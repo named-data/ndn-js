@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentObject><Signature><SignatureBits ccnbencoding="base64Binary">T9vjIhsEnnw4OAX2QHe0Zx9TEHLELm51YLxPDXxQy2EMET89KuXT7fEK6r3Ignu7
+z4lgtWw39ds0NhAjZW1s2aVNntZooLiN+VzLsIlPgVCSlbASqqmCSXQO45SvuKvm
+mog24sW3heJLAg15Y1XLuPLouZJvetu5xpsG9N9TUCg=</SignatureBits></Signature><Name><Component ccnbencoding="text">uri2</Component></Name><SignedInfo><PublisherPublicKeyDigest ccnbencoding="base64Binary">IEh0BFqfrJjrt9+txLvRqxWm5AZTScbIOoRghE6rMYU=</PublisherPublicKeyDigest><Timestamp ccnbencoding="base64Binary">BPP0z9ZL</Timestamp><KeyLocator><Key ccnbencoding="base64Binary">MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC9lWVVnBeVwEml703J0byLmBtm
+CX6iU/XQ9Q8aHfkIrE5pp5fa3SwFkJRKboSeH7tzccU9/dvngCZW4dX0SbhTDZx9
+qNar69kOBhJNkn8vbFch8dDknn9qEWfK+WDZb/Wvqi0lZzN3cqlEyObOuFmyWiMd
+nsqHNXT/mCJchT847wIDAQAB</Key></KeyLocator></SignedInfo><Content ccnbencoding="base64Binary">TWVzc2FnZQo=</Content></ContentObject>
