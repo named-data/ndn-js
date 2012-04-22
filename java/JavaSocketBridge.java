@@ -1,4 +1,4 @@
-// @author: Meki cherkaoui
+// @author: ucla-cs
 
 
 import java.applet.*;
