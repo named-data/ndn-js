@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-<Interest xmlns:ccn="http://www.parc.com/ccn">
-  <Name>
-    <Component>dGVzdDI=</Component>
-  </Name>
-  <MinSuffixComponents>1</MinSuffixComponents>
-  <MaxSuffixComponents>3</MaxSuffixComponents>
-</Interest>
