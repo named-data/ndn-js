@@ -1,0 +1,9 @@
+First native Javascript version of the NDN protocol. ( Also refereed to as CCN )
+
+The goal of this project is to improve the current implementation of the lwNDN API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that lwNDN communicates with CCNx nodes (routers).
+
+The current status of lwNDN allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
+
+This is currently done in the following way:
+
+createRoute('borges.metwi.ucla.edu', 9695); var contentObject = queryPrefix('/ndn/ucla.edu/apps/hydra/mainvideo'); console.log(contentObject.content);
