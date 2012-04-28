@@ -51,18 +51,24 @@
 
 			var ContentName = document.getElementById('contentname').value;
 		
+			var Content = document.getElementById('content').value;
+			
+			
+			
 			///////////////////////////////////////
 		    //createRoute('localhost', 9695);
 
-		    createRoute('131.179.141.15', 9695);
+		    //createRoute('131.179.141.15', 9695);
 		    //createRoute('borges.metwi.ucla.edu', 9695);
 		    
 			//content object
-			var co = queryPrefix( ContentName );
+			//var co = queryPrefix( ContentName );
+			
+			
 			
 			///////////////////////////////////////
 			
-			var output ="";
+			/*var output ="";
 			
 			if(co==-1)
 				output+= "NO CONTENT FOUND"
@@ -106,9 +112,11 @@
 					output+= "<br />";
 	
 				}
-			}
+			}*/
 			
-			document.getElementById('result').innerHTML = output;
+			//document.getElementById('result').innerHTML = output;
+			document.getElementById('result').innerHTML = 'Content \'' + Content + '\' was published with content name \'' + ContentName +'\'';
+
 		}
 	
 		</script>
@@ -116,9 +124,19 @@
 </head>
 <body >
 	<form>
-		Please Enter a Content Name:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> <br />
+
+		Please Enter a Content Name:<br />
+		
+		<input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> 
+		
+		Please Enter the Content:<br />
+		
+		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea> 
+		
+		
+		<br />
 	</form>
-	<button onclick="run()">Run!</button>
+	<button onclick="run()">Publish</button>
 	<div >
 		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
 		</applet>

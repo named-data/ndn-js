@@ -1,0 +1,130 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>NDN Request Example</title>
+	<script type="text/javascript" src="java_socket_bridge.js"></script>
+	
+	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
+	
+	<script type="text/javascript" src="CCNTime.js"></script>
+	
+	<script type="text/javascript" src="ContentName.js"></script>
+	
+	<script type="text/javascript" src="ContentObject.js"></script>
+	
+	<script type="text/javascript" src="DateFormat.js"></script>
+	
+	<script type="text/javascript" src="Exclude.js"></script>
+
+	<script type="text/javascript" src="ExcludeAny.js"></script>
+
+	<script type="text/javascript" src="ExcludeComponent.js"></script>
+
+	<script type="text/javascript" src="Interest.js"></script>
+	
+	<script type="text/javascript" src="KeyLocator.js"></script>
+	
+	<script type="text/javascript" src="KeyName.js"></script>
+
+	<script type="text/javascript" src="PublisherID.js"></script>
+	
+	<script type="text/javascript" src="Signature.js"></script>
+	
+	<script type="text/javascript" src="SignedInfo.js"></script>
+	
+	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
+	
+
+	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLCodec.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLDecoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/DataUtils.js"></script>
+	
+	<script type="text/javascript">
+		function run(){
+
+			var ContentName = document.getElementById('contentname').value;
+		
+			///////////////////////////////////////
+		    //createRoute('localhost', 9695);
+
+		    createRoute('131.179.141.15', 9695);
+		    //createRoute('borges.metwi.ucla.edu', 9695);
+		    
+			//content object
+			var co = queryPrefix( ContentName );
+			
+			///////////////////////////////////////
+			
+			var output ="";
+			
+			if(co==-1)
+				output+= "NO CONTENT FOUND"
+			else if (co==-2)
+				output+= "CONTENT NAME IS EMPTY"
+			else{
+				if(co.Name!=null && co.Name.Components!=null){
+					output+= "NAME: ";
+					
+					for(var i=0;i<co.Name.Components.length;i++){
+						output+= "/"+ toString(co.Name.Components[i]);
+					}
+					output+= "<br />";
+					output+= "<br />";
+				}
+	
+				if(co.Content !=null){
+					output += "CONTENT(ASCII): "+ toString(co.Content);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.Content !=null){
+					output += "CONTENT(hex): "+ toHex(co.Content);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.Signature !=null && co.Signature.Signature!=null){
+					
+					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.Key!=null){
+					
+					output += "PUBLISHER KEY: "+ toHex(co.SignedInfo.Locator.Key);
+					
+					output+= "<br />";
+					output+= "<br />";
+	
+				}
+			}
+			
+			document.getElementById('result').innerHTML = output;
+		}
+	
+		</script>
+	
+</head>
+<body >
+	<form>
+		Please Enter a Content Name:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> <br />
+	</form>
+	<button onclick="run()">Request Data!</button>
+	<div >
+		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
+		</applet>
+	</div>
+
+		<p id="result"></p>
+
+</body>
+</html>
