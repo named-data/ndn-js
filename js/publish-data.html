@@ -37,7 +37,10 @@
 	
 	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
 	
+	<script type="text/javascript" src="FaceInstance.js"></script>
 
+	<script type="text/javascript" src="ForwardingEntry.js"></script>
+	
 	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
 	
 	<script type="text/javascript" src="encoding/BinaryXMLCodec.js"></script>
@@ -52,6 +55,12 @@
 			var ContentName = document.getElementById('contentname').value;
 		
 			var Content = document.getElementById('content').value;
+			
+			//createRoute('borges.metwi.ucla.edu', 9695);
+			
+			createRoute('localhost', 9695);
+			
+			registerPrefix(ContentName, Content);
 			
 			
 			

@@ -21,7 +21,7 @@ var XML_UDATA = 0x06;
 var XML_CLOSE = 0x0;
 
 var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16; 
-	
+
 
 var XML_TT_BITS = 3;
 var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
@@ -57,7 +57,9 @@ BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content){
 BinaryXMLEncoder.prototype.writeBlob = function(/*byte []*/ binaryContent
 		//, /*int*/ offset, /*int*/ length
 		)  {
-	console.log(binaryContent);
+	
+	if(LOG >3) console.log(binaryContent);
+	
 	this.encodeBlob(this.ostream, binaryContent, this.offset, binaryContent.length);
 };
 
@@ -144,13 +146,30 @@ BinaryXMLEncoder.prototype.writeElement = function(
 		//long 
 		tag, 
 		//byte[] 
-		binaryContent,
+		Content,
 		//TreeMap<String, String> 
 		attributes) {
 	this.writeStartElement(tag, attributes);
 	// Will omit if 0-length
 	
-	this.writeBlob(binaryContent);
+	if(typeof Content === 'number') {
+		if(LOG>4) console.log('GOING TO WRITE THE NUMBER ' +Content );
+		this.writeBlob(Content.toString());
+		//whatever
+		
+	}
+	
+	else{
+	//else if(typeof Content === 'string'){
+		console.log('went here');
+		//this.writeBlob(Content);
+	//}
+	
+	//else if(typeof Content === 'object'){
+		this.writeBlob(Content);
+	//}
+	}
+	
 	this.writeEndElement();
 }
 
@@ -314,11 +333,19 @@ BinaryXMLEncoder.prototype.writeString = function(
 		//CCNTime 
 		offset) {
 	
-	
-	for (var i = 0; i < input.length; i++) {
-	    this.ostream[this.offset+i] = (input.charCodeAt(i));
+    if(typeof input === 'string'){
+		//console.log('went here');
+    	if(LOG>4) console.log('GOING TO WRITE A STRING');
+    
+		for (var i = 0; i < input.length; i++) {
+		    this.ostream[this.offset+i] = (input.charCodeAt(i));
+		}
 	}
-	
+    
+	else if(typeof input === 'object'){
+		this.writeBlobArray(input);
+	}	
+
 };
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
@@ -327,11 +354,16 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 		//CCNTime 
 		offset) {
 	
+	if(LOG>4) console.log('GOING TO WRITE A BLOB');
+    
 	for (var i = 0; i < Blob.length; i++) {
 	    this.ostream[this.offset+i] = Blob[i];
 	}
 	
 };
+
+
+
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
 	
 	return this.ostream.slice(0,this.offset);

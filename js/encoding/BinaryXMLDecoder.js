@@ -641,7 +641,6 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 var TypeAndVal = function TypeAndVal(_type,_val) {
 	this.t = _type;
 	this.v = _val;
-	
 };
 
 TypeAndVal.prototype.type = function(){

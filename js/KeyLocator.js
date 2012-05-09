@@ -23,7 +23,7 @@ var KeyLocator = function KeyLocator(_Input,_Type){
     else if(_Type==KeyLocatorType.CERTIFICATE){
     	this.Certificate = _Input;
     }
-    
+
 };
 
 KeyLocator.prototype.decode = function(decoder) {
@@ -105,7 +105,7 @@ KeyLocator.prototype.decode = function(decoder) {
 		encoder.writeEndElement();
 		
 };
-	
+
 KeyLocator.prototype.getElementLabel = function() {
 	return CCNProtocolDTags.KeyLocator; 
 };

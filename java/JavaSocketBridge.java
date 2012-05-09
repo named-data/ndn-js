@@ -8,14 +8,16 @@ import netscape.javascript.*;
 import java.net.*;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.ConcurrentHashMap;
 import java.io.*;
 
 public class JavaSocketBridge extends JApplet {
 
 	private final static int PACKETSIZE = 3000 ;
 	// Instance variables
-	JSObject browser = null;		// The browser
+	static JSObject browser = null;		// The browser
 
+	static ConcurrentHashMap hm = null;
 
 	// Initialize
 	public void init(){
@@ -38,7 +40,7 @@ public class JavaSocketBridge extends JApplet {
 							// Construct the socket
 							socket = new DatagramSocket() ;
 
-							
+
 							byte [] data = hex2Byte(interest);
 							DatagramPacket packet = new DatagramPacket( data, data.length, host, port ) ;
 
@@ -46,7 +48,7 @@ public class JavaSocketBridge extends JApplet {
 							socket.send( packet ) ;
 
 							// Set a receive timeout, 2000 milliseconds
-							socket.setSoTimeout( 2000 ) ;
+							socket.setSoTimeout( 4000 ) ;
 
 							// Prepare the packet for receive
 							packet.setData( new byte[PACKETSIZE] ) ;
@@ -78,6 +80,51 @@ public class JavaSocketBridge extends JApplet {
 				);
 
 	}
+
+	public String sendContentObject(final String ip, final int por, final String interest){
+		return AccessController.doPrivileged(
+				new PrivilegedAction<String>() {
+					public String run() {
+
+						DatagramSocket socket = null ;
+						byte[] output = null;
+						try
+						{
+							// Convert the arguments first, to ensure that they are valid
+							InetAddress host = InetAddress.getByName( ip ) ;
+							int port = por ;
+
+							// Construct the socket
+							socket = new DatagramSocket() ;
+
+
+							byte [] data = hex2Byte(interest);
+							DatagramPacket packet = new DatagramPacket( data, data.length, host, port ) ;
+
+							// Send it
+							socket.send( packet );
+						}
+						catch( Exception e )
+						{
+							error(e.toString());
+							System.out.println( e ) ;
+						}
+						finally
+						{
+							if( socket != null )
+								socket.close() ;
+						}
+
+						if(output!=null)
+							return byte2hex(output);
+						else 
+							return "";
+					}
+				}
+				);
+
+	}
+
 	public static byte[] hex2Byte(String str)
 	{
 		byte[] bytes = new byte[str.length() / 2];
@@ -126,14 +173,14 @@ public class JavaSocketBridge extends JApplet {
 			browser.call("java_socket_bridge_ready", null);
 		} catch (JSException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			error(e.getMessage());
 		}
 
 	}
 
 
 	// Report an error
-	public void error(String message){
+	public static void error(String message){
 		message = "Java Socket Bridge ERROR: " + message;
 		Object[] arguments = new Object[1];
 		arguments[0] = message;
@@ -145,5 +192,88 @@ public class JavaSocketBridge extends JApplet {
 		}
 	}
 
+	// Report an error
+	public static void receivedInterest(String IP,int port, byte[] data){
+
+
+		Object[] arguments = new Object[3];
+		arguments[0] = IP;
+		arguments[1] = port;
+		arguments[2] = byte2hex( data );
+
+		try {
+			browser.call("on_socket_received_interest", arguments);
+		} catch (JSException e) {
+			// TODO Auto-generated catch block
+			error(e.getMessage());
+		}
+
+	}
+
+
+	public static void connectAndStartAndPublish() 
+	{
+
+		AccessController.doPrivileged(
+				new PrivilegedAction<String>() {
+					public String run() {
+						Thread t = new Thread( new Runnable(){
+							public void run(){
+
+
+								String message; 
+								try{
+									DatagramSocket serverSocket = new DatagramSocket(9876);
+									byte[] receiveData = new byte[1024];
+									byte[] sendData = new byte[1024];
+									while(true)
+									{
+										DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+										serverSocket.receive(receivePacket);
+
+										//String sentence = new String( receivePacket.getData());
+
+										//System.out.println("RECEIVED: " + sentence);
+
+
+										InetAddress IPAddress = receivePacket.getAddress();
+
+										int port = receivePacket.getPort();
+
+										byte[] receivedData = receivePacket.getData();
+
+										receivedInterest( IPAddress.getHostAddress() , port, receivedData);
+
+										//String capitalizedSentence = sentence.toUpperCase();
+
+										//DATA PACKET HERE!
+
+
+										//sendData = capitalizedSentence.getBytes();
+
+										//DatagramPacket sendPacket =
+										//	new DatagramPacket(sendData, sendData.length, IPAddress, port);
+										//serverSocket.send(sendPacket);
+									}
+								}
+								catch(Exception e){
+									error("Exception " + e + "FAILURE, ERROR IN SOCKET CONECTION");
+								}
+
+
+							}
+						});
+
+						t.start();
+						return "SUCCESS";
+
+
+					}
+
+
+				}
+				);
+
+	}
 
 }

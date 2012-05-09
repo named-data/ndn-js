@@ -10,19 +10,18 @@ var FaceInstance  = function FaceInstance(
 		_Port,
 		_MulticastInterface,
 		_MulticastTTL,
-		_FreshnessSeconds,){
-		
+		_FreshnessSeconds){
 	
-	this.Action = _Action,
-	this.PublisherPublicKeyDigest = _PublisherPublicKeyDigest,
-	this.FaceID = _FaceID,
-	this.IPProto = _IPProto,
-	this.Host = _Host,
-	this.Port = _Port,
-	this.MulticastInterface =_MulticastInterface,
-	this.MulticastTTL =_MulticastTTL,
-	this.FreshnessSeconds = _FreshnessSeconds,
-	
+
+	this.Action = _Action;
+	this.PublisherPublicKeyDigest = _PublisherPublicKeyDigest;
+	this.FaceID = _FaceID;
+	this.IPProto = _IPProto;
+	this.Host = _Host;
+	this.Port = _Port;
+	this.MulticastInterface =_MulticastInterface;
+	this.MulticastTTL =_MulticastTTL;
+	this.FreshnessSeconds = _FreshnessSeconds;
 	
 	//Action           ::= ("newface" | "destroyface" | "queryface")
 	//PublisherPublicKeyDigest ::= SHA-256 digest
@@ -40,7 +39,7 @@ var FaceInstance  = function FaceInstance(
  * Used by NetworkObject to decode the object from a network stream.
  * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
-FaceInstance.prototype.decode(//XMLDecoder 
+FaceInstance.prototype.decode = function(//XMLDecoder 
 	decoder) {
 
 	decoder.readStartElement(this.getElementLabel());
@@ -113,39 +112,45 @@ FaceInstance.prototype.decode(//XMLDecoder
  * Used by NetworkObject to encode the object to a network stream.
  * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
-public void encode(XMLEncoder encoder) throws ContentEncodingException {
-	if (!validate()) {
-		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+FaceInstance.prototype.encode = function(//XMLEncoder
+	encoder){
+
+	//if (!this.validate()) {
+		//throw new Exception("Cannot encode : field values missing.");
+		//throw new Exception("")
+	//}
+	encoder.writeStartElement(this.getElementLabel());
+	if (null != this.Action && this.Action.length != 0)
+		encoder.writeElement(CCNProtocolDTags.Action, this.Action);	
+	if (null != this.PublisherPublicKeyDigest) {
+		this.PublisherPublicKeyDigest.encode(encoder);
 	}
-	encoder.writeStartElement(getElementLabel());
-	if (null != _action && _action.length() != 0)
-		encoder.writeElement(CCNProtocolDTags.Action, _action);	
-	if (null != _ccndID) {
-		_ccndID.encode(encoder);
+	if (null != this.FaceID) {
+		encoder.writeElement(CCNProtocolDTags.FaceID, this.FaceID);
 	}
-	if (null != _faceID) {
-		encoder.writeElement(CCNProtocolDTags.FaceID, _faceID);
+	if (null != this.IPProto) {
+		//encoder.writeElement(CCNProtocolDTags.IPProto, this.IpProto.value());
+		encoder.writeElement(CCNProtocolDTags.IPProto, this.IPProto);
 	}
-	if (null != _ipProto) {
-		encoder.writeElement(CCNProtocolDTags.IPProto, _ipProto.value());
+	if (null != this.Host && this.Host.length != 0) {
+		encoder.writeElement(CCNProtocolDTags.Host, this.Host);	
 	}
-	if (null != _host && _host.length() != 0) {
-		encoder.writeElement(CCNProtocolDTags.Host, _host);	
+	if (null != this.Port) {
+		encoder.writeElement(CCNProtocolDTags.Port, this.Port);
 	}
-	if (null != _port) {
-		encoder.writeElement(CCNProtocolDTags.Port, _port);
+	if (null != this.MulticastInterface && this.MulticastInterface.length != 0) {
+		encoder.writeElement(CCNProtocolDTags.MulticastInterface, this.MulticastInterface);
 	}
-	if (null != _multicastInterface && _multicastInterface.length() != 0) {
-		encoder.writeElement(CCNProtocolDTags.MulticastInterface, _multicastInterface);
+	if (null !=  this.MulticastTTL) {
+		encoder.writeElement(CCNProtocolDTags.MulticastTTL, this.MulticastTTL);
 	}
-	if (null != _multicastTTL) {
-		encoder.writeElement(CCNProtocolDTags.MulticastTTL, _multicastTTL);
-	}
-	if (null != _lifetime) {
-		encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, _lifetime);
+	if (null != this.FreshnessSeconds) {
+		encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.FreshnessSeconds);
 	}
 	encoder.writeEndElement();   			
 }
+
+
 
 
 FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceInstance;};
