@@ -1,0 +1,132 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>NDN Request Example</title>
+	
+	<script type="text/javascript" src="java_socket_bridge.js"></script>
+	
+	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
+	
+	<script type="text/javascript" src="CCNTime.js"></script>
+	
+	<script type="text/javascript" src="ContentName.js"></script>
+	
+	<script type="text/javascript" src="ContentObject.js"></script>
+	
+	<script type="text/javascript" src="DateFormat.js"></script>
+	
+	<script type="text/javascript" src="Exclude.js"></script>
+
+	<script type="text/javascript" src="ExcludeAny.js"></script>
+
+	<script type="text/javascript" src="ExcludeComponent.js"></script>
+
+	<script type="text/javascript" src="Interest.js"></script>
+	
+	<script type="text/javascript" src="KeyLocator.js"></script>
+	
+	<script type="text/javascript" src="KeyName.js"></script>
+
+	<script type="text/javascript" src="PublisherID.js"></script>
+	
+	<script type="text/javascript" src="Signature.js"></script>
+	
+	<script type="text/javascript" src="SignedInfo.js"></script>
+	
+	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
+	
+	<script type="text/javascript" src="FaceInstance.js"></script>
+
+	<script type="text/javascript" src="ForwardingEntry.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLCodec.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLDecoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/DataUtils.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
+
+	<script type="text/javascript">
+	
+		function encode(){
+			var interest = new Interest( new ContentName(document.getElementById('interest').value ) );
+
+			var output = encodeToHexInterest(interest);
+			
+			document.getElementById('result').innerHTML = output;
+
+		}
+		
+		function decode(){
+			
+			
+			
+			var input = document.getElementById('result').innerHTML;
+
+			
+			var interest = decodeHexInterest(input);
+			
+			if(LOG>3)console.log('INTEREST DECODED');
+			if(LOG>3)console.log(interest);
+
+			///////////////////////////////////////
+			
+			var output ="";
+			
+			if(interest.Name!=null && interest.Name.Components!=null){
+				output+= "NAME: ";
+				
+				for(var i=0;i<interest.Name.Components.length;i++){
+					output+= "/"+ toString(interest.Name.Components[i]);
+				}
+				output+= "<br />";
+				output+= "<br />";
+			}
+	
+			document.getElementById('result').innerHTML = output;
+			
+		}
+
+	</script>
+
+</head>
+<body >
+	<form>
+		
+		Please Enter a Interest:<br />
+		
+		<input id="interest" type="text" name="INTERSET" value="/PARC/abc" /> 
+		
+	</form>
+	<button onclick="encode()">Encode</button>
+	<button onclick="decode()">Decode</button>
+	
+	
+
+		<p id="result"></p>
+
+</body>
+</html>

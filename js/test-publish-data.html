@@ -38,6 +38,8 @@
 	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
 	
 	<script type="text/javascript" src="FaceInstance.js"></script>
+
+	<script type="text/javascript" src="ForwardingEntry.js"></script>
 	
 	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
 	
@@ -47,25 +49,55 @@
 	
 	<script type="text/javascript" src="encoding/DataUtils.js"></script>
 	
+	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
+	
+	
 	<script type="text/javascript">
 		function run(){
 
 			var ContentName = document.getElementById('contentname').value;
 		
+			var Content = document.getElementById('content').value;
+			
+			//createRoute('borges.metwi.ucla.edu', 9695);
+			
+			createRoute('localhost', 9695);
+			
+			registerPrefix(ContentName, Content);
+			
+			
+			
 			///////////////////////////////////////
-		    createRoute('localhost', 9695);
-			
-			
-			///  /ndn/ucla.edu/apps/hydra/mainvideo
+		    //createRoute('localhost', 9695);
+
 		    //createRoute('131.179.141.15', 9695);
 		    //createRoute('borges.metwi.ucla.edu', 9695);
 		    
 			//content object
-			var co = queryPrefix( ContentName );
+			//var co = queryPrefix( ContentName );
+			
+			
 			
 			///////////////////////////////////////
 			
-			var output ="";
+			/*var output ="";
 			
 			if(co==-1)
 				output+= "NO CONTENT FOUND"
@@ -109,9 +141,11 @@
 					output+= "<br />";
 	
 				}
-			}
+			}*/
 			
-			document.getElementById('result').innerHTML = output;
+			//document.getElementById('result').innerHTML = output;
+			document.getElementById('result').innerHTML = 'Content \'' + Content + '\' was published with content name \'' + ContentName +'\'';
+
 		}
 	
 		</script>
@@ -119,9 +153,18 @@
 </head>
 <body >
 	<form>
-		Please Enter a Content Name:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> <br />
+
+		Please Enter a Content Name:<br />
+		
+		<input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> 
+		
+		Please Enter the Content:<br />
+		
+		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea> 
+		
+		<br />
 	</form>
-	<button onclick="run()">Request Data!</button>
+	<button onclick="run()">Publish</button>
 	<div >
 		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
 		</applet>
