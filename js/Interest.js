@@ -4,7 +4,8 @@
  */
 
 var Interest = function Interest(_Name,_FaceInstance,_MinSuffixComponents,_MaxSuffixComponents,_PublisherPublicKeyDigest, _Exclude, _ChildSelector,_AnswerOriginKind,_Scope,_InterestLifetime,_Nonce){
-		
+	
+	//Setting fields
 	this.Name = _Name;
 	this.FaceInstance = _FaceInstance;
 	this.MaxSuffixComponents = _MaxSuffixComponents;
