@@ -161,7 +161,7 @@ BinaryXMLEncoder.prototype.writeElement = function(
 	
 	else{
 	//else if(typeof Content === 'string'){
-		console.log('went here');
+		 //console.log('went here');
 		//this.writeBlob(Content);
 	//}
 	

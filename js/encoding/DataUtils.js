@@ -21,7 +21,7 @@ var DataUtils = function DataUtils(){
                "wxyz0123456789+/" +
                "=";
 
-DataUtils.encode64=function encode64(input) {
+DataUtils.stringtoBase64=function stringtoBase64(input) {
      input = escape(input);
      var output = "";
      var chr1, chr2, chr3 = "";
@@ -56,7 +56,7 @@ DataUtils.encode64=function encode64(input) {
      return output;
   }
 
-DataUtils.decode64 = function decode64(input) {
+DataUtils.base64toString = function base64toString(input) {
      var output = "";
      var chr1, chr2, chr3 = "";
      var enc1, enc2, enc3, enc4 = "";
@@ -155,3 +155,37 @@ utf8.parse = function(byteArray) {
 };
 
 
+//http://ejohn.org/blog/numbers-hex-and-colors/
+function toHex(arguments){
+  //console.log(arguments);
+  var ret = "";
+  for ( var i = 0; i < arguments.length; i++ )
+    ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  return ret.toUpperCase();
+}
+
+//DOES NOT SEEM TO WORK
+function toString(arguments){
+  //console.log(arguments);
+  var ret = "";
+  for ( var i = 0; i < arguments.length; i++ )
+    ret += String.fromCharCode(arguments[i]);
+  return ret;
+}
+
+function toNumbers( str ){
+	if(typeof str =='string'){
+		  var ret = [];
+		   str.replace(/(..)/g, function(str){
+		    ret.push( parseInt( str, 16 ) );
+		  });
+		   return ret;
+    }
+}
+
+function toNumbersFromString( str ){
+	var bytes = new Array(str.length);
+	for(var i=0;i<str.length;i++)
+		bytes[i] = str.charCodeAt(i);
+	return bytes;
+}

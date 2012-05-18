@@ -493,8 +493,8 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	
 	byteTimestamp = this.readBinaryElement(startTag);
 	//CCNTime 
-	timestamp = new CCNTime();
-	timestamp.setDateBinary(byteTimestamp);
+	timestamp = new CCNTime(byteTimestamp);
+	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
 		throw new ContentDecodingException("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp));
@@ -584,6 +584,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 		tv = this.decodeTypeAndVal(this.istream);
 
 		var valval ;
+		
 		if(typeof tv.val() == 'string'){
 			valval = (parseInt(tv.val()));
 		}
