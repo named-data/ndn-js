@@ -13,7 +13,7 @@ var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C
 var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_freshnessSeconds,_finalBlockID){
 
 	//TODO, Check types
-    
+
     this.Publisher = _publisher; //PublisherPublicKeyDigest
     this.Timestamp=_timestamp; // CCN Time
     this.Type=_type; // ContentType
@@ -23,18 +23,45 @@ var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_fresh
 
 };
 
+SignedInfo.prototype.setFields = function(){
+	//BASE64 -> RAW STRING
+	
+	var stringCertificate = DataUtils.base64toString(globalKeyManager.certificate);
+	
+	if(LOG>3)console.log('string Certificate is '+stringCertificate);
+
+	//HEX -> BYTE ARRAY
+	var publisherkey = toNumbers(hex_sha256(stringCertificate));
+	
+	if(LOG>3)console.log('publisher key is ');
+	if(LOG>3)console.log(publisherkey);
+	
+	this.Publisher = new PublisherPublicKeyDigest(publisherkey);
+
+	
+	this.Timestamp = new CCNTime('FD0499602d2000');
+	
+	this.Type = ContentType.DATA;
+	
+	console.log('toNumbersFromString(stringCertificate) '+toNumbersFromString(stringCertificate));
+	this.Locator = new KeyLocator(  toNumbersFromString(stringCertificate)  ,KeyLocatorType.KEY );
+
+};
 
 SignedInfo.prototype.decode = function( decoder){
 
 		decoder.readStartElement( this.getElementLabel() );
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
+			if(LOG>3) console.log('DECODING PUBLISHER KEY');
 			this.Publisher = new PublisherPublicKeyDigest();
 			this.Publisher.decode(decoder);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Timestamp)) {
 			this.Timestamp = decoder.readDateTime(CCNProtocolDTags.Timestamp);
+			if(LOG>4)console.log('TIMESTAMP FOUND IS  '+this.Timestamp);
+
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
@@ -43,22 +70,25 @@ SignedInfo.prototype.decode = function( decoder){
 		
 			//TODO Implement Type of Key Reading
 			
-			//this.Type = valueToType(binType);
+			if(LOG>4)console.log('TYPE IS'+bintype);
+
+			this.Type = this.valueToType(binType);
 			
 			
 			//TODO Implement Type of Key Reading
 			
-			/*
+			
 			if (null == this.Type) {
 				throw new Exception("Cannot parse signedInfo type: bytes.");
 			}
 			
 		} else {
-			this.Type = ContentType.DATA; // default*/
+			this.Type = ContentType.DATA; // default
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
 			this.FreshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds);
+			if(LOG>4) console.log('FRESHNESS IN SECONDS IS '+ this.FreshnessSeconds);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FinalBlockID)) {
@@ -80,6 +110,8 @@ SignedInfo.prototype.encode = function( encoder)  {
 		encoder.writeStartElement(this.getElementLabel());
 		
 		if (null!=this.Publisher) {
+			if(LOG>3) console.log('ENCODING PUBLISHER KEY' + this.Publisher.PublisherPublicKeyDigest);
+
 			this.Publisher.encode(encoder);
 		}
 
@@ -107,6 +139,15 @@ SignedInfo.prototype.encode = function( encoder)  {
 		encoder.writeEndElement();   		
 };
 	
+SignedInfo.prototype.valueToType = function(){
+	//for (Entry<byte [], ContentType> entry : ContentValueTypes.entrySet()) {
+		//if (Arrays.equals(value, entry.getKey()))
+			//return entry.getValue();
+		//}
+	return null;
+	
+};
+
 SignedInfo.prototype.getElementLabel = function() { 
 	return CCNProtocolDTags.SignedInfo;
 };

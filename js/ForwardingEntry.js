@@ -1,4 +1,7 @@
-
+/*
+ * @author: ucla-cs
+ * This class represents Forwarding Entries
+ */
 
 var ForwardingEntry = function ForwardingEntry(
                                                //ActionType 

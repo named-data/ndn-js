@@ -1,4 +1,7 @@
-
+/*
+ * @author: ucla-cs
+ * This class represents Face Instances
+ */
 
 
 var FaceInstance  = function FaceInstance(
@@ -149,8 +152,6 @@ FaceInstance.prototype.encode = function(//XMLEncoder
 	}
 	encoder.writeEndElement();   			
 }
-
-
 
 
 FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceInstance;};

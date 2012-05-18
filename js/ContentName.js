@@ -15,23 +15,43 @@ var ContentName = function ContentName(_Components){
 	this.ROOT = null;
 	
 	if( typeof _Components == 'string') {
-		this.Components = _Components;
 		
-
+		if(LOG>3)console.log('Content Name String '+_Components);
+		this.Components = createNameArray(_Components);
 	}
 	else if(typeof _Components === 'object' && _Components instanceof Array ){
 		
+		if(LOG>4)console.log('Content Name Array '+_Components);
 		this.Components = _Components;
 
 	}
+	else if(_Components==null){
+		this.Components =[];
+	}
 	else{
-		
-		console.log("TODO: This should be an array");
-		this.Components==_Components;
+
+		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
+
 	}
 };
 
+function createNameArray(name){
 
+		
+	//message = decodeURIComponent(message);
+	name = unescape(name);
+	
+	var array = name.split('/');
+
+	
+	if(name[0]=="/")
+		array=array.slice(1,array.length);
+		
+	if(name[name.length-1]=="/")
+		array=array.slice(0,array.length-1);
+	
+	return array;
+}
 
 
 ContentName.prototype.decode = function(/*XMLDecoder*/ decoder)  {
@@ -49,7 +69,8 @@ ContentName.prototype.decode = function(/*XMLDecoder*/ decoder)  {
 
 ContentName.prototype.encode = function(/*XMLEncoder*/ encoder)  {
 		
-		//TODO Check if parameters are valid
+		if( this.Components ==null ) 
+			throw new Exception("CANNOT ENCODE EMPTY CONTENT NAME");
 
 		encoder.writeStartElement(this.getElementLabel());
 		var count = this.Components.length;

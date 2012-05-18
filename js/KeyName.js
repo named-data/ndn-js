@@ -20,6 +20,8 @@ KeyName.prototype.decode=function( decoder){
 	this.ContentName = new ContentName();
 	this.ContentName.decode(decoder);
 	
+	if(LOG>4) console.log('KEY NAME FOUND: ');
+	
 	if ( peek(decoder) ) {
 		this.PublisherID = new PublisherID();
 		this.PublisherID.decode(decoder);

@@ -11,16 +11,49 @@ var Signature = function Signature(_Witness,_Signature,_DigestAlgorithm) {
 	this.DigestAlgorithm = _DigestAlgorithm//String _digestAlgorithm;
 };
 
+var generateSignature = function(contentName,content,signedinfo){
+	
+	var enc = new BinaryXMLEncoder();
+	contentName.encode(enc);
+	var hex1 = toHex(enc.getReducedOstream());
+
+	var enc = new BinaryXMLEncoder();
+	content.encode(enc);
+	var hex2 = toHex(enc.getReducedOstream());
+
+	var enc = new BinaryXMLEncoder();
+	signedinfo.encode(enc);
+	var hex3 = toHex(enc.getReducedOstream());
+
+	var hex = hex1+hex2+hex3;
+
+	//globalKeyManager.sig
+
+};
 
 Signature.prototype.decode =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
+		
+		if(LOG>4)console.log('STARTED DECODING SIGNATURE ');
+		
 		if (decoder.peekStartElement(CCNProtocolDTags.DigestAlgorithm)) {
+			
+			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
 			this.DigestAlgorithm = decoder.readUTF8Element(CCNProtocolDTags.DigestAlgorithm); 
 		}
 		if (decoder.peekStartElement(CCNProtocolDTags.Witness)) {
+			if(LOG>4)console.log('WITNESS FOUND FOUND');
 			this.Witness = decoder.readBinaryElement(CCNProtocolDTags.Witness); 
 		}
-		this.Signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);	
+		
+		//FORCE TO READ A SIGNATURE
+
+		//if (decoder.peekStartElement(CCNProtocolDTags.SignatureBits)) {
+			//if(LOG>4)console.log('SIGNATURE FOUND ');
+			this.Signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);	
+
+		//}
+		
 		decoder.readEndElement();
 	
 };

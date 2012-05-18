@@ -3,7 +3,10 @@
  * This class represents Interest Objects
  */
 
-var LOG = 5; 
+//var ccndAddr = unescape(%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F);
+var ccndAddrHex = '%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F';
+
+var LOG = 5;
 
 // Global variables
 var java_socket_bridge_ready_flag = false;
@@ -22,6 +25,9 @@ function java_socket_bridge_ready(){
 	java_socket_bridge_ready_flag = true;
 }
 
+
+
+
 //Sets the route to ccnx router
 function createRoute(url, port){
 	ndnport = port;
@@ -30,11 +36,9 @@ function createRoute(url, port){
 	console.log(new BinaryXMLDecoder());
 
 	//SEND INTERST TO CCNX NODE
-	startRegisterPrefix();
+
 	
 	//Now Start the receiving thread
-	var result = get_java_socket_bridge().connectAndStartAndPublish();
-	
 	
 }
 
@@ -55,17 +59,8 @@ function queryPrefix(message){
 		}
 		
 		//message = decodeURIComponent(message);
-		message = unescape(message);
 		
-		var array = message.split('/');
-
-		
-		if(message[0]=="/")
-			array=array.slice(1,array.length);
-			
-		if(message[message.length-1]=="/")
-			array=array.slice(0,array.length-1);
-		
+		var array = createNameArray(message);
 		
 		//console.log('ARRAY IS '+ array);
 		
@@ -80,8 +75,6 @@ function queryPrefix(message){
 		
 		
 		//console.log('Connecting and start '+ ndnurl +':'+ndnport+'-'+message);
-		
-		
 
 
 		var result = get_java_socket_bridge().connectAndStart(ndnurl,ndnport,hex);
@@ -106,8 +99,8 @@ function queryPrefix(message){
         
 			co.decode(decoder);
 
-			//console.log(co);
-			
+			if(LOG>2) console.log(co);
+
 			return co;
 			
 
@@ -115,6 +108,7 @@ function queryPrefix(message){
 		
 
 	}
+
 
 	else{
 
@@ -126,8 +120,33 @@ function queryPrefix(message){
 
 }
 
+var registerStarted = false;
+function registerPrefix(name, content){
+	
+	registeredPrefixes[name] = content ;
+	
+	if(registerStarted == false){
+		var result = get_java_socket_bridge().connectAndStartAndPublish();
+		
+		startRegisterPrefix();
+		
+		registerStarted = true;
+	}
+	sendForwardingEntry(10);
+}
+
+
+function unRegisterPrefix(name){
+	
+	delete registeredPrefixes[name];
+
+}
+
+
+
 
 function on_socket_received_interest(IP, port, interestBinary){
+	console.log('WOOOO RECEIVED STUFF' );
 	var interest = decodeHexInterest(interestBinary);
 	
 	console.log('WOOO received interest' + interest.Name.Components);
@@ -151,20 +170,6 @@ function on_socket_received_interest(IP, port, interestBinary){
 		
 	}
 }
-
-function registerPrefix(name, content){
-	
-	registeredPrefixes[name] = content ;
-
-}
-
-
-function unRegisterPrefix(name){
-	
-	delete registeredPrefixes[name];
-
-}
-
 
 
 
@@ -194,26 +199,32 @@ function startRegisterPrefix(){
 		var faceInstanceBinary = encoder1.getReducedOstream();
 
 		
-
-		var co = new ContentObject(null,null,faceInstanceBinary,null); 
+		var si = new SignedInfo();
+		si.setFields();
+		
+		var co = new ContentObject(new ContentName(),si,faceInstanceBinary,new Signature()); 
+		co.sign();
 		
 		var encoder2 = new BinaryXMLEncoder();
-		
+
 		co.encode(encoder2);
 
 		var coBinary = encoder2.getReducedOstream();
+		
+		//if(LOG>3)console.log('ADDESS OF CCND IS'+unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F'));
+		
+		//var interestName = new ContentName(['ccnx',co.SignedInfo.Publisher.PublisherPublicKeyDigest,'newface',coBinary]);
+		var interestName = new ContentName(['ccnx',unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F'),'newface',coBinary]);
+		//var interestName = new ContentName(['ccnx','%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F','newface',coBinary]);
 
-
-
-		var interestName = new ContentName(['ccnx','1234','newface',faceInstanceBinary]);
 		//var interestName = new ContentName(['ccnx','1234','newface',coBinary]);
-
+		//var interestName = new ContentName(['ccnx',co.SignedInfo.Publisher.PublisherPublicKeyDigest,'newface',coBinary]);
 		int = new Interest(interestName,face);
 		
 		var hex = encodeToHexInterest(int);
 		/////////////////
-
-
+		
+		
 		
 		if(LOG>4)console.log('Interst name of Conntection Message is '+ interestName);
 		
@@ -222,11 +233,9 @@ function startRegisterPrefix(){
 		//console.log('Connecting and start '+ ndnurl +':'+ndnport+'-'+message);
 		
 		var result = get_java_socket_bridge().connectAndStart(ndnurl,ndnport,hex);
-		
-		console.log('BINARY RESPONSE IS ' +result);
+
 		
 		//TODO MOVE THIS
-		sendForwardingEntry(10);
 		
 		//result[0] and result[1] should be 0 and 4 if there is a content object found
 		if(result==null || result==undefined || result =="" || result[0] != '0'||result[1]!='4'){
@@ -271,7 +280,7 @@ function sendForwardingEntry(faceID){
 		
 
 		///////////////////////
-		var face = new ForwardingEntry('prefixreg',new ContentName('helloworld'),null, faceID, 1,null);
+		var face = new ForwardingEntry('prefixreg',new ContentName(['helloworld']),null, faceID, 1,null);
 		
 		var encoder1 = new BinaryXMLEncoder();
 		 
@@ -281,18 +290,26 @@ function sendForwardingEntry(faceID){
 
 		
 
-		var co = new ContentObject(null,null,faceInstanceBinary,null); 
+		var si = new SignedInfo();
+		si.setFields();
+		
+		var co = new ContentObject(new ContentName(),si,faceInstanceBinary,new Signature()); 
+		co.sign();
 		
 		var encoder2 = new BinaryXMLEncoder();
-		
+
 		co.encode(encoder2);
 
 		var coBinary = encoder2.getReducedOstream();
 
 
 
-		var interestName = new ContentName(['ccnx','1234','prefixreg',faceInstanceBinary]);
+		var interestName = new ContentName(['ccnx',unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F'),'prefixreg',coBinary]);
+		//var interestName = new ContentName(['ccnx',co.SignedInfo.Publisher.PublisherPublicKeyDigest,'newface',coBinary]);
+		//var interestName = new ContentName(['ccnx','%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F','newface',coBinary]);
+
 		//var interestName = new ContentName(['ccnx','1234','newface',coBinary]);
+		//var interestName = new ContentName(['ccnx',co.SignedInfo.Publisher.PublisherPublicKeyDigest,'prefixreg',coBinary]);
 
 		int = new Interest(interestName,face);
 		
@@ -309,7 +326,7 @@ function sendForwardingEntry(faceID){
 		
 		var result = get_java_socket_bridge().connectAndStart(ndnurl,ndnport,hex);
 		
-		console.log('BINARY RESPONSE IS ' +result);
+		if(LOG>3)console.log('BINARY RESPONSE IS ' +result);
 		
 		
 		//result[0] and result[1] should be 0 and 4 if there is a content object found
@@ -340,25 +357,6 @@ function sendForwardingEntry(faceID){
 
 
 
-function createNameArray(name){
-	if(name==null || name =="" || name=="/"){
-			return -2;
-		}
-		
-	//message = decodeURIComponent(message);
-	name = unescape(name);
-	
-	var array = name.split('/');
-
-	
-	if(name[0]=="/")
-		array=array.slice(1,array.length);
-		
-	if(name[name.length-1]=="/")
-		array=array.slice(0,array.length-1);
-	
-	return array;
-}
 
 function encodeToHexInterest(int){
 	
@@ -391,9 +389,8 @@ function decodeHexInterest(result){
 			
 	
 	decoder = new BinaryXMLDecoder(numbers);
-	console.log('DECODED HEX INTERST  \n'+numbers);
-	
-	
+	if(LOG>3)console.log('DECODED HEX INTERST  \n'+numbers);
+
 	i = new Interest();
 
 	i.decode(decoder);
@@ -406,7 +403,7 @@ function decodeHexContentObject(result){
 	var numbers = toNumbers(result);
 
 	decoder = new BinaryXMLDecoder(numbers);
-	console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
+	if(LOG>3)console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
 	
 	co = new ContentObject();
 
@@ -417,30 +414,7 @@ function decodeHexContentObject(result){
 }
 
 
-//http://ejohn.org/blog/numbers-hex-and-colors/
-function toHex(arguments){
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
-  return ret.toUpperCase();
-}
 
-function toString(arguments){
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += String.fromCharCode(arguments[i]);
-  return ret;
-}
-
-function toNumbers( str ){
-  var ret = [];
-   str.replace(/(..)/g, function(str){
-    ret.push( parseInt( str, 16 ) );
-  });
-  return ret;
-}
 
 // Get something from the socket
 function on_socket_get(message){}

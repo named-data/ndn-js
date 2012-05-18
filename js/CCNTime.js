@@ -4,15 +4,28 @@
  */
 
 var CCNTime = function CCNTime(
-                               //long 
-msec) {
+                               
+		msec) {
 
 
 
 
 	this.NANOS_MAX = 999877929;
 	
-	this.date = new Date(msec);
+	if(typeof msec =='object'){
+		this.setDateBinary(msec);
+		this.msec = msec;
+		this.msecHex = toHex(msec);
+	}
+	else if(typeof msec =='string'){
+		
+		this.msec = toNumbers(msec);
+		this.setDateBinary(this.msec);
+		this.msecHex = msec;
+	}
+	else{
+		if(LOG>1) console.log('UNRECOGNIZED TYPE FOR TIME');
+	}
 };
 
 
@@ -21,18 +34,7 @@ msec) {
 	 * @param timestamp source timestamp to initialize from, some precision will be lost
 	 */
 
-	/**
-	 * Create a CCNTime
-	 * @param time source Date to initialize from, some precision will be lost
-	 * as CCNTime does not round to unitary milliseconds
-	 */
-CCNTime.prototype.setDate = function(
-	//Date 
-		date) {
 
-	this.date = date;
-};
-	
 	/**
 	 * Create a CCNTime from its binary encoding
 	 * @param binaryTime12 the binary representation of a CCNTime
@@ -50,24 +52,22 @@ CCNTime.prototype.setDateBinary = function(
 	value = 0;
 	for(i = 0; i < binaryTime12.length; i++) {
 		value = value << 8;
-		// Java will assume the byte is signed, so extend it and trim it.
 		b = (binaryTime12[i]) & 0xFF;
 		value |= b;
 	}
 	
-	this.date = new Date(value);
+	this.date = value;
+	//this.date = new Date(value);
 
 };
 
 //byte[]
 CCNTime.prototype.toBinaryTime = function() {
-	
-	
 
-	return unsignedLongToByteArray(this.date.getTime());
+	return this.msec; //unsignedLongToByteArray(this.date.getTime());
 
 }
-
+/*
 unsignedLongToByteArray= function( value) {
 	if( 0 == value )
 		return [0];
@@ -95,5 +95,5 @@ unsignedLongToByteArray= function( value) {
 			out[ offset - i ] = b;
 	}
 	return out;
-}
+}*/
 	
