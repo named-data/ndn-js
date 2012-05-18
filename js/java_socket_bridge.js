@@ -29,6 +29,11 @@ function java_socket_bridge_ready(){
 
 
 //Sets the route to ccnx router
+/**
+ * Setup the router to use
+ * @url the url of the remote NDN router
+ * @port the port of the remote NDN router
+ */
 function createRoute(url, port){
 	ndnport = port;
 	ndnurl=url;
