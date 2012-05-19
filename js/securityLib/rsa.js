@@ -60,7 +60,10 @@ function pkcs1pad2(s,n) {
   return new BigInteger(ba);
 }
 
-// "empty" RSA key constructor
+/** 
+ * "empty" RSA key constructor
+ * @returns {RSAKey}
+ */
 function RSAKey() {
   this.n = null;
   this.e = 0;
@@ -72,7 +75,12 @@ function RSAKey() {
   this.coeff = null;
 }
 
-// Set the public key fields N and e from hex strings
+/** 
+ * Set the public key fields N and e from hex strings
+ * @param N
+ * @param E
+ * @returns {RSASetPublic}
+ */
 function RSASetPublic(N,E) {
   if(N != null && E != null && N.length > 0 && E.length > 0) {
     this.n = parseBigInt(N,16);
@@ -82,12 +90,18 @@ function RSASetPublic(N,E) {
     alert("Invalid RSA public key");
 }
 
-// Perform raw public operation on "x": return x^e (mod n)
+/** 
+ * Perform raw public operation on "x": return x^e (mod n)
+ * @param x
+ * @returns x^e (mod n)
+ */
 function RSADoPublic(x) {
   return x.modPowInt(this.e, this.n);
 }
 
-// Return the PKCS#1 RSA encryption of "text" as an even-length hex string
+/**
+ * Return the PKCS#1 RSA encryption of "text" as an even-length hex string
+ */ 
 function RSAEncrypt(text) {
   var m = pkcs1pad2(text,(this.n.bitLength()+7)>>3);
   if(m == null) return null;

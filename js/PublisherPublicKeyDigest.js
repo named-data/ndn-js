@@ -30,6 +30,12 @@ PublisherPublicKeyDigest.prototype.decode = function( decoder) {
 		
 		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
 
+		if(LOG>4){
+			console.log('PublisherID.PUBLISHER_ID_LEN = ', PublisherID.PUBLISHER_ID_LEN);
+			console.log('PublisherPublicKeyDigest.length = ', PublisherPublicKeyDigest.length);
+		}
+		
+		
 		if (this.PublisherPublicKeyDigest.length != PublisherID.PUBLISHER_ID_LEN) {
 			
 			console.log('LENGTH OF PUBLISHER ID IS WRONG!');

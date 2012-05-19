@@ -133,6 +133,7 @@
 				}
 				if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
 					
+					output += "Publisher Public Key Digest:  " + co.SignedInfo.Publisher.PublisherPublicKeyDigest + "<br />";
 					output += "Publisher Public Key Digest(hex): "+ toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
 					
 					output+= "<br />";
@@ -207,6 +208,18 @@
 					var rsakey = new RSAKey();
 					rsakey.setPublic(kp,exp);
 				    var result = rsakey.verifyString(input, signature);
+				    
+				    var inputBis = toHex(co.Name).concat(toHex(co.SignedInfo), toHex(co.Content));
+				    
+// 				    if(LOG>0){
+// 				    	console.log("Input: ", input);
+// 				    	console.log("Input bis: ", inputBis);
+// 				    	console.log("Verify input bis: ", rsakey.verifyString(inputBis, signature));
+// 				    }
+				    
+				    //var x509 = new X509();
+				    //x509.readCertPEM(publickey);
+				    //if(LOG>0) console.log("x509 verif: ", x509.subjectPublicKeyRSA.verifyString(input, signature));
 					
 					if(result)
 						output += 'SIGNATURE VALID';

@@ -6,6 +6,7 @@
 //var ccndAddr = unescape(%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F);
 var ccndAddrHex = '%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F';
 
+//var LOG = 5;
 var LOG = 5;
 
 // Global variables
@@ -50,6 +51,11 @@ function createRoute(url, port){
 // Connect to a given url and port
 //Error -1 No countent found
 //Error -2 Empty query
+/**
+ * Sends an interest for the given prefix and returns the response (java_socket_bridge.js)
+ * @message the prefix to query for
+ * @return -1 if no content is found,-2 is the array is empty, the content otherwise
+ */
 function queryPrefix(message){
 	if(ndnport!=null && ndnurl!=null){
 		var newMessage ='';
