@@ -38,11 +38,11 @@ Signature.prototype.decode =function( decoder) {
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.DigestAlgorithm)) {
 			
-			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
+			if(LOG>4)console.log('DIGEST ALGORITHM FOUND');
 			this.DigestAlgorithm = decoder.readUTF8Element(CCNProtocolDTags.DigestAlgorithm); 
 		}
 		if (decoder.peekStartElement(CCNProtocolDTags.Witness)) {
-			if(LOG>4)console.log('WITNESS FOUND FOUND');
+			if(LOG>4)console.log('WITNESS FOUND');
 			this.Witness = decoder.readBinaryElement(CCNProtocolDTags.Witness); 
 		}
 		

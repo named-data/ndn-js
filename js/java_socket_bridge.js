@@ -367,6 +367,20 @@ function sendForwardingEntry(faceID){
 }
 
 
+/**
+ * Computes the size in bytes of the ContentObject once encoded
+ * @param co the content object to encode
+ * @returns the size in bytes of the encoded ContentObject
+ */
+function getContentObjectSize(co){
+	var enc = new BinaryXMLEncoder();
+	
+	co.encode(enc);
+	
+	return enc.getReducedOstream().length;
+}
+
+
 
 
 function encodeToHexInterest(int){
@@ -388,7 +402,11 @@ function encodeToHexContentObject(co){
  
 	co.encode(enc);
 	
-	var hex = toHex(enc.getReducedOstream());
+	var reducedOstream = enc.getReducedOstream();
+	
+	if(LOG>3) console.log("In encodeToHexContentObject, reducedOstream: ", reducedOstream);
+	
+	var hex = toHex(reducedOstream);
 
 	return hex;
 

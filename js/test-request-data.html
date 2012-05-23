@@ -92,6 +92,10 @@
 			//content object
 			var co = queryPrefix( ContentName );
 			
+			var coSize = getContentObjectSize(co);
+			
+			document.getElementById('coSize').innerHTML = coSize;
+			
 			///////////////////////////////////////
 			
 			var output ="";
@@ -101,6 +105,10 @@
 			else if (co==-2)
 				output+= "CONTENT NAME IS EMPTY"
 			else{
+				output += "Content: " + toString(toHex(co));
+				output+="<br />";
+				output+= "<br />";
+				
 				if(co.Name!=null && co.Name.Components!=null){
 					output+= "NAME: ";
 					
@@ -156,6 +164,12 @@
 					
 					
 					var input = toString(co.rawSignatureData);
+					
+					var inputBis = toString(co.rawSignatureData.slice(0,co.rawSignatureData.length-2).concat([0]));
+					
+					console.log("Input bis: ", toHex(co.rawSignatureData.slice(0,co.rawSignatureData.length-2).concat([0])));
+					
+					if(LOG>2) console.log("Input: ", toHex(co.rawSignatureData), "; raw signature data: ", co.rawSignatureData, "; to hex: ", toHex(co.rawSignatureData));
 					 
 					
 					output += "DER Certificate: "+publickey ;
@@ -209,7 +223,11 @@
 					rsakey.setPublic(kp,exp);
 				    var result = rsakey.verifyString(input, signature);
 				    
-				    var inputBis = toHex(co.Name).concat(toHex(co.SignedInfo), toHex(co.Content));
+				    var resultBis = rsakey.verify(inputBis, signature);
+				    
+				    console.log("result bis: ", resultBis);
+				    
+				    //var inputBis = toHex(co.Name).concat(toHex(co.SignedInfo), toHex(co.Content));
 				    
 // 				    if(LOG>0){
 // 				    	console.log("Input: ", input);
@@ -249,13 +267,19 @@
 	<form>
 		Please Enter a Content Name:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> <br />
 	</form>
-	<button onclick="run()">Request Data!</button>
+	<div>
+		<button onclick="run()">Request Data!</button>
+	</div>
 	<div >
 		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
 		</applet>
 	</div>
 
-		<p id="result"></p>
-
+		<div>
+			<p>Size: <span id="coSize"></span></p>
+			
+			<p id="result"></p>
+			
+		</div> 
 </body>
 </html>

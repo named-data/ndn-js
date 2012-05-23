@@ -88,8 +88,15 @@
 			
 			co.sign();
 			
+			var coSize = getContentObjectSize(co);
+			
 			
 			var output = encodeToHexContentObject(co);
+			
+			if(LOG>3) console.log("Size: ", coSize);
+
+			
+			document.getElementById('coSize').innerHTML = coSize;
 			
 			document.getElementById('result').innerHTML = output;
 
@@ -104,12 +111,7 @@
 			
 			var co = decodeHexContentObject(input);
 			
-			if(LOG>3)console.log('CONTENT OBJECT DECODED');
-			if(LOG>3)console.log(co);
-
-			///////////////////////////////////////
-			
-			var output ="";
+var output ="";
 			
 			if(co==-1)
 				output+= "NO CONTENT FOUND"
@@ -138,6 +140,7 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
+				
 				if(co.Signature !=null && co.Signature.Signature!=null){
 					
 					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
@@ -147,6 +150,7 @@
 				}
 				if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
 					
+					output += "Publisher Public Key Digest:  " + co.SignedInfo.Publisher.PublisherPublicKeyDigest + "<br />";
 					output += "Publisher Public Key Digest(hex): "+ toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
 					
 					output+= "<br />";
@@ -169,6 +173,8 @@
 					
 					
 					var input = toString(co.rawSignatureData);
+					
+					if(LOG>2) console.log("Input: ", input, "; raw signature data: ", co.rawSignatureData);
 					 
 					
 					output += "DER Certificate: "+publickey ;
@@ -188,29 +194,33 @@
 					if(LOG>2) console.log(co.Signature.Signature);
 					
 					
-					var x509 = new X509();
+					/*var x509 = new X509();
 					
 					x509.readCertPEM(publickey);
 					
 					
 					//x509.readCertPEMWithoutRSAInit(publickey);
 
-					var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
-					console.log('result is '+result);
-					/*var rsakey = new RSAKey();
+					var result = x509.subjectPublicKeyRSA.verifyString(input, signature);*/
+					//console.log('result is '+result);
 					
-					var kp = publickeyHex.slice(56,314);
+					
+					//var kp = publickeyHex.slice(56,314);
+					var kp = publickeyHex.slice(336,594)
+// 					var kp = '00bd9565559c1795c049a5ef4dc9d1bc8b981b66097ea253f5d0f50f1a1df908ac4e69a797dadd2c0590944a6e849e1fbb7371c53dfddbe7802656e1d5f449b8530d9c7da8d6abebd90e06124d927f2f6c5721f1d0e49e7f6a1167caf960d96ff5afaa2d2567337772a944c8e6ceb859b25a231d9eca873574ff98225c853f38ef';
 					
 					output += "PUBLISHER KEY(hex): "+kp ;
 					
 					output+= "<br />";
 					output+= "<br />";
 					
-					console.log('kp is '+kp);
+					if(LOG>3) console.log('kp is '+kp);
 					
-					var exp = publickeyHex.slice(318,324);
+					//var exp = publickeyHex.slice(318,324);
+					var exp = publickeyHex.slice(598,604);
+// 					var exp = '5e8e57d7661e014bc1afe87644d5be1365cf2c8a49c5ced888dae1286690a1f9c6b63da7a8baad4d2d3a39117c459d9011d949c64c8a54a17efdd06fb502dbd27c27d89a6d984eddc7c41a20178ad3cf6998c82d4ca576c6e34b47d1e49d39e7f4ddb31371e2af7bf2f6ef21bf79a82132035e756b6e2ab44d4d8521dd0bb461';
 					
-					console.log('kp size is '+kp.length );
+					if(LOG>3) console.log('kp size is '+kp.length );
 					output += "exponent: "+exp ;
 					
 					output+= "<br />";
@@ -218,10 +228,21 @@
 					
 					console.log('exp is '+exp);
 					
-					
+					var rsakey = new RSAKey();
 					rsakey.setPublic(kp,exp);
-
-				    var result = rsakey.verifyString(input, signature);*/
+				    var result = rsakey.verifyString(input, signature);
+				    
+				    var inputBis = toHex(co.Name).concat(toHex(co.SignedInfo), toHex(co.Content));
+				    
+// 				    if(LOG>0){
+// 				    	console.log("Input: ", input);
+// 				    	console.log("Input bis: ", inputBis);
+// 				    	console.log("Verify input bis: ", rsakey.verifyString(inputBis, signature));
+// 				    }
+				    
+				    //var x509 = new X509();
+				    //x509.readCertPEM(publickey);
+				    //if(LOG>0) console.log("x509 verif: ", x509.subjectPublicKeyRSA.verifyString(input, signature));
 					
 					if(result)
 						output += 'SIGNATURE VALID';
@@ -243,6 +264,8 @@
 			
 			document.getElementById('result').innerHTML = output;
 			
+			return input;
+			
 		}
 
 	</script>
@@ -257,15 +280,22 @@
 		
 		Please Enter the Content:<br />
 		
-		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea> 
+		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea>
+		
+		
 		
 	</form>
-	<button onclick="encode()">Encode</button>
-	<button onclick="decode()">Decode</button>
-	
-	
+	<div>
+		<button onclick="encode()">Encode</button>
+		<button onclick="decode()">Decode</button>
+	</div>
+		<div>
+			<p>Size: <span id="coSize"></span></p>
+			
+			<p id="result"></p>
+			
+		</div> 
 
-		<p id="result"></p>
 
 </body>
 </html>
