@@ -80,6 +80,7 @@
 	var count = 0;
 	var end = false;
 	var LOG = 0;
+	var pieceSize = 1000;
 
 	
 	function getPiece(){
@@ -90,8 +91,8 @@
 
 		if(co){
 			 loadedImageString += DataUtils.toString(co.Content);
-			count++;
-			if(co.Content.length == 500){
+			 console.log("Received length: " + co.Content.length);
+			if(co.Content.length == pieceSize){
 				pieceNumber += co.Content.length;
 				getPiece();
 			}
