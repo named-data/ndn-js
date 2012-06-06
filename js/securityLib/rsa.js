@@ -24,7 +24,11 @@ function byte2Hex(b) {
     return b.toString(16);
 }
 
-// PKCS#1 (type 2, random) pad input string s to n bytes, and return a bigint
+/**
+ * PKCS#1 (type 2, random) pad input string s to n bytes, and return a bigint
+ * @param s: the string to encode
+ * @param n: the size in byte
+ */ 
 function pkcs1pad2(s,n) {
   if(n < s.length + 11) { // TODO: fix for utf-8
     alert("Message too long for RSA");
