@@ -32,8 +32,6 @@ function java_socket_bridge_ready(){
 	
 }
 
-
-
 // Send Test Interest
 function get(host,port,data){
 	if(java_socket_bridge_ready_flag){
@@ -46,10 +44,10 @@ function get(host,port,data){
 
 
 // Send Test Interest
-function put(host,port,data,name){
+function put(host,port,data,name,toReturn){
 	
 	if(java_socket_bridge_ready_flag){ 
-		return get_java_socket_bridge().put(host,port,data,name);
+		return get_java_socket_bridge().put(host,port,data,name,toReturn);
 	}
 	else{
 		on_socket_error("Java Socket Bridge send Interest until the applet has loaded");

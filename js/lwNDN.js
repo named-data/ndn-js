@@ -68,7 +68,6 @@ lwNDN.prototype.get = function(message){
 lwNDN.prototype.put = function(name,content){
 	if(this.host!=null && this.port!=null){
 		
-
 		name = name.trim();
 		
 		var fe = new ForwardingEntry('selfreg',new ContentName(name),null, null, 3,2147483647);
@@ -86,7 +85,7 @@ lwNDN.prototype.put = function(name,content){
 		
 		var ccnxnodename = unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F');
 		
-		var interestName = new ContentName(['ccnx',ccnxnodename,'prefixreg',coBinary]);
+		var interestName = new ContentName(['ccnx',ccnxnodename,'selfreg',coBinary]);
 
 		int = new Interest(interestName);
 		int.Scope = 1;
@@ -97,13 +96,44 @@ lwNDN.prototype.put = function(name,content){
 		
 		console.log(hex);
 		
-		var result = put(this.host,this.port, hex,name);
+		//var result = put(this.host,this.port, hex,name);
 
-		return result;
+		
+	//if(LOG>3)console.log('received interest'); //from host'+ host +':'+port+' with name '+name);
+	
+	//if(LOG>3)console.log('DATA ');
+	
+	//if(LOG>3)console.log(result);
+	
+	//interest = decodeHexInterest(result);
+	
+	//console.log('SUCCESSFULLY PARSED INTEREST');
+	
+	console.log('CREATING ANSWER');
+	var si = new SignedInfo();
+	si.setFields();
+	
+	var answer = DataUtils.toNumbersFromString(content);
 
+	var co = new ContentObject(new ContentName(name),si,answer,new Signature()); 
+	co.sign();
+	
+	
+	var outputHex = encodeToHexContentObject(co);
+	
+	//console.log('SENDING ANSWER');
+
+	//return get_java_socket_bridge().putAnswer(outputHex,name);
+
+
+	var result = put(this.host,this.port, hex,name,outputHex);
+
+
+	return result;
 	}
 	else{
 
+		
 		console.log('ERROR URL OR PORT NOT SET');
 
 		return null;
