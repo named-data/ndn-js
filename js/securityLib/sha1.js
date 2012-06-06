@@ -14,7 +14,7 @@
 var hexcase = 0;  /* hex output format. 0 - lowercase; 1 - uppercase        */
 var b64pad  = ""; /* base-64 pad character. "=" for strict RFC compliance   */
 
-/*
+/**
  * These are the functions you'll usually want to call
  * They take string arguments and return either hex or base-64 encoded strings
  */
@@ -28,7 +28,7 @@ function b64_hmac_sha1(k, d)
 function any_hmac_sha1(k, d, e)
   { return rstr2any(rstr_hmac_sha1(str2rstr_utf8(k), str2rstr_utf8(d)), e); }
 
-/*
+/**
  * Perform a simple self-test to see if the VM is working
  */
 function sha1_vm_test()
@@ -36,7 +36,7 @@ function sha1_vm_test()
   return hex_sha1("abc").toLowerCase() == "a9993e364706816aba3e25717850c26c9cd0d89d";
 }
 
-/*
+/**
  * Calculate the SHA1 of a raw string
  */
 function rstr_sha1(s)
@@ -44,7 +44,7 @@ function rstr_sha1(s)
   return binb2rstr(binb_sha1(rstr2binb(s), s.length * 8));
 }
 
-/*
+/**
  * Calculate the HMAC-SHA1 of a key and some data (raw strings)
  */
 function rstr_hmac_sha1(key, data)
@@ -63,7 +63,7 @@ function rstr_hmac_sha1(key, data)
   return binb2rstr(binb_sha1(opad.concat(hash), 512 + 160));
 }
 
-/*
+/**
  * Convert a raw string to a hex string
  */
 function rstr2hex(input)
@@ -81,7 +81,7 @@ function rstr2hex(input)
   return output;
 }
 
-/*
+/**
  * Convert a raw string to a base-64 string
  */
 function rstr2b64(input)
@@ -104,7 +104,7 @@ function rstr2b64(input)
   return output;
 }
 
-/*
+/**
  * Convert a raw string to an arbitrary string encoding
  */
 function rstr2any(input, encoding)
@@ -149,14 +149,14 @@ function rstr2any(input, encoding)
 
   /* Append leading zero equivalents */
   var full_length = Math.ceil(input.length * 8 /
-                                    (Math.log(encoding.length) / Math.log(2)))
+                                    (Math.log(encoding.length) / Math.log(2)));
   for(i = output.length; i < full_length; i++)
     output = encoding[0] + output;
 
   return output;
 }
 
-/*
+/**
  * Encode a string as utf-8.
  * For efficiency, this assumes the input is valid utf-16.
  */
@@ -196,7 +196,7 @@ function str2rstr_utf8(input)
   return output;
 }
 
-/*
+/**
  * Encode a string as utf-16
  */
 function str2rstr_utf16le(input)
@@ -217,7 +217,7 @@ function str2rstr_utf16be(input)
   return output;
 }
 
-/*
+/**
  * Convert a raw string to an array of big-endian words
  * Characters >255 have their high-byte silently ignored.
  */
@@ -231,7 +231,7 @@ function rstr2binb(input)
   return output;
 }
 
-/*
+/**
  * Convert an array of big-endian words to a string
  */
 function binb2rstr(input)
@@ -242,7 +242,7 @@ function binb2rstr(input)
   return output;
 }
 
-/*
+/**
  * Calculate the SHA-1 of an array of big-endian words, and a bit length
  */
 function binb_sha1(x, len)
@@ -289,7 +289,7 @@ function binb_sha1(x, len)
 
 }
 
-/*
+/**
  * Perform the appropriate triplet combination function for the current
  * iteration
  */
@@ -301,7 +301,7 @@ function sha1_ft(t, b, c, d)
   return b ^ c ^ d;
 }
 
-/*
+/**
  * Determine the appropriate additive constant for the current iteration
  */
 function sha1_kt(t)
@@ -310,7 +310,7 @@ function sha1_kt(t)
          (t < 60) ? -1894007588 : -899497514;
 }
 
-/*
+/**
  * Add integers, wrapping at 2^32. This uses 16-bit operations internally
  * to work around bugs in some JS interpreters.
  */
@@ -321,7 +321,7 @@ function safe_add(x, y)
   return (msw << 16) | (lsw & 0xFFFF);
 }
 
-/*
+/**
  * Bitwise rotate a 32-bit number to the left.
  */
 function bit_rol(num, cnt)

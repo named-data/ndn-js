@@ -4,7 +4,7 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Publish</title>
+	<title>Test Connect </title>
 	<script type="text/javascript" src="java_socket_bridge.js"></script>
 	
 	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
@@ -38,8 +38,9 @@
 	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
 	
 	<script type="text/javascript" src="FaceInstance.js"></script>
-
+	
 	<script type="text/javascript" src="ForwardingEntry.js"></script>
+	
 	
 	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
 	
@@ -48,11 +49,6 @@
 	<script type="text/javascript" src="encoding/BinaryXMLDecoder.js"></script>
 	
 	<script type="text/javascript" src="encoding/DataUtils.js"></script>
-	
-	<script type="text/javascript" src="encoding/EncodingUtils.js"></script>
-	
-	<script type="text/javascript" src="lwNDN.js"></script>
-	
 	
 	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
 	
@@ -72,104 +68,50 @@
 	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
-	
-	
+
 	<script type="text/javascript">
-		function run(){
 
-			var ContentName = document.getElementById('contentname').value;
+		function getAction(){
+			console.log('ABOUT TO GET');
+
+
+			var received = get('127.0.0.1',9695,'01d2f2fafdc12e4d2e532e6c6f63616c686f737400fabdc12e4d2e53525600faa563636e6400fa9d4b4559000002d28e310000');	
+
+			output= '<br /> received Content '+received;
+			
+			console.log('INTEREST RECEIVED '+ received);
+			
+			document.getElementById('result').innerHTML = output;
 		
-			var Content = document.getElementById('content').value;
-			
-			//createRoute('borges.metwi.ucla.edu', 9695);
-			
-
-			
-			
-			///////////////////////////////////////
-		    //createRoute('localhost', 9695);
-
-		    //createRoute('131.179.141.15', 9695);
-		    //createRoute('borges.metwi.ucla.edu', 9695);
-		    
-			//content object
-			//var co = queryPrefix( ContentName );
-			
-			var connector = new lwNDN('127.0.0.1', 9695);
-		    
-			var co = connector.put( ContentName, Content );
-			
-			///////////////////////////////////////
-			
-			/*var output ="";
-			
-			if(co==-1)
-				output+= "NO CONTENT FOUND"
-			else if (co==-2)
-				output+= "CONTENT NAME IS EMPTY"
-			else{
-				if(co.Name!=null && co.Name.Components!=null){
-					output+= "NAME: ";
-					
-					for(var i=0;i<co.Name.Components.length;i++){
-						output+= "/"+ toString(co.Name.Components[i]);
-					}
-					output+= "<br />";
-					output+= "<br />";
-				}
-	
-				if(co.Content !=null){
-					output += "CONTENT(ASCII): "+ toString(co.Content);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.Content !=null){
-					output += "CONTENT(hex): "+ toHex(co.Content);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.Signature !=null && co.Signature.Signature!=null){
-					
-					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.Key!=null){
-					
-					output += "PUBLISHER KEY: "+ toHex(co.SignedInfo.Locator.Key);
-					
-					output+= "<br />";
-					output+= "<br />";
-	
-				}
-			}*/
-			
-			//document.getElementById('result').innerHTML = output;
-			document.getElementById('result').innerHTML = 'Content \'' + Content + '\' was published with content name \'' + ContentName +'\'';
-
 		}
-	
+
+
+		function putAction(){
+			console.log('ABOUT TO PUT');
+
+			//var received = DataUtils.toString( DataUtils.toNumbers(send_test_interest()));
+			
+			var received = put('127.0.0.1',9695,'01d2f2faa563636e7800fa0285e0a01e093968f9740ce7f4361babf5bb05a4e55aaca5e58f73eddeb8e013aa8f00fabd73656c6672656700fa1bf5048202aa03b208854a18988c72aee624da28e2e1acbccb209b8e89429041985521ed68f95a1c546872fba3d854b1377dc249b6d8ec5935e5069256c97a7f6d8a62e86222ccd2cfe5097aed3fe5ede6732ce191a8680d78e39d0c5058a2b7bb0f0687994e9f045de346b66c46498547a08da1f2f0cdfafba3afdfe7107931935ede79040137ba94a90000f20001a203e202851a4860caa4991e829bcdc9429fb711d52440968d23560726606050bf147acffc0002bab504fcb3f03aa40001e201da0a9530819f300d06092a864886f70d010101050003818d00308189028181008ed27580e3d1c4c67672208665133a1ba12d8ebf5cad8e054571926b3ff0782a04c71703384021a6cefb6616b66cbd8a679b761d69d6373a851546e26f7105510b4c23be9a3c7f2e652e100ecc1471855730659f1477ce4e8504ad1fd8f44116baaeae2ff67eec33abba790157a79bf5039e5a528a471d9d67c94e70117ed7490203010001000000019a0585058a04cabe73656c6672656700f2faad726f63636f000003e20285e0a01e093968f9740ce7f4361babf5bb05a4e55aaca5e58f73eddeb8e013aa8f0004fa8e330003d2d63231343734383336343700000000000002d28e310000');	
+
+			output= '<br /> received Content '+received;
+						
+			document.getElementById('result').innerHTML = output;
+		
+		}
+		
+
 		</script>
 	
 </head>
 <body >
+	
 	<form>
-
-		Please Enter a Content Name:<br />
-		
-		<input id="contentname" type="text" name="CONTENTNAME" value="/meki" /> 
-		
-		Please Enter the Content:<br />
-		
-		<textarea id="content" cols="40" rows="5" name="CONTENT" value="cherkaoui"  >cherkaoui</textarea> 
-		
-		<br />
-		
+		Press Buttons:<br /><!--  input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /--> <br />
 	</form>
-	<button onclick="run()">Publish</button>
+	
+	<button onclick="putAction()">PUT!</button>
+	<button onclick="getAction()">GET!</button>
+
 	<div >
 		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
 		</applet>

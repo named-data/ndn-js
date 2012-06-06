@@ -57,7 +57,9 @@ function RSASetPrivateEx(N,E,D,P,Q,DP,DQ,C) {
     alert("Invalid RSA private key");
 }
 
-// Generate a new random private key B bits long, using public expt E
+/**
+ * Generate a new random private key B bits long, using public expt E
+ */
 function RSAGenerate(B,E) {
   var rng = new SecureRandom();
   var qs = B>>1;
@@ -91,7 +93,10 @@ function RSAGenerate(B,E) {
   }
 }
 
-// Perform raw private operation on "x": return x^d (mod n)
+/**
+ * Perform raw private operation on "x": return x^d (mod n)
+ * @return x^d (mod n)
+ */ 
 function RSADoPrivate(x) {
   if(this.p == null || this.q == null)
     return x.modPow(this.d, this.n);

@@ -71,7 +71,7 @@ PublisherID.prototype.encode = function(encoder) {
 	encoder.writeElement(this.getElementLabel(), this.PublisherID);
 };
 	
-var peek = function(
+PublisherID.peek = function(
 	//XMLDecoder 
 		decoder) {
 

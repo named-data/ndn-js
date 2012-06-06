@@ -56,6 +56,10 @@ _RSASIGN_HASHHEXFUNC['sha512'] =    function(s){return hex_sha512(s);} // http:/
 _RSASIGN_HASHHEXFUNC['md5'] =       function(s){return hex_md5(s);};   // http://pajhome.org.uk/crypt/md5/md5.html
 _RSASIGN_HASHHEXFUNC['ripemd160'] = function(s){return hex_rmd160(s);};   // http://pajhome.org.uk/crypt/md5/md5.html
 
+//@author axelcdv
+var _RSASIGN_HASHBYTEFUNC = [];
+_RSASIGN_HASHBYTEFUNC['sha256'] = 	function(byteArray){return hex_sha256_from_bytes(byteArray);};
+
 //_RSASIGN_HASHHEXFUNC['sha1'] =   function(s){return sha1.hex(s);}   // http://user1.matsumoto.ne.jp/~goma/js/hash.html
 //_RSASIGN_HASHHEXFUNC['sha256'] = function(s){return sha256.hex;}    // http://user1.matsumoto.ne.jp/~goma/js/hash.html
 
@@ -100,6 +104,29 @@ function _rsasign_getHexPaddedDigestInfoForStringHEX(s, keySize, hashAlg) {
   return sPaddedMessageHex;
 }
 
+/**
+ * Apply padding, then computes the hash of the given byte array, according to the key size and with the hash algorithm
+ * @param byteArray (byte[])
+ * @param keySize (int)
+ * @param hashAlg the hash algorithm to apply (string)
+ * @return the hash of byteArray
+ */
+function _rsasign_getHexPaddedDigestInfoForByteArray(byteArray, keySize, hashAlg){
+	var pmStrLen = keySize / 4;
+	var hashFunc = _RSASIGN_HASHBYTEFUNC[hashAlg];
+	var sHashHex = hashFunc(byteArray); //returns hex hash
+	
+	var sHead = "0001";
+	  var sTail = "00" + _RSASIGN_DIHEAD[hashAlg] + sHashHex;
+	  var sMid = "";
+	  var fLen = pmStrLen - sHead.length - sTail.length;
+	  for (var i = 0; i < fLen; i += 2) {
+	    sMid += "ff";
+	  }
+	  sPaddedMessageHex = sHead + sMid + sTail;
+	  return sPaddedMessageHex;
+}
+
 function _zeroPaddingOfSignature(hex, bitLength) {
   var s = "";
   var nZero = bitLength / 4 - hex.length;
@@ -135,6 +162,34 @@ function _rsasign_signStringHEX(s, hashAlg) {
   var biSign = this.doPrivate(biPaddedMessage);
   var hexSign = biSign.toString(16);
   return _zeroPaddingOfSignature(hexSign, this.n.bitLength());
+}
+
+
+/**
+ * Sign a message byteArray with an RSA private key
+ * @name signByteArray
+ * @memberOf RSAKey#
+ * @function
+ * @param {byte[]} byteArray
+ * @param {Sring} hashAlg the hash algorithm to apply
+ * @param {RSAKey} rsa key to sign with: hack because the context is lost here
+ * @return hexadecimal string of signature value
+ */
+function _rsasign_signByteArray(byteArray, hashAlg, rsaKey) {
+	var hPM = _rsasign_getHexPaddedDigestInfoForByteArray(byteArray, rsaKey.n.bitLength(), hashAlg); ///hack because the context is lost here
+	var biPaddedMessage = parseBigInt(hPM, 16);
+	var biSign = rsaKey.doPrivate(biPaddedMessage); //hack because the context is lost here
+	var hexSign = biSign.toString(16);
+	return _zeroPaddingOfSignature(hexSign, rsaKey.n.bitLength()); //hack because the context is lost here
+}
+
+/**
+ * Sign a byte array with the Sha-256 algorithm
+ * @param {byte[]} byteArray
+ * @return hexadecimal string of signature value
+ */
+function _rsasign_signByteArrayWithSHA256(byteArray){
+	return _rsasign_signByteArray(byteArray, 'sha256', this); //Hack because the context is lost in the next function
 }
 
 
@@ -225,7 +280,41 @@ function _rsasign_verifyString(sMsg, hSig) {
   return (diHashValue == msgHashValue);
 }
 
+/**
+ * verifies a sigature for a message byte array with RSA public key.<br/>
+ * @name verifyByteArray
+ * @memberOf RSAKey#
+ * @function
+ * @param {byte[]} byteArray message byte array to be verified.
+ * @param {String} hSig hexadecimal string of signature.<br/>
+ *                 non-hexadecimal charactors including new lines will be ignored.
+ * @return returns 1 if valid, otherwise 0 
+ */
+function _rsasign_verifyByteArray(byteArray, hSig) {
+	hSig = hSig.replace(_RE_HEXDECONLY, '');
+	  
+	  if(LOG>3)console.log('n is '+this.n);
+	  if(LOG>3)console.log('e is '+this.e);
+	  
+	  if (hSig.length != this.n.bitLength() / 4) return 0;
+	  hSig = hSig.replace(/[ \n]+/g, "");
+	  var biSig = parseBigInt(hSig, 16);
+	  var biDecryptedSig = this.doPublic(biSig);
+	  var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
+	  var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
+	  
+	  if (digestInfoAry.length == 0) return false;
+	  var algName = digestInfoAry[0];
+	  var diHashValue = digestInfoAry[1];
+	  var ff = _RSASIGN_HASHBYTEFUNC[algName];
+	  var msgHashValue = ff(byteArray);
+	  return (diHashValue == msgHashValue);
+}
+
 RSAKey.prototype.signString = _rsasign_signString;
+
+RSAKey.prototype.signByteArray = _rsasign_signByteArray; //@author axelcdv
+RSAKey.prototype.signByteArrayWithSHA256 = _rsasign_signByteArrayWithSHA256; //@author axelcdv
 
 RSAKey.prototype.signStringWithSHA1 = _rsasign_signStringWithSHA1;
 RSAKey.prototype.signStringWithSHA256 = _rsasign_signStringWithSHA256;
@@ -242,7 +331,7 @@ RSAKey.prototype.signWithSHA1HEX = _rsasign_signStringWithSHA1HEX;
 RSAKey.prototype.signWithSHA256HEX = _rsasign_signStringWithSHA256HEX;
 */
 
-
+RSAKey.prototype.verifyByteArray = _rsasign_verifyByteArray;
 RSAKey.prototype.verifyString = _rsasign_verifyString;
 RSAKey.prototype.verifyHexSignatureForMessage = _rsasign_verifyHexSignatureForMessage;
 RSAKey.prototype.verify = _rsasign_verifyString;

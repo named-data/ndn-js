@@ -20,6 +20,15 @@ var b64pad  = ""; /* base-64 pad character. "=" for strict RFC compliance   */
  * They take string arguments and return either hex or base-64 encoded strings
  */
 
+//@author axelcdv
+/**
+ * Computes the Sha-256 hash of the given byte array
+ * @param {byte[]} 
+ * @return the hex string corresponding to the Sha-256 hash of the byte array
+ */
+function hex_sha256_from_bytes(byteArray){
+	return rstr2hex(binb2rstr(binb_sha256( byteArray2binb(byteArray), byteArray.length * 8)));
+}
 
 function hex_sha256(s)    { return rstr2hex(rstr_sha256(str2rstr_utf8(s))); }
 function b64_sha256(s)    { return rstr2b64(rstr_sha256(str2rstr_utf8(s))); }
@@ -53,15 +62,16 @@ function sha256_vm_test()
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 }
 
-/*
+/**
  * Calculate the sha256 of a raw string
+ * @param s: the raw string
  */
 function rstr_sha256(s)
 {
   return binb2rstr(binb_sha256(rstr2binb(s), s.length * 8));
 }
 
-/*
+/**
  * Calculate the HMAC-sha256 of a key and some data (raw strings)
  */
 function rstr_hmac_sha256(key, data)
@@ -80,7 +90,7 @@ function rstr_hmac_sha256(key, data)
   return binb2rstr(binb_sha256(opad.concat(hash), 512 + 256));
 }
 
-/*
+/**
  * Convert a raw string to a hex string
  */
 function rstr2hex(input)
@@ -234,7 +244,7 @@ function str2rstr_utf16be(input)
   return output;
 }
 
-/*
+/**
  * Convert a raw string to an array of big-endian words
  * Characters >255 have their high-byte silently ignored.
  */
@@ -247,6 +257,22 @@ function rstr2binb(input)
   for(var i = 0; i < input.length * 8; i += 8)
     output[i>>5] |= (input.charCodeAt(i / 8) & 0xFF) << (24 - i % 32);
   return output;
+}
+
+/**
+ * @author axelcdv
+ * Convert a byte array to an array of big-endian words
+ * @param {byte[]} input
+ * @return the array of big-endian words
+ */
+function byteArray2binb(input){
+	console.log("Byte array coming is " + input);
+	var output = Array(input.length >> 2);
+	  for(var i = 0; i < output.length; i++)
+	    output[i] = 0;
+	  for(var i = 0; i < input.length * 8; i += 8)
+	    output[i>>5] |= (input[i / 8] & 0xFF) << (24 - i % 32);
+	  return output;
 }
 
 /*

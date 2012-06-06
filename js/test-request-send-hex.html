@@ -1,0 +1,304 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>NDN Send Hex</title>
+	<script type="text/javascript" src="java_socket_bridge.js"></script>
+	
+	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
+	
+	<script type="text/javascript" src="CCNTime.js"></script>
+	
+	<script type="text/javascript" src="ContentName.js"></script>
+	
+	<script type="text/javascript" src="ContentObject.js"></script>
+	
+	<script type="text/javascript" src="DateFormat.js"></script>
+	
+	<script type="text/javascript" src="Exclude.js"></script>
+
+	<script type="text/javascript" src="ExcludeAny.js"></script>
+
+	<script type="text/javascript" src="ExcludeComponent.js"></script>
+
+	<script type="text/javascript" src="Interest.js"></script>
+	
+	<script type="text/javascript" src="KeyLocator.js"></script>
+	
+	<script type="text/javascript" src="KeyName.js"></script>
+
+	<script type="text/javascript" src="PublisherID.js"></script>
+	
+	<script type="text/javascript" src="Signature.js"></script>
+	
+	<script type="text/javascript" src="SignedInfo.js"></script>
+	
+	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
+	
+	<script type="text/javascript" src="FaceInstance.js"></script>
+	
+	<script type="text/javascript" src="ForwardingEntry.js"></script>
+	
+	
+	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLCodec.js"></script>
+	
+	<script type="text/javascript" src="encoding/BinaryXMLDecoder.js"></script>
+	
+	<script type="text/javascript" src="encoding/DataUtils.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
+
+	<script type="text/javascript">
+		function run(){
+			//console.log(unescape('%04%82%02%AA%03%B2%08%85H%8EY%0C%94p%F1-%C5%E2%23lW%19%8B%0D%25%81%8D%DEBeNX%BA%0D%D0%10W%7D%BA%9F%C6%8C%2AU%BC%B8%BA%5E%F3%D1l%CDmJ%EE%C4%9D%21%0F%0Djhm%1Ah%86P%D91x%26%AC%B8%8Co%C1%CF%29.l6Mc%B4%DC%C8%D4%86%97%8F%D2%1A%7C%A2%ED%93%89%F3%E9%9D%3C%E0%D4%90%28%D4%11%A2%5D%08%EB%A4%AF%96j%15%A5s%C8%D2Jr%96q%0F%87%7F%D5%D7%B3%D3T%96%F3%16L%00%00%F2%00%01%A2%03%E2%02%85%20Ht%04Z%9F%AC%98%EB%B7%DF%AD%C4%BB%D1%AB%15%A6%E4%06SI%C6%C8%3A%84%60%84N%AB1%85%00%02%BA%B5%04%FA%C3%F9%D7%97%00%01%E2%01%DA%0A%950%81%9F0%0D%06%09%2A%86H%86%F7%0D%01%01%01%05%00%03%81%8D%000%81%89%02%81%81%00%BD%95eU%9C%17%95%C0I%A5%EFM%C9%D1%BC%8B%98%1Bf%09~%A2S%F5%D0%F5%0F%1A%1D%F9%08%ACNi%A7%97%DA%DD%2C%05%90%94Jn%84%9E%1F%BBsq%C5%3D%FD%DB%E7%80%26V%E1%D5%F4I%B8S%0D%9C%7D%A8%D6%AB%EB%D9%0E%06%12M%92%7F%2FlW%21%F1%D0%E4%9E%7Fj%11g%CA%F9%60%D9o%F5%AF%AA-%25g3wr%A9D%C8%E6%CE%B8Y%B2Z%23%1D%9E%CA%875t%FF%98%22%5C%85%3F8%EF%02%03%01%00%01%00%00%00%01%9A%06%8D%05%82%04%CA%BEnewface%00%03%E2%02%85%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F%00%04%D2%8E0%00%04%DA%9617%00%04%E2%CE127.0.0.1%00%04%EA%A69695%00%03%D2%D62147483647%00%00%00%00'));
+			
+			//var a = escape('%04%82%02%AA%03%B2%08%85L%90%D5X%2C%B06wHi%C5%E2%1C%03%D2M%5DB%BF%A5%8C%C8%E8g%99%EB%A7%84%25l%8EB%92%3E%AA%D8%F6%85t%FF%BB%CE%3D%B1%F4%F8%27%A7%1D.%B0%EEU%A6%06%AB%CD%1F3%C6W%93%A9%10X%28-7%7CW%D4%E4%8A3%CF%2B%E4%95%D6%B2%1D%3B%7C%E8%7C%88%7D%7B%F5%80%BC%F7%28%3A%FC%F5w%5B%8C%24%0E%0A%24%DBk%9B%8D%B5%28d%D0A%1E%BEq%0F%0Cc%DB%15%B6%26%1B%E7%E3%E3XL%00%00%F2%00%01%A2%03%E2%02%85%20Ht%04Z%9F%AC%98%EB%B7%DF%AD%C4%BB%D1%AB%15%A6%E4%06SI%C6%C8%3A%84%60%84N%AB1%85%00%02%BA%B5%04%FA%C4%C7%D3I%00%01%E2%01%DA%0A%950%81%9F0%0D%06%09%2A%86H%86%F7%0D%01%01%01%05%00%03%81%8D%000%81%89%02%81%81%00%BD%95eU%9C%17%95%C0I%A5%EFM%C9%D1%BC%8B%98%1Bf%09~%A2S%F5%D0%F5%0F%1A%1D%F9%08%ACNi%A7%97%DA%DD%2C%05%90%94Jn%84%9E%1F%BBsq%C5%3D%FD%DB%E7%80%26V%E1%D5%F4I%B8S%0D%9C%7D%A8%D6%AB%EB%D9%0E%06%12M%92%7F%2FlW%21%F1%D0%E4%9E%7Fj%11g%CA%F9%60%D9o%F5%AF%AA-%25g3wr%A9D%C8%E6%CE%B8Y%B2Z%23%1D%9E%CA%875t%FF%98%22%5C%85%3F8%EF%02%03%01%00%01%00%00%00%01%9A%06%8D%05%82%04%CA%BEnewface%00%03%E2%02%85%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F%00%04%D2%8E0%00%04%DA%9617%00%04%E2%CE127.0.0.1%00%04%EA%A69695%00%03%D2%D62147483647%00%00%00%00');
+			
+			//var n = a.replace("%","");
+			
+			//console.log(n);
+
+			var hex = document.getElementById('contentname').value;
+		
+			///////////////////////////////////////
+		    //createRoute(, 9695);
+			
+			
+			///  /ndn/ucla.edu/apps/hydra/mainvideo
+		    //createRoute('131.179.141.15', 9695);
+		    //createRoute('borges.metwi.ucla.edu', 9695);
+		    
+			//content object
+			//var co = queryPrefix( ContentName );
+			console.log('HEX IS');
+			console.log(hex);
+			
+		    var result = get_java_socket_bridge().connectAndStart('localhost',9695,hex);
+			
+			console.log('BINARY RESPONSE IS ' +result);
+			
+			var output ="";
+			output += "HEX ANSWER IS: "+ result;
+			
+			output+= "<br />";
+			output+= "<br />";
+
+			//result[0] and result[1] should be 0 and 4 if there is a content object found
+			if(result==null || result==undefined || result =="" ){
+				
+				
+				if(LOG>2)console.log('INVALID ANSWER');
+				output += "NO CONTENT FOUND";
+				
+				output+= "<br />";
+				output+= "<br />";
+			}
+			
+			else if(result[0] != '0'||result[1]!='4') {
+				if(LOG>2)console.log('INVALID ANSWER');
+				output += "INVALID ANSWER";
+				
+				output+= "<br />";
+				output+= "<br />";
+			}
+			else{
+				
+				var numbers = DataUtils.toNumbers(result);
+				
+				console.log('HEX RESPONSE IS \n'+numbers);
+				decoder = new BinaryXMLDecoder(numbers);
+				
+				
+				co = new ContentObject();
+	        
+				co.decode(decoder);
+
+				if(LOG>2) console.log(co);
+			
+				///////////////////////////////////////
+				
+				
+				if(co==-1)
+					output+= "NO CONTENT FOUND"
+				else if (co==-2)
+					output+= "CONTENT NAME IS EMPTY"
+				else{
+					if(co.Name!=null && co.Name.Components!=null){
+						output+= "NAME: ";
+						
+						for(var i=0;i<co.Name.Components.length;i++){
+							output+= "/"+  DataUtils.toString(co.Name.Components[i]);
+						}
+						output+= "<br />";
+						output+= "<br />";
+					}
+		
+					if(co.Content !=null){
+						output += "CONTENT(ASCII): "+  DataUtils.toString(co.Content);
+						
+						output+= "<br />";
+						output+= "<br />";
+					}
+					if(co.Content !=null){
+						output += "CONTENT(hex): "+  DataUtils.toHex(co.Content);
+						
+						output+= "<br />";
+						output+= "<br />";
+					}
+					
+					if(co.Signature !=null && co.Signature.Signature!=null){
+						
+						output += "SIGNATURE(hex): "+  DataUtils.toHex(co.Signature.Signature);
+						
+						output+= "<br />";
+						output+= "<br />";
+					}
+					if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
+						
+						output += "Publisher Public Key Digest(hex): "+ toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
+						
+						output+= "<br />";
+						output+= "<br />";
+					}
+					if(co.SignedInfo !=null && co.SignedInfo.Timestamp!=null){
+						
+						output += "TimeStamp(hex): "+ co.SignedInfo.Timestamp.date;
+						
+						output+= "<br />";
+						output+= "<br />";
+					}
+					if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.PublicKey!=null){
+						
+						var publickey = rstr2b64(toString(co.SignedInfo.Locator.PublicKey));
+						var publickeyHex = toHex(co.SignedInfo.Locator.PublicKey).toLowerCase();
+						var publickeyString = toString(co.SignedInfo.Locator.PublicKey);
+						
+						var signature = toHex(co.Signature.Signature).toLowerCase();
+						
+						
+						var input = toString(co.rawSignatureData);
+						 
+						
+						output += "DER Certificate: "+publickey ;
+						
+						output+= "<br />";
+						output+= "<br />";
+						
+						
+	
+						if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
+						if(LOG>2) console.log(" PublicKey = "+publickey );
+						if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
+						if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
+						
+						if(LOG>2) console.log(" Signature "+signature );
+						
+						if(LOG>2) console.log(" Signature NOW IS" );
+						
+						if(LOG>2) console.log(co.Signature.Signature);
+						
+						
+						/*var x509 = new X509();
+						
+						x509.readCertPEM(publickey);
+						
+						
+						//x509.readCertPEMWithoutRSAInit(publickey);
+	
+						var result = x509.subjectPublicKeyRSA.verifyString(input, signature);*/
+						//console.log('result is '+result);
+						
+						
+						var kp = publickeyHex.slice(56,314);
+						
+						output += "PUBLISHER KEY(hex): "+kp ;
+						
+						output+= "<br />";
+						output+= "<br />";
+						
+						console.log('PUBLIC KEY IN HEX is ');
+						console.log(kp);
+	
+						var exp = publickeyHex.slice(318,324);
+						
+						console.log('kp size is '+kp.length );
+						output += "exponent: "+exp ;
+						
+						output+= "<br />";
+						output+= "<br />";
+						
+						console.log('EXPONENT is ');
+						console.log(exp);
+	
+						var rsakey = new RSAKey();
+						
+						rsakey.setPublic(kp,exp);
+						
+					    var result = rsakey.verifyString(input, signature);
+						
+					    console.log('PUBLIC KEY n after is ');
+						console.log(rsakey.n);
+	
+						console.log('EXPONENT e after is ');
+						console.log(rsakey.e);
+						
+						
+						if(result)
+							output += 'SIGNATURE VALID';
+						else
+							output += 'SIGNATURE INVALID';
+	
+							
+						
+						
+						//output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+						
+						output+= "<br />";
+						output+= "<br />";
+						
+						
+						//if(LOG>4) console.log('str'[1]);
+					}
+				}
+			}
+			document.getElementById('result').innerHTML = output;
+		}
+	
+		</script>
+	
+</head>
+<body >
+	<form>
+		Please Enter a Content Name:<br /><input id="contentname" type="text" name="CONTENTNAME" value="01D2F2FAA55041524300FA9D616263000000" /> <br />
+	</form>
+	<button onclick="run()">Request Data!</button>
+	<div >
+		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
+		</applet>
+	</div>
+
+		<p id="result"></p>
+
+</body>
+</html>

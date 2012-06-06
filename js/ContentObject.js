@@ -27,30 +27,40 @@ var ContentObject = function ContentObject(_Name,_SignedInfo,_Content,_Signature
 };
 
 ContentObject.prototype.sign = function(){
+
 	var n1 = this.encodeObject(this.Name);
 	var n2 = this.encodeObject(this.SignedInfo);
 	var n3 = this.encodeContent();
 	
 	var n = n1.concat(n2,n3);
+	
 	if(LOG>2)console.log('Signature Data is (binary) '+n);
 	
-	if(LOG>2)console.log('Signature Data is (RawString) '+ toString(n) );
-	if(LOG>2)console.log(toString(n) );
+	if(LOG>2)console.log('Signature Data is (RawString)');
 	
+	if(LOG>2)console.log( DataUtils.toString(n) );
+	
+	var sig = DataUtils.toString(n);
+
 	
 	var rsa = new RSAKey();
 			
 	rsa.readPrivateKeyFromPEMString(globalKeyManager.privateKey);
-			
-	var hSig = rsa.signString(toString(n), "sha256");
+	
+	//var hSig = rsa.signString(sig, "sha256");
 
+	var hSig = rsa.signByteArrayWithSHA256(n);
+
+	
 	if(LOG>2)console.log('SIGNATURE SAVED IS');
 	
 	if(LOG>2)console.log(hSig);
 	
-	if(LOG>2)console.log(toNumbers(hSig.trim()));
+	if(LOG>2)console.log(  DataUtils.toNumbers(hSig.trim()));
 
-	this.Signature.Signature = toNumbers(hSig.trim());
+	this.Signature.Signature = DataUtils.toNumbers(hSig.trim());
+	
+
 };
 
 ContentObject.prototype.encodeObject = function encodeObject(obj){
@@ -80,21 +90,17 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 ContentObject.prototype.saveRawData = function(bytes){
 	
 	var sigBits = bytes.slice(this.StartSIG, this.EndSIG );
-	
-	//var sigIngoPlusContentBits = bytes.slice(this.StartSignedInfo, this.EndContent );
-	
-	//var concat = sigBits.concat(sigIngoPlusContentBits);
-	
-	//this.rawSignatureData = concat;
 
 	this.rawSignatureData = sigBits;
 };
 
 ContentObject.prototype.decode = function(/*XMLDecoder*/ decoder) {
 
+	// TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
+
 		decoder.readStartElement(this.getElementLabel());
 
-		
+
 		if( decoder.peekStartElement(CCNProtocolDTags.Signature) ){
 			this.Signature = new Signature();
 			this.Signature.decode(decoder);

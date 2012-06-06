@@ -48,12 +48,10 @@ Signature.prototype.decode =function( decoder) {
 		
 		//FORCE TO READ A SIGNATURE
 
-		//if (decoder.peekStartElement(CCNProtocolDTags.SignatureBits)) {
 			//if(LOG>4)console.log('SIGNATURE FOUND ');
 			this.Signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);	
+			if(LOG>4)console.log('READ SIGNATURE ');
 
-		//}
-		
 		decoder.readEndElement();
 	
 };

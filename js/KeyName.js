@@ -22,7 +22,7 @@ KeyName.prototype.decode=function( decoder){
 	
 	if(LOG>4) console.log('KEY NAME FOUND: ');
 	
-	if ( peek(decoder) ) {
+	if ( PublisherID.peek(decoder) ) {
 		this.PublisherID = new PublisherID();
 		this.PublisherID.decode(decoder);
 	}

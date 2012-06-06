@@ -21,14 +21,20 @@
 	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.min.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.min.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.min.js"></script>
-
+<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
+	
 		
 	<script type="text/javascript">
 		function sign(){
 			
+			
+			var keyManager = new KeyManager();
+			
+			
+			
 			var input = document.getElementById('contentname').value;
 			
-			var  _PEM_PRIVATE_KEY_STRING_ = document.getElementById('privateKey').value;
+			var  _PEM_PRIVATE_KEY_STRING_ = keyManager.privateKey;//document.getElementById('privateKey').value;
 			
 			var rsa = new RSAKey();
 			
@@ -107,5 +113,8 @@
 
 		<p id="result"></p>
 
+		
+	
 </body>
+
 </html>

@@ -6,23 +6,15 @@
 
 var ContentName = function ContentName(_Components){
 
-
-	this.SCHEME = "ccnx:";
-
-	this.ORIGINAL_SCHEME = "ccn:";
-
-	this.SEPARATOR = "/";
-	this.ROOT = null;
-	
 	if( typeof _Components == 'string') {
 		
 		if(LOG>3)console.log('Content Name String '+_Components);
-		this.Components = createNameArray(_Components);
+		this.Components = ContentName.makeBlob(ContentName.createNameArray(_Components));
 	}
 	else if(typeof _Components === 'object' && _Components instanceof Array ){
 		
 		if(LOG>4)console.log('Content Name Array '+_Components);
-		this.Components = _Components;
+		this.Components = ContentName.makeBlob(_Components);
 
 	}
 	else if(_Components==null){
@@ -35,10 +27,37 @@ var ContentName = function ContentName(_Components){
 	}
 };
 
-function createNameArray(name){
+ContentName.prototype.getName=function(){
+	
+	var output = "";
+	
+	for(var i=0;i<this.Components.length;i++){
+		output+= "/"+ DataUtils.toString(this.Components[i]);
+	}
+	
+	return output;
+	
+};
 
-		
-	//message = decodeURIComponent(message);
+ContentName.makeBlob=function(name){
+	
+	var blobArrays = new Array(name.length);
+
+	for(var i=0;i<name.length;i++){
+		if(typeof name[i] == 'string')
+			blobArrays[i]= DataUtils.toNumbersFromString( name[i] );
+		else if(typeof name[i] == 'object')
+			blobArrays[i]= name[i] ;
+		else 
+			if(LOG>4)console.log('NAME COMPONENT INVALID');
+	}
+	
+	return blobArrays;
+};
+
+ContentName.createNameArray=function(name){
+
+
 	name = unescape(name);
 	
 	var array = name.split('/');

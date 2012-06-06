@@ -11,7 +11,6 @@ var KeyLocatorType = {
 
 var KeyLocator = function KeyLocator(_Input,_Type){ 
 
-
     this.Type=_Type;
     
     if (_Type==KeyLocatorType.NAME){
@@ -39,7 +38,7 @@ KeyLocator.prototype.decode = function(decoder) {
 				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
 
 				this.PublicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				
+				this.Type = 2;
 				
 
 				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.PublicKey);
@@ -67,7 +66,8 @@ KeyLocator.prototype.decode = function(decoder) {
 				
 
 				this.Certificate = encodedCert;
-				
+				this.Type = 3;
+
 				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.Certificate);
 				
 			} catch ( e) {
@@ -77,7 +77,8 @@ KeyLocator.prototype.decode = function(decoder) {
 				throw new Exception("Cannot parse certificate! ");
 			}
 		} else  {
-			
+			this.Type = 1;
+
 
 			this.KeyName = new KeyName();
 			this.KeyName.decode(decoder);
@@ -105,7 +106,7 @@ KeyLocator.prototype.decode = function(decoder) {
 		} else if (this.Type == KeyLocatorType.CERTIFICATE) {
 			
 			try {
-				encoder.writeElement(CCNProtocolDTags.Certificate, this.Certificate.getEncoded());
+				encoder.writeElement(CCNProtocolDTags.Certificate, this.Certificate);
 			} catch ( e) {
 				throw new Exception("CertificateEncodingException attempting to write key locator: " + e);
 			}

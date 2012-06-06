@@ -3,6 +3,7 @@
  * This class represents Face Instances
  */
 
+var NetworkProtocol = { TCP:6, UDP:17};
 
 var FaceInstance  = function FaceInstance(
 	    _Action,
@@ -70,11 +71,11 @@ FaceInstance.prototype.decode = function(//XMLDecoder
 		
 		this.IPProto = null;
 		
-		if (NetworkProtocol.TCP.value().intValue() == pI) {
+		if (NetworkProtocol.TCP == pI) {
 			
 			this.IPProto = NetworkProtocol.TCP;
 			
-		} else if (NetworkProtocol.UDP.value().intValue() == pI) {
+		} else if (NetworkProtocol.UDP == pI) {
 			
 			this.IPProto = NetworkProtocol.UDP;
 			
@@ -107,7 +108,6 @@ FaceInstance.prototype.decode = function(//XMLDecoder
 	if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
 		this.FreshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
 	}
-	
 	decoder.readEndElement();
 }
 
@@ -123,8 +123,10 @@ FaceInstance.prototype.encode = function(//XMLEncoder
 		//throw new Exception("")
 	//}
 	encoder.writeStartElement(this.getElementLabel());
+	
 	if (null != this.Action && this.Action.length != 0)
 		encoder.writeElement(CCNProtocolDTags.Action, this.Action);	
+	
 	if (null != this.PublisherPublicKeyDigest) {
 		this.PublisherPublicKeyDigest.encode(encoder);
 	}

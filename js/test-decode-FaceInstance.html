@@ -4,7 +4,8 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Publish</title>
+	<title>NDN Decode Face Instance</title>
+	
 	<script type="text/javascript" src="java_socket_bridge.js"></script>
 	
 	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
@@ -49,11 +50,6 @@
 	
 	<script type="text/javascript" src="encoding/DataUtils.js"></script>
 	
-	<script type="text/javascript" src="encoding/EncodingUtils.js"></script>
-	
-	<script type="text/javascript" src="lwNDN.js"></script>
-	
-	
 	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
 	
 	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
@@ -72,110 +68,100 @@
 	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
-	
-	
+
 	<script type="text/javascript">
-		function run(){
 
-			var ContentName = document.getElementById('contentname').value;
-		
-			var Content = document.getElementById('content').value;
-			
-			//createRoute('borges.metwi.ucla.edu', 9695);
-			
+		function decode(){
+
+			var input = document.getElementById('result').innerHTML;
 
 			
+			var faceInstance = decodeHexFaceInstance(input);
 			
-			///////////////////////////////////////
-		    //createRoute('localhost', 9695);
+			if(LOG>3)console.log('FACE INSTANCE DECODED');
+			if(LOG>3)console.log(faceInstance);
 
-		    //createRoute('131.179.141.15', 9695);
-		    //createRoute('borges.metwi.ucla.edu', 9695);
-		    
-			//content object
-			//var co = queryPrefix( ContentName );
-			
-			var connector = new lwNDN('127.0.0.1', 9695);
-		    
-			var co = connector.put( ContentName, Content );
-			
 			///////////////////////////////////////
 			
-			/*var output ="";
+			var output ="";
 			
-			if(co==-1)
-				output+= "NO CONTENT FOUND"
-			else if (co==-2)
-				output+= "CONTENT NAME IS EMPTY"
-			else{
-				if(co.Name!=null && co.Name.Components!=null){
-					output+= "NAME: ";
+			if(faceInstance.PublisherPublicKeyDigest!=null ){
+				output+= "PublisherPublicKeyDigest: ";
+				
+					output+=  DataUtils.toHex(faceInstance.PublisherPublicKeyDigest.PublisherPublicKeyDigest);
 					
-					for(var i=0;i<co.Name.Components.length;i++){
-						output+= "/"+ toString(co.Name.Components[i]);
-					}
-					output+= "<br />";
-					output+= "<br />";
+					//output+= "PUBLISHER ID TYPE: ";
+					//output+=  faceInstance.PublisherPublicKeyDigest.PublisherPublicKeyDigest;
+					
+				output+= "<br />";
+				output+= "<br />";
+
+			}
+			
+			if(faceInstance.FaceID!=null){
+				output+= "FaceID: ";
+				
+				output+= faceInstance.FaceID;
+				output+= "<br />";
+			}
+			
+			if(faceInstance.IPProto!=null){
+				output+= "IPProto: ";
+				
+				output+= faceInstance.IPProto;
+				output+= "<br />";
+			}
+			
+			if(faceInstance.Host!=null){
+				output+= "Host: ";
+				
+				output+= faceInstance.Host;
+				output+= "<br />";
+			}
+			
+			if(faceInstance.Port!=null){
+				output+= "Port: ";
+				
+				output+= faceInstance.Port;
+				output+= "<br />";
+			}
+			if(faceInstance.FreshnessSeconds!=null){
+				output+= "FreshnessSeconds: ";
+				
+				output+= faceInstance.FreshnessSeconds;
+				output+= "<br />";
+			}
+			
+			/*if(interest.Name!=null && interest.Name.Components!=null){
+				output+= "NAME: ";
+				
+				for(var i=0;i<interest.Name.Components.length;i++){
+					output+= "/"+ DataUtils.toString(interest.Name.Components[i]);
 				}
-	
-				if(co.Content !=null){
-					output += "CONTENT(ASCII): "+ toString(co.Content);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.Content !=null){
-					output += "CONTENT(hex): "+ toHex(co.Content);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.Signature !=null && co.Signature.Signature!=null){
-					
-					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.Key!=null){
-					
-					output += "PUBLISHER KEY: "+ toHex(co.SignedInfo.Locator.Key);
-					
-					output+= "<br />";
-					output+= "<br />";
-	
-				}
+				output+= "<br />";
+				output+= "<br />";
 			}*/
+	
+			document.getElementById('result').innerHTML = output;
 			
-			//document.getElementById('result').innerHTML = output;
-			document.getElementById('result').innerHTML = 'Content \'' + Content + '\' was published with content name \'' + ContentName +'\'';
-
 		}
-	
-		</script>
-	
+
+	</script>
+
 </head>
 <body >
 	<form>
-
-		Please Enter a Content Name:<br />
 		
-		<input id="contentname" type="text" name="CONTENTNAME" value="/meki" /> 
+		Please Enter a Interest:<br />
 		
-		Please Enter the Content:<br />
-		
-		<textarea id="content" cols="40" rows="5" name="CONTENT" value="cherkaoui"  >cherkaoui</textarea> 
-		
-		<br />
+		<!--  input id="faceInstance" type="text" name="FACEINSTANCE" value="/PARC/abc" /--> 
 		
 	</form>
-	<button onclick="run()">Publish</button>
-	<div >
-		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
-		</applet>
-	</div>
+	<button onclick="decode()">Decode</button>
+	
+	
 
-		<p id="result"></p>
+		<p id="result">058203e20285e0a01e093968f9740ce7f4361babf5bb05a4e55aaca5e58f73eddeb8e013aa8f0004d29632310004da9631370004e2c631302e312e312e310004eaa6393639350003d2d6323134373438333634370000</p>
 
 </body>
 </html>

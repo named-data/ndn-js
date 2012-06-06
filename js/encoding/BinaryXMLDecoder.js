@@ -451,16 +451,24 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 	
 	
 BinaryXMLDecoder.prototype.readEndElement = function(){
-		try {
+		//try {
+			if(LOG>4)console.log('this.offset is '+this.offset);
+			
 			var next = this.istream[this.offset]; 
+			
 			this.offset++;
 			//read();
+			
+			if(LOG>4)console.log('XML_CLOSE IS '+XML_CLOSE);
+			if(LOG>4)console.log('next is '+next);
+			
 			if (next != XML_CLOSE) {
+				console.log("Expected end element, got: " + next);
 				throw new ContentDecodingException("Expected end element, got: " + next);
 			}
-		} catch ( e) {
-			throw new ContentDecodingException(e);
-		}
+		//} catch ( e) {
+			//throw new ContentDecodingException(e);
+		//}
 	};
 
 
@@ -491,9 +499,25 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	startTag)  {
 	//byte [] 
 	
-	byteTimestamp = this.readBinaryElement(startTag);
+	var byteTimestamp = this.readBinaryElement(startTag);
+
+	//var lontimestamp = DataUtils.byteArrayToUnsignedLong(byteTimestamp);
+
+	var byteTimestamp = DataUtils.toHex(byteTimestamp);
+	
+	
+	var byteTimestamp = parseInt(byteTimestamp, 16);
+
+	lontimestamp = (byteTimestamp/ 4096) * 1000;
+
+	//if(lontimestamp<0) lontimestamp =  - lontimestamp;
+
+	if(LOG>3) console.log('DECODED DATE WITH VALUE');
+	if(LOG>3) console.log(lontimestamp);
+	
+
 	//CCNTime 
-	timestamp = new CCNTime(byteTimestamp);
+	timestamp = new CCNTime(lontimestamp);
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
@@ -544,6 +568,8 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function(
 		
 	} while (more);
 	
+	if(LOG>3)console.log('TYPE is '+ type + ' VAL is '+ val);
+
 	return new TypeAndVal(type, val);
 };
 
@@ -608,7 +634,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 
 };
 
-
+var count =0;
 
 //String
 BinaryXMLDecoder.prototype.decodeUString = function(
@@ -617,7 +643,12 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		//int 
 		byteLength) {
 	
-	if(null == byteLength){
+	/*
+	console.log('COUNT IS '+count);
+	console.log('INPUT BYTELENGTH IS '+byteLength);
+	count++;
+	if(null == byteLength||  undefined == byteLength){
+		console.log("!!!!");
 		tv = this.decodeTypeAndVal(this.istream);
 		var valval ;
 		if(typeof tv.val() == 'string'){
@@ -626,16 +657,80 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		else
 			valval = (tv.val());
 		
+		if(LOG>4) console.log('valval  is ' + valval);
 		byteLength= this.decodeUString(this.istream, valval);
+		
+		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength.charCodeAt(0));
+		byteLength = parseInt(byteLength);
+		
+		
+		//byteLength = byteLength.charCodeAt(0);
+		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength);
 	}
-
+	if(LOG>4)console.log('byteLength is '+byteLength);
+	if(LOG>4)console.log('type of byteLength is '+typeof byteLength);
+	
 	stringBytes = this.decodeBlob(this.istream, byteLength);
 	
+	//console.log('String bytes are '+ stringBytes);
+	//console.log('stringBytes);
+	
+	if(LOG>4)console.log('byteLength is '+byteLength);
+	if(LOG>4)console.log('this.offset is '+this.offset);
+
 	tempBuffer = this.istream.slice(this.offset, this.offset+byteLength);
+	if(LOG>4)console.log('TEMPBUFFER IS' + tempBuffer);
+	if(LOG>4)console.log( tempBuffer);
+
+	if(LOG>4)console.log('ADDING to offset value' + byteLength);
 	this.offset+= byteLength;
-	console.log('read the String' + tempBuffer.toString('ascii'));
-	return tempBuffer.toString('ascii');//DataUtils.getUTF8StringFromBytes(stringBytes);
+	//if(LOG>3)console.log('read the String' + tempBuffer.toString('ascii'));
+	//return tempBuffer.toString('ascii');//
+	
+	
+	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(stringBytes) ) ;
+	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
+	//if(LOG>3)console.log(DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
+	//return DataUtils.getUTF8StringFromBytes(tempBuffer);
+	
+	if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.toString(stringBytes) ) ;
+	if(LOG>3)console.log( 'TYPE OF STRING READ IS '+ typeof DataUtils.toString(stringBytes) ) ;
+
+	return  DataUtils.toString(stringBytes);*/
+
+	if(null == byteLength ){
+		var tempStreamPosition = this.offset;
+			
+		//TypeAndVal 
+		tv = this.decodeTypeAndVal(istream);
+		
+		if(LOG>3)console.log('TV is '+tv);
+		if(LOG>3)console.log(tv);
+		
+		if(LOG>3)console.log('Type of TV is '+typeof tv);
+	
+		if ((null == tv) || (XML_UDATA != tv.type())) { // if we just have closers left, will get back null
+			//if (Log.isLoggable(Log.FAC_ENCODING, Level.FINEST))
+				//Log.finest(Log.FAC_ENCODING, "Expected UDATA, got " + ((null == tv) ? " not a tag " : tv.type()) + ", assuming elided 0-length blob.");
+			
+			this.offset = tempStreamPosition;
+			
+			return "";
+		}
+			
+		return this.decodeUString(istream, tv.val());
+	}
+	else{
+		//byte [] 
+		stringBytes = this.decodeBlob(istream, byteLength);
+		
+		//return DataUtils.getUTF8StringFromBytes(stringBytes);
+		return  DataUtils.toString(stringBytes);
+		
+	}
 };
+
+
 
 
 //OBject containg a pair of type and value
@@ -652,3 +747,42 @@ TypeAndVal.prototype.val = function(){
 	return this.v;
 };
 //TODO
+
+
+
+
+
+
+BinaryXMLDecoder.prototype.readIntegerElement =function(
+	//String 
+	startTag) {
+
+	//String 
+	if(LOG>4) console.log('READING INTEGER '+ startTag);
+	if(LOG>4) console.log('TYPE OF '+ typeof startTag);
+	
+	//try {
+		
+	strVal = this.readUTF8Element(startTag);
+
+	//}
+	//catch (e) {
+		//throw new Exception("Cannot parse " + startTag + ": " + strVal);
+	//}
+	
+	return parseInt(strVal);
+};
+
+
+BinaryXMLDecoder.prototype.readUTF8Element =function(
+			//String 
+			startTag,
+			//TreeMap<String, String> 
+			attributes) {
+			//throws ContentDecodingException 
+
+		this.readStartElement(startTag, attributes); // can't use getElementText, can't get attributes
+		//String 
+		strElementText = this.readUString();
+		return strElementText;
+};

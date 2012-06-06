@@ -26,25 +26,55 @@ var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_fresh
 SignedInfo.prototype.setFields = function(){
 	//BASE64 -> RAW STRING
 	
-	var stringCertificate = DataUtils.base64toString(globalKeyManager.certificate);
+	//this.Locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
 	
-	if(LOG>3)console.log('string Certificate is '+stringCertificate);
+	var publicKeyHex = globalKeyManager.publicKey;
+
+	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	console.log(publicKeyHex);
+	
+	var publicKeyBytes = DataUtils.toNumbers(globalKeyManager.publicKey) ; 
+
+	
+
+	//var stringCertificate = DataUtils.base64toString(globalKeyManager.certificate);
+	
+	//if(LOG>3)console.log('string Certificate is '+stringCertificate);
 
 	//HEX -> BYTE ARRAY
-	var publisherkey = toNumbers(hex_sha256(stringCertificate));
+	//var publisherkey = DataUtils.toNumbers(hex_sha256(stringCertificate));
 	
-	if(LOG>3)console.log('publisher key is ');
-	if(LOG>3)console.log(publisherkey);
+	//if(LOG>3)console.log('publisher key is ');
+	//if(LOG>3)console.log(publisherkey);
 	
-	this.Publisher = new PublisherPublicKeyDigest(publisherkey);
+	var publisherKeyDigest = hex_sha256_from_bytes(publicKeyBytes);
 
+	this.Publisher = new PublisherPublicKeyDigest(  DataUtils.toNumbers(  publisherKeyDigest )  );
 	
-	this.Timestamp = new CCNTime('FD0499602d2000');
+	//this.Publisher = new PublisherPublicKeyDigest(publisherkey);
+
+	var d = new Date();
 	
-	this.Type = ContentType.DATA;
+	var time = d.getTime();
 	
-	console.log('toNumbersFromString(stringCertificate) '+toNumbersFromString(stringCertificate));
-	this.Locator = new KeyLocator(  toNumbersFromString(stringCertificate)  ,KeyLocatorType.KEY );
+
+    this.Timestamp = new CCNTime( time );
+    
+    if(LOG>4)console.log('TIME msec is');
+
+    if(LOG>4)console.log(this.Timestamp.msec);
+
+    //DATA
+	this.Type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
+	
+	//if(LOG>4)console.log('toNumbersFromString(stringCertificate) '+DataUtils.toNumbersFromString(stringCertificate));
+	
+	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	console.log(publicKeyBytes);
+
+	this.Locator = new KeyLocator(  publicKeyBytes  ,KeyLocatorType.KEY );
+
+	//this.Locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
 
 };
 
@@ -67,12 +97,12 @@ SignedInfo.prototype.decode = function( decoder){
 		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
 			binType = decoder.readBinaryElement(CCNProtocolDTags.Type);//byte [] 
 		
-		
+			
 			//TODO Implement Type of Key Reading
 			
-			if(LOG>4)console.log('TYPE IS'+bintype);
+			if(LOG>4)console.log('Binary Type of of Signed Info is '+binType);
 
-			this.Type = this.valueToType(binType);
+			this.Type = binType;
 			
 			
 			//TODO Implement Type of Key Reading
@@ -116,7 +146,7 @@ SignedInfo.prototype.encode = function( encoder)  {
 		}
 
 		if (null!=this.Timestamp) {
-			encoder.writeDateTime(CCNProtocolDTags.Timestamp, this.Timestamp);
+			encoder.writeDateTime(CCNProtocolDTags.Timestamp, this.Timestamp );
 		}
 		
 		if (null!=this.Type && this.Type !=0) {

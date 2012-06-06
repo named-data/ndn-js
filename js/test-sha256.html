@@ -22,13 +22,19 @@
 	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.min.js"></script>
 	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.min.js"></script>
 
-		
+	<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+	
+			
 	<script type="text/javascript">
 		function hash(){
 			
 			var input = document.getElementById('contentname').value;
 			
-			var output = hex_sha256(input);
+			var output = "TEST1 "+hex_sha256(input);
+			
+			output+= "<br />";
+			
+			output += "TEST2 " +CryptoJS.SHA256(input);
 			
 			document.getElementById('result').innerHTML = output;
 

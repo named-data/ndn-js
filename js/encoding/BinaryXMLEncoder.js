@@ -51,7 +51,7 @@ var BinaryXMLEncoder = function BinaryXMLEncoder(){
 };
 
 BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content){
-	this.encodeUString(this.ostream, utf8Content);
+	this.encodeUString(this.ostream, utf8Content, XML_UDATA);
 };
 
 BinaryXMLEncoder.prototype.writeBlob = function(/*byte []*/ binaryContent
@@ -149,14 +149,27 @@ BinaryXMLEncoder.prototype.writeElement = function(
 		Content,
 		//TreeMap<String, String> 
 		attributes) {
+	
 	this.writeStartElement(tag, attributes);
 	// Will omit if 0-length
 	
 	if(typeof Content === 'number') {
-		if(LOG>4) console.log('GOING TO WRITE THE NUMBER ' +Content );
-		this.writeBlob(Content.toString());
+		if(LOG>4) console.log('GOING TO WRITE THE NUMBER .charCodeAt(0) ' +Content.toString().charCodeAt(0) );
+		if(LOG>4) console.log('GOING TO WRITE THE NUMBER ' +Content.toString() );
+		if(LOG>4) console.log('type of number is ' +typeof Content.toString() );
+		
+
+		
+		this.writeUString(Content.toString());
 		//whatever
 		
+	}
+	
+	else if(typeof Content === 'string'){
+		if(LOG>4) console.log('GOING TO WRITE THE STRING  ' +Content );
+		if(LOG>4) console.log('type of STRING is ' +typeof Content );
+		
+		this.writeUString(Content);
 	}
 	
 	else{
@@ -164,7 +177,7 @@ BinaryXMLEncoder.prototype.writeElement = function(
 		 //console.log('went here');
 		//this.writeBlob(Content);
 	//}
-	
+	if(LOG>4) console.log('GOING TO WRITE A BLOB  ' +Content );
 	//else if(typeof Content === 'object'){
 		this.writeBlob(Content);
 	//}
@@ -189,7 +202,9 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 		//byte [] 
 		buf) {
 	
-	console.log('Encoding type '+ type+ ' and value '+ val);
+	if(LOG>4)console.log('Encoding type '+ type+ ' and value '+ val);
+	
+	if(LOG>4) console.log('OFFSET IS ' + this.offset );
 	
 	if ((type > XML_UDATA) || (type < 0) || (val < 0)) {
 		throw new Exception("Tag and value must be positive, and tag valid.");
@@ -248,12 +263,22 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	//byte [] data utils
 	/*custom*/
 	//byte[]
-	strBytes = new Array(ustring.Length);
-	var i = 0;
-	for( ;i<ustring.lengh;i++) //in InStr.ToCharArray())
+	
+	if(LOG>3) console.log("The string to write is ");
+	
+	if(LOG>3) console.log(ustring);
+
+	//COPY THE STRING TO AVOID PROBLEMS
+	strBytes = new Array(ustring.length);
+	
+	var i = 0;	
+
+	for( ; i<ustring.length; i++) //in InStr.ToCharArray())
 	{
-		strBytes[i] = ustring[i];
+		if(LOG>3)console.log("ustring[" + i + '] = ' + ustring[i]);
+		strBytes[i] = ustring.charCodeAt(i);
 	}
+	
 	//strBytes = DataUtils.getBytesFromUTF8String(ustring);
 	
 	this.encodeTypeAndVal(type, 
@@ -261,7 +286,10 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 								(strBytes.length-1) :
 								strBytes.length), ostream);
 	
-
+	if(LOG>3) console.log("THE string to write is ");
+	
+	if(LOG>3) console.log(strBytes);
+	
 	this.writeString(strBytes,this.offset);
 	
 	this.offset+= strBytes.length;
@@ -286,12 +314,21 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 		return;
 	}
 	
+	if(LOG>4) console.log('LENGTH OF XML_BLOB IS '+length);
 	
+	
+	blobCopy = new Array(blob.Length);
+	var i = 0;
+	for( ;i<blob.length;i++) //in InStr.ToCharArray())
+	{
+		blobCopy[i] = blob[i];
+	}
+
 	this.encodeTypeAndVal(XML_BLOB, length, ostream,offset);
 	
 	if (null != blob) {
 
-		this.writeString(blob,this.offset);
+		this.writeBlobArray(blobCopy,this.offset);
 		this.offset += length;
 	}
 };
@@ -324,7 +361,29 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 		tag, 
 		//CCNTime 
 		dateTime) {
-	this.writeElement(tag, dateTime.toBinaryTime());
+	
+	if(LOG>4)console.log('ENCODING DATE with LONG VALUE');
+	if(LOG>4)console.log(dateTime.msec);
+	
+	//var binarydate = DataUtils.unsignedLongToByteArray( Math.round((dateTime.msec/1000) * 4096)  );
+	
+
+	//parse to hex
+	var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
+
+	//HACK
+	var binarydate =  DataUtils.toNumbers( '0'.concat(binarydate,'0')) ;
+
+	
+	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');
+	if(LOG>4)console.log(binarydate);
+	
+	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE(HEX)');
+	if(LOG>4)console.log(DataUtils.toHex(binarydate));
+	
+
+	this.writeElement(tag, binarydate);
+
 };
 
 BinaryXMLEncoder.prototype.writeString = function(
@@ -336,16 +395,27 @@ BinaryXMLEncoder.prototype.writeString = function(
     if(typeof input === 'string'){
 		//console.log('went here');
     	if(LOG>4) console.log('GOING TO WRITE A STRING');
-    
+    	if(LOG>4) console.log(input);
+        
 		for (var i = 0; i < input.length; i++) {
+			if(LOG>4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
 		    this.ostream[this.offset+i] = (input.charCodeAt(i));
 		}
 	}
     
+    else{
+    	
+    	if(LOG>4) console.log('GOING TO WRITE A STRING IN BINARY FORM');
+    	if(LOG>4) console.log(input);
+    	
+    	this.writeBlobArray(input);
+    	
+    }
+    /*
 	else if(typeof input === 'object'){
-		this.writeBlobArray(input);
+		
 	}	
-
+	*/
 };
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(

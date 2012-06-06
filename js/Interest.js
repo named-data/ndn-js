@@ -3,15 +3,14 @@
  * This class represents Interest Objects
  */
 
-var Interest = function Interest(_Name,_FaceInstance,_MinSuffixComponents,_MaxSuffixComponents,_PublisherPublicKeyDigest, _Exclude, _ChildSelector,_AnswerOriginKind,_Scope,_InterestLifetime,_Nonce){
-	
-	//Setting fields
+var Interest = function Interest(_Name,_FaceInstance,_MinSuffixComponents,_MaxSuffixComponents,_PublisherID, _Exclude, _ChildSelector,_AnswerOriginKind,_Scope,_InterestLifetime,_Nonce){
+		
 	this.Name = _Name;
 	this.FaceInstance = _FaceInstance;
 	this.MaxSuffixComponents = _MaxSuffixComponents;
 	this.MinSuffixComponents = _MinSuffixComponents;
 	
-	this.PublisherKeyDigest = _PublisherPublicKeyDigest;
+	this.PublisherID = _PublisherID;
 	this.Exclude = _Exclude;
 	this.ChildSelector = _ChildSelector;
 	this.AnswerOriginKind = _AnswerOriginKind;
@@ -49,10 +48,10 @@ Interest.prototype.decode = function(/*XMLDecoder*/ decoder) {
 		}
 			
 		//TODO decode PublisherID
-		/*if (PublisherID.peek(decoder)) {
+		if (PublisherID.peek(decoder)) {
 			this.Publisher = new PublisherID();
 			this.Publisher.decode(decoder);
-		}*/
+		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
 			this.Exclude = new Exclude();
@@ -84,9 +83,7 @@ Interest.prototype.decode = function(/*XMLDecoder*/ decoder) {
 };
 
 Interest.prototype.encode = function(/*XMLEncoder*/ encoder){
-		/*if (!validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}*/
+		//Could check if name is present
 		
 		encoder.writeStartElement(CCNProtocolDTags.Interest);
 		
@@ -100,20 +97,20 @@ Interest.prototype.encode = function(/*XMLEncoder*/ encoder){
 
 		//TODO Encode PublisherID
 		
-		/*if (null != this.PublisherID)
-			publisherID().encode(encoder);*/
+		if (null != this.PublisherID)
+			publisherID().encode(encoder);
 		
 		//TODO Encode Exclude
 		
-		//if (null != this.Exclude)
-			//exclude().encode(encoder);
+		if (null != this.Exclude)
+			exclude().encode(encoder);
 		
 		if (null != this.ChildSelector) 
 			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.ChildSelector);
 
 		//TODO Encode OriginKind
 		if (this.DEFAULT_ANSWER_ORIGIN_KIND != this.AnswerOriginKind && this.AnswerOriginKind!=null) 
-			//encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.AnswerOriginKind);
+			encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.AnswerOriginKind);
 		
 		if (null != this.Scope) 
 			encoder.writeElement(CCNProtocolDTags.Scope, this.Scope);
