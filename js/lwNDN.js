@@ -68,6 +68,16 @@ lwNDN.prototype.get = function(message){
 lwNDN.prototype.put = function(name,content){
 	if(this.host!=null && this.port!=null){
 		
+		var co = this.get("/%C1.M.S.localhost/%C1.M.SRV/ccnd");
+		
+		if(!co || !co.SignedInfo || !co.SignedInfo.Publisher || !co.SignedInfo.Publisher.PublisherPublicKeyDigest){
+			alert("Cannot contact router");
+			
+			return null;
+		}
+		
+		var ccnxnodename = co.SignedInfo.Publisher.PublisherPublicKeyDigest;
+		
 		name = name.trim();
 		
 		var fe = new ForwardingEntry('selfreg',new ContentName(name),null, null, 3,2147483647);
@@ -83,7 +93,7 @@ lwNDN.prototype.put = function(name,content){
 		
 		var coBinary = encodeToBinaryContentObject(co);
 		
-		var ccnxnodename = unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F');
+		//var ccnxnodename = unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F');
 		
 		var interestName = new ContentName(['ccnx',ccnxnodename,'selfreg',coBinary]);
 

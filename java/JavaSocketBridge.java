@@ -363,6 +363,9 @@ public class JavaSocketBridge extends JApplet {
 
 
 
+	/**
+	 * Not used
+	 */
 	public String putAnswer(final String s, final String dataBack){
 
 		final SocketChannel sChannel = connections.get(s);
