@@ -167,7 +167,7 @@ public class JavaSocketBridge extends JApplet {
 									buffer.clear();  
 									sChannel.read(bufferReceiver);
 
-									String output =  bytes2Hex(bufferReceiver.array());
+									String output =  bytes2Hex(bufferReceiver.array(), bufferReceiver.position());
 									System.out.println("RECEIVED BYTES:" +output);
 
 									result=output;
@@ -492,13 +492,13 @@ public class JavaSocketBridge extends JApplet {
 
 		return bytes;
 	}
-	public static String bytes2Hex(byte[] b)
+	public static String bytes2Hex(byte[] b, int length)
 	{
 		// String Buffer can be used instead
 		String hs = "";
 		String stmp = "";
 
-		for (int n = 0; n < b.length; n++)
+		for (int n = 0; n < length; n++)
 		{
 			stmp = (java.lang.Integer.toHexString(b[n] & 0XFF));
 
@@ -511,13 +511,17 @@ public class JavaSocketBridge extends JApplet {
 				hs = hs + stmp;
 			}
 
-			if (n < b.length - 1)
+			if (n < length - 1)
 			{
 				hs = hs + "";
 			}
 		}
 
 		return hs;
+	}
+	public static String bytes2Hex(byte[] b)
+	{
+		return bytes2Hex(b, b.length);
 	}
 
 
