@@ -4,7 +4,7 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Request Example</title>
+	<title>NDN Signature - String</title>
 	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
 	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
 	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
@@ -21,21 +21,16 @@
 	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.min.js"></script>
 	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.min.js"></script>
 	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.min.js"></script>
-<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
 	
 		
 	<script type="text/javascript">
 		function sign(){
-			
-			
 			var keyManager = new KeyManager();
-			
-			
-			
 			var input = document.getElementById('contentname').value;
 			
-			var  _PEM_PRIVATE_KEY_STRING_ = keyManager.privateKey;//document.getElementById('privateKey').value;
-			
+			var  _PEM_PRIVATE_KEY_STRING_ = keyManager.privateKey;
+                                                        //document.getElementById('privateKey').value;
 			var rsa = new RSAKey();
 			
 			rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
@@ -49,9 +44,9 @@
 			var input = document.getElementById('contentname').value;
 			
 			var signature = document.getElementById('result').innerHTML;
-			
-			var  _PEM_X509CERT_STRING_ = document.getElementById('certificate').value;
-			
+			var keyManager = new KeyManager();
+			var  _PEM_X509CERT_STRING_ = keyManager.certificate;
+                                                     //document.getElementById('certificate').value;
 			var x509 = new X509();
 			
 			x509.readCertPEM(_PEM_X509CERT_STRING_);
