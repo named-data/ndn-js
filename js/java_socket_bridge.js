@@ -72,7 +72,7 @@ function on_socket_received_interest(hex,name){
 	
 	var answer = toNumbersFromString('WORLD');
 
-	var co = new ContentObject(new ContentName(name),si,answer,new Signature()); 
+	var co = new ContentObject(new Name(name),si,answer,new Signature()); 
 	co.sign();
 	
 	

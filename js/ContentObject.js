@@ -6,7 +6,7 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 	
 	
 	if (typeof _name === 'string'){
-		this.name = new ContentName(_name);
+		this.name = new Name(_name);
 	}
 	else{
 		//TODO Check the class of _name
@@ -110,7 +110,7 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 		this.startSIG = decoder.offset;
 
-		this.name = new ContentName();
+		this.name = new Name();
 		this.name.from_ccnb(decoder);
 		
 		//this.startSignedInfo = decoder.offset;

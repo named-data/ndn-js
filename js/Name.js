@@ -1,20 +1,20 @@
 /*
  * @author: ucla-cs
- * This class represents ContentName
+ * This class represents a Name
  */
  
 
-var ContentName = function ContentName(_components){
+var Name = function Name(_components){
 
 	if( typeof _components == 'string') {
 		
 		if(LOG>3)console.log('Content Name String '+_components);
-		this.components = ContentName.makeBlob(ContentName.createNameArray(_components));
+		this.components = Name.makeBlob(Name.createNameArray(_components));
 	}
 	else if(typeof _components === 'object' && _components instanceof Array ){
 		
 		if(LOG>4)console.log('Content Name Array '+_components);
-		this.components = ContentName.makeBlob(_components);
+		this.components = Name.makeBlob(_components);
 
 	}
 	else if(_components==null){
@@ -27,7 +27,7 @@ var ContentName = function ContentName(_components){
 	}
 };
 
-ContentName.prototype.getName=function(){
+Name.prototype.getName=function(){
 	
 	var output = "";
 	
@@ -39,7 +39,7 @@ ContentName.prototype.getName=function(){
 	
 };
 
-ContentName.makeBlob=function(name){
+Name.makeBlob=function(name){
 	
 	var blobArrays = new Array(name.length);
 
@@ -55,7 +55,7 @@ ContentName.makeBlob=function(name){
 	return blobArrays;
 };
 
-ContentName.createNameArray=function(name){
+Name.createNameArray=function(name){
 
 
 	name = unescape(name);
@@ -73,7 +73,7 @@ ContentName.createNameArray=function(name){
 }
 
 
-ContentName.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
+Name.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
 		decoder.readStartElement(this.getElementLabel());
 
 		
@@ -86,7 +86,7 @@ ContentName.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
 		decoder.readEndElement();
 };
 
-ContentName.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+Name.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 		
 		if( this.components ==null ) 
 			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
@@ -99,11 +99,11 @@ ContentName.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 		encoder.writeEndElement();
 };
 
-ContentName.prototype.getElementLabel = function(){
+Name.prototype.getElementLabel = function(){
 	return CCNProtocolDTags.Name;
 };
 
-ContentName.prototype.add = function(param){
+Name.prototype.add = function(param){
 	return this.components.push(param);
 };
 

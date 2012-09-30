@@ -12,7 +12,7 @@
 	
 	<script type="text/javascript" src="../CCNTime.js"></script>
 	
-	<script type="text/javascript" src="../ContentName.js"></script>
+	<script type="text/javascript" src="../Name.js"></script>
 	
 	<script type="text/javascript" src="../ContentObject.js"></script>
 	
@@ -28,8 +28,6 @@
 	
 	<script type="text/javascript" src="../KeyLocator.js"></script>
 	
-	<script type="text/javascript" src="../KeyName.js"></script>
-
 	<script type="text/javascript" src="../PublisherID.js"></script>
 	
 	<script type="text/javascript" src="../Signature.js"></script>
@@ -74,7 +72,7 @@
 	<script type="text/javascript">
 	
 		function encode(){
-			var interest = new Interest( new ContentName(document.getElementById('interest').value ) );
+			var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
 			interest.scope = 1;
 			

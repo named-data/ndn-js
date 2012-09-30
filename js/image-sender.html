@@ -11,7 +11,7 @@
 	
 	<script type="text/javascript" src="CCNTime.js"></script>
 	
-	<script type="text/javascript" src="ContentName.js"></script>
+	<script type="text/javascript" src="Name.js"></script>
 	
 	<script type="text/javascript" src="ContentObject.js"></script>
 	
@@ -27,8 +27,6 @@
 	
 	<script type="text/javascript" src="KeyLocator.js"></script>
 	
-	<script type="text/javascript" src="KeyName.js"></script>
-
 	<script type="text/javascript" src="PublisherID.js"></script>
 	
 	<script type="text/javascript" src="Signature.js"></script>
@@ -105,7 +103,7 @@
 		    //createRoute('borges.metwi.ucla.edu', 9695);
 		    
 			//content object
-			//var co = queryPrefix( ContentName );
+			//var co = queryPrefix( Name );
 			
 			var connector = new lwNDN('127.0.0.1', 9695);
 		    
@@ -143,7 +141,7 @@
 			var Content = imageString.substr(beginning, length);
 			console.log(beginning + "; " + length);
 			var co = connector.put(ContentName, Content);
-			//document.getElementById('result').innerHTML += 'Content \'' + Content + '\' was published with content name \'' + ContentName +'\'';
+			//document.getElementById('result').innerHTML += 'Content \'' + Content + '\' was published with content name \'' + Name +'\'';
 
 		}
 	

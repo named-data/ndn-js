@@ -6,7 +6,7 @@
 var ForwardingEntry = function ForwardingEntry(
                                                //ActionType 
 		_action, 
-		//ContentName 
+		//Name 
 		_prefixName, 
 		//PublisherPublicKeyDigest
 		_ccndId, 
@@ -21,7 +21,7 @@ var ForwardingEntry = function ForwardingEntry(
 	
 		//String
 	this.action = _action;
-		//ContentName\
+		//Name\
 	this.prefixName = _prefixName;
 		//PublisherPublicKeyDigest 
 	this.ccndID = _ccndId;
@@ -44,7 +44,7 @@ ForwardingEntry.prototype.from_ccnb =function(
 				this.action = decoder.readUTF8Element(CCNProtocolDTags.Action); 
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.Name)) {
-				this.prefixName = new ContentName();
+				this.prefixName = new Name();
 				this.prefixName.from_ccnb(decoder) ;
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {

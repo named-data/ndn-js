@@ -36,7 +36,7 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 		decoder.readStartElement(CCNProtocolDTags.Interest);
 
-		this.name = new ContentName();
+		this.name = new Name();
 		this.name.from_ccnb(decoder);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents)) {
@@ -117,7 +117,7 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 
 };
 
-Interest.prototype.matches_name = function(/*ContentName*/ name){
+Interest.prototype.matches_name = function(/*Name*/ name){
 	var i_name = this.name.components;
 	var o_name = name.components;
 

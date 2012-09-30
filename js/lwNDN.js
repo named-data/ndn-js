@@ -20,9 +20,9 @@ lwNDN.prototype.get = function(message){
 		}
 		
 		
-		//var array = ContentName.createNameArray(message);
+		//var array = Name.createNameArray(message);
 
-		int = new Interest(new ContentName(message));
+		int = new Interest(new Name(message));
 
 		int.InterestLifetime = 4200;
 		
@@ -80,7 +80,7 @@ lwNDN.prototype.put = function(name,content){
 		
 		name = name.trim();
 		
-		var fe = new ForwardingEntry('selfreg',new ContentName(name),null, null, 3,2147483647);
+		var fe = new ForwardingEntry('selfreg',new Name(name),null, null, 3,2147483647);
 		
 		var bytes = encodeForwardingEntry(fe);
 		
@@ -88,14 +88,14 @@ lwNDN.prototype.put = function(name,content){
 		var si = new SignedInfo();
 		si.setFields();
 		
-		var co = new ContentObject(new ContentName(),si,bytes,new Signature()); 
+		var co = new ContentObject(new Name(),si,bytes,new Signature()); 
 		co.sign();
 		
 		var coBinary = encodeToBinaryContentObject(co);
 		
 		//var ccnxnodename = unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F');
 		
-		var interestName = new ContentName(['ccnx',ccnxnodename,'selfreg',coBinary]);
+		var interestName = new Name(['ccnx',ccnxnodename,'selfreg',coBinary]);
 
 		int = new Interest(interestName);
 		int.scope = 1;
@@ -125,7 +125,7 @@ lwNDN.prototype.put = function(name,content){
 	
 	var answer = DataUtils.toNumbersFromString(content);
 
-	var co = new ContentObject(new ContentName(name),si,answer,new Signature()); 
+	var co = new ContentObject(new Name(name),si,answer,new Signature()); 
 	co.sign();
 	
 	
