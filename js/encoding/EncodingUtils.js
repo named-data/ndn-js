@@ -2,11 +2,11 @@
 
 
 
-function encodeToHexInterest(int){
+function encodeToHexInterest(interest){
 	
 	var enc = new BinaryXMLEncoder();
  
-	int.encode(enc);
+	interest.to_ccnb(enc);
 	
 	var hex = DataUtils.toHex(enc.getReducedOstream());
 
@@ -19,7 +19,7 @@ function encodeToHexInterest(int){
 function encodeToHexContentObject(co){
 	var enc = new BinaryXMLEncoder();
  
-	co.encode(enc);
+	co.to_ccnb(enc);
 	
 	var hex = DataUtils.toHex(enc.getReducedOstream());
 
@@ -31,7 +31,7 @@ function encodeToHexContentObject(co){
 function encodeToBinaryContentObject(co){
 	var enc = new BinaryXMLEncoder();
  
-	co.encode(enc);
+	co.to_ccnb(enc);
 	
 	var hex = enc.getReducedOstream();
 
@@ -43,7 +43,7 @@ function encodeToBinaryContentObject(co){
 function encodeForwardingEntry(co){
 	var enc = new BinaryXMLEncoder();
  
-	co.encode(enc);
+	co.to_ccnb(enc);
 	
 	var bytes = enc.getReducedOstream();
 
@@ -63,11 +63,11 @@ function decodeHexFaceInstance(result){
 	
 	if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
 
-	i = new FaceInstance();
+	var faceInstance = new FaceInstance();
 
-	i.decode(decoder);
+	faceInstance.decode(decoder);
 
-	return i;
+	return faceInstance;
 	
 }
 
@@ -78,11 +78,11 @@ function decodeHexInterest(result){
 	decoder = new BinaryXMLDecoder(numbers);
 	if(LOG>3)console.log('DECODING HEX INTERST  \n'+numbers);
 
-	i = new Interest();
+	var interest = new Interest();
 
-	i.decode(decoder);
+	interest.from_ccnb(decoder);
 
-	return i;
+	return interest;
 	
 }
 
@@ -96,7 +96,7 @@ function decodeHexContentObject(result){
 	
 	co = new ContentObject();
 
-	co.decode(decoder);
+	co.from_ccnb(decoder);
 
 	return co;
 	
@@ -111,11 +111,11 @@ function decodeHexForwardingEntry(result){
 	
 	if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
 	
-	co = new ForwardingEntry();
+	forwardingEntry = new ForwardingEntry();
 
-	co.decode(decoder);
+	forwardingEntry.decode(decoder);
 
-	return co;
+	return forwardingEntry;
 	
 }
 
@@ -130,24 +130,24 @@ function contentObjectToHtml(/* ContentObject */ co) {
     else if (co==-2)
 	output+= "CONTENT NAME IS EMPTY"
     else{
-	if(co.Name!=null && co.Name.Components!=null){
+	if(co.name!=null && co.name.Components!=null){
 	    output+= "NAME: ";
 	    
-	    for(var i=0;i<co.Name.Components.length;i++){
-		output+= "/"+ DataUtils.toString(co.Name.Components[i]);
+	    for(var i=0;i<co.name.Components.length;i++){
+		output+= "/"+ DataUtils.toString(co.name.Components[i]);
 	    }
 	    output+= "<br />";
 	    output+= "<br />";
 	}
 	
-	if(co.Content !=null){
-	    output += "CONTENT(ASCII): "+ DataUtils.toString(co.Content);
+	if(co.content !=null){
+	    output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	}
-	if(co.Content !=null){
-	    output += "CONTENT(hex): "+ DataUtils.toHex(co.Content);
+	if(co.content !=null){
+	    output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
 	    
 	    output+= "<br />";
 	    output+= "<br />";

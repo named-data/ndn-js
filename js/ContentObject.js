@@ -2,33 +2,33 @@
  * @author: ucla-cs
  * This class represents ContentObject Objects
  */
-var ContentObject = function ContentObject(_Name,_SignedInfo,_Content,_Signature){
+var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature){
 	
 	
-	if (typeof _Name === 'string'){
-		this.Name = new ContentName(_Name);
+	if (typeof _name === 'string'){
+		this.name = new ContentName(_name);
 	}
 	else{
-		//TODO Check the class of _Name
-		this.Name = _Name;
+		//TODO Check the class of _name
+		this.name = _name;
 	}
-	this.SignedInfo = _SignedInfo;
-	this.Content=_Content;
-	this.Signature = _Signature;
+	this.SignedInfo = _signedInfo;
+	this.content=_content;
+	this.Signature = _signature;
 
 	
-	this.StartSIG = null;
-	this.EndSIG = null;
+	this.startSIG = null;
+	this.endSIG = null;
 	
-	this.StartSignedInfo = null;
-	this.EndContent = null;
+	this.startSignedInfo = null;
+	this.endContent = null;
 	
 	this.rawSignatureData = null;
 };
 
 ContentObject.prototype.sign = function(){
 
-	var n1 = this.encodeObject(this.Name);
+	var n1 = this.encodeObject(this.name);
 	var n2 = this.encodeObject(this.SignedInfo);
 	var n3 = this.encodeContent();
 	
@@ -78,7 +78,7 @@ ContentObject.prototype.encodeObject = function encodeObject(obj){
 ContentObject.prototype.encodeContent = function encodeContent(obj){
 	var enc = new BinaryXMLEncoder();
 	 
-	enc.writeElement(CCNProtocolDTags.Content, this.Content);
+	enc.writeElement(CCNProtocolDTags.Content, this.content);
 
 	var num = enc.getReducedOstream();
 
@@ -89,12 +89,12 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.slice(this.StartSIG, this.EndSIG );
+	var sigBits = bytes.slice(this.startSIG, this.endSIG );
 
 	this.rawSignatureData = sigBits;
 };
 
-ContentObject.prototype.decode = function(/*XMLDecoder*/ decoder) {
+ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 	// TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
 
@@ -106,14 +106,14 @@ ContentObject.prototype.decode = function(/*XMLDecoder*/ decoder) {
 			this.Signature.decode(decoder);
 		}
 		
-		//this.EndSIG = decoder.offset;
+		//this.endSIG = decoder.offset;
 
-		this.StartSIG = decoder.offset;
+		this.startSIG = decoder.offset;
 
-		this.Name = new ContentName();
-		this.Name.decode(decoder);
+		this.name = new ContentName();
+		this.name.decode(decoder);
 		
-		//this.StartSignedInfo = decoder.offset;
+		//this.startSignedInfo = decoder.offset;
 	
 		
 		if( decoder.peekStartElement(CCNProtocolDTags.SignedInfo) ){
@@ -121,11 +121,11 @@ ContentObject.prototype.decode = function(/*XMLDecoder*/ decoder) {
 			this.SignedInfo.decode(decoder);
 		}
 		
-		this.Content = decoder.readBinaryElement(CCNProtocolDTags.Content);
+		this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
 
 		
-		//this.EndContent = decoder.offset;
-		this.EndSIG = decoder.offset;
+		//this.endContent = decoder.offset;
+		this.endSIG = decoder.offset;
 
 		
 		decoder.readEndElement();
@@ -133,9 +133,9 @@ ContentObject.prototype.decode = function(/*XMLDecoder*/ decoder) {
 		this.saveRawData(decoder.istream);
 };
 
-ContentObject.prototype.encode = function(/*XMLEncoder*/ encoder)  {
+ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 
-	//TODO verify Name, SignedInfo and Signature is present
+	//TODO verify name, SignedInfo and Signature is present
 
 
 	encoder.writeStartElement(this.getElementLabel());
@@ -146,23 +146,23 @@ ContentObject.prototype.encode = function(/*XMLEncoder*/ encoder)  {
 	if(null!=this.Signature) this.Signature.encode(encoder);
 	
 	
-	this.StartSIG = encoder.offset;
+	this.startSIG = encoder.offset;
 	
 
-	if(null!=this.Name) this.Name.encode(encoder);
+	if(null!=this.name) this.name.encode(encoder);
 	
-	//this.EndSIG = encoder.offset;
-	//this.StartSignedInfo = encoder.offset;
+	//this.endSIG = encoder.offset;
+	//this.startSignedInfo = encoder.offset;
 	
 	
 	if(null!=this.SignedInfo) this.SignedInfo.encode(encoder);
 
-	encoder.writeElement(CCNProtocolDTags.Content, this.Content);
+	encoder.writeElement(CCNProtocolDTags.Content, this.content);
 
 	
-	this.EndSIG = encoder.offset;
+	this.endSIG = encoder.offset;
 	
-	//this.EndContent = encoder.offset;
+	//this.endContent = encoder.offset;
 	
 
 	encoder.writeEndElement();

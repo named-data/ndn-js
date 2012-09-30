@@ -71,9 +71,7 @@ PublisherID.prototype.encode = function(encoder) {
 	encoder.writeElement(this.getElementLabel(), this.PublisherID);
 };
 	
-PublisherID.peek = function(
-	//XMLDecoder 
-		decoder) {
+PublisherID.peek = function(/* XMLDecoder */ decoder) {
 
 		//Long
 		nextTag = decoder.peekStartElementAsLong();

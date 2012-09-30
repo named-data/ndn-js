@@ -18,7 +18,7 @@ var generateSignature = function(contentName,content,signedinfo){
 	var hex1 = toHex(enc.getReducedOstream());
 
 	var enc = new BinaryXMLEncoder();
-	content.encode(enc);
+	content.to_ccnb(enc);
 	var hex2 = toHex(enc.getReducedOstream());
 
 	var enc = new BinaryXMLEncoder();

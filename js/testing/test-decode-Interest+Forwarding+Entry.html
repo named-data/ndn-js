@@ -77,7 +77,6 @@
 
 		
 		function decode(){
-			
 
 			var input = document.getElementById('result').innerHTML;
 
@@ -92,136 +91,125 @@
 			var output ="";
 			
 			
-			if(interest.Name!=null && interest.Name.Components!=null){
+			if(interest.name!=null && interest.name.Components!=null){
 				output+= "NAME: ";
 				
-				for(var i=0;i<interest.Name.Components.length;i++){
-					output+= "/"+ DataUtils.toString(interest.Name.Components[i]);
+				for(var i=0;i<interest.name.Components.length;i++){
+					output+= "/"+ DataUtils.toString(interest.name.Components[i]);
 				}
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.FaceInstance!=null ){
+			if(interest.faceInstance!=null ){
 				output+= "FaceInstance: ";
 				
-					output+=  interest.FaceInstance;
+					output+=  interest.faceInstance;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.Exclude!=null ){
+			if(interest.exclude!=null ){
 				output+= "Exclude: ";
 				
-					output+=  interest.Exclude;
+					output+=  interest.exclude;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.ChildSelector!=null ){
+			if(interest.childSelector!=null ){
 				output+= "ChildSelector: ";
 				
-					output+=  interest.ChildSelector;
+					output+=  interest.childSelector;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.AnswerOriginKind!=null ){
+			if(interest.answerOriginKind!=null ){
 				output+= "AnswerOriginKind: ";
 				
-					output+=  interest.AnswerOriginKind;
+					output+=  interest.answerOriginKind;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.InterestLifetime!=null ){
+			if(interest.interestLifetime!=null ){
 				output+= "InterestLifetime: ";
 				
-					output+=  interest.InterestLifetime;
+					output+=  interest.interestLifetime;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.Nonce!=null ){
+			if(interest.nonce!=null ){
 				output+= "Nonce: ";
 				
-					output+=  interest.Nonce;
+					output+=  interest.nonce;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
 			
-			if(interest.Scope!=null ){
+			if(interest.scope!=null ){
 				output+= "SCOPE: ";
 				
-					output+=  interest.Scope;
+					output+=  interest.scope;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 	
-			if(interest.PublisherID!=null ){
-				output+= "PUBLISHER ID: ";
+			if(interest.publisherPublicKeyDigest!=null ){
+				output+= "PUBLISHER PUBLIC KEY DIGEST: ";
 				
-					output+=  interest.PublisherID.PublisherID;
-					
-					output+= "PUBLISHER ID TYPE: ";
-					output+=  interest.PublisherID.PublisherType;
+				output+=  interest.publisherPublicKeyDigest.PublisherPublicKeyDigest;
+                                        
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.MaxSuffixComponents!=null ){
+			if(interest.maxSuffixComponents!=null ){
 				output+= "MaxSuffixComponents : ";
 				
-				output+=  interest.MaxSuffixComponents;
+				output+=  interest.maxSuffixComponents;
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.MinSuffixComponents!=null ){
+			if(interest.minSuffixComponents!=null ){
 				output+= "MinSuffixComponents : ";
 				
-				output+=  interest.MinSuffixComponents;
+				output+=  interest.minSuffixComponents;
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.MinSuffixComponents!=null ){
-				output+= "MinSuffixComponents : ";
-				
-				output+=  interest.MinSuffixComponents;
-
-				output+= "<br />";
-				output+= "<br />";
-			}
-			
-			if(interest.Name.Components[3] !=null){
+			if(interest.name.Components[3] !=null){
 				
 				
-				var input = DataUtils.toHex(interest.Name.Components[3]) ;
+				var input = DataUtils.toHex(interest.name.Components[3]) ;
 
 				var contentObject = decodeHexContentObject(input);
 				
-				if(contentObject.Content!=null ){
+				if(contentObject.content!=null ){
 					output+= "Content of content Object: ";
 					
-						output+=  DataUtils.toHex(contentObject.Content);
+						output+=  DataUtils.toHex(contentObject.content);
 						
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
 				
-				var content = DataUtils.toHex(contentObject.Content);
+				var content = DataUtils.toHex(contentObject.content);
 				
 				var co = contentObject;
 				
@@ -229,24 +217,24 @@
 				////////////////////////////////////////
 				
 
-				if(co.Name!=null && co.Name.Components!=null){
+				if(co.name!=null && co.name.Components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.Name.Components.length;i++){
-						output+= "/"+ DataUtils.toString(co.Name.Components[i]);
+					for(var i=0;i<co.name.Components.length;i++){
+						output+= "/"+ DataUtils.toString(co.name.Components[i]);
 					}
 					output+= "<br />";
 					output+= "<br />";
 				}
 	
-				if(co.Content !=null){
-					output += "CONTENT(ASCII): "+ DataUtils.toString(co.Content);
+				if(co.content !=null){
+					output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.Content !=null){
-					output += "CONTENT(hex): "+ DataUtils.toHex(co.Content);
+				if(co.content !=null){
+					output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
 					
 					output+= "<br />";
 					output+= "<br />";
@@ -472,7 +460,7 @@
 <body >
 	<form>
 		
-		Please Press decode:<br />
+		Please Press Decode:<br />
 		
 
 	</form>

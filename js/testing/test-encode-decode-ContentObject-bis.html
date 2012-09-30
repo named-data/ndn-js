@@ -116,24 +116,24 @@
 			else if (co==-2)
 				output+= "CONTENT NAME IS EMPTY"
 			else{
-				if(co.Name!=null && co.Name.Components!=null){
+				if(co.name!=null && co.name.Components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.Name.Components.length;i++){
-						output+= "/"+ toString(co.Name.Components[i]);
+					for(var i=0;i<co.name.Components.length;i++){
+						output+= "/"+ toString(co.name.Components[i]);
 					}
 					output+= "<br />";
 					output+= "<br />";
 				}
 	
-				if(co.Content !=null){
-					output += "CONTENT(ASCII): "+ toString(co.Content);
+				if(co.content !=null){
+					output += "CONTENT(ASCII): "+ toString(co.content);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.Content !=null){
-					output += "CONTENT(hex): "+ toHex(co.Content);
+				if(co.content !=null){
+					output += "CONTENT(hex): "+ toHex(co.content);
 					
 					output+= "<br />";
 					output+= "<br />";

@@ -90,10 +90,10 @@
 		var co = connector.get( contentName );
 
 		if(co){
-			 loadedImageString += DataUtils.toString(co.Content);
-			 console.log("Received length: " + co.Content.length);
-			if(co.Content.length == pieceSize){
-				pieceNumber += co.Content.length;
+			 loadedImageString += DataUtils.toString(co.content);
+			 console.log("Received length: " + co.content.length);
+			if(co.content.length == pieceSize){
+				pieceNumber += co.content.length;
 				getPiece();
 			}
 			else document.getElementById('image').src += loadedImageString;

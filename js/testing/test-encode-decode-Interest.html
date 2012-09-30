@@ -76,7 +76,7 @@
 		function encode(){
 			var interest = new Interest( new ContentName(document.getElementById('interest').value ) );
 
-			interest.Scope = 1;
+			interest.scope = 1;
 			
 			var output = encodeToHexInterest(interest);
 			
@@ -100,14 +100,14 @@
 			
 			var output ="";
 			
-			if(interest.Name!=null && interest.Name.Components!=null){
+			if(interest.name!=null && interest.name.Components!=null){
 				output+= "NAME: ";
 				
 				
-				output+= interest.Name.getName();
+				output+= interest.name.getName();
 				
-				/*for(var i=0;i<interest.Name.Components.length;i++){
-					output+= "/"+ DataUtils.toString(interest.Name.Components[i]);
+				/*for(var i=0;i<interest.name.Components.length;i++){
+					output+= "/"+ DataUtils.toString(interest.name.Components[i]);
 				}*/
 				
 				output+= "<br />";
@@ -115,48 +115,39 @@
 			}
 	
 			
-			if(interest.Scope!=null ){
+			if(interest.scope!=null ){
 				output+= "SCOPE: ";
 				
-					output+=  interest.Scope;
+					output+=  interest.scope;
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 	
-			if(interest.PublisherID!=null ){
+			if(interest.publisherID!=null ){
 				output+= "PUBLISHER ID: ";
 				
-					output+=  interest.PublisherID.PublisherID;
+					output+=  interest.publisherID.PublisherID;
 					
 					output+= "PUBLISHER ID TYPE: ";
-					output+=  interest.PublisherID.PublisherType;
+					output+=  interest.publisherID.PublisherType;
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.MaxSuffixComponents!=null ){
+			if(interest.maxSuffixComponents!=null ){
 				output+= "MaxSuffixComponents : ";
 				
-				output+=  interest.MaxSuffixComponents;
+				output+=  interest.maxSuffixComponents;
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.MinSuffixComponents!=null ){
+			if(interest.minSuffixComponents!=null ){
 				output+= "MinSuffixComponents : ";
 				
-				output+=  interest.MinSuffixComponents;
-
-				output+= "<br />";
-				output+= "<br />";
-			}
-			
-			if(interest.MinSuffixComponents!=null ){
-				output+= "MinSuffixComponents : ";
-				
-				output+=  interest.MinSuffixComponents;
+				output+=  interest.minSuffixComponents;
 
 				output+= "<br />";
 				output+= "<br />";

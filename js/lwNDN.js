@@ -98,7 +98,7 @@ lwNDN.prototype.put = function(name,content){
 		var interestName = new ContentName(['ccnx',ccnxnodename,'selfreg',coBinary]);
 
 		int = new Interest(interestName);
-		int.Scope = 1;
+		int.scope = 1;
 		
 		var hex = encodeToHexInterest(int);
 

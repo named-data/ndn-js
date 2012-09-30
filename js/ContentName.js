@@ -4,20 +4,20 @@
  */
  
 
-var ContentName = function ContentName(_Components){
+var ContentName = function ContentName(_components){
 
-	if( typeof _Components == 'string') {
+	if( typeof _components == 'string') {
 		
-		if(LOG>3)console.log('Content Name String '+_Components);
-		this.Components = ContentName.makeBlob(ContentName.createNameArray(_Components));
+		if(LOG>3)console.log('Content Name String '+_components);
+		this.Components = ContentName.makeBlob(ContentName.createNameArray(_components));
 	}
-	else if(typeof _Components === 'object' && _Components instanceof Array ){
+	else if(typeof _components === 'object' && _components instanceof Array ){
 		
-		if(LOG>4)console.log('Content Name Array '+_Components);
-		this.Components = ContentName.makeBlob(_Components);
+		if(LOG>4)console.log('Content Name Array '+_components);
+		this.Components = ContentName.makeBlob(_components);
 
 	}
-	else if(_Components==null){
+	else if(_components==null){
 		this.Components =[];
 	}
 	else{

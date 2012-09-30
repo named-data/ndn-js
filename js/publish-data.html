@@ -110,7 +110,7 @@
 			else if (co==-2)
 				output+= "CONTENT NAME IS EMPTY"
 			else{
-				if(co.Name!=null && co.Name.Components!=null){
+				if(co.name!=null && co.Name.Components!=null){
 					output+= "NAME: ";
 					
 					for(var i=0;i<co.Name.Components.length;i++){
@@ -120,7 +120,7 @@
 					output+= "<br />";
 				}
 	
-				if(co.Content !=null){
+				if(co.content !=null){
 					output += "CONTENT(ASCII): "+ toString(co.Content);
 					
 					output+= "<br />";

@@ -75,7 +75,7 @@
 
 		function getAction(){
 			var interest = new Interest( new ContentName(document.getElementById('interest').value));
-			interest.Scope = 1;
+			interest.scope = 1;
 			
 			var received = get('127.0.0.1', 9695, encodeToHexInterest(interest));	
 
