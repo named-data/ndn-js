@@ -81,7 +81,7 @@ FaceInstance.prototype.from_ccnb = function(//XMLDecoder
 			
 		} else {
 			
-			throw new Exception("FaceInstance.decoder.  Invalid " + 
+			throw new Error("FaceInstance.decoder.  Invalid " + 
 					CCNProtocolDTags.tagToString(CCNProtocolDTags.IPProto) + " field: " + pI);
 			
 		}
@@ -119,8 +119,8 @@ FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 	encoder){
 
 	//if (!this.validate()) {
-		//throw new Exception("Cannot encode : field values missing.");
-		//throw new Exception("")
+		//throw new Error("Cannot encode : field values missing.");
+		//throw new Error("")
 	//}
 	encoder.writeStartElement(this.getElementLabel());
 	

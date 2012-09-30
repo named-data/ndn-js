@@ -86,7 +86,7 @@ BinaryXMLDecoder.prototype.readStartElement =function(
 		tv = this.decodeTypeAndVal(this.istream);
 
 		if (null == tv) {
-			throw new Exception("Expected start element: " + startTag + " got something not a tag.");
+			throw new Error("Expected start element: " + startTag + " got something not a tag.");
 		}
 		
 		//String 
@@ -101,7 +101,7 @@ BinaryXMLDecoder.prototype.readStartElement =function(
 		}
 		
 		if ((null ==  decodedTag) || decodedTag != startTag) {
-			throw new Exception("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
+			throw new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
 		}
 		
 		if (null != attributes) {
@@ -109,7 +109,7 @@ BinaryXMLDecoder.prototype.readStartElement =function(
 		}
 		
 	} catch (e) {
-		throw new Exception("readStartElement", e);
+		throw new Error("readStartElement", e);
 	}
 };
 
@@ -189,7 +189,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			tv = this.decodeTypeAndVal(this.istream);
 			
 			if (null == tv) {
-				throw new Exception("Expected start element: " + startTag + " got something not a tag.");
+				throw new Error("Expected start element: " + startTag + " got something not a tag.");
 			}
 			
 			//String 
@@ -227,7 +227,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 			if ((null ==  decodedTag) || decodedTag != startTag ) {
 				console.log('expecting '+ startag + ' but got '+ decodedTag);
-				throw new Exception("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
+				throw new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
 			}
 			
 			// DKS: does not read attributes out of stream if caller doesn't
@@ -239,7 +239,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 		//} catch ( e) {
 			//console.log(e);
-			//throw new Exception("readStartElement", e);
+			//throw new Error("readStartElement", e);
 		//}
 	}
 	
@@ -281,7 +281,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new Exception("Unknown DATTR value" + thisTV.val());
+					throw new Error("Unknown DATTR value" + thisTV.val());
 				}
 			}
 			// Attribute values are always UDATA
@@ -296,7 +296,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 
 	} catch ( e) {
 		Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-		throw new Exception("readStartElement", e);
+		throw new Error("readStartElement", e);
 	}
 };
 
@@ -371,7 +371,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 		return false;
 	}
 	else{
-		throw new Exception("SHOULD BE STRING OR NUMBER");
+		throw new Error("SHOULD BE STRING OR NUMBER");
 	}
 }
 //returns Long
@@ -425,7 +425,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 				this.offset = previousOffset;
 			} catch ( e) {
 				Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-				throw new Exception("Cannot reset stream! " + e.getMessage(), e);
+				throw new Error("Cannot reset stream! " + e.getMessage(), e);
 			}
 		}
 		return decodedTag;
@@ -767,7 +767,7 @@ BinaryXMLDecoder.prototype.readIntegerElement =function(
 
 	//}
 	//catch (e) {
-		//throw new Exception("Cannot parse " + startTag + ": " + strVal);
+		//throw new Error("Cannot parse " + startTag + ": " + strVal);
 	//}
 	
 	return parseInt(strVal);

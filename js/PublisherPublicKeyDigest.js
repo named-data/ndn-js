@@ -21,7 +21,7 @@ PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {
 		if(LOG>4)console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
 
 		if (null == this.publisherPublicKeyDigest) {
-			throw new Exception("Cannot parse publisher key digest.");
+			throw new Error("Cannot parse publisher key digest.");
 		}
 		
 		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
@@ -38,7 +38,7 @@ PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {
 PublisherPublicKeyDigest.prototype.to_ccnb= function( encoder) {
 		//TODO Check that the ByteArray for the key is present
 		if (!this.validate()) {
-			throw new Exception("Cannot encode : field values missing.");
+			throw new Error("Cannot encode : field values missing.");
 		}
 		if(LOG>3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
 		encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);

@@ -46,11 +46,11 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				
 				
 			} catch (e) {
-				throw new Exception("Cannot parse key: ", e);
+				throw new Error("Cannot parse key: ", e);
 			} 
 
 			if (null == this.publicKey) {
-				throw new Exception("Cannot parse key: ");
+				throw new Error("Cannot parse key: ");
 			}
 
 		} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
@@ -71,10 +71,10 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
 				
 			} catch ( e) {
-				throw new Exception("Cannot decode certificate: " +  e);
+				throw new Error("Cannot decode certificate: " +  e);
 			}
 			if (null == this.certificate) {
-				throw new Exception("Cannot parse certificate! ");
+				throw new Error("Cannot parse certificate! ");
 			}
 		} else  {
 			this.type = 1;
@@ -108,7 +108,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 			try {
 				encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
 			} catch ( e) {
-				throw new Exception("CertificateEncodingException attempting to write key locator: " + e);
+				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 			}
 			
 		} else if (this.type == KeyLocatorType.NAME) {

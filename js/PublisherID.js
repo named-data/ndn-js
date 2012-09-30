@@ -49,13 +49,13 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 		var nextTag = decoder.peekStartElementAsLong();
 		
 		if (null == nextTag) {
-			throw new Exception("Cannot parse publisher ID.");
+			throw new Error("Cannot parse publisher ID.");
 		} 
 		
 		this.publisherType = new PublisherType(nextTag); 
 		
 		if (!isTypeTagVal(nextTag)) {
-			throw new Exception("Invalid publisher ID, got unexpected type: " + nextTag);
+			throw new Error("Invalid publisher ID, got unexpected type: " + nextTag);
 		}
 		this.publisherID = decoder.readBinaryElement(nextTag);
 		if (null == this.publisherID) {
@@ -65,7 +65,7 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 
 PublisherID.prototype.to_ccnb = function(encoder) {
 	if (!this.validate()) {
-		throw new Exception("Cannot encode " + this.getClass().getName() + ": field values missing.");
+		throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 	}
 
 	encoder.writeElement(this.getElementLabel(), this.publisherID);

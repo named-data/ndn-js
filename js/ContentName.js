@@ -89,7 +89,7 @@ ContentName.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
 ContentName.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 		
 		if( this.components ==null ) 
-			throw new Exception("CANNOT ENCODE EMPTY CONTENT NAME");
+			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
 		encoder.writeStartElement(this.getElementLabel());
 		var count = this.components.length;

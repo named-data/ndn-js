@@ -60,7 +60,7 @@ Signature.prototype.from_ccnb =function( decoder) {
 Signature.prototype.to_ccnb= function( encoder){
     	
 	if (!this.validate()) {
-		throw new Exception("Cannot encode: field values missing.");
+		throw new Error("Cannot encode: field values missing.");
 	}
 	
 	encoder.writeStartElement(this.getElementLabel());

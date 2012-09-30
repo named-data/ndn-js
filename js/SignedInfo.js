@@ -109,7 +109,7 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 			
 			
 			if (null == this.type) {
-				throw new Exception("Cannot parse signedInfo type: bytes.");
+				throw new Error("Cannot parse signedInfo type: bytes.");
 			}
 			
 		} else {
@@ -135,7 +135,7 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 
 SignedInfo.prototype.to_ccnb = function( encoder)  {
 		if (!this.validate()) {
-			throw new Exception("Cannot encode : field values missing.");
+			throw new Error("Cannot encode : field values missing.");
 		}
 		encoder.writeStartElement(this.getElementLabel());
 		

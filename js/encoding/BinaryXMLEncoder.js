@@ -207,14 +207,14 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	if(LOG>4) console.log('OFFSET IS ' + this.offset );
 	
 	if ((type > XML_UDATA) || (type < 0) || (val < 0)) {
-		throw new Exception("Tag and value must be positive, and tag valid.");
+		throw new Error("Tag and value must be positive, and tag valid.");
 	}
 	
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
 	
 	if ((this.offset + numEncodingBytes) > buf.length) {
-		throw new Exception("Buffer space of " + (buf.length-this.offset) + 
+		throw new Error("Buffer space of " + (buf.length-this.offset) + 
 											" bytes insufficient to hold " + 
 											numEncodingBytes + " of encoded type and value.");
 	}
@@ -239,7 +239,7 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 		--i;
 	}
 	if (val != 0) {
-		throw new Exception( "This should not happen: miscalculated encoding");
+		throw new Error( "This should not happen: miscalculated encoding");
 		//Log.warning(Log.FAC_ENCODING, "This should not happen: miscalculated encoding length, have " + val + " left.");
 	}
 	this.offset+= numEncodingBytes;

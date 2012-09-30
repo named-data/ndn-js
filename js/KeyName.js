@@ -32,7 +32,7 @@ KeyName.prototype.from_ccnb=function( decoder){
 
 KeyName.prototype.to_ccnb = function( encoder) {
 	if (!this.validate()) {
-		throw new Exception("Cannot encode : field values missing.");
+		throw new Error("Cannot encode : field values missing.");
 	}
 	
 	encoder.writeStartElement(this.getElementLabel());

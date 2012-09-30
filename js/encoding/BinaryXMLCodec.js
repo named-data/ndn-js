@@ -61,14 +61,14 @@ BinaryXMLCodec.prototype.encodeTypeAndValOffset = function(
 	offset) {
 	
 	if ((type > XML_UDATA) || (type < 0) || (val < 0)) {
-		throw new Exception("Tag and value must be positive, and tag valid.");
+		throw new Error("Tag and value must be positive, and tag valid.");
 	}
 	
 	// Encode backwards. Calculate how many bytes we need:
 	var/*int*/ numEncodingBytes = numEncodingBytes(val);
 	
 	if ((offset + numEncodingBytes) > buf.length) {
-		throw new Exception("Buffer space of " + (buf.length-offset) + 
+		throw new Error("Buffer space of " + (buf.length-offset) + 
 											" bytes insufficient to hold " + 
 											numEncodingBytes + " of encoded type and value.");
 	}
@@ -104,7 +104,7 @@ BinaryXMLCodec.prototype.encodeTypeAndVal = function(
 		offset) {
 	
 	if ((type > XML_UDATA) || (type < 0) || (val < 0)) {
-		throw new Exception("Tag and value must be positive, and tag valid.");
+		throw new Error("Tag and value must be positive, and tag valid.");
 	}
 	
 	// Encode backwards. Calculate how many bytes we need:
@@ -112,7 +112,7 @@ BinaryXMLCodec.prototype.encodeTypeAndVal = function(
 	var numEncodingBytes = numEncodingBytes(val);
 	
 	if ((offset + numEncodingBytes) > buf.length) {
-		throw new Exception("Buffer space of " + (buf.length-offset) + 
+		throw new Error("Buffer space of " + (buf.length-offset) + 
 											" bytes insufficient to hold " + 
 											numEncodingBytes + " of encoded type and value.");
 	}
@@ -137,7 +137,7 @@ BinaryXMLCodec.prototype.encodeTypeAndVal = function(
 		--i;
 	}
 	if (val != 0) {
-		throw new Exception( "This should not happen: miscalculated encoding");
+		throw new Error( "This should not happen: miscalculated encoding");
 		//Log.warning(Log.FAC_ENCODING, "This should not happen: miscalculated encoding length, have " + val + " left.");
 	}
 	
