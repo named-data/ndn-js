@@ -8,44 +8,44 @@ var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(_pkd){
 	 this.PUBLISHER_ID_LEN = 512/8;
  	 
 
-	 this.PublisherPublicKeyDigest = _pkd;
- 	 //if( typeof _pkd == "object") this.PublisherPublicKeyDigest = _pkd; // Byte Array
+	 this.publisherPublicKeyDigest = _pkd;
+ 	 //if( typeof _pkd == "object") this.publisherPublicKeyDigest = _pkd; // Byte Array
  	 //else if( typeof _pkd == "PublicKey") ;//TODO...
     
 };
 
-PublisherPublicKeyDigest.prototype.decode = function( decoder) {		
+PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {		
 
-		this.PublisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
+		this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
 		
-		if(LOG>4)console.log('Publisher public key digest is ' + this.PublisherPublicKeyDigest);
+		if(LOG>4)console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
 
-		if (null == this.PublisherPublicKeyDigest) {
+		if (null == this.publisherPublicKeyDigest) {
 			throw new Exception("Cannot parse publisher key digest.");
 		}
 		
 		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
 
-		if (this.PublisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
+		if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
 			
-			console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.PublisherPublicKeyDigest.length);
+			console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
 			
-			//this.PublisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
+			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
 		
 		}
 	};
 
-PublisherPublicKeyDigest.prototype.encode= function( encoder) {
+PublisherPublicKeyDigest.prototype.to_ccnb= function( encoder) {
 		//TODO Check that the ByteArray for the key is present
 		if (!this.validate()) {
 			throw new Exception("Cannot encode : field values missing.");
 		}
-		if(LOG>3) console.log('PUBLISHER KEY DIGEST IS'+this.PublisherPublicKeyDigest);
-		encoder.writeElement(this.getElementLabel(), this.PublisherPublicKeyDigest);
+		if(LOG>3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
+		encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
 };
 	
 PublisherPublicKeyDigest.prototype.getElementLabel = function() { return CCNProtocolDTags.PublisherPublicKeyDigest; };
 
 PublisherPublicKeyDigest.prototype.validate =function() {
-		return (null != this.PublisherPublicKeyDigest);
+		return (null != this.publisherPublicKeyDigest);
 };

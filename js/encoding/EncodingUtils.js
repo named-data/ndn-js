@@ -65,7 +65,7 @@ function decodeHexFaceInstance(result){
 
 	var faceInstance = new FaceInstance();
 
-	faceInstance.decode(decoder);
+	faceInstance.from_ccnb(decoder);
 
 	return faceInstance;
 	
@@ -113,7 +113,7 @@ function decodeHexForwardingEntry(result){
 	
 	forwardingEntry = new ForwardingEntry();
 
-	forwardingEntry.decode(decoder);
+	forwardingEntry.from_ccnb(decoder);
 
 	return forwardingEntry;
 	
@@ -130,11 +130,11 @@ function contentObjectToHtml(/* ContentObject */ co) {
     else if (co==-2)
 	output+= "CONTENT NAME IS EMPTY"
     else{
-	if(co.name!=null && co.name.Components!=null){
+	if(co.name!=null && co.name.components!=null){
 	    output+= "NAME: ";
 	    
-	    for(var i=0;i<co.name.Components.length;i++){
-		output+= "/"+ DataUtils.toString(co.name.Components[i]);
+	    for(var i=0;i<co.name.components.length;i++){
+		output+= "/"+ DataUtils.toString(co.name.components[i]);
 	    }
 	    output+= "<br />";
 	    output+= "<br />";
@@ -152,36 +152,36 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	    output+= "<br />";
 	}
-	if(co.Signature !=null && co.Signature.Signature!=null){
-	    output += "SIGNATURE(hex): "+ DataUtils.toHex(co.Signature.Signature);
+	if(co.signature !=null && co.signature.signature!=null){
+	    output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	}
-	if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
-	    output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
+	if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
+	    output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	}
-	if(co.SignedInfo !=null && co.SignedInfo.Timestamp!=null){
+	if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
 	    var d = new Date();
-	    d.setTime( co.SignedInfo.Timestamp.msec );
+	    d.setTime( co.signedInfo.timestamp.msec );
 	    
 	    var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
 	    
 	    output += "TimeStamp: "+d;
 	    output+= "<br />";
-	    output += "TimeStamp(number): "+ co.SignedInfo.Timestamp.msec;
+	    output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
 	    
 	    output+= "<br />";
 	}
-	if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.Certificate!=null){
-	    var tmp = DataUtils.toString(co.SignedInfo.Locator.Certificate);
+	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
+	    var tmp = DataUtils.toString(co.signedInfo.locator.certificate);
 	    var publickey = rstr2b64(tmp);
-	    var publickeyHex = DataUtils.toHex(co.SignedInfo.Locator.Certificate).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.SignedInfo.Locator.Certificate);
-	    var signature = DataUtils.toHex(co.Signature.Signature).toLowerCase();
+	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
+	    var publickeyString = DataUtils.toString(co.signedInfo.locator.certificate);
+	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
 	    output += "DER Certificate: "+publickey ;
@@ -201,7 +201,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(" Signature is");
 	    if(LOG>2) console.log( signature );
 	    //if(LOG>2) console.log(" Signature NOW IS" );
-	    //if(LOG>2) console.log(co.Signature.Signature);
+	    //if(LOG>2) console.log(co.signature.signature);
 
 	    var x509 = new X509();
 	    x509.readCertPEM(publickey);
@@ -250,18 +250,18 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    else
 		output += 'SIGNATURE INVALID';
 	    
-	    //output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
 	    //if(LOG>4) console.log('str'[1]);
 	}
-	if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.PublicKey!=null){
-	    var publickey = rstr2b64(DataUtils.toString(co.SignedInfo.Locator.PublicKey));
-	    var publickeyHex = DataUtils.toHex(co.SignedInfo.Locator.PublicKey).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.SignedInfo.Locator.PublicKey);
-	    var signature = DataUtils.toHex(co.Signature.Signature).toLowerCase();
+	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
+	    var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
+	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
+	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
 	    output += "DER Certificate: "+publickey ;
@@ -278,7 +278,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    
 	    if(LOG>2) console.log(" Signature NOW IS" );
 	    
-	    if(LOG>2) console.log(co.Signature.Signature);
+	    if(LOG>2) console.log(co.signature.signature);
 	    
 	    /*var x509 = new X509();
 	      
@@ -340,7 +340,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    else
 		output += 'SIGNATURE INVALID';
 	    
-	    //output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    
 	    output+= "<br />";
 	    output+= "<br />";

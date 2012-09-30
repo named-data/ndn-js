@@ -9,16 +9,16 @@ var ContentName = function ContentName(_components){
 	if( typeof _components == 'string') {
 		
 		if(LOG>3)console.log('Content Name String '+_components);
-		this.Components = ContentName.makeBlob(ContentName.createNameArray(_components));
+		this.components = ContentName.makeBlob(ContentName.createNameArray(_components));
 	}
 	else if(typeof _components === 'object' && _components instanceof Array ){
 		
 		if(LOG>4)console.log('Content Name Array '+_components);
-		this.Components = ContentName.makeBlob(_components);
+		this.components = ContentName.makeBlob(_components);
 
 	}
 	else if(_components==null){
-		this.Components =[];
+		this.components =[];
 	}
 	else{
 
@@ -31,8 +31,8 @@ ContentName.prototype.getName=function(){
 	
 	var output = "";
 	
-	for(var i=0;i<this.Components.length;i++){
-		output+= "/"+ DataUtils.toString(this.Components[i]);
+	for(var i=0;i<this.components.length;i++){
+		output+= "/"+ DataUtils.toString(this.components[i]);
 	}
 	
 	return output;
@@ -73,11 +73,11 @@ ContentName.createNameArray=function(name){
 }
 
 
-ContentName.prototype.decode = function(/*XMLDecoder*/ decoder)  {
+ContentName.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
 		decoder.readStartElement(this.getElementLabel());
 
 		
-		this.Components = new Array(); //new ArrayList<byte []>();
+		this.components = new Array(); //new ArrayList<byte []>();
 
 		while (decoder.peekStartElement(CCNProtocolDTags.Component)) {
 			this.add(decoder.readBinaryElement(CCNProtocolDTags.Component));
@@ -86,15 +86,15 @@ ContentName.prototype.decode = function(/*XMLDecoder*/ decoder)  {
 		decoder.readEndElement();
 };
 
-ContentName.prototype.encode = function(/*XMLEncoder*/ encoder)  {
+ContentName.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 		
-		if( this.Components ==null ) 
+		if( this.components ==null ) 
 			throw new Exception("CANNOT ENCODE EMPTY CONTENT NAME");
 
 		encoder.writeStartElement(this.getElementLabel());
-		var count = this.Components.length;
+		var count = this.components.length;
 		for (var i=0; i < count; i++) {
-			encoder.writeElement(CCNProtocolDTags.Component, this.Components[i]);
+			encoder.writeElement(CCNProtocolDTags.Component, this.components[i]);
 		}
 		encoder.writeEndElement();
 };
@@ -104,6 +104,6 @@ ContentName.prototype.getElementLabel = function(){
 };
 
 ContentName.prototype.add = function(param){
-	return this.Components.push(param);
+	return this.components.push(param);
 };
 

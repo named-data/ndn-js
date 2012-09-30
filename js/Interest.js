@@ -37,7 +37,7 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 		decoder.readStartElement(CCNProtocolDTags.Interest);
 
 		this.name = new ContentName();
-		this.name.decode(decoder);
+		this.name.from_ccnb(decoder);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents)) {
 			this.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
@@ -48,13 +48,13 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 		}
 			
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-			this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-			this.publisherPublicKeyDigest.decode(decoder);
+			this.publisherPublicKeyDigest = new publisherPublicKeyDigest();
+			this.publisherPublicKeyDigest.from_ccnb(decoder);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
 			this.exclude = new Exclude();
-			this.exclude.decode(decoder);
+			this.exclude.from_ccnb(decoder);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector)) {
@@ -86,7 +86,7 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 		
 		encoder.writeStartElement(CCNProtocolDTags.Interest);
 		
-		this.name.encode(encoder);
+		this.name.to_ccnb(encoder);
 	
 		if (null != this.minSuffixComponents) 
 			encoder.writeElement(CCNProtocolDTags.MinSuffixComponents, this.minSuffixComponents);	
@@ -95,10 +95,10 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 			encoder.writeElement(CCNProtocolDTags.MaxSuffixComponents, this.maxSuffixComponents);
 
 		if (null != this.publisherPublicKeyDigest)
-			this.publisherPublicKeyDigest.encode(encoder);
+			this.publisherPublicKeyDigest.to_ccnb(encoder);
 		
 		if (null != this.exclude)
-			this.exclude.encode(encoder);
+			this.exclude.to_ccnb(encoder);
 		
 		if (null != this.childSelector) 
 			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.childSelector);
@@ -118,8 +118,8 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 };
 
 Interest.prototype.matches_name = function(/*ContentName*/ name){
-	var i_name = this.name.Components;
-	var o_name = name.Components;
+	var i_name = this.name.components;
+	var o_name = name.components;
 
 	// The intrest name is longer than the name we are checking it against.
 	if (i_name.length > o_name.length)

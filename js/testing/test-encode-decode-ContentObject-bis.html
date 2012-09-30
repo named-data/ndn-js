@@ -116,11 +116,11 @@
 			else if (co==-2)
 				output+= "CONTENT NAME IS EMPTY"
 			else{
-				if(co.name!=null && co.name.Components!=null){
+				if(co.name!=null && co.name.components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.name.Components.length;i++){
-						output+= "/"+ toString(co.name.Components[i]);
+					for(var i=0;i<co.name.components.length;i++){
+						output+= "/"+ toString(co.name.components[i]);
 					}
 					output+= "<br />";
 					output+= "<br />";
@@ -138,34 +138,34 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.Signature !=null && co.Signature.Signature!=null){
+				if(co.signature !=null && co.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
-					
-					output += "Publisher Public Key Digest(hex): "+ toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
+					output += "SIGNATURE(hex): "+ toHex(co.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo !=null && co.SignedInfo.Timestamp!=null){
+				if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
 					
-					output += "TimeStamp(hex): "+ co.SignedInfo.Timestamp.date;
+					output += "Publisher Public Key Digest(hex): "+ toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.PublicKey!=null){
+				if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
 					
-					var publickey = rstr2b64(toString(co.SignedInfo.Locator.PublicKey));
-					var publickeyHex = toHex(co.SignedInfo.Locator.PublicKey).toLowerCase();
-					var publickeyString = toString(co.SignedInfo.Locator.PublicKey);
+					output += "TimeStamp(hex): "+ co.signedInfo.timestamp.date;
 					
-					var signature = toHex(co.Signature.Signature).toLowerCase();
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
+					
+					var publickey = rstr2b64(toString(co.signedInfo.locator.publicKey));
+					var publickeyHex = toHex(co.signedInfo.locator.publicKey).toLowerCase();
+					var publickeyString = toString(co.signedInfo.locator.publicKey);
+					
+					var signature = toHex(co.signature.signature).toLowerCase();
 					
 					
 					var input = toString(co.rawSignatureData);
@@ -185,7 +185,7 @@
 					
 					if(LOG>2) console.log(" Signature "+signature );
 					if(LOG>2) console.log(" Signature NOW IS" );
-					if(LOG>2) console.log(co.Signature.Signature);
+					if(LOG>2) console.log(co.signature.signature);
 					
 					
 					var x509 = new X509();
@@ -231,7 +231,7 @@
 						
 					
 					
-					//output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+					//output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 					
 					output+= "<br />";
 					output+= "<br />";

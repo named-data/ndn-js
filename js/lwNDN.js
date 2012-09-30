@@ -70,13 +70,13 @@ lwNDN.prototype.put = function(name,content){
 		
 		var co = this.get("/%C1.M.S.localhost/%C1.M.SRV/ccnd");
 		
-		if(!co || !co.SignedInfo || !co.SignedInfo.Publisher || !co.SignedInfo.Publisher.PublisherPublicKeyDigest){
+		if(!co || !co.signedInfo || !co.signedInfo.publisher || !co.signedInfo.publisher.publisherPublicKeyDigest){
 			alert("Cannot contact router");
 			
 			return null;
 		}
 		
-		var ccnxnodename = co.SignedInfo.Publisher.PublisherPublicKeyDigest;
+		var ccnxnodename = co.signedInfo.publisher.publisherPublicKeyDigest;
 		
 		name = name.trim();
 		

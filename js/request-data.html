@@ -98,11 +98,11 @@
 			if(co==null)
 				output+= "NO CONTENT FOUND"
 			else{
-				if(co.name!=null && co.name.Components!=null){
+				if(co.name!=null && co.name.components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.name.Components.length;i++){
-						output+= "/"+ DataUtils.toString(co.name.Components[i]);
+					for(var i=0;i<co.name.components.length;i++){
+						output+= "/"+ DataUtils.toString(co.name.components[i]);
 					}
 					output+= "<br />";
 					output+= "<br />";
@@ -121,39 +121,39 @@
 					output+= "<br />";
 				}
 				
-				if(co.Signature !=null && co.Signature.Signature!=null){
+				if(co.signature !=null && co.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.Signature.Signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
-					
-					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
+					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo !=null && co.SignedInfo.Timestamp!=null){
+				if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
 					
-					output += "TimeStamp: "+ co.SignedInfo.Timestamp.getJavascriptDate();
-					
-					output+= "<br />";
-					output+= "<br />";
-					
-					output += "TimeStamp (MILLISECONDS): "+ co.SignedInfo.Timestamp.msec;
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.PublicKey!=null){
+				if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
 					
-					var publickey = rstr2b64(DataUtils.toString(co.SignedInfo.Locator.PublicKey));
-					var publickeyHex = DataUtils.toHex(co.SignedInfo.Locator.PublicKey).toLowerCase();
-					var publickeyString = DataUtils.toString(co.SignedInfo.Locator.PublicKey);
+					output += "TimeStamp: "+ co.signedInfo.timestamp.getJavascriptDate();
 					
-					var signature = DataUtils.toHex(co.Signature.Signature).toLowerCase();
+					output+= "<br />";
+					output+= "<br />";
+					
+					output += "TimeStamp (MILLISECONDS): "+ co.signedInfo.timestamp.msec;
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
+					
+					var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
+					var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+					var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
+					
+					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 					
 					
 					var input = DataUtils.toString(co.rawSignatureData);
@@ -173,7 +173,7 @@
 					
 					if(LOG>2) console.log(" Signature NOW IS" );
 					
-					if(LOG>2) console.log(co.Signature.Signature);
+					if(LOG>2) console.log(co.signature.signature);
 					
 					
 					/*var x509 = new X509();
@@ -245,7 +245,7 @@
 						
 					
 					
-					//output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+					//output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 					
 					output+= "<br />";
 					output+= "<br />";

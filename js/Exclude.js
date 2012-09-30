@@ -3,16 +3,16 @@
  * This class represents Exclude objects
  */
 
-var Exclude = function Exclude(_Values){ 
+var Exclude = function Exclude(_values){ 
 	
 	this.OPTIMUM_FILTER_SIZE = 100;
 	
 
-	this.Values = _Values; //array of elements
+	this.values = _values; //array of elements
 	
 }
 
-Exclude.prototype.decode = function(/*XMLDecoder*/ decoder) {
+Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 
 		
@@ -35,7 +35,7 @@ Exclude.prototype.decode = function(/*XMLDecoder*/ decoder) {
 
 };
 
-Exclude.prototype.encode=function(/*XMLEncoder*/ encoder)  {
+Exclude.prototype.to_ccnb=function(/*XMLEncoder*/ encoder)  {
 		if (!validate()) {
 			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
 		}

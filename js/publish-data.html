@@ -110,7 +110,7 @@
 			else if (co==-2)
 				output+= "CONTENT NAME IS EMPTY"
 			else{
-				if(co.name!=null && co.Name.Components!=null){
+				if(co.name!=null && co.Name.components!=null){
 					output+= "NAME: ";
 					
 					for(var i=0;i<co.Name.Components.length;i++){
@@ -132,14 +132,14 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.Signature !=null && co.Signature.Signature!=null){
+				if(co.signature !=null && co.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ toHex(co.Signature.Signature);
+					output += "SIGNATURE(hex): "+ toHex(co.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.Key!=null){
+				if(co.signedInfo!=null && co.SignedInfo.locator!=null && co.SignedInfo.Locator.Key!=null){
 					
 					output += "PUBLISHER KEY: "+ toHex(co.SignedInfo.Locator.Key);
 					

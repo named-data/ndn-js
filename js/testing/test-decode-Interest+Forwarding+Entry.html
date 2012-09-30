@@ -91,11 +91,11 @@
 			var output ="";
 			
 			
-			if(interest.name!=null && interest.name.Components!=null){
+			if(interest.name!=null && interest.name.components!=null){
 				output+= "NAME: ";
 				
-				for(var i=0;i<interest.name.Components.length;i++){
-					output+= "/"+ DataUtils.toString(interest.name.Components[i]);
+				for(var i=0;i<interest.name.components.length;i++){
+					output+= "/"+ DataUtils.toString(interest.name.components[i]);
 				}
 				output+= "<br />";
 				output+= "<br />";
@@ -168,7 +168,7 @@
 			if(interest.publisherPublicKeyDigest!=null ){
 				output+= "PUBLISHER PUBLIC KEY DIGEST: ";
 				
-				output+=  interest.publisherPublicKeyDigest.PublisherPublicKeyDigest;
+				output+=  interest.publisherPublicKeyDigest.publisherPublicKeyDigest;
                                         
 				output+= "<br />";
 				output+= "<br />";
@@ -192,10 +192,10 @@
 				output+= "<br />";
 			}
 			
-			if(interest.name.Components[3] !=null){
+			if(interest.name.components[3] !=null){
 				
 				
-				var input = DataUtils.toHex(interest.name.Components[3]) ;
+				var input = DataUtils.toHex(interest.name.components[3]) ;
 
 				var contentObject = decodeHexContentObject(input);
 				
@@ -217,11 +217,11 @@
 				////////////////////////////////////////
 				
 
-				if(co.name!=null && co.name.Components!=null){
+				if(co.name!=null && co.name.components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.name.Components.length;i++){
-						output+= "/"+ DataUtils.toString(co.name.Components[i]);
+					for(var i=0;i<co.name.components.length;i++){
+						output+= "/"+ DataUtils.toString(co.name.components[i]);
 					}
 					output+= "<br />";
 					output+= "<br />";
@@ -239,65 +239,65 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.Signature !=null && co.Signature.Signature!=null){
+				if(co.signature !=null && co.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.Signature.Signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.SignedInfo !=null && co.SignedInfo.Publisher!=null && co.SignedInfo.Publisher.PublisherPublicKeyDigest!=null){
-					
-					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.SignedInfo.Publisher.PublisherPublicKeyDigest);
+					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.SignedInfo !=null && co.SignedInfo.Timestamp!=null){
+				if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
+					
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
 					var d = new Date();
-					d.setTime( co.SignedInfo.Timestamp.msec );
+					d.setTime( co.signedInfo.timestamp.msec );
 					
 					var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
 					
 					output += "TimeStamp: "+d;
 					output+= "<br />";
-					output += "TimeStamp(number): "+ co.SignedInfo.Timestamp.msec;
+					output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
 					
 					
 					output+= "<br />";
 				}
-			    if(co.SignedInfo !=null && co.SignedInfo.Type!=null){
+			    if(co.signedInfo !=null && co.signedInfo.type!=null){
 
-					output += "Type: "+co.SignedInfo.Type;
+					output += "Type: "+co.signedInfo.type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.SignedInfo !=null && co.SignedInfo.Locator!=null){
+			    if(co.signedInfo !=null && co.signedInfo.locator!=null){
 
-					output += "Locator: "+co.SignedInfo.Locator.Type;
+					output += "Locator: "+co.signedInfo.locator.type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.SignedInfo !=null && co.SignedInfo.FreshnessSeconds!=null){
+			    if(co.signedInfo !=null && co.signedInfo.freshnessSeconds!=null){
 
-					output += "FreshnessSeconds: "+co.SignedInfo.FreshnessSeconds;
+					output += "FreshnessSeconds: "+co.signedInfo.freshnessSeconds;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.SignedInfo !=null && co.SignedInfo.FinalBlockID!=null){
+			    if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
 
-					output += "FinalBlockID: "+co.SignedInfo.FinalBlockID;
+					output += "FinalBlockID: "+co.signedInfo.finalBlockID;
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
-				if(co.SignedInfo!=null && co.SignedInfo.Locator!=null && co.SignedInfo.Locator.PublicKey!=null){
+				if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
 					
-					var publickey = rstr2b64(DataUtils.toString(co.SignedInfo.Locator.PublicKey));
-					var publickeyHex = DataUtils.toHex(co.SignedInfo.Locator.PublicKey).toLowerCase();
-					var publickeyString = DataUtils.toString(co.SignedInfo.Locator.PublicKey);
+					var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
+					var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+					var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 					
-					var signature = DataUtils.toHex(co.Signature.Signature).toLowerCase();
+					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 					
 					
 					var input = DataUtils.toString(co.rawSignatureData);
@@ -319,7 +319,7 @@
 					
 					if(LOG>2) console.log(" Signature NOW IS" );
 					
-					if(LOG>2) console.log(co.Signature.Signature);
+					if(LOG>2) console.log(co.signature.signature);
 					
 					
 					/*var x509 = new X509();
@@ -387,7 +387,7 @@
 					else
 						output += 'SIGNATURE INVALID';
 
-					//output += "VALID: "+ toHex(co.SignedInfo.Locator.PublicKey);
+					//output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 					
 					output+= "<br />";
 					output+= "<br />";
@@ -408,40 +408,40 @@
 				
 				//var output ="";
 				
-				if(forwardingEntry.Action!=null ){
+				if(forwardingEntry.action!=null ){
 					output+= "Action: ";
 					
-					output+=  DataUtils.toHex(forwardingEntry.Action);
+					output+=  DataUtils.toHex(forwardingEntry.action);
 						
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
-				if(forwardingEntry.PrefixName!=null){
+				if(forwardingEntry.prefixName!=null){
 					output+= "PrefixName: ";
 					
-					output+= forwardingEntry.PrefixName.getName();
+					output+= forwardingEntry.prefixName.getName();
 					output+= "<br />";
 				}
 				
-				if(forwardingEntry.CCNID!=null){
-					output+= "CCNID: ";
+				if(forwardingEntry.ccndID!=null){
+					output+= "ccndID: ";
 					
-					output+= forwardingEntry.CCNID;
+					output+= forwardingEntry.ccndID;
 					output+= "<br />";
 				}
 				
-				if(forwardingEntry.Flags!=null){
+				if(forwardingEntry.flags!=null){
 					output+= "Flags: ";
 					
-					output+= forwardingEntry.Flags;
+					output+= forwardingEntry.flags;
 					output+= "<br />";
 				}
 				
-				if(forwardingEntry.Lifetime!=null){
+				if(forwardingEntry.lifetime!=null){
 					output+= "Lifetime: ";
 					
-					output+= forwardingEntry.Lifetime;
+					output+= forwardingEntry.lifetime;
 					output+= "<br />";
 				}
 

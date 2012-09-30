@@ -87,37 +87,37 @@
 			
 			var output ="";
 			
-			if(faceInstance.PublisherPublicKeyDigest!=null ){
+			if(faceInstance.publisherPublicKeyDigest!=null ){
 				output+= "PublisherPublicKeyDigest: ";
 				
-					output+=  DataUtils.toHex(faceInstance.PublisherPublicKeyDigest.PublisherPublicKeyDigest);
+					output+=  DataUtils.toHex(faceInstance.publisherPublicKeyDigest.publisherPublicKeyDigest);
 					
 					//output+= "PUBLISHER ID TYPE: ";
-					//output+=  faceInstance.PublisherPublicKeyDigest.PublisherPublicKeyDigest;
+					//output+=  faceInstance.publisherPublicKeyDigest.PublisherPublicKeyDigest;
 					
 				output+= "<br />";
 				output+= "<br />";
 
 			}
 			
-			if(faceInstance.FaceID!=null){
+			if(faceInstance.faceID!=null){
 				output+= "FaceID: ";
 				
-				output+= faceInstance.FaceID;
+				output+= faceInstance.faceID;
 				output+= "<br />";
 			}
 			
-			if(faceInstance.IPProto!=null){
+			if(faceInstance.ipProto!=null){
 				output+= "IPProto: ";
 				
-				output+= faceInstance.IPProto;
+				output+= faceInstance.ipProto;
 				output+= "<br />";
 			}
 			
-			if(faceInstance.Host!=null){
+			if(faceInstance.host!=null){
 				output+= "Host: ";
 				
-				output+= faceInstance.Host;
+				output+= faceInstance.host;
 				output+= "<br />";
 			}
 			
@@ -127,14 +127,14 @@
 				output+= faceInstance.Port;
 				output+= "<br />";
 			}
-			if(faceInstance.FreshnessSeconds!=null){
+			if(faceInstance.freshnessSeconds!=null){
 				output+= "FreshnessSeconds: ";
 				
-				output+= faceInstance.FreshnessSeconds;
+				output+= faceInstance.freshnessSeconds;
 				output+= "<br />";
 			}
 			
-			/*if(interest.name!=null && interest.name.Components!=null){
+			/*if(interest.name!=null && interest.name.components!=null){
 				output+= "NAME: ";
 				
 				for(var i=0;i<interest.Name.Components.length;i++){

@@ -12,9 +12,9 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 		//TODO Check the class of _name
 		this.name = _name;
 	}
-	this.SignedInfo = _signedInfo;
+	this.signedInfo = _signedInfo;
 	this.content=_content;
-	this.Signature = _signature;
+	this.signature = _signature;
 
 	
 	this.startSIG = null;
@@ -29,7 +29,7 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 ContentObject.prototype.sign = function(){
 
 	var n1 = this.encodeObject(this.name);
-	var n2 = this.encodeObject(this.SignedInfo);
+	var n2 = this.encodeObject(this.signedInfo);
 	var n3 = this.encodeContent();
 	
 	var n = n1.concat(n2,n3);
@@ -58,7 +58,7 @@ ContentObject.prototype.sign = function(){
 	
 	if(LOG>2)console.log(  DataUtils.toNumbers(hSig.trim()));
 
-	this.Signature.Signature = DataUtils.toNumbers(hSig.trim());
+	this.signature.signature = DataUtils.toNumbers(hSig.trim());
 	
 
 };
@@ -66,7 +66,7 @@ ContentObject.prototype.sign = function(){
 ContentObject.prototype.encodeObject = function encodeObject(obj){
 	var enc = new BinaryXMLEncoder();
  
-	obj.encode(enc);
+	obj.to_ccnb(enc);
 	
 	var num = enc.getReducedOstream();
 
@@ -102,8 +102,8 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 
 		if( decoder.peekStartElement(CCNProtocolDTags.Signature) ){
-			this.Signature = new Signature();
-			this.Signature.decode(decoder);
+			this.signature = new Signature();
+			this.signature.from_ccnb(decoder);
 		}
 		
 		//this.endSIG = decoder.offset;
@@ -111,14 +111,14 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 		this.startSIG = decoder.offset;
 
 		this.name = new ContentName();
-		this.name.decode(decoder);
+		this.name.from_ccnb(decoder);
 		
 		//this.startSignedInfo = decoder.offset;
 	
 		
 		if( decoder.peekStartElement(CCNProtocolDTags.SignedInfo) ){
-			this.SignedInfo = new SignedInfo();
-			this.SignedInfo.decode(decoder);
+			this.signedInfo = new SignedInfo();
+			this.signedInfo.from_ccnb(decoder);
 		}
 		
 		this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
@@ -143,19 +143,19 @@ ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 	
 
 
-	if(null!=this.Signature) this.Signature.encode(encoder);
+	if(null!=this.signature) this.signature.to_ccnb(encoder);
 	
 	
 	this.startSIG = encoder.offset;
 	
 
-	if(null!=this.name) this.name.encode(encoder);
+	if(null!=this.name) this.name.to_ccnb(encoder);
 	
 	//this.endSIG = encoder.offset;
 	//this.startSignedInfo = encoder.offset;
 	
 	
-	if(null!=this.SignedInfo) this.SignedInfo.encode(encoder);
+	if(null!=this.signedInfo) this.signedInfo.to_ccnb(encoder);
 
 	encoder.writeElement(CCNProtocolDTags.Content, this.content);
 

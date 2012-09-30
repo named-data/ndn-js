@@ -100,13 +100,13 @@
 			
 			var output ="";
 			
-			if(interest.name!=null && interest.name.Components!=null){
+			if(interest.name!=null && interest.name.components!=null){
 				output+= "NAME: ";
 				
 				
 				output+= interest.name.getName();
 				
-				/*for(var i=0;i<interest.name.Components.length;i++){
+				/*for(var i=0;i<interest.name.components.length;i++){
 					output+= "/"+ DataUtils.toString(interest.name.Components[i]);
 				}*/
 				
@@ -127,10 +127,10 @@
 			if(interest.publisherID!=null ){
 				output+= "PUBLISHER ID: ";
 				
-					output+=  interest.publisherID.PublisherID;
+					output+=  interest.publisherID.publisherID;
 					
 					output+= "PUBLISHER ID TYPE: ";
-					output+=  interest.publisherID.PublisherType;
+					output+=  interest.publisherID.publisherType;
 				output+= "<br />";
 				output+= "<br />";
 			}
