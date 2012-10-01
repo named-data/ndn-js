@@ -1,16 +1,20 @@
 
 
-var lwNDN = function lwNDN(host,port){
-	this.host = host;
-	this.port = port;
+/**
+ * host is default '127.0.0.1'.
+ * port is default 9695.
+ */
+var NDN = function NDN(host, port){
+	this.host = (host || '127.0.0.1');
+	this.port = (port || 9695);
 };
 
-lwNDN.prototype.createRoute = function(host,port){
+NDN.prototype.createRoute = function(host,port){
 	this.host=host;
 	this.port=port;
 }
 
-lwNDN.prototype.get = function(message){
+NDN.prototype.get = function(message){
 	if(this.host!=null && this.port!=null){
 		var output ='';
 		message = message.trim();
@@ -65,7 +69,7 @@ lwNDN.prototype.get = function(message){
 }
 
 
-lwNDN.prototype.put = function(name,content){
+NDN.prototype.put = function(name,content){
 	if(this.host!=null && this.port!=null){
 		
 		var co = this.get("/%C1.M.S.localhost/%C1.M.SRV/ccnd");
@@ -134,7 +138,6 @@ lwNDN.prototype.put = function(name,content){
 	//console.log('SENDING ANSWER');
 
 	//return get_java_socket_bridge().putAnswer(outputHex,name);
-
 
 	var result = put(this.host,this.port, hex,name,outputHex);
 

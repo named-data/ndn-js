@@ -4,72 +4,72 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Publish</title>
-	<script type="text/javascript" src="java_socket_bridge.js"></script>
+	<title>NDN Image Sender</title>
+	<script type="text/javascript" src="../java_socket_bridge.js"></script>
 	
-	<script type="text/javascript" src="CCNProtocolDTags.js"></script>
+	<script type="text/javascript" src="../CCNProtocolDTags.js"></script>
 	
-	<script type="text/javascript" src="CCNTime.js"></script>
+	<script type="text/javascript" src="../CCNTime.js"></script>
 	
-	<script type="text/javascript" src="Name.js"></script>
+	<script type="text/javascript" src="../Name.js"></script>
 	
-	<script type="text/javascript" src="ContentObject.js"></script>
+	<script type="text/javascript" src="../ContentObject.js"></script>
 	
-	<script type="text/javascript" src="DateFormat.js"></script>
+	<script type="text/javascript" src="../DateFormat.js"></script>
 	
-	<script type="text/javascript" src="Exclude.js"></script>
+	<script type="text/javascript" src="../Exclude.js"></script>
 
-	<script type="text/javascript" src="ExcludeAny.js"></script>
+	<script type="text/javascript" src="../ExcludeAny.js"></script>
 
-	<script type="text/javascript" src="ExcludeComponent.js"></script>
+	<script type="text/javascript" src="../ExcludeComponent.js"></script>
 
-	<script type="text/javascript" src="Interest.js"></script>
+	<script type="text/javascript" src="../Interest.js"></script>
 	
-	<script type="text/javascript" src="KeyLocator.js"></script>
+	<script type="text/javascript" src="../KeyLocator.js"></script>
 	
-	<script type="text/javascript" src="PublisherID.js"></script>
+	<script type="text/javascript" src="../PublisherID.js"></script>
 	
-	<script type="text/javascript" src="Signature.js"></script>
+	<script type="text/javascript" src="../Signature.js"></script>
 	
-	<script type="text/javascript" src="SignedInfo.js"></script>
+	<script type="text/javascript" src="../SignedInfo.js"></script>
 	
-	<script type="text/javascript" src="PublisherPublicKeyDigest.js"></script>
+	<script type="text/javascript" src="../PublisherPublicKeyDigest.js"></script>
 	
-	<script type="text/javascript" src="FaceInstance.js"></script>
+	<script type="text/javascript" src="../FaceInstance.js"></script>
 
-	<script type="text/javascript" src="ForwardingEntry.js"></script>
+	<script type="text/javascript" src="../ForwardingEntry.js"></script>
 	
-	<script type="text/javascript" src="encoding/BinaryXMLEncoder.js"></script>
+	<script type="text/javascript" src="../encoding/BinaryXMLEncoder.js"></script>
 	
-	<script type="text/javascript" src="encoding/BinaryXMLCodec.js"></script>
+	<script type="text/javascript" src="../encoding/BinaryXMLCodec.js"></script>
 	
-	<script type="text/javascript" src="encoding/BinaryXMLDecoder.js"></script>
+	<script type="text/javascript" src="../encoding/BinaryXMLDecoder.js"></script>
 	
-	<script type="text/javascript" src="encoding/DataUtils.js"></script>
+	<script type="text/javascript" src="../encoding/DataUtils.js"></script>
 	
-	<script type="text/javascript" src="encoding/EncodingUtils.js"></script>
+	<script type="text/javascript" src="../encoding/EncodingUtils.js"></script>
 	
-	<script type="text/javascript" src="lwNDN.js"></script>
+	<script type="text/javascript" src="../NDN.js"></script>
 	
 	
-	<script language="JavaScript" type="text/javascript" src="security/KeyManager.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.js"></script>
 	
 	
 	<script type="text/javascript">
@@ -82,7 +82,7 @@
 	var LOG = 0;
 	
 	function init(){
-		connector = new lwNDN('127.0.0.1', 9695);
+		connector = new NDN();
 	}
 	
 		function run(){
@@ -105,7 +105,7 @@
 			//content object
 			//var co = queryPrefix( Name );
 			
-			var connector = new lwNDN('127.0.0.1', 9695);
+			var connector = new NDN();
 		    
 			var co = connector.put( ContentName, Content );
 			
@@ -153,7 +153,7 @@
 		<button onclick="publishImage()">Publish image</button>
 	</div>
 	<div >
-		<applet id="JavaSocketBridge" archive="JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
+		<applet id="JavaSocketBridge" archive="../JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
 		</applet>
 	</div>
 

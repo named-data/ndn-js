@@ -7,6 +7,8 @@
 	<title>NDN Get</title>
 	<script type="text/javascript" src="../java_socket_bridge.js"></script>
 	
+	<script type="text/javascript" src="../NDN.js"></script>
+        
 	<script type="text/javascript" src="../CCNProtocolDTags.js"></script>
 	
 	<script type="text/javascript" src="../CCNTime.js"></script>
@@ -49,7 +51,7 @@
 	<script type="text/javascript" src="../encoding/DataUtils.js"></script>
 	
 	<script type="text/javascript" src="../encoding/EncodingUtils.js"></script>
-	
+	                
 	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
 	
 	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
@@ -72,13 +74,10 @@
 	<script type="text/javascript">
 
 		function getAction(){
-			var interest = new Interest( new Name(document.getElementById('interest').value));
-			interest.scope = 1;
-			
-			var received = get('127.0.0.1', 9695, encodeToHexInterest(interest));	
+                        var connector = new NDN();
+			var co = connector.get(document.getElementById('interest').value);	
 
-			output = '<br /> received Content ' + received + '<br />' + contentObjectToHtml(decodeHexContentObject(received));			
-			console.log('INTEREST RECEIVED '+ received);
+			var output = '<br/> received Content:<br/>' + contentObjectToHtml(co);			
 			
 			document.getElementById('result').innerHTML = output;
 		}
@@ -90,7 +89,7 @@
 
 	<form>
 		Please Enter an Interest:<br />
-		<input id="interest" type="text" name="INTEREST" size="50" value="/ndn/ucla.edu/apps/lwndn-test/hello.txt" /> 
+		<input id="interest" type="text" name="INTEREST" size="50" value="/" /> 
 	</form>
 
 	<button onclick="getAction()">GET!</button>
