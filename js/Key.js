@@ -1,8 +1,23 @@
 /*
  * @author: ucla-cs
- * This class represents KeyLocator Objects
+ * This class represents Key Objects
  */
 
+var Key = function Key(){
+    /* TODO: Port from PyCCN:
+	generateRSA()
+	privateToDER()
+	publicToDER()
+	privateToPEM()
+	publicToPEM()
+	fromDER()
+	fromPEM()
+     */
+}
+
+/**
+ * KeyLocator
+ */
 var KeyLocatorType = {
 	  NAME:1,
 	  KEY:2,
