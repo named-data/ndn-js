@@ -236,6 +236,18 @@ DataUtils.toHex = function(arguments){
 }
 
 /**
+ * Raw string to hex string.
+ */
+DataUtils.stringToHex = function(arguments){
+	var ret = "";
+	for (var i = 0; i < arguments.length; ++i) {
+		var value = arguments.charCodeAt(i);
+		ret += (value < 16 ? "0" : "") + value.toString(16);
+	}
+	return ret;
+}
+
+/**
  * Byte array to raw string
  */
 //DOES NOT SEEM TO WORK
