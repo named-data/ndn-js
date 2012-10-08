@@ -71,6 +71,7 @@ DataUtils.base64toString = function base64toString(input) {
 
      // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
      var base64test = /[^A-Za-z0-9\+\/\=]/g;
+     /* Test for invalid characters. */
      if (base64test.exec(input)) {
         alert("There were invalid base64 characters in the input text.\n" +
               "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
@@ -269,6 +270,19 @@ DataUtils.toNumbers=function( str ){
 		    ret.push( parseInt( str, 16 ) );
 		  });
 		   return ret;
+    }
+}
+
+/**
+ * Hex String to raw string.
+ */
+DataUtils.hexToRawString = function(str) {
+    if(typeof str =='string') {
+		var ret = "";
+		str.replace(/(..)/g, function(s) {
+			ret += String.fromCharCode(parseInt(s, 16));
+		});
+		return ret;
     }
 }
 
