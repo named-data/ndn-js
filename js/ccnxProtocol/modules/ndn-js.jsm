@@ -232,8 +232,16 @@ function readAllFromSocket(host, port, outputData, listener) {
 				// Use readInputStreamToString to handle binary data.
 				this.data += NetUtil.readInputStreamToString(inStream, count);
 				
-				// TODO: Don't know why, but we never receive onStopRequest, assume we have
-				//   all the data and force it now.
+				// TODO: Need to parse the input to check if a whole ccnb object has been read, as in 
+				// CcnbObjectReader class: https://github.com/NDN-Routing/NDNLP/blob/master/ndnld.h#L256 .
+				// For now as a hack, try to fully decode this.data as a ContentObject.
+				try {
+ 					decodeHexContentObject(DataUtils.stringToHex(this.data));
+				} catch (ex) {
+					// Assume the exception is because the decoder only got partial data, so read moe.
+					return;
+				}
+				// We were able to parse the ContentObject, so finish.
 				this.onStopRequest();
 			} catch (ex) {
 				dump("onDataAvailable exception: " + ex + "\n");
@@ -271,7 +279,7 @@ NDN.prototype.getAsync = function(message, listener) {
 				if (result == null || result == undefined || result =="" )
 					listener.onReceivedContentObject(null);
 				else {
-					var co = decodeHexContentObject(result);
+ 					var co = decodeHexContentObject(result);
 					
 					if(LOG>2) {
 						dump('DECODED CONTENT OBJECT\n');
@@ -1719,7 +1727,7 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 		}
 		this.publisherID = decoder.readBinaryElement(nextTag);
 		if (null == this.publisherID) {
-			throw new Error("Cannot parse publisher ID of type : " + nextTag + ".");
+			throw new ContentDecodingException("Cannot parse publisher ID of type : " + nextTag + ".");
 		}
 };
 
@@ -2006,7 +2014,7 @@ var ForwardingEntry = function ForwardingEntry(
 ForwardingEntry.prototype.from_ccnb =function(
 	//XMLDecoder 
 	decoder) 
-	//throws Error
+	//throws ContentDecodingException
 	{
 			decoder.readStartElement(this.getElementLabel());
 			if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
@@ -2925,7 +2933,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new Error("Unknown DATTR value" + thisTV.val());
+					throw new ContentDecodingException("Unknown DATTR value" + thisTV.val());
 				}
 			}
 			
@@ -2938,7 +2946,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 
 	} catch ( e) {
 
-		throw new Error("readStartElement", e);
+		throw new ContentDecodingException("readStartElement", e);
 	}
 };
 
@@ -3101,7 +3109,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 
 			if (tv.type() == XML_TAG) {
 				/*if (tv.val()+1 > DEBUG_MAX_LEN) {
-					throw new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+					throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
 				}*/
 
 				// Tag value represents length-1 as tags can never be empty.
@@ -3129,7 +3137,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 			this.offset = previousOffset;
 		} catch ( e) {
 			Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-			throw new Error("Cannot reset stream! " + e.getMessage(), e);
+			throw new ContentDecodingException("Cannot reset stream! " + e.getMessage(), e);
 		}
 	}
 	return decodedTag;
@@ -3177,7 +3185,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 
 				if (tv.type() == XML_TAG) {
 					if (tv.val()+1 > DEBUG_MAX_LEN) {
-						throw new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+						throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
 					}
 
 					var valval ;
@@ -3248,10 +3256,10 @@ BinaryXMLDecoder.prototype.readEndElement = function(){
 			
 			if (next != XML_CLOSE) {
 				console.log("Expected end element, got: " + next);
-				throw new Error("Expected end element, got: " + next);
+				throw new ContentDecodingException("Expected end element, got: " + next);
 			}
 		//} catch ( e) {
-			//throw new Error(e);
+			//throw new ContentDecodingException(e);
 		//}
 	};
 
@@ -3305,7 +3313,7 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
-		throw new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp));
+		throw new ContentDecodingException("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp));
 	}		
 	return timestamp;
 };
@@ -3563,7 +3571,7 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 			startTag,
 			//TreeMap<String, String> 
 			attributes) {
-			//throws Error 
+			//throws ContentDecodingException 
 
 		this.readStartElement(startTag, attributes); // can't use getElementText, can't get attributes
 		//String 

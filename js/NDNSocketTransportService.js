@@ -51,8 +51,16 @@ function readAllFromSocket(host, port, outputData, listener) {
 				// Use readInputStreamToString to handle binary data.
 				this.data += NetUtil.readInputStreamToString(inStream, count);
 				
-				// TODO: Don't know why, but we never receive onStopRequest, assume we have
-				//   all the data and force it now.
+				// TODO: Need to parse the input to check if a whole ccnb object has been read, as in 
+				// CcnbObjectReader class: https://github.com/NDN-Routing/NDNLP/blob/master/ndnld.h#L256 .
+				// For now as a hack, try to fully decode this.data as a ContentObject.
+				try {
+ 					decodeHexContentObject(DataUtils.stringToHex(this.data));
+				} catch (ex) {
+					// Assume the exception is because the decoder only got partial data, so read moe.
+					return;
+				}
+				// We were able to parse the ContentObject, so finish.
 				this.onStopRequest();
 			} catch (ex) {
 				dump("onDataAvailable exception: " + ex + "\n");
@@ -90,7 +98,7 @@ NDN.prototype.getAsync = function(message, listener) {
 				if (result == null || result == undefined || result =="" )
 					listener.onReceivedContentObject(null);
 				else {
-					var co = decodeHexContentObject(result);
+ 					var co = decodeHexContentObject(result);
 					
 					if(LOG>2) {
 						dump('DECODED CONTENT OBJECT\n');
