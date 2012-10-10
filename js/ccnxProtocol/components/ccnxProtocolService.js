@@ -48,8 +48,9 @@ CcnxProtocol.prototype = {
 						// TODO: Need to check the signature, confirm that the name matches, etc.
 						if (contentObject.content != null) {
 							content = DataUtils.toString(contentObject.content);
+
 							// TODO: Should look at the returned Name to get contentType. For now,
-							//   just look for an image file extension in the original interest.
+							//   just look for a file extension in the original interest.
 							var interestLowerCase = interest.toLowerCase();
 							if (interestLowerCase.indexOf(".gif") >= 0) {
 								contentType = "image/gif";
@@ -68,6 +69,8 @@ CcnxProtocol.prototype = {
 								contentType = "image/bmp";
 								contentCharset = "ISO-8859-1";
 							}
+							else if (interestLowerCase.indexOf(".css") >= 0)
+								contentType = "text/css";
 						}
 						
 						contentListener.onReceivedContent(content, contentType, contentCharset);
