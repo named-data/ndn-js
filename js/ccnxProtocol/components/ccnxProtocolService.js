@@ -35,7 +35,8 @@ CcnxProtocol.prototype = {
 		try {
 			var requestContent = function(contentListener) {
 				var interest = aURI.spec.split(":")[1];
-				var ndn = new NDN();
+			    // 131.179.141.18 is lioncub.metwi.ucla.edu .
+				var ndn = new NDN('131.179.141.18');
 				
 				var coListener = {
 					onReceivedContentObject : function(contentObject) {
@@ -43,7 +44,8 @@ CcnxProtocol.prototype = {
 						var content = "";
 						var contentType = "text/html";
 						var contentCharset = "utf-8";
-						
+
+						// TODO: Need to check the signature, confirm that the name matches, etc.
 						if (contentObject.content != null) {
 							content = DataUtils.toString(contentObject.content);
 							// TODO: Should look at the returned Name to get contentType. For now,
