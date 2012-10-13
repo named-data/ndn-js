@@ -2,6 +2,7 @@
  * This class is used to encode and decode binary elements ( blog, type/value pairs)
  * 
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var XML_EXT = 0x00; 

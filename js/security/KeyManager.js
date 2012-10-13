@@ -1,4 +1,7 @@
-
+/*
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
 
 var KeyManager = function KeyManager(){
 

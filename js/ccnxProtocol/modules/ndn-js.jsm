@@ -1,5 +1,8 @@
-/** This file is created by running make-ndn-js.jsm.sh in this directory.
-    It concatenates ndn-js-header.txt with all the ndn-js source files.
+/* This file is created by running make-ndn-js.jsm.sh in this directory.
+ * It concatenates ndn-js-header.txt with all the ndn-js source files to
+ *   make ndn-js.jsm .
+ * author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var EXPORTED_SYMBOLS = ["NDN", "DataUtils", "readAllFromSocket"];
@@ -22,7 +25,11 @@ var console = {
     }
 };
 
-
+/*
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ * This class represents the top-level object for communicating with an NDN host.
+ */
 
 /**
  * host is default '127.0.0.1'.
@@ -179,8 +186,11 @@ NDN.prototype.put = function(name,content){
 	
 
 }
-/* Implement getAsync and putAsync used by NDN using nsISocketTransportService.
-   This is used inside Firefox XPCOM modules.
+/* 
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
+ * This is used inside Firefox XPCOM modules.
  */
 
 // Assume already imported the following:
@@ -301,7 +311,8 @@ NDN.prototype.getAsync = function(message, listener) {
 
 /*
  * @author: ucla-cs
- * THis class contains all CCNx tags
+ * See COPYING for copyright and distribution information.
+ * This class contains all CCNx tags
  */
 
 
@@ -457,6 +468,7 @@ var CCNProtocolDTagsStrings = [
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents CCNTime Objects
  */
 
@@ -560,6 +572,7 @@ unsignedLongToByteArray= function( value) {
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents a Name
  */
  
@@ -670,6 +683,7 @@ Name.prototype.add = function(param){
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents ContentObject Objects
  */
 var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature){
@@ -1244,6 +1258,7 @@ Date.prototype.format = function (mask, utc) {
 
  /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
  */
 
@@ -1473,6 +1488,7 @@ ExcludeComponent.prototype.getElementLabel = function() { return CCNProtocolDTag
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Key Objects
  */
 
@@ -1668,6 +1684,7 @@ KeyName.prototype.validate = function() {
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Publisher and PublisherType Objects
  */
 
@@ -1764,6 +1781,7 @@ PublisherID.prototype.validate = function(){
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents PublisherPublicKeyDigest Objects
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(_pkd){ 
@@ -1816,6 +1834,7 @@ PublisherPublicKeyDigest.prototype.validate =function() {
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Face Instances
  */
 
@@ -1977,6 +1996,7 @@ FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceI
 
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Forwarding Entries
  */
 
@@ -2080,6 +2100,7 @@ ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags
  * This class is used to encode and decode binary elements ( blog, type/value pairs)
  * 
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var XML_EXT = 0x00; 
@@ -2523,6 +2544,7 @@ BinaryXMLEncoder.prototype.getReducedOstream = function() {
  * This class is used to encode and decode binary elements ( blog, type/value pairs)
  * 
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 var XML_EXT = 0x00; 
 	
@@ -2794,6 +2816,7 @@ var numEncodingBytes = function(
  * This class is used to encode and decode binary elements ( blog, type/value pairs)
  * 
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var XML_EXT = 0x00; 
@@ -3579,10 +3602,10 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 		return strElementText;
 };
 
-
 /*
  * This class contains utilities to help parse the data
  * author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
  
 var DataUtils = function DataUtils(){
@@ -3993,9 +4016,11 @@ DataUtils.arraysEqual = function(a1, a2){
 
     return true;
 }
-
-
-
+/*
+ * This file contains utilities to help encode and decode NDN objects.
+ * author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
 
 function encodeToHexInterest(interest){
 	
@@ -4347,7 +4372,10 @@ function contentObjectToHtml(/* ContentObject */ co) {
     return output;
 }
 
-
+/*
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
 
 var KeyManager = function KeyManager(){
 

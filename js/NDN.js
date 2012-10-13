@@ -1,4 +1,8 @@
-
+/*
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ * This class represents the top-level object for communicating with an NDN host.
+ */
 
 /**
  * host is default '127.0.0.1'.

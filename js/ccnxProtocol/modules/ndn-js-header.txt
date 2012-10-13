@@ -1,5 +1,8 @@
-/** This file is created by running make-ndn-js.jsm.sh in this directory.
-    It concatenates ndn-js-header.txt with all the ndn-js source files.
+/* This file is created by running make-ndn-js.jsm.sh in this directory.
+ * It concatenates ndn-js-header.txt with all the ndn-js source files to
+ *   make ndn-js.jsm .
+ * author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var EXPORTED_SYMBOLS = ["NDN", "DataUtils", "readAllFromSocket"];

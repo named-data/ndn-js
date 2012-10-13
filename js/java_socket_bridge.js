@@ -1,6 +1,7 @@
 /*
  * @author: ucla-cs
- * This class represents Interest Objects
+ * See COPYING for copyright and distribution information.
+ * This file provides access to the JavaSocketBridge applet.
  */
 
 

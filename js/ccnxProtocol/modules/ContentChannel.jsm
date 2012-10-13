@@ -1,3 +1,8 @@
+/*
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
+
 var EXPORTED_SYMBOLS = ["ContentChannel"];
 
 const Cc = Components.classes;

@@ -1,5 +1,8 @@
-/* Implement getAsync and putAsync used by NDN using nsISocketTransportService.
-   This is used inside Firefox XPCOM modules.
+/* 
+ * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
+ * This is used inside Firefox XPCOM modules.
  */
 
 // Assume already imported the following:

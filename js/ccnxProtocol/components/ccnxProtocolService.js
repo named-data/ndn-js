@@ -1,6 +1,7 @@
 /*
  * @author: ucla-cs
- * This is the ccnx protocol handler.
+ * See COPYING for copyright and distribution information.
+ * This is the ccnx protocol handler for NDN.
  * Protocol handling code derived from http://mike.kaply.com/2011/01/18/writing-a-firefox-protocol-handler/
  */
 

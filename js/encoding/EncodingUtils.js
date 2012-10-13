@@ -1,6 +1,8 @@
-
-
-
+/*
+ * This file contains utilities to help encode and decode NDN objects.
+ * author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
 
 function encodeToHexInterest(interest){
 	

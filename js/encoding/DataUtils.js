@@ -1,7 +1,7 @@
-
 /*
  * This class contains utilities to help parse the data
  * author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
  
 var DataUtils = function DataUtils(){

@@ -1,4 +1,5 @@
 // @author: ucla-cs
+// See COPYING for copyright and distribution information.
 
 
 import java.applet.*;

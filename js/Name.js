@@ -1,5 +1,6 @@
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents a Name
  */
  
