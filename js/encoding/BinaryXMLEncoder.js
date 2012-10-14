@@ -1,5 +1,5 @@
 /*
- * This class is used to encode and decode binary elements ( blog, type/value pairs)
+ * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: ucla-cs
  * See COPYING for copyright and distribution information.
