@@ -197,20 +197,16 @@ NDN.prototype.put = function(name,content){
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-/** Convert outputHex to binary, send to host:port and call hexListener.onReceivedHexData(hexData).
+/** Convert outputHex to binary, send to host:port and call listener.onReceivedData(data)
+ *    where data is a byte array.
  */
-function getAsync(host, port, outputHex, hexListener) {
-	var binaryListener = {
-		onReceivedData : function(data) {
-			hexListener.onReceivedHexData(DataUtils.stringToHex(data));
-		}
-	}
-
-    readAllFromSocket(host, port, DataUtils.hexToRawString(outputHex), binaryListener);
+function getAsync(host, port, outputHex, listener) {
+    readAllFromSocket(host, port, DataUtils.hexToRawString(outputHex), listener);
 }
 
-/** Send outputData to host:port, read the entire response and call listener.onReceivedData(data).
-    Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
+/** Send outputData to host:port, read the entire response and call listener.onReceivedData(data)
+ *    where data is a byte array.
+ *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
 function readAllFromSocket(host, port, outputData, listener) {
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
@@ -223,8 +219,9 @@ function readAllFromSocket(host, port, outputData, listener) {
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
-		data: "",
+		data: [],
 		calledOnReceivedData: false,
+        debugNOnDataAvailable: 0,
 		
 		onStartRequest: function (request, context) {
 		},
@@ -238,17 +235,23 @@ function readAllFromSocket(host, port, outputData, listener) {
 		},
 		onDataAvailable: function (request, context, _inputStream, offset, count) {
 			try {
+                this.debugNOnDataAvailable += 1;
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
-				this.data += NetUtil.readInputStreamToString(inStream, count);
+				var rawData = NetUtil.readInputStreamToString(inStream, count);
+                // Append to this.data.
+                this.data = this.data.concat(DataUtils.toNumbersFromString(rawData));
 				
 				// TODO: Need to parse the input to check if a whole ccnb object has been read, as in 
 				// CcnbObjectReader class: https://github.com/NDN-Routing/NDNLP/blob/master/ndnld.h#L256 .
 				// For now as a hack, try to fully decode this.data as a ContentObject.
 				try {
- 					decodeHexContentObject(DataUtils.stringToHex(this.data));
+                    var decoder = new BinaryXMLDecoder(this.data);	
+                    var co = new ContentObject();
+                    co.from_ccnb(decoder);
 				} catch (ex) {
 					// Assume the exception is because the decoder only got partial data, so read moe.
+                    dump("Awaiting more data at onDataAvailable call # " + this.debugNOnDataAvailable);
 					return;
 				}
 				// We were able to parse the ContentObject, so finish.
@@ -278,18 +281,18 @@ NDN.prototype.getAsync = function(message, listener) {
 			return null;
 		}
 		
-		int = new Interest(new Name(message));
-		int.InterestLifetime = 4200;
-		var outputHex = encodeToHexInterest(int);
+		interest = new Interest(new Name(message));
+		interest.InterestLifetime = 4200;
+		var outputHex = encodeToHexInterest(interest);
 		
-		var hexListener = {
-			onReceivedHexData : function(result) {
-				if (LOG>0) dump('BINARY RESPONSE IS ' + result + '\n');
-				
-				if (result == null || result == undefined || result =="" )
+		var dataListener = {
+			onReceivedData : function(result) {
+				if (result == null || result == undefined || result.length == 0)
 					listener.onReceivedContentObject(null);
 				else {
- 					var co = decodeHexContentObject(result);
+                    var decoder = new BinaryXMLDecoder(result);	
+                    var co = new ContentObject();
+                    co.from_ccnb(decoder);
 					
 					if(LOG>2) {
 						dump('DECODED CONTENT OBJECT\n');
@@ -301,7 +304,8 @@ NDN.prototype.getAsync = function(message, listener) {
 				}
 			}
 		}
-		return getAsync(this.host, this.port, outputHex, hexListener);
+        
+		return getAsync(this.host, this.port, outputHex, dataListener);
 	}
 	else {
 		dump('ERROR host OR port NOT SET\n');
