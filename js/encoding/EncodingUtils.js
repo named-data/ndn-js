@@ -178,6 +178,10 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    
 	    output+= "<br />";
 	}
+	if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
+	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
+	    output+= "<br />";
+	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
 	    var tmp = DataUtils.toString(co.signedInfo.locator.certificate);
 	    var publickey = rstr2b64(tmp);
