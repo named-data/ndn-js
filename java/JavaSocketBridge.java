@@ -43,7 +43,7 @@ public class JavaSocketBridge extends JApplet {
 
 
 
-	private final static int PACKETSIZE = 2000 ;
+	private final static int PACKETSIZE = 8192 ;
 	// Instance variables
 	static JSObject browser = null;		// The browser
 
