@@ -32,6 +32,7 @@ function readAllFromSocket(host, port, outputData, listener) {
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
 		data: [],
+        structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
         debugNOnDataAvailable: 0,
 		
@@ -46,29 +47,21 @@ function readAllFromSocket(host, port, outputData, listener) {
 			}
 		},
 		onDataAvailable: function (request, context, _inputStream, offset, count) {
+            if (this.calledOnReceivedData)
+                // Already finished.  Ignore extra data.
+                return;
+            
 			try {
                 this.debugNOnDataAvailable += 1;
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
 				var rawData = NetUtil.readInputStreamToString(inStream, count);
-                // Append to this.data.
                 this.data = this.data.concat(DataUtils.toNumbersFromString(rawData));
 				
-				// TODO: Need to parse the input to check if a whole ccnb object has been read, as in 
-				// CcnbObjectReader class: https://github.com/NDN-Routing/NDNLP/blob/master/ndnld.h#L256 .
-				// For now as a hack, try to fully decode this.data as a ContentObject.
-				try {
-                    var decoder = new BinaryXMLDecoder(this.data);	
-                    var co = new ContentObject();
-                    co.from_ccnb(decoder);
-				} catch (ex) {
-					// Assume the exception is because the decoder only got partial data, so read moe.
-                    dump("Awaiting more data at onDataAvailable call # " + 
-                        this.debugNOnDataAvailable + "\n");
-					return;
-				}
-				// We were able to parse the ContentObject, so finish.
-				this.onStopRequest();
+				// Scan the input to check if a whole ccnb object has been read.
+                if (this.structureDecoder.findElementEnd(this.data))
+                    // Finish.
+                    this.onStopRequest();
 			} catch (ex) {
 				dump("onDataAvailable exception: " + ex + "\n");
 			}

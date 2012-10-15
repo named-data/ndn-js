@@ -15,6 +15,7 @@ cat ndn-js-header.txt \
   ../../ForwardingEntry.js emptyLine.txt \
   ../../encoding/BinaryXMLEncoder.js emptyLine.txt \
   ../../encoding/BinaryXMLDecoder.js emptyLine.txt \
+  ../../encoding/BinaryXMLStructureDecoder.js emptyLine.txt \
   ../../encoding/DataUtils.js emptyLine.txt \
   ../../encoding/EncodingUtils.js emptyLine.txt \
   ../../security/KeyManager.js emptyLine.txt \
