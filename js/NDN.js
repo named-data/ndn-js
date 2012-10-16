@@ -72,7 +72,6 @@ NDN.prototype.get = function(message){
 
 }
 
-
 NDN.prototype.put = function(name,content){
 	if(this.host!=null && this.port!=null){
 		
@@ -149,13 +148,60 @@ NDN.prototype.put = function(name,content){
 	return result;
 	}
 	else{
-
-		
 		console.log('ERROR URL OR PORT NOT SET');
 
 		return null;
-
 	}
-	
-
 }
+
+/** Encode name as an Interest. If template is not null, use its attributes.
+ *  Send the interest to host:port, read the entire response and call
+ *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
+ *                 new UpcallInfo(this, interest, 0, contentObject)).
+ */
+NDN.prototype.expressInterest = function(
+        // Name
+        name,
+        // Closure
+        closure,
+        // Interest
+        template) {
+	if (this.host == null || this.port == null) {
+		dump('ERROR host OR port NOT SET\n');
+        return;
+    }
+    
+	interest = new Interest(name);
+    if (template != null) {
+        // TODO: Exactly what do we copy from template?
+        interest.InterestLifetime = template.InterestLifetime;
+    }
+    else
+        interest.InterestLifetime = 4200;
+	var outputHex = encodeToHexInterest(interest);
+		
+	var dataListener = {
+		onReceivedData : function(result) {
+			if (result == null || result == undefined || result.length == 0)
+				listener.onReceivedContentObject(null);
+			else {
+                var decoder = new BinaryXMLDecoder(result);	
+                var co = new ContentObject();
+                co.from_ccnb(decoder);
+                   					
+				if(LOG>2) {
+					dump('DECODED CONTENT OBJECT\n');
+					dump(co);
+					dump('\n');
+				}
+					
+                // TODO: verify the content object and set kind to UPCALL_CONTENT.
+				closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                   new UpcallInfo(this, interest, 0, co))
+			}
+		}
+	}
+        
+	return getAsync(this.host, this.port, outputHex, dataListener);
+};
+

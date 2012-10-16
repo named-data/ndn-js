@@ -35,50 +35,58 @@ CcnxProtocol.prototype = {
 	{
 		try {
 			var requestContent = function(contentListener) {
-				var interest = aURI.spec.split(":")[1];
+				var name = aURI.spec.split(":")[1];
 			    // 131.179.141.18 is lioncub.metwi.ucla.edu .
 				var ndn = new NDN('131.179.141.18');
 				
-				var coListener = {
-					onReceivedContentObject : function(contentObject) {
-						// Set up defaults.
-						var content = "";
-						var contentType = "text/html";
-						var contentCharset = "utf-8";
+				var ContentClosure = function ContentClosure() {
+                    // Inherit from Closure.
+                    Closure.call(this);
+                }
+                ContentClosure.prototype.upcall = function(kind, upcallInfo) {
+                    if (!(kind == Closure.UPCALL_CONTENT ||
+                          kind == Closure.UPCALL_CONTENT_UNVERIFIED))
+                        // The upcall is not for us.
+                        return;
+                        
+                    var contentObject = upcallInfo.contentObject;
+                        
+					// Set up defaults.
+					var content = "";
+					var contentType = "text/html";
+					var contentCharset = "utf-8";
 
-						// TODO: Need to check the signature, confirm that the name matches, etc.
-						if (contentObject.content != null) {
-							content = DataUtils.toString(contentObject.content);
+					if (contentObject.content != null) {
+						content = DataUtils.toString(contentObject.content);
 
-							// TODO: Should look at the returned Name to get contentType. For now,
-							//   just look for a file extension in the original interest.
-							var interestLowerCase = interest.toLowerCase();
-							if (interestLowerCase.indexOf(".gif") >= 0) {
-								contentType = "image/gif";
-								contentCharset = "ISO-8859-1";
-							}
-							else if (interestLowerCase.indexOf(".jpg") >= 0 ||
-									 interestLowerCase.indexOf(".jpeg") >= 0) {
-								contentType = "image/jpeg";
-								contentCharset = "ISO-8859-1";
-							}
-							else if (interestLowerCase.indexOf(".png") >= 0) {
-								contentType = "image/png";
-								contentCharset = "ISO-8859-1";
-							}
-							else if (interestLowerCase.indexOf(".bmp") >= 0) {
-								contentType = "image/bmp";
-								contentCharset = "ISO-8859-1";
-							}
-							else if (interestLowerCase.indexOf(".css") >= 0)
-								contentType = "text/css";
+						// TODO: Should look at the returned Name to get contentType. For now,
+						//   just look for a file extension in the original name.
+						var nameLowerCase = name.toLowerCase();
+						if (nameLowerCase.indexOf(".gif") >= 0) {
+							contentType = "image/gif";
+							contentCharset = "ISO-8859-1";
 						}
-						
-						contentListener.onReceivedContent(content, contentType, contentCharset);
+						else if (nameLowerCase.indexOf(".jpg") >= 0 ||
+								 nameLowerCase.indexOf(".jpeg") >= 0) {
+							contentType = "image/jpeg";
+							contentCharset = "ISO-8859-1";
+						}
+						else if (nameLowerCase.indexOf(".png") >= 0) {
+							contentType = "image/png";
+							contentCharset = "ISO-8859-1";
+						}
+						else if (nameLowerCase.indexOf(".bmp") >= 0) {
+							contentType = "image/bmp";
+							contentCharset = "ISO-8859-1";
+						}
+						else if (nameLowerCase.indexOf(".css") >= 0)
+							contentType = "text/css";
 					}
+						
+					contentListener.onReceivedContent(content, contentType, contentCharset);
 				};
 			
-				ndn.getAsync(interest, coListener);
+				ndn.expressInterest(new Name(name), new ContentClosure());
 			};
 
 			return new ContentChannel(aURI, requestContent);

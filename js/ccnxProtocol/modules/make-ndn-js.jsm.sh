@@ -1,5 +1,6 @@
 #!/bin/sh
 cat ndn-js-header.txt \
+  ../../Closure.js emptyLine.txt \
   ../../NDN.js emptyLine.txt \
   ../../NDNSocketTransportService.js emptyLine.txt \
   ../../util/CCNProtocolDTags.js emptyLine.txt \
