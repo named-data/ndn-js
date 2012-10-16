@@ -47,7 +47,7 @@ CcnxProtocol.prototype = {
                     if (!(kind == Closure.UPCALL_CONTENT ||
                           kind == Closure.UPCALL_CONTENT_UNVERIFIED))
                         // The upcall is not for us.
-                        return;
+                        return Closure.RESULT_ERR;
                         
                     var contentObject = upcallInfo.contentObject;
                         
@@ -84,6 +84,7 @@ CcnxProtocol.prototype = {
 					}
 						
 					contentListener.onReceivedContent(content, contentType, contentCharset);
+                    return Closure.RESULT_OK;
 				};
 			
 				ndn.expressInterest(new Name(name), new ContentClosure());

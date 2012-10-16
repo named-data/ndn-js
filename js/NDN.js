@@ -174,10 +174,10 @@ NDN.prototype.expressInterest = function(
 	interest = new Interest(name);
     if (template != null) {
         // TODO: Exactly what do we copy from template?
-        interest.InterestLifetime = template.InterestLifetime;
+        interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.InterestLifetime = 4200;
+        interest.interestLifetime = 4200;
 	var outputHex = encodeToHexInterest(interest);
 		
 	var dataListener = {
@@ -196,8 +196,9 @@ NDN.prototype.expressInterest = function(
 				}
 					
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
-				closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                   new UpcallInfo(this, interest, 0, co))
+				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                               new UpcallInfo(this, interest, 0, co));
+                // TODO: Check result for Closure.RESULT_OK, etc.          
 			}
 		}
 	}
