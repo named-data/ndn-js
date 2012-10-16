@@ -157,7 +157,7 @@ NDN.prototype.put = function(name,content){
 /** Encode name as an Interest. If template is not null, use its attributes.
  *  Send the interest to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)).
+ *                 new UpcallInfo(this, interest, 0, contentObject)).                 
  */
 NDN.prototype.expressInterest = function(
         // Name
@@ -178,7 +178,11 @@ NDN.prototype.expressInterest = function(
     }
     else
         interest.interestLifetime = 4200;
-	var outputHex = encodeToHexInterest(interest);
+    
+    var encoder = new BinaryXMLEncoder();
+	interest.to_ccnb(encoder);	
+	var outputData = DataUtils.toString(encoder.getReducedOstream());
+    encoder = null;
 		
 	var dataListener = {
 		onReceivedData : function(result) {
@@ -203,6 +207,8 @@ NDN.prototype.expressInterest = function(
 		}
 	}
         
-	return getAsync(this.host, this.port, outputHex, dataListener);
+    // The application includes a source file that defines readAllFromSocket
+    //   according to the application's communication method.
+	readAllFromSocket(this.host, this.port, outputData, dataListener);
 };
 

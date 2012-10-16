@@ -9,13 +9,6 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-/** Convert outputHex to binary, send to host:port and call listener.onReceivedData(data)
- *    where data is a byte array.
- */
-function getAsync(host, port, outputHex, listener) {
-    readAllFromSocket(host, port, DataUtils.hexToRawString(outputHex), listener);
-}
-
 /** Send outputData to host:port, read the entire response and call listener.onReceivedData(data)
  *    where data is a byte array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
@@ -71,3 +64,4 @@ function readAllFromSocket(host, port, outputData, listener) {
 	pump.init(inStream, -1, -1, 0, 0, true);
     pump.asyncRead(dataListener, null);
 }
+
