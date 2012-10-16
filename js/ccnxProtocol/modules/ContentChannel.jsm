@@ -72,28 +72,33 @@ ContentChannel.prototype = {
 	},
 	
 	asyncOpen: function(aListener, aContext) {
-		var thisContentChannel = this;
-		var contentListener = {
-			onReceivedContent : function(content, contentType, contentCharset) {
-				thisContentChannel.contentLength = content.length;
-				thisContentChannel.contentType = contentType;
-				thisContentChannel.contentCharset = contentCharset;
+        try {
+            var thisContentChannel = this;
+            var contentListener = {
+                onReceivedContent : function(content, contentType, contentCharset) {
+                    thisContentChannel.contentLength = content.length;
+                    thisContentChannel.contentType = contentType;
+                    thisContentChannel.contentCharset = contentCharset;
 				
-				// Call aListener immediately to send all the content.
-				aListener.onStartRequest(thisContentChannel, aContext);
+                    // Call aListener immediately to send all the content.
+                    aListener.onStartRequest(thisContentChannel, aContext);
 
-				var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
-				pipe.init(true, true, 0, 0, null);
-				pipe.outputStream.write(content, content.length);
-				pipe.outputStream.close();
+                    var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
+                    pipe.init(true, true, 0, 0, null);
+                    pipe.outputStream.write(content, content.length);
+                    pipe.outputStream.close();
 				
-				aListener.onDataAvailable(thisContentChannel, aContext, pipe.inputStream, 0, content.length);
+                    aListener.onDataAvailable(thisContentChannel, aContext, pipe.inputStream, 0, 
+                        content.length);
 				
-				thisContentChannel.done = true;
-				aListener.onStopRequest(thisContentChannel, aContext, thisContentChannel.status);
-			}
-		};
+                    thisContentChannel.done = true;
+                    aListener.onStopRequest(thisContentChannel, aContext, thisContentChannel.status);
+                }
+            };
 		
-		this.requestContent(contentListener);
+            this.requestContent(contentListener);
+        } catch (ex) {
+            dump("ContentChannel.asyncOpen exception: " + ex + "\n");
+        }
 	}
 };
