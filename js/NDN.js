@@ -173,8 +173,14 @@ NDN.prototype.expressInterest = function(
     
 	interest = new Interest(name);
     if (template != null) {
-        // TODO: Exactly what do we copy from template?
-        interest.interestLifetime = template.interestLifetime;
+		interest.minSuffixComponents = template.minSuffixComponents;
+		interest.maxSuffixComponents = template.maxSuffixComponents;
+		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+		interest.exclude = template.exclude;
+		interest.childSelector = template.childSelector;
+		interest.answerOriginKind = template.answerOriginKind;
+		interest.scope = template.scope;
+		interest.interestLifetime = template.interestLifetime;
     }
     else
         interest.interestLifetime = 4200;
