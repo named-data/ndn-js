@@ -187,28 +187,41 @@ NDN.prototype.expressInterest = function(
     
     var encoder = new BinaryXMLEncoder();
 	interest.to_ccnb(encoder);	
-	var outputData = DataUtils.toString(encoder.getReducedOstream());
+	var outputData = encoder.getReducedOstream();
     encoder = null;
 		
 	var dataListener = {
-		onReceivedData : function(result) {
-			if (result == null || result == undefined || result.length == 0)
-				listener.onReceivedContentObject(null);
+		onReceivedData : function(data) {
+			if (data == null || data == undefined || data.length == 0)
+				dump("NDN.expressInterest: received empty data from socket.\n");
 			else {
-                var decoder = new BinaryXMLDecoder(result);	
+                var decoder = new BinaryXMLDecoder(data);	
                 var co = new ContentObject();
                 co.from_ccnb(decoder);
                    					
 				if(LOG>2) {
-					dump('DECODED CONTENT OBJECT\n');
+					dump("DECODED CONTENT OBJECT\n");
 					dump(co);
-					dump('\n');
+					dump("\n");
 				}
 					
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
 				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
                                new UpcallInfo(this, interest, 0, co));
-                // TODO: Check result for Closure.RESULT_OK, etc.          
+                if (result == Closure.RESULT_OK) {
+                    // success
+                }
+                else if (result == Closure.RESULT_ERR)
+                    dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
+                else if (result == Closure.RESULT_REEXPRESS)
+                    readAllFromSocket(this.host, this.port, outputData, dataListener);
+                else if (result == Closure.RESULT_VERIFY) {
+                    // TODO: force verification of content.
+                }
+                else if (result == Closure.RESULT_FETCHKEY) {
+                    // TODO: get the key in the key locator and re-call the interest
+                    //   with the key available in the local storage.
+                }
 			}
 		}
 	}

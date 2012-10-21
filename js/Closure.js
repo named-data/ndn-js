@@ -26,6 +26,8 @@ Closure.RESULT_OK                =  0; // normal upcall return
 Closure.RESULT_REEXPRESS         =  1; // reexpress the same interest again
 Closure.RESULT_INTEREST_CONSUMED =  2; // upcall claims to consume interest
 Closure.RESULT_VERIFY            =  3; // force an unverified result to be verified
+Closure.RESULT_FETCHKEY          =  4; // get the key in the key locator and re-call the interest
+                                       //   with the key available in the local storage
 
 // Upcall kind
 Closure.UPCALL_FINAL              = 0; // handler is about to be deregistered

@@ -9,25 +9,25 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-/** Send outputData to host:port, read the entire response and call listener.onReceivedData(data)
- *    where data is a byte array.
+/** Send outputData (byte array) to host:port, read the entire response and call 
+ *    listener.onReceivedData(data) where data is a byte array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
 function readAllFromSocket(host, port, outputData, listener) {
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
-	(Components.interfaces.nsISocketTransportService);
+        (Components.interfaces.nsISocketTransportService);
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
-	(Components.interfaces.nsIInputStreamPump);
+        (Components.interfaces.nsIInputStreamPump);
 	var transport = transportService.createTransport(null, 0, host, port, null);
 	var outStream = transport.openOutputStream(1, 0, 0);
-	outStream.write(outputData, outputData.length);
+    var rawDataString = DataUtils.toString(outputData);
+	outStream.write(rawDataString, rawDataString.length);
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
 		data: [],
         structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
-        debugNOnDataAvailable: 0,
 		
 		onStartRequest: function (request, context) {
 		},
@@ -45,7 +45,6 @@ function readAllFromSocket(host, port, outputData, listener) {
                 return;
             
 			try {
-                this.debugNOnDataAvailable += 1;
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
 				var rawData = NetUtil.readInputStreamToString(inStream, count);
