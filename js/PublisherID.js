@@ -60,7 +60,7 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 		}
 		this.publisherID = decoder.readBinaryElement(nextTag);
 		if (null == this.publisherID) {
-			throw new ContentDecodingException("Cannot parse publisher ID of type : " + nextTag + ".");
+			throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 		}
 };
 

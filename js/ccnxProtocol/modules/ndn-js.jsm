@@ -53,6 +53,8 @@ Closure.RESULT_OK                =  0; // normal upcall return
 Closure.RESULT_REEXPRESS         =  1; // reexpress the same interest again
 Closure.RESULT_INTEREST_CONSUMED =  2; // upcall claims to consume interest
 Closure.RESULT_VERIFY            =  3; // force an unverified result to be verified
+Closure.RESULT_FETCHKEY          =  4; // get the key in the key locator and re-call the interest
+                                       //   with the key available in the local storage
 
 // Upcall kind
 Closure.UPCALL_FINAL              = 0; // handler is about to be deregistered
@@ -263,36 +265,57 @@ NDN.prototype.expressInterest = function(
     
 	interest = new Interest(name);
     if (template != null) {
-        // TODO: Exactly what do we copy from template?
-        interest.interestLifetime = template.interestLifetime;
+		interest.minSuffixComponents = template.minSuffixComponents;
+		interest.maxSuffixComponents = template.maxSuffixComponents;
+		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+		interest.exclude = template.exclude;
+		interest.childSelector = template.childSelector;
+		interest.answerOriginKind = template.answerOriginKind;
+		interest.scope = template.scope;
+		interest.interestLifetime = template.interestLifetime;
     }
     else
         interest.interestLifetime = 4200;
     
     var encoder = new BinaryXMLEncoder();
 	interest.to_ccnb(encoder);	
-	var outputData = DataUtils.toString(encoder.getReducedOstream());
+	var outputData = encoder.getReducedOstream();
     encoder = null;
 		
+    // Make a local variable so it is not masked by an inner this.
+    var ndn = this;
 	var dataListener = {
-		onReceivedData : function(result) {
-			if (result == null || result == undefined || result.length == 0)
-				listener.onReceivedContentObject(null);
+		onReceivedData : function(data) {
+			if (data == null || data == undefined || data.length == 0)
+				dump("NDN.expressInterest: received empty data from socket.\n");
 			else {
-                var decoder = new BinaryXMLDecoder(result);	
+                var decoder = new BinaryXMLDecoder(data);	
                 var co = new ContentObject();
                 co.from_ccnb(decoder);
                    					
 				if(LOG>2) {
-					dump('DECODED CONTENT OBJECT\n');
+					dump("DECODED CONTENT OBJECT\n");
 					dump(co);
-					dump('\n');
+					dump("\n");
 				}
 					
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
 				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                               new UpcallInfo(this, interest, 0, co));
-                // TODO: Check result for Closure.RESULT_OK, etc.          
+                               new UpcallInfo(ndn, interest, 0, co));
+                if (result == Closure.RESULT_OK) {
+                    // success
+                }
+                else if (result == Closure.RESULT_ERR)
+                    dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
+                else if (result == Closure.RESULT_REEXPRESS)
+                    readAllFromSocket(ndn.host, ndn.port, outputData, dataListener);
+                else if (result == Closure.RESULT_VERIFY) {
+                    // TODO: force verification of content.
+                }
+                else if (result == Closure.RESULT_FETCHKEY) {
+                    // TODO: get the key in the key locator and re-call the interest
+                    //   with the key available in the local storage.
+                }
 			}
 		}
 	}
@@ -314,25 +337,25 @@ NDN.prototype.expressInterest = function(
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-/** Send outputData to host:port, read the entire response and call listener.onReceivedData(data)
- *    where data is a byte array.
+/** Send outputData (byte array) to host:port, read the entire response and call 
+ *    listener.onReceivedData(data) where data is a byte array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
 function readAllFromSocket(host, port, outputData, listener) {
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
-	(Components.interfaces.nsISocketTransportService);
+        (Components.interfaces.nsISocketTransportService);
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
-	(Components.interfaces.nsIInputStreamPump);
+        (Components.interfaces.nsIInputStreamPump);
 	var transport = transportService.createTransport(null, 0, host, port, null);
 	var outStream = transport.openOutputStream(1, 0, 0);
-	outStream.write(outputData, outputData.length);
+    var rawDataString = DataUtils.toString(outputData);
+	outStream.write(rawDataString, rawDataString.length);
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
 		data: [],
         structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
-        debugNOnDataAvailable: 0,
 		
 		onStartRequest: function (request, context) {
 		},
@@ -350,7 +373,6 @@ function readAllFromSocket(host, port, outputData, listener) {
                 return;
             
 			try {
-                this.debugNOnDataAvailable += 1;
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
 				var rawData = NetUtil.readInputStreamToString(inStream, count);
@@ -1806,7 +1828,7 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 		}
 		this.publisherID = decoder.readBinaryElement(nextTag);
 		if (null == this.publisherID) {
-			throw new ContentDecodingException("Cannot parse publisher ID of type : " + nextTag + ".");
+			throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 		}
 };
 
@@ -2096,7 +2118,7 @@ var ForwardingEntry = function ForwardingEntry(
 ForwardingEntry.prototype.from_ccnb =function(
 	//XMLDecoder 
 	decoder) 
-	//throws ContentDecodingException
+	//throws Error when name == "ContentDecodingException"
 	{
 			decoder.readStartElement(this.getElementLabel());
 			if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
@@ -2706,7 +2728,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new ContentDecodingException("Unknown DATTR value" + thisTV.val());
+					throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
 				}
 			}
 			
@@ -2719,7 +2741,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 
 	} catch ( e) {
 
-		throw new ContentDecodingException("readStartElement", e);
+		throw new ContentDecodingException(new Error("readStartElement", e));
 	}
 };
 
@@ -2749,12 +2771,11 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 		//if(typeof startTag == 'number')
 			//startTag = tagToString(startTag);
 		
-		//try {
 			//TypeAndVal 
 			tv = this.decodeTypeAndVal();
 			
 			if (null == tv) {
-				throw new Error("Expected start element: " + startTag + " got something not a tag.");
+				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
 			}
 			
 			//String 
@@ -2792,7 +2813,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 			if ((null ==  decodedTag) || decodedTag != startTag ) {
 				console.log('expecting '+ startag + ' but got '+ decodedTag);
-				throw new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
+				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
 			}
 			
 			// DKS: does not read attributes out of stream if caller doesn't
@@ -2801,11 +2822,6 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			if (null != attributes) {
 				readAttributes(attributes); 
 			}
-			
-		//} catch ( e) {
-			//console.log(e);
-			//throw new Error("readStartElement", e);
-		//}
 	}
 	
 
@@ -2846,7 +2862,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new Error("Unknown DATTR value" + thisTV.val());
+					throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
 				}
 			}
 			// Attribute values are always UDATA
@@ -2858,10 +2874,8 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 
 			nextTV = this.peekTypeAndVal();
 		}
-
 	} catch ( e) {
-		Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-		throw new Error("readStartElement", e);
+		throw new ContentDecodingException(new Error("readStartElement", e));
 	}
 };
 
@@ -2882,7 +2896,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 
 			if (tv.type() == XML_TAG) {
 				/*if (tv.val()+1 > DEBUG_MAX_LEN) {
-					throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+					throw new ContentDecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!")(;
 				}*/
 
 				// Tag value represents length-1 as tags can never be empty.
@@ -2910,7 +2924,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 			this.offset = previousOffset;
 		} catch ( e) {
 			Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-			throw new ContentDecodingException("Cannot reset stream! " + e.getMessage(), e);
+			throw new ContentDecodingException(new Error("Cannot reset stream! " + e.getMessage(), e));
 		}
 	}
 	return decodedTag;
@@ -2936,7 +2950,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 		return false;
 	}
 	else{
-		throw new Error("SHOULD BE STRING OR NUMBER");
+		throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 	}
 }
 //returns Long
@@ -2958,7 +2972,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 
 				if (tv.type() == XML_TAG) {
 					if (tv.val()+1 > DEBUG_MAX_LEN) {
-						throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+						throw new ContentDecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!"));
 					}
 
 					var valval ;
@@ -3016,7 +3030,6 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 	
 	
 BinaryXMLDecoder.prototype.readEndElement = function(){
-		//try {
 			if(LOG>4)console.log('this.offset is '+this.offset);
 			
 			var next = this.istream[this.offset]; 
@@ -3029,11 +3042,8 @@ BinaryXMLDecoder.prototype.readEndElement = function(){
 			
 			if (next != XML_CLOSE) {
 				console.log("Expected end element, got: " + next);
-				throw new ContentDecodingException("Expected end element, got: " + next);
+				throw new ContentDecodingException(new Error("Expected end element, got: " + next));
 			}
-		//} catch ( e) {
-			//throw new ContentDecodingException(e);
-		//}
 	};
 
 
@@ -3086,7 +3096,7 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
-		throw new ContentDecodingException("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp));
+		throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
 	}		
 	return timestamp;
 };
@@ -3318,14 +3328,7 @@ BinaryXMLDecoder.prototype.readIntegerElement =function(
 	if(LOG>4) console.log('READING INTEGER '+ startTag);
 	if(LOG>4) console.log('TYPE OF '+ typeof startTag);
 	
-	//try {
-		
 	strVal = this.readUTF8Element(startTag);
-
-	//}
-	//catch (e) {
-		//throw new Error("Cannot parse " + startTag + ": " + strVal);
-	//}
 	
 	return parseInt(strVal);
 };
@@ -3336,7 +3339,7 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 			startTag,
 			//TreeMap<String, String> 
 			attributes) {
-			//throws ContentDecodingException 
+			//throws Error where name == "ContentDecodingException" 
 
 		this.readStartElement(startTag, attributes); // can't use getElementText, can't get attributes
 		//String 
@@ -3352,6 +3355,20 @@ BinaryXMLDecoder.prototype.seek = function(
         offset) {
     this.offset = offset;        
 }
+
+/*
+ * Call with: throw new ContentDecodingException(new Error("message")).
+ */
+function ContentDecodingException(error) {
+    this.message = error.message;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+        this[prop] = error[prop];
+}
+ContentDecodingException.prototype = new Error();
+ContentDecodingException.prototype.name = "ContentDecodingException";
+
+
 
 /*
  * This class uses BinaryXMLDecoder to follow the structure of a ccnb binary element to 
