@@ -28,11 +28,10 @@ PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {
 		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
 
 		if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
+			if (LOG > 0)
+                console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
 			
-			console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
-			
-			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
-		
+			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;		
 		}
 	};
 
