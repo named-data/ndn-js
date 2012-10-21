@@ -190,6 +190,8 @@ NDN.prototype.expressInterest = function(
 	var outputData = encoder.getReducedOstream();
     encoder = null;
 		
+    // Make a local variable so it is not masked by an inner this.
+    var ndn = this;
 	var dataListener = {
 		onReceivedData : function(data) {
 			if (data == null || data == undefined || data.length == 0)
@@ -207,14 +209,14 @@ NDN.prototype.expressInterest = function(
 					
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
 				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                               new UpcallInfo(this, interest, 0, co));
+                               new UpcallInfo(ndn, interest, 0, co));
                 if (result == Closure.RESULT_OK) {
                     // success
                 }
                 else if (result == Closure.RESULT_ERR)
                     dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
                 else if (result == Closure.RESULT_REEXPRESS)
-                    readAllFromSocket(this.host, this.port, outputData, dataListener);
+                    readAllFromSocket(ndn.host, ndn.port, outputData, dataListener);
                 else if (result == Closure.RESULT_VERIFY) {
                     // TODO: force verification of content.
                 }
