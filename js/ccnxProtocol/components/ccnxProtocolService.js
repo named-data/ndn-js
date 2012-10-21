@@ -34,6 +34,10 @@ CcnxProtocol.prototype = {
 	newChannel: function(aURI)
 	{
 		try {
+            // Save the mostRecentWindow from the moment of newChannel.
+    		var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+    		var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
+    
 			var requestContent = function(contentListener) {
 				var name = aURI.spec.split(":")[1];
 			    // 131.179.141.18 is lioncub.metwi.ucla.edu .
@@ -50,40 +54,22 @@ CcnxProtocol.prototype = {
                         return Closure.RESULT_ERR;
                         
                     var contentObject = upcallInfo.contentObject;
+                    if (contentObject.content == null) {
+                        dump("CcnxProtocol.newChannel: contentObject.content is null\n");
+                        return Closure.RESULT_ERR;
+                    }
                         
-					// Set up defaults.
-					var content = "";
-					var contentType = "text/html";
-					var contentCharset = "utf-8";
-
-					if (contentObject.content != null) {
-						content = DataUtils.toString(contentObject.content);
-
-						// TODO: Should look at the returned Name to get contentType. For now,
-						//   just look for a file extension in the original name.
-						var nameLowerCase = name.toLowerCase();
-						if (nameLowerCase.indexOf(".gif") >= 0) {
-							contentType = "image/gif";
-							contentCharset = "ISO-8859-1";
-						}
-						else if (nameLowerCase.indexOf(".jpg") >= 0 ||
-								 nameLowerCase.indexOf(".jpeg") >= 0) {
-							contentType = "image/jpeg";
-							contentCharset = "ISO-8859-1";
-						}
-						else if (nameLowerCase.indexOf(".png") >= 0) {
-							contentType = "image/png";
-							contentCharset = "ISO-8859-1";
-						}
-						else if (nameLowerCase.indexOf(".bmp") >= 0) {
-							contentType = "image/bmp";
-							contentCharset = "ISO-8859-1";
-						}
-						else if (nameLowerCase.indexOf(".css") >= 0)
-							contentType = "text/css";
-					}
-						
-					contentListener.onReceivedContent(content, contentType, contentCharset);
+                    var content = DataUtils.toString(contentObject.content);
+					// TODO: Should look at the returned Name to get contentType. For now,
+					//   just look at the original name.
+                    var contentTypeAndCharset = getContentTypeAndCharset(name);						
+					contentListener.onReceivedContent(content, 
+                        contentTypeAndCharset.contentType, contentTypeAndCharset.contentCharset);
+                    
+                    // Assume that onReceivedContent sends all the content immediately and that
+                    //   the URLBar is updated if the content is for the main window.
+                    var urlBar = mostRecentWindow.gURLBar;
+                    
                     return Closure.RESULT_OK;
 				};
 			
@@ -107,4 +93,37 @@ if (XPCOMUtils.generateNSGetFactory)
 else
 	var NSGetModule = XPCOMUtils.generateNSGetModule([CcnxProtocol]);
  
+/*
+ * Based on name, return and object with properties contentType and charset.
+ */
+function getContentTypeAndCharset(name) {
+    // Set up defaults.
+    var contentType = "text/html";
+	var charset = "utf-8";
 
+	var nameLowerCase = name.toLowerCase();
+	if (nameLowerCase.indexOf(".gif") >= 0) {
+	    contentType = "image/gif";
+		charset = "ISO-8859-1";
+	}
+	else if (nameLowerCase.indexOf(".jpg") >= 0 ||
+			 nameLowerCase.indexOf(".jpeg") >= 0) {
+		contentType = "image/jpeg";
+		charset = "ISO-8859-1";
+	}
+	else if (nameLowerCase.indexOf(".png") >= 0) {
+		contentType = "image/png";
+		charset = "ISO-8859-1";
+	}
+	else if (nameLowerCase.indexOf(".bmp") >= 0) {
+		contentType = "image/bmp";
+		charset = "ISO-8859-1";
+	}
+	else if (nameLowerCase.indexOf(".css") >= 0)
+		contentType = "text/css";
+    
+    return {
+        contentType: contentType,
+        charset: charset
+    };
+}
