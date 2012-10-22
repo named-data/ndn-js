@@ -326,7 +326,9 @@ DataUtils.encodeUtf8 = function (string) {
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
-		var c = c1 = c2 = 0;
+		var c = 0;
+        var c1 = 0;
+        var c2 = 0;
  
 		while ( i < utftext.length ) {
  
@@ -343,7 +345,7 @@ DataUtils.decodeUtf8 = function (utftext) {
 			}
 			else {
 				c2 = utftext.charCodeAt(i+1);
-				c3 = utftext.charCodeAt(i+2);
+				var c3 = utftext.charCodeAt(i+2);
 				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
 				i += 3;
 			}
@@ -411,4 +413,33 @@ DataUtils.arraysEqual = function(a1, a2){
     }
 
     return true;
-}
+};
+
+/*
+ * Convert the big endian byte array to an unsigned int.
+ * Don't check for overflow.
+ */
+DataUtils.bigEndianToUnsignedInt = function(bytes) {
+    var result = 0;
+    for (var i = 0; i < bytes.length; ++i) {
+        result <<= 8;
+        result += bytes[i];
+    }
+    return result;
+};
+
+/*
+ * Convert the int value to a new big endian byte array and return.
+ * If value is 0 or negative, return []. 
+ */
+DataUtils.nonNegativeIntToBigEndian = function(value) {
+    var result = [];
+    if (value <= 0)
+        return result;
+    
+    while (value != 0) {
+        result.unshift(value & 0xff);
+        value >>= 8;
+    }
+    return result;
+};
