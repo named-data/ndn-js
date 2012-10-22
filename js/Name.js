@@ -56,20 +56,18 @@ Name.makeBlob=function(name){
 	return blobArrays;
 };
 
-Name.createNameArray=function(name){
-
-
-	name = unescape(name);
-	
+Name.createNameArray=function(name) {
 	var array = name.split('/');
-
 	
 	if(name[0]=="/")
-		array=array.slice(1,array.length);
-		
+		array=array.slice(1,array.length);		
 	if(name[name.length-1]=="/")
 		array=array.slice(0,array.length-1);
-	
+    
+    // Unescape the components.
+    for (var i = 0; i < array.length; ++i)
+        array[i] = unescape(array[i]);
+
 	return array;
 }
 
