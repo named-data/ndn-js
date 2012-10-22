@@ -46,9 +46,12 @@ CcnxProtocol.prototype = {
                     nameString = nameString.substr(colonIndex + 1, nameString.length - colonIndex - 1);
                 
 				var name = new Name(nameString);
+                // TODO: Strip off an ending implicit digest before checking the last component?
+                var uriEndsWithSequence = endsWithSequence(name);
+                
 			    // 131.179.141.18 is lioncub.metwi.ucla.edu .
 				var ndn = new NDN('131.179.141.18');
-				
+                				
 				var ContentClosure = function ContentClosure() {
                     // Inherit from Closure.
                     Closure.call(this);
@@ -70,9 +73,21 @@ CcnxProtocol.prototype = {
 					contentListener.onReceivedContent(content, 
                         contentTypeEtc.contentType, contentTypeEtc.contentCharset);
                     
-                    // Assume that onReceivedContent sends all the content immediately and that
-                    //   the gURLBar is updated if the content is for the main window.
+                    // Assume that onReceivedContent sends all the content immediately and updatse
+                    //   the gURLBar if the content is for the main window.
                     var urlBar = mostRecentWindow.gURLBar;
+                    if (urlBar && urlBar.value == aURI.spec) {
+                        // Assume the URI is for the window.  Update the URL bar.
+                        // Show the name without the ending sequence (unless the original URI had it).
+                        if (!uriEndsWithSequence && endsWithSequence(contentObject.name)) {
+                            var nameWithoutSequence = new Name
+                                (contentObject.name.components.slice
+                                 (0, contentObject.name.components.length - 1));
+                            urlBar.value = "ccnx:" + nameWithoutSequence.to_uri();
+                        }
+                        else
+                            urlBar.value = "ccnx:" + contentObject.name.to_uri();
+                    }
                     
                     return Closure.RESULT_OK;
 				};
@@ -114,18 +129,27 @@ function getContentTypeAndCharset(name) {
         
         var str = DataUtils.toString(component).toLowerCase();
         if (str.indexOf(".gif") >= 0) 
-            return { contentType:  "image/gif", charset:  "ISO-8859-1" }
+            return { contentType: "image/gif", charset: "ISO-8859-1" }
     	else if (str.indexOf(".jpg") >= 0 ||
     			 str.indexOf(".jpeg") >= 0) 
-            return { contentType:  "image/jpeg", charset:  "ISO-8859-1" }
+            return { contentType: "image/jpeg", charset: "ISO-8859-1" }
     	else if (str.indexOf(".png") >= 0) 
-            return { contentType:  "image/png", charset:  "ISO-8859-1" }
+            return { contentType: "image/png", charset: "ISO-8859-1" }
         else if (str.indexOf(".bmp") >= 0) 
-            return { contentType:  "image/bmp", charset:  "ISO-8859-1" }
+            return { contentType: "image/bmp", charset: "ISO-8859-1" }
     	else if (str.indexOf(".css") >= 0) 
-            return { contentType:  "text/css", charset: "utf-8" }
+            return { contentType: "text/css", charset: "utf-8" }
     }
     
     // default
     return { contentType: "text/html", charset: "utf-8" };
+}
+
+/*
+ * Return true if the last component in the name is a sequence..
+ */
+function endsWithSequence(name) {
+    return name.components != null && name.components.length >= 1 &&
+        name.components[name.components.length - 1].length >= 1 &&
+        name.components[name.components.length - 1][0] == 0;
 }

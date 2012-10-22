@@ -657,7 +657,7 @@ unsignedLongToByteArray= function( value) {
 /*
  * @author: ucla-cs
  * See COPYING for copyright and distribution information.
- * This class represents a Name
+ * This class represents a Name as an array of components where each is a byte array.
  */
  
 
@@ -712,20 +712,34 @@ Name.makeBlob=function(name){
 	return blobArrays;
 };
 
-Name.createNameArray=function(name){
-
-
-	name = unescape(name);
-	
+Name.createNameArray=function(name) {
 	var array = name.split('/');
-
+    var colonIndex = array[0].indexOf(':');
+    if (colonIndex >= 0) {
+        name = name.substr(colonIndex + 1, name.length - colonIndex - 1);
+        array = name.split('/');
+    }
 	
 	if(name[0]=="/")
-		array=array.slice(1,array.length);
-		
+		array=array.slice(1,array.length);		
 	if(name[name.length-1]=="/")
 		array=array.slice(0,array.length-1);
-	
+    
+    // Unescape the components.
+    for (var i = 0; i < array.length; ++i) {
+        var component = unescape(array[i]);
+        
+        if (component.match(/[^.]/) == null) {
+            // Special case for component of only periods.  Remove 3 periods.
+            if (component.length <= 3)
+                array[i] = "";
+            else
+                array[i] = component.substr(3, component.length - 3);
+        }
+        else
+            array[i] = component;
+    }
+
 	return array;
 }
 
@@ -764,6 +778,49 @@ Name.prototype.add = function(param){
 	return this.components.push(param);
 };
 
+// Return the escaped name string according to "CCNx URI Scheme".  Does not include "ccnx:".
+Name.prototype.to_uri = function() {	
+	var result = "";
+	
+	for(var i = 0; i < this.components.length; ++i)
+		result += "/"+ Name.toEscapedString(this.components[i]);
+	
+	return result;	
+};
+
+/**
+ * Return component as an escaped string according to "CCNx URI Scheme".
+ * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ */
+Name.toEscapedString = function(component) {
+    var result = "";
+    var gotNonDot = false;
+    for (var i = 0; i < component.length; ++i) {
+        if (component[i] != 0x2e) {
+            gotNonDot = true;
+            break;
+        }
+    }
+    if (!gotNonDot) {
+        // Special case for component of zero or more periods.  Add 3 periods.
+        result = "...";
+        for (var i = 0; i < component.length; ++i)
+            result += ".";
+    }
+    else {
+        for (var i = 0; i < component.length; ++i) {
+            var value = component[i];
+            // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
+            if (value >= 0x30 && value <= 0x39 || value >= 0x41 && value <= 0x5a ||
+                value >= 0x61 && value <= 0x7a || value == 0x2b || value == 0x2d || 
+                value == 0x2e || value == 0x5f)
+                result += String.fromCharCode(value);
+            else
+                result += "%" + (value < 16 ? "0" : "") + value.toString(16).toUpperCase();
+        }
+    }
+    return result;
+};
 
 /*
  * @author: ucla-cs
@@ -1893,11 +1950,10 @@ PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {
 		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
 
 		if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
+			if (LOG > 0)
+                console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
 			
-			console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
-			
-			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
-		
+			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;		
 		}
 	};
 
@@ -2118,7 +2174,7 @@ var ForwardingEntry = function ForwardingEntry(
 ForwardingEntry.prototype.from_ccnb =function(
 	//XMLDecoder 
 	decoder) 
-	//throws Error when name == "ContentDecodingException"
+	//throws ContentDecodingException
 	{
 			decoder.readStartElement(this.getElementLabel());
 			if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
@@ -3820,7 +3876,9 @@ DataUtils.encodeUtf8 = function (string) {
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
-		var c = c1 = c2 = 0;
+		var c = 0;
+        var c1 = 0;
+        var c2 = 0;
  
 		while ( i < utftext.length ) {
  
@@ -3837,7 +3895,7 @@ DataUtils.decodeUtf8 = function (utftext) {
 			}
 			else {
 				c2 = utftext.charCodeAt(i+1);
-				c3 = utftext.charCodeAt(i+2);
+				var c3 = utftext.charCodeAt(i+2);
 				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
 				i += 3;
 			}
@@ -3905,7 +3963,37 @@ DataUtils.arraysEqual = function(a1, a2){
     }
 
     return true;
-}
+};
+
+/*
+ * Convert the big endian byte array to an unsigned int.
+ * Don't check for overflow.
+ */
+DataUtils.bigEndianToUnsignedInt = function(bytes) {
+    var result = 0;
+    for (var i = 0; i < bytes.length; ++i) {
+        result <<= 8;
+        result += bytes[i];
+    }
+    return result;
+};
+
+/*
+ * Convert the int value to a new big endian byte array and return.
+ * If value is 0 or negative, return []. 
+ */
+DataUtils.nonNegativeIntToBigEndian = function(value) {
+    var result = [];
+    if (value <= 0)
+        return result;
+    
+    while (value != 0) {
+        result.unshift(value & 0xff);
+        value >>= 8;
+    }
+    return result;
+};
+
 /*
  * This file contains utilities to help encode and decode NDN objects.
  * author: ucla-cs
