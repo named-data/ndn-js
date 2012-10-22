@@ -39,7 +39,13 @@ CcnxProtocol.prototype = {
     		var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
     
 			var requestContent = function(contentListener) {
-				var name = aURI.spec.split(":")[1];
+                // Set nameString to the URI without the protocol.
+                var nameString = aURI.spec;
+                var colonIndex = nameString.indexOf(':');
+                if (colonIndex >= 0)
+                    nameString = nameString.substr(colonIndex + 1, nameString.length - colonIndex - 1);
+                
+				var name = new Name(nameString);
 			    // 131.179.141.18 is lioncub.metwi.ucla.edu .
 				var ndn = new NDN('131.179.141.18');
 				
@@ -60,20 +66,18 @@ CcnxProtocol.prototype = {
                     }
                         
                     var content = DataUtils.toString(contentObject.content);
-					// TODO: Should look at the returned Name to get contentType. For now,
-					//   just look at the original name.
-                    var contentTypeAndCharset = getContentTypeAndCharset(name);						
+                    var contentTypeEtc = getContentTypeAndCharset(contentObject.name);						
 					contentListener.onReceivedContent(content, 
-                        contentTypeAndCharset.contentType, contentTypeAndCharset.contentCharset);
+                        contentTypeEtc.contentType, contentTypeEtc.contentCharset);
                     
                     // Assume that onReceivedContent sends all the content immediately and that
-                    //   the URLBar is updated if the content is for the main window.
+                    //   the gURLBar is updated if the content is for the main window.
                     var urlBar = mostRecentWindow.gURLBar;
                     
                     return Closure.RESULT_OK;
 				};
 			
-				ndn.expressInterest(new Name(name), new ContentClosure());
+				ndn.expressInterest(name, new ContentClosure());
 			};
 
 			return new ContentChannel(aURI, requestContent);
@@ -94,36 +98,34 @@ else
 	var NSGetModule = XPCOMUtils.generateNSGetModule([CcnxProtocol]);
  
 /*
- * Based on name, return and object with properties contentType and charset.
+ * Scan the name from the last component to the first (skipping special CCNx components)
+ *   for a recognized file name extension, and return an object with properties contentType and charset.
  */
 function getContentTypeAndCharset(name) {
-    // Set up defaults.
-    var contentType = "text/html";
-	var charset = "utf-8";
-
-	var nameLowerCase = name.toLowerCase();
-	if (nameLowerCase.indexOf(".gif") >= 0) {
-	    contentType = "image/gif";
-		charset = "ISO-8859-1";
-	}
-	else if (nameLowerCase.indexOf(".jpg") >= 0 ||
-			 nameLowerCase.indexOf(".jpeg") >= 0) {
-		contentType = "image/jpeg";
-		charset = "ISO-8859-1";
-	}
-	else if (nameLowerCase.indexOf(".png") >= 0) {
-		contentType = "image/png";
-		charset = "ISO-8859-1";
-	}
-	else if (nameLowerCase.indexOf(".bmp") >= 0) {
-		contentType = "image/bmp";
-		charset = "ISO-8859-1";
-	}
-	else if (nameLowerCase.indexOf(".css") >= 0)
-		contentType = "text/css";
+    for (var i = name.components.length - 1; i >= 0; --i) {
+        var component = name.components[i];
+        if (component.length <= 0)
+            continue;
+        
+        // Skip special components which just may have ".gif", etc.
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+            (component[0] >= 0xF5 && component[0] <= 0xFF))
+            continue;
+        
+        var str = DataUtils.toString(component).toLowerCase();
+        if (str.indexOf(".gif") >= 0) 
+            return { contentType:  "image/gif", charset:  "ISO-8859-1" }
+    	else if (str.indexOf(".jpg") >= 0 ||
+    			 str.indexOf(".jpeg") >= 0) 
+            return { contentType:  "image/jpeg", charset:  "ISO-8859-1" }
+    	else if (str.indexOf(".png") >= 0) 
+            return { contentType:  "image/png", charset:  "ISO-8859-1" }
+        else if (str.indexOf(".bmp") >= 0) 
+            return { contentType:  "image/bmp", charset:  "ISO-8859-1" }
+    	else if (str.indexOf(".css") >= 0) 
+            return { contentType:  "text/css", charset: "utf-8" }
+    }
     
-    return {
-        contentType: contentType,
-        charset: charset
-    };
+    // default
+    return { contentType: "text/html", charset: "utf-8" };
 }
