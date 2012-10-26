@@ -477,15 +477,10 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 
 BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 	
-	/*int*/next;
-	/*int*/type = -1;
-	/*long*/val = 0;
-	/*boolean*/more = true;
+	/*int*/var type = -1;
+	/*long*/var val = 0;
+	/*boolean*/var more = true;
 
-	
-	//var savedOffset = this.offset;
-	var count = 0;
-	
 	do {
 		
 		var next = this.istream[this.offset ];
@@ -567,14 +562,11 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	//
 	//byte [] 
 
-	bytes = this.istream.slice(this.offset, this.offset+ blobLength);
+	var bytes = this.istream.slice(this.offset, this.offset+ blobLength);
 	this.offset += blobLength;
 	
 	//int 
 	return bytes;
-	
-	count = 0;
-
 };
 
 var count =0;
