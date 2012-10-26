@@ -34,16 +34,19 @@ CcnxProtocol.prototype = {
 	newChannel: function(aURI)
 	{
 		try {
+            var trimmedSpec = aURI.spec.trim();
+            
             // Save the mostRecentWindow from the moment of newChannel.
     		var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
     		var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
     
 			var requestContent = function(contentListener) {
                 // Set nameString to the URI without the protocol.
-                var nameString = aURI.spec;
+                var nameString = trimmedSpec;
                 var colonIndex = nameString.indexOf(':');
                 if (colonIndex >= 0)
-                    nameString = nameString.substr(colonIndex + 1, nameString.length - colonIndex - 1);
+                    nameString = nameString.substr
+                        (colonIndex + 1, nameString.length - colonIndex - 1).trim();
                 
 				var name = new Name(nameString);
                 // TODO: Strip off an ending implicit digest before checking the last component?
@@ -76,7 +79,7 @@ CcnxProtocol.prototype = {
                     // Assume that onReceivedContent sends all the content immediately and updatse
                     //   the gURLBar if the content is for the main window.
                     var urlBar = mostRecentWindow.gURLBar;
-                    if (urlBar && urlBar.value == aURI.spec) {
+                    if (urlBar && urlBar.value.trim() == trimmedSpec) {
                         // Assume the URI is for the window.  Update the URL bar.
                         // Show the name without the ending sequence (unless the original URI had it).
                         if (!uriEndsWithSequence && endsWithSequence(contentObject.name)) {
