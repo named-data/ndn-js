@@ -12,15 +12,17 @@ const Cr = Components.results;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
   
 /** Create an nsIChannel where asyncOpen calls requestContent(contentListener).  When the content
-	is available, call contentListener.onReceivedContent(content, contentType, contentCharset).  
-    The content is sent	to the listener passed to asyncOpen.
+	is available, call contentListener.onReceivedContent(content, contentType, contentCharset),  
+    which sends the content	to the listener passed to asyncOpen and returns after calling its
+    onStopRequest.
  */
 function ContentChannel(uri, requestContent) {
 	this.requestContent = requestContent;
 
 	this.done = false;
 
-	this.name = uri;
+	this.name = uri.spec;
+    // This is set by the caller of asyncOpen.
 	this.loadFlags = 0;
 	this.loadGroup = null;
 	this.status = 200;
@@ -74,25 +76,34 @@ ContentChannel.prototype = {
 	asyncOpen: function(aListener, aContext) {
         try {
             var thisContentChannel = this;
+            
+    		var threadManager = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);
+			var callingThread = threadManager.currentThread; 
+            
             var contentListener = {
                 onReceivedContent : function(content, contentType, contentCharset) {
                     thisContentChannel.contentLength = content.length;
                     thisContentChannel.contentType = contentType;
                     thisContentChannel.contentCharset = contentCharset;
 				
-                    // Call aListener immediately to send all the content.
-                    aListener.onStartRequest(thisContentChannel, aContext);
-
                     var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
                     pipe.init(true, true, 0, 0, null);
                     pipe.outputStream.write(content, content.length);
                     pipe.outputStream.close();
 				
-                    aListener.onDataAvailable(thisContentChannel, aContext, pipe.inputStream, 0, 
-                        content.length);
+                    // nsIChannel requires us to call aListener on its calling thread.
+                    // Set dispatch flags to 1 to wait for it to finish.
+					callingThread.dispatch({
+						run: function() { 				
+                            aListener.onStartRequest(thisContentChannel, aContext);
+                            aListener.onDataAvailable(thisContentChannel, aContext, 
+                                pipe.inputStream, 0, content.length);
 				
-                    thisContentChannel.done = true;
-                    aListener.onStopRequest(thisContentChannel, aContext, thisContentChannel.status);
+                            thisContentChannel.done = true;
+                            aListener.onStopRequest(thisContentChannel, aContext, 
+                                thisContentChannel.status);
+						}
+					}, 1);
                 }
             };
 		
