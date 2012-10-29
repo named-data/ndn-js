@@ -40,6 +40,7 @@ CcnxProtocol.prototype = {
     		var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
     		var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
     
+            var contentChannel;
 			var requestContent = function(contentListener) {
                 // Set nameString to the URI without the protocol.
                 var nameString = trimmedSpec;
@@ -76,12 +77,12 @@ CcnxProtocol.prototype = {
 					contentListener.onReceivedContent(content, 
                         contentTypeEtc.contentType, contentTypeEtc.contentCharset);
                     
-                    // Assume that onReceivedContent sends all the content immediately and updatse
-                    //   the gURLBar if the content is for the main window.
-                    var urlBar = mostRecentWindow.gURLBar;
-                    if (urlBar && urlBar.value.trim() == trimmedSpec) {
-                        // Assume the URI is for the window.  Update the URL bar.
+                    // Load flags bit 19 "LOAD_INITIAL_DOCUMENT_URI" means the channel is
+                    //   for the main window with the URL bar.
+                    if (contentChannel.loadFlags & (1<<19)) {
+                        // Update the URL bar.
                         // Show the name without the ending sequence (unless the original URI had it).
+                        var urlBar = mostRecentWindow.gURLBar;
                         if (!uriEndsWithSequence && endsWithSequence(contentObject.name)) {
                             var nameWithoutSequence = new Name
                                 (contentObject.name.components.slice
@@ -98,7 +99,8 @@ CcnxProtocol.prototype = {
 				ndn.expressInterest(name, new ContentClosure());
 			};
 
-			return new ContentChannel(aURI, requestContent);
+			contentChannel = new ContentChannel(aURI, requestContent);
+            return contentChannel;
 		} catch (ex) {
 			dump("CcnxProtocol.newChannel exception: " + ex + "\n");
 		}
