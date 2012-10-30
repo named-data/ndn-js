@@ -35,10 +35,6 @@ CcnxProtocol.prototype = {
 	{
 		try {
             var trimmedSpec = aURI.spec.trim();
-            
-            // Save the mostRecentWindow from the moment of newChannel.
-    		var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-    		var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
     
             var contentChannel;
 			var requestContent = function(contentListener) {
@@ -71,28 +67,25 @@ CcnxProtocol.prototype = {
                         dump("CcnxProtocol.newChannel: contentObject.content is null\n");
                         return Closure.RESULT_ERR;
                     }
-                        
-                    var content = DataUtils.toString(contentObject.content);
-                    var contentTypeEtc = getContentTypeAndCharset(contentObject.name);						
-					contentListener.onReceivedContent(content, 
-                        contentTypeEtc.contentType, contentTypeEtc.contentCharset);
-                    
-                    // Load flags bit 19 "LOAD_INITIAL_DOCUMENT_URI" means the channel is
-                    //   for the main window with the URL bar.
-                    if (contentChannel.loadFlags & (1<<19)) {
-                        // Update the URL bar.
-                        // Show the name without the ending sequence (unless the original URI had it).
-                        var urlBar = mostRecentWindow.gURLBar;
-                        if (!uriEndsWithSequence && endsWithSequence(contentObject.name)) {
-                            var nameWithoutSequence = new Name
-                                (contentObject.name.components.slice
-                                 (0, contentObject.name.components.length - 1));
-                            urlBar.value = "ccnx:" + nameWithoutSequence.to_uri();
-                        }
-                        else
-                            urlBar.value = "ccnx:" + contentObject.name.to_uri();
+
+                    // Get the URI from the ContentObject including the version.
+                    var contentUriSpec;
+                    if (!uriEndsWithSequence && endsWithSequence(contentObject.name)) {
+                        var nameWithoutSequence = new Name
+                            (contentObject.name.components.slice
+                             (0, contentObject.name.components.length - 1));
+                        contentUriSpec = "ccnx:" + nameWithoutSequence.to_uri();
                     }
+                    else
+                        contentUriSpec = "ccnx:" + contentObject.name.to_uri();
+
+                    var content = DataUtils.toString(contentObject.content);
+                    var contentTypeEtc = getContentTypeAndCharset(contentObject.name);
                     
+                    var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+					contentListener.onReceivedContent(content, 
+                        contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
+                        ioService.newURI(contentUriSpec, aURI.originCharset, null));                    
                     return Closure.RESULT_OK;
 				};
 			
