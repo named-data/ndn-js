@@ -77,10 +77,16 @@ ContentChannel.prototype = {
 };
 
 /*  Call requestContent(contentListener).  When the content is available, you should call 
- *  contentListener.onReceivedContent(content, contentType, contentCharset, uri), 
- *  which sends the content	aListener.  If uri is not null, update this.URI and if this.loadFlags
- *  LOAD_INITIAL_DOCUMENT_URI bit is set, then update the URL bar of the mostRecentWindow.
- *  (Note that the caller of asyncOpen sets this.loadFlags.)
+ *    contentListener funtions as follows:
+ *  onStart(contentType, contentCharset, uri)
+ *    Set the contentType and contentCharset and call aListener.onStartRequest.  If uri 
+ *    is not null, update this.URI and if this.loadFlags LOAD_INITIAL_DOCUMENT_URI bit is set, 
+ *    then update the URL bar of the mostRecentWindow. (Note that the caller of asyncOpen 
+ *    sets this.loadFlags.) 
+ *  onReceivedContent(content) 
+ *    Call aListener.onDataAvailable.
+ *  onStop() 
+ *    Call aListener.onStopRequest.
  */
 ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
     try {
@@ -90,20 +96,13 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
 		var callingThread = threadManager.currentThread; 
             
         var contentListener = {
-            onReceivedContent : function(content, contentType, contentCharset, uri) {
+            onStart : function(contentType, contentCharset, uri) {
                 if (uri)
                     thisContentChannel.URI = uri;
-                thisContentChannel.contentLength = content.length;
                 thisContentChannel.contentType = contentType;
                 thisContentChannel.contentCharset = contentCharset;
 				
-                var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
-                pipe.init(true, true, 0, 0, null);
-                pipe.outputStream.write(content, content.length);
-                pipe.outputStream.close();
-				
                 // nsIChannel requires us to call aListener on its calling thread.
-                // Set dispatch flags to 0 to return immediately.
 				callingThread.dispatch({
 					run: function() { 				
                         aListener.onStartRequest(thisContentChannel, aContext);
@@ -113,11 +112,32 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
                             // aListener.onStartRequest may set the URL bar but now we update it.
                             thisContentChannel.mostRecentWindow.gURLBar.value = 
                                 thisContentChannel.URI.spec;
-                        
+					}
+				}, 0);
+            },		
+
+            onReceivedContent : function(content) {
+                var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
+                pipe.init(true, true, 0, 0, null);
+                pipe.outputStream.write(content, content.length);
+                pipe.outputStream.close();
+				
+                // nsIChannel requires us to call aListener on its calling thread.
+                // Assume calls to dispatch are eventually executed in order.
+				callingThread.dispatch({
+					run: function() { 				
                         aListener.onDataAvailable(thisContentChannel, aContext, 
                             pipe.inputStream, 0, content.length);
-				
-                        thisContentChannel.done = true;
+					}
+				}, 0);
+            },
+
+            onStop : function() {
+                thisContentChannel.done = true;
+                
+                // nsIChannel requires us to call aListener on its calling thread.
+				callingThread.dispatch({
+					run: function() { 				
                         aListener.onStopRequest(thisContentChannel, aContext, 
                             thisContentChannel.status);
 					}
