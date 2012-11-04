@@ -28,16 +28,8 @@ var Name = function Name(_components){
 	}
 };
 
-Name.prototype.getName=function(){
-	
-	var output = "";
-	
-	for(var i=0;i<this.components.length;i++){
-		output+= "/"+ DataUtils.toString(this.components[i]);
-	}
-	
-	return output;
-	
+Name.prototype.getName = function() {
+    return this.to_uri();
 };
 
 Name.makeBlob=function(name){
@@ -56,28 +48,51 @@ Name.makeBlob=function(name){
 	return blobArrays;
 };
 
-Name.createNameArray=function(name) {
-	var array = name.split('/');
-    var colonIndex = array[0].indexOf(':');
-    if (colonIndex >= 0) {
-        name = name.substr(colonIndex + 1, name.length - colonIndex - 1);
-        array = name.split('/');
+Name.createNameArray = function(name) {
+    name = name.trim();
+    if (name.length <= 0)
+        return [];
+
+    var iColon = name.indexOf(':');
+    if (iColon >= 0) {
+        // Make sure the colon came before a '/'.
+        var iFirstSlash = name.indexOf('/');
+        if (iFirstSlash < 0 || iColon < iFirstSlash)
+            // Omit the leading protocol such as ccnx:
+            name = name.substr(iColon + 1, name.length - iColon - 1).trim();
     }
-	
-	if(name[0]=="/")
-		array=array.slice(1,array.length);		
-	if(name[name.length-1]=="/")
-		array=array.slice(0,array.length-1);
+    
+  	if (name[0] == '/') {
+        if (name.length >= 2 && name[1] == '/') {
+            // Strip the authority following "//".
+            var iAfterAuthority = name.indexOf('/', 2);
+            if (iAfterAuthority < 0)
+                // Unusual case: there was only an authority.
+                return [];
+            else
+                name = name.substr(iAfterAuthority + 1, name.length - iAfterAuthority - 1).trim();
+        }
+        else
+            name = name.substr(1, name.length - 1).trim();
+    }
+
+	var array = name.split('/');
     
     // Unescape the components.
     for (var i = 0; i < array.length; ++i) {
-        var component = unescape(array[i]);
+        var component = unescape(array[i].trim());
         
         if (component.match(/[^.]/) == null) {
-            // Special case for component of only periods.  Remove 3 periods.
-            if (component.length <= 3)
-                array[i] = "";
+            // Special case for component of only periods.  
+            if (component.length <= 2) {
+                // Zero, one or two periods is illegal.  Ignore this componenent to be
+                //   consistent with the C implmentation.
+                // This also gets rid of a trailing '/'.
+                array = array.slice(0, i).concat(array.slice(i + 1, array.length));
+                --i;                
+            }
             else
+                // Remove 3 periods.
                 array[i] = component.substr(3, component.length - 3);
         }
         else
