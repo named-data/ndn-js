@@ -310,10 +310,8 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 		length) {
 
 
-	if ((null == blob) || (length == 0)) {
-
+	if (null == blob)
 		return;
-	}
 	
 	if(LOG>4) console.log('LENGTH OF XML_BLOB IS '+length);
 	
