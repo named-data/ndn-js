@@ -137,7 +137,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         else
             contentUriSpec = "ccnx:" + contentObject.name.to_uri();
     
-        var contentTypeEtc = getContentTypeAndCharset(contentObject.name);
+        var contentTypeEtc = getNameContentTypeAndCharset(contentObject.name);
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.uriOriginCharset, null));
@@ -184,7 +184,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
  * Scan the name from the last component to the first (skipping special CCNx components)
  *   for a recognized file name extension, and return an object with properties contentType and charset.
  */
-function getContentTypeAndCharset(name) {
+function getNameContentTypeAndCharset(name) {
+    var filename = "";
     for (var i = name.components.length - 1; i >= 0; --i) {
         var component = name.components[i];
         if (component.length <= 0)
@@ -195,22 +196,11 @@ function getContentTypeAndCharset(name) {
             (component[0] >= 0xF5 && component[0] <= 0xFF))
             continue;
         
-        var str = DataUtils.toString(component).toLowerCase();
-        if (str.indexOf(".gif") >= 0) 
-            return { contentType: "image/gif", charset: "ISO-8859-1" }
-        else if (str.indexOf(".jpg") >= 0 ||
-                 str.indexOf(".jpeg") >= 0) 
-            return { contentType: "image/jpeg", charset: "ISO-8859-1" }
-        else if (str.indexOf(".png") >= 0) 
-            return { contentType: "image/png", charset: "ISO-8859-1" }
-        else if (str.indexOf(".bmp") >= 0) 
-            return { contentType: "image/bmp", charset: "ISO-8859-1" }
-        else if (str.indexOf(".css") >= 0) 
-            return { contentType: "text/css", charset: "utf-8" }
+        filename = DataUtils.toString(component).toLowerCase();
+        break;
     }
     
-    // default
-    return { contentType: "text/html", charset: "utf-8" };
+    return MimeTypes.getContentTypeAndCharset(filename);
 }
 
 /*

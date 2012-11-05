@@ -18,6 +18,7 @@ cat ndn-js-header.txt \
   ../../encoding/BinaryXMLDecoder.js emptyLine.txt \
   ../../encoding/BinaryXMLStructureDecoder.js emptyLine.txt \
   ../../encoding/DataUtils.js emptyLine.txt \
+  ../../encoding/MimeTypes.js emptyLine.txt \
   ../../encoding/EncodingUtils.js emptyLine.txt \
   ../../security/KeyManager.js emptyLine.txt \
   ../../securityLib/sha1.js emptyLine.txt \
