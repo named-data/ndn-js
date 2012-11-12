@@ -537,11 +537,10 @@ BinaryXMLDecoder.peekTypeAndVal = function() {
 };
 
 
-//byte[]
+//Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
 		//int 
 		blobLength) {
-	
 	
 	if(null == blobLength){
 		//TypeAndVal
@@ -560,12 +559,10 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	}
 	
 	//
-	//byte [] 
-
-	var bytes = this.istream.slice(this.offset, this.offset+ blobLength);
+	//Uint8Array
+	var bytes = this.istream.subarray(this.offset, this.offset+ blobLength);
 	this.offset += blobLength;
 	
-	//int 
 	return bytes;
 };
 
@@ -679,9 +676,6 @@ TypeAndVal.prototype.type = function(){
 TypeAndVal.prototype.val = function(){
 	return this.v;
 };
-//TODO
-
-
 
 
 
@@ -713,13 +707,14 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 		return strElementText;
 };
 
+
 /* 
  * Set the offset into the input, used for the next read.
  */
 BinaryXMLDecoder.prototype.seek = function(
         //int
         offset) {
-    this.offset = offset;        
+    this.offset = offset;
 }
 
 /*
@@ -733,5 +728,4 @@ function ContentDecodingException(error) {
 }
 ContentDecodingException.prototype = new Error();
 ContentDecodingException.prototype.name = "ContentDecodingException";
-
 
