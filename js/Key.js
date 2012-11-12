@@ -33,7 +33,7 @@ var KeyLocator = function KeyLocator(_input,_type){
     	this.keyName = _input;
     }
     else if(_type==KeyLocatorType.KEY){
-    	console.log('SET KEY');
+    	if(LOG>4)console.log('SET KEY');
     	this.publicKey = _input;
     }
     else if(_type==KeyLocatorType.CERTIFICATE){
@@ -105,7 +105,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 
 	KeyLocator.prototype.to_ccnb = function( encoder) {
 		
-		if(LOG>2) console.log('type is is ' + this.type);
+		if(LOG>4) console.log('type is is ' + this.type);
 		//TODO Check if Name is missing
 		if (!this.validate()) {
 			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");

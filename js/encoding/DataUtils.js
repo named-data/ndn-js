@@ -228,12 +228,13 @@ DataUtils.byteArrayToHexString = function(byteArray) {
  */
 //http://ejohn.org/blog/numbers-hex-and-colors/
 DataUtils.toHex = function(arguments){
-	if(LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
-  return ret; //.toUpperCase();
+	if (LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
+	//console.log(arguments);
+  	var ret = "";
+  	for ( var i = 0; i < arguments.length; i++ )
+    	ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  	if (LOG>4) console.log('Converted to: ' + ret);
+  	return ret; //.toUpperCase();
 }
 
 /**
