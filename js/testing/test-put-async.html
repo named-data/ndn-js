@@ -1,0 +1,92 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+
+
+<head>
+	<title>NDN Put via WebSocket</title>
+	
+	<script type="text/javascript" src="../Helper.js"></script>	
+	
+	<script type="text/javascript">
+		var ndn = new NDN();
+        ndn.connectWebSocket();
+        
+        var AsyncPutClosure = function AsyncPutClosure() {
+        	// Inherit from Closure.
+			Closure.call(this);
+		};
+		
+		AsyncPutClosure.prototype.upcall = function(kind, upcallInfo) {
+			if (kind == Closure.UPCALL_FINAL) {
+				// Do nothing.
+			} else if (kind == Closure.UPCALL_INTEREST) {
+				// Extract the Name from the Interest. var name = upcallInfo.Interest.name;;
+				// Check that we want to respond to upcallInfo.interest. If yes, construct a ContentObject
+				// response, put it to the NDN and return Closure.RESULT_INTEREST_CONSUMED. Else fall 
+				// through to return Content.RESULT_OK.
+				// See linemaker.py for more details.
+				console.log('AsyncPutClosure.upcall() called.');
+				var content = document.getElementById('content').value;
+				var interest = upcallInfo.interest;
+				nameStr = escape(interest.name.getName());
+				
+				var si = new SignedInfo();
+				si.setFields();
+				
+				var answer = DataUtils.toNumbersFromString(content);
+				
+				var co = new ContentObject(new Name(nameStr), si, answer, new Signature()); 
+				co.sign();
+				var hex = encodeToHexContentObject(co);
+				
+				var bytearray = new Uint8Array(hex.length / 2);
+	    		for (var i = 0; i < hex.length; i = i + 2) {
+	        		bytearray[i / 2] = '0x' + hex.substr(i, 2);
+	    		}
+	    		
+	    		upcallInfo.ndn.ws.send(bytearray.buffer);
+	    		console.log('ws.send() finised.');
+	    		
+	    		return Closure.RESULT_INTEREST_CONSUMED;
+			}
+			return Closure.RESULT_OK;
+		};
+        
+		
+		function run() {
+			var contentName = document.getElementById('contentname').value;		
+			
+			result = ndn.registerPrefixWS(contentName, new AsyncPutClosure(), null);
+			
+			document.getElementById('result').innerHTML = 'Content name \'' + contentName 
+					+'\' published. Result: ' + result;
+		}
+	
+		</script>
+	
+</head>
+<body >
+	<form>
+	<div>
+		<p>Please Enter a Content Name:</p>
+		
+		<input id="contentname" type="text" name="CONTENTNAME" value="/wentao.shang/regtest001" /> 
+		
+                <p>Please Enter the Content:</p>
+		
+		<textarea id="content" cols="40" rows="5" name="CONTENT" >This works!</textarea> 
+		
+		<br />
+		</div>
+	</form>
+	<div>
+		<button onclick="run()">Publish Content</button>
+	</div>
+	
+	<p id="result"></p>
+
+</body>
+</html>

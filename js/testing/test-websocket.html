@@ -1,0 +1,51 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Test WebSocket Support</title>
+
+	<script type="text/javascript">
+	
+		function test(){
+			var output = "";
+			
+			if ('WebSocket' in window) {
+				output += "This browser support WebSocket.";
+			} else {
+				output += "No WebSocket support.";
+			}
+			
+			document.getElementById('result').innerHTML += output;
+			
+			console.log("starting websocket...");
+			if ("WebSocket" in window) {
+			    var ws = new WebSocket("ws://localhost:9696");
+			    
+			    ws.onopen = function() {
+			        console.log("WebSockets connection opened");
+			        ws.send("Hello Server (from client).");
+			    }
+			    ws.onmessage = function(e) {
+			        console.log("Got from server: " + e.data);
+			    }
+			    ws.onclose = function() {
+			        console.log("WebSockets connection closed");
+			    }
+			} else {
+			    alert("No WebSockets support");
+			}
+
+		}
+
+	</script>
+
+</head>
+<body >
+	<button onclick="test()">Test Now!</button>
+	
+	<p id="result">Result here: </p>
+
+</body>
+</html>

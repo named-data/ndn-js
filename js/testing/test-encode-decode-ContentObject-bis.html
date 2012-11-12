@@ -36,6 +36,9 @@
 	
 	<script type="text/javascript" src="../encoding/DataUtils.js"></script>
 	
+	<script type="text/javascript" src="../encoding/EncodingUtils.js"></script>
+
+	
 	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
 	
 	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
@@ -58,7 +61,7 @@
 	<script type="text/javascript">
 	
 		function encode(){
-			var contentname = new Name( createNameArray(document.getElementById('contentname').value) );
+			var contentname = new Name( Name.createNameArray(document.getElementById('contentname').value) );
 			
 			var content = document.getElementById('content').value;
 			
@@ -119,21 +122,21 @@
 					output+= "<br />";
 				}
 				if(co.content !=null){
-					output += "CONTENT(hex): "+ toHex(co.content);
+					output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(co.signature !=null && co.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ toHex(co.signature.signature);
+					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
 					
-					output += "Publisher Public Key Digest(hex): "+ toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
 					
 					output+= "<br />";
 					output+= "<br />";
@@ -148,10 +151,10 @@
 				if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
 					
 					var publickey = rstr2b64(toString(co.signedInfo.locator.publicKey));
-					var publickeyHex = toHex(co.signedInfo.locator.publicKey).toLowerCase();
+					var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 					var publickeyString = toString(co.signedInfo.locator.publicKey);
 					
-					var signature = toHex(co.signature.signature).toLowerCase();
+					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 					
 					
 					var input = toString(co.rawSignatureData);
