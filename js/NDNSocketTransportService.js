@@ -1,5 +1,5 @@
 /* 
- * @author: ucla-cs
+ * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
  * This is used inside Firefox XPCOM modules.
@@ -9,8 +9,8 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-/** Send outputData (byte array) to host:port, read the entire response and call 
- *    listener.onReceivedData(data) where data is a byte array.
+/** Send outputData (Uint8Array) to host:port, read the entire response and call 
+ *    listener.onReceivedData(data) where data is Uint8Array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
 function readAllFromSocket(host, port, outputData, listener) {
@@ -25,7 +25,7 @@ function readAllFromSocket(host, port, outputData, listener) {
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
-		data: [],
+		data: new Uint8Array(0),
         structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
 		
@@ -48,7 +48,7 @@ function readAllFromSocket(host, port, outputData, listener) {
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
 				var rawData = NetUtil.readInputStreamToString(inStream, count);
-                this.data = this.data.concat(DataUtils.toNumbersFromString(rawData));
+                this.data = DataUtils.concatFromString(this.data, rawData);
 				
 				// Scan the input to check if a whole ccnb object has been read.
                 if (this.structureDecoder.findElementEnd(this.data))
