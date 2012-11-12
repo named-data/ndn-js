@@ -208,23 +208,9 @@ DataUtils.HexStringtoByteArray = function(str) {
     return byteArray;
 };
 */
-	
-/**
- * Byte Array to Hex String
- */
-DataUtils.byteArrayToHexString = function(byteArray) {
-    var str = '';
-    for (var i = 0; i < byteArray.length; i++)
-        str +=  byteArray[i] <= 0x7F?
-                byteArray[i] === 0x25 ? "%25" : // %
-                String.fromCharCode(byteArray[i]) :
-                "%" + byteArray[i].toString(16).toUpperCase();
-    return decodeURIComponent(str);
-};
-
 
 /**
- * Byte array to Hex String
+ * Uint8Array to Hex String
  */
 //http://ejohn.org/blog/numbers-hex-and-colors/
 DataUtils.toHex = function(arguments){
@@ -250,9 +236,8 @@ DataUtils.stringToHex = function(arguments){
 }
 
 /**
- * Byte array to raw string
+ * Uint8Array to raw string.
  */
-//DOES NOT SEEM TO WORK
 DataUtils.toString = function(arguments){
   //console.log(arguments);
   var ret = "";
@@ -262,15 +247,16 @@ DataUtils.toString = function(arguments){
 }
 
 /**
- * Hex String to byte array
+ * Hex String to Uint8Array.
  */
-DataUtils.toNumbers=function( str ){
-	if(typeof str =='string'){
-		  var ret = [];
-		   str.replace(/(..)/g, function(str){
-		    ret.push( parseInt( str, 16 ) );
-		  });
-		   return ret;
+DataUtils.toNumbers = function(str) {
+	if (typeof str == 'string') {
+		var ret = new Uint8Array(Math.floor(str.length / 2));
+        var i = 0;
+		str.replace(/(..)/g, function(str) {
+		    ret[i++] = parseInt(str, 16);
+		});
+		return ret;
     }
 }
 
@@ -288,15 +274,16 @@ DataUtils.hexToRawString = function(str) {
 }
 
 /**
- * Raw String to Byte Array
+ * Raw String to Uint8Array.
  */
 DataUtils.toNumbersFromString = function( str ){
-	var bytes = new Array(str.length);
+	var bytes = new Uint8Array(str.length);
 	for(var i=0;i<str.length;i++)
 		bytes[i] = str.charCodeAt(i);
 	return bytes;
 }
 
+// TODO: Use TextEncoder and return Uint8Array.
 DataUtils.encodeUtf8 = function (string) {
 		string = string.replace(/\r\n/g,"\n");
 		var utftext = "";
@@ -323,7 +310,7 @@ DataUtils.encodeUtf8 = function (string) {
 		return utftext;
 	};
  
-	// public method for url decoding
+// TODO: Take Uint8Array and use TextDecoder.
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
@@ -355,11 +342,6 @@ DataUtils.decodeUtf8 = function (utftext) {
  
 		return string;
 	};
-
-	test = function(){
-		console.log(DataUtils.decodeUtf8("HELLO.~"));
-		return DataUtils.decodeUtf8("HELLO.~");
-	}
 
 //NOT WORKING
 /*
