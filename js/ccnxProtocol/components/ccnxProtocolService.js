@@ -165,11 +165,19 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         segmentNumber != null && 
         (finalSegmentNumber == null || segmentNumber != finalSegmentNumber)) {
         // Make a name for the next segment and get it.
-        var nextSegmentNumber = DataUtils.nonNegativeIntToBigEndian(segmentNumber + 1);
-        nextSegmentNumber.unshift(0);
+        var segmentNumberPlus1 = DataUtils.nonNegativeIntToBigEndian(segmentNumber + 1);
+        // Put a 0 byte in front.
+        var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
+        nextSegmentNumber.set(segmentNumberPlus1, 1);
+        
+        // TODO: When Name uses Uint8Array, we don't need a byte array.
+        var nextSegmentNumberByteArray = [];
+        for (var i = 0; i < nextSegmentNumber.length; ++i)
+            nextSegmentNumberByteArray.push(nextSegmentNumber[i]);
+        
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
-        components.push(nextSegmentNumber);
+        components.push(nextSegmentNumberByteArray);
         this.ndn.expressInterest(new Name(components), this);
     }
     else
