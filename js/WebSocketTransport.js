@@ -218,9 +218,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 			return;
 		}
 		
-		name = name.trim();
-		
-		var fe = new ForwardingEntry('selfreg', new Name(name), null, null, 3, 2147483647);
+		var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
 		var bytes = encodeForwardingEntry(fe);
 		
 		var si = new SignedInfo();
@@ -242,7 +240,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		bytearray.set(binaryInterest);
 		console.log('Send Interest registration packet.');
     	
-    	var csEntry = new CSEntry(name, closure);
+    	var csEntry = new CSEntry(name.getName(), closure);
 		CSTable.push(csEntry);
     	
     	this.ws.send(bytearray.buffer);

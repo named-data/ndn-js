@@ -59,7 +59,7 @@
 		function run() {
 			var contentName = document.getElementById('contentname').value;		
 			
-			var result = ndn.registerPrefix(contentName, new AsyncPutClosure());
+			var result = ndn.registerPrefix(new Name(contentName), new AsyncPutClosure());
 			
 			document.getElementById('result').innerHTML = 'Content name \'' + contentName 
 					+'\' published. Result: ' + result;
