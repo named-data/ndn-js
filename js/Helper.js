@@ -3,6 +3,8 @@
 
 document.write('<script type="text/javascript" src="../NDN.js"></script>');
 
+document.write('<script type="text/javascript" src="../WebSocketTransport.js"></script>');
+
 document.write('<script type="text/javascript" src="../util/CCNProtocolDTags.js"></script>');
 	
 document.write('<script type="text/javascript" src="../util/CCNTime.js"></script>');

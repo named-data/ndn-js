@@ -11,7 +11,7 @@
 
 	<script type="text/javascript">
 		var ndn = new NDN();
-        ndn.connectWebSocket();
+        ndn.transport.connectWebSocket(ndn);
         
         var AsyncGetClosure = function AsyncGetClosure() {
         	// Inherit from Closure.
@@ -35,7 +35,7 @@
 		
 		
 		function run() {
-			ndn.expressInterestWS(document.getElementById('interest').value, new AsyncGetClosure(), null);
+			ndn.expressInterest(new Name(document.getElementById('interest').value), new AsyncGetClosure());
 		}
 		
 	</script>

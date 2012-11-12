@@ -12,7 +12,7 @@
 	
 	<script type="text/javascript">
 		var ndn = new NDN();
-        ndn.connectWebSocket();
+        ndn.transport.connectWebSocket(ndn);
         
         var AsyncPutClosure = function AsyncPutClosure() {
         	// Inherit from Closure.
@@ -31,7 +31,7 @@
 				console.log('AsyncPutClosure.upcall() called.');
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
-				nameStr = escape(interest.name.getName());
+				var nameStr = escape(interest.name.getName());
 				
 				var si = new SignedInfo();
 				si.setFields();
@@ -47,7 +47,7 @@
 	        		bytearray[i / 2] = '0x' + hex.substr(i, 2);
 	    		}
 	    		
-	    		upcallInfo.ndn.ws.send(bytearray.buffer);
+	    		upcallInfo.ndn.transport.ws.send(bytearray.buffer);
 	    		console.log('ws.send() finised.');
 	    		
 	    		return Closure.RESULT_INTEREST_CONSUMED;
@@ -59,7 +59,7 @@
 		function run() {
 			var contentName = document.getElementById('contentname').value;		
 			
-			result = ndn.registerPrefixWS(contentName, new AsyncPutClosure(), null);
+			var result = ndn.registerPrefix(contentName, new AsyncPutClosure());
 			
 			document.getElementById('result').innerHTML = 'Content name \'' + contentName 
 					+'\' published. Result: ' + result;
