@@ -5,7 +5,6 @@
  */
 
 function encodeToHexInterest(interest){
-	
 	var enc = new BinaryXMLEncoder();
  
 	interest.to_ccnb(enc);
@@ -13,8 +12,18 @@ function encodeToHexInterest(interest){
 	var hex = DataUtils.toHex(enc.getReducedOstream());
 
 	return hex;
-
 	
+}
+
+
+function encodeToBinaryInterest(interest){
+	var enc = new BinaryXMLEncoder();
+ 
+	interest.to_ccnb(enc);
+	
+	var hex = enc.getReducedOstream();
+
+	return hex;
 }
 
 
@@ -24,7 +33,7 @@ function encodeToHexContentObject(co){
 	co.to_ccnb(enc);
 	
 	var hex = DataUtils.toHex(enc.getReducedOstream());
-
+	
 	return hex;
 
 	
@@ -38,8 +47,6 @@ function encodeToBinaryContentObject(co){
 	var hex = enc.getReducedOstream();
 
 	return hex;
-
-	
 }
 
 function encodeForwardingEntry(co){
@@ -73,11 +80,13 @@ function decodeHexFaceInstance(result){
 	
 }
 
+
+
 function decodeHexInterest(result){
-	var numbers = DataUtils.toNumbers(result);
-			
+	var numbers = DataUtils.toNumbers(result);	
 	
 	decoder = new BinaryXMLDecoder(numbers);
+	
 	if(LOG>3)console.log('DECODING HEX INTERST  \n'+numbers);
 
 	var interest = new Interest();
@@ -92,8 +101,9 @@ function decodeHexInterest(result){
 
 function decodeHexContentObject(result){
 	var numbers = DataUtils.toNumbers(result);
-
+	
 	decoder = new BinaryXMLDecoder(numbers);
+	
 	if(LOG>3)console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
 	
 	co = new ContentObject();
@@ -136,7 +146,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "NAME: ";
 	    
 	    for(var i=0;i<co.name.components.length;i++){
-		output+= "/"+ DataUtils.toString(co.name.components[i]);
+		output+= "/"+ escape(DataUtils.toString(co.name.components[i]));
 	    }
 	    output+= "<br />";
 	    output+= "<br />";
