@@ -250,7 +250,7 @@ function str2rstr_utf16be(input)
  */
 function rstr2binb(input)
 {
-  console.log('Raw string comming is '+input);
+  //console.log('Raw string comming is '+input);
   var output = Array(input.length >> 2);
   for(var i = 0; i < output.length; i++)
     output[i] = 0;
@@ -266,7 +266,7 @@ function rstr2binb(input)
  * @return the array of big-endian words
  */
 function byteArray2binb(input){
-	console.log("Byte array coming is " + input);
+	//console.log("Byte array coming is " + input);
 	var output = Array(input.length >> 2);
 	  for(var i = 0; i < output.length; i++)
 	    output[i] = 0;
