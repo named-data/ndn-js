@@ -283,6 +283,17 @@ DataUtils.toNumbersFromString = function( str ){
 	return bytes;
 }
 
+/*
+ * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
+ */
+DataUtils.concatFromString = function(array, str) {
+	var bytes = new Uint8Array(array.length + str.length);
+    bytes.set(array);
+	for (var i = 0; i < str.length; ++i)
+		bytes[array.length + i] = str.charCodeAt(i);
+	return bytes;
+}
+
 // TODO: Use TextEncoder and return Uint8Array.
 DataUtils.encodeUtf8 = function (string) {
 		string = string.replace(/\r\n/g,"\n");
@@ -399,7 +410,7 @@ DataUtils.arraysEqual = function(a1, a2){
 };
 
 /*
- * Convert the big endian byte array to an unsigned int.
+ * Convert the big endian Uint8Array to an unsigned int.
  * Don't check for overflow.
  */
 DataUtils.bigEndianToUnsignedInt = function(bytes) {
@@ -412,17 +423,19 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
 };
 
 /*
- * Convert the int value to a new big endian byte array and return.
- * If value is 0 or negative, return []. 
+ * Convert the int value to a new big endian Uint8Array and return.
+ * If value is 0 or negative, return Uint8Array(0). 
  */
 DataUtils.nonNegativeIntToBigEndian = function(value) {
-    var result = [];
     if (value <= 0)
-        return result;
+        return new Uint8Array(0);
     
+    // Assume value is not over 64 bits.
+    var result = new Uint8Array(8);
+    var i = 0;
     while (value != 0) {
-        result.unshift(value & 0xff);
+        result[i++] = value & 0xff;
         value >>= 8;
     }
-    return result;
+    return result.subarray(0, i);
 };
