@@ -2,7 +2,7 @@
 cat ndn-js-header.txt \
   ../../Closure.js emptyLine.txt \
   ../../NDN.js emptyLine.txt \
-  ../../NDNSocketTransportService.js emptyLine.txt \
+  ../../XpcomTransport.js emptyLine.txt \
   ../../util/CCNProtocolDTags.js emptyLine.txt \
   ../../util/CCNTime.js emptyLine.txt \
   ../../Name.js emptyLine.txt \

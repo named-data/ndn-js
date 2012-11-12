@@ -6,7 +6,7 @@
  */
 
 var EXPORTED_SYMBOLS = ["NDN", "Closure", "Name", "Interest", "ContentObject",
-      "DataUtils", "MimeTypes"];
+      "DataUtils", "MimeTypes", "XpcomTransport"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
@@ -92,19 +92,31 @@ UpcallInfo.prototype.toString = function() {
 }
 
 /*
- * @author: ucla-cs
+ * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.
  */
 
+var LOG = 3;
+
 /**
- * host is default '127.0.0.1'.
- * port is default 9695.
+ * settings is an associative array with the following defaults:
+ * {
+ *   host: 'localhost',
+ *   port: 9696,
+ *   getTransport: function() { return new WebSocketTransport(); }
+ * }
  */
-var NDN = function NDN(host, port){
-	this.host = (host || '127.0.0.1');
-	this.port = (port || 9695);
+var NDN = function NDN(settings) {
+    settings = (settings || {});
+	this.host = (settings.host || "localhost");
+	this.port = (settings.port || 9696);
+    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+    this.transport = getTransport();    
 };
+
+
+/* Java Socket Bridge and XPCOM transport */
 
 NDN.prototype.createRoute = function(host,port){
 	this.host=host;
@@ -119,32 +131,32 @@ NDN.prototype.get = function(message){
 			console.log('INVALID INPUT TO GET');
 			return null;
 		}
-		
-		
+
+
 		//var array = Name.createNameArray(message);
 
 		int = new Interest(new Name(message));
 
 		int.InterestLifetime = 4200;
-		
+
 		var hex = encodeToHexInterest(int);
-		
+
 		//var result = get_java_socket_bridge().connectAndStart(ndnurl,ndnport,hex);
-		
+
 		var result = get(this.host,this.port, hex);
 
 
 		if(LOG>0)console.log('BINARY RESPONSE IS ' +result);
-		
+
 		if(result==null || result==undefined || result =="" ){
 			/*if(result[0] != '0'||result[1]!='4') {
 				if(LOG>2)console.log('INVALID ANSWER');
 			}*/
 			return null;
 		}
-		
+
 		else{
-			
+
 			co = decodeHexContentObject(result);
 
 			if(LOG>2) {
@@ -161,76 +173,76 @@ NDN.prototype.get = function(message){
 		return null;
 
 	}
-	
+
 
 }
 
 NDN.prototype.put = function(name,content){
 	if(this.host!=null && this.port!=null){
-		
+
 		var co = this.get("/%C1.M.S.localhost/%C1.M.SRV/ccnd");
-		
+
 		if(!co || !co.signedInfo || !co.signedInfo.publisher || !co.signedInfo.publisher.publisherPublicKeyDigest){
 			alert("Cannot contact router");
-			
+
 			return null;
 		}
-		
+
 		var ccnxnodename = co.signedInfo.publisher.publisherPublicKeyDigest;
-		
+
 		name = name.trim();
-		
+
 		var fe = new ForwardingEntry('selfreg',new Name(name),null, null, 3,2147483647);
-		
+
 		var bytes = encodeForwardingEntry(fe);
-		
-		
+
+
 		var si = new SignedInfo();
 		si.setFields();
-		
+
 		var co = new ContentObject(new Name(),si,bytes,new Signature()); 
 		co.sign();
-		
+
 		var coBinary = encodeToBinaryContentObject(co);
-		
+
 		//var ccnxnodename = unescape('%E0%A0%1E%099h%F9t%0C%E7%F46%1B%AB%F5%BB%05%A4%E5Z%AC%A5%E5%8Fs%ED%DE%B8%E0%13%AA%8F');
-		
+
 		var interestName = new Name(['ccnx',ccnxnodename,'selfreg',coBinary]);
 
 		int = new Interest(interestName);
 		int.scope = 1;
-		
+
 		var hex = encodeToHexInterest(int);
 
 		console.log('GOING TO PUT INTEREST OBJECT');
-		
+
 		console.log(hex);
-		
+
 		//var result = put(this.host,this.port, hex,name);
 
-		
+
 	//if(LOG>3)console.log('received interest'); //from host'+ host +':'+port+' with name '+name);
-	
+
 	//if(LOG>3)console.log('DATA ');
-	
+
 	//if(LOG>3)console.log(result);
-	
+
 	//interest = decodeHexInterest(result);
-	
+
 	//console.log('SUCCESSFULLY PARSED INTEREST');
-	
+
 	console.log('CREATING ANSWER');
 	var si = new SignedInfo();
 	si.setFields();
-	
+
 	var answer = DataUtils.toNumbersFromString(content);
 
 	var co = new ContentObject(new Name(name),si,answer,new Signature()); 
 	co.sign();
-	
-	
+
+
 	var outputHex = encodeToHexContentObject(co);
-	
+
 	//console.log('SENDING ANSWER');
 
 	//return get_java_socket_bridge().putAnswer(outputHex,name);
@@ -264,7 +276,7 @@ NDN.prototype.expressInterest = function(
         return;
     }
     
-	interest = new Interest(name);
+	var interest = new Interest(name);
     if (template != null) {
 		interest.minSuffixComponents = template.minSuffixComponents;
 		interest.maxSuffixComponents = template.maxSuffixComponents;
@@ -278,14 +290,32 @@ NDN.prototype.expressInterest = function(
     else
         interest.interestLifetime = 4200;
     
-    var encoder = new BinaryXMLEncoder();
-	interest.to_ccnb(encoder);	
-	var outputData = encoder.getReducedOstream();
-    encoder = null;
-		
-    // Make a local variable so it is not masked by an inner this.
-    var ndn = this;
-	var dataListener = {
+    this.transport.expressInterest(this, interest, closure);
+};
+
+
+NDN.prototype.registerPrefix = function(name, closure, flag) {
+    return this.transport.registerPrefix(this, name, closure, flag);
+}
+
+/* 
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
+ * This is used inside Firefox XPCOM modules.
+ */
+
+// Assume already imported the following:
+// Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+// Components.utils.import("resource://gre/modules/NetUtil.jsm");
+
+var XpcomTransport = function XpcomTransport() {    
+};
+
+XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
+    var binaryInterest = encodeToBinaryInterest(interest);
+    
+    var dataListener = {
 		onReceivedData : function(data) {
 			if (data == null || data == undefined || data.length == 0)
 				dump("NDN.expressInterest: received empty data from socket.\n");
@@ -299,7 +329,7 @@ NDN.prototype.expressInterest = function(
 					dump(co);
 					dump("\n");
 				}
-					
+
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
 				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
                                new UpcallInfo(ndn, interest, 0, co));
@@ -309,7 +339,7 @@ NDN.prototype.expressInterest = function(
                 else if (result == Closure.RESULT_ERR)
                     dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
                 else if (result == Closure.RESULT_REEXPRESS)
-                    readAllFromSocket(ndn.host, ndn.port, outputData, dataListener);
+                    XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
                 else if (result == Closure.RESULT_VERIFY) {
                     // TODO: force verification of content.
                 }
@@ -319,30 +349,16 @@ NDN.prototype.expressInterest = function(
                 }
 			}
 		}
-	}
-        
-    // The application includes a source file that defines readAllFromSocket
-    //   according to the application's communication method.
-	readAllFromSocket(this.host, this.port, outputData, dataListener);
+	}    
+    
+	XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
 };
 
-
-/* 
- * @author: ucla-cs
- * See COPYING for copyright and distribution information.
- * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
- * This is used inside Firefox XPCOM modules.
- */
-
-// Assume already imported the following:
-// Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
-// Components.utils.import("resource://gre/modules/NetUtil.jsm");
-
-/** Send outputData (byte array) to host:port, read the entire response and call 
- *    listener.onReceivedData(data) where data is a byte array.
+/** Send outputData (Uint8Array) to host:port, read the entire response and call 
+ *    listener.onReceivedData(data) where data is Uint8Array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
-function readAllFromSocket(host, port, outputData, listener) {
+XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
         (Components.interfaces.nsISocketTransportService);
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
@@ -354,7 +370,7 @@ function readAllFromSocket(host, port, outputData, listener) {
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
-		data: [],
+		data: new Uint8Array(0),
         structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
 		
@@ -377,7 +393,7 @@ function readAllFromSocket(host, port, outputData, listener) {
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
 				var rawData = NetUtil.readInputStreamToString(inStream, count);
-                this.data = this.data.concat(DataUtils.toNumbersFromString(rawData));
+                this.data = DataUtils.concatFromString(this.data, rawData);
 				
 				// Scan the input to check if a whole ccnb object has been read.
                 if (this.structureDecoder.findElementEnd(this.data))
@@ -872,16 +888,29 @@ ContentObject.prototype.sign = function(){
 	var n1 = this.encodeObject(this.name);
 	var n2 = this.encodeObject(this.signedInfo);
 	var n3 = this.encodeContent();
+	/*console.log('sign: ');
+	console.log(n1);
+	console.log(n2);
+	console.log(n3);*/
 	
-	var n = n1.concat(n2,n3);
+	//var n = n1.concat(n2,n3);
+	var tempBuf = new ArrayBuffer(n1.length + n2.length + n3.length);
+	var n = new Uint8Array(tempBuf);
+	//console.log(n);
+	n.set(n1, 0);
+	//console.log(n);
+	n.set(n2, n1.length);
+	//console.log(n);
+	n.set(n3, n1.length + n2.length);
+	//console.log(n);
 	
-	if(LOG>2)console.log('Signature Data is (binary) '+n);
+	if(LOG>4)console.log('Signature Data is (binary) '+n);
 	
-	if(LOG>2)console.log('Signature Data is (RawString)');
+	if(LOG>4)console.log('Signature Data is (RawString)');
 	
-	if(LOG>2)console.log( DataUtils.toString(n) );
+	if(LOG>4)console.log( DataUtils.toString(n) );
 	
-	var sig = DataUtils.toString(n);
+	//var sig = DataUtils.toString(n);
 
 	
 	var rsa = new RSAKey();
@@ -893,11 +922,11 @@ ContentObject.prototype.sign = function(){
 	var hSig = rsa.signByteArrayWithSHA256(n);
 
 	
-	if(LOG>2)console.log('SIGNATURE SAVED IS');
+	if(LOG>4)console.log('SIGNATURE SAVED IS');
 	
-	if(LOG>2)console.log(hSig);
+	if(LOG>4)console.log(hSig);
 	
-	if(LOG>2)console.log(  DataUtils.toNumbers(hSig.trim()));
+	if(LOG>4)console.log(  DataUtils.toNumbers(hSig.trim()));
 
 	this.signature.signature = DataUtils.toNumbers(hSig.trim());
 	
@@ -930,7 +959,7 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.slice(this.startSIG, this.endSIG );
+	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
 
 	this.rawSignatureData = sigBits;
 };
@@ -1127,8 +1156,8 @@ SignedInfo.prototype.setFields = function(){
 	
 	var publicKeyHex = globalKeyManager.publicKey;
 
-	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	console.log(publicKeyHex);
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyHex);
 	
 	var publicKeyBytes = DataUtils.toNumbers(globalKeyManager.publicKey) ; 
 
@@ -1166,8 +1195,8 @@ SignedInfo.prototype.setFields = function(){
 	
 	//if(LOG>4)console.log('toNumbersFromString(stringCertificate) '+DataUtils.toNumbersFromString(stringCertificate));
 	
-	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	console.log(publicKeyBytes);
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyBytes);
 
 	this.locator = new KeyLocator(  publicKeyBytes  ,KeyLocatorType.KEY );
 
@@ -1678,7 +1707,7 @@ var KeyLocator = function KeyLocator(_input,_type){
     	this.keyName = _input;
     }
     else if(_type==KeyLocatorType.KEY){
-    	console.log('SET KEY');
+    	if(LOG>4)console.log('SET KEY');
     	this.publicKey = _input;
     }
     else if(_type==KeyLocatorType.CERTIFICATE){
@@ -1750,7 +1779,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 
 	KeyLocator.prototype.to_ccnb = function( encoder) {
 		
-		if(LOG>2) console.log('type is is ' + this.type);
+		if(LOG>4) console.log('type is is ' + this.type);
 		//TODO Check if Name is missing
 		if (!this.validate()) {
 			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
@@ -2295,37 +2324,37 @@ var bits_32 = 0x0FFFFFFFF;
 
 
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-
-	this.ostream = new Array(10000);
-	
-	
+	this.ostream = new Uint8Array(10000);
 	this.offset =0;
-	
 	this.CODEC_NAME = "Binary";
-	
 };
 
-BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content){
+
+BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
 	this.encodeUString(this.ostream, utf8Content, XML_UDATA);
 };
 
-BinaryXMLEncoder.prototype.writeBlob = function(/*byte []*/ binaryContent
+
+BinaryXMLEncoder.prototype.writeBlob = function(
+		/*Uint8Array*/ binaryContent
 		//, /*int*/ offset, /*int*/ length
-		)  {
+		) {
 	
 	if(LOG >3) console.log(binaryContent);
 	
 	this.encodeBlob(this.ostream, binaryContent, this.offset, binaryContent.length);
 };
 
-BinaryXMLEncoder.prototype.writeStartElement = function(/*String*/ tag, /*TreeMap<String,String>*/ attributes){
 
-	/*Long*/ dictionaryVal = tag;//stringToTag(tag);
+BinaryXMLEncoder.prototype.writeStartElement = function(
+	/*String*/ tag, 
+	/*TreeMap<String,String>*/ attributes
+	) {
+
+	/*Long*/ dictionaryVal = tag; //stringToTag(tag);
 	
 	if (null == dictionaryVal) {
-
 		this.encodeUString(this.ostream, tag, XML_TAG);
-		
 	} else {
 		this.encodeTypeAndVal(XML_DTAG, dictionaryVal, this.ostream);
 	}
@@ -2336,14 +2365,13 @@ BinaryXMLEncoder.prototype.writeStartElement = function(/*String*/ tag, /*TreeMa
 };
 
 
-BinaryXMLEncoder.prototype.writeEndElement = function(){
-
+BinaryXMLEncoder.prototype.writeEndElement = function() {
 	this.ostream[this.offset] = XML_CLOSE;
-	this.offset+= 1;
+	this.offset += 1;
 }
 
+
 BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/ attributes) {
-	
 	if (null == attributes) {
 		return;
 	}
@@ -2368,9 +2396,8 @@ BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/
 		this.encodeUString(this.ostream, strValue);
 		
 	}
-
-	
 }
+
 
 //returns a string
 stringToTag = function(/*long*/ tagVal) {
@@ -2403,45 +2430,35 @@ BinaryXMLEncoder.prototype.writeElement = function(
 		//byte[] 
 		Content,
 		//TreeMap<String, String> 
-		attributes) {
-	
+		attributes
+		) {
 	this.writeStartElement(tag, attributes);
 	// Will omit if 0-length
 	
 	if(typeof Content === 'number') {
-		if(LOG>4) console.log('GOING TO WRITE THE NUMBER .charCodeAt(0) ' +Content.toString().charCodeAt(0) );
-		if(LOG>4) console.log('GOING TO WRITE THE NUMBER ' +Content.toString() );
-		if(LOG>4) console.log('type of number is ' +typeof Content.toString() );
-		
-
+		if(LOG>4) console.log('GOING TO WRITE THE NUMBER .charCodeAt(0) ' + Content.toString().charCodeAt(0) );
+		if(LOG>4) console.log('GOING TO WRITE THE NUMBER ' + Content.toString() );
+		if(LOG>4) console.log('type of number is ' + typeof Content.toString() );
 		
 		this.writeUString(Content.toString());
 		//whatever
-		
 	}
-	
 	else if(typeof Content === 'string'){
-		if(LOG>4) console.log('GOING TO WRITE THE STRING  ' +Content );
-		if(LOG>4) console.log('type of STRING is ' +typeof Content );
+		if(LOG>4) console.log('GOING TO WRITE THE STRING  ' + Content );
+		if(LOG>4) console.log('type of STRING is ' + typeof Content );
 		
 		this.writeUString(Content);
 	}
-	
 	else{
-	//else if(typeof Content === 'string'){
-		 //console.log('went here');
-		//this.writeBlob(Content);
-	//}
-	if(LOG>4) console.log('GOING TO WRITE A BLOB  ' +Content );
-	//else if(typeof Content === 'object'){
+		if(LOG>4) console.log('GOING TO WRITE A BLOB  ' + Content );
+
 		this.writeBlob(Content);
-	//}
 	}
 	
 	this.writeEndElement();
 }
 
-//TODO
+
 
 var TypeAndVal = function TypeAndVal(_type,_val) {
 	this.type = _type;
@@ -2449,17 +2466,19 @@ var TypeAndVal = function TypeAndVal(_type,_val) {
 	
 };
 
+
 BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 		//int
 		type, 
 		//long 
 		val, 
-		//byte [] 
-		buf) {
+		//ArrayBufferView 
+		ostream
+		) {
 	
-	if(LOG>4)console.log('Encoding type '+ type+ ' and value '+ val);
+	if(LOG>4) console.log('Encoding type '+ type+ ' and value '+ val);
 	
-	if(LOG>4) console.log('OFFSET IS ' + this.offset );
+	if(LOG>4) console.log('OFFSET IS ' + this.offset);
 	
 	if ((type > XML_UDATA) || (type < 0) || (val < 0)) {
 		throw new Error("Tag and value must be positive, and tag valid.");
@@ -2468,14 +2487,14 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
 	
-	if ((this.offset + numEncodingBytes) > buf.length) {
-		throw new Error("Buffer space of " + (buf.length-this.offset) + 
+	if ((this.offset + numEncodingBytes) > ostream.length) {
+		throw new Error("Buffer space of " + (ostream.length - this.offset) + 
 											" bytes insufficient to hold " + 
 											numEncodingBytes + " of encoded type and value.");
 	}
 
 	// Bottom 4 bits of val go in last byte with tag.
-	buf[this.offset + numEncodingBytes - 1] = 
+	ostream[this.offset + numEncodingBytes - 1] = 
 		//(byte)
 			(BYTE_MASK &
 					(((XML_TT_MASK & type) | 
@@ -2487,9 +2506,8 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	// is "more" flag.
 	var i = this.offset + numEncodingBytes - 2;
 	while ((0 != val) && (i >= this.offset)) {
-		buf[i] = //(byte)
-				(BYTE_MASK &
-						    (val & XML_REG_VAL_MASK)); // leave top bit unset
+		ostream[i] = //(byte)
+				(BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
 		val = val >>> XML_REG_VAL_BITS;
 		--i;
 	}
@@ -2501,6 +2519,7 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	
 	return numEncodingBytes;
 };
+
 
 BinaryXMLEncoder.prototype.encodeUString = function(
 		//OutputStream 
@@ -2514,23 +2533,15 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 		return;
 	}
 	
-	
-	//byte [] data utils
-	/*custom*/
-	//byte[]
-	
 	if(LOG>3) console.log("The string to write is ");
-	
 	if(LOG>3) console.log(ustring);
 
 	//COPY THE STRING TO AVOID PROBLEMS
 	strBytes = new Array(ustring.length);
-	
-	var i = 0;	
 
-	for( ; i<ustring.length; i++) //in InStr.ToCharArray())
+	for (i = 0; i < ustring.length; i++) //in InStr.ToCharArray())
 	{
-		if(LOG>3)console.log("ustring[" + i + '] = ' + ustring[i]);
+		if(LOG>3) console.log('ustring[' + i + '] = ' + ustring[i]);
 		strBytes[i] = ustring.charCodeAt(i);
 	}
 	
@@ -2546,9 +2557,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	if(LOG>3) console.log(strBytes);
 	
 	this.writeString(strBytes,this.offset);
-	
 	this.offset+= strBytes.length;
-
 };
 
 
@@ -2556,7 +2565,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 BinaryXMLEncoder.prototype.encodeBlob = function(
 		//OutputStream 
 		ostream, 
-		//byte [] 
+		//Uint8Array 
 		blob, 
 		//int 
 		offset, 
@@ -2569,21 +2578,17 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 	
 	if(LOG>4) console.log('LENGTH OF XML_BLOB IS '+length);
 	
+	/*blobCopy = new Array(blob.Length);
 	
-	blobCopy = new Array(blob.Length);
-	var i = 0;
-	for( ;i<blob.length;i++) //in InStr.ToCharArray())
+	for (i = 0; i < blob.length; i++) //in InStr.ToCharArray())
 	{
 		blobCopy[i] = blob[i];
-	}
+	}*/
 
-	this.encodeTypeAndVal(XML_BLOB, length, ostream,offset);
-	
-	if (null != blob) {
+	this.encodeTypeAndVal(XML_BLOB, length, ostream, offset);
 
-		this.writeBlobArray(blobCopy,this.offset);
-		this.offset += length;
-	}
+	this.writeBlobArray(blob, this.offset);
+	this.offset += length;
 };
 
 var ENCODING_LIMIT_1_BYTE = ((1 << (XML_TT_VAL_BITS)) - 1);
@@ -2630,13 +2635,10 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');
 	if(LOG>4)console.log(binarydate);
-	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE(HEX)');
 	if(LOG>4)console.log(DataUtils.toHex(binarydate));
 	
-
 	this.writeElement(tag, binarydate);
-
 };
 
 BinaryXMLEncoder.prototype.writeString = function(
@@ -2650,19 +2652,16 @@ BinaryXMLEncoder.prototype.writeString = function(
     	if(LOG>4) console.log('GOING TO WRITE A STRING');
     	if(LOG>4) console.log(input);
         
-		for (var i = 0; i < input.length; i++) {
+		for (i = 0; i < input.length; i++) {
 			if(LOG>4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
 		    this.ostream[this.offset+i] = (input.charCodeAt(i));
 		}
 	}
-    
     else{
-    	
-    	if(LOG>4) console.log('GOING TO WRITE A STRING IN BINARY FORM');
-    	if(LOG>4) console.log(input);
-    	
-    	this.writeBlobArray(input);
-    	
+		if(LOG>4) console.log('GOING TO WRITE A STRING IN BINARY FORM');
+		if(LOG>4) console.log(input);
+		
+		this.writeBlobArray(input);
     }
     /*
 	else if(typeof input === 'object'){
@@ -2671,26 +2670,24 @@ BinaryXMLEncoder.prototype.writeString = function(
 	*/
 };
 
+
 BinaryXMLEncoder.prototype.writeBlobArray = function(
-		//String 
-		Blob,
-		//CCNTime 
+		//Uint8Array 
+		blob,
+		//int 
 		offset) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
     
-	for (var i = 0; i < Blob.length; i++) {
+	/*for (var i = 0; i < Blob.length; i++) {
 	    this.ostream[this.offset+i] = Blob[i];
-	}
-	
+	}*/
+	this.ostream.set(blob, this.offset);
 };
 
 
-
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
-	
-	return this.ostream.slice(0,this.offset);
-	
+	return this.ostream.subarray(0, this.offset);
 };
 
 
@@ -3233,11 +3230,10 @@ BinaryXMLDecoder.peekTypeAndVal = function() {
 };
 
 
-//byte[]
+//Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
 		//int 
 		blobLength) {
-	
 	
 	if(null == blobLength){
 		//TypeAndVal
@@ -3256,12 +3252,10 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	}
 	
 	//
-	//byte [] 
-
-	var bytes = this.istream.slice(this.offset, this.offset+ blobLength);
+	//Uint8Array
+	var bytes = this.istream.subarray(this.offset, this.offset+ blobLength);
 	this.offset += blobLength;
 	
-	//int 
 	return bytes;
 };
 
@@ -3375,9 +3369,6 @@ TypeAndVal.prototype.type = function(){
 TypeAndVal.prototype.val = function(){
 	return this.v;
 };
-//TODO
-
-
 
 
 
@@ -3409,13 +3400,14 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 		return strElementText;
 };
 
+
 /* 
  * Set the offset into the input, used for the next read.
  */
 BinaryXMLDecoder.prototype.seek = function(
         //int
         offset) {
-    this.offset = offset;        
+    this.offset = offset;
 }
 
 /*
@@ -3429,7 +3421,6 @@ function ContentDecodingException(error) {
 }
 ContentDecodingException.prototype = new Error();
 ContentDecodingException.prototype.name = "ContentDecodingException";
-
 
 
 /*
@@ -3764,32 +3755,19 @@ DataUtils.HexStringtoByteArray = function(str) {
     return byteArray;
 };
 */
-	
-/**
- * Byte Array to Hex String
- */
-DataUtils.byteArrayToHexString = function(byteArray) {
-    var str = '';
-    for (var i = 0; i < byteArray.length; i++)
-        str +=  byteArray[i] <= 0x7F?
-                byteArray[i] === 0x25 ? "%25" : // %
-                String.fromCharCode(byteArray[i]) :
-                "%" + byteArray[i].toString(16).toUpperCase();
-    return decodeURIComponent(str);
-};
-
 
 /**
- * Byte array to Hex String
+ * Uint8Array to Hex String
  */
 //http://ejohn.org/blog/numbers-hex-and-colors/
 DataUtils.toHex = function(arguments){
-	if(LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
-  return ret; //.toUpperCase();
+	if (LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
+	//console.log(arguments);
+  	var ret = "";
+  	for ( var i = 0; i < arguments.length; i++ )
+    	ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  	if (LOG>4) console.log('Converted to: ' + ret);
+  	return ret; //.toUpperCase();
 }
 
 /**
@@ -3805,9 +3783,8 @@ DataUtils.stringToHex = function(arguments){
 }
 
 /**
- * Byte array to raw string
+ * Uint8Array to raw string.
  */
-//DOES NOT SEEM TO WORK
 DataUtils.toString = function(arguments){
   //console.log(arguments);
   var ret = "";
@@ -3817,15 +3794,16 @@ DataUtils.toString = function(arguments){
 }
 
 /**
- * Hex String to byte array
+ * Hex String to Uint8Array.
  */
-DataUtils.toNumbers=function( str ){
-	if(typeof str =='string'){
-		  var ret = [];
-		   str.replace(/(..)/g, function(str){
-		    ret.push( parseInt( str, 16 ) );
-		  });
-		   return ret;
+DataUtils.toNumbers = function(str) {
+	if (typeof str == 'string') {
+		var ret = new Uint8Array(Math.floor(str.length / 2));
+        var i = 0;
+		str.replace(/(..)/g, function(str) {
+		    ret[i++] = parseInt(str, 16);
+		});
+		return ret;
     }
 }
 
@@ -3843,15 +3821,27 @@ DataUtils.hexToRawString = function(str) {
 }
 
 /**
- * Raw String to Byte Array
+ * Raw String to Uint8Array.
  */
 DataUtils.toNumbersFromString = function( str ){
-	var bytes = new Array(str.length);
+	var bytes = new Uint8Array(str.length);
 	for(var i=0;i<str.length;i++)
 		bytes[i] = str.charCodeAt(i);
 	return bytes;
 }
 
+/*
+ * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
+ */
+DataUtils.concatFromString = function(array, str) {
+	var bytes = new Uint8Array(array.length + str.length);
+    bytes.set(array);
+	for (var i = 0; i < str.length; ++i)
+		bytes[array.length + i] = str.charCodeAt(i);
+	return bytes;
+}
+
+// TODO: Use TextEncoder and return Uint8Array.
 DataUtils.encodeUtf8 = function (string) {
 		string = string.replace(/\r\n/g,"\n");
 		var utftext = "";
@@ -3878,7 +3868,7 @@ DataUtils.encodeUtf8 = function (string) {
 		return utftext;
 	};
  
-	// public method for url decoding
+// TODO: Take Uint8Array and use TextDecoder.
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
@@ -3910,11 +3900,6 @@ DataUtils.decodeUtf8 = function (utftext) {
  
 		return string;
 	};
-
-	test = function(){
-		console.log(DataUtils.decodeUtf8("HELLO.~"));
-		return DataUtils.decodeUtf8("HELLO.~");
-	}
 
 //NOT WORKING
 /*
@@ -3972,7 +3957,7 @@ DataUtils.arraysEqual = function(a1, a2){
 };
 
 /*
- * Convert the big endian byte array to an unsigned int.
+ * Convert the big endian Uint8Array to an unsigned int.
  * Don't check for overflow.
  */
 DataUtils.bigEndianToUnsignedInt = function(bytes) {
@@ -3985,19 +3970,21 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
 };
 
 /*
- * Convert the int value to a new big endian byte array and return.
- * If value is 0 or negative, return []. 
+ * Convert the int value to a new big endian Uint8Array and return.
+ * If value is 0 or negative, return Uint8Array(0). 
  */
 DataUtils.nonNegativeIntToBigEndian = function(value) {
-    var result = [];
     if (value <= 0)
-        return result;
+        return new Uint8Array(0);
     
+    // Assume value is not over 64 bits.
+    var result = new Uint8Array(8);
+    var i = 0;
     while (value != 0) {
-        result.unshift(value & 0xff);
+        result[i++] = value & 0xff;
         value >>= 8;
     }
-    return result;
+    return result.subarray(0, i);
 };
 
 var MimeTypes = {
@@ -4550,7 +4537,6 @@ var MimeTypes = {
  */
 
 function encodeToHexInterest(interest){
-	
 	var enc = new BinaryXMLEncoder();
  
 	interest.to_ccnb(enc);
@@ -4558,8 +4544,18 @@ function encodeToHexInterest(interest){
 	var hex = DataUtils.toHex(enc.getReducedOstream());
 
 	return hex;
-
 	
+}
+
+
+function encodeToBinaryInterest(interest){
+	var enc = new BinaryXMLEncoder();
+ 
+	interest.to_ccnb(enc);
+	
+	var hex = enc.getReducedOstream();
+
+	return hex;
 }
 
 
@@ -4569,7 +4565,7 @@ function encodeToHexContentObject(co){
 	co.to_ccnb(enc);
 	
 	var hex = DataUtils.toHex(enc.getReducedOstream());
-
+	
 	return hex;
 
 	
@@ -4583,8 +4579,6 @@ function encodeToBinaryContentObject(co){
 	var hex = enc.getReducedOstream();
 
 	return hex;
-
-	
 }
 
 function encodeForwardingEntry(co){
@@ -4618,11 +4612,13 @@ function decodeHexFaceInstance(result){
 	
 }
 
+
+
 function decodeHexInterest(result){
-	var numbers = DataUtils.toNumbers(result);
-			
+	var numbers = DataUtils.toNumbers(result);	
 	
 	decoder = new BinaryXMLDecoder(numbers);
+	
 	if(LOG>3)console.log('DECODING HEX INTERST  \n'+numbers);
 
 	var interest = new Interest();
@@ -4637,8 +4633,9 @@ function decodeHexInterest(result){
 
 function decodeHexContentObject(result){
 	var numbers = DataUtils.toNumbers(result);
-
+	
 	decoder = new BinaryXMLDecoder(numbers);
+	
 	if(LOG>3)console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
 	
 	co = new ContentObject();
@@ -4681,7 +4678,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "NAME: ";
 	    
 	    for(var i=0;i<co.name.components.length;i++){
-		output+= "/"+ DataUtils.toString(co.name.components[i]);
+		output+= "/"+ escape(DataUtils.toString(co.name.components[i]));
 	    }
 	    output+= "<br />";
 	    output+= "<br />";
@@ -5592,7 +5589,7 @@ function str2rstr_utf16be(input)
  */
 function rstr2binb(input)
 {
-  console.log('Raw string comming is '+input);
+  //console.log('Raw string comming is '+input);
   var output = Array(input.length >> 2);
   for(var i = 0; i < output.length; i++)
     output[i] = 0;
@@ -5608,7 +5605,7 @@ function rstr2binb(input)
  * @return the array of big-endian words
  */
 function byteArray2binb(input){
-	console.log("Byte array coming is " + input);
+	//console.log("Byte array coming is " + input);
 	var output = Array(input.length >> 2);
 	  for(var i = 0; i < output.length; i++)
 	    output[i] = 0;

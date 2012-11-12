@@ -9,11 +9,56 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
+var XpcomTransport = function XpcomTransport() {    
+};
+
+XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
+    var binaryInterest = encodeToBinaryInterest(interest);
+    
+    var dataListener = {
+		onReceivedData : function(data) {
+			if (data == null || data == undefined || data.length == 0)
+				dump("NDN.expressInterest: received empty data from socket.\n");
+			else {
+                var decoder = new BinaryXMLDecoder(data);	
+                var co = new ContentObject();
+                co.from_ccnb(decoder);
+                   					
+				if(LOG>2) {
+					dump("DECODED CONTENT OBJECT\n");
+					dump(co);
+					dump("\n");
+				}
+
+                // TODO: verify the content object and set kind to UPCALL_CONTENT.
+				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                               new UpcallInfo(ndn, interest, 0, co));
+                if (result == Closure.RESULT_OK) {
+                    // success
+                }
+                else if (result == Closure.RESULT_ERR)
+                    dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
+                else if (result == Closure.RESULT_REEXPRESS)
+                    XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
+                else if (result == Closure.RESULT_VERIFY) {
+                    // TODO: force verification of content.
+                }
+                else if (result == Closure.RESULT_FETCHKEY) {
+                    // TODO: get the key in the key locator and re-call the interest
+                    //   with the key available in the local storage.
+                }
+			}
+		}
+	}    
+    
+	XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
+};
+
 /** Send outputData (Uint8Array) to host:port, read the entire response and call 
  *    listener.onReceivedData(data) where data is Uint8Array.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
-function readAllFromSocket(host, port, outputData, listener) {
+XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
         (Components.interfaces.nsISocketTransportService);
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance

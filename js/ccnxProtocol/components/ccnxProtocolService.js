@@ -1,5 +1,5 @@
 /*
- * @author: ucla-cs
+ * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * This is the ccnx protocol handler for NDN.
  * Protocol handling code derived from http://mike.kaply.com/2011/01/18/writing-a-firefox-protocol-handler/
@@ -23,6 +23,7 @@ CcnxProtocol.prototype = {
     protocolFlags: nsIProtocolHandler.URI_NORELATIVE |
                    nsIProtocolHandler.URI_NOAUTH |
                    nsIProtocolHandler.URI_LOADABLE_BY_ANYONE,
+    transport: new XpcomTransport(),
 
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
@@ -33,6 +34,8 @@ CcnxProtocol.prototype = {
 
     newChannel: function(aURI)
     {
+        var thisCcnxProtocol = this;
+        
         try {
             var trimmedSpec = aURI.spec.trim();
     
@@ -49,7 +52,9 @@ CcnxProtocol.prototype = {
                 // TODO: Strip off an ending implicit digest before checking the last component?
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
                 
-                var ndn = new NDN("lioncub.metwi.ucla.edu");
+                var ndn = new NDN({ host: "lioncub.metwi.ucla.edu", port: 9695,
+                      // Use the same transport object each time.
+                      getTransport: function() { return thisCcnxProtocol.transport; } });
                 ndn.expressInterest(name, new ContentClosure
                     (ndn, contentListener, uriEndsWithSegmentNumber, aURI.originCharset));
             };
