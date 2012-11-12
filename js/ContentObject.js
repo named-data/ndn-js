@@ -32,16 +32,29 @@ ContentObject.prototype.sign = function(){
 	var n1 = this.encodeObject(this.name);
 	var n2 = this.encodeObject(this.signedInfo);
 	var n3 = this.encodeContent();
+	/*console.log('sign: ');
+	console.log(n1);
+	console.log(n2);
+	console.log(n3);*/
 	
-	var n = n1.concat(n2,n3);
+	//var n = n1.concat(n2,n3);
+	var tempBuf = new ArrayBuffer(n1.length + n2.length + n3.length);
+	var n = new Uint8Array(tempBuf);
+	//console.log(n);
+	n.set(n1, 0);
+	//console.log(n);
+	n.set(n2, n1.length);
+	//console.log(n);
+	n.set(n3, n1.length + n2.length);
+	//console.log(n);
 	
-	if(LOG>2)console.log('Signature Data is (binary) '+n);
+	if(LOG>4)console.log('Signature Data is (binary) '+n);
 	
-	if(LOG>2)console.log('Signature Data is (RawString)');
+	if(LOG>4)console.log('Signature Data is (RawString)');
 	
-	if(LOG>2)console.log( DataUtils.toString(n) );
+	if(LOG>4)console.log( DataUtils.toString(n) );
 	
-	var sig = DataUtils.toString(n);
+	//var sig = DataUtils.toString(n);
 
 	
 	var rsa = new RSAKey();
@@ -53,11 +66,11 @@ ContentObject.prototype.sign = function(){
 	var hSig = rsa.signByteArrayWithSHA256(n);
 
 	
-	if(LOG>2)console.log('SIGNATURE SAVED IS');
+	if(LOG>4)console.log('SIGNATURE SAVED IS');
 	
-	if(LOG>2)console.log(hSig);
+	if(LOG>4)console.log(hSig);
 	
-	if(LOG>2)console.log(  DataUtils.toNumbers(hSig.trim()));
+	if(LOG>4)console.log(  DataUtils.toNumbers(hSig.trim()));
 
 	this.signature.signature = DataUtils.toNumbers(hSig.trim());
 	
@@ -90,7 +103,7 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.slice(this.startSIG, this.endSIG );
+	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
 
 	this.rawSignatureData = sigBits;
 };
@@ -287,8 +300,8 @@ SignedInfo.prototype.setFields = function(){
 	
 	var publicKeyHex = globalKeyManager.publicKey;
 
-	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	console.log(publicKeyHex);
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyHex);
 	
 	var publicKeyBytes = DataUtils.toNumbers(globalKeyManager.publicKey) ; 
 
@@ -326,8 +339,8 @@ SignedInfo.prototype.setFields = function(){
 	
 	//if(LOG>4)console.log('toNumbersFromString(stringCertificate) '+DataUtils.toNumbersFromString(stringCertificate));
 	
-	console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	console.log(publicKeyBytes);
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyBytes);
 
 	this.locator = new KeyLocator(  publicKeyBytes  ,KeyLocatorType.KEY );
 
