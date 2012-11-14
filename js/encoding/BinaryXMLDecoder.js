@@ -1,7 +1,8 @@
 /*
- * This class is used to encode and decode binary elements ( blog, type/value pairs)
+ * This class is used to decode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
 
 var XML_EXT = 0x00; 
@@ -70,47 +71,7 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(istream){
 	var DEBUG_MAX_LEN =  32768;
 	
 	this.istream = istream;
-	//console.log('istream is '+ this.istream);
 	this.offset = 0;
-};
-
-
-BinaryXMLDecoder.prototype.readStartElement =function(
-	//String
-	startTag,				    
-	//TreeMap<String, String>
-	attributes) {
-
-	try {
-		//this.TypeAndVal 
-		tv = this.decodeTypeAndVal(this.istream);
-
-		if (null == tv) {
-			throw new Exception("Expected start element: " + startTag + " got something not a tag.");
-		}
-		
-		//String 
-		decodedTag = null;
-		
-		if (tv.type() == XML_TAG) {
-			
-			decodedTag = this.decodeUString(this.Istream, tv.val()+1);
-			
-		} else if (tv.type() == XML_DTAG) {
-			decodedTag = tagToString(tv.val());	
-		}
-		
-		if ((null ==  decodedTag) || decodedTag != startTag) {
-			throw new Exception("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
-		}
-		
-		if (null != attributes) {
-			readAttributes(attributes); 
-		}
-		
-	} catch (e) {
-		throw new Exception("readStartElement", e);
-	}
 };
 
 BinaryXMLDecoder.prototype.readAttributes = function(
@@ -124,37 +85,37 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 	try {
 
 		//this.TypeAndVal 
-		nextTV = this.peekTypeAndVal(this.istream);
+		nextTV = this.peekTypeAndVal();
 
 		while ((null != nextTV) && ((XML_ATTR == nextTV.type()) ||
 				(XML_DATTR == nextTV.type()))) {
 
 			//this.TypeAndVal 
-			thisTV = this.decodeTypeAndVal(this.Istream);
+			thisTV = this.decodeTypeAndVal();
 
 			var attributeName = null;
 			if (XML_ATTR == thisTV.type()) {
 				
-				attributeName = this.decodeUString(this.istream, thisTV.val()+1);
+				attributeName = this.decodeUString(thisTV.val()+1);
 
 			} else if (XML_DATTR == thisTV.type()) {
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new ContentDecodingException("Unknown DATTR value" + thisTV.val());
+					throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
 				}
 			}
 			
-			var attributeValue = this.decodeUString(this.istream);
+			var attributeValue = this.decodeUString();
 
 			attributes.put(attributeName, attributeValue);
 
-			nextTV = this.peekTypeAndVal(this.istream);
+			nextTV = this.peekTypeAndVal();
 		}
 
 	} catch ( e) {
 
-		throw new ContentDecodingException("readStartElement", e);
+		throw new ContentDecodingException(new Error("readStartElement", e));
 	}
 };
 
@@ -184,12 +145,11 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 		//if(typeof startTag == 'number')
 			//startTag = tagToString(startTag);
 		
-		//try {
 			//TypeAndVal 
-			tv = this.decodeTypeAndVal(this.istream);
+			tv = this.decodeTypeAndVal();
 			
 			if (null == tv) {
-				throw new Exception("Expected start element: " + startTag + " got something not a tag.");
+				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
 			}
 			
 			//String 
@@ -211,7 +171,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 				
 				//console.log('valval is ' +valval);
 				
-				decodedTag = this.decodeUString(this.istream,  valval);
+				decodedTag = this.decodeUString(valval);
 				
 			} else if (tv.type() == XML_DTAG) {
 				//console.log('gothere');
@@ -227,7 +187,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 			if ((null ==  decodedTag) || decodedTag != startTag ) {
 				console.log('expecting '+ startag + ' but got '+ decodedTag);
-				throw new Exception("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")");
+				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
 			}
 			
 			// DKS: does not read attributes out of stream if caller doesn't
@@ -236,11 +196,6 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			if (null != attributes) {
 				readAttributes(attributes); 
 			}
-			
-		//} catch ( e) {
-			//console.log(e);
-			//throw new Exception("readStartElement", e);
-		//}
 	}
 	
 
@@ -255,14 +210,14 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 	try {
 		// Now need to get attributes.
 		//TypeAndVal 
-		nextTV = this.peekTypeAndVal(this.istream);
+		nextTV = this.peekTypeAndVal();
 
 		while ((null != nextTV) && ((XML_ATTR == nextTV.type()) ||
 				(XML_DATTR == nextTV.type()))) {
 
 			// Decode this attribute. First, really read the type and value.
 			//this.TypeAndVal 
-			thisTV = this.decodeTypeAndVal(this.istream);
+			thisTV = this.decodeTypeAndVal();
 
 			//String 
 			attributeName = null;
@@ -275,28 +230,26 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 				else
 					valval = (tv.val())+ 1;
 				
-				attributeName = this.decodeUString(this.istream,valval);
+				attributeName = this.decodeUString(valval);
 
 			} else if (XML_DATTR == thisTV.type()) {
 				// DKS TODO are attributes same or different dictionary?
 				attributeName = tagToString(thisTV.val());
 				if (null == attributeName) {
-					throw new Exception("Unknown DATTR value" + thisTV.val());
+					throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
 				}
 			}
 			// Attribute values are always UDATA
 			//String
-			attributeValue = this.decodeUString(this.istream);
+			attributeValue = this.decodeUString();
 
 			//
 			attributes.push([attributeName, attributeValue]);
 
-			nextTV = this.peekTypeAndVal(this.istream);
+			nextTV = this.peekTypeAndVal();
 		}
-
 	} catch ( e) {
-		Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-		throw new Exception("readStartElement", e);
+		throw new ContentDecodingException(new Error("readStartElement", e));
 	}
 };
 
@@ -311,13 +264,13 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 		// Have to distinguish genuine errors from wrong tags. Could either use
 		// a special exception subtype, or redo the work here.
 		//this.TypeAndVal 
-		tv = this.decodeTypeAndVal(this.istream);
+		tv = this.decodeTypeAndVal();
 
 		if (null != tv) {
 
 			if (tv.type() == XML_TAG) {
 				/*if (tv.val()+1 > DEBUG_MAX_LEN) {
-					throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+					throw new ContentDecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!")(;
 				}*/
 
 				// Tag value represents length-1 as tags can never be empty.
@@ -328,7 +281,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 				else
 					valval = (tv.val())+ 1;
 				
-				decodedTag = this.decodeUString(this.istream, valval);
+				decodedTag = this.decodeUString(valval);
 				
 				//Log.info(Log.FAC_ENCODING, "Unexpected: got text tag in peekStartElement; length: " + valval + " decoded tag = " + decodedTag);
 
@@ -345,7 +298,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 			this.offset = previousOffset;
 		} catch ( e) {
 			Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-			throw new ContentDecodingException("Cannot reset stream! " + e.getMessage(), e);
+			throw new ContentDecodingException(new Error("Cannot reset stream! " + e.getMessage(), e));
 		}
 	}
 	return decodedTag;
@@ -371,7 +324,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 		return false;
 	}
 	else{
-		throw new Exception("SHOULD BE STRING OR NUMBER");
+		throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 	}
 }
 //returns Long
@@ -387,13 +340,13 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 			// Have to distinguish genuine errors from wrong tags. Could either use
 			// a special exception subtype, or redo the work here.
 			//this.TypeAndVal
-			tv = this.decodeTypeAndVal(this.istream);
+			tv = this.decodeTypeAndVal();
 
 			if (null != tv) {
 
 				if (tv.type() == XML_TAG) {
 					if (tv.val()+1 > DEBUG_MAX_LEN) {
-						throw new ContentDecodingException("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!");
+						throw new ContentDecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!"));
 					}
 
 					var valval ;
@@ -405,7 +358,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 					
 					// Tag value represents length-1 as tags can never be empty.
 					//String 
-					strTag = this.decodeUString(this.istream, valval);
+					strTag = this.decodeUString(valval);
 					
 					decodedTag = stringToTag(strTag);
 					
@@ -425,7 +378,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 				this.offset = previousOffset;
 			} catch ( e) {
 				Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-				throw new Exception("Cannot reset stream! " + e.getMessage(), e);
+				throw new Error("Cannot reset stream! " + e.getMessage(), e);
 			}
 		}
 		return decodedTag;
@@ -451,23 +404,27 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 	
 	
 BinaryXMLDecoder.prototype.readEndElement = function(){
-		try {
+			if(LOG>4)console.log('this.offset is '+this.offset);
+			
 			var next = this.istream[this.offset]; 
+			
 			this.offset++;
 			//read();
+			
+			if(LOG>4)console.log('XML_CLOSE IS '+XML_CLOSE);
+			if(LOG>4)console.log('next is '+next);
+			
 			if (next != XML_CLOSE) {
-				throw new ContentDecodingException("Expected end element, got: " + next);
+				console.log("Expected end element, got: " + next);
+				throw new ContentDecodingException(new Error("Expected end element, got: " + next));
 			}
-		} catch ( e) {
-			throw new ContentDecodingException(e);
-		}
 	};
 
 
 //String	
 BinaryXMLDecoder.prototype.readUString = function(){
 			//String 
-			ustring = this.decodeUString(this.istream);	
+			ustring = this.decodeUString();	
 			this.readEndElement();
 			return ustring;
 
@@ -478,7 +435,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 BinaryXMLDecoder.prototype.readBlob = function() {
 			//byte []
 			
-			blob = this.decodeBlob(this.istream);	
+			blob = this.decodeBlob();	
 			this.readEndElement();
 			return blob;
 
@@ -491,30 +448,39 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	startTag)  {
 	//byte [] 
 	
-	byteTimestamp = this.readBinaryElement(startTag);
+	var byteTimestamp = this.readBinaryElement(startTag);
+
+	//var lontimestamp = DataUtils.byteArrayToUnsignedLong(byteTimestamp);
+
+	var byteTimestamp = DataUtils.toHex(byteTimestamp);
+	
+	
+	var byteTimestamp = parseInt(byteTimestamp, 16);
+
+	lontimestamp = (byteTimestamp/ 4096) * 1000;
+
+	//if(lontimestamp<0) lontimestamp =  - lontimestamp;
+
+	if(LOG>3) console.log('DECODED DATE WITH VALUE');
+	if(LOG>3) console.log(lontimestamp);
+	
+
 	//CCNTime 
-	timestamp = new CCNTime(byteTimestamp);
+	timestamp = new CCNTime(lontimestamp);
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
-		throw new ContentDecodingException("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp));
+		throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
 	}		
 	return timestamp;
 };
 
-BinaryXMLDecoder.prototype.decodeTypeAndVal = function(
-		/*InputStream*/
-		istream) {
+BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 	
-	/*int*/next;
-	/*int*/type = -1;
-	/*long*/val = 0;
-	/*boolean*/more = true;
+	/*int*/var type = -1;
+	/*long*/var val = 0;
+	/*boolean*/var more = true;
 
-	
-	//var savedOffset = this.offset;
-	var count = 0;
-	
 	do {
 		
 		var next = this.istream[this.offset ];
@@ -544,26 +510,26 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function(
 		
 	} while (more);
 	
+	if(LOG>3)console.log('TYPE is '+ type + ' VAL is '+ val);
+
 	return new TypeAndVal(type, val);
 };
 
 
 
 //TypeAndVal
-BinaryXMLDecoder.peekTypeAndVal = function(
-		//InputStream 
-		istream) {
+BinaryXMLDecoder.peekTypeAndVal = function() {
 	//TypeAndVal 
 	tv = null;
 	
-	//istream.mark(LONG_BYTES*2);		
+	//this.istream.mark(LONG_BYTES*2);		
 	
 	var previousOffset = this.offset;
 	
 	try {
-		tv = this.decodeTypeAndVal(this.istream);
+		tv = this.decodeTypeAndVal();
 	} finally {
-		//istream.reset();
+		//this.istream.reset();
 		this.offset = previousOffset;
 	}
 	
@@ -571,17 +537,14 @@ BinaryXMLDecoder.peekTypeAndVal = function(
 };
 
 
-//byte[]
+//Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
-		//InputStream 
-		istream, 
 		//int 
 		blobLength) {
 	
-	
 	if(null == blobLength){
 		//TypeAndVal
-		tv = this.decodeTypeAndVal(this.istream);
+		tv = this.decodeTypeAndVal();
 
 		var valval ;
 		
@@ -592,33 +555,31 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 			valval = (tv.val());
 		
 		//console.log('valval here is ' + valval);
-		return  this.decodeBlob(this.istream, valval);
+		return  this.decodeBlob(valval);
 	}
 	
 	//
-	//byte [] 
-
-	bytes = this.istream.slice(this.offset, this.offset+ blobLength);
+	//Uint8Array
+	var bytes = this.istream.subarray(this.offset, this.offset+ blobLength);
 	this.offset += blobLength;
 	
-	//int 
 	return bytes;
-	
-	count = 0;
-
 };
 
-
+var count =0;
 
 //String
 BinaryXMLDecoder.prototype.decodeUString = function(
-		//InputStream 
-		istream, 
 		//int 
 		byteLength) {
 	
-	if(null == byteLength){
-		tv = this.decodeTypeAndVal(this.istream);
+	/*
+	console.log('COUNT IS '+count);
+	console.log('INPUT BYTELENGTH IS '+byteLength);
+	count++;
+	if(null == byteLength||  undefined == byteLength){
+		console.log("!!!!");
+		tv = this.decodeTypeAndVal();
 		var valval ;
 		if(typeof tv.val() == 'string'){
 			valval = (parseInt(tv.val()));
@@ -626,16 +587,80 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		else
 			valval = (tv.val());
 		
-		byteLength= this.decodeUString(this.istream, valval);
+		if(LOG>4) console.log('valval  is ' + valval);
+		byteLength= this.decodeUString(valval);
+		
+		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength.charCodeAt(0));
+		byteLength = parseInt(byteLength);
+		
+		
+		//byteLength = byteLength.charCodeAt(0);
+		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength);
 	}
-
-	stringBytes = this.decodeBlob(this.istream, byteLength);
+	if(LOG>4)console.log('byteLength is '+byteLength);
+	if(LOG>4)console.log('type of byteLength is '+typeof byteLength);
 	
+	stringBytes = this.decodeBlob(byteLength);
+	
+	//console.log('String bytes are '+ stringBytes);
+	//console.log('stringBytes);
+	
+	if(LOG>4)console.log('byteLength is '+byteLength);
+	if(LOG>4)console.log('this.offset is '+this.offset);
+
 	tempBuffer = this.istream.slice(this.offset, this.offset+byteLength);
+	if(LOG>4)console.log('TEMPBUFFER IS' + tempBuffer);
+	if(LOG>4)console.log( tempBuffer);
+
+	if(LOG>4)console.log('ADDING to offset value' + byteLength);
 	this.offset+= byteLength;
-	console.log('read the String' + tempBuffer.toString('ascii'));
-	return tempBuffer.toString('ascii');//DataUtils.getUTF8StringFromBytes(stringBytes);
+	//if(LOG>3)console.log('read the String' + tempBuffer.toString('ascii'));
+	//return tempBuffer.toString('ascii');//
+	
+	
+	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(stringBytes) ) ;
+	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
+	//if(LOG>3)console.log(DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
+	//return DataUtils.getUTF8StringFromBytes(tempBuffer);
+	
+	if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.toString(stringBytes) ) ;
+	if(LOG>3)console.log( 'TYPE OF STRING READ IS '+ typeof DataUtils.toString(stringBytes) ) ;
+
+	return  DataUtils.toString(stringBytes);*/
+
+	if(null == byteLength ){
+		var tempStreamPosition = this.offset;
+			
+		//TypeAndVal 
+		tv = this.decodeTypeAndVal();
+		
+		if(LOG>3)console.log('TV is '+tv);
+		if(LOG>3)console.log(tv);
+		
+		if(LOG>3)console.log('Type of TV is '+typeof tv);
+	
+		if ((null == tv) || (XML_UDATA != tv.type())) { // if we just have closers left, will get back null
+			//if (Log.isLoggable(Log.FAC_ENCODING, Level.FINEST))
+				//Log.finest(Log.FAC_ENCODING, "Expected UDATA, got " + ((null == tv) ? " not a tag " : tv.type()) + ", assuming elided 0-length blob.");
+			
+			this.offset = tempStreamPosition;
+			
+			return "";
+		}
+			
+		return this.decodeUString(tv.val());
+	}
+	else{
+		//byte [] 
+		stringBytes = this.decodeBlob(byteLength);
+		
+		//return DataUtils.getUTF8StringFromBytes(stringBytes);
+		return  DataUtils.toString(stringBytes);
+		
+	}
 };
+
+
 
 
 //OBject containg a pair of type and value
@@ -651,4 +676,56 @@ TypeAndVal.prototype.type = function(){
 TypeAndVal.prototype.val = function(){
 	return this.v;
 };
-//TODO
+
+
+
+
+BinaryXMLDecoder.prototype.readIntegerElement =function(
+	//String 
+	startTag) {
+
+	//String 
+	if(LOG>4) console.log('READING INTEGER '+ startTag);
+	if(LOG>4) console.log('TYPE OF '+ typeof startTag);
+	
+	strVal = this.readUTF8Element(startTag);
+	
+	return parseInt(strVal);
+};
+
+
+BinaryXMLDecoder.prototype.readUTF8Element =function(
+			//String 
+			startTag,
+			//TreeMap<String, String> 
+			attributes) {
+			//throws Error where name == "ContentDecodingException" 
+
+		this.readStartElement(startTag, attributes); // can't use getElementText, can't get attributes
+		//String 
+		strElementText = this.readUString();
+		return strElementText;
+};
+
+
+/* 
+ * Set the offset into the input, used for the next read.
+ */
+BinaryXMLDecoder.prototype.seek = function(
+        //int
+        offset) {
+    this.offset = offset;
+}
+
+/*
+ * Call with: throw new ContentDecodingException(new Error("message")).
+ */
+function ContentDecodingException(error) {
+    this.message = error.message;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+        this[prop] = error[prop];
+}
+ContentDecodingException.prototype = new Error();
+ContentDecodingException.prototype.name = "ContentDecodingException";
+

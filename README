@@ -1,9 +1,33 @@
 First native version of the NDN protocol written in Javascript ( Also refereed to as CCN )
 
-The goal of this project is to improve the current implementation of the lwNDN API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that lwNDN communicates with CCNx nodes (routers).
+The goal of this project is to improve the current implementation of the NDN-JS API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that NDN-JS communicates with CCNx nodes (routers).
 
-The current status of lwNDN allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
+The current status of NDN-JS allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
 
 This is currently done in the following way:
 
-createRoute('borges.metwi.ucla.edu', 9695); var contentObject = queryPrefix('/ndn/ucla.edu/apps/hydra/mainvideo'); console.log(contentObject.content);
+var ndn = new NDN();
+var contentObject = ndn.get('/ndn/ucla.edu/apps/hydra/mainvideo'); 
+console.log(contentObject.content);
+
+* Firefox extension for ccnx protocol
+
+NDN-JS also includes a Firefox extension for the ccnx protocol.  To install in Firefox, open
+Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
+js/ccnxProtocol.xpi in this distribution.  Restart Firefox.
+
+Firefox uses the extension to load any URI starting with ccnx, for example
+ccnx:/ndn/ucla.edu/apps/lwndn-test/trig-table
+
+When the page is loaded, the extension updates address bar with the full matched name from the
+retrieved content object including the version, but without the implicit digest or segment number 
+(see below).
+
+A URI for content with multiple segments is handled as follows.
+If the URI has a segment number, just retrieve that segment and return the content to the browser.
+
+Otherwise look at the name in the returned ContentObject.  If the returned name has no segment number,
+just return the content to the browser. If the name has a segment number which isn't 0, store it 
+and express an interest for segment 0. Read segments in order and return each content to the browser 
+as we go until we get the segment for FinalBlockID.
+

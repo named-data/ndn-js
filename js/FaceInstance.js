@@ -1,40 +1,42 @@
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Face Instances
  */
 
+var NetworkProtocol = { TCP:6, UDP:17};
 
 var FaceInstance  = function FaceInstance(
-	    _Action,
-		_PublisherPublicKeyDigest,
-		_FaceID,
-		_IPProto,
-		_Host,
-		_Port,
-		_MulticastInterface,
-		_MulticastTTL,
-		_FreshnessSeconds){
+	    _action,
+		_publisherPublicKeyDigest,
+		_faceID,
+		_ipProto,
+		_host,
+		_port,
+		_multicastInterface,
+		_multicastTTL,
+		_freshnessSeconds){
 	
 
-	this.Action = _Action;
-	this.PublisherPublicKeyDigest = _PublisherPublicKeyDigest;
-	this.FaceID = _FaceID;
-	this.IPProto = _IPProto;
-	this.Host = _Host;
-	this.Port = _Port;
-	this.MulticastInterface =_MulticastInterface;
-	this.MulticastTTL =_MulticastTTL;
-	this.FreshnessSeconds = _FreshnessSeconds;
+	this.action = _action;
+	this.publisherPublicKeyDigest = _publisherPublicKeyDigest;
+	this.faceID = _faceID;
+	this.ipProto = _ipProto;
+	this.host = _host;
+	this.Port = _port;
+	this.multicastInterface =_multicastInterface;
+	this.multicastTTL =_multicastTTL;
+	this.freshnessSeconds = _freshnessSeconds;
 	
-	//Action           ::= ("newface" | "destroyface" | "queryface")
-	//PublisherPublicKeyDigest ::= SHA-256 digest
-	//FaceID           ::= nonNegativeInteger
-	//IPProto          ::= nonNegativeInteger [IANA protocol number, 6=TCP, 17=UDP]
+	//action           ::= ("newface" | "destroyface" | "queryface")
+	//publisherPublicKeyDigest ::= SHA-256 digest
+	//faceID           ::= nonNegativeInteger
+	//ipProto          ::= nonNegativeInteger [IANA protocol number, 6=TCP, 17=UDP]
 	//Host             ::= textual representation of numeric IPv4 or IPv6 address
 	//Port             ::= nonNegativeInteger [1..65535]
 	//MulticastInterface ::= textual representation of numeric IPv4 or IPv6 address
 	//MulticastTTL     ::= nonNegativeInteger [1..255]
-	//FreshnessSeconds ::= nonNegativeInteger
+	//freshnessSeconds ::= nonNegativeInteger
 
 };
 
@@ -42,25 +44,25 @@ var FaceInstance  = function FaceInstance(
  * Used by NetworkObject to decode the object from a network stream.
  * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
-FaceInstance.prototype.decode = function(//XMLDecoder 
+FaceInstance.prototype.from_ccnb = function(//XMLDecoder 
 	decoder) {
 
 	decoder.readStartElement(this.getElementLabel());
 	
 	if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
 		
-		this.Action = decoder.readUTF8Element(CCNProtocolDTags.Action);
+		this.action = decoder.readUTF8Element(CCNProtocolDTags.Action);
 		
 	}
 	if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
 		
-		this.PublisherPublicKeyDigest = new PublisherPublicKeyDigest();
-		this.PublisherPublicKeyDigest.decode(decoder);
+		this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
+		this.publisherPublicKeyDigest.from_ccnb(decoder);
 		
 	}
 	if (decoder.peekStartElement(CCNProtocolDTags.FaceID)) {
 		
-		this.FaceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID);
+		this.faceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID);
 		
 	}
 	if (decoder.peekStartElement(CCNProtocolDTags.IPProto)) {
@@ -68,19 +70,19 @@ FaceInstance.prototype.decode = function(//XMLDecoder
 		//int
 		var pI = decoder.readIntegerElement(CCNProtocolDTags.IPProto);
 		
-		this.IPProto = null;
+		this.ipProto = null;
 		
-		if (NetworkProtocol.TCP.value().intValue() == pI) {
+		if (NetworkProtocol.TCP == pI) {
 			
-			this.IPProto = NetworkProtocol.TCP;
+			this.ipProto = NetworkProtocol.TCP;
 			
-		} else if (NetworkProtocol.UDP.value().intValue() == pI) {
+		} else if (NetworkProtocol.UDP == pI) {
 			
-			this.IPProto = NetworkProtocol.UDP;
+			this.ipProto = NetworkProtocol.UDP;
 			
 		} else {
 			
-			throw new Exception("FaceInstance.decoder.  Invalid " + 
+			throw new Error("FaceInstance.decoder.  Invalid " + 
 					CCNProtocolDTags.tagToString(CCNProtocolDTags.IPProto) + " field: " + pI);
 			
 		}
@@ -88,7 +90,7 @@ FaceInstance.prototype.decode = function(//XMLDecoder
 	
 	if (decoder.peekStartElement(CCNProtocolDTags.Host)) {
 		
-		this.Host = decoder.readUTF8Element(CCNProtocolDTags.Host);
+		this.host = decoder.readUTF8Element(CCNProtocolDTags.Host);
 		
 	}
 	
@@ -97,17 +99,16 @@ FaceInstance.prototype.decode = function(//XMLDecoder
 	}
 	
 	if (decoder.peekStartElement(CCNProtocolDTags.MulticastInterface)) {
-		this.MulticastInterface = decoder.readUTF8Element(CCNProtocolDTags.MulticastInterface); 
+		this.multicastInterface = decoder.readUTF8Element(CCNProtocolDTags.MulticastInterface); 
 	}
 	
 	if (decoder.peekStartElement(CCNProtocolDTags.MulticastTTL)) {
-		this.MulticastTTL = decoder.readIntegerElement(CCNProtocolDTags.MulticastTTL); 
+		this.multicastTTL = decoder.readIntegerElement(CCNProtocolDTags.MulticastTTL); 
 	}
 	
 	if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
-		this.FreshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
+		this.freshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
 	}
-	
 	decoder.readEndElement();
 }
 
@@ -115,40 +116,42 @@ FaceInstance.prototype.decode = function(//XMLDecoder
  * Used by NetworkObject to encode the object to a network stream.
  * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
-FaceInstance.prototype.encode = function(//XMLEncoder
+FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 	encoder){
 
 	//if (!this.validate()) {
-		//throw new Exception("Cannot encode : field values missing.");
-		//throw new Exception("")
+		//throw new Error("Cannot encode : field values missing.");
+		//throw new Error("")
 	//}
 	encoder.writeStartElement(this.getElementLabel());
-	if (null != this.Action && this.Action.length != 0)
-		encoder.writeElement(CCNProtocolDTags.Action, this.Action);	
-	if (null != this.PublisherPublicKeyDigest) {
-		this.PublisherPublicKeyDigest.encode(encoder);
+	
+	if (null != this.action && this.action.length != 0)
+		encoder.writeElement(CCNProtocolDTags.Action, this.action);	
+	
+	if (null != this.publisherPublicKeyDigest) {
+		this.publisherPublicKeyDigest.to_ccnb(encoder);
 	}
-	if (null != this.FaceID) {
-		encoder.writeElement(CCNProtocolDTags.FaceID, this.FaceID);
+	if (null != this.faceID) {
+		encoder.writeElement(CCNProtocolDTags.FaceID, this.faceID);
 	}
-	if (null != this.IPProto) {
+	if (null != this.ipProto) {
 		//encoder.writeElement(CCNProtocolDTags.IPProto, this.IpProto.value());
-		encoder.writeElement(CCNProtocolDTags.IPProto, this.IPProto);
+		encoder.writeElement(CCNProtocolDTags.IPProto, this.ipProto);
 	}
-	if (null != this.Host && this.Host.length != 0) {
-		encoder.writeElement(CCNProtocolDTags.Host, this.Host);	
+	if (null != this.host && this.host.length != 0) {
+		encoder.writeElement(CCNProtocolDTags.Host, this.host);	
 	}
 	if (null != this.Port) {
 		encoder.writeElement(CCNProtocolDTags.Port, this.Port);
 	}
-	if (null != this.MulticastInterface && this.MulticastInterface.length != 0) {
-		encoder.writeElement(CCNProtocolDTags.MulticastInterface, this.MulticastInterface);
+	if (null != this.multicastInterface && this.multicastInterface.length != 0) {
+		encoder.writeElement(CCNProtocolDTags.MulticastInterface, this.multicastInterface);
 	}
-	if (null !=  this.MulticastTTL) {
-		encoder.writeElement(CCNProtocolDTags.MulticastTTL, this.MulticastTTL);
+	if (null !=  this.multicastTTL) {
+		encoder.writeElement(CCNProtocolDTags.MulticastTTL, this.multicastTTL);
 	}
-	if (null != this.FreshnessSeconds) {
-		encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.FreshnessSeconds);
+	if (null != this.freshnessSeconds) {
+		encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 	}
 	encoder.writeEndElement();   			
 }

@@ -1,0 +1,60 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Test SHA-256</title>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.min.js"></script>
+
+	<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+	
+			
+	<script type="text/javascript">
+		function hash(){
+			
+			var input = document.getElementById('contentname').value;
+			
+			var output = "TEST1 "+hex_sha256(input);
+			
+			output+= "<br />";
+			
+			output += "reference " +CryptoJS.SHA256(input);
+			
+			document.getElementById('result').innerHTML = output;
+
+		}
+		
+	</script>
+	
+
+</head>
+<body >
+	<form>
+		
+
+
+		Please Enter Text to Hash:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /> <br />
+	
+	</form>
+	<button onclick="hash()">Hash</button>
+
+		<p id="result"></p>
+
+</body>
+</html>

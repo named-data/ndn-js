@@ -1,6 +1,7 @@
 //TODO INCOMPLETE
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * 
  * Encodes CCN object into xml tags
  */
@@ -22,38 +23,3 @@ var TextXMLCodec =  function TextXMLCodec(){
 
 };
 
-//returns a string
-
-TextXMLCodec.protpotype.codecName = function() { return this.CODEC_NAME; }	;
-
-//returns a string
-TextXMLCodec.protottype.encodeBinaryElement = function(/*byte []*/ element) {
-		if ((null == element) || (0 == element.length)) 
-			return new String("");
-		return new String(DataUtils.base64Encode(element));
-	};
-	
-/* returns a string */
-TextXMLCodec.prototype.encodeBinaryElement = function(/*byte []*/ element, /*int*/ offset, /*int*/ length) {
-		if ((null == element) || (0 == element.length)) 
-			return new String("");
-		ByteBuffer bbuf = ByteBuffer.wrap(element, offset, length);
-		return new String(DataUtils.base64Encode(bbuf.array()));
-	};
-
-/*returns a byte array*/
-TextXMLCodec.prototype.decodeBinaryElement = function(/*String*/ element) {
-		if ((null == element) || (0 == element.length()))
-			return new byte[0];
-		return DataUtils.base64Decode(element.getBytes());
-	}; 
-
-	
-/*
-	Decode Data
-*/
-	
-
-/*
-	Encode Date
-*/ 

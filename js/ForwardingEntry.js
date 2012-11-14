@@ -1,12 +1,13 @@
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Forwarding Entries
  */
 
 var ForwardingEntry = function ForwardingEntry(
                                                //ActionType 
 		_action, 
-		//ContentName 
+		//Name 
 		_prefixName, 
 		//PublisherPublicKeyDigest
 		_ccndId, 
@@ -20,45 +21,45 @@ var ForwardingEntry = function ForwardingEntry(
 		
 	
 		//String
-	this.Action = _action;
-		//ContentName\
-	this.PrefixName = _prefixName;
+	this.action = _action;
+		//Name\
+	this.prefixName = _prefixName;
 		//PublisherPublicKeyDigest 
-	this.CCNID = _ccndId;
+	this.ccndID = _ccndId;
 		//Integer		
-	this.FaceID = _faceID;
+	this.faceID = _faceID;
 		//Integer		
-	this.Flags = _flags;
+	this.flags = _flags;
 		//Integer 		
-	this.Lifetime = _lifetime;  // in seconds
+	this.lifetime = _lifetime;  // in seconds
 
 };
 
-ForwardingEntry.prototype.decode =function(
+ForwardingEntry.prototype.from_ccnb =function(
 	//XMLDecoder 
 	decoder) 
 	//throws ContentDecodingException
 	{
 			decoder.readStartElement(this.getElementLabel());
 			if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
-				this.Action = decoder.readUTF8Element(CCNProtocolDTags.Action); 
+				this.action = decoder.readUTF8Element(CCNProtocolDTags.Action); 
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.Name)) {
-				this.PrefixName = new ContentName();
-				this.PrefixName.decode(decoder) ;
+				this.prefixName = new Name();
+				this.prefixName.from_ccnb(decoder) ;
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
 				this.CcndId = new PublisherPublicKeyDigest();
-				this.CcndId.decode(decoder);
+				this.CcndId.from_ccnb(decoder);
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.FaceID)) {
-				this.FaceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID); 
+				this.faceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID); 
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.ForwardingFlags)) {
-				this.Flags = decoder.readIntegerElement(CCNProtocolDTags.ForwardingFlags); 
+				this.flags = decoder.readIntegerElement(CCNProtocolDTags.ForwardingFlags); 
 			}
 			if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
-				this.Lifetime = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
+				this.lifetime = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
 			}
 			decoder.readEndElement();
 		};
@@ -67,7 +68,7 @@ ForwardingEntry.prototype.decode =function(
 		 * Used by NetworkObject to encode the object to a network stream.
 		 * @see org.ccnx.ccn.impl.encoding.XMLEncodable
 		 */
-ForwardingEntry.prototype.encode =function(
+ForwardingEntry.prototype.to_ccnb =function(
 	//XMLEncoder 
 encoder) 
 {
@@ -77,22 +78,22 @@ encoder)
 				//throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
 			//}
 			encoder.writeStartElement(this.getElementLabel());
-			if (null != this.Action && this.Action.length != 0)
-				encoder.writeElement(CCNProtocolDTags.Action, this.Action);	
-			if (null != this.PrefixName) {
-				this.PrefixName.encode(encoder);
+			if (null != this.action && this.action.length != 0)
+				encoder.writeElement(CCNProtocolDTags.Action, this.action);	
+			if (null != this.prefixName) {
+				this.prefixName.to_ccnb(encoder);
 			}
 			if (null != this.CcndId) {
-				this.CcndId.encode(encoder);
+				this.CcndId.to_ccnb(encoder);
 			}
-			if (null != this.FaceID) {
-				encoder.writeElement(CCNProtocolDTags.FaceID, this.FaceID);
+			if (null != this.faceID) {
+				encoder.writeElement(CCNProtocolDTags.FaceID, this.faceID);
 			}
-			if (null != this.Flags) {
-				encoder.writeElement(CCNProtocolDTags.ForwardingFlags, this.Flags);
+			if (null != this.flags) {
+				encoder.writeElement(CCNProtocolDTags.ForwardingFlags, this.flags);
 			}
-			if (null != this.Lifetime) {
-				encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.Lifetime);
+			if (null != this.lifetime) {
+				encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.lifetime);
 			}
 			encoder.writeEndElement();   			
 		};

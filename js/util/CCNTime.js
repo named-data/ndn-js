@@ -1,33 +1,38 @@
 /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents CCNTime Objects
  */
 
 var CCNTime = function CCNTime(
                                
-		msec) {
+		input) {
 
 
 
 
 	this.NANOS_MAX = 999877929;
 	
-	if(typeof msec =='object'){
-		this.setDateBinary(msec);
-		this.msec = msec;
-		this.msecHex = toHex(msec);
-	}
-	else if(typeof msec =='string'){
-		
-		this.msec = toNumbers(msec);
-		this.setDateBinary(this.msec);
-		this.msecHex = msec;
+	/*if(typeof input =='object'){
+		this.longDate = DataUtils.byteArrayToUnsignedLong(input);
+		this.binaryDate = input;
+	}*/
+	if(typeof input =='number'){
+		this.msec = input;
+		//this.binaryDate = DataUtils.unsignedLongToByteArray(input);
+
 	}
 	else{
 		if(LOG>1) console.log('UNRECOGNIZED TYPE FOR TIME');
 	}
 };
 
+
+CCNTime.prototype.getJavascriptDate = function(){
+	var d = new Date();
+	d.setTime( this.msec );
+	return d
+};
 
 	/**
 	 * Create a CCNTime
@@ -39,7 +44,7 @@ var CCNTime = function CCNTime(
 	 * Create a CCNTime from its binary encoding
 	 * @param binaryTime12 the binary representation of a CCNTime
 	 */
-CCNTime.prototype.setDateBinary = function(
+/*CCNTime.prototype.setDateBinary = function(
 	//byte [] 
 		binaryTime12) {
 
@@ -55,8 +60,7 @@ CCNTime.prototype.setDateBinary = function(
 		b = (binaryTime12[i]) & 0xFF;
 		value |= b;
 	}
-	
-	this.date = value;
+
 	//this.date = new Date(value);
 
 };
@@ -66,7 +70,7 @@ CCNTime.prototype.toBinaryTime = function() {
 
 	return this.msec; //unsignedLongToByteArray(this.date.getTime());
 
-}
+}*/
 /*
 unsignedLongToByteArray= function( value) {
 	if( 0 == value )

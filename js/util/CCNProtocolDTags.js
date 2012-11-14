@@ -1,6 +1,7 @@
 /*
  * @author: ucla-cs
- * THis class contains all CCNx tags
+ * See COPYING for copyright and distribution information.
+ * This class contains all CCNx tags
  */
 
 

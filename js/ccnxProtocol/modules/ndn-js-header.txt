@@ -1,0 +1,28 @@
+/* This file is created by running make-ndn-js.jsm.sh in this directory.
+ * It concatenates ndn-js-header.txt with all the ndn-js source files to
+ *   make ndn-js.jsm .
+ * author: ucla-cs
+ * See COPYING for copyright and distribution information.
+ */
+
+var EXPORTED_SYMBOLS = ["NDN", "Closure", "Name", "Interest", "ContentObject",
+      "DataUtils", "MimeTypes", "XpcomTransport"];
+
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/NetUtil.jsm");
+
+// LOG is used by some of the NDN code.
+var LOG = 0;
+
+// jsbn.js needs the navigator object which isn't defined in XPCOM, so make a local hack.
+var navigator = {
+    appName: "Netscape"
+};
+
+// Some code calls console.log without checking LOG>0.  Until this is cleaned up, make a local hack console.
+var console = {
+    log: function(message) {
+        dump(message + "\n");
+    }
+};
+

@@ -1,0 +1,144 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>NDN Send Hex</title>
+	<script type="text/javascript" src="../java_socket_bridge.js"></script>
+	
+	<script type="text/javascript" src="../util/CCNProtocolDTags.js"></script>
+	
+	<script type="text/javascript" src="../util/CCNTime.js"></script>
+	
+	<script type="text/javascript" src="../Name.js"></script>
+	
+	<script type="text/javascript" src="../ContentObject.js"></script>
+	
+	<script type="text/javascript" src="../encoding/DateFormat.js"></script>
+	
+	<script type="text/javascript" src="../Interest.js"></script>
+	
+	<script type="text/javascript" src="../Key.js"></script>
+	
+	<script type="text/javascript" src="../PublisherID.js"></script>
+	
+	<script type="text/javascript" src="../PublisherPublicKeyDigest.js"></script>
+	
+	<script type="text/javascript" src="../FaceInstance.js"></script>
+	
+	<script type="text/javascript" src="../ForwardingEntry.js"></script>
+	
+	
+	<script type="text/javascript" src="../encoding/BinaryXMLEncoder.js"></script>
+	
+	<script type="text/javascript" src="../encoding/BinaryXMLDecoder.js"></script>
+	
+	<script type="text/javascript" src="../encoding/DataUtils.js"></script>
+
+	<script type="text/javascript" src="../encoding/EncodingUtils.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.js"></script>
+
+	<script type="text/javascript">
+		function run(){
+			//var n = a.replace("%","");
+			
+			//console.log(n);
+
+			var hex = document.getElementById('contentname').value;
+		
+			///////////////////////////////////////
+		    //createRoute(, 9695);
+			
+			
+			///  /ndn/ucla.edu/apps/hydra/mainvideo
+		    //createRoute('131.179.141.15', 9695);
+		    //createRoute('borges.metwi.ucla.edu', 9695);
+		    
+			//content object
+			//var co = queryPrefix( Name );
+			console.log('HEX IS');
+			console.log(hex);
+			
+			var result = get('127.0.0.1', 9695, hex);	
+			
+			console.log('BINARY RESPONSE IS ' +result);
+			
+			var output ="";
+			output += "HEX ANSWER IS: "+ result;
+			
+			output+= "<br />";
+			output+= "<br />";
+
+			//result[0] and result[1] should be 0 and 4 if there is a content object found
+			if(result==null || result==undefined || result =="" ){
+				
+				
+				if(LOG>2)console.log('INVALID ANSWER');
+				output += "NO CONTENT FOUND";
+				
+				output+= "<br />";
+				output+= "<br />";
+			}
+			
+			else if(result[0] != '0'||result[1]!='4') {
+				if(LOG>2)console.log('INVALID ANSWER');
+				output += "INVALID ANSWER";
+				
+				output+= "<br />";
+				output+= "<br />";
+			}
+			else{
+				
+				var numbers = DataUtils.toNumbers(result);
+				
+				console.log('HEX RESPONSE IS \n'+numbers);
+				decoder = new BinaryXMLDecoder(numbers);
+				
+				
+				co = new ContentObject();
+	        
+				co.from_ccnb(decoder);
+
+				if(LOG>2) console.log(co);
+			
+		        output += contentObjectToHtml(co);
+			}
+			document.getElementById('result').innerHTML = output;
+		}
+	
+		</script>
+	
+</head>
+<body >
+	<form>
+		Please Enter a Hex Encoded Interest:<br /><input id="contentname" type="text" name="CONTENTNAME" value="01d2f20002d28e310000" /> <br />
+	</form>
+	<button onclick="run()">Request Data!</button>
+	<div >
+		<applet id="JavaSocketBridge" archive="../JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
+		</applet>
+	</div>
+
+		<p id="result"></p>
+
+</body>
+</html>

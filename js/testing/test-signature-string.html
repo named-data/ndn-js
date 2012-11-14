@@ -4,32 +4,33 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Request Example</title>
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	<title>NDN Signature - String</title>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.min.js"></script>
-
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
+	
 		
 	<script type="text/javascript">
 		function sign(){
-			
+			var keyManager = new KeyManager();
 			var input = document.getElementById('contentname').value;
 			
-			var  _PEM_PRIVATE_KEY_STRING_ = document.getElementById('privateKey').value;
-			
+			var  _PEM_PRIVATE_KEY_STRING_ = keyManager.privateKey;
+                                                        //document.getElementById('privateKey').value;
 			var rsa = new RSAKey();
 			
 			rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
@@ -43,9 +44,9 @@
 			var input = document.getElementById('contentname').value;
 			
 			var signature = document.getElementById('result').innerHTML;
-			
-			var  _PEM_X509CERT_STRING_ = document.getElementById('certificate').value;
-			
+			var keyManager = new KeyManager();
+			var  _PEM_X509CERT_STRING_ = keyManager.certificate;
+                                                     //document.getElementById('certificate').value;
 			var x509 = new X509();
 			
 			x509.readCertPEM(_PEM_X509CERT_STRING_);
@@ -97,7 +98,7 @@
 			3OK+u3ivTSj3zwjtpudY5Xo=
 			-----END CERTIFICATE-----"></input>
 
-		Please Enter a Text to sign:<br /><input id="contentname" type="text" name="CONTENTNAME" value="ª²s\nXñ­å àÄÕk...\?8ï����µhello\n�" /> <br />
+		Please Enter a Text to sign:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/CCNX" /> <br />
 	
 	</form>
 	<button onclick="sign()">Sign</button>
@@ -107,5 +108,8 @@
 
 		<p id="result"></p>
 
+		
+	
 </body>
+
 </html>

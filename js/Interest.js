@@ -1,23 +1,23 @@
  /*
  * @author: ucla-cs
+ * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
  */
 
-var Interest = function Interest(_Name,_FaceInstance,_MinSuffixComponents,_MaxSuffixComponents,_PublisherPublicKeyDigest, _Exclude, _ChildSelector,_AnswerOriginKind,_Scope,_InterestLifetime,_Nonce){
+var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
+		
+	this.name = _name;
+	this.faceInstance = _faceInstance;
+	this.maxSuffixComponents = _maxSuffixComponents;
+	this.minSuffixComponents = _minSuffixComponents;
 	
-	//Setting fields
-	this.Name = _Name;
-	this.FaceInstance = _FaceInstance;
-	this.MaxSuffixComponents = _MaxSuffixComponents;
-	this.MinSuffixComponents = _MinSuffixComponents;
-	
-	this.PublisherKeyDigest = _PublisherPublicKeyDigest;
-	this.Exclude = _Exclude;
-	this.ChildSelector = _ChildSelector;
-	this.AnswerOriginKind = _AnswerOriginKind;
-	this.Scope = _Scope;
-	this.InterestLifetime = null;		// For now we don't have the ability to set an interest lifetime
-	this.Nonce = _Nonce;
+	this.publisherPublicKeyDigest = _publisherPublicKeyDigest;
+	this.exclude = _exclude;
+	this.childSelector = _childSelector;
+	this.answerOriginKind = _answerOriginKind;
+	this.scope = _scope;
+	this.interestLifetime = null;		// For now we don't have the ability to set an interest lifetime
+	this.nonce = _nonce;
 	
 
 	this.RECURSIVE_POSTFIX = "*";
@@ -27,101 +27,203 @@ var Interest = function Interest(_Name,_FaceInstance,_MinSuffixComponents,_MaxSu
 	this.ANSWER_CONTENT_STORE = 1;
 	this.ANSWER_GENERATED = 2;
 	this.ANSWER_STALE = 4;		// Stale answer OK
-	this.MARK_STALE = 16;		// Must have Scope 0.  Michael calls this a "hack"
+	this.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 
 	this.DEFAULT_ANSWER_ORIGIN_KIND = this.ANSWER_CONTENT_STORE | this.ANSWER_GENERATED;
 
 };
 
-Interest.prototype.decode = function(/*XMLDecoder*/ decoder) {
+Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 		decoder.readStartElement(CCNProtocolDTags.Interest);
 
-		this.Name = new ContentName();
-		this.Name.decode(decoder);
+		this.name = new Name();
+		this.name.from_ccnb(decoder);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents)) {
-			this.MinSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
+			this.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) {
-			this.MaxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
+			this.maxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
 		}
 			
-		//TODO decode PublisherID
-		/*if (PublisherID.peek(decoder)) {
-			this.Publisher = new PublisherID();
-			this.Publisher.decode(decoder);
-		}*/
+		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
+			this.publisherPublicKeyDigest = new publisherPublicKeyDigest();
+			this.publisherPublicKeyDigest.from_ccnb(decoder);
+		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
-			this.Exclude = new Exclude();
-			this.Exclude.decode(decoder);
+			this.exclude = new Exclude();
+			this.exclude.from_ccnb(decoder);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector)) {
-			this.ChildSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
+			this.childSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind)) {
 			// call setter to handle defaulting
-			this.AnswerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
+			this.answerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Scope)) {
-			this.Scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
+			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime)) {
-			this.InterestLifetime = decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime);
+			this.interestLifetime = decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Nonce)) {
-			this.Nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
+			this.nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
 		}
 		
 		decoder.readEndElement();
 };
 
-Interest.prototype.encode = function(/*XMLEncoder*/ encoder){
-		/*if (!validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}*/
+Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
+		//Could check if name is present
 		
 		encoder.writeStartElement(CCNProtocolDTags.Interest);
 		
-		this.Name.encode(encoder);
+		this.name.to_ccnb(encoder);
 	
-		if (null != this.MinSuffixComponents) 
-			encoder.writeElement(CCNProtocolDTags.MinSuffixComponents, this.MinSuffixComponents);	
+		if (null != this.minSuffixComponents) 
+			encoder.writeElement(CCNProtocolDTags.MinSuffixComponents, this.minSuffixComponents);	
 
-		if (null != this.MaxSuffixComponents) 
-			encoder.writeElement(CCNProtocolDTags.MaxSuffixComponents, this.MaxSuffixComponents);
+		if (null != this.maxSuffixComponents) 
+			encoder.writeElement(CCNProtocolDTags.MaxSuffixComponents, this.maxSuffixComponents);
 
-		//TODO Encode PublisherID
+		if (null != this.publisherPublicKeyDigest)
+			this.publisherPublicKeyDigest.to_ccnb(encoder);
 		
-		/*if (null != this.PublisherID)
-			publisherID().encode(encoder);*/
+		if (null != this.exclude)
+			this.exclude.to_ccnb(encoder);
 		
-		//TODO Encode Exclude
-		
-		//if (null != this.Exclude)
-			//exclude().encode(encoder);
-		
-		if (null != this.ChildSelector) 
-			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.ChildSelector);
+		if (null != this.childSelector) 
+			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.childSelector);
 
 		//TODO Encode OriginKind
-		if (this.DEFAULT_ANSWER_ORIGIN_KIND != this.AnswerOriginKind && this.AnswerOriginKind!=null) 
-			//encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.AnswerOriginKind);
+		if (this.DEFAULT_ANSWER_ORIGIN_KIND != this.answerOriginKind && this.answerOriginKind!=null) 
+			encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.answerOriginKind);
 		
-		if (null != this.Scope) 
-			encoder.writeElement(CCNProtocolDTags.Scope, this.Scope);
+		if (null != this.scope) 
+			encoder.writeElement(CCNProtocolDTags.Scope, this.scope);
 		
-		if (null != this.Nonce)
-			encoder.writeElement(CCNProtocolDTags.Nonce, this.Nonce);
+		if (null != this.nonce)
+			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);
 		
 		encoder.writeEndElement();
 
 };
 
+Interest.prototype.matches_name = function(/*Name*/ name){
+	var i_name = this.name.components;
+	var o_name = name.components;
+
+	// The intrest name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+            return false;
+
+	// Check if at least one of given components doesn't match.
+        for (var i = 0; i < i_name.length; ++i) {
+            if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+                return false;
+        }
+
+	return true;
+}
+
+/**
+ * Exclude
+ */
+var Exclude = function Exclude(_values){ 
+	
+	this.OPTIMUM_FILTER_SIZE = 100;
+	
+
+	this.values = _values; //array of elements
+	
+}
+
+Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
+
+
+		
+		decoder.readStartElement(this.getElementLabel());
+
+		//TODO APPLY FILTERS/EXCLUDE
+		
+		//TODO 
+		/*var component;
+		var any = false;
+		while ((component = decoder.peekStartElement(CCNProtocolDTags.Component)) || 
+				(any = decoder.peekStartElement(CCNProtocolDTags.Any)) ||
+					decoder.peekStartElement(CCNProtocolDTags.Bloom)) {
+			var ee = component?new ExcludeComponent(): any ? new ExcludeAny() : new BloomFilter();
+			ee.decode(decoder);
+			_values.add(ee);
+		}*/
+
+		decoder.readEndElement();
+
+};
+
+Exclude.prototype.to_ccnb=function(/*XMLEncoder*/ encoder)  {
+		if (!validate()) {
+			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+		}
+
+		if (empty())
+			return;
+
+		encoder.writeStartElement(getElementLabel());
+
+		encoder.writeEndElement();
+		
+	};
+
+Exclude.prototype.getElementLabel = function() { return CCNProtocolDTags.Exclude; };
+
+
+/**
+ * ExcludeAny
+ */
+var ExcludeAny = function ExcludeAny() {
+
+};
+
+ExcludeAny.prototype.from_ccnb = function(decoder) {
+		decoder.readStartElement(this.getElementLabel());
+		decoder.readEndElement();
+};
+
+
+ExcludeAny.prototype.to_ccnb = function( encoder) {
+		encoder.writeStartElement(this.getElementLabel());
+		encoder.writeEndElement();
+};
+
+ExcludeAny.prototype.getElementLabel=function() { return CCNProtocolDTags.Any; };
+
+
+/**
+ * ExcludeComponent
+ */
+var ExcludeComponent = function ExcludeComponent(_body) {
+
+	//TODO Check BODY is an Array of componenets.
+	
+	this.body = _body
+};
+
+ExcludeComponent.prototype.from_ccnb = function( decoder)  {
+		this.body = decoder.readBinaryElement(this.getElementLabel());
+};
+
+ExcludeComponent.prototype.to_ccnb = function(encoder) {
+		encoder.writeElement(this.getElementLabel(), this.body);
+};
+
+ExcludeComponent.prototype.getElementLabel = function() { return CCNProtocolDTags.Component; };

@@ -1,7 +1,7 @@
-
 /*
  * This class contains utilities to help parse the data
  * author: ucla-cs
+ * See COPYING for copyright and distribution information.
  */
  
 var DataUtils = function DataUtils(){
@@ -15,12 +15,16 @@ var DataUtils = function DataUtils(){
  * 
  */
 
-  var keyStr = "ABCDEFGHIJKLMNOP" +
+DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
                "QRSTUVWXYZabcdef" +
                "ghijklmnopqrstuv" +
                "wxyz0123456789+/" +
                "=";
 
+               
+/**
+ * Raw String to Base 64
+ */
 DataUtils.stringtoBase64=function stringtoBase64(input) {
      input = escape(input);
      var output = "";
@@ -45,10 +49,10 @@ DataUtils.stringtoBase64=function stringtoBase64(input) {
         }
 
         output = output +
-           keyStr.charAt(enc1) +
-           keyStr.charAt(enc2) +
-           keyStr.charAt(enc3) +
-           keyStr.charAt(enc4);
+           DataUtils.keyStr.charAt(enc1) +
+           DataUtils.keyStr.charAt(enc2) +
+           DataUtils.keyStr.charAt(enc3) +
+           DataUtils.keyStr.charAt(enc4);
         chr1 = chr2 = chr3 = "";
         enc1 = enc2 = enc3 = enc4 = "";
      } while (i < input.length);
@@ -56,6 +60,9 @@ DataUtils.stringtoBase64=function stringtoBase64(input) {
      return output;
   }
 
+/**
+ * Base 64 to Raw String 
+ */
 DataUtils.base64toString = function base64toString(input) {
      var output = "";
      var chr1, chr2, chr3 = "";
@@ -64,18 +71,20 @@ DataUtils.base64toString = function base64toString(input) {
 
      // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
      var base64test = /[^A-Za-z0-9\+\/\=]/g;
+     /* Test for invalid characters. */
      if (base64test.exec(input)) {
         alert("There were invalid base64 characters in the input text.\n" +
               "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
               "Expect errors in decoding.");
      }
+     
      input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
      do {
-        enc1 = keyStr.indexOf(input.charAt(i++));
-        enc2 = keyStr.indexOf(input.charAt(i++));
-        enc3 = keyStr.indexOf(input.charAt(i++));
-        enc4 = keyStr.indexOf(input.charAt(i++));
+        enc1 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc2 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc3 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc4 = DataUtils.keyStr.indexOf(input.charAt(i++));
 
         chr1 = (enc1 << 2) | (enc2 >> 4);
         chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
@@ -99,39 +108,94 @@ DataUtils.base64toString = function base64toString(input) {
   };
 
 //byte [] 
-DataUtils.prototype.unsignedLongToByteArray= function( value) {
+
+/**
+ * NOT WORKING!!!!!
+ * 
+ * Unsiged Long Number to Byte Array
+ */
+	
+ /*
+DataUtils.unsignedLongToByteArray= function( value) {
+	
+	if(LOG>4)console.log('INPUT IS '+value);
+	
 	if( 0 == value )
 		return [0];
 
 	if( 0 <= value && value <= 0x00FF ) {
 		//byte [] 
-		bb = new Array[1];
+		var bb = new Array(1);
 		bb[0] = (value & 0x00FF);
 		return bb;
 	}
 
-	
+	if(LOG>4) console.log('type of value is '+typeof value);
+	if(LOG>4) console.log('value is '+value);
 	//byte [] 
-	out = null;
+	var out = null;
 	//int
 	var offset = -1;
 	for(var i = 7; i >=0; --i) {
 		//byte
-		b = ((value >> (i * 8)) & 0xFF);
+		console.log(i);
+		console.log('value is '+value);
+		console.log('(value >> (i * 8)) '+ (value >> (i * 8))  );
+		console.log(' ((value >> (i * 8)) & 0xFF) '+ ((value >> (i * 8)) & 0xFF)  );
+
+		var b = ((value >> (i * 8)) & 0xFF)  ;
+		
+		if(LOG>4) console.log('b is '+b);
+		
 		if( out == null && b != 0 ) {
-			out = new byte[i+1];
+			//out = new byte[i+1];
+			out = new Array(i+1);
 			offset = i;
 		}
+		
 		if( out != null )
 			out[ offset - i ] = b;
 	}
+	if(LOG>4)console.log('OUTPUT IS ');
+	if(LOG>4)console.log(out);
 	return out;
 }
+*/
+	
+/**
+ * NOT WORKING!!!!!
+ * 
+ * Unsiged Long Number to Byte Array
+ *//*
+DataUtils.byteArrayToUnsignedLong = function(//final byte [] 
+	src) {
+		if(LOG>4) console.log('INPUT IS ');
+		if(LOG>4) console.log(src);
+		
+		var value = 0;
+		for(var i = 0; i < src.length; i++) {
+			value = value << 8;
+			// Java will assume the byte is signed, so extend it and trim it.
+			
+			
+			var b = ((src[i]) & 0xFF );
+			value |= b;
+		}
+		
+		if(LOG>4) console.log('OUTPUT IS ');
+		
+		if(LOG>4) console.log(value);
+
+		return value;
+	}*/
 
 
-var utf8 = {}
-
-utf8.toByteArray = function(str) {
+/**
+ * Hex String to Byte Array
+ */
+	//THIS IS NOT WORKING
+/*
+DataUtils.HexStringtoByteArray = function(str) {
     var byteArray = [];
     for (var i = 0; i < str.length; i++)
         if (str.charCodeAt(i) <= 0x7F)
@@ -143,29 +207,38 @@ utf8.toByteArray = function(str) {
         }
     return byteArray;
 };
+*/
 
-utf8.parse = function(byteArray) {
-    var str = '';
-    for (var i = 0; i < byteArray.length; i++)
-        str +=  byteArray[i] <= 0x7F?
-                byteArray[i] === 0x25 ? "%25" : // %
-                String.fromCharCode(byteArray[i]) :
-                "%" + byteArray[i].toString(16).toUpperCase();
-    return decodeURIComponent(str);
-};
-
-
+/**
+ * Uint8Array to Hex String
+ */
 //http://ejohn.org/blog/numbers-hex-and-colors/
-function toHex(arguments){
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
-  return ret.toUpperCase();
+DataUtils.toHex = function(arguments){
+	if (LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
+	//console.log(arguments);
+  	var ret = "";
+  	for ( var i = 0; i < arguments.length; i++ )
+    	ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  	if (LOG>4) console.log('Converted to: ' + ret);
+  	return ret; //.toUpperCase();
 }
 
-//DOES NOT SEEM TO WORK
-function toString(arguments){
+/**
+ * Raw string to hex string.
+ */
+DataUtils.stringToHex = function(arguments){
+	var ret = "";
+	for (var i = 0; i < arguments.length; ++i) {
+		var value = arguments.charCodeAt(i);
+		ret += (value < 16 ? "0" : "") + value.toString(16);
+	}
+	return ret;
+}
+
+/**
+ * Uint8Array to raw string.
+ */
+DataUtils.toString = function(arguments){
   //console.log(arguments);
   var ret = "";
   for ( var i = 0; i < arguments.length; i++ )
@@ -173,19 +246,196 @@ function toString(arguments){
   return ret;
 }
 
-function toNumbers( str ){
-	if(typeof str =='string'){
-		  var ret = [];
-		   str.replace(/(..)/g, function(str){
-		    ret.push( parseInt( str, 16 ) );
-		  });
-		   return ret;
+/**
+ * Hex String to Uint8Array.
+ */
+DataUtils.toNumbers = function(str) {
+	if (typeof str == 'string') {
+		var ret = new Uint8Array(Math.floor(str.length / 2));
+        var i = 0;
+		str.replace(/(..)/g, function(str) {
+		    ret[i++] = parseInt(str, 16);
+		});
+		return ret;
     }
 }
 
-function toNumbersFromString( str ){
-	var bytes = new Array(str.length);
+/**
+ * Hex String to raw string.
+ */
+DataUtils.hexToRawString = function(str) {
+    if(typeof str =='string') {
+		var ret = "";
+		str.replace(/(..)/g, function(s) {
+			ret += String.fromCharCode(parseInt(s, 16));
+		});
+		return ret;
+    }
+}
+
+/**
+ * Raw String to Uint8Array.
+ */
+DataUtils.toNumbersFromString = function( str ){
+	var bytes = new Uint8Array(str.length);
 	for(var i=0;i<str.length;i++)
 		bytes[i] = str.charCodeAt(i);
 	return bytes;
 }
+
+/*
+ * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
+ */
+DataUtils.concatFromString = function(array, str) {
+	var bytes = new Uint8Array(array.length + str.length);
+    bytes.set(array);
+	for (var i = 0; i < str.length; ++i)
+		bytes[array.length + i] = str.charCodeAt(i);
+	return bytes;
+}
+
+// TODO: Use TextEncoder and return Uint8Array.
+DataUtils.encodeUtf8 = function (string) {
+		string = string.replace(/\r\n/g,"\n");
+		var utftext = "";
+ 
+		for (var n = 0; n < string.length; n++) {
+ 
+			var c = string.charCodeAt(n);
+ 
+			if (c < 128) {
+				utftext += String.fromCharCode(c);
+			}
+			else if((c > 127) && (c < 2048)) {
+				utftext += String.fromCharCode((c >> 6) | 192);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+			else {
+				utftext += String.fromCharCode((c >> 12) | 224);
+				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+ 
+		}
+ 
+		return utftext;
+	};
+ 
+// TODO: Take Uint8Array and use TextDecoder.
+DataUtils.decodeUtf8 = function (utftext) {
+		var string = "";
+		var i = 0;
+		var c = 0;
+        var c1 = 0;
+        var c2 = 0;
+ 
+		while ( i < utftext.length ) {
+ 
+			c = utftext.charCodeAt(i);
+ 
+			if (c < 128) {
+				string += String.fromCharCode(c);
+				i++;
+			}
+			else if((c > 191) && (c < 224)) {
+				c2 = utftext.charCodeAt(i+1);
+				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			}
+			else {
+				c2 = utftext.charCodeAt(i+1);
+				var c3 = utftext.charCodeAt(i+2);
+				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+ 
+		}
+ 
+		return string;
+	};
+
+//NOT WORKING
+/*
+DataUtils.getUTF8StringFromBytes = function(bytes) {
+	
+	bytes = toString(bytes);
+
+    var ix = 0;
+ 
+    if( bytes.slice(0,3) == "\xEF\xBB\xBF") {
+        ix = 3;
+    }
+ 
+    var string = "";
+    for( ; ix < bytes.length; ix++ ) {
+        var byte1 = bytes[ix].charCodeAt(0);
+        if( byte1 < 0x80 ) {
+            string += String.fromCharCode(byte1);
+        } else if( byte1 >= 0xC2 && byte1 < 0xE0 ) {
+            var byte2 = bytes[++ix].charCodeAt(0);
+            string += String.fromCharCode(((byte1&0x1F)<<6) + (byte2&0x3F));
+        } else if( byte1 >= 0xE0 && byte1 < 0xF0 ) {
+            var byte2 = bytes[++ix].charCodeAt(0);
+            var byte3 = bytes[++ix].charCodeAt(0);
+            string += String.fromCharCode(((byte1&0xFF)<<12) + ((byte2&0x3F)<<6) + (byte3&0x3F));
+        } else if( byte1 >= 0xF0 && byte1 < 0xF5) {
+            var byte2 = bytes[++ix].charCodeAt(0);
+            var byte3 = bytes[++ix].charCodeAt(0);
+            var byte4 = bytes[++ix].charCodeAt(0);
+            var codepoint = ((byte1&0x07)<<18) + ((byte2&0x3F)<<12)+ ((byte3&0x3F)<<6) + (byte4&0x3F);
+            codepoint -= 0x10000;
+            string += String.fromCharCode(
+                (codepoint>>10) + 0xD800,
+                (codepoint&0x3FF) + 0xDC00
+            );
+        }
+    }
+ 
+    return string;
+}*/
+
+/**
+ * Return true if a1 and a2 are the same length with equal elements.
+ */
+DataUtils.arraysEqual = function(a1, a2){
+    if (a1.length != a2.length)
+        return false;
+    
+    for (var i = 0; i < a1.length; ++i) {
+        if (a1[i] != a2[i])
+            return false;
+    }
+
+    return true;
+};
+
+/*
+ * Convert the big endian Uint8Array to an unsigned int.
+ * Don't check for overflow.
+ */
+DataUtils.bigEndianToUnsignedInt = function(bytes) {
+    var result = 0;
+    for (var i = 0; i < bytes.length; ++i) {
+        result <<= 8;
+        result += bytes[i];
+    }
+    return result;
+};
+
+/*
+ * Convert the int value to a new big endian Uint8Array and return.
+ * If value is 0 or negative, return Uint8Array(0). 
+ */
+DataUtils.nonNegativeIntToBigEndian = function(value) {
+    if (value <= 0)
+        return new Uint8Array(0);
+    
+    // Assume value is not over 64 bits.
+    var result = new Uint8Array(8);
+    var i = 0;
+    while (value != 0) {
+        result[i++] = value & 0xff;
+        value >>= 8;
+    }
+    return result.subarray(0, i);
+};

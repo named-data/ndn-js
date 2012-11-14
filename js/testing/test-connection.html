@@ -1,0 +1,113 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Test Connection</title>
+	<script type="text/javascript" src="../java_socket_bridge.js"></script>
+	
+	<script type="text/javascript" src="../util/CCNProtocolDTags.js"></script>
+	
+	<script type="text/javascript" src="../util/CCNTime.js"></script>
+	
+	<script type="text/javascript" src="../Name.js"></script>
+	
+	<script type="text/javascript" src="../ContentObject.js"></script>
+	
+	<script type="text/javascript" src="../encoding/DateFormat.js"></script>
+	
+	<script type="text/javascript" src="../Interest.js"></script>
+	
+	<script type="text/javascript" src="../Key.js"></script>
+	
+	<script type="text/javascript" src="../PublisherID.js"></script>
+	
+	<script type="text/javascript" src="../PublisherPublicKeyDigest.js"></script>
+	
+	<script type="text/javascript" src="../FaceInstance.js"></script>
+	
+	<script type="text/javascript" src="../ForwardingEntry.js"></script>
+	
+	
+	<script type="text/javascript" src="../encoding/BinaryXMLEncoder.js"></script>
+	
+	<script type="text/javascript" src="../encoding/BinaryXMLDecoder.js"></script>
+	
+	<script type="text/javascript" src="../encoding/DataUtils.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../security/KeyManager.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
+	
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.js"></script>
+
+	<script type="text/javascript">
+
+		function getAction(){
+			console.log('ABOUT TO GET');
+
+                        // Interest for "/"
+                        var hex = '01d2f20000';
+			var received = get('127.0.0.1', 9695, hex);	
+
+			var output= '<br /> received Content: <br/>' + received;
+			
+			console.log('INTEREST RECEIVED '+ received);
+			
+			document.getElementById('result').innerHTML = output;
+		
+		}
+
+
+		function putAction(){
+			console.log('ABOUT TO PUT');
+
+                        var hex = '01d2f2faa563636e7800fa0285e0290233a1f9da00a6b0db63b910379f6d98edd2b5ea7b0044109923286e6aaa00fabd73656c6672656700fa1a95048202aa03b20885a4024a492e588eade1bb1f94c151a617a41dde3d571d94ea1ac9d3c77f4c9f0ed5700c9722b3497124f3003320e346a2dead367b92a53bb087298023b0ac15584d3dcfb51482b6f458f24d37d46095c97b708aacaabd3fdfa981a86bd4831b2596b1ac23faa3ac6dcf3cb324dea96bc3d75aee7f1d6178ed82a09d5f31c6fa800000f20001a203e20285b5506b1aba3da7761b0f8d61a4aa7e3b6d15b426feb5bda82389aca765a3b81c0002bab505068dba9ba20001e201da0a9530819f300d06092a864886f70d010101050003818d0030818902818100e17d30a7d828ab1b840b17542dcaf6207afd221e086b2a60d16cb7f54448ba9f3f08bcd099db21dd162a779e61aa89eee554d3a47de230bc7ac590d524067c3898bba6f5dc4360b845eda48cbd9cf126a723445f0e1952d7325a75faf556144f9a98af7186b0278685b8e2c08bea87171b4dee585c1828295b5395eb4a17779f0203010001000000019a03a5058a04cabe73656c6672656700f2faa564656d6f00fabd6d657373616765000004fa8e330003d2d63231343734383336343700000000000002d28e310000';                       
+                        var name = '/demo/message';
+                        // Signed content of "It works!".
+                        outputHex = '048202aa03b20885c8762b14c1df125229ecc88ff5080d042a2de01cd0b8e4357af88cff993c0c78c9774ebaf00bebfa2699ae81412fe03a155291981f3c914f2bc075446bb3dafce0314a40bc4c93890c6663da80b7798b66d97be6ddbee58ca30761d28b46ce3ac058b1fbbab7fad981626de954c54c09d68ebb8a18d31a4e1fb970677fb43f180000f2faa564656d6f00fabd6d657373616765000001a203e20285b5506b1aba3da7761b0f8d61a4aa7e3b6d15b426feb5bda82389aca765a3b81c0002bab505068dbab1f00001e201da0a9530819f300d06092a864886f70d010101050003818d0030818902818100e17d30a7d828ab1b840b17542dcaf6207afd221e086b2a60d16cb7f54448ba9f3f08bcd099db21dd162a779e61aa89eee554d3a47de230bc7ac590d524067c3898bba6f5dc4360b845eda48cbd9cf126a723445f0e1952d7325a75faf556144f9a98af7186b0278685b8e2c08bea87171b4dee585c1828295b5395eb4a17779f0203010001000000019add5468697320776f726b73210000';
+                        
+			var received = put('127.0.0.1', 9695, hex, name, outputHex);
+
+			var output= '<br /> received Content: <br/>' + received;
+						
+			document.getElementById('result').innerHTML = output;
+		
+		}
+		
+
+		</script>
+	
+</head>
+<body >
+	
+	<form>
+		Press Buttons:<br /><!--  input id="contentname" type="text" name="CONTENTNAME" value="/PARC/abc" /--> <br />
+	</form>
+	
+	<button onclick="putAction()">PUT!</button>
+	<button onclick="getAction()">GET!</button>
+
+	<div >
+		<applet id="JavaSocketBridge" archive="../JavaSocketBridge.jar" code="JavaSocketBridge.class" width="0" height="0">
+		</applet>
+	</div>
+
+		<p id="result"></p>
+
+</body>
+</html>

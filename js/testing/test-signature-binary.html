@@ -4,25 +4,25 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Request Example</title>
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/jsbn2.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsa2.js"></script>
+	<title>NDN Signature - Binary</title>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/jsbn2.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsa2.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha1.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha256.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/sha512.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/md5.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/ripemd160.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/base64.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha1.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha256.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/sha512.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/md5.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/ripemd160.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/base64.js"></script>
 	
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsapem-1.1.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/rsasign-1.2.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/asn1hex-1.1.min.js"></script>
-	<script language="JavaScript" type="text/javascript" src="securityLib/x509-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsapem-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/rsasign-1.2.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/asn1hex-1.1.min.js"></script>
+	<script language="JavaScript" type="text/javascript" src="../securityLib/x509-1.1.min.js"></script>
 
-		
+
 	<script type="text/javascript">
 		function sign(){
 			
@@ -97,7 +97,7 @@
 			3OK+u3ivTSj3zwjtpudY5Xo=
 			-----END CERTIFICATE-----"></input>
 
-		Please Enter a Text to sign:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/PARC/CCNX" /> <br />
+		Please Enter a Text to sign:<br /><input id="contentname" type="text" name="CONTENTNAME" value="ª²s\nXñ­å àÄÕk...\?8ï����µhello\n�" /> <br />
 	
 	</form>
 	<button onclick="sign()">Sign</button>
