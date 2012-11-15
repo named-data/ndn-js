@@ -5,48 +5,27 @@
  */
 
 function encodeToHexInterest(interest){
-	var enc = new BinaryXMLEncoder();
- 
-	interest.to_ccnb(enc);
-	
-	var hex = DataUtils.toHex(enc.getReducedOstream());
-
-	return hex;
-	
+    return DataUtils.toHex(encodeToBinaryInterest(interest));
 }
 
 
-function encodeToBinaryInterest(interest){
+function encodeToBinaryInterest(interest) {
 	var enc = new BinaryXMLEncoder();
- 
 	interest.to_ccnb(enc);
 	
-	var hex = enc.getReducedOstream();
-
-	return hex;
+	return enc.getReducedOstream();
 }
 
 
 function encodeToHexContentObject(co){
-	var enc = new BinaryXMLEncoder();
- 
-	co.to_ccnb(enc);
-	
-	var hex = DataUtils.toHex(enc.getReducedOstream());
-	
-	return hex;
-
-	
+    return DataUtils.toHex(encodeToBinaryContentObject(co));
 }
 
 function encodeToBinaryContentObject(co){
 	var enc = new BinaryXMLEncoder();
- 
 	co.to_ccnb(enc);
-	
-	var hex = enc.getReducedOstream();
 
-	return hex;
+	return enc.getReducedOstream();
 }
 
 function encodeForwardingEntry(co){
@@ -143,11 +122,8 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	output+= "CONTENT NAME IS EMPTY"
     else{
 	if(co.name!=null && co.name.components!=null){
-	    output+= "NAME: ";
-	    
-	    for(var i=0;i<co.name.components.length;i++){
-		output+= "/"+ escape(DataUtils.toString(co.name.components[i]));
-	    }
+	    output+= "NAME: " + co.name.to_uri();
+        
 	    output+= "<br />";
 	    output+= "<br />";
 	}
