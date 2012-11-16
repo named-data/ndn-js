@@ -38,7 +38,7 @@ Name.makeBlob=function(name){
 
 	for(var i=0;i<name.length;i++){
 		if(typeof name[i] == 'string')
-			blobArrays[i]= DataUtils.toNumbersFromString( name[i] );
+			blobArrays[i]= DataUtils.stringToUtf8Array(name[i]);
 		else if(typeof name[i] == 'object')
 			blobArrays[i]= name[i] ;
 		else 

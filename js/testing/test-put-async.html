@@ -36,7 +36,7 @@
 				var si = new SignedInfo();
 				si.setFields();
 				
-				var answer = DataUtils.toNumbersFromString(content);
+				var answer = DataUtils.stringToUtf8Array(content);
 				
 				var co = new ContentObject(new Name(nameStr), si, answer, new Signature()); 
 				co.sign();

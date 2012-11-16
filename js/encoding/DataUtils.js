@@ -284,6 +284,13 @@ DataUtils.toNumbersFromString = function( str ){
 }
 
 /*
+ * Encode str as utf8 and return as Uint8Array.
+ */
+DataUtils.stringToUtf8Array = function(str) {
+    return DataUtils.toNumbersFromString(str2rstr_utf8(str));
+}
+
+/*
  * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
  */
 DataUtils.concatFromString = function(array, str) {
