@@ -48,18 +48,17 @@ var BinaryXMLEncoder = function BinaryXMLEncoder(){
 
 
 BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
-	this.encodeUString(this.ostream, utf8Content, XML_UDATA);
+	this.encodeUString(utf8Content, XML_UDATA);
 };
 
 
 BinaryXMLEncoder.prototype.writeBlob = function(
 		/*Uint8Array*/ binaryContent
-		//, /*int*/ offset, /*int*/ length
 		) {
 	
 	if(LOG >3) console.log(binaryContent);
 	
-	this.encodeBlob(this.ostream, binaryContent, this.offset, binaryContent.length);
+	this.encodeBlob(binaryContent, binaryContent.length);
 };
 
 
@@ -68,12 +67,12 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
 	/*TreeMap<String,String>*/ attributes
 	) {
 
-	/*Long*/ dictionaryVal = tag; //stringToTag(tag);
+	/*Long*/ var dictionaryVal = tag; //stringToTag(tag);
 	
 	if (null == dictionaryVal) {
-		this.encodeUString(this.ostream, tag, XML_TAG);
+		this.encodeUString(tag, XML_TAG);
 	} else {
-		this.encodeTypeAndVal(XML_DTAG, dictionaryVal, this.ostream);
+		this.encodeTypeAndVal(XML_DTAG, dictionaryVal);
 	}
 	
 	if (null != attributes) {
@@ -105,12 +104,12 @@ BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/
 			// compressed format wants length of tag represented as length-1
 			// to save that extra bit, as tag cannot be 0 length.
 			// encodeUString knows to do that.
-			this.encodeUString(this.ostream, strAttr, XML_ATTR);
+			this.encodeUString(strAttr, XML_ATTR);
 		} else {
-			this.encodeTypeAndVal(XML_DATTR, dictionaryAttr, this.ostream);
+			this.encodeTypeAndVal(XML_DATTR, dictionaryAttr);
 		}
 		// Write value
-		this.encodeUString(this.ostream, strValue);
+		this.encodeUString(strValue);
 		
 	}
 }
@@ -188,9 +187,7 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 		//int
 		type, 
 		//long 
-		val, 
-		//ArrayBufferView 
-		ostream
+		val
 		) {
 	
 	if(LOG>4) console.log('Encoding type '+ type+ ' and value '+ val);
@@ -204,14 +201,14 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
 	
-	if ((this.offset + numEncodingBytes) > ostream.length) {
-		throw new Error("Buffer space of " + (ostream.length - this.offset) + 
+	if ((this.offset + numEncodingBytes) > this.ostream.length) {
+		throw new Error("Buffer space of " + (this.ostream.length - this.offset) + 
 											" bytes insufficient to hold " + 
 											numEncodingBytes + " of encoded type and value.");
 	}
 
 	// Bottom 4 bits of val go in last byte with tag.
-	ostream[this.offset + numEncodingBytes - 1] = 
+	this.ostream[this.offset + numEncodingBytes - 1] = 
 		//(byte)
 			(BYTE_MASK &
 					(((XML_TT_MASK & type) | 
@@ -223,7 +220,7 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	// is "more" flag.
 	var i = this.offset + numEncodingBytes - 2;
 	while ((0 != val) && (i >= this.offset)) {
-		ostream[i] = //(byte)
+		this.ostream[i] = //(byte)
 				(BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
 		val = val >>> XML_REG_VAL_BITS;
 		--i;
@@ -239,8 +236,6 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 
 
 BinaryXMLEncoder.prototype.encodeUString = function(
-		//OutputStream 
-		ostream, 
 		//String 
 		ustring, 
 		//byte 
@@ -254,7 +249,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	if(LOG>3) console.log(ustring);
 
 	//COPY THE STRING TO AVOID PROBLEMS
-	strBytes = new Array(ustring.length);
+	var strBytes = new Array(ustring.length);
 
 	for (i = 0; i < ustring.length; i++) //in InStr.ToCharArray())
 	{
@@ -267,7 +262,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	this.encodeTypeAndVal(type, 
 						(((type == XML_TAG) || (type == XML_ATTR)) ?
 								(strBytes.length-1) :
-								strBytes.length), ostream);
+								strBytes.length));
 	
 	if(LOG>3) console.log("THE string to write is ");
 	
@@ -280,12 +275,8 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 
 
 BinaryXMLEncoder.prototype.encodeBlob = function(
-		//OutputStream 
-		ostream, 
 		//Uint8Array 
 		blob, 
-		//int 
-		offset, 
 		//int 
 		length) {
 
@@ -302,7 +293,7 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 		blobCopy[i] = blob[i];
 	}*/
 
-	this.encodeTypeAndVal(XML_BLOB, length, ostream, offset);
+	this.encodeTypeAndVal(XML_BLOB, length);
 
 	this.writeBlobArray(blob, this.offset);
 	this.offset += length;
