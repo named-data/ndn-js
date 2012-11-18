@@ -1,7 +1,7 @@
 /*
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
- * @author: ucla-cs
+ * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
 

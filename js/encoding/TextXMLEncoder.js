@@ -1,6 +1,6 @@
 //TODO INCOMPLETE
 /*
- * @author: ucla-cs
+ * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * 
  * Encodes CCN object into xml

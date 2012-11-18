@@ -1,5 +1,5 @@
 /* 
- * @author: ucla-cs
+ * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Provide the callback closure for the async communication methods in the NDN class.
  * This is a port of Closure.py from PyCCN, written by: 

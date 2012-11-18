@@ -1,3 +1,9 @@
+/*
+ * This class defines MOME types based on the filename extension.
+ * author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ */
+ 
 var MimeTypes = {
   /*
    * Based on filename, return an object with properties contentType and charset.

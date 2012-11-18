@@ -87,7 +87,7 @@ function _rsasign_getHexPaddedDigestInfoForString(s, keySize, hashAlg) {
 }
 
 
-//@author: ucla-cs
+//@author: Meki Cheraoui
 function _rsasign_getHexPaddedDigestInfoForStringHEX(s, keySize, hashAlg) {
   var pmStrLen = keySize / 4;
   var hashFunc = _RSASIGN_HASHHEXFUNC[hashAlg];

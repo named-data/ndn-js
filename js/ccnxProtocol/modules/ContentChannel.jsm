@@ -1,5 +1,5 @@
 /*
- * @author: ucla-cs
+ * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  */
 

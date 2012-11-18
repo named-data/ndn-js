@@ -1,6 +1,6 @@
 /*
  * This class contains utilities to help parse the data
- * author: ucla-cs
+ * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
  */
  
