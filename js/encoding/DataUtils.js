@@ -285,6 +285,7 @@ DataUtils.toNumbersFromString = function( str ){
 
 /*
  * Encode str as utf8 and return as Uint8Array.
+ * TODO: Use TextEncoder when available.
  */
 DataUtils.stringToUtf8Array = function(str) {
     return DataUtils.toNumbersFromString(str2rstr_utf8(str));
@@ -300,35 +301,8 @@ DataUtils.concatFromString = function(array, str) {
 		bytes[array.length + i] = str.charCodeAt(i);
 	return bytes;
 }
-
-// TODO: Use TextEncoder and return Uint8Array.
-DataUtils.encodeUtf8 = function (string) {
-		string = string.replace(/\r\n/g,"\n");
-		var utftext = "";
  
-		for (var n = 0; n < string.length; n++) {
- 
-			var c = string.charCodeAt(n);
- 
-			if (c < 128) {
-				utftext += String.fromCharCode(c);
-			}
-			else if((c > 127) && (c < 2048)) {
-				utftext += String.fromCharCode((c >> 6) | 192);
-				utftext += String.fromCharCode((c & 63) | 128);
-			}
-			else {
-				utftext += String.fromCharCode((c >> 12) | 224);
-				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-				utftext += String.fromCharCode((c & 63) | 128);
-			}
- 
-		}
- 
-		return utftext;
-	};
- 
-// TODO: Take Uint8Array and use TextDecoder.
+// TODO: Take Uint8Array and use TextDecoder when available.
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
