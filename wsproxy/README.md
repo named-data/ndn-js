@@ -14,6 +14,7 @@ Installation guide:
 
 To run the proxy, simply use the command 'node wsproxy-tcp.js' or 'node wsproxy-udp.js'.
 To specify remote ccnd router's hostname or ip address, use option '-c x.x.x.x'. Default is 'localhost'.
+To specify the port number on which the proxy will listen, use option '-p xxxx'. Default is 9696.
 To specify maximum number of concurrent clients, use option '-m N'. Default is 40.
 To specify the level of log info display, use option '-L x'. x=0 means no output; x=1 will log connection startup and close; x=2 will log contents of all messages that flow across the proxy. Default is 1.
 
