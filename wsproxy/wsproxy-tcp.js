@@ -9,6 +9,7 @@ var net = require('net');
 
 var opt = require('node-getopt').create([
   ['c' , 'ccnd=ARG', 'host name or ip of ccnd router'],
+  ['p' , 'port=ARG', 'port number on which the proxy will listen'],
   ['m' , 'maxclient=ARG', 'maximum number of concurrent client'],
   ['L' , 'LOG=ARG', 'level of log message display'],
   ['h' , 'help', 'display this help']
@@ -21,7 +22,11 @@ var opt = require('node-getopt').create([
 var ccndhost = opt.options.ccnd || 'localhost';
 //console.log(ccndhost);
 
-var wss = new WebSocketServer({port:9696});   //TODO: Do we need to make WS server port number configurable?
+var wsport = opt.options.port || 9696;
+//console.log(wsport);
+
+var wss = new WebSocketServer({port:wsport, host:'0.0.0.0'});   // Set host to '0.0.0.0' so that we can accept connections from anywhere
+                                                                // This host has nothing to do with ccndhost.
 
 var MaxNumOfClients = opt.options.maxclient || 40;
 //console.log(MaxNumOfClients);
