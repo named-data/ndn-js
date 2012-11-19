@@ -1,53 +1,40 @@
 /*
- * @author: Meki Cheraoui
+ * @author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
  */
  
-
+/*
+ * Create a new Name from _components.
+ * If _components is a string, parse it as a URI.  Otherwise it is an array of components
+ * where each is a string, byte array, ArrayBuffer or Uint8Array. 
+ * Convert and store as an array of Uint8Array.
+ * If a component is a string, encode as utf8.
+ */
 var Name = function Name(_components){
-
-	if( typeof _components == 'string') {
-		
+	if( typeof _components == 'string') {		
 		if(LOG>3)console.log('Content Name String '+_components);
-		this.components = Name.makeBlob(Name.createNameArray(_components));
+		this.components = Name.createNameArray(_components);
 	}
-	else if(typeof _components === 'object' && _components instanceof Array ){
-		
+	else if(typeof _components === 'object'){		
 		if(LOG>4)console.log('Content Name Array '+_components);
-		this.components = Name.makeBlob(_components);
-
+		this.components = [];
+        for (var i = 0; i < _components.length; ++i)
+            this.add(_components[i]);
 	}
-	else if(_components==null){
+	else if(_components==null)
 		this.components =[];
-	}
-	else{
-
+	else
 		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
-
-	}
 };
 
 Name.prototype.getName = function() {
     return this.to_uri();
 };
 
-Name.makeBlob=function(name){
-	
-	var blobArrays = new Array(name.length);
-
-	for(var i=0;i<name.length;i++){
-		if(typeof name[i] == 'string')
-			blobArrays[i]= DataUtils.toNumbersFromString(name[i]);
-		else if(typeof name[i] == 'object')
-			blobArrays[i]= name[i] ;
-		else 
-			if(LOG>4)console.log('NAME COMPONENT INVALID');
-	}
-	
-	return blobArrays;
-};
-
+/* Parse name as a URI and return an array of Uint8Array components.
+ *
+ */
 Name.createNameArray = function(name) {
     name = name.trim();
     if (name.length <= 0)
@@ -97,6 +84,9 @@ Name.createNameArray = function(name) {
         }
         else
             array[i] = component;
+        
+        // Change the component to Uint8Array now.
+        array[i] = DataUtils.toNumbersFromString(array[i]);
     }
 
 	return array;
@@ -133,8 +123,27 @@ Name.prototype.getElementLabel = function(){
 	return CCNProtocolDTags.Name;
 };
 
-Name.prototype.add = function(param){
-	return this.components.push(param);
+/*
+ * component is a string, byte array, ArrayBuffer or Uint8Array.
+ * Convert to Uint8Array and add to this Name.
+ * If a component is a string, encode as utf8.
+ * Return the converted value.
+ */
+Name.prototype.add = function(component){
+    var result = null;
+    if(typeof component == 'string')
+        result = DataUtils.stringToUtf8Array(component);
+	else if(typeof component == 'object' && component instanceof Array)
+        result = new Uint8Array(component);
+	else if(typeof component == 'object' && component instanceof Uint8Array)
+        result = new Uint8Array(component);
+	else if(typeof component == 'object' && component instanceof ArrayBuffer)
+        // Make a copy.
+        result = new Uint8Array(component.slice(0, component.byteLength));
+	else 
+		if(LOG>4)console.log('NAME COMPONENT INVALID');
+    
+	return this.components.push(result);
 };
 
 // Return the escaped name string according to "CCNx URI Scheme".  Does not include "ccnx:".
@@ -146,6 +155,22 @@ Name.prototype.to_uri = function() {
 	
 	return result;	
 };
+
+/*
+ * Return a new Name with the first nComponents components of this Name.
+ */
+Name.prototype.getPrefix = function(nComponents) {
+    return new Name(this.components.slice(0, nComponents));
+}
+
+/*
+ * Return a new ArrayBuffer of the component at i.
+ */
+Name.prototype.getComponent = function(i) {
+    var result = new ArrayBuffer(this.components[i].length);
+    new Uint8Array(result).set(this.components[i]);
+    return result;
+}
 
 /**
  * Return component as an escaped string according to "CCNx URI Scheme".
