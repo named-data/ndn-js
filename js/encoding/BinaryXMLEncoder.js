@@ -46,7 +46,9 @@ var BinaryXMLEncoder = function BinaryXMLEncoder(){
 	this.CODEC_NAME = "Binary";
 };
 
-
+/*
+ * Encode utf8Content as utf8.
+ */
 BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
 	this.encodeUString(utf8Content, XML_UDATA);
 };
@@ -139,7 +141,9 @@ tagToString =  function(/*String*/ tagName) {
 	return null;
 };
 
-
+/*
+ * If Content is a string, then encode as utf8 and write UDATA.
+ */
 BinaryXMLEncoder.prototype.writeElement = function(
 		//long 
 		tag, 
@@ -234,30 +238,24 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	return numEncodingBytes;
 };
 
-
+/*
+ * Encode ustring as utf8.
+ */
 BinaryXMLEncoder.prototype.encodeUString = function(
 		//String 
 		ustring, 
 		//byte 
 		type) {
 	
-	if ((null == ustring) || (ustring.length == 0)) {
+	if (null == ustring)
 		return;
-	}
+	if (type == XML_TAG || type == XML_ATTR && ustring.length == 0)
+		return;
 	
 	if(LOG>3) console.log("The string to write is ");
 	if(LOG>3) console.log(ustring);
 
-	//COPY THE STRING TO AVOID PROBLEMS
-	var strBytes = new Array(ustring.length);
-
-	for (i = 0; i < ustring.length; i++) //in InStr.ToCharArray())
-	{
-		if(LOG>3) console.log('ustring[' + i + '] = ' + ustring[i]);
-		strBytes[i] = ustring.charCodeAt(i);
-	}
-	
-	//strBytes = DataUtils.getBytesFromUTF8String(ustring);
+	var strBytes = DataUtils.stringToUtf8Array(ustring);
 	
 	this.encodeTypeAndVal(type, 
 						(((type == XML_TAG) || (type == XML_ATTR)) ?
