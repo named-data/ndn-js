@@ -16,9 +16,8 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.childSelector = _childSelector;
 	this.answerOriginKind = _answerOriginKind;
 	this.scope = _scope;
-	this.interestLifetime = null;		// For now we don't have the ability to set an interest lifetime
-	this.nonce = _nonce;
-	
+	this.interestLifetime = _interestLifetime;  // number of seconds
+	this.nonce = _nonce;	
 
 	this.RECURSIVE_POSTFIX = "*";
 
@@ -40,16 +39,14 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 		this.name = new Name();
 		this.name.from_ccnb(decoder);
 
-		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents)) {
+		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents))
 			this.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
-		}
 
-		if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) {
+		if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) 
 			this.maxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
-		}
 			
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-			this.publisherPublicKeyDigest = new publisherPublicKeyDigest();
+			this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
 			this.publisherPublicKeyDigest.from_ccnb(decoder);
 		}
 
@@ -58,26 +55,21 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.exclude.from_ccnb(decoder);
 		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector)) {
+		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector))
 			this.childSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
-		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind)) {
-			// call setter to handle defaulting
+		if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind))
 			this.answerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
-		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.Scope)) {
+		if (decoder.peekStartElement(CCNProtocolDTags.Scope))
 			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
-		}
 
-		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime)) {
-			this.interestLifetime = decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime);
-		}
+		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
+			this.interestLifetime = DataUtils.bigEndianToUnsignedInt
+                (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.Nonce)) {
+		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
 			this.nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
-		}
 		
 		decoder.readEndElement();
 };
@@ -104,12 +96,15 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 		if (null != this.childSelector) 
 			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.childSelector);
 
-		//TODO Encode OriginKind
 		if (this.DEFAULT_ANSWER_ORIGIN_KIND != this.answerOriginKind && this.answerOriginKind!=null) 
 			encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.answerOriginKind);
 		
 		if (null != this.scope) 
 			encoder.writeElement(CCNProtocolDTags.Scope, this.scope);
+		
+		if (null != this.interestLifetime) 
+			encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
+                DataUtils.nonNegativeIntToBigEndian(this.interestLifetime * 4096));
 		
 		if (null != this.nonce)
 			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);

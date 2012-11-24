@@ -10,88 +10,94 @@
 
 	<script type="text/javascript">
 	
-		function encode(){
+		function encode() {
 			var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
-			interest.scope = 1;
-			
+            interest.minSuffixComponents = 2;
+            interest.maxSuffixComponents = 4;
+            interest.childSelector = 1;
+            interest.answerOriginKind = 4;
+            interest.scope = 2;
+            interest.interestLifetime = 30;
+            interest.nonce = new Uint8Array([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
+            var pkd = [];
+            for (i = 0; i < 32; ++i)
+                pkd.push(i);
+			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Uint8Array(pkd));
+                
 			var output = encodeToHexInterest(interest);
 			
 			document.getElementById('result').innerHTML = output;
 
 		}
 		
-		function decode(){
-			
-			
-			
+		function decode() {
 			var input = document.getElementById('result').innerHTML;
-
 			
 			var interest = decodeHexInterest(input);
 			
-			if(LOG>3)console.log('INTEREST DECODED');
-			if(LOG>3)console.log(interest);
+			if (LOG>3)console.log('INTEREST DECODED');
+			if (LOG>3)console.log(interest);
 
 			///////////////////////////////////////
 			
 			var output ="";
 			
-			if(interest.name!=null && interest.name.components!=null){
-				output+= "NAME: ";
+			if (interest.name != null && interest.name.components != null) {
+				output += "Name: ";
+				output += interest.name.getName();
+				output += "<br/>";
+			}
 				
-				
-				output+= interest.name.getName();
-				
-				/*for(var i=0;i<interest.name.components.length;i++){
-					output+= "/"+ DataUtils.toString(interest.name.Components[i]);
-				}*/
-				
-				output+= "<br />";
-				output+= "<br />";
+			if (interest.minSuffixComponents != null ) {
+				output += "MinSuffixComponents : ";
+				output +=  interest.minSuffixComponents;
+				output += "<br/>";
+			}
+			
+			if (interest.maxSuffixComponents != null ) {
+				output += "MaxSuffixComponents : ";
+				output +=  interest.maxSuffixComponents;
+				output += "<br/>";
 			}
 	
+			if (interest.publisherPublicKeyDigest != null ) {
+				output += "PublisherPublicKeyDigest: ";
+				output +=  DataUtils.toHex(interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
+				output += "<br/>";
+			}
 			
-			if(interest.scope!=null ){
-				output+= "SCOPE: ";
-				
-					output+=  interest.scope;
-				
-				output+= "<br />";
-				output+= "<br />";
+			if (interest.childSelector != null ) {
+				output += "ChildSelector: ";
+				output +=  interest.childSelector;
+				output += "<br/>";
+			}
+			
+			if (interest.answerOriginKind != null ) {
+				output += "AnswerOriginKind: ";
+				output +=  interest.answerOriginKind;
+				output += "<br/>";
+			}
+			
+			if (interest.scope != null ) {
+				output += "Scope: ";
+				output +=  interest.scope;
+				output += "<br/>";
+			}
+			
+			if (interest.interestLifetime != null ) {
+				output += "InterestLifetime: ";
+				output +=  interest.interestLifetime;
+				output += "<br/>";
 			}
 	
-			if(interest.publisherID!=null ){
-				output+= "PUBLISHER ID: ";
-				
-					output+=  interest.publisherID.publisherID;
-					
-					output+= "PUBLISHER ID TYPE: ";
-					output+=  interest.publisherID.publisherType;
-				output+= "<br />";
-				output+= "<br />";
-			}
-			
-			if(interest.maxSuffixComponents!=null ){
-				output+= "MaxSuffixComponents : ";
-				
-				output+=  interest.maxSuffixComponents;
-
-				output+= "<br />";
-				output+= "<br />";
-			}
-			
-			if(interest.minSuffixComponents!=null ){
-				output+= "MinSuffixComponents : ";
-				
-				output+=  interest.minSuffixComponents;
-
-				output+= "<br />";
-				output+= "<br />";
+			if (interest.nonce != null ) {
+				output += "Nonce: ";
+				output +=  DataUtils.toHex(interest.nonce);
+				output += "<br/>";
 			}
 			
 			document.getElementById('result').innerHTML = output;
-			
 		}
 
 	</script>

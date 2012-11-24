@@ -39,15 +39,19 @@ CcnxProtocol.prototype = {
         try {            
             var spec = aURI.spec.trim();
             var preHash = spec.split('#', 1)[0];
-            var hash = spec.substr(preHash.length, spec.length).trim();
+            var hash = spec.substr(preHash.length).trim();
             var preSearch = preHash.split('?', 1)[0];
-            var search = preHash.substr(preSearch.length, spec.length).trim();
+            var search = preHash.substr(preSearch.length).trim();
             // Set nameString to the preSearch without the protocol.
             var nameString = preSearch.trim();
             if (nameString.indexOf(':') >= 0)
-                nameString = nameString.substr(nameString.indexOf(':') + 1, spec.length).trim();
+                nameString = nameString.substr(nameString.indexOf(':') + 1).trim();
     
-            var contentChannel;
+            var template = new Interest(new Name([]));
+            // Use the same default as NDN.expressInterest.
+            template.interestLifetime = 4200;
+            var searchWithoutCcnx = extractCcnxSearch(search, template);
+    
             var requestContent = function(contentListener) {                
                 var name = new Name(nameString);
                 // TODO: Strip off an ending implicit digest before checking the last component?
@@ -56,13 +60,13 @@ CcnxProtocol.prototype = {
                 var ndn = new NDN({ host: "lioncub.metwi.ucla.edu", port: 9695,
                       // Use the same transport object each time.
                       getTransport: function() { return thisCcnxProtocol.transport; } });
-                ndn.expressInterest(name, new ContentClosure
-                    (ndn, contentListener, uriEndsWithSegmentNumber, aURI.originCharset,
-                     search + hash));
+                ndn.expressInterest(name, 
+                    new ContentClosure(ndn, contentListener, uriEndsWithSegmentNumber, 
+                            aURI.originCharset, searchWithoutCcnx + hash),
+                    template);
             };
 
-            contentChannel = new ContentChannel(aURI, requestContent);
-            return contentChannel;
+            return new ContentChannel(aURI, requestContent);
         } catch (ex) {
             dump("CcnxProtocol.newChannel exception: " + ex + "\n");
         }
@@ -231,4 +235,55 @@ function endsWithSegmentNumber(name) {
     return name.components != null && name.components.length >= 1 &&
         name.components[name.components.length - 1].length >= 1 &&
         name.components[name.components.length - 1][0] == 0;
+}
+
+/*
+ * Find all search keys starting with "ccnx." and set the attribute in template.
+ * Return the search string including the starting "?" but with the "ccnx." keys removed,
+ *   or return "" if there are no search terms left.
+ */
+function extractCcnxSearch(search, template) {
+    if (!(search.length >= 1 && search[0] == '?'))
+        return search;
+    
+    var terms = search.substr(1).split('&');
+    var i = 0;
+    while (i < terms.length) {
+        var keyValue = terms[i].split('=');
+        var key = keyValue[0].trim();
+        if (key.substr(0, 5) == "ccnx.") {
+            if (keyValue.length >= 1) {
+                var value = keyValue[1].trim;
+                var nonNegativeInt = parseInt(value);
+                
+                if (key == "ccnx.MinSuffixComponents" && nonNegativeInt >= 0)
+                    template.minSuffixComponents = nonNegativeInt;
+                if (key == "ccnx.MaxSuffixComponents" && nonNegativeInt >= 0)
+                    template.maxSuffixComponents = nonNegativeInt;
+                if (key == "ccnx.ChildSelector" && nonNegativeInt >= 0)
+                    template.childSelector = nonNegativeInt;
+                if (key == "ccnx.AnswerOriginKind" && nonNegativeInt >= 0)
+                    template.answerOriginKind = nonNegativeInt;
+                if (key == "ccnx.Scope" && nonNegativeInt >= 0)
+                    template.scope = nonNegativeInt;
+                if (key == "ccnx.InterestLifetime" && nonNegativeInt >= 0)
+                    template.interestLifetime = nonNegativeInt;
+                if (key == "ccnx.PublisherPublicKeyDigest" && nonNegativeInt >= 0)
+                    template.publisherPublicKeyDigest = DataUtils.toNumbersFromString(unescape(value));
+                if (key == "ccnx.Nonce" && nonNegativeInt >= 0)
+                    template.nonce = DataUtils.toNumbersFromString(unescape(value));
+                // TODO: handle Exclude.
+            }
+        
+            // Remove the "ccnx." term and don't advance i.
+            terms.splice(i, 1);
+        }
+        else
+            ++i;
+    }
+    
+    if (terms.length == 0)
+        return "";
+    else
+        return "?" + terms.join('&');
 }
