@@ -408,15 +408,18 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
  * If value is 0 or negative, return Uint8Array(0). 
  */
 DataUtils.nonNegativeIntToBigEndian = function(value) {
+    value = Math.round(value);
     if (value <= 0)
         return new Uint8Array(0);
     
     // Assume value is not over 64 bits.
-    var result = new Uint8Array(8);
+    var size = 8;
+    var result = new Uint8Array(size);
     var i = 0;
     while (value != 0) {
-        result[i++] = value & 0xff;
+        ++i;
+        result[size - i] = value & 0xff;
         value >>= 8;
     }
-    return result.subarray(0, i);
+    return result.subarray(size - i, size);
 };
