@@ -27,8 +27,13 @@ CcnxProtocol.prototype = {
 
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
+        // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
+        var spec = aSpec.trim();
+        var preSearch = spec.split('?', 1)[0];
+        var searchAndHash = spec.substr(preSearch.length).trim();
+
         var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
-        uri.spec = aSpec;
+        uri.spec = preSearch.trim() + searchAndHash;
         return uri;
     },
 
@@ -37,6 +42,7 @@ CcnxProtocol.prototype = {
         var thisCcnxProtocol = this;
         
         try {            
+            // Decode manually since nsIURI doesn't have selectors for hash, etc.
             var spec = aURI.spec.trim();
             var preHash = spec.split('#', 1)[0];
             var hash = spec.substr(preHash.length).trim();
