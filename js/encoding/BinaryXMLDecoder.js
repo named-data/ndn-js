@@ -85,13 +85,13 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 	try {
 
 		//this.TypeAndVal 
-		nextTV = this.peekTypeAndVal();
+		var nextTV = this.peekTypeAndVal();
 
 		while ((null != nextTV) && ((XML_ATTR == nextTV.type()) ||
 				(XML_DATTR == nextTV.type()))) {
 
 			//this.TypeAndVal 
-			thisTV = this.decodeTypeAndVal();
+			var thisTV = this.decodeTypeAndVal();
 
 			var attributeName = null;
 			if (XML_ATTR == thisTV.type()) {
@@ -153,7 +153,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			}
 			
 			//String 
-			decodedTag = null;
+			var decodedTag = null;
 			//console.log(tv);
 			//console.log(typeof tv);
 			
@@ -210,17 +210,17 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 	try {
 		// Now need to get attributes.
 		//TypeAndVal 
-		nextTV = this.peekTypeAndVal();
+		var nextTV = this.peekTypeAndVal();
 
 		while ((null != nextTV) && ((XML_ATTR == nextTV.type()) ||
 				(XML_DATTR == nextTV.type()))) {
 
 			// Decode this attribute. First, really read the type and value.
 			//this.TypeAndVal 
-			thisTV = this.decodeTypeAndVal();
+			var thisTV = this.decodeTypeAndVal();
 
 			//String 
-			attributeName = null;
+			var attributeName = null;
 			if (XML_ATTR == thisTV.type()) {
 				// Tag value represents length-1 as attribute names cannot be empty.
 				var valval ;
@@ -241,7 +241,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 			}
 			// Attribute values are always UDATA
 			//String
-			attributeValue = this.decodeUString();
+			var attributeValue = this.decodeUString();
 
 			//
 			attributes.push([attributeName, attributeValue]);
@@ -258,13 +258,13 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
 	//this.istream.mark(MARK_LEN);
 
 	//String 
-	decodedTag = null;
+	var decodedTag = null;
 	var previousOffset = this.offset;
 	try {
 		// Have to distinguish genuine errors from wrong tags. Could either use
 		// a special exception subtype, or redo the work here.
 		//this.TypeAndVal 
-		tv = this.decodeTypeAndVal();
+		var tv = this.decodeTypeAndVal();
 
 		if (null != tv) {
 
@@ -309,7 +309,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 		startTag) {
 	//String 
 	if(typeof startTag == 'string'){
-		decodedTag = this.peekStartElementAsString();
+		var decodedTag = this.peekStartElementAsString();
 		
 		if ((null !=  decodedTag) && decodedTag == startTag) {
 			return true;
@@ -317,7 +317,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 		return false;
 	}
 	else if(typeof startTag == 'number'){
-		decodedTag = this.peekStartElementAsLong();
+		var decodedTag = this.peekStartElementAsLong();
 		if ((null !=  decodedTag) && decodedTag == startTag) {
 			return true;
 		}
@@ -332,7 +332,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 		//this.istream.mark(MARK_LEN);
 
 		//Long
-		decodedTag = null;
+		var decodedTag = null;
 		
 		var previousOffset = this.offset;
 		
@@ -340,7 +340,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 			// Have to distinguish genuine errors from wrong tags. Could either use
 			// a special exception subtype, or redo the work here.
 			//this.TypeAndVal
-			tv = this.decodeTypeAndVal();
+			var tv = this.decodeTypeAndVal();
 
 			if (null != tv) {
 
@@ -358,7 +358,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 					
 					// Tag value represents length-1 as tags can never be empty.
 					//String 
-					strTag = this.decodeUString(valval);
+					var strTag = this.decodeUString(valval);
 					
 					decodedTag = stringToTag(strTag);
 					
@@ -392,14 +392,12 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//TreeMap<String, String> 
 		attributes){
 	//byte [] 
-	blob = null;
+	var blob = null;
 	
-		this.readStartElement(startTag, attributes);
-		blob = this.readBlob();
-	
+	this.readStartElement(startTag, attributes);
+	blob = this.readBlob();	
 
 	return blob;
-
 };
 	
 	
@@ -424,7 +422,7 @@ BinaryXMLDecoder.prototype.readEndElement = function(){
 //String	
 BinaryXMLDecoder.prototype.readUString = function(){
 			//String 
-			ustring = this.decodeUString();	
+			var ustring = this.decodeUString();	
 			this.readEndElement();
 			return ustring;
 
@@ -435,7 +433,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 BinaryXMLDecoder.prototype.readBlob = function() {
 			//byte []
 			
-			blob = this.decodeBlob();	
+			var blob = this.decodeBlob();	
 			this.readEndElement();
 			return blob;
 
@@ -452,12 +450,12 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 
 	//var lontimestamp = DataUtils.byteArrayToUnsignedLong(byteTimestamp);
 
-	var byteTimestamp = DataUtils.toHex(byteTimestamp);
+	byteTimestamp = DataUtils.toHex(byteTimestamp);
 	
 	
-	var byteTimestamp = parseInt(byteTimestamp, 16);
+	byteTimestamp = parseInt(byteTimestamp, 16);
 
-	lontimestamp = (byteTimestamp/ 4096) * 1000;
+	var lontimestamp = (byteTimestamp/ 4096) * 1000;
 
 	//if(lontimestamp<0) lontimestamp =  - lontimestamp;
 
@@ -466,7 +464,7 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	
 
 	//CCNTime 
-	timestamp = new CCNTime(lontimestamp);
+	var timestamp = new CCNTime(lontimestamp);
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {
@@ -520,7 +518,7 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 //TypeAndVal
 BinaryXMLDecoder.peekTypeAndVal = function() {
 	//TypeAndVal 
-	tv = null;
+	var tv = null;
 	
 	//this.istream.mark(LONG_BYTES*2);		
 	
@@ -544,7 +542,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	
 	if(null == blobLength){
 		//TypeAndVal
-		tv = this.decodeTypeAndVal();
+		var tv = this.decodeTypeAndVal();
 
 		var valval ;
 		
@@ -632,7 +630,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		var tempStreamPosition = this.offset;
 			
 		//TypeAndVal 
-		tv = this.decodeTypeAndVal();
+		var tv = this.decodeTypeAndVal();
 		
 		if(LOG>3)console.log('TV is '+tv);
 		if(LOG>3)console.log(tv);
@@ -652,7 +650,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 	}
 	else{
 		//byte [] 
-		stringBytes = this.decodeBlob(byteLength);
+		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);
 		return  DataUtils.toString(stringBytes);
@@ -688,7 +686,7 @@ BinaryXMLDecoder.prototype.readIntegerElement =function(
 	if(LOG>4) console.log('READING INTEGER '+ startTag);
 	if(LOG>4) console.log('TYPE OF '+ typeof startTag);
 	
-	strVal = this.readUTF8Element(startTag);
+	var strVal = this.readUTF8Element(startTag);
 	
 	return parseInt(strVal);
 };
@@ -703,7 +701,7 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 
 		this.readStartElement(startTag, attributes); // can't use getElementText, can't get attributes
 		//String 
-		strElementText = this.readUString();
+		var strElementText = this.readUString();
 		return strElementText;
 };
 
