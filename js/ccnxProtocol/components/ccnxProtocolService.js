@@ -36,18 +36,19 @@ CcnxProtocol.prototype = {
     {
         var thisCcnxProtocol = this;
         
-        try {
-            var trimmedSpec = aURI.spec.trim();
+        try {            
+            var spec = aURI.spec.trim();
+            var preHash = spec.split('#', 1)[0];
+            var hash = spec.substr(preHash.length, spec.length).trim();
+            var preSearch = preHash.split('?', 1)[0];
+            var search = preHash.substr(preSearch.length, spec.length).trim();
+            // Set nameString to the preSearch without the protocol.
+            var nameString = preSearch.trim();
+            if (nameString.indexOf(':') >= 0)
+                nameString = nameString.substr(nameString.indexOf(':') + 1, spec.length).trim();
     
             var contentChannel;
-            var requestContent = function(contentListener) {
-                // Set nameString to the URI without the protocol.
-                var nameString = trimmedSpec;
-                var colonIndex = nameString.indexOf(':');
-                if (colonIndex >= 0)
-                    nameString = nameString.substr
-                        (colonIndex + 1, nameString.length - colonIndex - 1).trim();
-                
+            var requestContent = function(contentListener) {                
                 var name = new Name(nameString);
                 // TODO: Strip off an ending implicit digest before checking the last component?
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
@@ -56,7 +57,8 @@ CcnxProtocol.prototype = {
                       // Use the same transport object each time.
                       getTransport: function() { return thisCcnxProtocol.transport; } });
                 ndn.expressInterest(name, new ContentClosure
-                    (ndn, contentListener, uriEndsWithSegmentNumber, aURI.originCharset));
+                    (ndn, contentListener, uriEndsWithSegmentNumber, aURI.originCharset,
+                     search + hash));
             };
 
             contentChannel = new ContentChannel(aURI, requestContent);
@@ -83,9 +85,11 @@ else
  * uriEndsWithSegmentNumber is true if the URI passed to newChannel has a segment number
  *    (used to determine whether to request only that segment number and for updating the URL bar).
  * uriOriginCharset is the charset of the URI passed to newChannel (used for making a new URI)
+ * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
+ *    and/or '#' but without the interest selector fields.
  */                                                
 var ContentClosure = function ContentClosure
-        (ndn, contentListener, uriEndsWithSegmentNumber, uriOriginCharset) {
+        (ndn, contentListener, uriEndsWithSegmentNumber, uriOriginCharset, uriSearchAndHash) {
     // Inherit from Closure.
     Closure.call(this);
     
@@ -93,6 +97,8 @@ var ContentClosure = function ContentClosure
     this.contentListener = contentListener;
     this.uriEndsWithSegmentNumber = uriEndsWithSegmentNumber;
     this.uriOriginCharset = uriOriginCharset;
+    this.uriSearchAndHash = uriSearchAndHash;
+    
     this.firstReceivedSegmentNumber = null;
     this.firstReceivedContentObject = null;
 }
@@ -141,6 +147,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         }
         else
             contentUriSpec = "ccnx:" + contentObject.name.to_uri();
+    
+        // Include the search and hash.
+        contentUriSpec += this.uriSearchAndHash;
     
         var contentTypeEtc = getNameContentTypeAndCharset(contentObject.name);
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
@@ -191,8 +200,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         
     return Closure.RESULT_OK;
 };
-            
- 
+             
 /*
  * Scan the name from the last component to the first (skipping special CCNx components)
  *   for a recognized file name extension, and return an object with properties contentType and charset.
