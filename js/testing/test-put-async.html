@@ -23,11 +23,6 @@
 			if (kind == Closure.UPCALL_FINAL) {
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_INTEREST) {
-				// Extract the Name from the Interest. var name = upcallInfo.Interest.name;;
-				// Check that we want to respond to upcallInfo.interest. If yes, construct a ContentObject
-				// response, put it to the NDN and return Closure.RESULT_INTEREST_CONSUMED. Else fall 
-				// through to return Content.RESULT_OK.
-				// See linemaker.py for more details.
 				console.log('AsyncPutClosure.upcall() called.');
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
@@ -40,17 +35,21 @@
 				
 				var co = new ContentObject(new Name(nameStr), si, answer, new Signature()); 
 				co.sign();
-				var hex = encodeToHexContentObject(co);
+				var coBinary = encodeToBinaryContentObject(co);
+				// If we directly use coBinary.buffer to feed ws.send(), WebSocket 
+				// will end up sending a packet with 10000 bytes of data. That 
+				// is, WebSocket will flush the entire buffer in BinaryXMLEncoder
+				// regardless of the offset of the Uint8Array. So we have to
+				// create a new Uint8Array buffer with just the right size and
+				// copy the content from coBinary to the new buffer.
+				//    ---Wentao
+				var bytearray = new Uint8Array(coBinary.length);
+				bytearray.set(coBinary);
 				
-				var bytearray = new Uint8Array(hex.length / 2);
-	    		for (var i = 0; i < hex.length; i = i + 2) {
-	        		bytearray[i / 2] = '0x' + hex.substr(i, 2);
-	    		}
-	    		
-	    		upcallInfo.ndn.transport.ws.send(bytearray.buffer);
-	    		console.log('ws.send() finised.');
-	    		
-	    		return Closure.RESULT_INTEREST_CONSUMED;
+				upcallInfo.ndn.transport.ws.send(bytearray.buffer);
+				console.log('ws.send() finised.');
+				
+				return Closure.RESULT_INTEREST_CONSUMED;
 			}
 			return Closure.RESULT_OK;
 		};

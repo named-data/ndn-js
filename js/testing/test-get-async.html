@@ -10,7 +10,7 @@
 	<script type="text/javascript" src="../Helper.js"></script>
 
 	<script type="text/javascript">
-		var ndn = new NDN();
+		var ndn = new NDN({port:9696});
         ndn.transport.connectWebSocket(ndn);
         
         var AsyncGetClosure = function AsyncGetClosure() {

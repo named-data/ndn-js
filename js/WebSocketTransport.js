@@ -161,7 +161,6 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		bytes.set(hex);
 		
 		self.ws.send(bytes.buffer);
-		console.log('ws.onopen: ws.send() returned.');
 	}
 	
 	this.ws.onerror = function(ev) {
@@ -236,6 +235,13 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		interest.scope = 1;
 		//var hex = encodeToHexInterest(int);
 		var binaryInterest = encodeToBinaryInterest(interest);
+		// If we directly use binaryInterest.buffer to feed ws.send(), 
+		// WebSocket will end up sending a packet with 10000 bytes of data.
+		// That is, WebSocket will flush the entire buffer in BinaryXMLEncoder
+		// regardless of the offset of the Uint8Array. So we have to create
+		// a new Uint8Array buffer with just the right size and copy the 
+		// content from binaryInterest to the new buffer.
+		//    ---Wentao
     	var bytearray = new Uint8Array(binaryInterest.length);
 		bytearray.set(binaryInterest);
 		console.log('Send Interest registration packet.');
@@ -244,7 +250,6 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		CSTable.push(csEntry);
     	
     	this.ws.send(bytearray.buffer);
-		console.log('ws.send() returned.');
 		
 		return 0;
 	} else {
