@@ -18,19 +18,19 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.scope = _scope;
 	this.interestLifetime = _interestLifetime;  // number of seconds
 	this.nonce = _nonce;	
-
-	this.RECURSIVE_POSTFIX = "*";
-
-	this.CHILD_SELECTOR_LEFT = 0;
-	this.CHILD_SELECTOR_RIGHT = 1;
-	this.ANSWER_CONTENT_STORE = 1;
-	this.ANSWER_GENERATED = 2;
-	this.ANSWER_STALE = 4;		// Stale answer OK
-	this.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
-
-	this.DEFAULT_ANSWER_ORIGIN_KIND = this.ANSWER_CONTENT_STORE | this.ANSWER_GENERATED;
-
 };
+
+Interest.RECURSIVE_POSTFIX = "*";
+
+Interest.CHILD_SELECTOR_LEFT = 0;
+Interest.CHILD_SELECTOR_RIGHT = 1;
+Interest.ANSWER_CONTENT_STORE = 1;
+Interest.ANSWER_GENERATED = 2;
+Interest.ANSWER_STALE = 4;		// Stale answer OK
+Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
+
+Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
+
 
 Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
