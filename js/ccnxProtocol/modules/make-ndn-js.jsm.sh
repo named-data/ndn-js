@@ -1,38 +1,38 @@
 #!/bin/sh
 cat ndn-js-header.txt \
-  ../../Closure.js emptyLine.txt \
-  ../../NDN.js emptyLine.txt \
-  ../../XpcomTransport.js emptyLine.txt \
-  ../../util/CCNProtocolDTags.js emptyLine.txt \
-  ../../util/CCNTime.js emptyLine.txt \
-  ../../Name.js emptyLine.txt \
-  ../../ContentObject.js emptyLine.txt \
-  ../../encoding/DateFormat.js emptyLine.txt \
-  ../../Interest.js emptyLine.txt \
-  ../../Key.js emptyLine.txt \
-  ../../PublisherID.js emptyLine.txt \
-  ../../PublisherPublicKeyDigest.js emptyLine.txt \
-  ../../FaceInstance.js emptyLine.txt \
-  ../../ForwardingEntry.js emptyLine.txt \
-  ../../encoding/BinaryXMLEncoder.js emptyLine.txt \
-  ../../encoding/BinaryXMLDecoder.js emptyLine.txt \
-  ../../encoding/BinaryXMLStructureDecoder.js emptyLine.txt \
-  ../../encoding/DataUtils.js emptyLine.txt \
-  ../../encoding/MimeTypes.js emptyLine.txt \
-  ../../encoding/EncodingUtils.js emptyLine.txt \
-  ../../security/KeyManager.js emptyLine.txt \
-  ../../securityLib/sha1.js emptyLine.txt \
-  ../../securityLib/sha256.js emptyLine.txt \
-  ../../securityLib/sha512.js emptyLine.txt \
-  ../../securityLib/md5.js emptyLine.txt \
-  ../../securityLib/ripemd160.js emptyLine.txt \
-  ../../securityLib/base64.js emptyLine.txt \
-  ../../securityLib/rsa.js emptyLine.txt \
-  ../../securityLib/rsa2.js emptyLine.txt \
-  ../../securityLib/rsapem-1.1.js emptyLine.txt \
-  ../../securityLib/rsasign-1.2.js emptyLine.txt \
-  ../../securityLib/asn1hex-1.1.js emptyLine.txt \
-  ../../securityLib/x509-1.1.js emptyLine.txt \
-  ../../securityLib/jsbn.js emptyLine.txt \
-  ../../securityLib/jsbn2.js emptyLine.txt \
+  ../../Closure.js \
+  ../../NDN.js \
+  ../../XpcomTransport.js \
+  ../../util/CCNProtocolDTags.js \
+  ../../util/CCNTime.js \
+  ../../Name.js \
+  ../../ContentObject.js \
+  ../../encoding/DateFormat.js \
+  ../../Interest.js \
+  ../../Key.js \
+  ../../PublisherID.js \
+  ../../PublisherPublicKeyDigest.js \
+  ../../FaceInstance.js \
+  ../../ForwardingEntry.js \
+  ../../encoding/BinaryXMLEncoder.js \
+  ../../encoding/BinaryXMLDecoder.js \
+  ../../encoding/BinaryXMLStructureDecoder.js \
+  ../../encoding/DataUtils.js \
+  ../../encoding/MimeTypes.js \
+  ../../encoding/EncodingUtils.js \
+  ../../security/KeyManager.js \
+  ../../securityLib/sha1.js \
+  ../../securityLib/sha256.js \
+  ../../securityLib/sha512.js \
+  ../../securityLib/md5.js \
+  ../../securityLib/ripemd160.js \
+  ../../securityLib/base64.js \
+  ../../securityLib/rsa.js \
+  ../../securityLib/rsa2.js \
+  ../../securityLib/rsapem-1.1.js \
+  ../../securityLib/rsasign-1.2.js \
+  ../../securityLib/asn1hex-1.1.js \
+  ../../securityLib/x509-1.1.js \
+  ../../securityLib/jsbn.js \
+  ../../securityLib/jsbn2.js \
   > ndn-js.jsm
