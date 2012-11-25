@@ -147,7 +147,7 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
 		
         this.requestContent(contentListener);
     } catch (ex) {
-        dump("ContentChannel.asyncOpen exception: " + ex + "\n");
+        dump("ContentChannel.asyncOpen exception: " + ex + "\n" + ex.stack);
     }
 };
 

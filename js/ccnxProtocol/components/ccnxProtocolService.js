@@ -74,7 +74,7 @@ CcnxProtocol.prototype = {
 
             return new ContentChannel(aURI, requestContent);
         } catch (ex) {
-            dump("CcnxProtocol.newChannel exception: " + ex + "\n");
+            dump("CcnxProtocol.newChannel exception: " + ex + "\n" + ex.stack);
         }
     },
 
