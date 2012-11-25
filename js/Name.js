@@ -133,13 +133,15 @@ Name.prototype.add = function(component){
     var result;
     if(typeof component == 'string')
         result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Array)
-        result = new Uint8Array(component);
 	else if(typeof component == 'object' && component instanceof Uint8Array)
         result = new Uint8Array(component);
 	else if(typeof component == 'object' && component instanceof ArrayBuffer)
         // Make a copy.
         result = new Uint8Array(component.slice(0, component.byteLength));
+	else if(typeof component == 'object')
+        // Assume component is a byte array.  We can't check instanceof Array because
+        //   this doesn't work in JavaScript if the array comes from a different module.
+        result = new Uint8Array(component);
 	else 
 		throw new Error("Cannot add Name element at index " + this.components.length + 
             ": Invalid type");
