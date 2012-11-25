@@ -90,7 +90,6 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
-
 /*
  * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
@@ -161,7 +160,6 @@ NDN.prototype.expressInterest = function(
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     return this.transport.registerPrefix(this, name, closure, flag);
 }
-
 /* 
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -272,7 +270,6 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 	pump.init(inStream, -1, -1, 0, 0, true);
     pump.asyncRead(dataListener, null);
 }
-
 
 /*
  * @author: Meki Cheraoui
@@ -430,7 +427,6 @@ var CCNProtocolDTagsStrings = [
 //TESTING
 //console.log(exports.CCNProtocolDTagsStrings[17]);
 
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -534,7 +530,6 @@ unsignedLongToByteArray= function( value) {
 	return out;
 }*/
 	
-
 /*
  * @author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -667,18 +662,21 @@ Name.prototype.getElementLabel = function(){
  * Return the converted value.
  */
 Name.prototype.add = function(component){
-    var result = null;
+    var result;
     if(typeof component == 'string')
         result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Array)
-        result = new Uint8Array(component);
 	else if(typeof component == 'object' && component instanceof Uint8Array)
         result = new Uint8Array(component);
 	else if(typeof component == 'object' && component instanceof ArrayBuffer)
         // Make a copy.
         result = new Uint8Array(component.slice(0, component.byteLength));
+	else if(typeof component == 'object')
+        // Assume component is a byte array.  We can't check instanceof Array because
+        //   this doesn't work in JavaScript if the array comes from a different module.
+        result = new Uint8Array(component);
 	else 
-		if(LOG>4)console.log('NAME COMPONENT INVALID');
+		throw new Error("Cannot add Name element at index " + this.components.length + 
+            ": Invalid type");
     
 	return this.components.push(result);
 };
@@ -742,7 +740,6 @@ Name.toEscapedString = function(component) {
     }
     return result;
 };
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1204,7 +1201,6 @@ SignedInfo.prototype.validate = function() {
 			return false;
 		return true;
 };
-
 /*
  * Date Format 1.2.3
  * (c) 2007-2009 Steven Levithan <stevenlevithan.com>
@@ -1330,7 +1326,6 @@ DateFormat.i18n = {
 Date.prototype.format = function (mask, utc) {
 	return dateFormat(this, mask, utc);
 };
-
  /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1351,19 +1346,19 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.scope = _scope;
 	this.interestLifetime = _interestLifetime;  // number of seconds
 	this.nonce = _nonce;	
-
-	this.RECURSIVE_POSTFIX = "*";
-
-	this.CHILD_SELECTOR_LEFT = 0;
-	this.CHILD_SELECTOR_RIGHT = 1;
-	this.ANSWER_CONTENT_STORE = 1;
-	this.ANSWER_GENERATED = 2;
-	this.ANSWER_STALE = 4;		// Stale answer OK
-	this.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
-
-	this.DEFAULT_ANSWER_ORIGIN_KIND = this.ANSWER_CONTENT_STORE | this.ANSWER_GENERATED;
-
 };
+
+Interest.RECURSIVE_POSTFIX = "*";
+
+Interest.CHILD_SELECTOR_LEFT = 0;
+Interest.CHILD_SELECTOR_RIGHT = 1;
+Interest.ANSWER_CONTENT_STORE = 1;
+Interest.ANSWER_GENERATED = 2;
+Interest.ANSWER_STALE = 4;		// Stale answer OK
+Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
+
+Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
+
 
 Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
@@ -1555,7 +1550,6 @@ ExcludeComponent.prototype.to_ccnb = function(encoder) {
 };
 
 ExcludeComponent.prototype.getElementLabel = function() { return CCNProtocolDTags.Component; };
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1751,7 +1745,6 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1848,7 +1841,6 @@ PublisherID.prototype.validate = function(){
 
 
 
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1900,7 +1892,6 @@ PublisherPublicKeyDigest.prototype.getElementLabel = function() { return CCNProt
 PublisherPublicKeyDigest.prototype.validate =function() {
 		return (null != this.publisherPublicKeyDigest);
 };
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -2062,7 +2053,6 @@ FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 
 FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceInstance;};
 
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -2164,7 +2154,6 @@ encoder)
 		};
 
 ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags.ForwardingEntry; }
-
 /*
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
@@ -2562,7 +2551,6 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
 	return this.ostream.subarray(0, this.offset);
 };
-
 
 /*
  * This class is used to decode ccnb binary elements (blob, type/value pairs).
@@ -3293,7 +3281,6 @@ function ContentDecodingException(error) {
 ContentDecodingException.prototype = new Error();
 ContentDecodingException.prototype.name = "ContentDecodingException";
 
-
 /*
  * This class uses BinaryXMLDecoder to follow the structure of a ccnb binary element to 
  * determine its end.
@@ -3415,7 +3402,6 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         }
     }
 };
-
 /*
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
@@ -3841,7 +3827,6 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
     }
     return result.subarray(size - i, size);
 };
-
 /*
  * This class defines MOME types based on the filename extension.
  * author: Jeff Thompson
@@ -4390,7 +4375,6 @@ var MimeTypes = {
   "zip": "application/zip",
   "zmt": "chemical/x-mopac-input"
 };
-
 /*
  * This file contains utilities to help encode and decode NDN objects.
  * author: Meki Cheraoui
@@ -4736,7 +4720,6 @@ function contentObjectToHtml(/* ContentObject */ co) {
 
     return output;
 }
-
 /*
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -4840,7 +4823,6 @@ KeyManager.prototype.sign= function sign(message){
 
 var globalKeyManager = new KeyManager();
 //var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
-
 
 
 /*
@@ -5173,7 +5155,6 @@ function bit_rol(num, cnt)
 {
   return (num << cnt) | (num >>> (32 - cnt));
 }
-
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -5553,7 +5534,6 @@ function safe_add (x, y)
   var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
   return (msw << 16) | (lsw & 0xFFFF);
 }
-
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-512, as defined
  * in FIPS 180-2
@@ -6050,7 +6030,6 @@ function int64add5(dst, a, b, c, d, e)
    dst.l = (w0 & 0xffff) | (w1 << 16);
    dst.h = (w2 & 0xffff) | (w3 << 16);
 }
-
 /*
  * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
  * Digest Algorithm, as defined in RFC 1321.
@@ -6430,7 +6409,6 @@ function bit_rol(num, cnt)
 {
   return (num << cnt) | (num >>> (32 - cnt));
 }
-
 /*
  * A JavaScript implementation of the RIPEMD-160 Algorithm
  * Version 2.2 Copyright Jeremy Lin, Paul Johnston 2000 - 2009.
@@ -6790,7 +6768,6 @@ function bit_rol(num, cnt)
 {
   return (num << cnt) | (num >>> (32 - cnt));
 }
-
 var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var b64pad="=";
 
@@ -6862,7 +6839,6 @@ function b64toBA(s) {
   }
   return a;
 }
-
 // Depends on jsbn.js and rng.js
 
 // Version 1.1: support utf-8 encoding in pkcs1pad2
@@ -6993,7 +6969,6 @@ RSAKey.prototype.doPublic = RSADoPublic;
 RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
-
 // Depends on rsa.js and jsbn2.js
 
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
@@ -7135,7 +7110,6 @@ RSAKey.prototype.setPrivateEx = RSASetPrivateEx;
 RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
-
 /*! rsapem-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -7217,7 +7191,6 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 }
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
-
 /*! rsasign-1.2.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -7570,7 +7543,6 @@ RSAKey.prototype.verifyHexSignatureForByteArrayMessageHEX = _rsasign_verifyHexSi
  * @class
  * @description Tom Wu's RSA Key class and extension
  */
-
 /*! asn1hex-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -7850,7 +7822,6 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
-
 /*! x509-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 // 
@@ -8121,7 +8092,6 @@ X509.prototype.getIssuerString = _x509_getIssuerString;
 X509.prototype.getSubjectString = _x509_getSubjectString;
 X509.prototype.getNotBefore = _x509_getNotBefore;
 X509.prototype.getNotAfter = _x509_getNotAfter;
-
 
 // Copyright (c) 2005  Tom Wu
 // All Rights Reserved.
@@ -8682,7 +8652,6 @@ BigInteger.prototype.modPowInt = bnModPowInt;
 // "constants"
 BigInteger.ZERO = nbv(0);
 BigInteger.ONE = nbv(1);
-
 // Copyright (c) 2005-2009  Tom Wu
 // All Rights Reserved.
 // See "LICENSE" for details.
@@ -9331,4 +9300,3 @@ BigInteger.prototype.isProbablePrime = bnIsProbablePrime;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
-

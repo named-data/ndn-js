@@ -194,14 +194,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
         nextSegmentNumber.set(segmentNumberPlus1, 1);
         
-        // TODO: When Name uses Uint8Array, we don't need a byte array.
-        var nextSegmentNumberByteArray = [];
-        for (var i = 0; i < nextSegmentNumber.length; ++i)
-            nextSegmentNumberByteArray.push(nextSegmentNumber[i]);
-        
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
-        components.push(nextSegmentNumberByteArray);
+        components.push(nextSegmentNumber);
         this.ndn.expressInterest(new Name(components), this);
     }
     else
