@@ -135,9 +135,11 @@ Name.prototype.add = function(component){
         result = DataUtils.stringToUtf8Array(component);
 	else if(typeof component == 'object' && component instanceof Uint8Array)
         result = new Uint8Array(component);
-	else if(typeof component == 'object' && component instanceof ArrayBuffer)
-        // Make a copy.
-        result = new Uint8Array(component.slice(0, component.byteLength));
+	else if(typeof component == 'object' && component instanceof ArrayBuffer) {
+        // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
+        result = new Uint8Array(new ArrayBuffer(component.byteLength));
+        result.set(new Uint8Array(component));
+    }
 	else if(typeof component == 'object')
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
