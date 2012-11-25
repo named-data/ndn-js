@@ -259,7 +259,7 @@ function extractCcnxSearch(search, template) {
         var key = keyValue[0].trim();
         if (key.substr(0, 5) == "ccnx.") {
             if (keyValue.length >= 1) {
-                var value = keyValue[1].trim;
+                var value = keyValue[1].trim();
                 var nonNegativeInt = parseInt(value);
                 
                 if (key == "ccnx.MinSuffixComponents" && nonNegativeInt >= 0)
