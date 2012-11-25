@@ -130,7 +130,7 @@ Name.prototype.getElementLabel = function(){
  * Return the converted value.
  */
 Name.prototype.add = function(component){
-    var result = null;
+    var result;
     if(typeof component == 'string')
         result = DataUtils.stringToUtf8Array(component);
 	else if(typeof component == 'object' && component instanceof Array)
@@ -141,7 +141,8 @@ Name.prototype.add = function(component){
         // Make a copy.
         result = new Uint8Array(component.slice(0, component.byteLength));
 	else 
-		if(LOG>4)console.log('NAME COMPONENT INVALID');
+		throw new Error("Cannot add Name element at index " + this.components.length + 
+            ": Invalid type");
     
 	return this.components.push(result);
 };
