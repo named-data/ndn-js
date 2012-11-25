@@ -75,8 +75,9 @@ Name.createNameArray = function(name) {
                 // Zero, one or two periods is illegal.  Ignore this componenent to be
                 //   consistent with the C implmentation.
                 // This also gets rid of a trailing '/'.
-                array = array.slice(0, i).concat(array.slice(i + 1, array.length));
-                --i;                
+                array.splice(i, 1);
+                --i;  
+                continue;
             }
             else
                 // Remove 3 periods.

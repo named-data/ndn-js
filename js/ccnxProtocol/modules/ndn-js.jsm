@@ -607,8 +607,9 @@ Name.createNameArray = function(name) {
                 // Zero, one or two periods is illegal.  Ignore this componenent to be
                 //   consistent with the C implmentation.
                 // This also gets rid of a trailing '/'.
-                array = array.slice(0, i).concat(array.slice(i + 1, array.length));
-                --i;                
+                array.splice(i, 1);
+                --i;  
+                continue;
             }
             else
                 // Remove 3 periods.
@@ -667,9 +668,11 @@ Name.prototype.add = function(component){
         result = DataUtils.stringToUtf8Array(component);
 	else if(typeof component == 'object' && component instanceof Uint8Array)
         result = new Uint8Array(component);
-	else if(typeof component == 'object' && component instanceof ArrayBuffer)
-        // Make a copy.
-        result = new Uint8Array(component.slice(0, component.byteLength));
+	else if(typeof component == 'object' && component instanceof ArrayBuffer) {
+        // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
+        result = new Uint8Array(new ArrayBuffer(component.byteLength));
+        result.set(new Uint8Array(component));
+    }
 	else if(typeof component == 'object')
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
@@ -705,6 +708,27 @@ Name.prototype.getComponent = function(i) {
     var result = new ArrayBuffer(this.components[i].length);
     new Uint8Array(result).set(this.components[i]);
     return result;
+}
+
+/*
+ * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
+ *   special marker octets (for version, etc.).  Return the index in this.components of
+ *   the file name, or -1 if not found.
+ */
+Name.prototype.indexOfFileName = function() {
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        var component = this.components[i];
+        if (component.length <= 0)
+            continue;
+        
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+            (component[0] >= 0xF5 && component[0] <= 0xFF))
+            continue;
+        
+        return i;
+    }
+    
+    return -1;
 }
 
 /**
