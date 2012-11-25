@@ -1,0 +1,12 @@
+
+/* This is ndn-js-footer.txt which make-ndn-js.js.sh puts at the end after including
+ *    all the source files.  Declare the exports.
+ */
+
+exports.NDN = NDN;
+exports.Closure = Closure;
+exports.Name = Name;
+exports.Interest = Interest;
+exports.ContentObject = ContentObject;
+exports.DataUtils = DataUtils;
+
