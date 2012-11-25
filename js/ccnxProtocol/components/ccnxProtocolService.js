@@ -211,22 +211,13 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
  *   for a recognized file name extension, and return an object with properties contentType and charset.
  */
 function getNameContentTypeAndCharset(name) {
-    var filename = "";
-    for (var i = name.components.length - 1; i >= 0; --i) {
-        var component = name.components[i];
-        if (component.length <= 0)
-            continue;
-        
-        // Skip special components which just may have ".gif", etc.
-        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
-            (component[0] >= 0xF5 && component[0] <= 0xFF))
-            continue;
-        
-        filename = DataUtils.toString(component).toLowerCase();
-        break;
-    }
+    var iFileName = name.indexOfFileName();
+    if (iFileName < 0)
+        // Get the default mime type.
+        return MimeTypes.getContentTypeAndCharset("");
     
-    return MimeTypes.getContentTypeAndCharset(filename);
+    return MimeTypes.getContentTypeAndCharset
+        (DataUtils.toString(name.components[iFileName]).toLowerCase());
 }
 
 /*

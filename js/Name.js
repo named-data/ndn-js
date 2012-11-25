@@ -177,6 +177,27 @@ Name.prototype.getComponent = function(i) {
     return result;
 }
 
+/*
+ * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
+ *   special marker octets (for version, etc.).  Return the index in this.components of
+ *   the file name, or -1 if not found.
+ */
+Name.prototype.indexOfFileName = function() {
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        var component = this.components[i];
+        if (component.length <= 0)
+            continue;
+        
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+            (component[0] >= 0xF5 && component[0] <= 0xFF))
+            continue;
+        
+        return i;
+    }
+    
+    return -1;
+}
+
 /**
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
