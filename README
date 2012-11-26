@@ -7,21 +7,61 @@ The current status of NDN-JS allows for JavaScript applications running on brows
 This is currently done in the following way:
 
 var ndn = new NDN();
-var contentObject = ndn.get('/ndn/ucla.edu/apps/hydra/mainvideo'); 
-console.log(contentObject.content);
+ndn.transport.connectWebSocket(ndn);
+        
+var AsyncGetClosure = function AsyncGetClosure() {
+    // Inherit from Closure.
+    Closure.call(this);
+};		
+AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
+    if (kind == Closure.UPCALL_CONTENT) {
+        console.log("Received " + upcallInfo.contentObject.name.to_uri());
+        console.log(upcallInfo.contentObject.content);
+    }
+    return Closure.RESULT_OK;
+};
 
-* Firefox extension for ccnx protocol
+ndn.expressInterest(new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt"), new AsyncGetClosure());
 
-NDN-JS also includes a Firefox extension for the ccnx protocol.  To install in Firefox, open
+*** Firefox extension for the ccnx protocol
+
+NDN-JS also includes a Firefox extension for the ccnx protocol.  To install, either download
+https://github.com/remap/ndn-js/blob/master/js/ccnxProtocol.xpi
+or use js/ccnxProtocol.xpi in the distribution.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
-js/ccnxProtocol.xpi in this distribution.  Restart Firefox.
+ccnxProtocol.xpi.  Restart Firefox.
 
-Firefox uses the extension to load any URI starting with ccnx, for example
+Firefox uses the protocol extension to load any URI starting with ccnx, for example
 ccnx:/ndn/ucla.edu/apps/lwndn-test/trig-table
 
-When the page is loaded, the extension updates address bar with the full matched name from the
+When the page is loaded, Firefox updates the address bar with the full matched name from the
 retrieved content object including the version, but without the implicit digest or segment number 
 (see below).
+
+* Interest selectors in the ccnx protocol
+
+You can add interest selectors. For example, this uses 1 to select the "rightmost" child (latest version).
+ccnx:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ccnx.ChildSelector=1&key=value#ref
+
+The browser loads the latest version and changes the address to:
+ccnx:/ndn/ucla.edu/apps/ndn-js-test/hello.txt/%FD%05%0B%16z%22%D1?key=value#ref
+
+The child selector was used and removed. Note that the other non-ccnx query values and 
+ref "?key=value#ref" are still present, in case they are needed by the web application.
+
+The following selector keys are supported:
+ccnx.MinSuffixComponent= non-negative int
+ccnx.MaxSuffixComponents= non-negative int
+ccnx.ChildSelector= non-negative int
+ccnx.AnswerOriginKind= non-negative int
+ccnx.Scope= non-negative int
+ccnx.InterestLifetime= non-negative int
+ccnx.PublisherPublicKeyDigest= % escaped value
+ccnx.Nonce= % escaped value
+
+TODO: implement ccnx.Exclude. 
+
+* Multiple segments in the ccnx protocol
 
 A URI for content with multiple segments is handled as follows.
 If the URI has a segment number, just retrieve that segment and return the content to the browser.
