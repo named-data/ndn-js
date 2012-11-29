@@ -186,7 +186,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 			
 			if ((null ==  decodedTag) || decodedTag != startTag ) {
-				console.log('expecting '+ startag + ' but got '+ decodedTag);
+				console.log('expecting '+ startTag + ' but got '+ decodedTag);
 				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
 			}
 			
