@@ -12,7 +12,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.level = 0;
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerStartOffset = 0;
-    this.readBytesEndOffset = 0;
+    this.nBytesToRead = 0;
 };
 
 BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
@@ -89,12 +89,12 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         // Start a new level and read the tag.
                         ++this.level;
                     // Minimum tag or attribute length is 1.
-                    this.readBytesEndOffset = this.offset + typeAndVal.v + 1;
+                    this.nBytesToRead = typeAndVal.v + 1;
                     this.state = BinaryXMLStructureDecoder.READ_BYTES;
                     // ccnb has rules about what must follow an attribute, but we are just scanning.
                 }
                 else if (type == XML_BLOB || type == XML_UDATA) {
-                    this.readBytesEndOffset = this.offset + typeAndVal.v;
+                    this.nBytesToRead = typeAndVal.v;
                     this.state = BinaryXMLStructureDecoder.READ_BYTES;
                 }
                 else
@@ -102,13 +102,15 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 break;
             
             case BinaryXMLStructureDecoder.READ_BYTES:
-                if (input.length < this.readBytesEndOffset) {
+                var nRemainingBytes = input.length - this.offset;
+                if (nRemainingBytes < this.nBytesToRead) {
                     // Need more.
-                    this.offset = input.length;
+                    this.offset += nRemainingBytes;
+                    this.nBytesToRead -= nRemainingBytes;
                     return false;
                 }
                 // Got the bytes.  Read a new header or close.
-                this.offset = this.readBytesEndOffset;
+                this.offset += this.nBytesToRead;
                 this.headerStartOffset = this.offset;
                 this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
                 break;
