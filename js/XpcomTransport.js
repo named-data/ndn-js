@@ -24,12 +24,6 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
                 var co = new ContentObject();
                 co.from_ccnb(decoder);
                    					
-				if(LOG>2) {
-					dump("DECODED CONTENT OBJECT\n");
-					dump(co);
-					dump("\n");
-				}
-
                 // TODO: verify the content object and set kind to UPCALL_CONTENT.
 				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
                                new UpcallInfo(ndn, interest, 0, co));
@@ -70,7 +64,7 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 	outStream.flush();
 	var inStream = transport.openInputStream(0, 0, 0);
 	var dataListener = {
-		data: new Uint8Array(0),
+		dataParts: [],
         structureDecoder: new BinaryXMLStructureDecoder(),
 		calledOnReceivedData: false,
 		
@@ -81,7 +75,7 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 			outStream.close();
 			if (!this.calledOnReceivedData) {
 				this.calledOnReceivedData = true;
-				listener.onReceivedData(this.data);
+				listener.onReceivedData(DataUtils.concatArrays(this.dataParts));
 			}
 		},
 		onDataAvailable: function (request, context, _inputStream, offset, count) {
@@ -92,11 +86,15 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 			try {
 				// Ignore _inputStream and use inStream.
 				// Use readInputStreamToString to handle binary data.
-				var rawData = NetUtil.readInputStreamToString(inStream, count);
-                this.data = DataUtils.concatFromString(this.data, rawData);
+                // TODO: Can we go directly from the stream to Uint8Array?
+				var rawData = DataUtils.toNumbersFromString
+                    (NetUtil.readInputStreamToString(inStream, count));
+                // Save for later call to concatArrays so that we only reallocate a buffer once.
+                this.dataParts.push(rawData);
 				
 				// Scan the input to check if a whole ccnb object has been read.
-                if (this.structureDecoder.findElementEnd(this.data))
+                this.structureDecoder.seek(0);
+                if (this.structureDecoder.findElementEnd(rawData))
                     // Finish.
                     this.onStopRequest();
 			} catch (ex) {
