@@ -11,7 +11,9 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
 	this.offset = 0;
     this.level = 0;
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
-    this.headerStartOffset = 0;
+    this.headerLength = 0;
+    this.useHeaderBuffer = false;
+    this.headerBuffer = new Uint8Array(5);
     this.nBytesToRead = 0;
 };
 
@@ -26,7 +28,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  * This throws an exception for badly formed ccnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-    // byte array
+    // Uint8Array
     input)
 {
     if (this.gotElementEnd)
@@ -43,7 +45,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         switch (this.state) {
             case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:               
                 // First check for XML_CLOSE.
-                if (this.offset == this.headerStartOffset && input[this.offset] == XML_CLOSE) {
+                if (this.headerLength == 0 && input[this.offset] == XML_CLOSE) {
                     ++this.offset;
                     // Close the level.
                     --this.level;
@@ -55,34 +57,57 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                             (this.offset - 1));
                     
                     // Get ready for the next header.
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                     break;
                 }
-
+                
+                var startingHeaderLength = this.headerLength;
                 while (true) {
-                    if (this.offset >= input.length)                    
+                    if (this.offset >= input.length) {
+                        // We can't get all of the header bytes from this input. Save in headerBuffer.
+                        this.useHeaderBuffer = true;
+                        var nNewBytes = this.headerLength - startingHeaderLength;
+                        this.setHeaderBuffer
+                            (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                        
                         return false;
-                    if (input[this.offset++] & XML_TT_NO_MORE)
+                    }
+                    var headerByte = input[this.offset++];
+                    ++this.headerLength;
+                    if (headerByte & XML_TT_NO_MORE)
                         // Break and read the header.
                         break;
                 }
-            
-                decoder.seek(this.headerStartOffset);
-                var typeAndVal = decoder.decodeTypeAndVal();
+                
+                var typeAndVal;
+                if (this.useHeaderBuffer) {
+                    // Copy the remaining bytes into headerBuffer.
+                    nNewBytes = this.headerLength - startingHeaderLength;
+                    this.setHeaderBuffer
+                        (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+
+                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer).decodeTypeAndVal();
+                }
+                else {
+                    // We didn't have to use the headerBuffer.
+                    decoder.seek(this.offset - this.headerLength);
+                    typeAndVal = decoder.decodeTypeAndVal();
+                }
+                
                 if (typeAndVal == null)
                     throw new Error("BinaryXMLStructureDecoder: Can't read header starting at offset " +
-                        this.headerStartOffset);
+                        (this.offset - this.headerLength));
                 
                 // Set the next state based on the type.
                 var type = typeAndVal.t;
                 if (type == XML_DATTR)
                     // We already consumed the item. READ_HEADER_OR_CLOSE again.
                     // ccnb has rules about what must follow an attribute, but we are just scanning.
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                 else if (type == XML_DTAG || type == XML_EXT) {
                     // Start a new level and READ_HEADER_OR_CLOSE again.
                     ++this.level;
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                 }
                 else if (type == XML_TAG || type == XML_ATTR) {
                     if (type == XML_TAG)
@@ -111,8 +136,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 }
                 // Got the bytes.  Read a new header or close.
                 this.offset += this.nBytesToRead;
-                this.headerStartOffset = this.offset;
-                this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
+                this.startHeader();
                 break;
             
             default:
@@ -121,3 +145,35 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         }
     }
 };
+
+/*
+ * Set the state to READ_HEADER_OR_CLOSE and set up to start reading the header
+ */
+BinaryXMLStructureDecoder.prototype.startHeader = function() {
+    this.headerLength = 0;
+    this.useHeaderBuffer = false;
+    this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;    
+}
+
+/*
+ *  Set the offset into the input, used for the next read.
+ */
+BinaryXMLStructureDecoder.prototype.seek = function(
+        //int
+        offset) {
+    this.offset = offset;
+}
+
+/*
+ * Set call this.headerBuffer.set(subarray, bufferOffset), an reallocate the headerBuffer if needed.
+ */
+BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferOffset) {
+    var size = subarray.length + bufferOffset;
+    if (size > this.headerBuffer.length) {
+        // Reallocate the buffer.
+        var newHeaderBuffer = new Uint8Array(size + 5);
+        newHeaderBuffer.set(this.headerBuffer);
+        this.headerBuffer = newHeaderBuffer;
+    }
+    this.headerBuffer.set(subarray, bufferOffset);
+}
