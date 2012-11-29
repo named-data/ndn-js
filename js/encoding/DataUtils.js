@@ -292,14 +292,21 @@ DataUtils.stringToUtf8Array = function(str) {
 }
 
 /*
- * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
+ * arrays is an array of Uint8Array. Return a new Uint8Array which is the concatenation of all.
  */
-DataUtils.concatFromString = function(array, str) {
-	var bytes = new Uint8Array(array.length + str.length);
-    bytes.set(array);
-	for (var i = 0; i < str.length; ++i)
-		bytes[array.length + i] = str.charCodeAt(i);
-	return bytes;
+DataUtils.concatArrays = function(arrays) {
+    var totalLength = 0;
+	for (var i = 0; i < arrays.length; ++i)
+        totalLength += arrays[i].length;
+    
+    var result = new Uint8Array(totalLength);
+    var offset = 0;
+	for (var i = 0; i < arrays.length; ++i) {
+        result.set(arrays[i], offset);
+        offset += arrays[i].length;
+    }
+    return result;
+    
 }
  
 // TODO: Take Uint8Array and use TextDecoder when available.
