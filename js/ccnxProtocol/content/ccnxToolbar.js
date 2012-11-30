@@ -2,7 +2,7 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 
 function CcnxToolbarGetLatest(event){
   if (window._content.document.location.protocol != "ccnx:") {
-    alert("The addres must start with ccnx");
+    alert("The address must start with ccnx");
     return;
   }
 
