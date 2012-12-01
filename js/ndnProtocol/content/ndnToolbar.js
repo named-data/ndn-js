@@ -1,12 +1,12 @@
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 
-function CcnxToolbarGetLatest(event){
-  if (window._content.document.location.protocol != "ccnx:") {
-    alert("The address must start with ccnx");
+function ndnToolbarGetLatest(event){
+  if (window._content.document.location.protocol != "ndn:") {
+    alert("The address must start with ndn");
     return;
   }
 
-  // Parse the same as in ccnxprotocolService newChannel.
+  // Parse the same as in ndnProtocolService newChannel.
   var spec = window._content.document.location.href.trim();
   var preHash = spec.split('#', 1)[0];
   var hash = spec.substr(preHash.length).trim();
@@ -20,14 +20,14 @@ function CcnxToolbarGetLatest(event){
   var name = new Name(nameString);
   var indexOfVersion = getIndexOfVersion(name);
   if (indexOfVersion < 0) {
-    alert("The ccnx address does not have a version");
+    alert("The ndn address does not have a version");
     return;
   }
 
   var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
-  var searchWithChildSelector = (search == "" ? "?" : search + "&") + "ccnx.ChildSelector=1";
+  var searchWithChildSelector = (search == "" ? "?" : search + "&") + "ndn.ChildSelector=1";
     
-  var uri = "ccnx:" + nameWithoutVersion.to_uri() + searchWithChildSelector + hash;
+  var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + hash;
   window._content.document.location = uri;
 } 
 

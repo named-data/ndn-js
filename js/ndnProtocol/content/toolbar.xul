@@ -1,0 +1,15 @@
+<?xml version="1.0"?>                 
+<overlay id="Scrapper-Overlay"
+xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+<script type="application/x-javascript" src="chrome://toolbar/content/ndnToolbar.js" />
+
+<toolbox id="navigator-toolbox">
+  <toolbar id="NdnToolbar" toolbarname="ndnToolbar" >
+      <label value="NDN"/>
+      <toolbarbutton id="mdnToolbarGetLatestButton"
+        label="Get Latest" oncommand="ndnToolbarGetLatest(event)" />
+  </toolbar>
+</toolbox>
+
+</overlay>

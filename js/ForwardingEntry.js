@@ -66,7 +66,6 @@ ForwardingEntry.prototype.from_ccnb =function(
 
 		/**
 		 * Used by NetworkObject to encode the object to a network stream.
-		 * @see org.ccnx.ccn.impl.encoding.XMLEncodable
 		 */
 ForwardingEntry.prototype.to_ccnb =function(
 	//XMLEncoder 

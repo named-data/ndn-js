@@ -42,7 +42,6 @@ var FaceInstance  = function FaceInstance(
 
 /**
  * Used by NetworkObject to decode the object from a network stream.
- * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
 FaceInstance.prototype.from_ccnb = function(//XMLDecoder 
 	decoder) {
@@ -114,7 +113,6 @@ FaceInstance.prototype.from_ccnb = function(//XMLDecoder
 
 /**
  * Used by NetworkObject to encode the object to a network stream.
- * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
 FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 	encoder){

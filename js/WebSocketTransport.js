@@ -227,9 +227,9 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		co.sign();
 		var coBinary = encodeToBinaryContentObject(co);
 		
-		//var ccnxnodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
-		var ccnxnodename = this.ccndid;
-		var interestName = new Name(['ccnx', ccnxnodename, 'selfreg', coBinary]);
+		//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
+		var nodename = this.ccndid;
+		var interestName = new Name(['ccnx', nodename, 'selfreg', coBinary]);
 
 		var interest = new Interest(interestName);
 		interest.scope = 1;

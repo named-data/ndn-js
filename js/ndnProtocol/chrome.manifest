@@ -1,0 +1,5 @@
+component {8122e660-1012-11e2-892e-0800200c9a66} components/ndnProtocolService.js
+contract @mozilla.org/network/protocol;1?name=ndn {8122e660-1012-11e2-892e-0800200c9a66}
+content modules modules/
+content toolbar content/
+overlay chrome://browser/content/browser.xul chrome://toolbar/content/toolbar.xul

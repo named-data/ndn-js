@@ -45,7 +45,7 @@ Name.createNameArray = function(name) {
         // Make sure the colon came before a '/'.
         var iFirstSlash = name.indexOf('/');
         if (iFirstSlash < 0 || iColon < iFirstSlash)
-            // Omit the leading protocol such as ccnx:
+            // Omit the leading protocol such as ndn:
             name = name.substr(iColon + 1, name.length - iColon - 1).trim();
     }
     
@@ -152,7 +152,7 @@ Name.prototype.add = function(component){
 	return this.components.push(result);
 };
 
-// Return the escaped name string according to "CCNx URI Scheme".  Does not include "ccnx:".
+// Return the escaped name string according to "CCNx URI Scheme".
 Name.prototype.to_uri = function() {	
 	var result = "";
 	

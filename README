@@ -1,8 +1,8 @@
-First native version of the NDN protocol written in Javascript ( Also refereed to as CCN )
+cFirst native version of the NDN protocol written in Javascript (also referred to as CCN).
 
-The goal of this project is to improve the current implementation of the NDN-JS API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that NDN-JS communicates with CCNx nodes (routers).
+The goal of this project is to improve the current implementation of the NDN.JS API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that NDN.JS communicates with CCNx nodes (routers).
 
-The current status of NDN-JS allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
+The current status of NDN.JS allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
 
 This is currently done in the following way:
 
@@ -23,45 +23,45 @@ AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
 
 ndn.expressInterest(new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt"), new AsyncGetClosure());
 
-*** Firefox extension for the ccnx protocol
+*** Firefox extension for the ndn protocol
 
-NDN-JS also includes a Firefox extension for the ccnx protocol.  To install, either download
-https://github.com/remap/ndn-js/blob/master/js/ccnxProtocol.xpi
-or use js/ccnxProtocol.xpi in the distribution.  In Firefox, open
+NDN.JS also includes a Firefox extension for the ndn protocol.  To install, either download
+https://github.com/remap/ndn-js/blob/master/js/ndnProtocol.xpi
+or use js/ndnProtocol.xpi in the distribution.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
-ccnxProtocol.xpi.  Restart Firefox.
+ndnProtocol.xpi.  Restart Firefox.
 
-Firefox uses the protocol extension to load any URI starting with ccnx, for example
-ccnx:/ndn/ucla.edu/apps/lwndn-test/trig-table
+Firefox uses the protocol extension to load any URI starting with ndn, for example
+ndn:/ndn/ucla.edu/apps/lwndn-test/trig-table
 
 When the page is loaded, Firefox updates the address bar with the full matched name from the
 retrieved content object including the version, but without the implicit digest or segment number 
 (see below).
 
-* Interest selectors in the ccnx protocol
+* Interest selectors in the ndn protocol
 
 You can add interest selectors. For example, this uses 1 to select the "rightmost" child (latest version).
-ccnx:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ccnx.ChildSelector=1&key=value#ref
+ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref
 
 The browser loads the latest version and changes the address to:
-ccnx:/ndn/ucla.edu/apps/ndn-js-test/hello.txt/%FD%05%0B%16z%22%D1?key=value#ref
+ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt/%FD%05%0B%16z%22%D1?key=value#ref
 
-The child selector was used and removed. Note that the other non-ccnx query values and 
+The child selector was used and removed. Note that the other non-ndn query values and 
 ref "?key=value#ref" are still present, in case they are needed by the web application.
 
 The following selector keys are supported:
-ccnx.MinSuffixComponent= non-negative int
-ccnx.MaxSuffixComponents= non-negative int
-ccnx.ChildSelector= non-negative int
-ccnx.AnswerOriginKind= non-negative int
-ccnx.Scope= non-negative int
-ccnx.InterestLifetime= non-negative int
-ccnx.PublisherPublicKeyDigest= % escaped value
-ccnx.Nonce= % escaped value
+ndn.MinSuffixComponent= non-negative int
+ndn.MaxSuffixComponents= non-negative int
+ndn.ChildSelector= non-negative int
+ndn.AnswerOriginKind= non-negative int
+ndn.Scope= non-negative int
+ndn.InterestLifetime= non-negative int
+ndn.PublisherPublicKeyDigest= % escaped value
+ndn.Nonce= % escaped value
 
-TODO: implement ccnx.Exclude. 
+TODO: implement ndn.Exclude. 
 
-* Multiple segments in the ccnx protocol
+* Multiple segments in the ndn protocol
 
 A URI for content with multiple segments is handled as follows.
 If the URI has a segment number, just retrieve that segment and return the content to the browser.
