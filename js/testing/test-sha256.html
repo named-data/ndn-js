@@ -10,33 +10,22 @@
 
 	<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
 	
-			
 	<script type="text/javascript">
-		function hash(){
-			
+		function hash(){			
 			var input = document.getElementById('contentname').value;
 			
-			var output = "TEST1 "+hex_sha256(input);
-			
-			output+= "<br />";
-			
-			output += "reference " +CryptoJS.SHA256(input);
+			var output = "from string- " + hex_sha256(input) + "<br/>";
+			output += "from bytes-- " + hex_sha256_from_bytes(DataUtils.toNumbersFromString(input)) + "<br/>";			
+			output += "reference---- " + CryptoJS.SHA256(input);
 			
 			document.getElementById('result').innerHTML = output;
-
-		}
-		
+		}		
 	</script>
 	
-
 </head>
 <body >
 	<form>
-		
-
-
 		Please Enter Text to Hash:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" /> <br />
-	
 	</form>
 	<button onclick="hash()">Hash</button>
 
