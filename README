@@ -1,6 +1,6 @@
-cFirst native version of the NDN protocol written in Javascript (also referred to as CCN).
+NDN.JS is the first native version of the NDN protocol (also referred to as CCN) written in JavaScript.
 
-The goal of this project is to improve the current implementation of the NDN.JS API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that NDN.JS communicates with CCNx nodes (routers).
+The goal of this project is to improve the current implementation of the NDN API that allows users to create applications running on top of the NDN network. The goal is to have a lightweight version of the protocol, which can run on browsers. The main intent is to enable browser-based applications to use NDN directly without requiring a binary build of the CCNx code. In particular, the goal is to have an AJAX-style dynamic data access. The goal is also to have a lighter version of the protocol, which would be better suited for embedded systems. Furthermore, the goal is that NDN.JS communicates with CCNx nodes (routers).
 
 The current status of NDN.JS allows for JavaScript applications running on browsers to send interest packets and retrieve data packets. This includes encoding and decoding data packets.
 
