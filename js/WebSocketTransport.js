@@ -25,12 +25,10 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		PITTable.push(pitEntry);
 		
 		this.ws.send(bytearray.buffer);
-		console.log('ws.send() returned.');
+		if (LOG > 3) console.log('ws.send() returned.');
 	}
-	else{
+	else
 		console.log('WebSocket connection is not established.');
-		return null;
-	}
 };
 
 
@@ -41,7 +39,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		delete this.ws;
 	
 	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
-	console.log('ws connection created.');
+	if (LOG > 0) console.log('ws connection created.');
 	
 	this.ws.binaryType = "arraybuffer";
 	
@@ -88,13 +86,13 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			var decoder = new BinaryXMLDecoder(self.buffer);
 			// Dispatch according to packet type
 			if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {  // Interest packet
-				console.log('Interest packet received.');
+				if (LOG > 3) console.log('Interest packet received.');
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
 				if (LOG>3) console.log(interest);
 				var nameStr = escape(interest.name.getName());
-				console.log(nameStr);
+				if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -103,13 +101,13 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
-				console.log('ContentObject packet received.');
+				if (LOG > 3) console.log('ContentObject packet received.');
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
-				if (LOG>3) console.log(co);
+				if (LOG > 3) console.log(co);
 				nameStr = co.name.getName();
-				console.log(nameStr);
+				if (LOG > 3) console.log(nameStr);
 				
 				if (self.ccndid == null && nameStr.match(ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
@@ -143,12 +141,12 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 	}
 	
 	this.ws.onopen = function(ev) {
-		console.log(ev);
-		console.log('ws.onopen: WebSocket connection opened.');
-		console.log('ws.onopen: ReadyState: ' + this.readyState);
+		if (LOG > 3) console.log(ev);
+		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
+		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		interest = new Interest(new Name(ccndIdFetcher));
+		var interest = new Interest(new Name(ccndIdFetcher));
 		interest.InterestLifetime = 4200;
 		//var hex = encodeToHexInterest(interest);
 		var hex = encodeToBinaryInterest(interest);
@@ -214,7 +212,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 	if (this.ws != null) {
 		if (this.ccndid == null) {
 			console.log('ccnd node ID unkonwn. Cannot register prefix.');
-			return;
+			return -1;
 		}
 		
 		var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
@@ -244,7 +242,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		//    ---Wentao
     	var bytearray = new Uint8Array(binaryInterest.length);
 		bytearray.set(binaryInterest);
-		console.log('Send Interest registration packet.');
+		if (LOG > 3) console.log('Send Interest registration packet.');
     	
     	var csEntry = new CSEntry(name.getName(), closure);
 		CSTable.push(csEntry);
