@@ -53,7 +53,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		} else if (result instanceof ArrayBuffer) {
 	        var bytearray = new Uint8Array(result);
 	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray);
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			
 			try {
 				if (bytearray.length + self.buffer.byteOffset >= self.buffer.byteLength) {
