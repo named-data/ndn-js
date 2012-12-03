@@ -213,12 +213,12 @@ DataUtils.HexStringtoByteArray = function(str) {
  * Uint8Array to Hex String
  */
 //http://ejohn.org/blog/numbers-hex-and-colors/
-DataUtils.toHex = function(arguments){
-	if (LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
-	//console.log(arguments);
+DataUtils.toHex = function(args){
+	if (LOG>4) console.log('ABOUT TO CONVERT '+ args);
+	//console.log(args);
   	var ret = "";
-  	for ( var i = 0; i < arguments.length; i++ )
-    	ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  	for ( var i = 0; i < args.length; i++ )
+    	ret += (args[i] < 16 ? "0" : "") + args[i].toString(16);
   	if (LOG>4) console.log('Converted to: ' + ret);
   	return ret; //.toUpperCase();
 }
@@ -226,10 +226,10 @@ DataUtils.toHex = function(arguments){
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(arguments){
+DataUtils.stringToHex = function(args){
 	var ret = "";
-	for (var i = 0; i < arguments.length; ++i) {
-		var value = arguments.charCodeAt(i);
+	for (var i = 0; i < args.length; ++i) {
+		var value = args.charCodeAt(i);
 		ret += (value < 16 ? "0" : "") + value.toString(16);
 	}
 	return ret;
@@ -238,11 +238,11 @@ DataUtils.stringToHex = function(arguments){
 /**
  * Uint8Array to raw string.
  */
-DataUtils.toString = function(arguments){
+DataUtils.toString = function(args){
   //console.log(arguments);
   var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += String.fromCharCode(arguments[i]);
+  for ( var i = 0; i < args.length; i++ )
+    ret += String.fromCharCode(args[i]);
   return ret;
 }
 

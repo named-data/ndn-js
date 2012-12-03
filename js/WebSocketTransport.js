@@ -116,10 +116,20 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
 						console.log("Cannot contact router");
+						
+						// Close NDN if we fail to connect to a ccn router
+						ndn.readyStatus = NDN.CLOSED;
+						ndn.onclose();
+						console.log("NDN.onclose event fired.");
 					} else {
 						console.log('Connected to ccnd.');
 						self.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 						if (LOG>3) console.log(self.ccndid);
+						
+						// Call NDN.onopen after success
+						ndn.readyStatus = NDN.OPENED;
+						ndn.onopen();
+						console.log("NDN.onopen event fired.");
 					}
 				} else {
 					var pitEntry = getEntryForExpressedInterest(nameStr);
@@ -172,6 +182,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 	this.ws.onclose = function(ev) {
 		console.log('ws.onclose: WebSocket connection closed.');
 		self.ws = null;
+		
+		// Close NDN when WebSocket is closed
+		ndn.readyStatus = NDN.CLOSED;
+		ndn.onclose();
+		console.log("NDN.onclose event fired.");
 	}
 }
 

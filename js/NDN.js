@@ -12,6 +12,8 @@ var LOG = 3;
  *   host: 'localhost',
  *   port: 9696,
  *   getTransport: function() { return new WebSocketTransport(); }
+ *   onopen: function() { console.log("NDN connection established."); }
+ *   onclose: function() { console.log("NDN connection closed."); }
  * }
  */
 var NDN = function NDN(settings) {
@@ -19,9 +21,16 @@ var NDN = function NDN(settings) {
 	this.host = (settings.host || "localhost");
 	this.port = (settings.port || 9696);
     var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
-    this.transport = getTransport();    
+    this.transport = getTransport();
+    this.readyStatus = NDN.UNOPEN;
+    // Event handler
+    this.onopen = (settings.onopen || function() { console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { console.log("NDN connection closed."); });
 };
 
+NDN.UNOPEN = 0;  // created but not opened yet
+NDN.OPENED = 1;  // connection to ccnd opened
+NDN.CLOSED = 2;  // connection to ccnd closed
 
 /* Java Socket Bridge and XPCOM transport */
 

@@ -59,14 +59,14 @@ document.write('<script type="text/javascript" src="' + path + 'securityLib/jsbn
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsa.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsa2.js"></script>');
 
-document.write('<script type="text/javascript" src="' + path + 'securityLib/sha1.js"></script>');
+//document.write('<script type="text/javascript" src="' + path + 'securityLib/sha1.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/sha256.js"></script>');
-document.write('<script type="text/javascript" src="' + path + 'securityLib/sha512.js"></script>');
-document.write('<script type="text/javascript" src="' + path + 'securityLib/md5.js"></script>');
-document.write('<script type="text/javascript" src="' + path + 'securityLib/ripemd160.js"></script>');
+//document.write('<script type="text/javascript" src="' + path + 'securityLib/sha512.js"></script>');
+//document.write('<script type="text/javascript" src="' + path + 'securityLib/md5.js"></script>');
+//document.write('<script type="text/javascript" src="' + path + 'securityLib/ripemd160.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/base64.js"></script>');
 
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsapem-1.1.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsasign-1.2.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/asn1hex-1.1.js"></script>');
-document.write('<script type="text/javascript" src="' + path + 'securityLib/x509-1.1.js"></script>');
+//document.write('<script type="text/javascript" src="' + path + 'securityLib/x509-1.1.js"></script>');
