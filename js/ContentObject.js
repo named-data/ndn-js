@@ -197,26 +197,6 @@ var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
 	this.digestAlgorithm = _digestAlgorithm//String _digestAlgorithm;
 };
 
-var generateSignature = function(contentName,content,signedinfo){
-	
-	var enc = new BinaryXMLEncoder();
-	contentName.to_ccnb(enc);
-	var hex1 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	content.to_ccnb(enc);
-	var hex2 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	signedinfo.to_ccnb(enc);
-	var hex3 = toHex(enc.getReducedOstream());
-
-	var hex = hex1+hex2+hex3;
-
-	//globalKeyManager.sig
-
-};
-
 Signature.prototype.from_ccnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
 		

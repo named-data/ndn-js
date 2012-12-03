@@ -4,7 +4,7 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var LOG = 3;
+var LOG = 0;
 
 /**
  * settings is an associative array with the following defaults:

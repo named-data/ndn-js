@@ -5,8 +5,8 @@
  * See COPYING for copyright and distribution information.
  */
 
-var EXPORTED_SYMBOLS = ["NDN", "Closure", "Name", "Interest", "ContentObject",
-      "DataUtils", "MimeTypes", "XpcomTransport"];
+var EXPORTED_SYMBOLS = ["Closure", "ContentObject", "DataUtils", "Interest", "MimeTypes", "NDN", 
+      "Name", "Sha256", "XpcomTransport"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
@@ -96,7 +96,7 @@ UpcallInfo.prototype.toString = function() {
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var LOG = 3;
+var LOG = 0;
 
 /**
  * settings is an associative array with the following defaults:
@@ -729,6 +729,32 @@ Name.prototype.indexOfFileName = function() {
     return -1;
 }
 
+/*
+ * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ *   or null if not found.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.prototype.getContentDigestValue = function() {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+        if (this.components[i].length == digestComponentLength &&
+            DataUtils.arraysEqual(this.components[i].subarray(0, Name.ContentDigestPrefix.length), 
+                                  Name.ContentDigestPrefix) &&
+            DataUtils.arraysEqual(this.components[i].subarray
+               (this.components[i].length - Name.ContentDigestSuffix.length, this.components[i].length),
+                                  Name.ContentDigestSuffix))
+           return this.components[i].subarray
+               (Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+    }
+    
+    return null;
+}
+
+// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
+Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Uint8Array([0x00]);
+
 /**
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
@@ -959,26 +985,6 @@ var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
     this.Witness = _witness;//byte [] _witness;
 	this.signature = _signature;//byte [] _signature;
 	this.digestAlgorithm = _digestAlgorithm//String _digestAlgorithm;
-};
-
-var generateSignature = function(contentName,content,signedinfo){
-	
-	var enc = new BinaryXMLEncoder();
-	contentName.to_ccnb(enc);
-	var hex1 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	content.to_ccnb(enc);
-	var hex2 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	signedinfo.to_ccnb(enc);
-	var hex3 = toHex(enc.getReducedOstream());
-
-	var hex = hex1+hex2+hex3;
-
-	//globalKeyManager.sig
-
 };
 
 Signature.prototype.from_ccnb =function( decoder) {
@@ -5492,8 +5498,10 @@ function rstr2binb(input)
 {
   //console.log('Raw string comming is '+input);
   var output = Array(input.length >> 2);
+  /* JavaScript automatically zeroizes a new array.
   for(var i = 0; i < output.length; i++)
     output[i] = 0;
+   */
   for(var i = 0; i < input.length * 8; i += 8)
     output[i>>5] |= (input.charCodeAt(i / 8) & 0xFF) << (24 - i % 32);
   return output;
@@ -5508,8 +5516,10 @@ function rstr2binb(input)
 function byteArray2binb(input){
 	//console.log("Byte array coming is " + input);
 	var output = Array(input.length >> 2);
+      /* JavaScript automatically zeroizes a new array.
 	  for(var i = 0; i < output.length; i++)
 	    output[i] = 0;
+       */
 	  for(var i = 0; i < input.length * 8; i += 8)
 	    output[i>>5] |= (input[i / 8] & 0xFF) << (24 - i % 32);
 	  return output;
@@ -5562,15 +5572,25 @@ function binb_sha256(m, l)
   var HASH = new Array(1779033703, -1150833019, 1013904242, -1521486534,
                        1359893119, -1694144372, 528734635, 1541459225);
   var W = new Array(64);
-  var a, b, c, d, e, f, g, h;
-  var i, j, T1, T2;
 
   /* append padding */
   m[l >> 5] |= 0x80 << (24 - l % 32);
   m[((l + 64 >> 9) << 4) + 15] = l;
+ 
+  for(var offset = 0; offset < m.length; offset += 16)
+    processBlock_sha256(m, offset, HASH, W);
 
-  for(i = 0; i < m.length; i += 16)
-  {
+  return HASH;
+}
+
+/*
+ * Process a block of 16 4-byte words in m starting at offset and update HASH.  
+ * offset must be a multiple of 16 and less than m.length.  W is a scratchpad Array(64).
+ */
+function processBlock_sha256(m, offset, HASH, W) {
+    var a, b, c, d, e, f, g, h;
+    var j, T1, T2;
+    
     a = HASH[0];
     b = HASH[1];
     c = HASH[2];
@@ -5582,7 +5602,7 @@ function binb_sha256(m, l)
 
     for(j = 0; j < 64; j++)
     {
-      if (j < 16) W[j] = m[j + i];
+      if (j < 16) W[j] = m[j + offset];
       else W[j] = safe_add(safe_add(safe_add(sha256_Gamma1256(W[j - 2]), W[j - 7]),
                                             sha256_Gamma0256(W[j - 15])), W[j - 16]);
 
@@ -5607,8 +5627,6 @@ function binb_sha256(m, l)
     HASH[5] = safe_add(f, HASH[5]);
     HASH[6] = safe_add(g, HASH[6]);
     HASH[7] = safe_add(h, HASH[7]);
-  }
-  return HASH;
 }
 
 function safe_add (x, y)
@@ -5616,6 +5634,90 @@ function safe_add (x, y)
   var lsw = (x & 0xFFFF) + (y & 0xFFFF);
   var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
   return (msw << 16) | (lsw & 0xFFFF);
+}
+
+/*
+ * Create a Sha256, call update(data) multiple times, then call finalize().
+ */
+var Sha256 = function Sha256() {
+    this.W = new Array(64);
+    this.hash = new Array(1779033703, -1150833019, 1013904242, -1521486534,
+                          1359893119, -1694144372, 528734635, 1541459225);
+    this.nTotalBytes = 0;
+    this.buffer = new Uint8Array(16 * 4);
+    this.nBufferBytes = 0;
+}
+
+/*
+ * Update the hash with data, which is Uint8Array.
+ */
+Sha256.prototype.update = function(data) {
+    this.nTotalBytes += data.length;
+    
+    if (this.nBufferBytes > 0) {
+        // Fill up the buffer and process it first.
+        var bytesNeeded = this.buffer.length - this.nBufferBytes;
+        if (data.length < bytesNeeded) {
+            this.buffer.set(data, this.nBufferBytes);
+            this.nBufferBytes += data.length;
+            return;
+        }
+        else {
+            this.buffer.set(data.subarray(0, bytesNeeded), this.nBufferBytes);
+            processBlock_sha256(byteArray2binb(this.buffer), 0, this.hash, this.W);
+            this.nBufferBytes = 0;
+            // Consume the bytes from data.
+            data = data.subarray(bytesNeeded, data.length);
+            if (data.length == 0)
+                return;
+        }
+    }
+    
+    // 2^6 is 16 * 4.
+    var nBlocks = data.length >> 6;
+    if (nBlocks > 0) {
+        var nBytes = nBlocks * 16 * 4;
+        var m = byteArray2binb(data.subarray(0, nBytes));
+        for(var offset = 0; offset < m.length; offset += 16)
+            processBlock_sha256(m, offset, this.hash, this.W);
+
+        data = data.subarray(nBytes, data.length);
+    }
+    
+    if (data.length > 0) {
+        // Save the remainder in the buffer.
+        this.buffer.set(data);
+        this.nBufferBytes = data.length;
+    }
+}
+
+/*
+ * Finalize the hash and return the result as Uint8Array.
+ * Only call this once.  Return values on subsequent calls are undefined.
+ */
+Sha256.prototype.finalize = function() {
+    var m = byteArray2binb(this.buffer.subarray(0, this.nBufferBytes));
+    /* append padding */
+    var l = this.nBufferBytes * 8;
+    m[l >> 5] |= 0x80 << (24 - l % 32);
+    m[((l + 64 >> 9) << 4) + 15] = this.nTotalBytes * 8;
+
+    for(var offset = 0; offset < m.length; offset += 16)
+        processBlock_sha256(m, offset, this.hash, this.W);
+
+    return Sha256.binb2Uint8Array(this.hash);
+}
+
+/*
+ * Convert an array of big-endian words to Uint8Array.
+ */
+Sha256.binb2Uint8Array = function(input)
+{
+    var output = new Uint8Array(input.length * 4);
+    var iOutput = 0;
+    for (var i = 0; i < input.length * 32; i += 8)
+        output[iOutput++] = (input[i>>5] >>> (24 - i % 32)) & 0xFF;
+    return output;
 }
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-512, as defined
