@@ -1,4 +1,4 @@
-/* 
+/** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
@@ -12,25 +12,6 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.buffer = new Uint8Array(this.maxBufferSize);
 	this.structureDecoder = new BinaryXMLStructureDecoder();
 };
-
-WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-	if (this.ws != null) {
-		//TODO: check local content store first
-
-        var binaryInterest = encodeToBinaryInterest(interest);
-		var bytearray = new Uint8Array(binaryInterest.length);
-		bytearray.set(binaryInterest);
-		
-		var pitEntry = new PITEntry(interest.name.getName(), closure);
-		PITTable.push(pitEntry);
-		
-		this.ws.send(bytearray.buffer);
-		if (LOG > 3) console.log('ws.send() returned.');
-	}
-	else
-		console.log('WebSocket connection is not established.');
-};
-
 
 var ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
 
@@ -133,6 +114,12 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					var pitEntry = getEntryForExpressedInterest(nameStr);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
+						
+						// Cancel interest timer
+						clearTimeout(pitEntry.closure.timerID);
+						//console.log("Clear interest timer");
+						//console.log(pitEntry.closure.timerID);
+						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
 					}
 				}
@@ -205,6 +192,38 @@ function getEntryForExpressedInterest(name) {
 	}
 	return null;
 }
+
+WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
+	if (this.ws != null) {
+		//TODO: check local content store first
+
+        var binaryInterest = encodeToBinaryInterest(interest);
+		var bytearray = new Uint8Array(binaryInterest.length);
+		bytearray.set(binaryInterest);
+		
+		var pitEntry = new PITEntry(interest.name.getName(), closure);
+		PITTable.push(pitEntry);
+		
+		this.ws.send(bytearray.buffer);
+		if (LOG > 3) console.log('ws.send() returned.');
+		
+		// Set interest timer
+		closure.timerID = setTimeout(function() {
+			console.log("Interest time out.");
+			
+			// Remove PIT entry from PITTable
+			index = PITTable.indexOf(pitEntry);
+			//console.log(PITTable);
+			PITTable.splice(index, 1);
+			//console.log(PITTable);
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
+		}, NDN.InterestTimeOut);
+		//console.log(closure.timerID);
+	}
+	else
+		console.log('WebSocket connection is not established.');
+};
 
 
 // For publishing data

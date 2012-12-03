@@ -1,4 +1,4 @@
-/*
+/**
  * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.
@@ -12,8 +12,8 @@ var LOG = 0;
  *   host: 'localhost',
  *   port: 9696,
  *   getTransport: function() { return new WebSocketTransport(); }
- *   onopen: function() { console.log("NDN connection established."); }
- *   onclose: function() { console.log("NDN connection closed."); }
+ *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
+ *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
  * }
  */
 var NDN = function NDN(settings) {
@@ -24,13 +24,15 @@ var NDN = function NDN(settings) {
     this.transport = getTransport();
     this.readyStatus = NDN.UNOPEN;
     // Event handler
-    this.onopen = (settings.onopen || function() { console.log("NDN connection established."); });
-    this.onclose = (settings.onclose || function() { console.log("NDN connection closed."); });
+    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 };
 
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
+
+NDN.InterestTimeOut = 5000; // 5000 ms timeout for pending interest
 
 /* Java Socket Bridge and XPCOM transport */
 

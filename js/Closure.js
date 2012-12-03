@@ -1,4 +1,4 @@
-/* 
+/**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Provide the callback closure for the async communication methods in the NDN class.
@@ -18,6 +18,8 @@ var Closure = function Closure() {
 	// Use instance variables to return data to callback
 	this.ndn_data = null;  // this holds the ndn_closure
     this.ndn_data_dirty = false;
+    
+    this.timerID = -1;  // Store the interest timer; used to cancel the timer upon receiving interest
 };
 
 // Upcall result

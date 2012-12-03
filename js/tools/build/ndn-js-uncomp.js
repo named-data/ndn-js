@@ -1,4 +1,4 @@
-/* 
+/**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Provide the callback closure for the async communication methods in the NDN class.
@@ -18,6 +18,8 @@ var Closure = function Closure() {
 	// Use instance variables to return data to callback
 	this.ndn_data = null;  // this holds the ndn_closure
     this.ndn_data_dirty = false;
+    
+    this.timerID = -1;  // Store the interest timer; used to cancel the timer upon receiving interest
 };
 
 // Upcall result
@@ -62,13 +64,13 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
-/*
+/**
  * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var LOG = 3;
+var LOG = 0;
 
 /**
  * settings is an associative array with the following defaults:
@@ -76,8 +78,8 @@ var LOG = 3;
  *   host: 'localhost',
  *   port: 9696,
  *   getTransport: function() { return new WebSocketTransport(); }
- *   onopen: function() { console.log("NDN connection established."); }
- *   onclose: function() { console.log("NDN connection closed."); }
+ *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
+ *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
  * }
  */
 var NDN = function NDN(settings) {
@@ -88,13 +90,15 @@ var NDN = function NDN(settings) {
     this.transport = getTransport();
     this.readyStatus = NDN.UNOPEN;
     // Event handler
-    this.onopen = (settings.onopen || function() { console.log("NDN connection established."); });
-    this.onclose = (settings.onclose || function() { console.log("NDN connection closed."); });
+    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 };
 
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
+
+NDN.InterestTimeOut = 5000; // 5000 ms timeout for pending interest
 
 /* Java Socket Bridge and XPCOM transport */
 
@@ -141,7 +145,7 @@ NDN.prototype.expressInterest = function(
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     return this.transport.registerPrefix(this, name, closure, flag);
 }
-/* 
+/** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
@@ -156,27 +160,6 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-	if (this.ws != null) {
-		//TODO: check local content store first
-
-        var binaryInterest = encodeToBinaryInterest(interest);
-		var bytearray = new Uint8Array(binaryInterest.length);
-		bytearray.set(binaryInterest);
-		
-		var pitEntry = new PITEntry(interest.name.getName(), closure);
-		PITTable.push(pitEntry);
-		
-		this.ws.send(bytearray.buffer);
-		console.log('ws.send() returned.');
-	}
-	else{
-		console.log('WebSocket connection is not established.');
-		return null;
-	}
-};
-
-
 var ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
 
 WebSocketTransport.prototype.connectWebSocket = function(ndn) {
@@ -184,7 +167,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		delete this.ws;
 	
 	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
-	console.log('ws connection created.');
+	if (LOG > 0) console.log('ws connection created.');
 	
 	this.ws.binaryType = "arraybuffer";
 	
@@ -198,7 +181,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		} else if (result instanceof ArrayBuffer) {
 	        var bytearray = new Uint8Array(result);
 	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray);
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			
 			try {
 				if (bytearray.length + self.buffer.byteOffset >= self.buffer.byteLength) {
@@ -231,13 +214,13 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			var decoder = new BinaryXMLDecoder(self.buffer);
 			// Dispatch according to packet type
 			if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {  // Interest packet
-				console.log('Interest packet received.');
+				if (LOG > 3) console.log('Interest packet received.');
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
 				if (LOG>3) console.log(interest);
 				var nameStr = escape(interest.name.getName());
-				console.log(nameStr);
+				if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -246,38 +229,44 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
-				console.log('ContentObject packet received.');
+				if (LOG > 3) console.log('ContentObject packet received.');
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
-				if (LOG>3) console.log(co);
+				if (LOG > 3) console.log(co);
 				nameStr = co.name.getName();
-				console.log(nameStr);
+				if (LOG > 3) console.log(nameStr);
 				
 				if (self.ccndid == null && nameStr.match(ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
-						console.log("Cannot contact router");
+						console.log("Cannot contact router, close NDN now.");
 						
 						// Close NDN if we fail to connect to a ccn router
 						ndn.readyStatus = NDN.CLOSED;
 						ndn.onclose();
-						console.log("NDN.onclose event fired.");
+						//console.log("NDN.onclose event fired.");
 					} else {
-						console.log('Connected to ccnd.');
+						//console.log('Connected to ccnd.');
 						self.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 						if (LOG>3) console.log(self.ccndid);
 						
 						// Call NDN.onopen after success
 						ndn.readyStatus = NDN.OPENED;
 						ndn.onopen();
-						console.log("NDN.onopen event fired.");
+						//console.log("NDN.onopen event fired.");
 					}
 				} else {
 					var pitEntry = getEntryForExpressedInterest(nameStr);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
+						
+						// Cancel interest timer
+						clearTimeout(pitEntry.closure.timerID);
+						//console.log("Clear interest timer");
+						//console.log(pitEntry.closure.timerID);
+						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
 					}
 				}
@@ -296,12 +285,12 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 	}
 	
 	this.ws.onopen = function(ev) {
-		console.log(ev);
-		console.log('ws.onopen: WebSocket connection opened.');
-		console.log('ws.onopen: ReadyState: ' + this.readyState);
+		if (LOG > 3) console.log(ev);
+		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
+		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		interest = new Interest(new Name(ccndIdFetcher));
+		var interest = new Interest(new Name(ccndIdFetcher));
 		interest.InterestLifetime = 4200;
 		//var hex = encodeToHexInterest(interest);
 		var hex = encodeToBinaryInterest(interest);
@@ -329,7 +318,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		// Close NDN when WebSocket is closed
 		ndn.readyStatus = NDN.CLOSED;
 		ndn.onclose();
-		console.log("NDN.onclose event fired.");
+		//console.log("NDN.onclose event fired.");
 	}
 }
 
@@ -350,6 +339,38 @@ function getEntryForExpressedInterest(name) {
 	}
 	return null;
 }
+
+WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
+	if (this.ws != null) {
+		//TODO: check local content store first
+
+        var binaryInterest = encodeToBinaryInterest(interest);
+		var bytearray = new Uint8Array(binaryInterest.length);
+		bytearray.set(binaryInterest);
+		
+		var pitEntry = new PITEntry(interest.name.getName(), closure);
+		PITTable.push(pitEntry);
+		
+		this.ws.send(bytearray.buffer);
+		if (LOG > 3) console.log('ws.send() returned.');
+		
+		// Set interest timer
+		closure.timerID = setTimeout(function() {
+			console.log("Interest time out.");
+			
+			// Remove PIT entry from PITTable
+			index = PITTable.indexOf(pitEntry);
+			//console.log(PITTable);
+			PITTable.splice(index, 1);
+			//console.log(PITTable);
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
+		}, NDN.InterestTimeOut);
+		//console.log(closure.timerID);
+	}
+	else
+		console.log('WebSocket connection is not established.');
+};
 
 
 // For publishing data
@@ -372,7 +393,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 	if (this.ws != null) {
 		if (this.ccndid == null) {
 			console.log('ccnd node ID unkonwn. Cannot register prefix.');
-			return;
+			return -1;
 		}
 		
 		var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
@@ -402,7 +423,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		//    ---Wentao
     	var bytearray = new Uint8Array(binaryInterest.length);
 		bytearray.set(binaryInterest);
-		console.log('Send Interest registration packet.');
+		if (LOG > 3) console.log('Send Interest registration packet.');
     	
     	var csEntry = new CSEntry(name.getName(), closure);
 		CSTable.push(csEntry);
@@ -876,6 +897,32 @@ Name.prototype.indexOfFileName = function() {
     return -1;
 }
 
+/*
+ * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ *   or null if not found.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.prototype.getContentDigestValue = function() {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+        if (this.components[i].length == digestComponentLength &&
+            DataUtils.arraysEqual(this.components[i].subarray(0, Name.ContentDigestPrefix.length), 
+                                  Name.ContentDigestPrefix) &&
+            DataUtils.arraysEqual(this.components[i].subarray
+               (this.components[i].length - Name.ContentDigestSuffix.length, this.components[i].length),
+                                  Name.ContentDigestSuffix))
+           return this.components[i].subarray
+               (Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+    }
+    
+    return null;
+}
+
+// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
+Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Uint8Array([0x00]);
+
 /**
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
@@ -1106,26 +1153,6 @@ var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
     this.Witness = _witness;//byte [] _witness;
 	this.signature = _signature;//byte [] _signature;
 	this.digestAlgorithm = _digestAlgorithm//String _digestAlgorithm;
-};
-
-var generateSignature = function(contentName,content,signedinfo){
-	
-	var enc = new BinaryXMLEncoder();
-	contentName.to_ccnb(enc);
-	var hex1 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	content.to_ccnb(enc);
-	var hex2 = toHex(enc.getReducedOstream());
-
-	var enc = new BinaryXMLEncoder();
-	signedinfo.to_ccnb(enc);
-	var hex3 = toHex(enc.getReducedOstream());
-
-	var hex = hex1+hex2+hex3;
-
-	//globalKeyManager.sig
-
 };
 
 Signature.prototype.from_ccnb =function( decoder) {
@@ -4761,8 +4788,10 @@ function rstr2binb(input)
 {
   //console.log('Raw string comming is '+input);
   var output = Array(input.length >> 2);
+  /* JavaScript automatically zeroizes a new array.
   for(var i = 0; i < output.length; i++)
     output[i] = 0;
+   */
   for(var i = 0; i < input.length * 8; i += 8)
     output[i>>5] |= (input.charCodeAt(i / 8) & 0xFF) << (24 - i % 32);
   return output;
@@ -4777,8 +4806,10 @@ function rstr2binb(input)
 function byteArray2binb(input){
 	//console.log("Byte array coming is " + input);
 	var output = Array(input.length >> 2);
+      /* JavaScript automatically zeroizes a new array.
 	  for(var i = 0; i < output.length; i++)
 	    output[i] = 0;
+       */
 	  for(var i = 0; i < input.length * 8; i += 8)
 	    output[i>>5] |= (input[i / 8] & 0xFF) << (24 - i % 32);
 	  return output;
@@ -4831,15 +4862,25 @@ function binb_sha256(m, l)
   var HASH = new Array(1779033703, -1150833019, 1013904242, -1521486534,
                        1359893119, -1694144372, 528734635, 1541459225);
   var W = new Array(64);
-  var a, b, c, d, e, f, g, h;
-  var i, j, T1, T2;
 
   /* append padding */
   m[l >> 5] |= 0x80 << (24 - l % 32);
   m[((l + 64 >> 9) << 4) + 15] = l;
+ 
+  for(var offset = 0; offset < m.length; offset += 16)
+    processBlock_sha256(m, offset, HASH, W);
 
-  for(i = 0; i < m.length; i += 16)
-  {
+  return HASH;
+}
+
+/*
+ * Process a block of 16 4-byte words in m starting at offset and update HASH.  
+ * offset must be a multiple of 16 and less than m.length.  W is a scratchpad Array(64).
+ */
+function processBlock_sha256(m, offset, HASH, W) {
+    var a, b, c, d, e, f, g, h;
+    var j, T1, T2;
+    
     a = HASH[0];
     b = HASH[1];
     c = HASH[2];
@@ -4851,7 +4892,7 @@ function binb_sha256(m, l)
 
     for(j = 0; j < 64; j++)
     {
-      if (j < 16) W[j] = m[j + i];
+      if (j < 16) W[j] = m[j + offset];
       else W[j] = safe_add(safe_add(safe_add(sha256_Gamma1256(W[j - 2]), W[j - 7]),
                                             sha256_Gamma0256(W[j - 15])), W[j - 16]);
 
@@ -4876,8 +4917,6 @@ function binb_sha256(m, l)
     HASH[5] = safe_add(f, HASH[5]);
     HASH[6] = safe_add(g, HASH[6]);
     HASH[7] = safe_add(h, HASH[7]);
-  }
-  return HASH;
 }
 
 function safe_add (x, y)
@@ -4885,6 +4924,90 @@ function safe_add (x, y)
   var lsw = (x & 0xFFFF) + (y & 0xFFFF);
   var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
   return (msw << 16) | (lsw & 0xFFFF);
+}
+
+/*
+ * Create a Sha256, call update(data) multiple times, then call finalize().
+ */
+var Sha256 = function Sha256() {
+    this.W = new Array(64);
+    this.hash = new Array(1779033703, -1150833019, 1013904242, -1521486534,
+                          1359893119, -1694144372, 528734635, 1541459225);
+    this.nTotalBytes = 0;
+    this.buffer = new Uint8Array(16 * 4);
+    this.nBufferBytes = 0;
+}
+
+/*
+ * Update the hash with data, which is Uint8Array.
+ */
+Sha256.prototype.update = function(data) {
+    this.nTotalBytes += data.length;
+    
+    if (this.nBufferBytes > 0) {
+        // Fill up the buffer and process it first.
+        var bytesNeeded = this.buffer.length - this.nBufferBytes;
+        if (data.length < bytesNeeded) {
+            this.buffer.set(data, this.nBufferBytes);
+            this.nBufferBytes += data.length;
+            return;
+        }
+        else {
+            this.buffer.set(data.subarray(0, bytesNeeded), this.nBufferBytes);
+            processBlock_sha256(byteArray2binb(this.buffer), 0, this.hash, this.W);
+            this.nBufferBytes = 0;
+            // Consume the bytes from data.
+            data = data.subarray(bytesNeeded, data.length);
+            if (data.length == 0)
+                return;
+        }
+    }
+    
+    // 2^6 is 16 * 4.
+    var nBlocks = data.length >> 6;
+    if (nBlocks > 0) {
+        var nBytes = nBlocks * 16 * 4;
+        var m = byteArray2binb(data.subarray(0, nBytes));
+        for(var offset = 0; offset < m.length; offset += 16)
+            processBlock_sha256(m, offset, this.hash, this.W);
+
+        data = data.subarray(nBytes, data.length);
+    }
+    
+    if (data.length > 0) {
+        // Save the remainder in the buffer.
+        this.buffer.set(data);
+        this.nBufferBytes = data.length;
+    }
+}
+
+/*
+ * Finalize the hash and return the result as Uint8Array.
+ * Only call this once.  Return values on subsequent calls are undefined.
+ */
+Sha256.prototype.finalize = function() {
+    var m = byteArray2binb(this.buffer.subarray(0, this.nBufferBytes));
+    /* append padding */
+    var l = this.nBufferBytes * 8;
+    m[l >> 5] |= 0x80 << (24 - l % 32);
+    m[((l + 64 >> 9) << 4) + 15] = this.nTotalBytes * 8;
+
+    for(var offset = 0; offset < m.length; offset += 16)
+        processBlock_sha256(m, offset, this.hash, this.W);
+
+    return Sha256.binb2Uint8Array(this.hash);
+}
+
+/*
+ * Convert an array of big-endian words to Uint8Array.
+ */
+Sha256.binb2Uint8Array = function(input)
+{
+    var output = new Uint8Array(input.length * 4);
+    var iOutput = 0;
+    for (var i = 0; i < input.length * 32; i += 8)
+        output[iOutput++] = (input[i>>5] >>> (24 - i % 32)) & 0xFF;
+    return output;
 }
 var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var b64pad="=";

@@ -19,16 +19,18 @@
 		};
 		
 		AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
+			//console.log("Closure.upcall() executed.");
 			if (kind == Closure.UPCALL_FINAL) {
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_CONTENT) {
-				console.log("Closure.upcall() executed.");
 				var content = upcallInfo.contentObject;
 				nameStr = escape(content.name.getName());
 				console.log("In callback, nameStr: " + nameStr);
 				console.log("In callback, content: ");
 				console.log(content);
 				document.getElementById('content').innerHTML = contentObjectToHtml(content);
+			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+				console.log("Closure.upcall called with interest time out.");
 			}
 			return Closure.RESULT_OK;
 		};
