@@ -199,6 +199,32 @@ Name.prototype.indexOfFileName = function() {
     return -1;
 }
 
+/*
+ * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ *   or null if not found.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.prototype.getContentDigestValue = function() {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+        if (this.components[i].length == digestComponentLength &&
+            DataUtils.arraysEqual(this.components[i].subarray(0, Name.ContentDigestPrefix.length), 
+                                  Name.ContentDigestPrefix) &&
+            DataUtils.arraysEqual(this.components[i].subarray
+               (this.components[i].length - Name.ContentDigestSuffix.length, this.components[i].length),
+                                  Name.ContentDigestSuffix))
+           return this.components[i].subarray
+               (Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+    }
+    
+    return null;
+}
+
+// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
+Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Uint8Array([0x00]);
+
 /**
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
