@@ -11,11 +11,21 @@
 	<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
 	
 	<script type="text/javascript">
-		function hash(){			
+		function hash(){		
 			var input = document.getElementById('contentname').value;
 			
 			var output = "from string- " + hex_sha256(input) + "<br/>";
-			output += "from bytes-- " + hex_sha256_from_bytes(DataUtils.toNumbersFromString(input)) + "<br/>";			
+            
+            var sha256 = new Sha256();
+            var data = DataUtils.toNumbersFromString(input);
+            // Call update multiple times in small chunks to test the buffering.
+            var chunkSize = 3;
+            var nCalls = Math.floor(data / chunkSize);
+            for (var i = 0; i < nCalls; ++i)
+                sha256.update(data.subarray(i * chunkSize, chunkSize));
+            sha256.update(data.subarray(i * nCalls, data.length));
+			output += "from bytes-- " + DataUtils.toHex(sha256.finalize()) + "<br/>";			
+            
 			output += "reference---- " + CryptoJS.SHA256(input);
 			
 			document.getElementById('result').innerHTML = output;
