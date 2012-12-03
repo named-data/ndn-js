@@ -113,21 +113,21 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
-						console.log("Cannot contact router");
+						console.log("Cannot contact router, close NDN now.");
 						
 						// Close NDN if we fail to connect to a ccn router
 						ndn.readyStatus = NDN.CLOSED;
 						ndn.onclose();
-						console.log("NDN.onclose event fired.");
+						//console.log("NDN.onclose event fired.");
 					} else {
-						console.log('Connected to ccnd.');
+						//console.log('Connected to ccnd.');
 						self.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 						if (LOG>3) console.log(self.ccndid);
 						
 						// Call NDN.onopen after success
 						ndn.readyStatus = NDN.OPENED;
 						ndn.onopen();
-						console.log("NDN.onopen event fired.");
+						//console.log("NDN.onopen event fired.");
 					}
 				} else {
 					var pitEntry = getEntryForExpressedInterest(nameStr);
@@ -184,7 +184,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		// Close NDN when WebSocket is closed
 		ndn.readyStatus = NDN.CLOSED;
 		ndn.onclose();
-		console.log("NDN.onclose event fired.");
+		//console.log("NDN.onclose event fired.");
 	}
 }
 
