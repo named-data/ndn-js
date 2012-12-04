@@ -98,8 +98,6 @@ NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
 
-NDN.InterestTimeOut = 5000; // 5000 ms timeout for pending interest
-
 /* Java Socket Bridge and XPCOM transport */
 
 NDN.prototype.createRoute = function(host,port){
@@ -136,7 +134,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4200;
+        interest.interestLifetime = 4200;   // default interest timeout value
     
     this.transport.expressInterest(this, interest, closure);
 };
@@ -266,6 +264,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						clearTimeout(pitEntry.closure.timerID);
 						//console.log("Clear interest timer");
 						//console.log(pitEntry.closure.timerID);
+						
+						// Remove PIT entry from PITTable
+						index = PITTable.indexOf(pitEntry);
+						PITTable.splice(index, 1);
+						
 						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
 					}
@@ -356,7 +359,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		
 		// Set interest timer
 		closure.timerID = setTimeout(function() {
-			console.log("Interest time out.");
+			if (LOG > 3) console.log("Interest time out.");
 			
 			// Remove PIT entry from PITTable
 			index = PITTable.indexOf(pitEntry);
@@ -365,7 +368,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, NDN.InterestTimeOut);
+		}, interest.interestLifetime);
 		//console.log(closure.timerID);
 	}
 	else
@@ -437,7 +440,7 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 	}
 }
 
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class contains all CCNx tags
@@ -593,7 +596,7 @@ var CCNProtocolDTagsStrings = [
 //TESTING
 //console.log(exports.CCNProtocolDTagsStrings[17]);
 
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents CCNTime Objects
@@ -696,7 +699,7 @@ unsignedLongToByteArray= function( value) {
 	return out;
 }*/
 	
-/*
+/**
  * @author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
@@ -956,7 +959,7 @@ Name.toEscapedString = function(component) {
     }
     return result;
 };
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents ContentObject Objects
@@ -1522,7 +1525,7 @@ DateFormat.i18n = {
 Date.prototype.format = function (mask, utc) {
 	return dateFormat(this, mask, utc);
 };
- /*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
@@ -1746,7 +1749,7 @@ ExcludeComponent.prototype.to_ccnb = function(encoder) {
 };
 
 ExcludeComponent.prototype.getElementLabel = function() { return CCNProtocolDTags.Component; };
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Key Objects
@@ -1941,7 +1944,7 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Publisher and PublisherType Objects
@@ -2037,7 +2040,7 @@ PublisherID.prototype.validate = function(){
 
 
 
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents PublisherPublicKeyDigest Objects
@@ -2088,7 +2091,7 @@ PublisherPublicKeyDigest.prototype.getElementLabel = function() { return CCNProt
 PublisherPublicKeyDigest.prototype.validate =function() {
 		return (null != this.publisherPublicKeyDigest);
 };
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Face Instances
@@ -2247,7 +2250,7 @@ FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 
 FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceInstance;};
 
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Forwarding Entries
@@ -2347,7 +2350,7 @@ encoder)
 		};
 
 ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags.ForwardingEntry; }
-/*
+/**
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
@@ -2745,7 +2748,7 @@ BinaryXMLEncoder.prototype.getReducedOstream = function() {
 	return this.ostream.subarray(0, this.offset);
 };
 
-/*
+/**
  * This class is used to decode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
@@ -3474,7 +3477,7 @@ function ContentDecodingException(error) {
 ContentDecodingException.prototype = new Error();
 ContentDecodingException.prototype.name = "ContentDecodingException";
 
-/*
+/**
  * This class uses BinaryXMLDecoder to follow the structure of a ccnb binary element to 
  * determine its end.
  * 
@@ -3652,7 +3655,7 @@ BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferO
         this.headerBuffer = newHeaderBuffer;
     }
     this.headerBuffer.set(subarray, bufferOffset);
-}/*
+}/**
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -4084,7 +4087,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
     }
     return result.subarray(size - i, size);
 };
-/*
+/**
  * This file contains utilities to help encode and decode NDN objects.
  * author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -4429,7 +4432,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 
     return output;
 }
-/*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */

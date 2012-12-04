@@ -91,6 +91,8 @@ var LOG = 3;
  *   host: 'localhost',
  *   port: 9696,
  *   getTransport: function() { return new WebSocketTransport(); }
+ *   onopen: function() { console.log("NDN connection established."); }
+ *   onclose: function() { console.log("NDN connection closed."); }
  * }
  */
 var NDN = function NDN(settings) {
@@ -98,9 +100,16 @@ var NDN = function NDN(settings) {
 	this.host = (settings.host || "localhost");
 	this.port = (settings.port || 9696);
     var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
-    this.transport = getTransport();    
+    this.transport = getTransport();
+    this.readyStatus = NDN.UNOPEN;
+    // Event handler
+    this.onopen = (settings.onopen || function() { console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { console.log("NDN connection closed."); });
 };
 
+NDN.UNOPEN = 0;  // created but not opened yet
+NDN.OPENED = 1;  // connection to ccnd opened
+NDN.CLOSED = 2;  // connection to ccnd closed
 
 /* Java Socket Bridge and XPCOM transport */
 
@@ -265,10 +274,20 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
 						console.log("Cannot contact router");
+						
+						// Close NDN if we fail to connect to a ccn router
+						ndn.readyStatus = NDN.CLOSED;
+						ndn.onclose();
+						console.log("NDN.onclose event fired.");
 					} else {
 						console.log('Connected to ccnd.');
 						self.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 						if (LOG>3) console.log(self.ccndid);
+						
+						// Call NDN.onopen after success
+						ndn.readyStatus = NDN.OPENED;
+						ndn.onopen();
+						console.log("NDN.onopen event fired.");
 					}
 				} else {
 					var pitEntry = getEntryForExpressedInterest(nameStr);
@@ -321,6 +340,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 	this.ws.onclose = function(ev) {
 		console.log('ws.onclose: WebSocket connection closed.');
 		self.ws = null;
+		
+		// Close NDN when WebSocket is closed
+		ndn.readyStatus = NDN.CLOSED;
+		ndn.onclose();
+		console.log("NDN.onclose event fired.");
 	}
 }
 
@@ -376,9 +400,9 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		co.sign();
 		var coBinary = encodeToBinaryContentObject(co);
 		
-		//var ccnxnodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
-		var ccnxnodename = this.ccndid;
-		var interestName = new Name(['ccnx', ccnxnodename, 'selfreg', coBinary]);
+		//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
+		var nodename = this.ccndid;
+		var interestName = new Name(['ccnx', nodename, 'selfreg', coBinary]);
 
 		var interest = new Interest(interestName);
 		interest.scope = 1;
@@ -713,7 +737,7 @@ Name.createNameArray = function(name) {
         // Make sure the colon came before a '/'.
         var iFirstSlash = name.indexOf('/');
         if (iFirstSlash < 0 || iColon < iFirstSlash)
-            // Omit the leading protocol such as ccnx:
+            // Omit the leading protocol such as ndn:
             name = name.substr(iColon + 1, name.length - iColon - 1).trim();
     }
     
@@ -743,8 +767,9 @@ Name.createNameArray = function(name) {
                 // Zero, one or two periods is illegal.  Ignore this componenent to be
                 //   consistent with the C implmentation.
                 // This also gets rid of a trailing '/'.
-                array = array.slice(0, i).concat(array.slice(i + 1, array.length));
-                --i;                
+                array.splice(i, 1);
+                --i;  
+                continue;
             }
             else
                 // Remove 3 periods.
@@ -819,7 +844,7 @@ Name.prototype.add = function(component){
 	return this.components.push(result);
 };
 
-// Return the escaped name string according to "CCNx URI Scheme".  Does not include "ccnx:".
+// Return the escaped name string according to "CCNx URI Scheme".
 Name.prototype.to_uri = function() {	
 	var result = "";
 	
@@ -843,6 +868,27 @@ Name.prototype.getComponent = function(i) {
     var result = new ArrayBuffer(this.components[i].length);
     new Uint8Array(result).set(this.components[i]);
     return result;
+}
+
+/*
+ * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
+ *   special marker octets (for version, etc.).  Return the index in this.components of
+ *   the file name, or -1 if not found.
+ */
+Name.prototype.indexOfFileName = function() {
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        var component = this.components[i];
+        if (component.length <= 0)
+            continue;
+        
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+            (component[0] >= 0xF5 && component[0] <= 0xFF))
+            continue;
+        
+        return i;
+    }
+    
+    return -1;
 }
 
 /**
@@ -2074,7 +2120,6 @@ var FaceInstance  = function FaceInstance(
 
 /**
  * Used by NetworkObject to decode the object from a network stream.
- * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
 FaceInstance.prototype.from_ccnb = function(//XMLDecoder 
 	decoder) {
@@ -2146,7 +2191,6 @@ FaceInstance.prototype.from_ccnb = function(//XMLDecoder
 
 /**
  * Used by NetworkObject to encode the object to a network stream.
- * @see org.ccnx.ccn.impl.encoding.XMLEncodable
  */
 FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 	encoder){
@@ -2259,7 +2303,6 @@ ForwardingEntry.prototype.from_ccnb =function(
 
 		/**
 		 * Used by NetworkObject to encode the object to a network stream.
-		 * @see org.ccnx.ccn.impl.encoding.XMLEncodable
 		 */
 ForwardingEntry.prototype.to_ccnb =function(
 	//XMLEncoder 
@@ -2878,7 +2921,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			
 			
 			if ((null ==  decodedTag) || decodedTag != startTag ) {
-				console.log('expecting '+ startag + ' but got '+ decodedTag);
+				console.log('expecting '+ startTag + ' but got '+ decodedTag);
 				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
 			}
 			
@@ -3432,8 +3475,10 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
 	this.offset = 0;
     this.level = 0;
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
-    this.headerStartOffset = 0;
-    this.readBytesEndOffset = 0;
+    this.headerLength = 0;
+    this.useHeaderBuffer = false;
+    this.headerBuffer = new Uint8Array(5);
+    this.nBytesToRead = 0;
 };
 
 BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
@@ -3447,7 +3492,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  * This throws an exception for badly formed ccnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-    // byte array
+    // Uint8Array
     input)
 {
     if (this.gotElementEnd)
@@ -3464,7 +3509,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         switch (this.state) {
             case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:               
                 // First check for XML_CLOSE.
-                if (this.offset == this.headerStartOffset && input[this.offset] == XML_CLOSE) {
+                if (this.headerLength == 0 && input[this.offset] == XML_CLOSE) {
                     ++this.offset;
                     // Close the level.
                     --this.level;
@@ -3476,46 +3521,69 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                             (this.offset - 1));
                     
                     // Get ready for the next header.
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                     break;
                 }
-
+                
+                var startingHeaderLength = this.headerLength;
                 while (true) {
-                    if (this.offset >= input.length)                    
+                    if (this.offset >= input.length) {
+                        // We can't get all of the header bytes from this input. Save in headerBuffer.
+                        this.useHeaderBuffer = true;
+                        var nNewBytes = this.headerLength - startingHeaderLength;
+                        this.setHeaderBuffer
+                            (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                        
                         return false;
-                    if (input[this.offset++] & XML_TT_NO_MORE)
+                    }
+                    var headerByte = input[this.offset++];
+                    ++this.headerLength;
+                    if (headerByte & XML_TT_NO_MORE)
                         // Break and read the header.
                         break;
                 }
-            
-                decoder.seek(this.headerStartOffset);
-                var typeAndVal = decoder.decodeTypeAndVal();
+                
+                var typeAndVal;
+                if (this.useHeaderBuffer) {
+                    // Copy the remaining bytes into headerBuffer.
+                    nNewBytes = this.headerLength - startingHeaderLength;
+                    this.setHeaderBuffer
+                        (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+
+                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer).decodeTypeAndVal();
+                }
+                else {
+                    // We didn't have to use the headerBuffer.
+                    decoder.seek(this.offset - this.headerLength);
+                    typeAndVal = decoder.decodeTypeAndVal();
+                }
+                
                 if (typeAndVal == null)
                     throw new Error("BinaryXMLStructureDecoder: Can't read header starting at offset " +
-                        this.headerStartOffset);
+                        (this.offset - this.headerLength));
                 
                 // Set the next state based on the type.
                 var type = typeAndVal.t;
                 if (type == XML_DATTR)
                     // We already consumed the item. READ_HEADER_OR_CLOSE again.
                     // ccnb has rules about what must follow an attribute, but we are just scanning.
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                 else if (type == XML_DTAG || type == XML_EXT) {
                     // Start a new level and READ_HEADER_OR_CLOSE again.
                     ++this.level;
-                    this.headerStartOffset = this.offset;
+                    this.startHeader();
                 }
                 else if (type == XML_TAG || type == XML_ATTR) {
                     if (type == XML_TAG)
                         // Start a new level and read the tag.
                         ++this.level;
                     // Minimum tag or attribute length is 1.
-                    this.readBytesEndOffset = this.offset + typeAndVal.v + 1;
+                    this.nBytesToRead = typeAndVal.v + 1;
                     this.state = BinaryXMLStructureDecoder.READ_BYTES;
                     // ccnb has rules about what must follow an attribute, but we are just scanning.
                 }
                 else if (type == XML_BLOB || type == XML_UDATA) {
-                    this.readBytesEndOffset = this.offset + typeAndVal.v;
+                    this.nBytesToRead = typeAndVal.v;
                     this.state = BinaryXMLStructureDecoder.READ_BYTES;
                 }
                 else
@@ -3523,15 +3591,16 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 break;
             
             case BinaryXMLStructureDecoder.READ_BYTES:
-                if (input.length < this.readBytesEndOffset) {
+                var nRemainingBytes = input.length - this.offset;
+                if (nRemainingBytes < this.nBytesToRead) {
                     // Need more.
-                    this.offset = input.length;
+                    this.offset += nRemainingBytes;
+                    this.nBytesToRead -= nRemainingBytes;
                     return false;
                 }
                 // Got the bytes.  Read a new header or close.
-                this.offset = this.readBytesEndOffset;
-                this.headerStartOffset = this.offset;
-                this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
+                this.offset += this.nBytesToRead;
+                this.startHeader();
                 break;
             
             default:
@@ -3540,7 +3609,38 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         }
     }
 };
+
 /*
+ * Set the state to READ_HEADER_OR_CLOSE and set up to start reading the header
+ */
+BinaryXMLStructureDecoder.prototype.startHeader = function() {
+    this.headerLength = 0;
+    this.useHeaderBuffer = false;
+    this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;    
+}
+
+/*
+ *  Set the offset into the input, used for the next read.
+ */
+BinaryXMLStructureDecoder.prototype.seek = function(
+        //int
+        offset) {
+    this.offset = offset;
+}
+
+/*
+ * Set call this.headerBuffer.set(subarray, bufferOffset), an reallocate the headerBuffer if needed.
+ */
+BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferOffset) {
+    var size = subarray.length + bufferOffset;
+    if (size > this.headerBuffer.length) {
+        // Reallocate the buffer.
+        var newHeaderBuffer = new Uint8Array(size + 5);
+        newHeaderBuffer.set(this.headerBuffer);
+        this.headerBuffer = newHeaderBuffer;
+    }
+    this.headerBuffer.set(subarray, bufferOffset);
+}/*
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -3755,12 +3855,12 @@ DataUtils.HexStringtoByteArray = function(str) {
  * Uint8Array to Hex String
  */
 //http://ejohn.org/blog/numbers-hex-and-colors/
-DataUtils.toHex = function(arguments){
-	if (LOG>4) console.log('ABOUT TO CONVERT '+ arguments);
-	//console.log(arguments);
+DataUtils.toHex = function(args){
+	if (LOG>4) console.log('ABOUT TO CONVERT '+ args);
+	//console.log(args);
   	var ret = "";
-  	for ( var i = 0; i < arguments.length; i++ )
-    	ret += (arguments[i] < 16 ? "0" : "") + arguments[i].toString(16);
+  	for ( var i = 0; i < args.length; i++ )
+    	ret += (args[i] < 16 ? "0" : "") + args[i].toString(16);
   	if (LOG>4) console.log('Converted to: ' + ret);
   	return ret; //.toUpperCase();
 }
@@ -3768,10 +3868,10 @@ DataUtils.toHex = function(arguments){
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(arguments){
+DataUtils.stringToHex = function(args){
 	var ret = "";
-	for (var i = 0; i < arguments.length; ++i) {
-		var value = arguments.charCodeAt(i);
+	for (var i = 0; i < args.length; ++i) {
+		var value = args.charCodeAt(i);
 		ret += (value < 16 ? "0" : "") + value.toString(16);
 	}
 	return ret;
@@ -3780,11 +3880,11 @@ DataUtils.stringToHex = function(arguments){
 /**
  * Uint8Array to raw string.
  */
-DataUtils.toString = function(arguments){
+DataUtils.toString = function(args){
   //console.log(arguments);
   var ret = "";
-  for ( var i = 0; i < arguments.length; i++ )
-    ret += String.fromCharCode(arguments[i]);
+  for ( var i = 0; i < args.length; i++ )
+    ret += String.fromCharCode(args[i]);
   return ret;
 }
 
@@ -3834,14 +3934,21 @@ DataUtils.stringToUtf8Array = function(str) {
 }
 
 /*
- * Return a new Uint8Array which is the Uint8Array concatenated with raw String str. 
+ * arrays is an array of Uint8Array. Return a new Uint8Array which is the concatenation of all.
  */
-DataUtils.concatFromString = function(array, str) {
-	var bytes = new Uint8Array(array.length + str.length);
-    bytes.set(array);
-	for (var i = 0; i < str.length; ++i)
-		bytes[array.length + i] = str.charCodeAt(i);
-	return bytes;
+DataUtils.concatArrays = function(arrays) {
+    var totalLength = 0;
+	for (var i = 0; i < arrays.length; ++i)
+        totalLength += arrays[i].length;
+    
+    var result = new Uint8Array(totalLength);
+    var offset = 0;
+	for (var i = 0; i < arrays.length; ++i) {
+        result.set(arrays[i], offset);
+        offset += arrays[i].length;
+    }
+    return result;
+    
 }
  
 // TODO: Take Uint8Array and use TextDecoder when available.
@@ -4318,7 +4425,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 var KeyManager = function KeyManager(){
 
 	
-//Certificate from CCNx
+//Certificate
 
 this.certificate = 'MIIBmzCCAQQCCQC32FyQa61S7jANBgkqhkiG9w0BAQUFADASMRAwDgYDVQQDEwd'+
 
@@ -4341,7 +4448,7 @@ this.certificate = 'MIIBmzCCAQQCCQC32FyQa61S7jANBgkqhkiG9w0BAQUFADASMRAwDgYDVQQD
 
 //this.publicKey = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQAB';
 this.publicKey ='30819F300D06092A864886F70D010101050003818D0030818902818100E17D30A7D828AB1B840B17542DCAF6207AFD221E086B2A60D16CB7F54448BA9F3F08BCD099DB21DD162A779E61AA89EEE554D3A47DE230BC7AC590D524067C3898BBA6F5DC4360B845EDA48CBD9CF126A723445F0E1952D7325A75FAF556144F9A98AF7186B0278685B8E2C08BEA87171B4DEE585C1828295B5395EB4A17779F0203010001';
-//Private Key from CCNx
+//Private Key
 
 this.privateKey ='MIICXQIBAAKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQABAoGAGkv6T6jC3WmhFZYL6CdCWvlc6gysmKrhjarrLTxgavtFY6R5g2ft5BXAsCCVbUkWxkIFSKqxpVNl0gKZCNGEzPDN6mHJOQI/h0rlxNIHAuGfoAbCzALnqmyZivhJAPGijAyKuU9tczsst5+Kpn+bn7ehzHQuj7iwJonS5WbojqECQQD851K8TpW2GrRizNgG4dx6orZxAaon/Jnl8lS7soXhllQty7qG+oDfzznmdMsiznCqEABzHUUKOVGE9RWPN3aRAkEA5D/w9N55d0ibnChFJlc8cUAoaqH+w+U3oQP2Lb6AZHJpLptN4y4b/uf5d4wYU5/i/gC7SSBH3wFhh9bjRLUDLwJAVOx8vN0Kqt7myfKNbCo19jxjVSlA8TKCn1Oznl/BU1I+rC4oUaEW25DjmX6IpAR8kq7S59ThVSCQPjxqY/A08QJBAIRaF2zGPITQk3r/VumemCvLWiRK/yG0noc9dtibqHOWbCtcXtOm/xDWjq+lis2i3ssOvYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaMhndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861';
 

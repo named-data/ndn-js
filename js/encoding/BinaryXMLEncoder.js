@@ -1,4 +1,4 @@
-/*
+/**
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui

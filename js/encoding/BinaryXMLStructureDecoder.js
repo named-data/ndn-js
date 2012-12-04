@@ -1,4 +1,4 @@
-/*
+/**
  * This class uses BinaryXMLDecoder to follow the structure of a ccnb binary element to 
  * determine its end.
  * 

@@ -1,4 +1,4 @@
-/*
+/**
  * @author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.

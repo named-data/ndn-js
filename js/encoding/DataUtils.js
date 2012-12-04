@@ -1,4 +1,4 @@
-/*
+/**
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.

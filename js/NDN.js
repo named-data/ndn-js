@@ -32,8 +32,6 @@ NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
 
-NDN.InterestTimeOut = 5000; // 5000 ms timeout for pending interest
-
 /* Java Socket Bridge and XPCOM transport */
 
 NDN.prototype.createRoute = function(host,port){
@@ -70,7 +68,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4200;
+        interest.interestLifetime = 4200;   // default interest timeout value
     
     this.transport.expressInterest(this, interest, closure);
 };

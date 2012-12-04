@@ -1,4 +1,4 @@
- /*
+/**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Interest Objects

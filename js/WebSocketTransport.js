@@ -119,6 +119,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						clearTimeout(pitEntry.closure.timerID);
 						//console.log("Clear interest timer");
 						//console.log(pitEntry.closure.timerID);
+						
+						// Remove PIT entry from PITTable
+						index = PITTable.indexOf(pitEntry);
+						PITTable.splice(index, 1);
+						
 						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
 					}
@@ -209,7 +214,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		
 		// Set interest timer
 		closure.timerID = setTimeout(function() {
-			console.log("Interest time out.");
+			if (LOG > 3) console.log("Interest time out.");
 			
 			// Remove PIT entry from PITTable
 			index = PITTable.indexOf(pitEntry);
@@ -218,7 +223,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, NDN.InterestTimeOut);
+		}, interest.interestLifetime);
 		//console.log(closure.timerID);
 	}
 	else

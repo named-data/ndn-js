@@ -1,4 +1,4 @@
-/* 
+/** 
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Implement getAsync and putAsync used by NDN using nsISocketTransportService.

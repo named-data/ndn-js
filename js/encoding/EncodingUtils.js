@@ -1,4 +1,4 @@
-/*
+/**
  * This file contains utilities to help encode and decode NDN objects.
  * author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
