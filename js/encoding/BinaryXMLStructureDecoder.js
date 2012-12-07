@@ -41,7 +41,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         if (this.offset >= input.length)
             // All the cases assume we have some input.
             return false;
-                
+        
         switch (this.state) {
             case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:               
                 // First check for XML_CLOSE.

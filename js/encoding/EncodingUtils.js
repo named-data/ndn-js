@@ -289,19 +289,19 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    console.log('PUBLIC KEY IN HEX is ');
-	    console.log(kp);
+	    if(LOG>2) console.log('PUBLIC KEY IN HEX is ');
+	    if(LOG>2) console.log(kp);
 
 	    var exp = publickeyHex.slice(318,324);
 	    
-	    console.log('kp size is '+kp.length );
+	    if(LOG>2) console.log('kp size is '+kp.length );
 	    output += "exponent: "+exp ;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    console.log('EXPONENT is ');
-	    console.log(exp);
+	    if(LOG>2) console.log('EXPONENT is ');
+	    if(LOG>2) console.log(exp);
 	    
 	    /*var c1 = hex_sha256(input);
 	      var c2 = signature;
@@ -321,11 +321,11 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
-	    console.log('PUBLIC KEY n after is ');
-	    console.log(rsakey.n);
+	    if(LOG>2) console.log('PUBLIC KEY n after is ');
+	    if(LOG>2) console.log(rsakey.n);
 
-	    console.log('EXPONENT e after is ');
-	    console.log(rsakey.e);
+	    if(LOG>2) console.log('EXPONENT e after is ');
+	    if(LOG>2) console.log(rsakey.e);
 	    
 	    if(result)
 		output += 'SIGNATURE VALID';

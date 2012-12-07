@@ -155,6 +155,7 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.ccndid = null;
 	this.maxBufferSize = 10000;  // Currently support 10000 bytes data input, consistent with BinaryXMLEncoder
 	this.buffer = new Uint8Array(this.maxBufferSize);
+	this.bufferOffset = 0;
 	this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
@@ -182,28 +183,33 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			
 			try {
-				if (bytearray.length + self.buffer.byteOffset >= self.buffer.byteLength) {
-					console.log("NDN.ws.onmessage: buffer overflow. Accumulate received length: " + self.buffer.byteOffset 
-						+ ". Current packet length: " + bytearray.length + ".");
+				if (bytearray.length + self.bufferOffset >= self.buffer.byteLength) {
+					if (LOG>3) {
+						console.log("NDN.ws.onmessage: buffer overflow. Accumulate received length: " + self.bufferOffset 
+							+ ". Current packet length: " + bytearray.length + ".");
+					}
+					
 					// Purge and quit.
 					delete self.structureDecoder;
 					delete self.buffer;
 					self.structureDecoder = new BinaryXMLStructureDecoder();
 					self.buffer = new Uint8Array(self.maxBufferSize);
+					self.bufferOffset = 0;
 					return;
 				}
 				
 				/*for (var i = 0; i < bytearray.length; i++) {
 					self.buffer.push(bytearray[i]);
 				}*/
-				self.buffer.set(bytearray, self.buffer.byteOffset);
+				self.buffer.set(bytearray, self.bufferOffset);
+				self.bufferOffset += bytearray.length;
 				
-				if (!self.structureDecoder.findElementEnd(self.buffer)) {
+				if (!self.structureDecoder.findElementEnd(self.buffer.subarray(0, self.bufferOffset))) {
 					// Need more data to decode
-					console.log('Incomplete packet received. Length ' + bytearray.length + '. Wait for more input.');
-					console.log('self.buffer length: ' + self.buffer.length);
+					if (LOG>3) console.log('Incomplete packet received. Length ' + bytearray.length + '. Wait for more input.');
 					return;
 				}
+				if (LOG>3) console.log('Complete packet received. Length ' + bytearray.length + '. Start decoding.');
 			} catch (ex) {
 				console.log("NDN.ws.onmessage exception: " + ex);
 				return;
@@ -284,6 +290,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			delete self.buffer;
 			self.structureDecoder = new BinaryXMLStructureDecoder();
 			self.buffer = new Uint8Array(self.maxBufferSize);
+			self.bufferOffset = 0;
 		}
 	}
 	
@@ -3520,7 +3527,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         if (this.offset >= input.length)
             // All the cases assume we have some input.
             return false;
-                
+        
         switch (this.state) {
             case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:               
                 // First check for XML_CLOSE.
@@ -4378,19 +4385,19 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    console.log('PUBLIC KEY IN HEX is ');
-	    console.log(kp);
+	    if(LOG>2) console.log('PUBLIC KEY IN HEX is ');
+	    if(LOG>2) console.log(kp);
 
 	    var exp = publickeyHex.slice(318,324);
 	    
-	    console.log('kp size is '+kp.length );
+	    if(LOG>2) console.log('kp size is '+kp.length );
 	    output += "exponent: "+exp ;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    console.log('EXPONENT is ');
-	    console.log(exp);
+	    if(LOG>2) console.log('EXPONENT is ');
+	    if(LOG>2) console.log(exp);
 	    
 	    /*var c1 = hex_sha256(input);
 	      var c2 = signature;
@@ -4410,11 +4417,11 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
-	    console.log('PUBLIC KEY n after is ');
-	    console.log(rsakey.n);
+	    if(LOG>2) console.log('PUBLIC KEY n after is ');
+	    if(LOG>2) console.log(rsakey.n);
 
-	    console.log('EXPONENT e after is ');
-	    console.log(rsakey.e);
+	    if(LOG>2) console.log('EXPONENT e after is ');
+	    if(LOG>2) console.log(rsakey.e);
 	    
 	    if(result)
 		output += 'SIGNATURE VALID';

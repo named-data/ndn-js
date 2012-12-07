@@ -10,6 +10,7 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.ccndid = null;
 	this.maxBufferSize = 10000;  // Currently support 10000 bytes data input, consistent with BinaryXMLEncoder
 	this.buffer = new Uint8Array(this.maxBufferSize);
+	this.bufferOffset = 0;
 	this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
@@ -37,28 +38,33 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			
 			try {
-				if (bytearray.length + self.buffer.byteOffset >= self.buffer.byteLength) {
-					console.log("NDN.ws.onmessage: buffer overflow. Accumulate received length: " + self.buffer.byteOffset 
-						+ ". Current packet length: " + bytearray.length + ".");
+				if (bytearray.length + self.bufferOffset >= self.buffer.byteLength) {
+					if (LOG>3) {
+						console.log("NDN.ws.onmessage: buffer overflow. Accumulate received length: " + self.bufferOffset 
+							+ ". Current packet length: " + bytearray.length + ".");
+					}
+					
 					// Purge and quit.
 					delete self.structureDecoder;
 					delete self.buffer;
 					self.structureDecoder = new BinaryXMLStructureDecoder();
 					self.buffer = new Uint8Array(self.maxBufferSize);
+					self.bufferOffset = 0;
 					return;
 				}
 				
 				/*for (var i = 0; i < bytearray.length; i++) {
 					self.buffer.push(bytearray[i]);
 				}*/
-				self.buffer.set(bytearray, self.buffer.byteOffset);
+				self.buffer.set(bytearray, self.bufferOffset);
+				self.bufferOffset += bytearray.length;
 				
-				if (!self.structureDecoder.findElementEnd(self.buffer)) {
+				if (!self.structureDecoder.findElementEnd(self.buffer.subarray(0, self.bufferOffset))) {
 					// Need more data to decode
-					console.log('Incomplete packet received. Length ' + bytearray.length + '. Wait for more input.');
-					console.log('self.buffer length: ' + self.buffer.length);
+					if (LOG>3) console.log('Incomplete packet received. Length ' + bytearray.length + '. Wait for more input.');
 					return;
 				}
+				if (LOG>3) console.log('Complete packet received. Length ' + bytearray.length + '. Start decoding.');
 			} catch (ex) {
 				console.log("NDN.ws.onmessage exception: " + ex);
 				return;
@@ -139,6 +145,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 			delete self.buffer;
 			self.structureDecoder = new BinaryXMLStructureDecoder();
 			self.buffer = new Uint8Array(self.maxBufferSize);
+			self.bufferOffset = 0;
 		}
 	}
 	
