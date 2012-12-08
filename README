@@ -17,9 +17,9 @@ This is a young project, with minimal documentation that we are slowly enhancing
 The primary goal of NDN.JS is to provide a pure Javascript implementation of the NDN API that enables developers to create browser-based applications using Named Data Networking. The approach requires no native code or signed Java applets, and thus can be delivered over the current web to modern browsers with no hassle for the end user.
 
 Additional goals for the project:
-	- Websockets transport (rather than TCP or UDP, which are not directly supported in Javascript).
-	- Relatively lightweight and compact, to enable efficient use on the web.	
-	- Wire format compatible with PARC's CCNx implementation of NDN.
+- Websockets transport (rather than TCP or UDP, which are not directly supported in Javascript).
+- Relatively lightweight and compact, to enable efficient use on the web.	
+- Wire format compatible with PARC's CCNx implementation of NDN.
 	
 The library currently requires a remote NDN daemon, and has been tested with ccnd, from the's CCNx package: http://ccnx.org/
 
@@ -43,9 +43,11 @@ See files in js/  and examples in js/testing/
 
 NDN.JS currently supports expressing Interests (and receiving data) and publishing Data (that answers Interests).  This includes encoding and decoding data packets as well as signing and verifying them using RSA keys.
 
+To use the library with a remote ccnd, a Websockets proxy is currently required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It currently listens on port 9696 and passes messages (using either TCP or UDP) to ccnd on the same host. 
+
 A simple example of the current API to express an Interest and receive data:
 
-var ndn = new NDN();	// connect to default hub/proxy
+var ndn = new NDN();	// connect to a default hub/proxy
 ndn.transport.connectWebSocket(ndn);
         
 var AsyncGetClosure = function AsyncGetClosure() {
