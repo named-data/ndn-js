@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<!-- 
+	See COPYING for copyright and distribution information.
+-->
+<html>
+<head>
+<title>NDN Ping</title>
+
+<!--
+	ndn-js.js
+	is a concatented, compressed version of the library,
+	built in tools/build
+-->
+<script type="text/javascript" src="ndn-js.js"></script>
+<script type="text/javascript" src="ndn-ping.js"></script>
+
+</head>
+
+<body>
+	
+	<h1>NDN Ping example</h1>
+	
+	Using ping responder on NDN testbed, which responds to Interests in <em>
+	/&lt;topo-prefix&gt;/ping/&lt;random-number&gt;</em>.
+	
+	<h2>NDN Testbed Status</h2>
+	<p>Testbed content ping results retrieved using <a href="http://github.com/remap/ndn-js">NDN.js</a>, a javascript client library for NDN.</p>
+	<table border="0" width="40%" id="pingreport" style="margin-left:20px">
+	</table>
+	<p>&nbsp;</p>
+
+
+</body>
+</html>
