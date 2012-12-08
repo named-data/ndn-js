@@ -15,7 +15,7 @@ possible.
 WEBSOCKETS PROXY. 
 If you wish to run your own WebSockets proxy instead of using the NDN testbed, you must
 build and install Node.js (often on the machine also running the ccnd you wish to proxy
-for, but that doesn't have to be the case).
+for, but that doesn't have to be the case).  See wsproxy/README.md
 
 THE FIREFOX PLUG-IN. [Instructions to come.]
 
