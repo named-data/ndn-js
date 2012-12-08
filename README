@@ -39,12 +39,21 @@ By default, both parts of the library connect automatically to a set of proxies 
 JAVASCRIPT API
 --------------
 
-See files in js/  and examples in js/testing/
+See files in js/  and examples in js/testing, js/examples
 
 NDN.JS currently supports expressing Interests (and receiving data) and publishing Data (that answers Interests).  This includes encoding and decoding data packets as well as signing and verifying them using RSA keys.
 
-To use the library with a remote ccnd, a Websockets proxy is currently required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It currently listens on port 9696 and passes messages (using either TCP or UDP) to ccnd on the same host. 
+** NDN connectivity **
+The only way (for now) to get connectivity to other NDN nodes is via ccnd.  For the Javascript API, a Websockets proxy that can communicate the target ccnd is currently required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It currently listens on port 9696 and passes messages (using either TCP or UDP) to ccnd on the same host. 
 
+** Including the scripts in a web page **
+To use NDN.JS in a web page, one of two scripts must be included using a <script> tag:
+
+1. ndn-js.js, a combined, compressed library designed for efficient distribution.  It can be built using js/tools/build/make-js.sh     This is used in examples/ndn-ping.html
+
+2. Helper.js, which loads each component script independently.  This is used in most of the tests in testing/
+
+** Example **
 A simple example of the current API to express an Interest and receive data:
 
 var ndn = new NDN();	// connect to a default hub/proxy
@@ -70,7 +79,7 @@ FIREFOX ADD-ON FOR THE NDN PROTOCOL
 
 See files in js/ndnProtocol
 
-NDN.JS includes a Firefox extension for the ndn protocol.  
+NDN.JS includes a Firefox extension for the ndn protocol built using the Javascript library.   It currently obtains NDN connectivity through the NDN testbed.  (This is hard-coded.)
 
 To install, either download
 https://github.com/remap/ndn-js/blob/master/js/ndnProtocol.xpi
@@ -81,9 +90,10 @@ ndnProtocol.xpi.  Restart Firefox.
 Firefox uses the protocol extension to load any URI starting with ndn, for example
 ndn:/ndn/ucla.edu/apps/lwndn-test/trig-table
 
-When the page is loaded, Firefox updates the address bar with the full matched name from the
-retrieved content object including the version, but without the implicit digest or segment number 
-(see below).
+When the page is loaded, Firefox updates the address bar with the full matched name from the retrieved content object including the version, but without the implicit digest or segment number (see below).
+
+
+
 
 * Interest selectors in the ndn protocol:
 
@@ -110,11 +120,7 @@ TODO: implement ndn.Exclude.
 
 * Multiple segments in the ndn protocol
 
-A URI for content with multiple segments is handled as follows.
-If the URI has a segment number, just retrieve that segment and return the content to the browser.
+A URI for content with multiple segments is handled as follows. If the URI has a segment number, just retrieve that segment and return the content to the browser.
 
-Otherwise look at the name in the returned ContentObject.  If the returned name has no segment number,
-just return the content to the browser. If the name has a segment number which isn't 0, store it 
-and express an interest for segment 0. Read segments in order and return each content to the browser 
-as we go until we get the segment for FinalBlockID.
+Otherwise look at the name in the returned ContentObject.  If the returned name has no segment number, just return the content to the browser. If the name has a segment number which isn't 0, store it and express an interest for segment 0. Read segments in order and return each content to the browser as we go until we get the segment for FinalBlockID.
 
