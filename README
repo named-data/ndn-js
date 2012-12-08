@@ -74,7 +74,7 @@ be built using js/tools/build/make-js.sh     This is used in examples/ndn-ping.h
 2. Helper.js, which loads each component script independently.  This is used in most of
 the tests in testing/
 
-** Example **
+** Example to retrieve content **
 A simple example of the current API to express an Interest and receive data:
 
 var ndn = new NDN();	// connect to a default hub/proxy
@@ -94,6 +94,17 @@ AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
 
 ndn.expressInterest(new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt"), new
 AsyncGetClosure());
+
+** Example to publish content **
+
+// Note that publishing content requires knowledge of a 
+// routable prefix for your upstream ccnd.  We are working
+// on a way to either obtain that prefix or use the /local
+// convention. 
+
+For now, see testing/test-publish-async.html
+
+
 
 
 FIREFOX ADD-ON FOR THE NDN PROTOCOL
