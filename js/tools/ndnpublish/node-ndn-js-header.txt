@@ -1,0 +1,12 @@
+/* This file is created by running make-node-ndn-js.js.sh in this directory.
+ * It concatenates node-ndn-js-header.txt ../build/ndn-js.js and node-ndn-js-footer.txt to make node-ndn-js.js .
+ * ../build/ndn-js.js must already be built.
+ * author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ */
+
+// jsbn.js needs the navigator object which isn't defined in Node, so make a local hack.
+var navigator = {
+    appName: "Netscape"
+};
+

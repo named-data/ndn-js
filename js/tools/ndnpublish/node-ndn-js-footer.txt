@@ -1,5 +1,4 @@
-
-/* This is ndn-js-footer.txt which make-ndn-js.js.sh puts at the end after including
+/* This is node-ndn-js-footer.txt which make-node-ndn-js.js.sh puts at the end after including
  *    all the source files.  Declare the exports.
  */
 
