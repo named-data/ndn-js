@@ -17,7 +17,6 @@ If you wish to run your own WebSockets proxy instead of using the NDN testbed, y
 build and install Node.js (often on the machine also running the ccnd you wish to proxy
 for, but that doesn't have to be the case).  See wsproxy/README.md
 
-THE FIREFOX PLUG-IN. [Instructions to come.]
-
-
-
+THE FIREFOX ADD-ON.
+If the compressed library js/tools/build/ndn-js.js is out of date, first build it (see above).
+Go to js/ndnProtocol and run make-ndnProtocol.sh which makes js/ndnProtocol.xpi .
