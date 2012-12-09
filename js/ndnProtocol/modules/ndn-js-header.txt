@@ -11,9 +11,6 @@ var EXPORTED_SYMBOLS = ["Closure", "ContentObject", "DataUtils", "Interest", "Mi
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-// LOG is used by some of the NDN code.
-var LOG = 0;
-
 // jsbn.js needs the navigator object which isn't defined in XPCOM, so make a local hack.
 var navigator = {
     appName: "Netscape"
