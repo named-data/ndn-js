@@ -127,7 +127,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						//console.log(pitEntry.closure.timerID);
 						
 						// Remove PIT entry from PITTable
-						index = PITTable.indexOf(pitEntry);
+						var index = PITTable.indexOf(pitEntry);
 						PITTable.splice(index, 1);
 						
 						// Raise callback
@@ -224,7 +224,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			if (LOG > 3) console.log("Interest time out.");
 			
 			// Remove PIT entry from PITTable
-			index = PITTable.indexOf(pitEntry);
+			var index = PITTable.indexOf(pitEntry);
 			//console.log(PITTable);
 			PITTable.splice(index, 1);
 			//console.log(PITTable);
