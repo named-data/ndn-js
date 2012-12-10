@@ -68,7 +68,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4200;   // default interest timeout value
+        interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
     
     this.transport.expressInterest(this, interest, closure);
 };

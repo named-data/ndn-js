@@ -134,7 +134,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4200;   // default interest timeout value
+        interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
     
     this.transport.expressInterest(this, interest, closure);
 };
@@ -146,8 +146,6 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
 /** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
- * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
- * This is used inside Firefox XPCOM modules.
  */
 
 var WebSocketTransport = function WebSocketTransport() {    
@@ -272,7 +270,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						//console.log(pitEntry.closure.timerID);
 						
 						// Remove PIT entry from PITTable
-						index = PITTable.indexOf(pitEntry);
+						var index = PITTable.indexOf(pitEntry);
 						PITTable.splice(index, 1);
 						
 						// Raise callback
@@ -301,16 +299,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 
 		// Fetch ccndid now
 		var interest = new Interest(new Name(ccndIdFetcher));
-		interest.InterestLifetime = 4200;
-		//var hex = encodeToHexInterest(interest);
-		var hex = encodeToBinaryInterest(interest);
+		interest.interestLifetime = 4.0; // seconds
+		var subarray = encodeToBinaryInterest(interest);
 		
-		/*var bytes = new Uint8Array(hex.length / 2);
-		for (var i = 0; i < hex.length; i = i + 2) {
-	    	bytes[i / 2] = '0x' + hex.substr(i, 2);
-		}*/
-		var bytes = new Uint8Array(hex.length);
-		bytes.set(hex);
+		var bytes = new Uint8Array(subarray.length);
+		bytes.set(subarray);
 		
 		self.ws.send(bytes.buffer);
 	}
@@ -369,13 +362,13 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			if (LOG > 3) console.log("Interest time out.");
 			
 			// Remove PIT entry from PITTable
-			index = PITTable.indexOf(pitEntry);
+			var index = PITTable.indexOf(pitEntry);
 			//console.log(PITTable);
 			PITTable.splice(index, 1);
 			//console.log(PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);
+		}, interest.interestLifetime * 1000);  // convert interestLifetime from seconds to ms.
 		//console.log(closure.timerID);
 	}
 	else
@@ -422,7 +415,6 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 
 		var interest = new Interest(interestName);
 		interest.scope = 1;
-		//var hex = encodeToHexInterest(int);
 		var binaryInterest = encodeToBinaryInterest(interest);
 		// If we directly use binaryInterest.buffer to feed ws.send(), 
 		// WebSocket will end up sending a packet with 10000 bytes of data.

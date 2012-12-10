@@ -154,7 +154,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 
 		// Fetch ccndid now
 		var interest = new Interest(new Name(ccndIdFetcher));
-		interest.InterestLifetime = 4200;
+		interest.interestLifetime = 4.0; // seconds
 		var subarray = encodeToBinaryInterest(interest);
 		
 		var bytes = new Uint8Array(subarray.length);
@@ -223,7 +223,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);
+		}, interest.interestLifetime * 1000);  // convert interestLifetime from seconds to ms.
 		//console.log(closure.timerID);
 	}
 	else
