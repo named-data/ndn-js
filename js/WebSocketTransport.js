@@ -1,8 +1,6 @@
 /** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
- * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
- * This is used inside Firefox XPCOM modules.
  */
 
 var WebSocketTransport = function WebSocketTransport() {    
@@ -157,15 +155,10 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		// Fetch ccndid now
 		var interest = new Interest(new Name(ccndIdFetcher));
 		interest.InterestLifetime = 4200;
-		//var hex = encodeToHexInterest(interest);
-		var hex = encodeToBinaryInterest(interest);
+		var subarray = encodeToBinaryInterest(interest);
 		
-		/*var bytes = new Uint8Array(hex.length / 2);
-		for (var i = 0; i < hex.length; i = i + 2) {
-	    	bytes[i / 2] = '0x' + hex.substr(i, 2);
-		}*/
-		var bytes = new Uint8Array(hex.length);
-		bytes.set(hex);
+		var bytes = new Uint8Array(subarray.length);
+		bytes.set(subarray);
 		
 		self.ws.send(bytes.buffer);
 	}
@@ -277,7 +270,6 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 
 		var interest = new Interest(interestName);
 		interest.scope = 1;
-		//var hex = encodeToHexInterest(int);
 		var binaryInterest = encodeToBinaryInterest(interest);
 		// If we directly use binaryInterest.buffer to feed ws.send(), 
 		// WebSocket will end up sending a packet with 10000 bytes of data.
