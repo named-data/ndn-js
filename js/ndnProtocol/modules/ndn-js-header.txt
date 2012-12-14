@@ -24,3 +24,13 @@ var console = {
     }
 };
 
+// The NDN class uses setTimeout and clearTimeout, so define them using XPCOM.
+function setTimeout(callback, delay) {
+    var timer = Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
+    timer.initWithCallback({notify: callback}, delay, Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+    return timer;
+}
+
+function clearTimeout(timer) {
+    timer.cancel();
+}
