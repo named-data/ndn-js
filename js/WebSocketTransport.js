@@ -10,6 +10,10 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.buffer = new Uint8Array(this.maxBufferSize);
 	this.bufferOffset = 0;
 	this.structureDecoder = new BinaryXMLStructureDecoder();
+    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+        (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
+          "E.ws.ndn.ucla.edu"],
+         9696);
 };
 
 WebSocketTransport.prototype.connectWebSocket = function(ndn) {
@@ -124,7 +128,8 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						
 						// Remove PIT entry from NDN.PITTable
 						var index = NDN.PITTable.indexOf(pitEntry);
-						NDN.PITTable.splice(index, 1);
+						if (index >= 0)
+                            NDN.PITTable.splice(index, 1);
 						
 						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
@@ -199,7 +204,8 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			// Remove PIT entry from NDN.PITTable
 			var index = NDN.PITTable.indexOf(pitEntry);
 			//console.log(NDN.PITTable);
-			NDN.PITTable.splice(index, 1);
+			if (index >= 0) 
+                NDN.PITTable.splice(index, 1);
 			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
