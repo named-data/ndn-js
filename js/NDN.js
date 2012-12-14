@@ -32,7 +32,7 @@ NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
 
-/* Java Socket Bridge and XPCOM transport */
+NDN.ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
 
 NDN.prototype.createRoute = function(host,port){
 	this.host=host;

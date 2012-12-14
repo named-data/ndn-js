@@ -12,8 +12,6 @@ var WebSocketTransport = function WebSocketTransport() {
 	this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-var ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
-
 WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 	if (this.ws != null)
 		delete this.ws;
@@ -94,7 +92,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				nameStr = co.name.getName();
 				if (LOG > 3) console.log(nameStr);
 				
-				if (self.ccndid == null && nameStr.match(ccndIdFetcher) != null) {
+				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
@@ -153,7 +151,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		var interest = new Interest(new Name(ccndIdFetcher));
+		var interest = new Interest(new Name(NDN.ccndIdFetcher));
 		interest.interestLifetime = 4.0; // seconds
 		var subarray = encodeToBinaryInterest(interest);
 		
