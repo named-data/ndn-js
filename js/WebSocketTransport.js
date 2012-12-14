@@ -113,7 +113,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						//console.log("NDN.onopen event fired.");
 					}
 				} else {
-					var pitEntry = getEntryForExpressedInterest(nameStr);
+					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
 						
@@ -122,9 +122,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						//console.log("Clear interest timer");
 						//console.log(pitEntry.closure.timerID);
 						
-						// Remove PIT entry from PITTable
-						var index = PITTable.indexOf(pitEntry);
-						PITTable.splice(index, 1);
+						// Remove PIT entry from NDN.PITTable
+						var index = NDN.PITTable.indexOf(pitEntry);
+						NDN.PITTable.splice(index, 1);
 						
 						// Raise callback
 						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
@@ -176,25 +176,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		ndn.onclose();
 		//console.log("NDN.onclose event fired.");
 	}
-}
-
-
-// For fetching data
-var PITTable = new Array();
-
-var PITEntry = function PITEntry(interest, closure) {
-	this.interest = interest;  // String
-	this.closure = closure;    // Closure
-}
-
-function getEntryForExpressedInterest(name) {
-	for (var i = 0; i < PITTable.length; i++) {
-		if (name.match(PITTable[i].interest) != null)
-			return PITTable[i];
-			// TODO: handle multiple matching prefixes
-	}
-	return null;
-}
+};
 
 WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
 	if (this.ws != null) {
@@ -204,8 +186,8 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		var bytearray = new Uint8Array(binaryInterest.length);
 		bytearray.set(binaryInterest);
 		
-		var pitEntry = new PITEntry(interest.name.getName(), closure);
-		PITTable.push(pitEntry);
+		var pitEntry = new PITEntry(interest, closure);
+		NDN.PITTable.push(pitEntry);
 		
 		this.ws.send(bytearray.buffer);
 		if (LOG > 3) console.log('ws.send() returned.');
@@ -214,11 +196,11 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		closure.timerID = setTimeout(function() {
 			if (LOG > 3) console.log("Interest time out.");
 			
-			// Remove PIT entry from PITTable
-			var index = PITTable.indexOf(pitEntry);
-			//console.log(PITTable);
-			PITTable.splice(index, 1);
-			//console.log(PITTable);
+			// Remove PIT entry from NDN.PITTable
+			var index = NDN.PITTable.indexOf(pitEntry);
+			//console.log(NDN.PITTable);
+			NDN.PITTable.splice(index, 1);
+			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
 		}, interest.interestLifetime * 1000);  // convert interestLifetime from seconds to ms.
@@ -235,7 +217,7 @@ var CSTable = new Array();
 var CSEntry = function CSEntry(name, closure) {
 	this.name = name;        // String
 	this.closure = closure;  // Closure
-}
+};
 
 function getEntryForRegisteredPrefix(name) {
 	for (var i = 0; i < CSTable.length; i++) {
@@ -290,5 +272,5 @@ WebSocketTransport.prototype.registerPrefix = function(ndn, name, closure, flag)
 		console.log('WebSocket connection is not established.');
 		return -1;
 	}
-}
+};
 

@@ -39,6 +39,31 @@ NDN.prototype.createRoute = function(host,port){
 	this.port=port;
 }
 
+// For fetching data
+NDN.PITTable = new Array();
+
+var PITEntry = function PITEntry(interest, closure) {
+	this.interest = interest;  // Interest
+	this.closure = closure;    // Closure
+};
+
+// Return the longest entry from NDN.PITTable that matches name.
+NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
+    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
+    //   could be sent for one Interest?
+    var result = null;
+    
+	for (var i = 0; i < NDN.PITTable.length; i++) {
+		if (NDN.PITTable[i].interest.matches_name(name)) {
+            if (result == null || 
+                NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
+                result = NDN.PITTable[i];
+        }
+	}
+    
+	return result;
+};
+
 /** Encode name as an Interest. If template is not null, use its attributes.
  *  Send the interest to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
