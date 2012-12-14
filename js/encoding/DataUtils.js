@@ -430,3 +430,16 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
     }
     return result.subarray(size - i, size);
 };
+
+/*
+ * Modify array to randomly shuffle the elements.
+ */
+DataUtils.shuffle = function(array) {
+    for (var i = array.length - 1; i >= 1; --i) {
+        // j is from 0 to i.
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
