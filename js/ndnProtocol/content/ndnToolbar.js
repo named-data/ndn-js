@@ -2,7 +2,7 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 
 function ndnToolbarGetLatest(event){
   if (window._content.document.location.protocol != "ndn:") {
-    alert("The address must start with ndn");
+    alert("The address must start with ndn:");
     return;
   }
 
