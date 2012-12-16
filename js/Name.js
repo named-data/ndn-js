@@ -200,6 +200,22 @@ Name.prototype.indexOfFileName = function() {
 }
 
 /*
+ * Return true if this Name has the same components as name.
+ */
+Name.prototype.equalsName = function(name) {
+    if (this.components.length != name.components.length)
+        return false;
+    
+    // Start from the last component because they are more likely to differ.
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        if (!DataUtils.arraysEqual(this.components[i], name.components[i]))
+            return false;
+    }
+    
+    return true;
+}
+
+/*
  * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
  *   or null if not found.
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
