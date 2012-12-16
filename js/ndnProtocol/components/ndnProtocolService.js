@@ -165,14 +165,11 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.uriOriginCharset, null));
             
-        if (contentObject.name.getContentDigestValue() != null)
-            // We need to compute the content digest.
-            this.contentSha256 = new Sha256();
+        this.contentSha256 = new Sha256();
     }
 
     this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-    if (this.contentSha256 != null)
-        this.contentSha256.update(contentObject.content);
+    this.contentSha256.update(contentObject.content);
     
     // Check for the special case if the saved content is for the next segment that we need.
     if (this.firstReceivedContentObject != null && 
@@ -184,8 +181,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         this.firstReceivedContentObject = null;
         
         this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));        
-        if (this.contentSha256 != null)
-            this.contentSha256.update(contentObject.content);
+        this.contentSha256.update(contentObject.content);
     }
 
     var finalSegmentNumber = null;
@@ -209,13 +205,11 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     else {
         // Finished.
         this.contentListener.onStop();
-        if (this.contentSha256 != null) {
-            var nameContentDigest = contentObject.name.getContentDigestValue();
-            if (nameContentDigest != null &&
-                !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
-                // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + contentObject.name.to_uri());
-        }
+        var nameContentDigest = contentObject.name.getContentDigestValue();
+        if (nameContentDigest != null &&
+            !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+            // TODO: How to show the user an error for invalid digest?
+            dump("Content does not match digest in name " + contentObject.name.to_uri());
     }
         
     return Closure.RESULT_OK;
