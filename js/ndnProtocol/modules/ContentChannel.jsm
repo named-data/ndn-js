@@ -20,8 +20,9 @@ function ContentChannel(uri, requestContent) {
 	this.done = false;
 
 	this.name = uri.spec;
-    // This is set by the caller of asyncOpen.
-	this.loadFlags = 0;
+    // Bit 18 "LOAD_REPLACE" means the window.location should use the URI set by onStart.
+    // loadFlags is updated by the caller of asyncOpen.
+    this.loadFlags = (1<<18);
 	this.loadGroup = null;
 	this.status = 200;
 
