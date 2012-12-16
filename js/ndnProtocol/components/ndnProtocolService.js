@@ -16,6 +16,8 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
 
 function NdnProtocol() {
+    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); } });
+    this.ndn.host = null; // TODO: Remove this when null is the default.
 }
 
 NdnProtocol.prototype = {
@@ -23,7 +25,6 @@ NdnProtocol.prototype = {
     protocolFlags: nsIProtocolHandler.URI_NORELATIVE |
                    nsIProtocolHandler.URI_NOAUTH |
                    nsIProtocolHandler.URI_LOADABLE_BY_ANYONE,
-    transport: new XpcomTransport(),
 
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
@@ -55,7 +56,7 @@ NdnProtocol.prototype = {
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
-            template.interestLifetime = 4200;
+            template.interestLifetime = 4.0;
             var searchWithoutNdn = extractNdnSearch(search, template);
     
             var requestContent = function(contentListener) {                
@@ -63,11 +64,9 @@ NdnProtocol.prototype = {
                 // TODO: Strip off an ending implicit digest before checking the last component?
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
                 
-                var ndn = new NDN({ host: "lioncub.metwi.ucla.edu", port: 9695,
-                      // Use the same transport object each time.
-                      getTransport: function() { return thisNdnProtocol.transport; } });
-                ndn.expressInterest(name, 
-                    new ContentClosure(ndn, contentListener, uriEndsWithSegmentNumber, 
+                // Use the same NDN object each time.
+                thisNdnProtocol.ndn.expressInterest(name, 
+                    new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
                             aURI.originCharset, searchWithoutNdn + hash),
                     template);
             };
@@ -82,7 +81,7 @@ NdnProtocol.prototype = {
     contractID: "@mozilla.org/network/protocol;1?name=" + "ndn",
     classID: Components.ID('{8122e660-1012-11e2-892e-0800200c9a66}'),
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIProtocolHandler])
-}
+};
 
 if (XPCOMUtils.generateNSGetFactory)
     var NSGetFactory = XPCOMUtils.generateNSGetFactory([NdnProtocol]);
@@ -112,7 +111,7 @@ var ContentClosure = function ContentClosure
     this.firstReceivedSegmentNumber = null;
     this.firstReceivedContentObject = null;
     this.contentSha256 = null;
-}
+};
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     if (!(kind == Closure.UPCALL_CONTENT ||
