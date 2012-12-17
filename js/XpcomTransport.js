@@ -9,7 +9,11 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
-var XpcomTransport = function XpcomTransport() {    
+var XpcomTransport = function XpcomTransport() { 
+    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+        (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
+          "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
+         9695);
 };
 
 XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
@@ -20,28 +24,42 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
 			if (data == null || data == undefined || data.length == 0)
 				dump("NDN.expressInterest: received empty data from socket.\n");
 			else {
-                var decoder = new BinaryXMLDecoder(data);	
-                var co = new ContentObject();
-                co.from_ccnb(decoder);
+                var decoder = new BinaryXMLDecoder(data);
+                if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
+                    // TODO: handle interest
+                    if (closure.upcall(Closure.UPCALL_INTEREST, null) == Closure.RESULT_OK)
+                        // success
+                        return true;
+                }
+                else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
+                    var co = new ContentObject();
+                    co.from_ccnb(decoder);
                    					
-                // TODO: verify the content object and set kind to UPCALL_CONTENT.
-				var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                    // TODO: verify the content object and set kind to UPCALL_CONTENT.
+                    var result = closure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
                                new UpcallInfo(ndn, interest, 0, co));
-                if (result == Closure.RESULT_OK) {
-                    // success
+                    if (result == Closure.RESULT_OK)
+                        // success
+                        return true;
+                    else if (result == Closure.RESULT_ERR)
+                        dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
+                    else if (result == Closure.RESULT_REEXPRESS) {
+                        XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
+                        return true;
+                    }
+                    else if (result == Closure.RESULT_VERIFY) {
+                        // TODO: force verification of content.
+                    }
+                    else if (result == Closure.RESULT_FETCHKEY) {
+                        // TODO: get the key in the key locator and re-call the interest
+                        //   with the key available in the local storage.
+                    }
                 }
-                else if (result == Closure.RESULT_ERR)
-                    dump("NDN.expressInterest: upcall returned RESULT_ERR.\n");
-                else if (result == Closure.RESULT_REEXPRESS)
-                    XpcomTransport.readAllFromSocket(ndn.host, ndn.port, binaryInterest, dataListener);
-                else if (result == Closure.RESULT_VERIFY) {
-                    // TODO: force verification of content.
-                }
-                else if (result == Closure.RESULT_FETCHKEY) {
-                    // TODO: get the key in the key locator and re-call the interest
-                    //   with the key available in the local storage.
-                }
+                else
+                    console.log('Incoming packet is not Interest or ContentObject. Discard now.');
 			}
+            
+            return false;
 		}
 	}    
     
@@ -49,7 +67,8 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
 };
 
 /** Send outputData (Uint8Array) to host:port, read the entire response and call 
- *    listener.onReceivedData(data) where data is Uint8Array.
+ *    listener.onReceivedData(data) where data is Uint8Array and returns true if the data is consumed,
+ *    false if need to keep reading.
  *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
  */
 XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
@@ -66,20 +85,16 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
 	var dataListener = {
 		dataParts: [],
         structureDecoder: new BinaryXMLStructureDecoder(),
-		calledOnReceivedData: false,
+		dataIsConsumed: false,
 		
 		onStartRequest: function (request, context) {
 		},
 		onStopRequest: function (request, context, status) {
 			inStream.close();
 			outStream.close();
-			if (!this.calledOnReceivedData) {
-				this.calledOnReceivedData = true;
-				listener.onReceivedData(DataUtils.concatArrays(this.dataParts));
-			}
 		},
 		onDataAvailable: function (request, context, _inputStream, offset, count) {
-            if (this.calledOnReceivedData)
+            if (this.dataIsConsumed)
                 // Already finished.  Ignore extra data.
                 return;
             
@@ -89,14 +104,35 @@ XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
                 // TODO: Can we go directly from the stream to Uint8Array?
 				var rawData = DataUtils.toNumbersFromString
                     (NetUtil.readInputStreamToString(inStream, count));
-                // Save for later call to concatArrays so that we only reallocate a buffer once.
-                this.dataParts.push(rawData);
 				
-				// Scan the input to check if a whole ccnb object has been read.
-                this.structureDecoder.seek(0);
-                if (this.structureDecoder.findElementEnd(rawData))
-                    // Finish.
-                    this.onStopRequest();
+                // Process multiple objects in this packet.
+                while(true) {
+                    // Scan the input to check if a whole ccnb object has been read.
+                    this.structureDecoder.seek(0);
+                    if (this.structureDecoder.findElementEnd(rawData)) {
+                        // Got the remainder of an object.  Report to the caller.
+                        this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
+                        if (listener.onReceivedData(DataUtils.concatArrays(this.dataParts))) {
+                            this.dataIsConsumed = true;
+                            this.onStopRequest();
+                            return;
+                        }
+                    
+                        // Need to read a new object.
+                        rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
+                        this.dataParts = [];
+                        this.structureDecoder = new BinaryXMLStructureDecoder();
+                        if (rawData.length == 0)
+                            // No more data in the packet.
+                            return;
+                        // else loop back to decode.
+                    }
+                    else {
+                        // Save for a later call to concatArrays so that we only copy data once.
+                        this.dataParts.push(rawData);
+                        return;
+                    }
+                }
 			} catch (ex) {
 				dump("readAllFromSocket.onDataAvailable exception: " + ex + "\n");
 			}
