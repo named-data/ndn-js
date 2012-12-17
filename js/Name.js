@@ -217,24 +217,35 @@ Name.prototype.equalsName = function(name) {
 
 /*
  * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
- *   or null if not found.
- * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() {
-    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
     for (var i = this.components.length - 1; i >= 0; --i) {
-        // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
-        if (this.components[i].length == digestComponentLength &&
-            DataUtils.arraysEqual(this.components[i].subarray(0, Name.ContentDigestPrefix.length), 
-                                  Name.ContentDigestPrefix) &&
-            DataUtils.arraysEqual(this.components[i].subarray
-               (this.components[i].length - Name.ContentDigestSuffix.length, this.components[i].length),
-                                  Name.ContentDigestSuffix))
-           return this.components[i].subarray
-               (Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+        var digestValue = Name.getComponentContentDigestValue(this.components[i]);
+        if (digestValue != null)
+           return digestValue;
     }
     
     return null;
+}
+
+/*
+ * If component is a ContentDigest, return the digest value as a Uint8Array subarray (don't modify!).
+ * If not a ContentDigest, return null.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.getComponentContentDigestValue = function(component) {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+    if (component.length == digestComponentLength &&
+        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+                              Name.ContentDigestPrefix) &&
+        DataUtils.arraysEqual(component.subarray
+           (component.length - Name.ContentDigestSuffix.length, component.length),
+                              Name.ContentDigestSuffix))
+       return component.subarray(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+   else
+       return null;
 }
 
 // Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
