@@ -9,19 +9,24 @@ var LOG = 0;
 /**
  * settings is an associative array with the following defaults:
  * {
- *   host: 'localhost',
- *   port: 9696,
  *   getTransport: function() { return new WebSocketTransport(); }
+ *   getHostAndPort: transport.defaultGetHostAndPort,
+ *   host: 'localhost', // If null, use getHostAndPort when connecting.
+ *   port: 9696,
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
  * }
+ * 
+ * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
+ *   null if there are no more hosts.
  */
 var NDN = function NDN(settings) {
     settings = (settings || {});
-	this.host = (settings.host || "localhost");
-	this.port = (settings.port || 9696);
     var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
     this.transport = getTransport();
+    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
+	this.host = (settings.host !== undefined ? settings.host : 'localhost');
+	this.port = (settings.port || 9696);
     this.readyStatus = NDN.UNOPEN;
     // Event handler
     this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
@@ -64,6 +69,23 @@ NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
 	return result;
 };
 
+/*
+ * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
+ * If no more hosts remain, return null.
+ */
+NDN.makeShuffledGetHostAndPort = function(hostList, port) {
+    // Make a copy.
+    hostList = hostList.slice(0, hostList.length);
+    DataUtils.shuffle(hostList);
+
+    return function() {
+        if (hostList.length == 0)
+            return null;
+        
+        return { host: hostList.splice(0, 1)[0], port: port };
+    };
+};
+
 /** Encode name as an Interest. If template is not null, use its attributes.
  *  Send the interest to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
@@ -76,11 +98,6 @@ NDN.prototype.expressInterest = function(
         closure,
         // Interest
         template) {
-	if (this.host == null || this.port == null) {
-		dump('ERROR host OR port NOT SET\n');
-        return;
-    }
-    
 	var interest = new Interest(name);
     if (template != null) {
 		interest.minSuffixComponents = template.minSuffixComponents;
@@ -94,11 +111,80 @@ NDN.prototype.expressInterest = function(
     }
     else
         interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
-    
-    this.transport.expressInterest(this, interest, closure);
-};
 
+	if (this.host == null || this.port == null) {
+        if (this.getHostAndPort == null)
+            console.log('ERROR: host OR port NOT SET');
+        else
+            this.connectAndExpressInterest(interest, closure);
+    }
+    else
+        this.transport.expressInterest(this, interest, closure);
+};
 
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     return this.transport.registerPrefix(this, name, closure, flag);
 }
+
+/*
+ * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
+ *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
+ */
+NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
+    var hostAndPort = this.getHostAndPort();
+    if (hostAndPort == null) {
+        console.log('ERROR: No more hosts from getHostAndPort');
+        this.host = null;
+        return;
+    }
+
+    if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
+        console.log('ERROR: The host returned by getHostAndPort is not alive: ' + 
+                this.host + ":" + this.port);
+        return;
+    }
+        
+    this.host = hostAndPort.host;
+    this.port = hostAndPort.port;   
+    console.log("Trying host from getHostAndPort: " + this.host);
+    
+    // Fetch the ccndId.
+    var interest = new Interest(new Name(NDN.ccndIdFetcher));
+	interest.interestLifetime = 4.0; // seconds    
+
+    var thisNDN = this;
+	var timerID = setTimeout(function() {
+        console.log("Timeout waiting for host " + thisNDN.host);
+        // Try again.
+        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
+	}, 3000);
+  
+    this.transport.expressInterest
+        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
+}
+
+NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
+    // Inherit from Closure.
+    Closure.call(this);
+    
+    this.ndn = ndn;
+    this.callerInterest = callerInterest;
+    this.callerClosure = callerClosure;
+    this.timerID = timerID;
+};
+
+NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
+    if (!(kind == Closure.UPCALL_CONTENT ||
+          kind == Closure.UPCALL_CONTENT_UNVERIFIED ||
+          kind == Closure.UPCALL_INTEREST))
+        // The upcall is not for us.
+        return Closure.RESULT_ERR;
+        
+    // The host is alive, so cancel the timeout and issue the caller's interest.
+    clearTimeout(this.timerID);
+    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
+    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
+
+    return Closure.RESULT_OK;
+};
+
