@@ -16,8 +16,8 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
 
 function NdnProtocol() {
-    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); } });
-    this.ndn.host = null; // TODO: Remove this when null is the default.
+    // TODO: Remove host: null when null is the default.
+    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, host: null });
 }
 
 NdnProtocol.prototype = {
