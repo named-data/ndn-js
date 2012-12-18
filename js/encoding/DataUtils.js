@@ -276,7 +276,7 @@ DataUtils.hexToRawString = function(str) {
 /**
  * Raw String to Uint8Array.
  */
-DataUtils.toNumbersFromString = function( str ){
+DataUtils.toNumbersFromString = function(str) {
 	var bytes = new Uint8Array(str.length);
 	for(var i=0;i<str.length;i++)
 		bytes[i] = str.charCodeAt(i);

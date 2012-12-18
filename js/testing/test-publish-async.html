@@ -32,26 +32,11 @@
 				var nameStr = escape(interest.name.getName());
 				
 				var si = new SignedInfo();
-				si.setFields();
 				
-				var answer = DataUtils.toNumbersFromString(content);
-				
-				var co = new ContentObject(new Name(nameStr), si, answer, new Signature()); 
+				var co = new ContentObject(new Name(nameStr), si, content, new Signature()); 
 				co.sign();
-				var coBinary = encodeToBinaryContentObject(co);
-				// If we directly use coBinary.buffer to feed ws.send(), WebSocket 
-				// will end up sending a packet with 10000 bytes of data. That 
-				// is, WebSocket will flush the entire buffer in BinaryXMLEncoder
-				// regardless of the offset of the Uint8Array. So we have to
-				// create a new Uint8Array buffer with just the right size and
-				// copy the content from coBinary to the new buffer.
-				//    ---Wentao
-				var bytearray = new Uint8Array(coBinary.length);
-				bytearray.set(coBinary);
 				
-				upcallInfo.ndn.transport.ws.send(bytearray.buffer);
-				console.log('ws.send() finised.');
-				
+				upcallInfo.contentObject = co;
 				return Closure.RESULT_INTEREST_CONSUMED;
 			}
 			return Closure.RESULT_OK;

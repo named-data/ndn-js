@@ -84,7 +84,22 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
 					//console.log(entry);
-					entry.closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(ndn, interest, 0, null));
+					var info = new UpcallInfo(ndn, interest, 0, null);
+					var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
+					if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) { 
+						var coBinary = encodeToBinaryContentObject(info.contentObject);
+						// If we directly use coBinary.buffer to feed ws.send(), WebSocket 
+						// will end up sending a packet with 10000 bytes of data. That 
+						// is, WebSocket will flush the entire buffer in BinaryXMLEncoder
+						// regardless of the offset of the Uint8Array. So we have to
+						// create a new Uint8Array buffer with just the right size and
+						// copy the content from coBinary to the new buffer.
+						//    ---Wentao
+						var bytearray = new Uint8Array(coBinary.length);
+						bytearray.set(coBinary);
+						
+						self.ws.send(bytearray.buffer);
+					}
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet

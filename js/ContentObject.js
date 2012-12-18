@@ -6,7 +6,7 @@
 var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature){
 	
 	
-	if (typeof _name === 'string'){
+	if (typeof _name == 'string') {
 		this.name = new Name(_name);
 	}
 	else{
@@ -14,7 +14,13 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 		this.name = _name;
 	}
 	this.signedInfo = _signedInfo;
-	this.content=_content;
+	
+	if (typeof _content == 'string') {
+		this.content = DataUtils.toNumbersFromString(_content);
+	} else {
+		this.content = _content;
+	}
+	
 	this.signature = _signature;
 
 	
@@ -270,6 +276,9 @@ var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_fresh
     this.locator =_locator;//KeyLocator
     this.freshnessSeconds =_freshnessSeconds; // Integer
     this.finalBlockID=_finalBlockID; //byte array
+    
+    // SWT: merge setFields() method into constructor
+    this.setFields();
 
 };
 
