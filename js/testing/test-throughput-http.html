@@ -1,0 +1,45 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+
+<head>
+	<title>HTTP Get via XHR</title>
+	
+	<script type="text/javascript" src="../tools/build/ndn-js.js"></script>
+
+	<script type="text/javascript">
+		function run() {
+			var xhr = new XMLHttpRequest();
+			var url = document.getElementById('interest').value;
+			xhr.open("GET", url, true);
+			//xhr.responseType = "arraybuffer";
+			var T0 = new Date();
+			xhr.onload = function(e) {
+				//var arraybuffer = xhr.response; // not responseText
+				/* ... */
+				//document.getElementById('content').innerHTML += xhr.responseText;
+				var T1 = new Date();
+				document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - T0) + " ms</p>";
+				document.getElementById('content').innerHTML += "<p>Buffer size: " + xhr.responseText.length + "</p>";
+			};
+			xhr.send();
+		}
+		
+	</script>
+	
+</head>
+<body >
+
+	<form>
+		Please Enter an Interest:<br />
+		<input id="interest" type="text" name="INTEREST" size="50" value="marsgale_curiosity_1452.jpg" /> 
+	</form>
+
+	<button onclick="run()">Fetch Content</button>
+	
+	<p id="content">Result: <br/></p>
+
+</body>
+</html>

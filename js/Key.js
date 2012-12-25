@@ -20,23 +20,25 @@ var Key = function Key(){
  * KeyLocator
  */
 var KeyLocatorType = {
-	  NAME:1,
-	  KEY:2,
-	  CERTIFICATE:3
+	KEY:1,
+	CERTIFICATE:2,
+	KEYNAME:3
 };
 
 var KeyLocator = function KeyLocator(_input,_type){ 
 
-    this.type=_type;
+    this.type = _type;
     
-    if (_type==KeyLocatorType.NAME){
+    if (_type == KeyLocatorType.KEYNAME){
+    	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
     	this.keyName = _input;
     }
-    else if(_type==KeyLocatorType.KEY){
-    	if(LOG>4)console.log('SET KEY');
+    else if (_type == KeyLocatorType.KEY){
+    	if (LOG>3) console.log('KeyLocator: SET KEY');
     	this.publicKey = _input;
     }
-    else if(_type==KeyLocatorType.CERTIFICATE){
+    else if (_type == KeyLocatorType.CERTIFICATE){
+    	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
     	this.certificate = _input;
     }
 
@@ -54,7 +56,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
 
 				this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				this.type = 2;
+				this.type = KeyLocatorType.KEY;
 				
 
 				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
@@ -82,7 +84,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				
 
 				this.certificate = encodedCert;
-				this.type = 3;
+				this.type = KeyLocatorType.CERTIFICATE;
 
 				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
 				
@@ -93,9 +95,8 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				throw new Error("Cannot parse certificate! ");
 			}
 		} else  {
-			this.type = 1;
-
-
+			this.type = KeyLocatorType.KEYNAME;
+			
 			this.keyName = new KeyName();
 			this.keyName.from_ccnb(decoder);
 		}
@@ -127,7 +128,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 			}
 			
-		} else if (this.type == KeyLocatorType.NAME) {
+		} else if (this.type == KeyLocatorType.KEYNAME) {
 			
 			this.keyName.to_ccnb(encoder);
 		}

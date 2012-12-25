@@ -29,11 +29,11 @@
 				console.log('AsyncPutClosure.upcall() called.');
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
-				var nameStr = escape(interest.name.getName());
+				var nameStr = interest.name.getName();
 				
 				var si = new SignedInfo();
 				
-				var co = new ContentObject(new Name(nameStr), si, content, new Signature()); 
+				var co = new ContentObject(new Name(nameStr), si, content, new Signature());
 				co.sign();
 				
 				upcallInfo.contentObject = co;

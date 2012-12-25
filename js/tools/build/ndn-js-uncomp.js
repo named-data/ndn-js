@@ -92,7 +92,6 @@ var NDN = function NDN(settings) {
     this.transport = getTransport();
     this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : 'localhost');
-    dump("this.host " + this.host + "\n");
 	this.port = (settings.port || 9696);
     this.readyStatus = NDN.UNOPEN;
     // Event handler
@@ -341,7 +340,22 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
 					//console.log(entry);
-					entry.closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(ndn, interest, 0, null));
+					var info = new UpcallInfo(ndn, interest, 0, null);
+					var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
+					if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) { 
+						var coBinary = encodeToBinaryContentObject(info.contentObject);
+						// If we directly use coBinary.buffer to feed ws.send(), WebSocket 
+						// will end up sending a packet with 10000 bytes of data. That 
+						// is, WebSocket will flush the entire buffer in BinaryXMLEncoder
+						// regardless of the offset of the Uint8Array. So we have to
+						// create a new Uint8Array buffer with just the right size and
+						// copy the content from coBinary to the new buffer.
+						//    ---Wentao
+						var bytearray = new Uint8Array(coBinary.length);
+						bytearray.set(coBinary);
+						
+						self.ws.send(bytearray.buffer);
+					}
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
@@ -350,8 +364,39 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				nameStr = co.name.getName();
-				if (LOG > 3) console.log(nameStr);
+				var nameStr = co.name.getName();
+				console.log(nameStr);
+				
+				// Key verification
+				if (co.signedInfo && co.signature) {
+					if (LOG > 3) console.log("Key verification...");
+					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+					
+					var keylocator = co.signedInfo.locator;
+					if (keylocator.type == KeyLocatorType.KEYNAME) {
+						console.log("KeyLocator contains KEYNAME");
+						var keyname = keylocator.keyName.contentName.getName();
+						console.log(keyname);
+					} else if (keylocator.type == KeyLocatorType.KEY) {
+						console.log("Keylocator contains KEY");
+						var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+
+						var kp = publickeyHex.slice(56, 314);
+						var exp = publickeyHex.slice(318, 324);
+						
+						var rsakey = new RSAKey();
+						rsakey.setPublic(kp, exp);
+						var result = rsakey.verifyByteArray(co.rawSignatureData, signature);
+						if (result)
+							console.log('SIGNATURE VALID');
+						else
+							console.log('SIGNATURE INVALID');
+					} else {
+						var cert = keylocator.certificate;
+						console.log("KeyLocator contains CERT");
+						console.log(cert);
+					}
+				}
 				
 				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
@@ -1015,24 +1060,35 @@ Name.prototype.equalsName = function(name) {
 
 /*
  * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
- *   or null if not found.
- * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() {
-    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
     for (var i = this.components.length - 1; i >= 0; --i) {
-        // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
-        if (this.components[i].length == digestComponentLength &&
-            DataUtils.arraysEqual(this.components[i].subarray(0, Name.ContentDigestPrefix.length), 
-                                  Name.ContentDigestPrefix) &&
-            DataUtils.arraysEqual(this.components[i].subarray
-               (this.components[i].length - Name.ContentDigestSuffix.length, this.components[i].length),
-                                  Name.ContentDigestSuffix))
-           return this.components[i].subarray
-               (Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+        var digestValue = Name.getComponentContentDigestValue(this.components[i]);
+        if (digestValue != null)
+           return digestValue;
     }
     
     return null;
+}
+
+/*
+ * If component is a ContentDigest, return the digest value as a Uint8Array subarray (don't modify!).
+ * If not a ContentDigest, return null.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.getComponentContentDigestValue = function(component) {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+    if (component.length == digestComponentLength &&
+        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+                              Name.ContentDigestPrefix) &&
+        DataUtils.arraysEqual(component.subarray
+           (component.length - Name.ContentDigestSuffix.length, component.length),
+                              Name.ContentDigestSuffix))
+       return component.subarray(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+   else
+       return null;
 }
 
 // Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
@@ -1080,7 +1136,7 @@ Name.toEscapedString = function(component) {
 var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature){
 	
 	
-	if (typeof _name === 'string'){
+	if (typeof _name == 'string') {
 		this.name = new Name(_name);
 	}
 	else{
@@ -1088,7 +1144,13 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 		this.name = _name;
 	}
 	this.signedInfo = _signedInfo;
-	this.content=_content;
+	
+	if (typeof _content == 'string') {
+		this.content = DataUtils.toNumbersFromString(_content);
+	} else {
+		this.content = _content;
+	}
+	
 	this.signature = _signature;
 
 	
@@ -1344,6 +1406,9 @@ var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_fresh
     this.locator =_locator;//KeyLocator
     this.freshnessSeconds =_freshnessSeconds; // Integer
     this.finalBlockID=_finalBlockID; //byte array
+    
+    // SWT: merge setFields() method into constructor
+    this.setFields();
 
 };
 
@@ -1884,23 +1949,25 @@ var Key = function Key(){
  * KeyLocator
  */
 var KeyLocatorType = {
-	  NAME:1,
-	  KEY:2,
-	  CERTIFICATE:3
+	KEY:1,
+	CERTIFICATE:2,
+	KEYNAME:3
 };
 
 var KeyLocator = function KeyLocator(_input,_type){ 
 
-    this.type=_type;
+    this.type = _type;
     
-    if (_type==KeyLocatorType.NAME){
+    if (_type == KeyLocatorType.KEYNAME){
+    	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
     	this.keyName = _input;
     }
-    else if(_type==KeyLocatorType.KEY){
-    	if(LOG>4)console.log('SET KEY');
+    else if (_type == KeyLocatorType.KEY){
+    	if (LOG>3) console.log('KeyLocator: SET KEY');
     	this.publicKey = _input;
     }
-    else if(_type==KeyLocatorType.CERTIFICATE){
+    else if (_type == KeyLocatorType.CERTIFICATE){
+    	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
     	this.certificate = _input;
     }
 
@@ -1918,7 +1985,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
 
 				this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				this.type = 2;
+				this.type = KeyLocatorType.KEY;
 				
 
 				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
@@ -1946,7 +2013,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				
 
 				this.certificate = encodedCert;
-				this.type = 3;
+				this.type = KeyLocatorType.CERTIFICATE;
 
 				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
 				
@@ -1957,9 +2024,8 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				throw new Error("Cannot parse certificate! ");
 			}
 		} else  {
-			this.type = 1;
-
-
+			this.type = KeyLocatorType.KEYNAME;
+			
 			this.keyName = new KeyName();
 			this.keyName.from_ccnb(decoder);
 		}
@@ -1991,7 +2057,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 			}
 			
-		} else if (this.type == KeyLocatorType.NAME) {
+		} else if (this.type == KeyLocatorType.KEYNAME) {
 			
 			this.keyName.to_ccnb(encoder);
 		}
@@ -4046,7 +4112,7 @@ DataUtils.hexToRawString = function(str) {
 /**
  * Raw String to Uint8Array.
  */
-DataUtils.toNumbersFromString = function( str ){
+DataUtils.toNumbersFromString = function(str) {
 	var bytes = new Uint8Array(str.length);
 	for(var i=0;i<str.length;i++)
 		bytes[i] = str.charCodeAt(i);

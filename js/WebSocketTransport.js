@@ -108,8 +108,39 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				nameStr = co.name.getName();
-				if (LOG > 3) console.log(nameStr);
+				var nameStr = co.name.getName();
+				console.log(nameStr);
+				
+				// Key verification
+				if (co.signedInfo && co.signature) {
+					if (LOG > 3) console.log("Key verification...");
+					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+					
+					var keylocator = co.signedInfo.locator;
+					if (keylocator.type == KeyLocatorType.KEYNAME) {
+						console.log("KeyLocator contains KEYNAME");
+						var keyname = keylocator.keyName.contentName.getName();
+						console.log(keyname);
+					} else if (keylocator.type == KeyLocatorType.KEY) {
+						console.log("Keylocator contains KEY");
+						var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+
+						var kp = publickeyHex.slice(56, 314);
+						var exp = publickeyHex.slice(318, 324);
+						
+						var rsakey = new RSAKey();
+						rsakey.setPublic(kp, exp);
+						var result = rsakey.verifyByteArray(co.rawSignatureData, signature);
+						if (result)
+							console.log('SIGNATURE VALID');
+						else
+							console.log('SIGNATURE INVALID');
+					} else {
+						var cert = keylocator.certificate;
+						console.log("KeyLocator contains CERT");
+						console.log(cert);
+					}
+				}
 				
 				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
