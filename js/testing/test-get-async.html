@@ -26,6 +26,7 @@
 			if (kind == Closure.UPCALL_FINAL) {
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_CONTENT) {
+				console.log("Closure.upcall: content signature verification pass.");
 				var content = upcallInfo.contentObject;
 				//console.log(content.name);
 				nameStr = escape(content.name.getName());
@@ -35,6 +36,8 @@
 				//console.log("In callback, content: ");
 				//console.log(content);
 				document.getElementById('content').innerHTML += contentObjectToHtml(content);
+			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
+				console.log("Closure.upcall: content signature verification fail.");
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out.");
 			}

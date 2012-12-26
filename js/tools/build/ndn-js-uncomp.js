@@ -359,44 +359,14 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
-				if (LOG > 3) console.log('ContentObject packet received.');
+				//if (LOG > 3) 
+				console.log('ContentObject packet received.');
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
 				var nameStr = co.name.getName();
 				console.log(nameStr);
-				
-				// Key verification
-				if (co.signedInfo && co.signature) {
-					if (LOG > 3) console.log("Key verification...");
-					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-					
-					var keylocator = co.signedInfo.locator;
-					if (keylocator.type == KeyLocatorType.KEYNAME) {
-						console.log("KeyLocator contains KEYNAME");
-						var keyname = keylocator.keyName.contentName.getName();
-						console.log(keyname);
-					} else if (keylocator.type == KeyLocatorType.KEY) {
-						console.log("Keylocator contains KEY");
-						var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-
-						var kp = publickeyHex.slice(56, 314);
-						var exp = publickeyHex.slice(318, 324);
-						
-						var rsakey = new RSAKey();
-						rsakey.setPublic(kp, exp);
-						var result = rsakey.verifyByteArray(co.rawSignatureData, signature);
-						if (result)
-							console.log('SIGNATURE VALID');
-						else
-							console.log('SIGNATURE INVALID');
-					} else {
-						var cert = keylocator.certificate;
-						console.log("KeyLocator contains CERT");
-						console.log(cert);
-					}
-				}
 				
 				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
@@ -422,19 +392,96 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
-						
-						// Cancel interest timer
-						clearTimeout(pitEntry.closure.timerID);
-						//console.log("Clear interest timer");
-						//console.log(pitEntry.closure.timerID);
-						
 						// Remove PIT entry from NDN.PITTable
 						var index = NDN.PITTable.indexOf(pitEntry);
 						if (index >= 0)
-                            NDN.PITTable.splice(index, 1);
+							NDN.PITTable.splice(index, 1);
 						
-						// Raise callback
-						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+						var currentClosure = pitEntry.closure;
+						
+						// Cancel interest timer
+						clearTimeout(currentClosure.timerID);
+						//console.log("Clear interest timer");
+						//console.log(currentClosure.timerID);
+						
+						// Key verification
+						var verified = false;
+						
+						// Recursive key fetching closure
+						var KeyFetchClosure = function KeyFetchClosure(content, closure, key, signature) {
+							this.contentObject = content;  // unverified content object
+							this.closure = closure;  // closure corresponding to the contentObject
+							this.keyName = key;  // name of current key to be fetched
+							this.signature = signature;  // hex signature string to be verified
+							
+							Closure.call(this);
+						};
+						
+						KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
+							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+								console.log("In KeyFetchClosure.upcall: interest time out.");
+							} else if (kind == Closure.UPCALL_CONTENT) {
+								console.log("In KeyFetchClosure.upcall");
+								var keyHex = DataUtils.toHex(upcallInfo.contentObject.content).toLowerCase();
+								console.log("Key: " + keyHex);
+								
+								var kp = keyHex.slice(56, 314);
+								var exp = keyHex.slice(318, 324);
+								
+								var rsakey = new RSAKey();
+								rsakey.setPublic(kp, exp);
+								verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, sigHex);
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								
+								console.log("raise encapsulated closure");
+								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
+							}
+						};
+						
+						if (co.signedInfo && co.signedInfo.locator && co.signature) {
+							if (LOG > 3) console.log("Key verification...");
+							var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+							
+							var keylocator = co.signedInfo.locator;
+							if (keylocator.type == KeyLocatorType.KEYNAME) {
+								console.log("KeyLocator contains KEYNAME");
+								var keyname = keylocator.keyName.contentName.getName();
+								console.log(keyname);
+								
+								if (nameStr.match("/ccnx.org/Users/")) {
+									console.log("Key found");
+									currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+								} else {
+									console.log("Fetch key according to keylocator");
+									var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
+									var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
+									interest.interestLifetime = 4.0;
+									self.expressInterest(ndn, interest, nextClosure);
+								}
+							} else if (keylocator.type == KeyLocatorType.KEY) {
+								console.log("Keylocator contains KEY");
+								var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+								console.log(publickeyHex);
+		
+								var kp = publickeyHex.slice(56, 314);
+								var exp = publickeyHex.slice(318, 324);
+								
+								var rsakey = new RSAKey();
+								rsakey.setPublic(kp, exp);
+								verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
+								
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								
+								// Raise callback
+								currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+							} else {
+								var cert = keylocator.certificate;
+								console.log("KeyLocator contains CERT");
+								console.log(cert);
+								
+								// TODO: verify certificate
+							}
+						}
 					}
 				}
 			} else {
