@@ -110,6 +110,29 @@ NDN.prototype.createRoute = function(host,port){
 	this.port=port;
 }
 
+
+NDN.KeyStore = new Array();
+
+var KeyStoreEntry = function KeyStoreEntry(name, key, rsa) {
+	this.keyName = name;  // KeyName
+	this.keyHex = key;    // Raw key hex string
+	this.rsaKey = rsa;    // RSA key
+};
+
+NDN.getKeyByName = function(/* KeyName */ name) {
+	var result = null;
+	
+	for (var i = 0; i < NDN.KeyStore.length; i++) {
+		if (NDN.KeyStore[i].keyName.matches_name(name.contentName)) {
+            if (result == null || 
+                NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+                result = NDN.KeyStore[i];
+        }
+	}
+    
+	return result;
+};
+
 // For fetching data
 NDN.PITTable = new Array();
 
@@ -407,7 +430,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						// Key verification
 						var verified = false;
 						
-						// Recursive key fetching closure
+						// Recursive key fetching & verification closure
 						var KeyFetchClosure = function KeyFetchClosure(content, closure, key, signature) {
 							this.contentObject = content;  // unverified content object
 							this.closure = closure;  // closure corresponding to the contentObject
@@ -421,7 +444,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
 							} else if (kind == Closure.UPCALL_CONTENT) {
-								console.log("In KeyFetchClosure.upcall");
+								console.log("In KeyFetchClosure.upcall: signature verification passed");
 								var keyHex = DataUtils.toHex(upcallInfo.contentObject.content).toLowerCase();
 								console.log("Key: " + keyHex);
 								
@@ -430,7 +453,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								
 								var rsakey = new RSAKey();
 								rsakey.setPublic(kp, exp);
-								verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, sigHex);
+								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.signature);
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								
 								console.log("raise encapsulated closure");
@@ -448,19 +471,51 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								var keyname = keylocator.keyName.contentName.getName();
 								console.log(keyname);
 								
-								if (nameStr.match("/ccnx.org/Users/")) {
-									console.log("Key found");
-									currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+								if (nameStr.match(keyname)) {
+									console.log("Content is key itself");
+									
+									var keyHex = DataUtils.toHex(co.content).toLowerCase();
+									console.log("Key content: " + keyHex);
+									
+									var kp = keyHex.slice(56, 314);
+									var exp = keyHex.slice(318, 324);
+									
+									var rsakey = new RSAKey();
+									rsakey.setPublic(kp, exp);
+									var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
+									var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+									
+									currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									
+									// Store key in cache
+									var keyEntry = new KeyStoreEntry(keylocator.keyName, keyHex, rsakey);
+									NDN.KeyStore.push(keyEntry);
 								} else {
 									console.log("Fetch key according to keylocator");
-									var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
-									var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
-									interest.interestLifetime = 4.0;
-									self.expressInterest(ndn, interest, nextClosure);
+									
+									// Check local key store
+									var keyEntry = NDN.getKeyByName(keylocator.keyName);
+									if (keyEntry) {
+										// Key found, verify now
+										console.log("Local key cache hit");
+										var rsakey = keyEntry.rsaKey;
+										verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
+										
+										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+										
+										// Raise callback
+										currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+									} else {
+										// Not found, fetch now
+										var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
+										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
+										interest.interestLifetime = 4.0;
+										self.expressInterest(ndn, interest, nextClosure);
+									}
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
 								console.log("Keylocator contains KEY");
-								var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+								var publickeyHex = DataUtils.toHex(keylocator.publicKey).toLowerCase();
 								console.log(publickeyHex);
 		
 								var kp = publickeyHex.slice(56, 314);
@@ -474,6 +529,10 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								
 								// Raise callback
 								currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+								
+								// Store key in cache
+								var keyEntry = new KeyStoreEntry(keylocator.keyName, publickeyHex, rsakey);
+								NDN.KeyStore.push(keyEntry);
 							} else {
 								var cert = keylocator.certificate;
 								console.log("KeyLocator contains CERT");
@@ -2022,94 +2081,94 @@ var KeyLocator = function KeyLocator(_input,_type){
 
 KeyLocator.prototype.from_ccnb = function(decoder) {
 
-		decoder.readStartElement(this.getElementLabel());
+	decoder.readStartElement(this.getElementLabel());
 
-		if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
-			try {
-				encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
-				// This is a DER-encoded SubjectPublicKeyInfo.
-				
-				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-				this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				this.type = KeyLocatorType.KEY;
-				
-
-				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-				//this.publicKey = encodedKey;
-				
-				
-			} catch (e) {
-				throw new Error("Cannot parse key: ", e);
-			} 
-
-			if (null == this.publicKey) {
-				throw new Error("Cannot parse key: ");
-			}
-
-		} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
-			try {
-				encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
-				
-				/*
-				 * Certificates not yet working
-				 */
-				
-				//CertificateFactory factory = CertificateFactory.getInstance("X.509");
-				//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
-				
-
-				this.certificate = encodedCert;
-				this.type = KeyLocatorType.CERTIFICATE;
-
-				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-				
-			} catch ( e) {
-				throw new Error("Cannot decode certificate: " +  e);
-			}
-			if (null == this.certificate) {
-				throw new Error("Cannot parse certificate! ");
-			}
-		} else  {
-			this.type = KeyLocatorType.KEYNAME;
+	if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
+		try {
+			encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
+			// This is a DER-encoded SubjectPublicKeyInfo.
 			
-			this.keyName = new KeyName();
-			this.keyName.from_ccnb(decoder);
+			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
+
+			this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
+			this.type = KeyLocatorType.KEY;
+			
+
+			if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
+			//this.publicKey = encodedKey;
+			
+			
+		} catch (e) {
+			throw new Error("Cannot parse key: ", e);
+		} 
+
+		if (null == this.publicKey) {
+			throw new Error("Cannot parse key: ");
 		}
-		decoder.readEndElement();
+
+	} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
+		try {
+			encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
+			
+			/*
+			 * Certificates not yet working
+			 */
+			
+			//CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
+			
+
+			this.certificate = encodedCert;
+			this.type = KeyLocatorType.CERTIFICATE;
+
+			if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
+			
+		} catch ( e) {
+			throw new Error("Cannot decode certificate: " +  e);
+		}
+		if (null == this.certificate) {
+			throw new Error("Cannot parse certificate! ");
+		}
+	} else  {
+		this.type = KeyLocatorType.KEYNAME;
+		
+		this.keyName = new KeyName();
+		this.keyName.from_ccnb(decoder);
 	}
+	decoder.readEndElement();
+};
 	
 
-	KeyLocator.prototype.to_ccnb = function( encoder) {
-		
-		if(LOG>4) console.log('type is is ' + this.type);
-		//TODO Check if Name is missing
-		if (!this.validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}
+KeyLocator.prototype.to_ccnb = function( encoder) {
+	
+	if(LOG>4) console.log('type is is ' + this.type);
+	//TODO Check if Name is missing
+	if (!this.validate()) {
+		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+	}
 
+	
+	//TODO FIX THIS TOO
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if (this.type == KeyLocatorType.KEY) {
+		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
+		encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
 		
-		//TODO FIX THIS TOO
-		encoder.writeStartElement(this.getElementLabel());
+	} else if (this.type == KeyLocatorType.CERTIFICATE) {
 		
-		if (this.type == KeyLocatorType.KEY) {
-			if(LOG>5)console.log('About to encode a public key' +this.publicKey);
-			encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
-			
-		} else if (this.type == KeyLocatorType.CERTIFICATE) {
-			
-			try {
-				encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
-			} catch ( e) {
-				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-			}
-			
-		} else if (this.type == KeyLocatorType.KEYNAME) {
-			
-			this.keyName.to_ccnb(encoder);
+		try {
+			encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
+		} catch ( e) {
+			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 		}
-		encoder.writeEndElement();
 		
+	} else if (this.type == KeyLocatorType.KEYNAME) {
+		
+		this.keyName.to_ccnb(encoder);
+	}
+	encoder.writeEndElement();
+	
 };
 
 KeyLocator.prototype.getElementLabel = function() {
@@ -2170,6 +2229,24 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
+
+KeyName.prototype.matches_name = function(/*Name*/ name) {
+	var i_name = this.contentName.components;
+	var o_name = name.components;
+
+	// The intrest name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+            return false;
+
+	// Check if at least one of given components doesn't match.
+        for (var i = 0; i < i_name.length; ++i) {
+            if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+                return false;
+        }
+
+	return true;
+}
+
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.

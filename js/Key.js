@@ -46,94 +46,94 @@ var KeyLocator = function KeyLocator(_input,_type){
 
 KeyLocator.prototype.from_ccnb = function(decoder) {
 
-		decoder.readStartElement(this.getElementLabel());
+	decoder.readStartElement(this.getElementLabel());
 
-		if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
-			try {
-				encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
-				// This is a DER-encoded SubjectPublicKeyInfo.
-				
-				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-				this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				this.type = KeyLocatorType.KEY;
-				
-
-				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-				//this.publicKey = encodedKey;
-				
-				
-			} catch (e) {
-				throw new Error("Cannot parse key: ", e);
-			} 
-
-			if (null == this.publicKey) {
-				throw new Error("Cannot parse key: ");
-			}
-
-		} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
-			try {
-				encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
-				
-				/*
-				 * Certificates not yet working
-				 */
-				
-				//CertificateFactory factory = CertificateFactory.getInstance("X.509");
-				//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
-				
-
-				this.certificate = encodedCert;
-				this.type = KeyLocatorType.CERTIFICATE;
-
-				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-				
-			} catch ( e) {
-				throw new Error("Cannot decode certificate: " +  e);
-			}
-			if (null == this.certificate) {
-				throw new Error("Cannot parse certificate! ");
-			}
-		} else  {
-			this.type = KeyLocatorType.KEYNAME;
+	if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
+		try {
+			encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
+			// This is a DER-encoded SubjectPublicKeyInfo.
 			
-			this.keyName = new KeyName();
-			this.keyName.from_ccnb(decoder);
+			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
+
+			this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
+			this.type = KeyLocatorType.KEY;
+			
+
+			if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
+			//this.publicKey = encodedKey;
+			
+			
+		} catch (e) {
+			throw new Error("Cannot parse key: ", e);
+		} 
+
+		if (null == this.publicKey) {
+			throw new Error("Cannot parse key: ");
 		}
-		decoder.readEndElement();
+
+	} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
+		try {
+			encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
+			
+			/*
+			 * Certificates not yet working
+			 */
+			
+			//CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
+			
+
+			this.certificate = encodedCert;
+			this.type = KeyLocatorType.CERTIFICATE;
+
+			if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
+			
+		} catch ( e) {
+			throw new Error("Cannot decode certificate: " +  e);
+		}
+		if (null == this.certificate) {
+			throw new Error("Cannot parse certificate! ");
+		}
+	} else  {
+		this.type = KeyLocatorType.KEYNAME;
+		
+		this.keyName = new KeyName();
+		this.keyName.from_ccnb(decoder);
 	}
+	decoder.readEndElement();
+};
 	
 
-	KeyLocator.prototype.to_ccnb = function( encoder) {
-		
-		if(LOG>4) console.log('type is is ' + this.type);
-		//TODO Check if Name is missing
-		if (!this.validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}
+KeyLocator.prototype.to_ccnb = function( encoder) {
+	
+	if(LOG>4) console.log('type is is ' + this.type);
+	//TODO Check if Name is missing
+	if (!this.validate()) {
+		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+	}
 
+	
+	//TODO FIX THIS TOO
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if (this.type == KeyLocatorType.KEY) {
+		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
+		encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
 		
-		//TODO FIX THIS TOO
-		encoder.writeStartElement(this.getElementLabel());
+	} else if (this.type == KeyLocatorType.CERTIFICATE) {
 		
-		if (this.type == KeyLocatorType.KEY) {
-			if(LOG>5)console.log('About to encode a public key' +this.publicKey);
-			encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
-			
-		} else if (this.type == KeyLocatorType.CERTIFICATE) {
-			
-			try {
-				encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
-			} catch ( e) {
-				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-			}
-			
-		} else if (this.type == KeyLocatorType.KEYNAME) {
-			
-			this.keyName.to_ccnb(encoder);
+		try {
+			encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
+		} catch ( e) {
+			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 		}
-		encoder.writeEndElement();
 		
+	} else if (this.type == KeyLocatorType.KEYNAME) {
+		
+		this.keyName.to_ccnb(encoder);
+	}
+	encoder.writeEndElement();
+	
 };
 
 KeyLocator.prototype.getElementLabel = function() {
@@ -194,3 +194,21 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
+
+KeyName.prototype.matches_name = function(/*Name*/ name) {
+	var i_name = this.contentName.components;
+	var o_name = name.components;
+
+	// The intrest name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+            return false;
+
+	// Check if at least one of given components doesn't match.
+        for (var i = 0; i < i_name.length; ++i) {
+            if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+                return false;
+        }
+
+	return true;
+}
+

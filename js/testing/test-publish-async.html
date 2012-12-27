@@ -17,6 +17,10 @@
 		var ndn = new NDN();
         ndn.transport.connectWebSocket(ndn);
         
+        ndn.onopen = function() {
+        	document.getElementById("testBtn").disabled = false;
+        };
+        
         var AsyncPutClosure = function AsyncPutClosure() {
         	// Inherit from Closure.
 			Closure.call(this);
@@ -70,7 +74,7 @@
 		</div>
 	</form>
 	<div>
-		<button onclick="run()">Publish Content</button>
+		<button id="testBtn" onclick="run()" disabled="disabled">Publish Content</button>
 	</div>
 	
 	<p id="result"></p>

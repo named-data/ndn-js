@@ -16,6 +16,10 @@
 		var ndn = new NDN({port:9696});
         ndn.transport.connectWebSocket(ndn);
         
+        ndn.onopen = function() {
+        	document.getElementById("testBtn").disabled = false;
+        };
+        
         var AsyncGetClosure = function AsyncGetClosure() {
         	// Inherit from Closure.
 			Closure.call(this);
@@ -59,7 +63,7 @@
 		<input id="interest" type="text" name="INTEREST" size="50" value="/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY" /> 
 	</form>
 
-	<button onclick="run()">Fetch Content</button>
+	<button id="testBtn" onclick="run()" disabled="disabled">Fetch Content</button>
 	
 	<p id="content">Content: <br/></p>
 

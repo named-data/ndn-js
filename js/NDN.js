@@ -44,6 +44,29 @@ NDN.prototype.createRoute = function(host,port){
 	this.port=port;
 }
 
+
+NDN.KeyStore = new Array();
+
+var KeyStoreEntry = function KeyStoreEntry(name, key, rsa) {
+	this.keyName = name;  // KeyName
+	this.keyHex = key;    // Raw key hex string
+	this.rsaKey = rsa;    // RSA key
+};
+
+NDN.getKeyByName = function(/* KeyName */ name) {
+	var result = null;
+	
+	for (var i = 0; i < NDN.KeyStore.length; i++) {
+		if (NDN.KeyStore[i].keyName.matches_name(name.contentName)) {
+            if (result == null || 
+                NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+                result = NDN.KeyStore[i];
+        }
+	}
+    
+	return result;
+};
+
 // For fetching data
 NDN.PITTable = new Array();
 
