@@ -1,6 +1,7 @@
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
+Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
-function ndnToolbarGetLatest(event){
+function ndnToolbarGetLatest(event) {
   if (window._content.document.location.protocol != "ndn:") {
     alert("The address must start with ndn:");
     return;
@@ -31,7 +32,9 @@ function ndnToolbarGetLatest(event){
   window._content.document.location = uri;
 } 
 
-// Return the index of the last component that starts with 0xfd, or -1 if not found.
+/*
+ * Return the index of the last component that starts with 0xfd, or -1 if not found.
+ */
 function getIndexOfVersion(name) {
   for (var i = name.components.length - 1; i >= 0; --i) {
     if (name.components[i].length >= 1 && name.components[i][0] == 0xfd)
@@ -40,3 +43,13 @@ function getIndexOfVersion(name) {
 
   return -1;
 }
+
+/*
+ * This is called when the connected NDN hub changes.
+ */
+function onNdnHubChanged(host, port) {
+   document.getElementById("ndnHubLabel").setAttribute("value", "Hub: " + host + ":" + port);
+}
+
+// Assume that addNdnHubChangedListener is defined since we imported NdnProtocolInfo.jsm above.
+addNdnHubChangedListener(onNdnHubChanged);

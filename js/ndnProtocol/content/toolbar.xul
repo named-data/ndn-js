@@ -1,5 +1,5 @@
 <?xml version="1.0"?>                 
-<overlay id="Scrapper-Overlay"
+<overlay id="NDN-Toolbar-Overlay"
 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
 <script type="application/x-javascript" src="chrome://toolbar/content/ndnToolbar.js" />
@@ -8,7 +8,8 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <toolbar id="NdnToolbar" toolbarname="ndnToolbar" >
       <label value="NDN"/>
       <toolbarbutton id="ndnToolbarGetLatestButton"
-        label="Get Latest" oncommand="ndnToolbarGetLatest(event)" />
+        label="Get Latest" oncommand="ndnToolbarGetLatest(event)"/>
+      <label id="ndnHubLabel" value="Hub: not connected"/>
   </toolbar>
 </toolbox>
 
