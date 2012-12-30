@@ -103,8 +103,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				}
 				
 			} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
-				//if (LOG > 3) 
-				console.log('ContentObject packet received.');
+				if (LOG > 3) console.log('ContentObject packet received.');
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
@@ -167,7 +166,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 							} else if (kind == Closure.UPCALL_CONTENT) {
 								console.log("In KeyFetchClosure.upcall: signature verification passed");
 								var keyHex = DataUtils.toHex(upcallInfo.contentObject.content).toLowerCase();
-								console.log("Key: " + keyHex);
+								//console.log("Key: " + keyHex);
 								
 								var kp = keyHex.slice(56, 314);
 								var exp = keyHex.slice(318, 324);
@@ -177,7 +176,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.signature);
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								
-								console.log("raise encapsulated closure");
+								//console.log("raise encapsulated closure");
 								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
 							}
 						};

@@ -148,10 +148,8 @@ KeyLocator.prototype.validate = function() {
  * KeyName is only used by KeyLocator.
  */
 var KeyName = function KeyName() {
-	
-
-	this.contentName = this.contentName;//contentName
-	this.publisherID =this.publisherID;//publisherID
+	this.contentName = this.contentName;  //contentName
+	this.publisherID = this.publisherID;  //publisherID
 
 };
 
