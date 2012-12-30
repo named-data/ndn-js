@@ -29,6 +29,7 @@ cat ../../Closure.js \
   ../../securityLib/rsapem-1.1.js \
   ../../securityLib/rsasign-1.2.js \
   ../../securityLib/asn1hex-1.1.js \
+  ../../securityLib/x509-1.1.js \
   ../../securityLib/jsbn.js \
   ../../securityLib/jsbn2.js \
   > ndn-js-uncomp.js

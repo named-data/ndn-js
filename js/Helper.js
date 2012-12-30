@@ -69,4 +69,4 @@ document.write('<script type="text/javascript" src="' + path + 'securityLib/base
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsapem-1.1.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/rsasign-1.2.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/asn1hex-1.1.js"></script>');
-//document.write('<script type="text/javascript" src="' + path + 'securityLib/x509-1.1.js"></script>');
+document.write('<script type="text/javascript" src="' + path + 'securityLib/x509-1.1.js"></script>');
