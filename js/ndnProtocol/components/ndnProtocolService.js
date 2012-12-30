@@ -57,7 +57,7 @@ NdnProtocol.prototype = {
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
-            template.interestLifetime = 4.0;
+            template.interestLifetime = 4000; // milliseconds
             var searchWithoutNdn = extractNdnSearch(search, template);
     
             var requestContent = function(contentListener) {                

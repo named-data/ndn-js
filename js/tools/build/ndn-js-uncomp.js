@@ -176,7 +176,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
+        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
 
 	if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
@@ -216,7 +216,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
     
     // Fetch the ccndId.
     var interest = new Interest(new Name(NDN.ccndIdFetcher));
-	interest.interestLifetime = 4.0; // seconds    
+	interest.interestLifetime = 4000; // milliseconds    
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
@@ -428,7 +428,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 
 		// Fetch ccndid now
 		var interest = new Interest(new Name(NDN.ccndIdFetcher));
-		interest.interestLifetime = 4.0; // seconds
+		interest.interestLifetime = 4000; // milliseconds
 		var subarray = encodeToBinaryInterest(interest);
 		
 		var bytes = new Uint8Array(subarray.length);
@@ -480,7 +480,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime * 1000);  // convert interestLifetime from seconds to ms.
+		}, interest.interestLifetime);  // convert interestLifetime is in milliseconds.
 		//console.log(closure.timerID);
 	}
 	else
@@ -1678,6 +1678,7 @@ Date.prototype.format = function (mask, utc) {
  * This class represents Interest Objects
  */
 
+// _interestLifetime is in milliseconds.
 var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
 		
 	this.name = _name;
@@ -1690,7 +1691,7 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.childSelector = _childSelector;
 	this.answerOriginKind = _answerOriginKind;
 	this.scope = _scope;
-	this.interestLifetime = _interestLifetime;  // number of seconds
+	this.interestLifetime = _interestLifetime;  // milli seconds
 	this.nonce = _nonce;	
 };
 
@@ -1739,7 +1740,7 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
-			this.interestLifetime = DataUtils.bigEndianToUnsignedInt
+			this.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
                 (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
@@ -1778,7 +1779,7 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 		
 		if (null != this.interestLifetime) 
 			encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian(this.interestLifetime * 4096));
+                DataUtils.nonNegativeIntToBigEndian((this.interestLifetime / 1000.0) * 4096));
 		
 		if (null != this.nonce)
 			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);

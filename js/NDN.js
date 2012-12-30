@@ -110,7 +110,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
+        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
 
 	if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
@@ -150,7 +150,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
     
     // Fetch the ccndId.
     var interest = new Interest(new Name(NDN.ccndIdFetcher));
-	interest.interestLifetime = 4.0; // seconds    
+	interest.interestLifetime = 4000; // milliseconds    
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
