@@ -191,6 +191,9 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    
 	    var x509 = new X509();
 	    x509.readCertHex(certificateHex);
+	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
+	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
+	    output += "<br/>";
 	    
 	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, signature);
 	    if(LOG>2) console.log('result is '+result);
