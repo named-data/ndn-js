@@ -113,10 +113,18 @@ NDN.prototype.createRoute = function(host,port){
 
 NDN.KeyStore = new Array();
 
-var KeyStoreEntry = function KeyStoreEntry(name, key, rsa) {
+var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
 	this.keyName = name;  // KeyName
-	this.keyHex = key;    // Raw key hex string
 	this.rsaKey = rsa;    // RSA key
+	this.timeStamp = time;  // Time Stamp
+};
+
+NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
+	var result = NDN.getKeyByName(keyEntry.keyName);
+	if (result == null) 
+		NDN.KeyStore.push(keyEntry);
+	else
+		result = keyEntry;
 };
 
 NDN.getKeyByName = function(/* KeyName */ name) {
@@ -427,7 +435,6 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						//console.log(currentClosure.timerID);
 						
 						// Key verification
-						var verified = false;
 						
 						// Recursive key fetching & verification closure
 						var KeyFetchClosure = function KeyFetchClosure(content, closure, key, signature) {
@@ -444,19 +451,18 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
 							} else if (kind == Closure.UPCALL_CONTENT) {
 								console.log("In KeyFetchClosure.upcall: signature verification passed");
-								var keyHex = DataUtils.toHex(upcallInfo.contentObject.content).toLowerCase();
-								//console.log("Key: " + keyHex);
 								
-								var kp = keyHex.slice(56, 314);
-								var exp = keyHex.slice(318, 324);
-								
-								var rsakey = new RSAKey();
-								rsakey.setPublic(kp, exp);
+								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.signature);
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								
 								//console.log("raise encapsulated closure");
 								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
+								
+								// Store key in cache
+								var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+								NDN.addKeyEntry(keyEntry);
+								//console.log(NDN.KeyStore);
 							}
 						};
 						
@@ -473,22 +479,17 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								if (nameStr.match(keyname)) {
 									console.log("Content is key itself");
 									
-									var keyHex = DataUtils.toHex(co.content).toLowerCase();
-									console.log("Key content: " + keyHex);
-									
-									var kp = keyHex.slice(56, 314);
-									var exp = keyHex.slice(318, 324);
-									
-									var rsakey = new RSAKey();
-									rsakey.setPublic(kp, exp);
+									var rsakey = decodeSubjectPublicKeyInfo(co.content);
 									var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
 									var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 									
 									currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
 									
-									// Store key in cache
-									var keyEntry = new KeyStoreEntry(keylocator.keyName, keyHex, rsakey);
-									NDN.KeyStore.push(keyEntry);
+									// SWT: We don't need to store key here since the same key will be
+									//      stored again in the closure.
+									//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+									//NDN.addKeyEntry(keyEntry);
+									//console.log(NDN.KeyStore);
 								} else {
 									console.log("Fetch key according to keylocator");
 									
@@ -498,12 +499,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 										// Key found, verify now
 										console.log("Local key cache hit");
 										var rsakey = keyEntry.rsaKey;
-										verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
-										
+										var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
 										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 										
 										// Raise callback
-										currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+										currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
 									} else {
 										// Not found, fetch now
 										var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
@@ -514,24 +514,16 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
 								console.log("Keylocator contains KEY");
-								var publickeyHex = DataUtils.toHex(keylocator.publicKey).toLowerCase();
-								console.log(publickeyHex);
 		
-								var kp = publickeyHex.slice(56, 314);
-								var exp = publickeyHex.slice(318, 324);
-								
-								var rsakey = new RSAKey();
-								rsakey.setPublic(kp, exp);
-								verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
-								
+								var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+								var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								
 								// Raise callback
 								currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
 								
-								// Store key in cache
-								var keyEntry = new KeyStoreEntry(keylocator.keyName, publickeyHex, rsakey);
-								NDN.KeyStore.push(keyEntry);
+								// Since KeyLocator does not contain key name for this key,
+								// we have no way to store it as a key entry in KeyStore.
 							} else {
 								var cert = keylocator.certificate;
 								console.log("KeyLocator contains CERT");

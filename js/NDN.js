@@ -47,10 +47,18 @@ NDN.prototype.createRoute = function(host,port){
 
 NDN.KeyStore = new Array();
 
-var KeyStoreEntry = function KeyStoreEntry(name, key, rsa) {
+var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
 	this.keyName = name;  // KeyName
-	this.keyHex = key;    // Raw key hex string
 	this.rsaKey = rsa;    // RSA key
+	this.timeStamp = time;  // Time Stamp
+};
+
+NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
+	var result = NDN.getKeyByName(keyEntry.keyName);
+	if (result == null) 
+		NDN.KeyStore.push(keyEntry);
+	else
+		result = keyEntry;
 };
 
 NDN.getKeyByName = function(/* KeyName */ name) {
