@@ -480,7 +480,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);  // convert interestLifetime is in milliseconds.
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
 		//console.log(closure.timerID);
 	}
 	else
@@ -2499,6 +2499,60 @@ encoder)
 
 ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags.ForwardingEntry; }
 /**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * Encapsulate an Uint8Array and support dynamic reallocation.
+ */
+
+/*
+ * Create a DynamicUint8Array where this.array is a Uint8Array of size length.
+ * If length is not supplied, use a default initial length.
+ * The methods will update this.length.
+ * To access the array, use this.array or call subarray.
+ */
+var DynamicUint8Array = function DynamicUint8Array(length) {
+	if (!length)
+        length = 16;
+    
+    this.array = new Uint8Array(length);
+    this.length = length;
+};
+
+/*
+ * Ensure that this.array has the length, reallocate and copy if necessary.
+ * Update this.length which may be greater than length.
+ */
+DynamicUint8Array.prototype.ensureLength = function(length) {
+    if (this.array.length >= length)
+        return;
+    
+    // See if double is enough.
+    var newLength = this.array.length * 2;
+    if (length > newLength)
+        // The needed length is much greater, so use it.
+        newLength = length;
+    
+    var newArray = new Uint8Array(newLength);
+    newArray.set(this.array);
+    this.array = newArray;
+    this.length = newLength;
+};
+
+/*
+ * Call this.array.set(value, offset), reallocating if necessary. 
+ */
+DynamicUint8Array.prototype.set = function(value, offset) {
+    this.ensureLength(value.length + offset);
+    this.array.set(value, offset);
+};
+
+/*
+ * Return this.array.subarray(begin, end);
+ */
+DynamicUint8Array.prototype.subarray = function(begin, end) {
+    return this.array.subarray(begin, end);
+}
+/**
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
@@ -2541,7 +2595,7 @@ var bits_32 = 0x0FFFFFFFF;
 
 
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-	this.ostream = new Uint8Array(10000);
+	this.ostream = new DynamicUint8Array(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
@@ -2584,7 +2638,8 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
 
 
 BinaryXMLEncoder.prototype.writeEndElement = function() {
-	this.ostream[this.offset] = XML_CLOSE;
+    this.ostream.ensureLength(this.offset + 1);
+	this.ostream.array[this.offset] = XML_CLOSE;
 	this.offset += 1;
 }
 
@@ -2704,27 +2759,22 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
-	
-	if ((this.offset + numEncodingBytes) > this.ostream.length) {
-		throw new Error("Buffer space of " + (this.ostream.length - this.offset) + 
-											" bytes insufficient to hold " + 
-											numEncodingBytes + " of encoded type and value.");
-	}
+	this.ostream.ensureLength(this.offset + numEncodingBytes);
 
 	// Bottom 4 bits of val go in last byte with tag.
-	this.ostream[this.offset + numEncodingBytes - 1] = 
+	this.ostream.array[this.offset + numEncodingBytes - 1] = 
 		//(byte)
 			(BYTE_MASK &
 					(((XML_TT_MASK & type) | 
 					 ((XML_TT_VAL_MASK & val) << XML_TT_BITS))) |
 					 XML_TT_NO_MORE); // set top bit for last byte
-	val = val >>> XML_TT_VAL_BITS;;
+	val = val >>> XML_TT_VAL_BITS;
 	
 	// Rest of val goes into preceding bytes, 7 bits per byte, top bit
 	// is "more" flag.
 	var i = this.offset + numEncodingBytes - 2;
 	while ((0 != val) && (i >= this.offset)) {
-		this.ostream[i] = //(byte)
+		this.ostream.array[i] = //(byte)
 				(BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
 		val = val >>> XML_REG_VAL_BITS;
 		--i;
@@ -2766,7 +2816,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	
 	if(LOG>3) console.log(strBytes);
 	
-	this.writeString(strBytes,this.offset);
+	this.writeString(strBytes);
 	this.offset+= strBytes.length;
 };
 
@@ -2793,7 +2843,7 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 
 	this.encodeTypeAndVal(XML_BLOB, length);
 
-	this.writeBlobArray(blob, this.offset);
+	this.writeBlobArray(blob);
 	this.offset += length;
 };
 
@@ -2847,20 +2897,18 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 	this.writeElement(tag, binarydate);
 };
 
-BinaryXMLEncoder.prototype.writeString = function(
-		//String 
-		input,
-		//CCNTime 
-		offset) {
+// This does not update this.offset.
+BinaryXMLEncoder.prototype.writeString = function(input) {
 	
     if(typeof input === 'string'){
 		//console.log('went here');
     	if(LOG>4) console.log('GOING TO WRITE A STRING');
     	if(LOG>4) console.log(input);
         
-		for (i = 0; i < input.length; i++) {
+        this.ostream.ensureLength(this.offset + input.length);
+		for (var i = 0; i < input.length; i++) {
 			if(LOG>4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
-		    this.ostream[this.offset+i] = (input.charCodeAt(i));
+		    this.ostream.array[this.offset + i] = (input.charCodeAt(i));
 		}
 	}
     else{
@@ -2879,15 +2927,10 @@ BinaryXMLEncoder.prototype.writeString = function(
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
 		//Uint8Array 
-		blob,
-		//int 
-		offset) {
+		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
     
-	/*for (var i = 0; i < Blob.length; i++) {
-	    this.ostream[this.offset+i] = Blob[i];
-	}*/
 	this.ostream.set(blob, this.offset);
 };
 
@@ -3640,7 +3683,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
     this.useHeaderBuffer = false;
-    this.headerBuffer = new Uint8Array(5);
+    this.headerBuffer = new DynamicUint8Array(5);
     this.nBytesToRead = 0;
 };
 
@@ -3694,7 +3737,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         // We can't get all of the header bytes from this input. Save in headerBuffer.
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
-                        this.setHeaderBuffer
+                        this.headerBuffer.set
                             (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
@@ -3710,10 +3753,10 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 if (this.useHeaderBuffer) {
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
-                    this.setHeaderBuffer
+                    this.headerBuffer.set
                         (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
-                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer).decodeTypeAndVal();
+                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }
                 else {
                     // We didn't have to use the headerBuffer.
@@ -3790,20 +3833,7 @@ BinaryXMLStructureDecoder.prototype.seek = function(
         offset) {
     this.offset = offset;
 }
-
-/*
- * Set call this.headerBuffer.set(subarray, bufferOffset), an reallocate the headerBuffer if needed.
- */
-BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferOffset) {
-    var size = subarray.length + bufferOffset;
-    if (size > this.headerBuffer.length) {
-        // Reallocate the buffer.
-        var newHeaderBuffer = new Uint8Array(size + 5);
-        newHeaderBuffer.set(this.headerBuffer);
-        this.headerBuffer = newHeaderBuffer;
-    }
-    this.headerBuffer.set(subarray, bufferOffset);
-}/**
+/**
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.

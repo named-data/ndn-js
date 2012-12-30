@@ -41,7 +41,7 @@ var bits_32 = 0x0FFFFFFFF;
 
 
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-	this.ostream = new Uint8Array(10000);
+	this.ostream = new DynamicUint8Array(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
@@ -84,7 +84,8 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
 
 
 BinaryXMLEncoder.prototype.writeEndElement = function() {
-	this.ostream[this.offset] = XML_CLOSE;
+    this.ostream.ensureLength(this.offset + 1);
+	this.ostream.array[this.offset] = XML_CLOSE;
 	this.offset += 1;
 }
 
@@ -204,27 +205,22 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
-	
-	if ((this.offset + numEncodingBytes) > this.ostream.length) {
-		throw new Error("Buffer space of " + (this.ostream.length - this.offset) + 
-											" bytes insufficient to hold " + 
-											numEncodingBytes + " of encoded type and value.");
-	}
+	this.ostream.ensureLength(this.offset + numEncodingBytes);
 
 	// Bottom 4 bits of val go in last byte with tag.
-	this.ostream[this.offset + numEncodingBytes - 1] = 
+	this.ostream.array[this.offset + numEncodingBytes - 1] = 
 		//(byte)
 			(BYTE_MASK &
 					(((XML_TT_MASK & type) | 
 					 ((XML_TT_VAL_MASK & val) << XML_TT_BITS))) |
 					 XML_TT_NO_MORE); // set top bit for last byte
-	val = val >>> XML_TT_VAL_BITS;;
+	val = val >>> XML_TT_VAL_BITS;
 	
 	// Rest of val goes into preceding bytes, 7 bits per byte, top bit
 	// is "more" flag.
 	var i = this.offset + numEncodingBytes - 2;
 	while ((0 != val) && (i >= this.offset)) {
-		this.ostream[i] = //(byte)
+		this.ostream.array[i] = //(byte)
 				(BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
 		val = val >>> XML_REG_VAL_BITS;
 		--i;
@@ -266,7 +262,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	
 	if(LOG>3) console.log(strBytes);
 	
-	this.writeString(strBytes,this.offset);
+	this.writeString(strBytes);
 	this.offset+= strBytes.length;
 };
 
@@ -293,7 +289,7 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 
 	this.encodeTypeAndVal(XML_BLOB, length);
 
-	this.writeBlobArray(blob, this.offset);
+	this.writeBlobArray(blob);
 	this.offset += length;
 };
 
@@ -347,20 +343,18 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 	this.writeElement(tag, binarydate);
 };
 
-BinaryXMLEncoder.prototype.writeString = function(
-		//String 
-		input,
-		//CCNTime 
-		offset) {
+// This does not update this.offset.
+BinaryXMLEncoder.prototype.writeString = function(input) {
 	
     if(typeof input === 'string'){
 		//console.log('went here');
     	if(LOG>4) console.log('GOING TO WRITE A STRING');
     	if(LOG>4) console.log(input);
         
-		for (i = 0; i < input.length; i++) {
+        this.ostream.ensureLength(this.offset + input.length);
+		for (var i = 0; i < input.length; i++) {
 			if(LOG>4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
-		    this.ostream[this.offset+i] = (input.charCodeAt(i));
+		    this.ostream.array[this.offset + i] = (input.charCodeAt(i));
 		}
 	}
     else{
@@ -379,15 +373,10 @@ BinaryXMLEncoder.prototype.writeString = function(
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
 		//Uint8Array 
-		blob,
-		//int 
-		offset) {
+		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
     
-	/*for (var i = 0; i < Blob.length; i++) {
-	    this.ostream[this.offset+i] = Blob[i];
-	}*/
 	this.ostream.set(blob, this.offset);
 };
 
