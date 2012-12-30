@@ -14,6 +14,7 @@ const nsIProtocolHandler = Ci.nsIProtocolHandler;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
+Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
 function NdnProtocol() {
     // TODO: Remove host: null when null is the default.
@@ -56,7 +57,7 @@ NdnProtocol.prototype = {
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
-            template.interestLifetime = 4.0;
+            template.interestLifetime = 4000; // milliseconds
             var searchWithoutNdn = extractNdnSearch(search, template);
     
             var requestContent = function(contentListener) {                
@@ -124,6 +125,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         dump("NdnProtocol.ContentClosure: contentObject.content is null\n");
         return Closure.RESULT_ERR;
     }
+    
+    // Now that we're connected, report the host and port.
+    setConnectedNdnHub(this.ndn.host, this.ndn.port);
 
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     var segmentNumber = null;

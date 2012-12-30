@@ -4,6 +4,7 @@
  * This class represents Interest Objects
  */
 
+// _interestLifetime is in milliseconds.
 var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
 		
 	this.name = _name;
@@ -16,7 +17,7 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.childSelector = _childSelector;
 	this.answerOriginKind = _answerOriginKind;
 	this.scope = _scope;
-	this.interestLifetime = _interestLifetime;  // number of seconds
+	this.interestLifetime = _interestLifetime;  // milli seconds
 	this.nonce = _nonce;	
 };
 
@@ -65,7 +66,7 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
-			this.interestLifetime = DataUtils.bigEndianToUnsignedInt
+			this.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
                 (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
@@ -104,7 +105,7 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 		
 		if (null != this.interestLifetime) 
 			encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian(this.interestLifetime * 4096));
+                DataUtils.nonNegativeIntToBigEndian((this.interestLifetime / 1000.0) * 4096));
 		
 		if (null != this.nonce)
 			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);

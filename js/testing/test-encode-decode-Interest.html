@@ -21,7 +21,7 @@
             interest.childSelector = 1;
             interest.answerOriginKind = 4;
             interest.scope = 2;
-            interest.interestLifetime = 30;
+            interest.interestLifetime = 30000;
             interest.nonce = new Uint8Array([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
             var pkd = [];
             for (i = 0; i < 32; ++i)
@@ -89,7 +89,7 @@
 			}
 			
 			if (interest.interestLifetime != null ) {
-				output += "InterestLifetime: ";
+				output += "InterestLifetime (milliseconds): ";
 				output +=  interest.interestLifetime;
 				output += "<br/>";
 			}

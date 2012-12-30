@@ -54,8 +54,10 @@ function _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert) {
 }
 
 // NOTE: Without BITSTRING encapsulation.
-function _x509_getSubjectPublicKeyPosFromCertHex(hCert) {
-  var pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
+// If pInfo is supplied, it is the position in hCert of the SubjectPublicKeyInfo.
+function _x509_getSubjectPublicKeyPosFromCertHex(hCert, pInfo) {
+  if (pInfo == null)
+      pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
   if (pInfo == -1) return -1;    
   var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pInfo); 
   
@@ -68,8 +70,10 @@ function _x509_getSubjectPublicKeyPosFromCertHex(hCert) {
   return pBitStringV + 2;
 }
 
-function _x509_getPublicKeyHexArrayFromCertHex(hCert) {
-  var p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
+// If p is supplied, it is the public key position in hCert.
+function _x509_getPublicKeyHexArrayFromCertHex(hCert, p) {
+  if (p == null)
+      p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
   var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, p); 
   //var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, a[3]); 
   if(LOG>4){
@@ -232,6 +236,24 @@ function _x509_readCertPEM(sCertPEM) {
   this.hex = hCert;
 }
 
+/**
+ * read hex formatted X.509 certificate from string.
+ * @name readCertHex
+ * @memberOf X509#
+ * @function
+ * @param {String} hCert string for hex formatted X.509 certificate
+ */
+function _x509_readCertHex(hCert) {
+  hCert = hCert.toLowerCase();
+  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
+  var rsa = new RSAKey();
+  rsa.setPublic(a[0], a[1]);
+  this.subjectPublicKeyRSA = rsa;
+  this.subjectPublicKeyRSA_hN = a[0];
+  this.subjectPublicKeyRSA_hE = a[1];
+  this.hex = hCert;
+}
+
 function _x509_readCertPEMWithoutRSAInit(sCertPEM) {
   var hCert = _x509_pemToHex(sCertPEM);
   var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
@@ -260,6 +282,7 @@ function X509() {
 }
 
 X509.prototype.readCertPEM = _x509_readCertPEM;
+X509.prototype.readCertHex = _x509_readCertHex;
 X509.prototype.readCertPEMWithoutRSAInit = _x509_readCertPEMWithoutRSAInit;
 X509.prototype.getSerialNumberHex = _x509_getSerialNumberHex;
 X509.prototype.getIssuerHex = _x509_getIssuerHex;

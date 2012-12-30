@@ -13,7 +13,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
     this.useHeaderBuffer = false;
-    this.headerBuffer = new Uint8Array(5);
+    this.headerBuffer = new DynamicUint8Array(5);
     this.nBytesToRead = 0;
 };
 
@@ -67,7 +67,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         // We can't get all of the header bytes from this input. Save in headerBuffer.
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
-                        this.setHeaderBuffer
+                        this.headerBuffer.set
                             (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
@@ -83,10 +83,10 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 if (this.useHeaderBuffer) {
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
-                    this.setHeaderBuffer
+                    this.headerBuffer.set
                         (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
-                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer).decodeTypeAndVal();
+                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }
                 else {
                     // We didn't have to use the headerBuffer.
@@ -162,18 +162,4 @@ BinaryXMLStructureDecoder.prototype.seek = function(
         //int
         offset) {
     this.offset = offset;
-}
-
-/*
- * Set call this.headerBuffer.set(subarray, bufferOffset), an reallocate the headerBuffer if needed.
- */
-BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferOffset) {
-    var size = subarray.length + bufferOffset;
-    if (size > this.headerBuffer.length) {
-        // Reallocate the buffer.
-        var newHeaderBuffer = new Uint8Array(size + 5);
-        newHeaderBuffer.set(this.headerBuffer);
-        this.headerBuffer = newHeaderBuffer;
-    }
-    this.headerBuffer.set(subarray, bufferOffset);
 }

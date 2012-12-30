@@ -199,7 +199,7 @@ NDN.prototype.expressInterest = function(
 		interest.interestLifetime = template.interestLifetime;
     }
     else
-        interest.interestLifetime = 4.0;   // default interest timeout value in seconds.
+        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
 
 	if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
@@ -239,7 +239,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
     
     // Fetch the ccndId.
     var interest = new Interest(new Name(NDN.ccndIdFetcher));
-	interest.interestLifetime = 4.0; // seconds    
+	interest.interestLifetime = 4000; // milliseconds    
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
@@ -457,10 +457,6 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								
 								//console.log("raise encapsulated closure");
 								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
-								
-								// Store key in cache
-								var keyEntry = new KeyStoreEntry(keylocator.keyName, keyHex, rsakey);
-								NDN.KeyStore.push(keyEntry);
 							}
 						};
 						
@@ -489,6 +485,10 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 									var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 									
 									currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									
+									// Store key in cache
+									var keyEntry = new KeyStoreEntry(keylocator.keyName, keyHex, rsakey);
+									NDN.KeyStore.push(keyEntry);
 								} else {
 									console.log("Fetch key according to keylocator");
 									
@@ -564,7 +564,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 
 		// Fetch ccndid now
 		var interest = new Interest(new Name(NDN.ccndIdFetcher));
-		interest.interestLifetime = 4.0; // seconds
+		interest.interestLifetime = 4000; // milliseconds
 		var subarray = encodeToBinaryInterest(interest);
 		
 		var bytes = new Uint8Array(subarray.length);
@@ -616,7 +616,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime * 1000);  // convert interestLifetime from seconds to ms.
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
 		//console.log(closure.timerID);
 	}
 	else
@@ -1814,6 +1814,7 @@ Date.prototype.format = function (mask, utc) {
  * This class represents Interest Objects
  */
 
+// _interestLifetime is in milliseconds.
 var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
 		
 	this.name = _name;
@@ -1826,7 +1827,7 @@ var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSu
 	this.childSelector = _childSelector;
 	this.answerOriginKind = _answerOriginKind;
 	this.scope = _scope;
-	this.interestLifetime = _interestLifetime;  // number of seconds
+	this.interestLifetime = _interestLifetime;  // milli seconds
 	this.nonce = _nonce;	
 };
 
@@ -1875,7 +1876,7 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
 
 		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
-			this.interestLifetime = DataUtils.bigEndianToUnsignedInt
+			this.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
                 (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
@@ -1914,7 +1915,7 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 		
 		if (null != this.interestLifetime) 
 			encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian(this.interestLifetime * 4096));
+                DataUtils.nonNegativeIntToBigEndian((this.interestLifetime / 1000.0) * 4096));
 		
 		if (null != this.nonce)
 			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);
@@ -2651,6 +2652,60 @@ encoder)
 
 ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags.ForwardingEntry; }
 /**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * Encapsulate an Uint8Array and support dynamic reallocation.
+ */
+
+/*
+ * Create a DynamicUint8Array where this.array is a Uint8Array of size length.
+ * If length is not supplied, use a default initial length.
+ * The methods will update this.length.
+ * To access the array, use this.array or call subarray.
+ */
+var DynamicUint8Array = function DynamicUint8Array(length) {
+	if (!length)
+        length = 16;
+    
+    this.array = new Uint8Array(length);
+    this.length = length;
+};
+
+/*
+ * Ensure that this.array has the length, reallocate and copy if necessary.
+ * Update this.length which may be greater than length.
+ */
+DynamicUint8Array.prototype.ensureLength = function(length) {
+    if (this.array.length >= length)
+        return;
+    
+    // See if double is enough.
+    var newLength = this.array.length * 2;
+    if (length > newLength)
+        // The needed length is much greater, so use it.
+        newLength = length;
+    
+    var newArray = new Uint8Array(newLength);
+    newArray.set(this.array);
+    this.array = newArray;
+    this.length = newLength;
+};
+
+/*
+ * Call this.array.set(value, offset), reallocating if necessary. 
+ */
+DynamicUint8Array.prototype.set = function(value, offset) {
+    this.ensureLength(value.length + offset);
+    this.array.set(value, offset);
+};
+
+/*
+ * Return this.array.subarray(begin, end);
+ */
+DynamicUint8Array.prototype.subarray = function(begin, end) {
+    return this.array.subarray(begin, end);
+}
+/**
  * This class is used to encode ccnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
@@ -2693,7 +2748,7 @@ var bits_32 = 0x0FFFFFFFF;
 
 
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-	this.ostream = new Uint8Array(10000);
+	this.ostream = new DynamicUint8Array(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
@@ -2736,7 +2791,8 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
 
 
 BinaryXMLEncoder.prototype.writeEndElement = function() {
-	this.ostream[this.offset] = XML_CLOSE;
+    this.ostream.ensureLength(this.offset + 1);
+	this.ostream.array[this.offset] = XML_CLOSE;
 	this.offset += 1;
 }
 
@@ -2856,27 +2912,22 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	
 	// Encode backwards. Calculate how many bytes we need:
 	var numEncodingBytes = this.numEncodingBytes(val);
-	
-	if ((this.offset + numEncodingBytes) > this.ostream.length) {
-		throw new Error("Buffer space of " + (this.ostream.length - this.offset) + 
-											" bytes insufficient to hold " + 
-											numEncodingBytes + " of encoded type and value.");
-	}
+	this.ostream.ensureLength(this.offset + numEncodingBytes);
 
 	// Bottom 4 bits of val go in last byte with tag.
-	this.ostream[this.offset + numEncodingBytes - 1] = 
+	this.ostream.array[this.offset + numEncodingBytes - 1] = 
 		//(byte)
 			(BYTE_MASK &
 					(((XML_TT_MASK & type) | 
 					 ((XML_TT_VAL_MASK & val) << XML_TT_BITS))) |
 					 XML_TT_NO_MORE); // set top bit for last byte
-	val = val >>> XML_TT_VAL_BITS;;
+	val = val >>> XML_TT_VAL_BITS;
 	
 	// Rest of val goes into preceding bytes, 7 bits per byte, top bit
 	// is "more" flag.
 	var i = this.offset + numEncodingBytes - 2;
 	while ((0 != val) && (i >= this.offset)) {
-		this.ostream[i] = //(byte)
+		this.ostream.array[i] = //(byte)
 				(BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
 		val = val >>> XML_REG_VAL_BITS;
 		--i;
@@ -2918,7 +2969,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 	
 	if(LOG>3) console.log(strBytes);
 	
-	this.writeString(strBytes,this.offset);
+	this.writeString(strBytes);
 	this.offset+= strBytes.length;
 };
 
@@ -2945,7 +2996,7 @@ BinaryXMLEncoder.prototype.encodeBlob = function(
 
 	this.encodeTypeAndVal(XML_BLOB, length);
 
-	this.writeBlobArray(blob, this.offset);
+	this.writeBlobArray(blob);
 	this.offset += length;
 };
 
@@ -2999,20 +3050,18 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 	this.writeElement(tag, binarydate);
 };
 
-BinaryXMLEncoder.prototype.writeString = function(
-		//String 
-		input,
-		//CCNTime 
-		offset) {
+// This does not update this.offset.
+BinaryXMLEncoder.prototype.writeString = function(input) {
 	
     if(typeof input === 'string'){
 		//console.log('went here');
     	if(LOG>4) console.log('GOING TO WRITE A STRING');
     	if(LOG>4) console.log(input);
         
-		for (i = 0; i < input.length; i++) {
+        this.ostream.ensureLength(this.offset + input.length);
+		for (var i = 0; i < input.length; i++) {
 			if(LOG>4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
-		    this.ostream[this.offset+i] = (input.charCodeAt(i));
+		    this.ostream.array[this.offset + i] = (input.charCodeAt(i));
 		}
 	}
     else{
@@ -3031,15 +3080,10 @@ BinaryXMLEncoder.prototype.writeString = function(
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
 		//Uint8Array 
-		blob,
-		//int 
-		offset) {
+		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
     
-	/*for (var i = 0; i < Blob.length; i++) {
-	    this.ostream[this.offset+i] = Blob[i];
-	}*/
 	this.ostream.set(blob, this.offset);
 };
 
@@ -3792,7 +3836,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
     this.useHeaderBuffer = false;
-    this.headerBuffer = new Uint8Array(5);
+    this.headerBuffer = new DynamicUint8Array(5);
     this.nBytesToRead = 0;
 };
 
@@ -3846,7 +3890,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         // We can't get all of the header bytes from this input. Save in headerBuffer.
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
-                        this.setHeaderBuffer
+                        this.headerBuffer.set
                             (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
@@ -3862,10 +3906,10 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 if (this.useHeaderBuffer) {
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
-                    this.setHeaderBuffer
+                    this.headerBuffer.set
                         (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
-                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer).decodeTypeAndVal();
+                    typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }
                 else {
                     // We didn't have to use the headerBuffer.
@@ -3942,20 +3986,7 @@ BinaryXMLStructureDecoder.prototype.seek = function(
         offset) {
     this.offset = offset;
 }
-
-/*
- * Set call this.headerBuffer.set(subarray, bufferOffset), an reallocate the headerBuffer if needed.
- */
-BinaryXMLStructureDecoder.prototype.setHeaderBuffer = function(subarray, bufferOffset) {
-    var size = subarray.length + bufferOffset;
-    if (size > this.headerBuffer.length) {
-        // Reallocate the buffer.
-        var newHeaderBuffer = new Uint8Array(size + 5);
-        newHeaderBuffer.set(this.headerBuffer);
-        this.headerBuffer = newHeaderBuffer;
-    }
-    this.headerBuffer.set(subarray, bufferOffset);
-}/**
+/**
  * This class contains utilities to help parse the data
  * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -4512,6 +4543,17 @@ function decodeHexForwardingEntry(result){
 	
 }
 
+/*
+ * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
+ */
+function decodeSubjectPublicKeyInfo(array) {
+    var hex = DataUtils.toHex(array).toLowerCase();
+    var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
+    var rsaKey = new RSAKey();
+    rsaKey.setPublic(a[0], a[1]);
+    return rsaKey;
+}
+
 /* Return a user friendly HTML string with the contents of co.
    This also outputs to console.log.
  */
@@ -4571,37 +4613,21 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var tmp = DataUtils.toString(co.signedInfo.locator.certificate);
-	    var publickey = rstr2b64(tmp);
-	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.signedInfo.locator.certificate);
+	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    output += "DER Certificate: "+publickey ;
+	    output += "Hex Certificate: "+ certificateHex ;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    
-	    if(LOG>2) console.log("HEX OF ContentName + SignedInfo + Content = ");
-	    if(LOG>2) console.log(DataUtils.stringtoBase64(input));
-	    
-	    if(LOG>2) console.log(" PublicKey = "+publickey );
-	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
-	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
-	    
-	    if(LOG>2) console.log(" Signature is");
-	    if(LOG>2) console.log( signature );
-	    //if(LOG>2) console.log(" Signature NOW IS" );
-	    //if(LOG>2) console.log(co.signature.signature);
-
 	    var x509 = new X509();
-	    x509.readCertPEM(publickey);
+	    x509.readCertHex(certificateHex);
+	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
+	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
+	    output += "<br/>";
 	    
-	    //x509.readCertPEMWithoutRSAInit(publickey);
-
 	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, signature);
 	    if(LOG>2) console.log('result is '+result);
 	    
@@ -4614,35 +4640,10 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log('EXPONENT e after is ');
 	    if(LOG>2) console.log(e);
 	    
-	    /*var rsakey = new RSAKey();
-	      
-	      var kp = publickeyHex.slice(56,314);
-	      
-	      output += "PUBLISHER KEY(hex): "+kp ;
-	      
-	      output+= "<br />";
-	      output+= "<br />";
-	      
-	      console.log('kp is '+kp);
-	      
-	      var exp = publickeyHex.slice(318,324);
-	      
-	      console.log('kp size is '+kp.length );
-	      output += "exponent: "+exp ;
-	      
-	      output+= "<br />";
-	      output+= "<br />";
-	      
-	      console.log('exp is '+exp);
-	      
-	      rsakey.setPublic(kp,exp);
-
-	      var result = rsakey.verifyString(input, signature);*/
-	    
 	    if(result)
-		output += 'SIGNATURE VALID';
+            output += 'SIGNATURE VALID';
 	    else
-		output += 'SIGNATURE INVALID';
+            output += 'SIGNATURE INVALID';
 	    
 	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    
@@ -4652,19 +4653,17 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    //if(LOG>4) console.log('str'[1]);
 	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
-	    var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
 	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    output += "DER Certificate: "+publickey ;
+	    output += "Public key: " + publickeyHex;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
 	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    if(LOG>2) console.log(" PublicKey = "+publickey );
 	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
 	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
 	    
@@ -4673,53 +4672,13 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(" Signature NOW IS" );
 	    
 	    if(LOG>2) console.log(co.signature.signature);
-	    
-	    /*var x509 = new X509();
-	      
-	      x509.readCertPEM(publickey);
-	      
-	      
-	      //x509.readCertPEMWithoutRSAInit(publickey);
+	   
+	    var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
 
-	      var result = x509.subjectPublicKeyRSA.verifyString(input, signature);*/
-	    //console.log('result is '+result);
-	    
-	    var kp = publickeyHex.slice(56,314);
-	    
-	    output += "PUBLISHER KEY(hex): "+kp ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log('PUBLIC KEY IN HEX is ');
-	    if(LOG>2) console.log(kp);
-
-	    var exp = publickeyHex.slice(318,324);
-	    
-	    if(LOG>2) console.log('kp size is '+kp.length );
-	    output += "exponent: "+exp ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log('EXPONENT is ');
-	    if(LOG>2) console.log(exp);
-	    
-	    /*var c1 = hex_sha256(input);
-	      var c2 = signature;
-	      
-	      if(LOG>4)console.log('input is ');
-	      if(LOG>4)console.log(input);
-	      if(LOG>4)console.log('C1 is ');
-	      if(LOG>4)console.log(c1);
-	      if(LOG>4)console.log('C2 is ');
-	      if(LOG>4)console.log(c2);
-	      var result = c1 == c2;*/
-	    
-	    var rsakey = new RSAKey();
-	    
-	    rsakey.setPublic(kp,exp);
-	    
+	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
+	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
+	    output += "<br/>";
+	   	    
 	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
@@ -4745,6 +4704,8 @@ function contentObjectToHtml(/* ContentObject */ co) {
 
     return output;
 }
+
+
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -6379,6 +6340,300 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+/*! x509-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
+ */
+// 
+// x509.js - X509 class to read subject public key from certificate.
+//
+// version: 1.1 (10-May-2012)
+//
+// Copyright (c) 2010-2012 Kenji Urushima (kenji.urushima@gmail.com)
+//
+// This software is licensed under the terms of the MIT License.
+// http://kjur.github.com/jsrsasign/license
+//
+// The above copyright and license notice shall be 
+// included in all copies or substantial portions of the Software.
+// 
+
+// Depends:
+//   base64.js
+//   rsa.js
+//   asn1hex.js
+
+function _x509_pemToBase64(sCertPEM) {
+  var s = sCertPEM;
+  s = s.replace("-----BEGIN CERTIFICATE-----", "");
+  s = s.replace("-----END CERTIFICATE-----", "");
+  s = s.replace(/[ \n]+/g, "");
+  return s;
+}
+
+function _x509_pemToHex(sCertPEM) {
+  var b64Cert = _x509_pemToBase64(sCertPEM);
+  var hCert = b64tohex(b64Cert);
+  return hCert;
+}
+
+function _x509_getHexTbsCertificateFromCert(hCert) {
+  var pTbsCert = ASN1HEX.getStartPosOfV_AtObj(hCert, 0);
+  return pTbsCert;
+}
+
+// NOTE: privateKeyUsagePeriod field of X509v2 not supported.
+// NOTE: v1 and v3 supported
+function _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert) {
+  var pTbsCert = ASN1HEX.getStartPosOfV_AtObj(hCert, 0);
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pTbsCert); 
+  if (a.length < 1) return -1;
+  if (hCert.substring(a[0], a[0] + 10) == "a003020102") { // v3
+    if (a.length < 6) return -1;
+    return a[6];
+  } else {
+    if (a.length < 5) return -1;
+    return a[5];
+  }
+}
+
+// NOTE: Without BITSTRING encapsulation.
+// If pInfo is supplied, it is the position in hCert of the SubjectPublicKeyInfo.
+function _x509_getSubjectPublicKeyPosFromCertHex(hCert, pInfo) {
+  if (pInfo == null)
+      pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
+  if (pInfo == -1) return -1;    
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pInfo); 
+  
+  if (a.length != 2) return -1;
+  var pBitString = a[1];
+  if (hCert.substring(pBitString, pBitString + 2) != '03') return -1;
+  var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hCert, pBitString);
+
+  if (hCert.substring(pBitStringV, pBitStringV + 2) != '00') return -1;
+  return pBitStringV + 2;
+}
+
+// If p is supplied, it is the public key position in hCert.
+function _x509_getPublicKeyHexArrayFromCertHex(hCert, p) {
+  if (p == null)
+      p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, p); 
+  //var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, a[3]); 
+  if(LOG>4){
+	  console.log('a is now');
+	  console.log(a);
+  }
+  
+  //if (a.length != 2) return [];
+  if (a.length < 2) return [];
+
+  var hN = ASN1HEX.getHexOfV_AtObj(hCert, a[0]);
+  var hE = ASN1HEX.getHexOfV_AtObj(hCert, a[1]);
+  if (hN != null && hE != null) {
+    return [hN, hE];
+  } else {
+    return [];
+  }
+}
+
+function _x509_getPublicKeyHexArrayFromCertPEM(sCertPEM) {
+  var hCert = _x509_pemToHex(sCertPEM);
+  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
+  return a;
+}
+
+// ===== get basic fields from hex =====================================
+/**
+ * get hexadecimal string of serialNumber field of certificate.<br/>
+ * @name getSerialNumberHex
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getSerialNumberHex() {
+  return ASN1HEX.getDecendantHexVByNthList(this.hex, 0, [0, 1]);
+}
+
+/**
+ * get hexadecimal string of issuer field of certificate.<br/>
+ * @name getIssuerHex
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getIssuerHex() {
+  return ASN1HEX.getDecendantHexTLVByNthList(this.hex, 0, [0, 3]);
+}
+
+/**
+ * get string of issuer field of certificate.<br/>
+ * @name getIssuerString
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getIssuerString() {
+  return _x509_hex2dn(ASN1HEX.getDecendantHexTLVByNthList(this.hex, 0, [0, 3]));
+}
+
+/**
+ * get hexadecimal string of subject field of certificate.<br/>
+ * @name getSubjectHex
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getSubjectHex() {
+  return ASN1HEX.getDecendantHexTLVByNthList(this.hex, 0, [0, 5]);
+}
+
+/**
+ * get string of subject field of certificate.<br/>
+ * @name getSubjectString
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getSubjectString() {
+  return _x509_hex2dn(ASN1HEX.getDecendantHexTLVByNthList(this.hex, 0, [0, 5]));
+}
+
+/**
+ * get notBefore field string of certificate.<br/>
+ * @name getNotBefore
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getNotBefore() {
+  var s = ASN1HEX.getDecendantHexVByNthList(this.hex, 0, [0, 4, 0]);
+  s = s.replace(/(..)/g, "%$1");
+  s = decodeURIComponent(s);
+  return s;
+}
+
+/**
+ * get notAfter field string of certificate.<br/>
+ * @name getNotAfter
+ * @memberOf X509#
+ * @function
+ */
+function _x509_getNotAfter() {
+  var s = ASN1HEX.getDecendantHexVByNthList(this.hex, 0, [0, 4, 1]);
+  s = s.replace(/(..)/g, "%$1");
+  s = decodeURIComponent(s);
+  return s;
+}
+
+// ===== read certificate =====================================
+
+_x509_DN_ATTRHEX = {
+    "0603550406": "C",
+    "060355040a": "O",
+    "060355040b": "OU",
+    "0603550403": "CN",
+    "0603550405": "SN",
+    "0603550408": "ST",
+    "0603550407": "L" };
+
+function _x509_hex2dn(hDN) {
+  var s = "";
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hDN, 0);
+  for (var i = 0; i < a.length; i++) {
+    var hRDN = ASN1HEX.getHexOfTLV_AtObj(hDN, a[i]);
+    s = s + "/" + _x509_hex2rdn(hRDN);
+  }
+  return s;
+}
+
+function _x509_hex2rdn(hRDN) {
+    var hType = ASN1HEX.getDecendantHexTLVByNthList(hRDN, 0, [0, 0]);
+    var hValue = ASN1HEX.getDecendantHexVByNthList(hRDN, 0, [0, 1]);
+    var type = "";
+    try { type = _x509_DN_ATTRHEX[hType]; } catch (ex) { type = hType; }
+    hValue = hValue.replace(/(..)/g, "%$1");
+    var value = decodeURIComponent(hValue);
+    return type + "=" + value;
+}
+
+// ===== read certificate =====================================
+
+
+/**
+ * read PEM formatted X.509 certificate from string.<br/>
+ * @name readCertPEM
+ * @memberOf X509#
+ * @function
+ * @param {String} sCertPEM string for PEM formatted X.509 certificate
+ */
+function _x509_readCertPEM(sCertPEM) {
+  var hCert = _x509_pemToHex(sCertPEM);
+  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
+  if(LOG>4){
+	  console.log('HEX VALUE IS ' + hCert);
+	  console.log('type of a' + typeof a);
+	  console.log('a VALUE IS ');
+	  console.log(a);
+	  console.log('a[0] VALUE IS ' + a[0]);
+	  console.log('a[1] VALUE IS ' + a[1]);
+  }
+  var rsa = new RSAKey();
+  rsa.setPublic(a[0], a[1]);
+  this.subjectPublicKeyRSA = rsa;
+  this.subjectPublicKeyRSA_hN = a[0];
+  this.subjectPublicKeyRSA_hE = a[1];
+  this.hex = hCert;
+}
+
+/**
+ * read hex formatted X.509 certificate from string.
+ * @name readCertHex
+ * @memberOf X509#
+ * @function
+ * @param {String} hCert string for hex formatted X.509 certificate
+ */
+function _x509_readCertHex(hCert) {
+  hCert = hCert.toLowerCase();
+  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
+  var rsa = new RSAKey();
+  rsa.setPublic(a[0], a[1]);
+  this.subjectPublicKeyRSA = rsa;
+  this.subjectPublicKeyRSA_hN = a[0];
+  this.subjectPublicKeyRSA_hE = a[1];
+  this.hex = hCert;
+}
+
+function _x509_readCertPEMWithoutRSAInit(sCertPEM) {
+  var hCert = _x509_pemToHex(sCertPEM);
+  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
+  this.subjectPublicKeyRSA.setPublic(a[0], a[1]);
+  this.subjectPublicKeyRSA_hN = a[0];
+  this.subjectPublicKeyRSA_hE = a[1];
+  this.hex = hCert;
+}
+
+/**
+ * X.509 certificate class.<br/>
+ * @class X.509 certificate class
+ * @property {RSAKey} subjectPublicKeyRSA Tom Wu's RSAKey object
+ * @property {String} subjectPublicKeyRSA_hN hexadecimal string for modulus of RSA public key
+ * @property {String} subjectPublicKeyRSA_hE hexadecimal string for public exponent of RSA public key
+ * @property {String} hex hexacedimal string for X.509 certificate.
+ * @author Kenji Urushima
+ * @version 1.0.1 (08 May 2012)
+ * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
+ */
+function X509() {
+  this.subjectPublicKeyRSA = null;
+  this.subjectPublicKeyRSA_hN = null;
+  this.subjectPublicKeyRSA_hE = null;
+  this.hex = null;
+}
+
+X509.prototype.readCertPEM = _x509_readCertPEM;
+X509.prototype.readCertHex = _x509_readCertHex;
+X509.prototype.readCertPEMWithoutRSAInit = _x509_readCertPEMWithoutRSAInit;
+X509.prototype.getSerialNumberHex = _x509_getSerialNumberHex;
+X509.prototype.getIssuerHex = _x509_getIssuerHex;
+X509.prototype.getSubjectHex = _x509_getSubjectHex;
+X509.prototype.getIssuerString = _x509_getIssuerString;
+X509.prototype.getSubjectString = _x509_getSubjectString;
+X509.prototype.getNotBefore = _x509_getNotBefore;
+X509.prototype.getNotAfter = _x509_getNotAfter;
+
 // Copyright (c) 2005  Tom Wu
 // All Rights Reserved.
 // See "LICENSE" for details.

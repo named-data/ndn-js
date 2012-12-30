@@ -110,6 +110,17 @@ function decodeHexForwardingEntry(result){
 	
 }
 
+/*
+ * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
+ */
+function decodeSubjectPublicKeyInfo(array) {
+    var hex = DataUtils.toHex(array).toLowerCase();
+    var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
+    var rsaKey = new RSAKey();
+    rsaKey.setPublic(a[0], a[1]);
+    return rsaKey;
+}
+
 /* Return a user friendly HTML string with the contents of co.
    This also outputs to console.log.
  */
@@ -169,37 +180,21 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var tmp = DataUtils.toString(co.signedInfo.locator.certificate);
-	    var publickey = rstr2b64(tmp);
-	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.signedInfo.locator.certificate);
+	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    output += "DER Certificate: "+publickey ;
+	    output += "Hex Certificate: "+ certificateHex ;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
-	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    
-	    if(LOG>2) console.log("HEX OF ContentName + SignedInfo + Content = ");
-	    if(LOG>2) console.log(DataUtils.stringtoBase64(input));
-	    
-	    if(LOG>2) console.log(" PublicKey = "+publickey );
-	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
-	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
-	    
-	    if(LOG>2) console.log(" Signature is");
-	    if(LOG>2) console.log( signature );
-	    //if(LOG>2) console.log(" Signature NOW IS" );
-	    //if(LOG>2) console.log(co.signature.signature);
-
 	    var x509 = new X509();
-	    x509.readCertPEM(publickey);
+	    x509.readCertHex(certificateHex);
+	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
+	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
+	    output += "<br/>";
 	    
-	    //x509.readCertPEMWithoutRSAInit(publickey);
-
 	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, signature);
 	    if(LOG>2) console.log('result is '+result);
 	    
@@ -212,35 +207,10 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log('EXPONENT e after is ');
 	    if(LOG>2) console.log(e);
 	    
-	    /*var rsakey = new RSAKey();
-	      
-	      var kp = publickeyHex.slice(56,314);
-	      
-	      output += "PUBLISHER KEY(hex): "+kp ;
-	      
-	      output+= "<br />";
-	      output+= "<br />";
-	      
-	      console.log('kp is '+kp);
-	      
-	      var exp = publickeyHex.slice(318,324);
-	      
-	      console.log('kp size is '+kp.length );
-	      output += "exponent: "+exp ;
-	      
-	      output+= "<br />";
-	      output+= "<br />";
-	      
-	      console.log('exp is '+exp);
-	      
-	      rsakey.setPublic(kp,exp);
-
-	      var result = rsakey.verifyString(input, signature);*/
-	    
 	    if(result)
-		output += 'SIGNATURE VALID';
+            output += 'SIGNATURE VALID';
 	    else
-		output += 'SIGNATURE INVALID';
+            output += 'SIGNATURE INVALID';
 	    
 	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    
@@ -250,19 +220,17 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    //if(LOG>4) console.log('str'[1]);
 	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
-	    var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
 	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    output += "DER Certificate: "+publickey ;
+	    output += "Public key: " + publickeyHex;
 	    
 	    output+= "<br />";
 	    output+= "<br />";
 	    
 	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    if(LOG>2) console.log(" PublicKey = "+publickey );
 	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
 	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
 	    
@@ -271,53 +239,13 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(" Signature NOW IS" );
 	    
 	    if(LOG>2) console.log(co.signature.signature);
-	    
-	    /*var x509 = new X509();
-	      
-	      x509.readCertPEM(publickey);
-	      
-	      
-	      //x509.readCertPEMWithoutRSAInit(publickey);
+	   
+	    var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
 
-	      var result = x509.subjectPublicKeyRSA.verifyString(input, signature);*/
-	    //console.log('result is '+result);
-	    
-	    var kp = publickeyHex.slice(56,314);
-	    
-	    output += "PUBLISHER KEY(hex): "+kp ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log('PUBLIC KEY IN HEX is ');
-	    if(LOG>2) console.log(kp);
-
-	    var exp = publickeyHex.slice(318,324);
-	    
-	    if(LOG>2) console.log('kp size is '+kp.length );
-	    output += "exponent: "+exp ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log('EXPONENT is ');
-	    if(LOG>2) console.log(exp);
-	    
-	    /*var c1 = hex_sha256(input);
-	      var c2 = signature;
-	      
-	      if(LOG>4)console.log('input is ');
-	      if(LOG>4)console.log(input);
-	      if(LOG>4)console.log('C1 is ');
-	      if(LOG>4)console.log(c1);
-	      if(LOG>4)console.log('C2 is ');
-	      if(LOG>4)console.log(c2);
-	      var result = c1 == c2;*/
-	    
-	    var rsakey = new RSAKey();
-	    
-	    rsakey.setPublic(kp,exp);
-	    
+	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
+	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
+	    output += "<br/>";
+	   	    
 	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
@@ -343,3 +271,5 @@ function contentObjectToHtml(/* ContentObject */ co) {
 
     return output;
 }
+
+
