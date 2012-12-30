@@ -42,6 +42,8 @@ document.write('<script type="text/javascript" src="' + path + 'ForwardingEntry.
 
 document.write('<script type="text/javascript" src="' + path + 'Closure.js"></script>');
 
+document.write('<script type="text/javascript" src="' + path + 'encoding/DynamicUint8Array.js"></script>');
+
 document.write('<script type="text/javascript" src="' + path + 'encoding/BinaryXMLEncoder.js"></script>');
 
 document.write('<script type="text/javascript" src="' + path + 'encoding/BinaryXMLDecoder.js"></script>');

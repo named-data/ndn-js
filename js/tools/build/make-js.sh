@@ -16,6 +16,7 @@ cat ../../Closure.js \
   ../../PublisherPublicKeyDigest.js \
   ../../FaceInstance.js \
   ../../ForwardingEntry.js \
+  ../../encoding/DynamicUint8Array.js \
   ../../encoding/BinaryXMLEncoder.js \
   ../../encoding/BinaryXMLDecoder.js \
   ../../encoding/BinaryXMLStructureDecoder.js \
