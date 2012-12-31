@@ -17,9 +17,19 @@ var ndnHubChangedListenerList = [];
 
 /*
  * When the NDN hub host or port is changed, the system calls listener(host, port).
+ * If the current host and port are not null, call listener with the values to initialize.
  */
 function addNdnHubChangedListener(listener) {
     ndnHubChangedListenerList.push(listener);
+    
+    if (ndnHubHost != null && ndnHubPort != null) {
+        try {
+            listener(ndnHubHost, ndnHubPort);
+        }
+        catch (ex) {
+            // Ignore error from the listener.
+        }
+    }
 }
 
 /*
