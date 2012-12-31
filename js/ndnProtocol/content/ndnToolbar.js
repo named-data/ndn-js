@@ -51,5 +51,4 @@ function onNdnHubChanged(host, port) {
    document.getElementById("ndnHubLabel").setAttribute("value", "Hub: " + host + ":" + port);
 }
 
-// Assume that addNdnHubChangedListener is defined since we imported NdnProtocolInfo.jsm above.
-addNdnHubChangedListener(onNdnHubChanged);
+window.addEventListener("load", function() { addNdnHubChangedListener(onNdnHubChanged); }, false);
