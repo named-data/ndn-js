@@ -3,7 +3,6 @@
 rm ndn-js-uncomp.js
 
 cat ../../Closure.js \
-  ../../NDN.js \
   ../../WebSocketTransport.js \
   ../../util/CCNProtocolDTags.js \
   ../../util/CCNTime.js \
@@ -33,6 +32,7 @@ cat ../../Closure.js \
   ../../securityLib/x509-1.1.js \
   ../../securityLib/jsbn.js \
   ../../securityLib/jsbn2.js \
+  ../../NDN.js \
   > ndn-js-uncomp.js
 
 java -jar compiler/compiler.jar --js ndn-js-uncomp.js --js_output_file ndn-js.js

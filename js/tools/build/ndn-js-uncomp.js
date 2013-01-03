@@ -64,227 +64,6 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
-/**
- * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
- * See COPYING for copyright and distribution information.
- * This class represents the top-level object for communicating with an NDN host.
- */
-
-var LOG = 0;
-
-/**
- * settings is an associative array with the following defaults:
- * {
- *   getTransport: function() { return new WebSocketTransport(); }
- *   getHostAndPort: transport.defaultGetHostAndPort,
- *   host: 'localhost', // If null, use getHostAndPort when connecting.
- *   port: 9696,
- *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
- *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
- * }
- * 
- * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
- *   null if there are no more hosts.
- */
-var NDN = function NDN(settings) {
-    settings = (settings || {});
-    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
-    this.transport = getTransport();
-    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
-	this.host = (settings.host !== undefined ? settings.host : 'localhost');
-	this.port = (settings.port || 9696);
-    this.readyStatus = NDN.UNOPEN;
-    // Event handler
-    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
-    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
-};
-
-NDN.UNOPEN = 0;  // created but not opened yet
-NDN.OPENED = 1;  // connection to ccnd opened
-NDN.CLOSED = 2;  // connection to ccnd closed
-
-NDN.ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
-
-NDN.prototype.createRoute = function(host,port){
-	this.host=host;
-	this.port=port;
-}
-
-
-NDN.KeyStore = new Array();
-
-var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
-	this.keyName = name;  // KeyName
-	this.rsaKey = rsa;    // RSA key
-	this.timeStamp = time;  // Time Stamp
-};
-
-NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
-	var result = NDN.getKeyByName(keyEntry.keyName);
-	if (result == null) 
-		NDN.KeyStore.push(keyEntry);
-	else
-		result = keyEntry;
-};
-
-NDN.getKeyByName = function(/* KeyName */ name) {
-	var result = null;
-	
-	for (var i = 0; i < NDN.KeyStore.length; i++) {
-		if (NDN.KeyStore[i].keyName.matches_name(name.contentName)) {
-            if (result == null || 
-                NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
-                result = NDN.KeyStore[i];
-        }
-	}
-    
-	return result;
-};
-
-// For fetching data
-NDN.PITTable = new Array();
-
-var PITEntry = function PITEntry(interest, closure) {
-	this.interest = interest;  // Interest
-	this.closure = closure;    // Closure
-};
-
-// Return the longest entry from NDN.PITTable that matches name.
-NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
-    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
-    //   could be sent for one Interest?
-    var result = null;
-    
-	for (var i = 0; i < NDN.PITTable.length; i++) {
-		if (NDN.PITTable[i].interest.matches_name(name)) {
-            if (result == null || 
-                NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
-                result = NDN.PITTable[i];
-        }
-	}
-    
-	return result;
-};
-
-/*
- * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
- * If no more hosts remain, return null.
- */
-NDN.makeShuffledGetHostAndPort = function(hostList, port) {
-    // Make a copy.
-    hostList = hostList.slice(0, hostList.length);
-    DataUtils.shuffle(hostList);
-
-    return function() {
-        if (hostList.length == 0)
-            return null;
-        
-        return { host: hostList.splice(0, 1)[0], port: port };
-    };
-};
-
-/** Encode name as an Interest. If template is not null, use its attributes.
- *  Send the interest to host:port, read the entire response and call
- *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)).                 
- */
-NDN.prototype.expressInterest = function(
-        // Name
-        name,
-        // Closure
-        closure,
-        // Interest
-        template) {
-	var interest = new Interest(name);
-    if (template != null) {
-		interest.minSuffixComponents = template.minSuffixComponents;
-		interest.maxSuffixComponents = template.maxSuffixComponents;
-		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-		interest.exclude = template.exclude;
-		interest.childSelector = template.childSelector;
-		interest.answerOriginKind = template.answerOriginKind;
-		interest.scope = template.scope;
-		interest.interestLifetime = template.interestLifetime;
-    }
-    else
-        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
-
-	if (this.host == null || this.port == null) {
-        if (this.getHostAndPort == null)
-            console.log('ERROR: host OR port NOT SET');
-        else
-            this.connectAndExpressInterest(interest, closure);
-    }
-    else
-        this.transport.expressInterest(this, interest, closure);
-};
-
-NDN.prototype.registerPrefix = function(name, closure, flag) {
-    return this.transport.registerPrefix(this, name, closure, flag);
-}
-
-/*
- * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
- *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
- */
-NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
-    var hostAndPort = this.getHostAndPort();
-    if (hostAndPort == null) {
-        console.log('ERROR: No more hosts from getHostAndPort');
-        this.host = null;
-        return;
-    }
-
-    if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
-        console.log('ERROR: The host returned by getHostAndPort is not alive: ' + 
-                this.host + ":" + this.port);
-        return;
-    }
-        
-    this.host = hostAndPort.host;
-    this.port = hostAndPort.port;   
-    console.log("Trying host from getHostAndPort: " + this.host);
-    
-    // Fetch the ccndId.
-    var interest = new Interest(new Name(NDN.ccndIdFetcher));
-	interest.interestLifetime = 4000; // milliseconds    
-
-    var thisNDN = this;
-	var timerID = setTimeout(function() {
-        console.log("Timeout waiting for host " + thisNDN.host);
-        // Try again.
-        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
-	}, 3000);
-  
-    this.transport.expressInterest
-        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
-}
-
-NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
-    // Inherit from Closure.
-    Closure.call(this);
-    
-    this.ndn = ndn;
-    this.callerInterest = callerInterest;
-    this.callerClosure = callerClosure;
-    this.timerID = timerID;
-};
-
-NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
-    if (!(kind == Closure.UPCALL_CONTENT ||
-          kind == Closure.UPCALL_CONTENT_UNVERIFIED ||
-          kind == Closure.UPCALL_INTEREST))
-        // The upcall is not for us.
-        return Closure.RESULT_ERR;
-        
-    // The host is alive, so cancel the timeout and issue the caller's interest.
-    clearTimeout(this.timerID);
-    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
-    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
-
-    return Closure.RESULT_OK;
-};
-
 /** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
@@ -364,9 +143,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
-				if (LOG>3) console.log(interest);
-				var nameStr = escape(interest.name.getName());
-				if (LOG > 3) console.log(nameStr);
+				if (LOG > 3) console.log(interest);
+				//var nameStr = escape(interest.name.getName());
+				//if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -395,10 +174,10 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				var nameStr = co.name.getName();
-				console.log(nameStr);
+				//var nameStr = co.name.getName();
+				//if (LOG > 3) console.log(nameStr);
 				
-				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
+				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
@@ -449,8 +228,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
+								console.log(this.keyName.contentName.getName());
 							} else if (kind == Closure.UPCALL_CONTENT) {
-								console.log("In KeyFetchClosure.upcall: signature verification passed");
+								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
 								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.signature);
@@ -472,12 +252,13 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 							
 							var keylocator = co.signedInfo.locator;
 							if (keylocator.type == KeyLocatorType.KEYNAME) {
-								console.log("KeyLocator contains KEYNAME");
-								var keyname = keylocator.keyName.contentName.getName();
-								console.log(keyname);
+								if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+								//var keyname = keylocator.keyName.contentName.getName();
+								//console.log(nameStr);
+								//console.log(keyname);
 								
-								if (nameStr.match(keyname)) {
-									console.log("Content is key itself");
+								if (keylocator.keyName.contentName.match(co.name)) {
+									if (LOG > 3) console.log("Content is key itself");
 									
 									var rsakey = decodeSubjectPublicKeyInfo(co.content);
 									var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
@@ -491,13 +272,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 									//NDN.addKeyEntry(keyEntry);
 									//console.log(NDN.KeyStore);
 								} else {
-									console.log("Fetch key according to keylocator");
-									
 									// Check local key store
 									var keyEntry = NDN.getKeyByName(keylocator.keyName);
 									if (keyEntry) {
 										// Key found, verify now
-										console.log("Local key cache hit");
+										if (LOG > 3) console.log("Local key cache hit");
 										var rsakey = keyEntry.rsaKey;
 										var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
 										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
@@ -506,14 +285,15 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 										currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
 									} else {
 										// Not found, fetch now
-										var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
+										if (LOG > 3) console.log("Fetch key according to keylocator");
+										var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex);
 										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
 										interest.interestLifetime = 4.0;
 										self.expressInterest(ndn, interest, nextClosure);
 									}
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
-								console.log("Keylocator contains KEY");
+								if (LOG > 3) console.log("Keylocator contains KEY");
 		
 								var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
 								var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
@@ -1224,6 +1004,23 @@ Name.toEscapedString = function(component) {
         }
     }
     return result;
+};
+
+Name.prototype.match = function(/*Name*/ name) {
+	var i_name = this.components;
+	var o_name = name.components;
+
+	// The intrest name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+            return false;
+
+	// Check if at least one of given components doesn't match.
+    for (var i = 0; i < i_name.length; ++i) {
+        if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+            return false;
+    }
+
+	return true;
 };
 /**
  * @author: Meki Cheraoui
@@ -2219,23 +2016,6 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
-
-KeyName.prototype.matches_name = function(/*Name*/ name) {
-	var i_name = this.contentName.components;
-	var o_name = name.components;
-
-	// The intrest name is longer than the name we are checking it against.
-	if (i_name.length > o_name.length)
-            return false;
-
-	// Check if at least one of given components doesn't match.
-        for (var i = 0; i < i_name.length; ++i) {
-            if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
-                return false;
-        }
-
-	return true;
-}
 
 /**
  * @author: Meki Cheraoui
@@ -7833,3 +7613,224 @@ BigInteger.prototype.isProbablePrime = bnIsProbablePrime;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+/**
+ * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
+ * See COPYING for copyright and distribution information.
+ * This class represents the top-level object for communicating with an NDN host.
+ */
+
+var LOG = 0;
+
+/**
+ * settings is an associative array with the following defaults:
+ * {
+ *   getTransport: function() { return new WebSocketTransport(); }
+ *   getHostAndPort: transport.defaultGetHostAndPort,
+ *   host: 'localhost', // If null, use getHostAndPort when connecting.
+ *   port: 9696,
+ *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
+ *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
+ * }
+ * 
+ * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
+ *   null if there are no more hosts.
+ */
+var NDN = function NDN(settings) {
+    settings = (settings || {});
+    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+    this.transport = getTransport();
+    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
+	this.host = (settings.host !== undefined ? settings.host : 'localhost');
+	this.port = (settings.port || 9696);
+    this.readyStatus = NDN.UNOPEN;
+    // Event handler
+    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
+};
+
+NDN.UNOPEN = 0;  // created but not opened yet
+NDN.OPENED = 1;  // connection to ccnd opened
+NDN.CLOSED = 2;  // connection to ccnd closed
+
+NDN.ccndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY');
+
+NDN.prototype.createRoute = function(host, port) {
+	this.host=host;
+	this.port=port;
+};
+
+
+NDN.KeyStore = new Array();
+
+var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
+	this.keyName = name;  // KeyName
+	this.rsaKey = rsa;    // RSA key
+	this.timeStamp = time;  // Time Stamp
+};
+
+NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
+	var result = NDN.getKeyByName(keyEntry.keyName);
+	if (result == null) 
+		NDN.KeyStore.push(keyEntry);
+	else
+		result = keyEntry;
+};
+
+NDN.getKeyByName = function(/* KeyName */ name) {
+	var result = null;
+	
+	for (var i = 0; i < NDN.KeyStore.length; i++) {
+		if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
+            if (result == null || 
+                NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+                result = NDN.KeyStore[i];
+        }
+	}
+    
+	return result;
+};
+
+// For fetching data
+NDN.PITTable = new Array();
+
+var PITEntry = function PITEntry(interest, closure) {
+	this.interest = interest;  // Interest
+	this.closure = closure;    // Closure
+};
+
+// Return the longest entry from NDN.PITTable that matches name.
+NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
+    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
+    //   could be sent for one Interest?
+    var result = null;
+    
+	for (var i = 0; i < NDN.PITTable.length; i++) {
+		if (NDN.PITTable[i].interest.matches_name(name)) {
+            if (result == null || 
+                NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
+                result = NDN.PITTable[i];
+        }
+	}
+    
+	return result;
+};
+
+/*
+ * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
+ * If no more hosts remain, return null.
+ */
+NDN.makeShuffledGetHostAndPort = function(hostList, port) {
+    // Make a copy.
+    hostList = hostList.slice(0, hostList.length);
+    DataUtils.shuffle(hostList);
+
+    return function() {
+        if (hostList.length == 0)
+            return null;
+        
+        return { host: hostList.splice(0, 1)[0], port: port };
+    };
+};
+
+/** Encode name as an Interest. If template is not null, use its attributes.
+ *  Send the interest to host:port, read the entire response and call
+ *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
+ *                 new UpcallInfo(this, interest, 0, contentObject)).                 
+ */
+NDN.prototype.expressInterest = function(
+        // Name
+        name,
+        // Closure
+        closure,
+        // Interest
+        template) {
+	var interest = new Interest(name);
+    if (template != null) {
+		interest.minSuffixComponents = template.minSuffixComponents;
+		interest.maxSuffixComponents = template.maxSuffixComponents;
+		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+		interest.exclude = template.exclude;
+		interest.childSelector = template.childSelector;
+		interest.answerOriginKind = template.answerOriginKind;
+		interest.scope = template.scope;
+		interest.interestLifetime = template.interestLifetime;
+    }
+    else
+        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+
+	if (this.host == null || this.port == null) {
+        if (this.getHostAndPort == null)
+            console.log('ERROR: host OR port NOT SET');
+        else
+            this.connectAndExpressInterest(interest, closure);
+    }
+    else
+        this.transport.expressInterest(this, interest, closure);
+};
+
+NDN.prototype.registerPrefix = function(name, closure, flag) {
+    return this.transport.registerPrefix(this, name, closure, flag);
+};
+
+/*
+ * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
+ *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
+ */
+NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
+    var hostAndPort = this.getHostAndPort();
+    if (hostAndPort == null) {
+        console.log('ERROR: No more hosts from getHostAndPort');
+        this.host = null;
+        return;
+    }
+
+    if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
+        console.log('ERROR: The host returned by getHostAndPort is not alive: ' + 
+                this.host + ":" + this.port);
+        return;
+    }
+        
+    this.host = hostAndPort.host;
+    this.port = hostAndPort.port;   
+    console.log("Trying host from getHostAndPort: " + this.host);
+    
+    // Fetch the ccndId.
+    var interest = new Interest(new Name(NDN.ccndIdFetcher));
+	interest.interestLifetime = 4000; // milliseconds    
+
+    var thisNDN = this;
+	var timerID = setTimeout(function() {
+        console.log("Timeout waiting for host " + thisNDN.host);
+        // Try again.
+        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
+	}, 3000);
+  
+    this.transport.expressInterest
+        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
+};
+
+NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
+    // Inherit from Closure.
+    Closure.call(this);
+    
+    this.ndn = ndn;
+    this.callerInterest = callerInterest;
+    this.callerClosure = callerClosure;
+    this.timerID = timerID;
+};
+
+NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
+    if (!(kind == Closure.UPCALL_CONTENT ||
+          kind == Closure.UPCALL_CONTENT_UNVERIFIED ||
+          kind == Closure.UPCALL_INTEREST))
+        // The upcall is not for us.
+        return Closure.RESULT_ERR;
+        
+    // The host is alive, so cancel the timeout and issue the caller's interest.
+    clearTimeout(this.timerID);
+    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
+    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
+
+    return Closure.RESULT_OK;
+};
+

@@ -77,9 +77,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
-				if (LOG>3) console.log(interest);
-				var nameStr = escape(interest.name.getName());
-				if (LOG > 3) console.log(nameStr);
+				if (LOG > 3) console.log(interest);
+				//var nameStr = escape(interest.name.getName());
+				//if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -108,10 +108,10 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				var nameStr = co.name.getName();
-				console.log(nameStr);
+				//var nameStr = co.name.getName();
+				//if (LOG > 3) console.log(nameStr);
 				
-				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
+				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
@@ -162,8 +162,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
+								console.log(this.keyName.contentName.getName());
 							} else if (kind == Closure.UPCALL_CONTENT) {
-								console.log("In KeyFetchClosure.upcall: signature verification passed");
+								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
 								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.signature);
@@ -185,12 +186,13 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 							
 							var keylocator = co.signedInfo.locator;
 							if (keylocator.type == KeyLocatorType.KEYNAME) {
-								console.log("KeyLocator contains KEYNAME");
-								var keyname = keylocator.keyName.contentName.getName();
-								console.log(keyname);
+								if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+								//var keyname = keylocator.keyName.contentName.getName();
+								//console.log(nameStr);
+								//console.log(keyname);
 								
-								if (nameStr.match(keyname)) {
-									console.log("Content is key itself");
+								if (keylocator.keyName.contentName.match(co.name)) {
+									if (LOG > 3) console.log("Content is key itself");
 									
 									var rsakey = decodeSubjectPublicKeyInfo(co.content);
 									var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
@@ -204,13 +206,11 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 									//NDN.addKeyEntry(keyEntry);
 									//console.log(NDN.KeyStore);
 								} else {
-									console.log("Fetch key according to keylocator");
-									
 									// Check local key store
 									var keyEntry = NDN.getKeyByName(keylocator.keyName);
 									if (keyEntry) {
 										// Key found, verify now
-										console.log("Local key cache hit");
+										if (LOG > 3) console.log("Local key cache hit");
 										var rsakey = keyEntry.rsaKey;
 										var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);
 										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
@@ -219,14 +219,15 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 										currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
 									} else {
 										// Not found, fetch now
-										var nextClosure = new KeyFetchClosure(co, currentClosure, keyname, sigHex);
+										if (LOG > 3) console.log("Fetch key according to keylocator");
+										var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex);
 										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
 										interest.interestLifetime = 4.0;
 										self.expressInterest(ndn, interest, nextClosure);
 									}
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
-								console.log("Keylocator contains KEY");
+								if (LOG > 3) console.log("Keylocator contains KEY");
 		
 								var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
 								var verified = rsakey.verifyByteArray(co.rawSignatureData, sigHex);

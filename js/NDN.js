@@ -37,12 +37,12 @@ NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
 
-NDN.ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
+NDN.ccndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY');
 
-NDN.prototype.createRoute = function(host,port){
+NDN.prototype.createRoute = function(host, port) {
 	this.host=host;
 	this.port=port;
-}
+};
 
 
 NDN.KeyStore = new Array();
@@ -65,7 +65,7 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 	var result = null;
 	
 	for (var i = 0; i < NDN.KeyStore.length; i++) {
-		if (NDN.KeyStore[i].keyName.matches_name(name.contentName)) {
+		if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
             if (result == null || 
                 NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
                 result = NDN.KeyStore[i];
@@ -155,7 +155,7 @@ NDN.prototype.expressInterest = function(
 
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     return this.transport.registerPrefix(this, name, closure, flag);
-}
+};
 
 /*
  * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
@@ -192,7 +192,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
   
     this.transport.expressInterest
         (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
-}
+};
 
 NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
     // Inherit from Closure.
