@@ -10,8 +10,8 @@
 	<script type="text/javascript" src="../tools/build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		hostip = "131.179.196.232";
-		//hostip = "localhost";
+		//hostip = "131.179.196.232";
+		hostip = "localhost";
 		var ndncon = new NDN({port:9696,host:hostip});
         ndncon.transport.connectWebSocket(ndncon);
         
@@ -39,7 +39,7 @@
 		        document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
 		        return Closure.RESULT_OK;
 		    }
-		    /*
+		    
 		    if (kind == Closure.UPCALL_CONTENT_BAD) {
 		    	console.log("NdnProtocol.ContentClosure: signature verification failed");
 		    	return Closure.RESULT_OK;
@@ -49,7 +49,7 @@
 		          kind == Closure.UPCALL_CONTENT_UNVERIFIED))
 		        // The upcall is not for us.
 		        return Closure.RESULT_ERR;
-		    */
+		    
 		    var contentObject = upcallInfo.contentObject;
 		    if (contentObject.content == null) {
 		        console.log("NdnProtocol.ContentClosure: contentObject.content is null");

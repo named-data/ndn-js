@@ -21,7 +21,10 @@ cat ../../Closure.js \
   ../../encoding/BinaryXMLStructureDecoder.js \
   ../../encoding/DataUtils.js \
   ../../encoding/EncodingUtils.js \
+  ../../encoding/ASN1/asn1.js \
+  ../../encoding/ASN1/hex.js \
   ../../security/KeyManager.js \
+  ../../security/Witness.js \
   ../../securityLib/sha256.js \
   ../../securityLib/base64.js \
   ../../securityLib/rsa.js \
