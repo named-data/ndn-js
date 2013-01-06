@@ -195,7 +195,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
 	    output += "<br/>";
 	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, signature);
+	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
 	    if(LOG>2) console.log('result is '+result);
 	    
 	    var n = x509.subjectPublicKeyRSA.n;
@@ -225,6 +225,14 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
+	    var wit = null;
+	    var witHex = "";
+		if (co.signature.Witness != null) {
+			wit = new Witness();
+			wit.decode(co.signature.Witness);
+			witHex = DataUtils.toHex(co.signature.Witness);
+		}
+	    
 	    output += "Public key: " + publickeyHex;
 	    
 	    output+= "<br />";
@@ -235,6 +243,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
 	    
 	    if(LOG>2) console.log(" Signature "+signature );
+	    if(LOG>2) console.log(" Witness "+witHex );
 	    
 	    if(LOG>2) console.log(" Signature NOW IS" );
 	    
@@ -246,7 +255,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
 	    output += "<br/>";
 	   	    
-	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
+	    var result = rsakey.verifyByteArray(co.rawSignatureData, wit, signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
 	    if(LOG>2) console.log('PUBLIC KEY n after is ');
@@ -256,9 +265,9 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(rsakey.e);
 	    
 	    if(result)
-		output += 'SIGNATURE VALID';
+			output += 'SIGNATURE VALID';
 	    else
-		output += 'SIGNATURE INVALID';
+			output += 'SIGNATURE INVALID';
 	    
 	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    

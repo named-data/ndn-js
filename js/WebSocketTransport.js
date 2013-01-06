@@ -78,8 +78,8 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
 				if (LOG > 3) console.log(interest);
-				//var nameStr = escape(interest.name.getName());
-				//console.log(nameStr);
+				var nameStr = escape(interest.name.getName());
+				if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -107,14 +107,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
-				if (LOG > 3) console.log(co);
+				//console.log(co);
 				//var nameStr = co.name.getName();
 				//console.log(nameStr);
-				var wit = null;
-				if (co.signature.Witness != null) {
-					wit = new Witness();
-					wit.decode(co.signature.Witness);
-				}
 				
 				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
@@ -170,7 +165,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
 								console.log(this.keyName.contentName.getName());
 							} else if (kind == Closure.UPCALL_CONTENT) {
-								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
+								//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
 								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
@@ -183,12 +178,20 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
 								NDN.addKeyEntry(keyEntry);
 								//console.log(NDN.KeyStore);
+							} else if (kind == Closure.UPCALL_CONTENT_BAD) {
+								console.log("In KeyFetchClosure.upcall: signature verification failed");
 							}
 						};
 						
 						if (co.signedInfo && co.signedInfo.locator && co.signature) {
 							if (LOG > 3) console.log("Key verification...");
 							var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+							
+							var wit = null;
+							if (co.signature.Witness != null) {
+								wit = new Witness();
+								wit.decode(co.signature.Witness);
+							}
 							
 							var keylocator = co.signedInfo.locator;
 							if (keylocator.type == KeyLocatorType.KEYNAME) {
@@ -234,14 +237,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
 								if (LOG > 3) console.log("Keylocator contains KEY");
-								var verified = false;
 								
-								if (wit == null) {
-									var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
-									verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-								} else {
-									
-								}
+								var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+								var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
 								
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								// Raise callback

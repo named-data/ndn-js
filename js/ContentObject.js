@@ -27,7 +27,7 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 	this.startSIG = null;
 	this.endSIG = null;
 	
-	this.startSignedInfo = null;
+	//this.startSignedInfo = null;
 	this.endContent = null;
 	
 	this.rawSignatureData = null;

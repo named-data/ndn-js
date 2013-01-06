@@ -144,8 +144,8 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
 				if (LOG > 3) console.log(interest);
-				//var nameStr = escape(interest.name.getName());
-				//console.log(nameStr);
+				var nameStr = escape(interest.name.getName());
+				if (LOG > 3) console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -173,14 +173,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
-				if (LOG > 3) console.log(co);
+				//console.log(co);
 				//var nameStr = co.name.getName();
 				//console.log(nameStr);
-				var wit = null;
-				if (co.signature.Witness != null) {
-					wit = new Witness();
-					wit.decode(co.signature.Witness);
-				}
 				
 				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
@@ -236,7 +231,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								console.log("In KeyFetchClosure.upcall: interest time out.");
 								console.log(this.keyName.contentName.getName());
 							} else if (kind == Closure.UPCALL_CONTENT) {
-								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
+								//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
 								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
 								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
@@ -249,12 +244,20 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
 								NDN.addKeyEntry(keyEntry);
 								//console.log(NDN.KeyStore);
+							} else if (kind == Closure.UPCALL_CONTENT_BAD) {
+								console.log("In KeyFetchClosure.upcall: signature verification failed");
 							}
 						};
 						
 						if (co.signedInfo && co.signedInfo.locator && co.signature) {
 							if (LOG > 3) console.log("Key verification...");
 							var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+							
+							var wit = null;
+							if (co.signature.Witness != null) {
+								wit = new Witness();
+								wit.decode(co.signature.Witness);
+							}
 							
 							var keylocator = co.signedInfo.locator;
 							if (keylocator.type == KeyLocatorType.KEYNAME) {
@@ -300,14 +303,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 								}
 							} else if (keylocator.type == KeyLocatorType.KEY) {
 								if (LOG > 3) console.log("Keylocator contains KEY");
-								var verified = false;
 								
-								if (wit == null) {
-									var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
-									verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-								} else {
-									
-								}
+								var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+								var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
 								
 								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 								// Raise callback
@@ -1062,7 +1060,7 @@ var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature
 	this.startSIG = null;
 	this.endSIG = null;
 	
-	this.startSignedInfo = null;
+	//this.startSignedInfo = null;
 	this.endContent = null;
 	
 	this.rawSignatureData = null;
@@ -4410,7 +4408,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
 	    output += "<br/>";
 	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, signature);
+	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
 	    if(LOG>2) console.log('result is '+result);
 	    
 	    var n = x509.subjectPublicKeyRSA.n;
@@ -4440,6 +4438,14 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
+	    var wit = null;
+	    var witHex = "";
+		if (co.signature.Witness != null) {
+			wit = new Witness();
+			wit.decode(co.signature.Witness);
+			witHex = DataUtils.toHex(co.signature.Witness);
+		}
+	    
 	    output += "Public key: " + publickeyHex;
 	    
 	    output+= "<br />";
@@ -4450,6 +4456,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
 	    
 	    if(LOG>2) console.log(" Signature "+signature );
+	    if(LOG>2) console.log(" Witness "+witHex );
 	    
 	    if(LOG>2) console.log(" Signature NOW IS" );
 	    
@@ -4461,7 +4468,7 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
 	    output += "<br/>";
 	   	    
-	    var result = rsakey.verifyByteArray(co.rawSignatureData,signature);
+	    var result = rsakey.verifyByteArray(co.rawSignatureData, wit, signature);
 	    // var result = rsakey.verifyString(input, signature);
 	    
 	    if(LOG>2) console.log('PUBLIC KEY n after is ');
@@ -4471,9 +4478,9 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    if(LOG>2) console.log(rsakey.e);
 	    
 	    if(result)
-		output += 'SIGNATURE VALID';
+			output += 'SIGNATURE VALID';
 	    else
-		output += 'SIGNATURE INVALID';
+			output += 'SIGNATURE INVALID';
 	    
 	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
 	    
