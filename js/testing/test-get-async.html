@@ -13,7 +13,7 @@
 	<script type="text/javascript" src="../tools/build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		var ndn = new NDN({port:9696});
+		var ndn = new NDN({port:9696,host:"localhost"});
         ndn.transport.connectWebSocket(ndn);
         
         ndn.onopen = function() {

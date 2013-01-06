@@ -280,7 +280,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		var interest = new Interest(new Name(NDN.ccndIdFetcher));
+		var interest = new Interest(NDN.ccndIdFetcher);
 		interest.interestLifetime = 4000; // milliseconds
 		var subarray = encodeToBinaryInterest(interest);
 		
