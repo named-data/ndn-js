@@ -114,21 +114,8 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 
 };
 
-Interest.prototype.matches_name = function(/*Name*/ name){
-	var i_name = this.name.components;
-	var o_name = name.components;
-
-	// The intrest name is longer than the name we are checking it against.
-	if (i_name.length > o_name.length)
-            return false;
-
-	// Check if at least one of given components doesn't match.
-        for (var i = 0; i < i_name.length; ++i) {
-            if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
-                return false;
-        }
-
-	return true;
+Interest.prototype.matches_name = function(/*Name*/ name) {
+    return this.name.match(name);
 }
 
 /**
