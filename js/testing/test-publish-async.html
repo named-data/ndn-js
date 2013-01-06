@@ -17,6 +17,10 @@
 		var ndn = new NDN();
         ndn.transport.connectWebSocket(ndn);
         
+        ndn.onopen = function() {
+        	document.getElementById("testBtn").disabled = false;
+        };
+        
         var AsyncPutClosure = function AsyncPutClosure() {
         	// Inherit from Closure.
 			Closure.call(this);
@@ -29,11 +33,11 @@
 				console.log('AsyncPutClosure.upcall() called.');
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
-				var nameStr = escape(interest.name.getName());
+				var nameStr = interest.name.getName();
 				
 				var si = new SignedInfo();
 				
-				var co = new ContentObject(new Name(nameStr), si, content, new Signature()); 
+				var co = new ContentObject(new Name(nameStr), si, content, new Signature());
 				co.sign();
 				
 				upcallInfo.contentObject = co;
@@ -70,7 +74,7 @@
 		</div>
 	</form>
 	<div>
-		<button onclick="run()">Publish Content</button>
+		<button id="testBtn" onclick="run()" disabled="disabled">Publish Content</button>
 	</div>
 	
 	<p id="result"></p>

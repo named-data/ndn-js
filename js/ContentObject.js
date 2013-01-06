@@ -206,23 +206,21 @@ var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
 Signature.prototype.from_ccnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
 		
-		if(LOG>4)console.log('STARTED DECODING SIGNATURE ');
+		if(LOG>4)console.log('STARTED DECODING SIGNATURE');
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.DigestAlgorithm)) {
-			
 			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
 			this.digestAlgorithm = decoder.readUTF8Element(CCNProtocolDTags.DigestAlgorithm); 
 		}
 		if (decoder.peekStartElement(CCNProtocolDTags.Witness)) {
-			if(LOG>4)console.log('WITNESS FOUND FOUND');
+			if(LOG>4)console.log('WITNESS FOUND');
 			this.Witness = decoder.readBinaryElement(CCNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
 
-			//if(LOG>4)console.log('SIGNATURE FOUND ');
-			this.signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);	
-			if(LOG>4)console.log('READ SIGNATURE ');
+			if(LOG>4)console.log('SIGNATURE FOUND');
+			this.signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);
 
 		decoder.readEndElement();
 	
@@ -342,15 +340,14 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 		decoder.readStartElement( this.getElementLabel() );
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-			if(LOG>3) console.log('DECODING PUBLISHER KEY');
+			if(LOG>4)console.log('DECODING PUBLISHER KEY');
 			this.publisher = new PublisherPublicKeyDigest();
 			this.publisher.from_ccnb(decoder);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Timestamp)) {
+			if(LOG>4)console.log('DECODING TIMESTAMP');
 			this.timestamp = decoder.readDateTime(CCNProtocolDTags.Timestamp);
-			if(LOG>4)console.log('TIMESTAMP FOUND IS  '+this.timestamp);
-
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
@@ -377,14 +374,16 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
 			this.freshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds);
-			if(LOG>4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
+			if(LOG>4)console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FinalBlockID)) {
+			if(LOG>4)console.log('DECODING FINAL BLOCKID');
 			this.finalBlockID = decoder.readBinaryElement(CCNProtocolDTags.FinalBlockID);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.KeyLocator)) {
+			if(LOG>4)console.log('DECODING KEY LOCATOR');
 			this.locator = new KeyLocator();
 			this.locator.from_ccnb(decoder);
 		}

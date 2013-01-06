@@ -64,196 +64,6 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
-/**
- * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
- * See COPYING for copyright and distribution information.
- * This class represents the top-level object for communicating with an NDN host.
- */
-
-var LOG = 0;
-
-/**
- * settings is an associative array with the following defaults:
- * {
- *   getTransport: function() { return new WebSocketTransport(); }
- *   getHostAndPort: transport.defaultGetHostAndPort,
- *   host: 'localhost', // If null, use getHostAndPort when connecting.
- *   port: 9696,
- *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
- *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
- * }
- * 
- * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
- *   null if there are no more hosts.
- */
-var NDN = function NDN(settings) {
-    settings = (settings || {});
-    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
-    this.transport = getTransport();
-    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
-	this.host = (settings.host !== undefined ? settings.host : 'localhost');
-	this.port = (settings.port || 9696);
-    this.readyStatus = NDN.UNOPEN;
-    // Event handler
-    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
-    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
-};
-
-NDN.UNOPEN = 0;  // created but not opened yet
-NDN.OPENED = 1;  // connection to ccnd opened
-NDN.CLOSED = 2;  // connection to ccnd closed
-
-NDN.ccndIdFetcher = '/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY';
-
-NDN.prototype.createRoute = function(host,port){
-	this.host=host;
-	this.port=port;
-}
-
-// For fetching data
-NDN.PITTable = new Array();
-
-var PITEntry = function PITEntry(interest, closure) {
-	this.interest = interest;  // Interest
-	this.closure = closure;    // Closure
-};
-
-// Return the longest entry from NDN.PITTable that matches name.
-NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
-    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
-    //   could be sent for one Interest?
-    var result = null;
-    
-	for (var i = 0; i < NDN.PITTable.length; i++) {
-		if (NDN.PITTable[i].interest.matches_name(name)) {
-            if (result == null || 
-                NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
-                result = NDN.PITTable[i];
-        }
-	}
-    
-	return result;
-};
-
-/*
- * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
- * If no more hosts remain, return null.
- */
-NDN.makeShuffledGetHostAndPort = function(hostList, port) {
-    // Make a copy.
-    hostList = hostList.slice(0, hostList.length);
-    DataUtils.shuffle(hostList);
-
-    return function() {
-        if (hostList.length == 0)
-            return null;
-        
-        return { host: hostList.splice(0, 1)[0], port: port };
-    };
-};
-
-/** Encode name as an Interest. If template is not null, use its attributes.
- *  Send the interest to host:port, read the entire response and call
- *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)).                 
- */
-NDN.prototype.expressInterest = function(
-        // Name
-        name,
-        // Closure
-        closure,
-        // Interest
-        template) {
-	var interest = new Interest(name);
-    if (template != null) {
-		interest.minSuffixComponents = template.minSuffixComponents;
-		interest.maxSuffixComponents = template.maxSuffixComponents;
-		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-		interest.exclude = template.exclude;
-		interest.childSelector = template.childSelector;
-		interest.answerOriginKind = template.answerOriginKind;
-		interest.scope = template.scope;
-		interest.interestLifetime = template.interestLifetime;
-    }
-    else
-        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
-
-	if (this.host == null || this.port == null) {
-        if (this.getHostAndPort == null)
-            console.log('ERROR: host OR port NOT SET');
-        else
-            this.connectAndExpressInterest(interest, closure);
-    }
-    else
-        this.transport.expressInterest(this, interest, closure);
-};
-
-NDN.prototype.registerPrefix = function(name, closure, flag) {
-    return this.transport.registerPrefix(this, name, closure, flag);
-}
-
-/*
- * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
- *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
- */
-NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
-    var hostAndPort = this.getHostAndPort();
-    if (hostAndPort == null) {
-        console.log('ERROR: No more hosts from getHostAndPort');
-        this.host = null;
-        return;
-    }
-
-    if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
-        console.log('ERROR: The host returned by getHostAndPort is not alive: ' + 
-                this.host + ":" + this.port);
-        return;
-    }
-        
-    this.host = hostAndPort.host;
-    this.port = hostAndPort.port;   
-    console.log("Trying host from getHostAndPort: " + this.host);
-    
-    // Fetch the ccndId.
-    var interest = new Interest(new Name(NDN.ccndIdFetcher));
-	interest.interestLifetime = 4000; // milliseconds    
-
-    var thisNDN = this;
-	var timerID = setTimeout(function() {
-        console.log("Timeout waiting for host " + thisNDN.host);
-        // Try again.
-        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
-	}, 3000);
-  
-    this.transport.expressInterest
-        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
-}
-
-NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
-    // Inherit from Closure.
-    Closure.call(this);
-    
-    this.ndn = ndn;
-    this.callerInterest = callerInterest;
-    this.callerClosure = callerClosure;
-    this.timerID = timerID;
-};
-
-NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
-    if (!(kind == Closure.UPCALL_CONTENT ||
-          kind == Closure.UPCALL_CONTENT_UNVERIFIED ||
-          kind == Closure.UPCALL_INTEREST))
-        // The upcall is not for us.
-        return Closure.RESULT_ERR;
-        
-    // The host is alive, so cancel the timeout and issue the caller's interest.
-    clearTimeout(this.timerID);
-    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
-    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
-
-    return Closure.RESULT_OK;
-};
-
 /** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
@@ -333,9 +143,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
-				if (LOG>3) console.log(interest);
-				var nameStr = escape(interest.name.getName());
-				if (LOG > 3) console.log(nameStr);
+				if (LOG > 3) console.log(interest);
+				//var nameStr = escape(interest.name.getName());
+				//console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -364,10 +174,15 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				nameStr = co.name.getName();
-				if (LOG > 3) console.log(nameStr);
+				//var nameStr = co.name.getName();
+				//console.log(nameStr);
+				var wit = null;
+				if (co.signature.Witness != null) {
+					wit = new Witness();
+					wit.decode(co.signature.Witness);
+				}
 				
-				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
+				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
@@ -391,19 +206,123 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
-						
-						// Cancel interest timer
-						clearTimeout(pitEntry.closure.timerID);
-						//console.log("Clear interest timer");
-						//console.log(pitEntry.closure.timerID);
-						
 						// Remove PIT entry from NDN.PITTable
 						var index = NDN.PITTable.indexOf(pitEntry);
 						if (index >= 0)
-                            NDN.PITTable.splice(index, 1);
+							NDN.PITTable.splice(index, 1);
 						
-						// Raise callback
-						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+						var currentClosure = pitEntry.closure;
+						
+						// Cancel interest timer
+						clearTimeout(currentClosure.timerID);
+						//console.log("Clear interest timer");
+						//console.log(currentClosure.timerID);
+						
+						// Key verification
+						
+						// Recursive key fetching & verification closure
+						var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
+							this.contentObject = content;  // unverified content object
+							this.closure = closure;  // closure corresponding to the contentObject
+							this.keyName = key;  // name of current key to be fetched
+							this.sigHex = sig;  // hex signature string to be verified
+							this.witness = wit;
+							
+							Closure.call(this);
+						};
+						
+						KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
+							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+								console.log("In KeyFetchClosure.upcall: interest time out.");
+								console.log(this.keyName.contentName.getName());
+							} else if (kind == Closure.UPCALL_CONTENT) {
+								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
+								
+								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
+								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
+								
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								//console.log("raise encapsulated closure");
+								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
+								
+								// Store key in cache
+								var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+								NDN.addKeyEntry(keyEntry);
+								//console.log(NDN.KeyStore);
+							}
+						};
+						
+						if (co.signedInfo && co.signedInfo.locator && co.signature) {
+							if (LOG > 3) console.log("Key verification...");
+							var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+							
+							var keylocator = co.signedInfo.locator;
+							if (keylocator.type == KeyLocatorType.KEYNAME) {
+								if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+								//var keyname = keylocator.keyName.contentName.getName();
+								//console.log(nameStr);
+								//console.log(keyname);
+								
+								if (keylocator.keyName.contentName.match(co.name)) {
+									if (LOG > 3) console.log("Content is key itself");
+									
+									var rsakey = decodeSubjectPublicKeyInfo(co.content);
+									var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+									var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+									
+									currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									
+									// SWT: We don't need to store key here since the same key will be
+									//      stored again in the closure.
+									//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+									//NDN.addKeyEntry(keyEntry);
+									//console.log(NDN.KeyStore);
+								} else {
+									// Check local key store
+									var keyEntry = NDN.getKeyByName(keylocator.keyName);
+									if (keyEntry) {
+										// Key found, verify now
+										if (LOG > 3) console.log("Local key cache hit");
+										var rsakey = keyEntry.rsaKey;
+										var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+										
+										// Raise callback
+										currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									} else {
+										// Not found, fetch now
+										if (LOG > 3) console.log("Fetch key according to keylocator");
+										var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
+										interest.interestLifetime = 4.0;
+										self.expressInterest(ndn, interest, nextClosure);
+									}
+								}
+							} else if (keylocator.type == KeyLocatorType.KEY) {
+								if (LOG > 3) console.log("Keylocator contains KEY");
+								var verified = false;
+								
+								if (wit == null) {
+									var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+									verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+								} else {
+									
+								}
+								
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								// Raise callback
+								currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+								
+								// Since KeyLocator does not contain key name for this key,
+								// we have no way to store it as a key entry in KeyStore.
+							} else {
+								var cert = keylocator.certificate;
+								console.log("KeyLocator contains CERT");
+								console.log(cert);
+								
+								// TODO: verify certificate
+							}
+						}
 					}
 				}
 			} else {
@@ -427,7 +346,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		var interest = new Interest(new Name(NDN.ccndIdFetcher));
+		var interest = new Interest(NDN.ccndIdFetcher);
 		interest.interestLifetime = 4000; // milliseconds
 		var subarray = encodeToBinaryInterest(interest);
 		
@@ -1097,6 +1016,23 @@ Name.toEscapedString = function(component) {
     }
     return result;
 };
+
+Name.prototype.match = function(/*Name*/ name) {
+	var i_name = this.components;
+	var o_name = name.components;
+
+	// The intrest name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+            return false;
+
+	// Check if at least one of given components doesn't match.
+    for (var i = 0; i < i_name.length; ++i) {
+        if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+            return false;
+    }
+
+	return true;
+};
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -1305,23 +1241,21 @@ var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
 Signature.prototype.from_ccnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
 		
-		if(LOG>4)console.log('STARTED DECODING SIGNATURE ');
+		if(LOG>4)console.log('STARTED DECODING SIGNATURE');
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.DigestAlgorithm)) {
-			
 			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
 			this.digestAlgorithm = decoder.readUTF8Element(CCNProtocolDTags.DigestAlgorithm); 
 		}
 		if (decoder.peekStartElement(CCNProtocolDTags.Witness)) {
-			if(LOG>4)console.log('WITNESS FOUND FOUND');
+			if(LOG>4)console.log('WITNESS FOUND');
 			this.Witness = decoder.readBinaryElement(CCNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
 
-			//if(LOG>4)console.log('SIGNATURE FOUND ');
-			this.signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);	
-			if(LOG>4)console.log('READ SIGNATURE ');
+			if(LOG>4)console.log('SIGNATURE FOUND');
+			this.signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);
 
 		decoder.readEndElement();
 	
@@ -1441,15 +1375,14 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 		decoder.readStartElement( this.getElementLabel() );
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-			if(LOG>3) console.log('DECODING PUBLISHER KEY');
+			if(LOG>4)console.log('DECODING PUBLISHER KEY');
 			this.publisher = new PublisherPublicKeyDigest();
 			this.publisher.from_ccnb(decoder);
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Timestamp)) {
+			if(LOG>4)console.log('DECODING TIMESTAMP');
 			this.timestamp = decoder.readDateTime(CCNProtocolDTags.Timestamp);
-			if(LOG>4)console.log('TIMESTAMP FOUND IS  '+this.timestamp);
-
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
@@ -1476,14 +1409,16 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
 			this.freshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds);
-			if(LOG>4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
+			if(LOG>4)console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.FinalBlockID)) {
+			if(LOG>4)console.log('DECODING FINAL BLOCKID');
 			this.finalBlockID = decoder.readBinaryElement(CCNProtocolDTags.FinalBlockID);
 		}
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.KeyLocator)) {
+			if(LOG>4)console.log('DECODING KEY LOCATOR');
 			this.locator = new KeyLocator();
 			this.locator.from_ccnb(decoder);
 		}
@@ -1919,23 +1854,25 @@ var Key = function Key(){
  * KeyLocator
  */
 var KeyLocatorType = {
-	  NAME:1,
-	  KEY:2,
-	  CERTIFICATE:3
+	KEY:1,
+	CERTIFICATE:2,
+	KEYNAME:3
 };
 
 var KeyLocator = function KeyLocator(_input,_type){ 
 
-    this.type=_type;
+    this.type = _type;
     
-    if (_type==KeyLocatorType.NAME){
+    if (_type == KeyLocatorType.KEYNAME){
+    	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
     	this.keyName = _input;
     }
-    else if(_type==KeyLocatorType.KEY){
-    	if(LOG>4)console.log('SET KEY');
+    else if (_type == KeyLocatorType.KEY){
+    	if (LOG>3) console.log('KeyLocator: SET KEY');
     	this.publicKey = _input;
     }
-    else if(_type==KeyLocatorType.CERTIFICATE){
+    else if (_type == KeyLocatorType.CERTIFICATE){
+    	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
     	this.certificate = _input;
     }
 
@@ -1943,95 +1880,94 @@ var KeyLocator = function KeyLocator(_input,_type){
 
 KeyLocator.prototype.from_ccnb = function(decoder) {
 
-		decoder.readStartElement(this.getElementLabel());
+	decoder.readStartElement(this.getElementLabel());
 
-		if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
-			try {
-				encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
-				// This is a DER-encoded SubjectPublicKeyInfo.
-				
-				//TODO FIX THIS, This should create a Key Object instead of keeping bytes
+	if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
+		try {
+			encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
+			// This is a DER-encoded SubjectPublicKeyInfo.
+			
+			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
 
-				this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-				this.type = 2;
-				
+			this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
+			this.type = KeyLocatorType.KEY;
+			
 
-				if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-				//this.publicKey = encodedKey;
-				
-				
-			} catch (e) {
-				throw new Error("Cannot parse key: ", e);
-			} 
+			if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
+			//this.publicKey = encodedKey;
+			
+			
+		} catch (e) {
+			throw new Error("Cannot parse key: ", e);
+		} 
 
-			if (null == this.publicKey) {
-				throw new Error("Cannot parse key: ");
-			}
-
-		} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
-			try {
-				encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
-				
-				/*
-				 * Certificates not yet working
-				 */
-				
-				//CertificateFactory factory = CertificateFactory.getInstance("X.509");
-				//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
-				
-
-				this.certificate = encodedCert;
-				this.type = 3;
-
-				if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-				
-			} catch ( e) {
-				throw new Error("Cannot decode certificate: " +  e);
-			}
-			if (null == this.certificate) {
-				throw new Error("Cannot parse certificate! ");
-			}
-		} else  {
-			this.type = 1;
-
-
-			this.keyName = new KeyName();
-			this.keyName.from_ccnb(decoder);
+		if (null == this.publicKey) {
+			throw new Error("Cannot parse key: ");
 		}
-		decoder.readEndElement();
+
+	} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
+		try {
+			encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
+			
+			/*
+			 * Certificates not yet working
+			 */
+			
+			//CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
+			
+
+			this.certificate = encodedCert;
+			this.type = KeyLocatorType.CERTIFICATE;
+
+			if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
+			
+		} catch ( e) {
+			throw new Error("Cannot decode certificate: " +  e);
+		}
+		if (null == this.certificate) {
+			throw new Error("Cannot parse certificate! ");
+		}
+	} else  {
+		this.type = KeyLocatorType.KEYNAME;
+		
+		this.keyName = new KeyName();
+		this.keyName.from_ccnb(decoder);
 	}
+	decoder.readEndElement();
+};
 	
 
-	KeyLocator.prototype.to_ccnb = function( encoder) {
-		
-		if(LOG>4) console.log('type is is ' + this.type);
-		//TODO Check if Name is missing
-		if (!this.validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}
+KeyLocator.prototype.to_ccnb = function( encoder) {
+	
+	if(LOG>4) console.log('type is is ' + this.type);
+	//TODO Check if Name is missing
+	if (!this.validate()) {
+		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+	}
 
+	
+	//TODO FIX THIS TOO
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if (this.type == KeyLocatorType.KEY) {
+		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
+		encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
 		
-		//TODO FIX THIS TOO
-		encoder.writeStartElement(this.getElementLabel());
+	} else if (this.type == KeyLocatorType.CERTIFICATE) {
 		
-		if (this.type == KeyLocatorType.KEY) {
-			if(LOG>5)console.log('About to encode a public key' +this.publicKey);
-			encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
-			
-		} else if (this.type == KeyLocatorType.CERTIFICATE) {
-			
-			try {
-				encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
-			} catch ( e) {
-				throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-			}
-			
-		} else if (this.type == KeyLocatorType.NAME) {
-			
-			this.keyName.to_ccnb(encoder);
+		try {
+			encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
+		} catch ( e) {
+			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 		}
-		encoder.writeEndElement();
 		
+	} else if (this.type == KeyLocatorType.KEYNAME) {
+		
+		this.keyName.to_ccnb(encoder);
+	}
+	encoder.writeEndElement();
+	
 };
 
 KeyLocator.prototype.getElementLabel = function() {
@@ -2046,10 +1982,8 @@ KeyLocator.prototype.validate = function() {
  * KeyName is only used by KeyLocator.
  */
 var KeyName = function KeyName() {
-	
-
-	this.contentName = this.contentName;//contentName
-	this.publisherID =this.publisherID;//publisherID
+	this.contentName = this.contentName;  //contentName
+	this.publisherID = this.publisherID;  //publisherID
 
 };
 
@@ -2092,6 +2026,7 @@ KeyName.prototype.validate = function() {
 		// null signedInfo ok
 		return (null != this.contentName);
 };
+
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -3370,9 +3305,9 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-//returns a byte[]
+//returns a uint8array
 BinaryXMLDecoder.prototype.readBlob = function() {
-			//byte []
+			//uint8array
 			
 			var blob = this.decodeBlob();	
 			this.readEndElement();
@@ -3590,7 +3525,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		return this.decodeUString(tv.val());
 	}
 	else{
-		//byte [] 
+		//uint8array 
 		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);
@@ -4658,6 +4593,137 @@ var globalKeyManager = new KeyManager();
 //var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
 
 
+/** 
+ * @author: Wentao Shang
+ * See COPYING for copyright and distribution information.
+ */
+
+var MerklePath = function MerkelPath() {
+	this.index = null;  // int
+	this.digestList = [];  // array of hex string
+};
+
+var Witness = function Witness() {
+	this.oid = null;  // string
+	this.path = new MerklePath();  // MerklePath
+};
+
+function parseOID(bytes, start, end) {
+    var s, n = 0, bits = 0;
+    for (var i = start; i < end; ++i) {
+        var v = bytes[i];
+        n = (n << 7) | (v & 0x7F);
+        bits += 7;
+        if (!(v & 0x80)) { // finished
+            if (s == undefined)
+                s = parseInt(n / 40) + "." + (n % 40);
+            else
+                s += "." + ((bits >= 31) ? "bigint" : n);
+            n = bits = 0;
+        }
+        s += String.fromCharCode();
+    }
+    return s;
+}
+
+function parseInteger(bytes, start, end) {
+    var n = 0;
+    for (var i = start; i < end; ++i)
+        n = (n << 8) | bytes[i];
+    return n;
+}
+
+Witness.prototype.decode = function(/* Uint8Array */ witness) {
+	/* The asn1.js decoder has some bug and 
+	 * cannot decode certain kind of witness.
+	 * So we use an alternative (and dirty) hack
+	 * to read witness from byte streams
+	 *      ------Wentao
+	 */
+	/*
+	var wit = DataUtils.toHex(witness).toLowerCase();
+	try {
+		var der = Hex.decode(wit);
+		var asn1 = ASN1.decode(der);
+	}
+	catch (e) {
+		console.log(e);
+		console.log(wit);
+	}
+	//console.log(asn1.toPrettyString());
+	
+	this.oid = asn1.sub[0].sub[0].content();  // OID
+	//console.log(this.oid);
+	this.path.index = asn1.sub[1].sub[0].sub[0].content();  // index
+	//console.log(this.path.index);
+	for (i = 0; i < asn1.sub[1].sub[0].sub[1].sub.length; i++) {
+		pos = asn1.sub[1].sub[0].sub[1].sub[i].stream.pos;
+		str = wit.substring(2 * pos + 4, 2 * pos + 68);
+		this.path.digestList.push(str);  // digest hex string
+		//console.log(str);
+	}
+	*/
+	
+	// FIXME: Need to be fixed to support arbitrary ASN1 encoding,
+	// But do we really nned that????  -------Wentao
+	
+	// The structure of Witness is fixed as follows:
+	// SEQUENCE  (2 elem)
+	//   SEQUENCE  (1 elem)
+	//     OBJECT IDENTIFIER  1.2.840.113550.11.1.2.2
+	//   OCTET STRING  (1 elem)
+	//     SEQUENCE  (2 elem)
+	//       INTEGER  index
+	//       SEQUENCE  (n elem)
+	//         OCTET STRING(32 byte) 345FB4B5E9A1D2FF450ECA87EB87601683027A1A...
+	//         OCTET STRING(32 byte) DBCEE5B7A6C2B851B029324197DDBD9A655723DC...
+	//         OCTET STRING(32 byte) 4C79B2D256E4CD657A27F01DCB51AC3C56A24E71...
+	//         OCTET STRING(32 byte) 7F7FB169604A87EAC94378F0BDB4FC5D5899AB88...
+	//         ......
+	// Hence we can follow this structure to extract witness fields at fixed level
+	// Tag numbers for ASN1:
+	//    SEQUENCE            0x10
+	//    OCT STRING          0x04
+	//    INTEGER             0x02
+	//    OBJECT IDENTIFIER   0x06
+	var i = 0;
+	var step = 0;  // count of sequence tag
+	while (i < witness.length) {
+		var len = 0;
+		
+		if (witness[i] == 0x30) {
+			// Sequence (constructed)
+			// There is no primitive sequence in Witness
+			if ((witness[i + 1] & 0x80) != 0) {
+				len = witness[i+1] & 0x7F;
+			}
+			step++;
+		} else if (witness[i] == 0x06) {
+			// Decode OID
+			len = witness[i+1];  // XXX: OID will not be longer than 127 bytes
+			this.oid = parseOID(witness, i + 2, i + 2 + len);
+			//console.log(this.oid);
+		} else if (witness[i] == 0x02) {
+			// Decode node index
+			len = witness[i+1];  // XXX: index will not be longer than 127 bytes
+			this.path.index = parseInteger(witness, i + 2, i + 2 + len);
+			//console.log(this.path.index);
+		} else if (witness[i] == 0x04) {
+			if ((witness[i + 1] & 0x80) != 0) {
+				len = witness[i+1] & 0x7F;
+			} else {
+				len = witness[i+1];
+			}
+			if (step == 4) {
+				// Start to decode digest hex string
+				str = DataUtils.toHex(witness.subarray(i + 2, i + 2 + len));
+				this.path.digestList.push(str);  // digest hex string
+				//console.log(str);
+			}
+		}
+		i = i + 2 + len;
+	}
+};
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -5848,7 +5914,7 @@ function _rsasign_verifyString(sMsg, hSig) {
  *                 non-hexadecimal charactors including new lines will be ignored.
  * @return returns 1 if valid, otherwise 0 
  */
-function _rsasign_verifyByteArray(byteArray, hSig) {
+function _rsasign_verifyByteArray(byteArray, witness, hSig) {
 	hSig = hSig.replace(_RE_HEXDECONLY, '');
 	  
 	  if(LOG>3)console.log('n is '+this.n);
@@ -5864,10 +5930,32 @@ function _rsasign_verifyByteArray(byteArray, hSig) {
 	  if (digestInfoAry.length == 0) return false;
 	  var algName = digestInfoAry[0];
 	  var diHashValue = digestInfoAry[1];
-	  var ff = _RSASIGN_HASHBYTEFUNC[algName];
-	  var msgHashValue = ff(byteArray);
+	  var msgHashValue = null;
+	  
+	  if (witness == null) {
+	  	var ff = _RSASIGN_HASHBYTEFUNC[algName];
+	  	msgHashValue = ff(byteArray);
+	  } else {
+	  	// Compute merkle hash
+		  h = hex_sha256_from_bytes(byteArray);
+		  index = witness.path.index;
+		  for (i = witness.path.digestList.length - 1; i >= 0; i--) {
+		  	var str = "";
+		  	if (index % 2 == 0) {
+		  		str = h + witness.path.digestList[i];
+		  	} else {
+		  		str = witness.path.digestList[i] + h;
+		  	}
+		  	h = hex_sha256_from_bytes(DataUtils.toNumbers(str));
+		  	index = Math.floor(index / 2);
+		  }
+		  msgHashValue = hex_sha256_from_bytes(DataUtils.toNumbers(h));
+	  }
+	  //console.log(diHashValue);
+	  //console.log(msgHashValue);
 	  return (diHashValue == msgHashValue);
 }
+
 
 RSAKey.prototype.signString = _rsasign_signString;
 
@@ -7688,3 +7776,224 @@ BigInteger.prototype.isProbablePrime = bnIsProbablePrime;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+/**
+ * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
+ * See COPYING for copyright and distribution information.
+ * This class represents the top-level object for communicating with an NDN host.
+ */
+
+var LOG = 0;
+
+/**
+ * settings is an associative array with the following defaults:
+ * {
+ *   getTransport: function() { return new WebSocketTransport(); }
+ *   getHostAndPort: transport.defaultGetHostAndPort,
+ *   host: 'localhost', // If null, use getHostAndPort when connecting.
+ *   port: 9696,
+ *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
+ *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
+ * }
+ * 
+ * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
+ *   null if there are no more hosts.
+ */
+var NDN = function NDN(settings) {
+    settings = (settings || {});
+    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+    this.transport = getTransport();
+    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
+	this.host = (settings.host !== undefined ? settings.host : 'localhost');
+	this.port = (settings.port || 9696);
+    this.readyStatus = NDN.UNOPEN;
+    // Event handler
+    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
+    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
+};
+
+NDN.UNOPEN = 0;  // created but not opened yet
+NDN.OPENED = 1;  // connection to ccnd opened
+NDN.CLOSED = 2;  // connection to ccnd closed
+
+NDN.ccndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY');
+
+NDN.prototype.createRoute = function(host, port) {
+	this.host=host;
+	this.port=port;
+};
+
+
+NDN.KeyStore = new Array();
+
+var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
+	this.keyName = name;  // KeyName
+	this.rsaKey = rsa;    // RSA key
+	this.timeStamp = time;  // Time Stamp
+};
+
+NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
+	var result = NDN.getKeyByName(keyEntry.keyName);
+	if (result == null) 
+		NDN.KeyStore.push(keyEntry);
+	else
+		result = keyEntry;
+};
+
+NDN.getKeyByName = function(/* KeyName */ name) {
+	var result = null;
+	
+	for (var i = 0; i < NDN.KeyStore.length; i++) {
+		if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
+            if (result == null || 
+                NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+                result = NDN.KeyStore[i];
+        }
+	}
+    
+	return result;
+};
+
+// For fetching data
+NDN.PITTable = new Array();
+
+var PITEntry = function PITEntry(interest, closure) {
+	this.interest = interest;  // Interest
+	this.closure = closure;    // Closure
+};
+
+// Return the longest entry from NDN.PITTable that matches name.
+NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
+    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
+    //   could be sent for one Interest?
+    var result = null;
+    
+	for (var i = 0; i < NDN.PITTable.length; i++) {
+		if (NDN.PITTable[i].interest.matches_name(name)) {
+            if (result == null || 
+                NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
+                result = NDN.PITTable[i];
+        }
+	}
+    
+	return result;
+};
+
+/*
+ * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
+ * If no more hosts remain, return null.
+ */
+NDN.makeShuffledGetHostAndPort = function(hostList, port) {
+    // Make a copy.
+    hostList = hostList.slice(0, hostList.length);
+    DataUtils.shuffle(hostList);
+
+    return function() {
+        if (hostList.length == 0)
+            return null;
+        
+        return { host: hostList.splice(0, 1)[0], port: port };
+    };
+};
+
+/** Encode name as an Interest. If template is not null, use its attributes.
+ *  Send the interest to host:port, read the entire response and call
+ *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
+ *                 new UpcallInfo(this, interest, 0, contentObject)).                 
+ */
+NDN.prototype.expressInterest = function(
+        // Name
+        name,
+        // Closure
+        closure,
+        // Interest
+        template) {
+	var interest = new Interest(name);
+    if (template != null) {
+		interest.minSuffixComponents = template.minSuffixComponents;
+		interest.maxSuffixComponents = template.maxSuffixComponents;
+		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+		interest.exclude = template.exclude;
+		interest.childSelector = template.childSelector;
+		interest.answerOriginKind = template.answerOriginKind;
+		interest.scope = template.scope;
+		interest.interestLifetime = template.interestLifetime;
+    }
+    else
+        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+
+	if (this.host == null || this.port == null) {
+        if (this.getHostAndPort == null)
+            console.log('ERROR: host OR port NOT SET');
+        else
+            this.connectAndExpressInterest(interest, closure);
+    }
+    else
+        this.transport.expressInterest(this, interest, closure);
+};
+
+NDN.prototype.registerPrefix = function(name, closure, flag) {
+    return this.transport.registerPrefix(this, name, closure, flag);
+};
+
+/*
+ * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
+ *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
+ */
+NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
+    var hostAndPort = this.getHostAndPort();
+    if (hostAndPort == null) {
+        console.log('ERROR: No more hosts from getHostAndPort');
+        this.host = null;
+        return;
+    }
+
+    if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
+        console.log('ERROR: The host returned by getHostAndPort is not alive: ' + 
+                this.host + ":" + this.port);
+        return;
+    }
+        
+    this.host = hostAndPort.host;
+    this.port = hostAndPort.port;   
+    console.log("Trying host from getHostAndPort: " + this.host);
+    
+    // Fetch the ccndId.
+    var interest = new Interest(new Name(NDN.ccndIdFetcher));
+	interest.interestLifetime = 4000; // milliseconds    
+
+    var thisNDN = this;
+	var timerID = setTimeout(function() {
+        console.log("Timeout waiting for host " + thisNDN.host);
+        // Try again.
+        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
+	}, 3000);
+  
+    this.transport.expressInterest
+        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
+};
+
+NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
+    // Inherit from Closure.
+    Closure.call(this);
+    
+    this.ndn = ndn;
+    this.callerInterest = callerInterest;
+    this.callerClosure = callerClosure;
+    this.timerID = timerID;
+};
+
+NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
+    if (!(kind == Closure.UPCALL_CONTENT ||
+          kind == Closure.UPCALL_CONTENT_UNVERIFIED ||
+          kind == Closure.UPCALL_INTEREST))
+        // The upcall is not for us.
+        return Closure.RESULT_ERR;
+        
+    // The host is alive, so cancel the timeout and issue the caller's interest.
+    clearTimeout(this.timerID);
+    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
+    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
+
+    return Closure.RESULT_OK;
+};
+

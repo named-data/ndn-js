@@ -77,9 +77,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				
 				var interest = new Interest();
 				interest.from_ccnb(decoder);
-				if (LOG>3) console.log(interest);
-				var nameStr = escape(interest.name.getName());
-				if (LOG > 3) console.log(nameStr);
+				if (LOG > 3) console.log(interest);
+				//var nameStr = escape(interest.name.getName());
+				//console.log(nameStr);
 				
 				var entry = getEntryForRegisteredPrefix(nameStr);
 				if (entry != null) {
@@ -108,10 +108,15 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 				var co = new ContentObject();
 				co.from_ccnb(decoder);
 				if (LOG > 3) console.log(co);
-				nameStr = co.name.getName();
-				if (LOG > 3) console.log(nameStr);
+				//var nameStr = co.name.getName();
+				//console.log(nameStr);
+				var wit = null;
+				if (co.signature.Witness != null) {
+					wit = new Witness();
+					wit.decode(co.signature.Witness);
+				}
 				
-				if (self.ccndid == null && nameStr.match(NDN.ccndIdFetcher) != null) {
+				if (self.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
 					// We are in starting phase, record publisherPublicKeyDigest in self.ccndid
 					if(!co.signedInfo || !co.signedInfo.publisher 
 						|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
@@ -135,19 +140,123 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 					if (pitEntry != null) {
 						//console.log(pitEntry);
-						
-						// Cancel interest timer
-						clearTimeout(pitEntry.closure.timerID);
-						//console.log("Clear interest timer");
-						//console.log(pitEntry.closure.timerID);
-						
 						// Remove PIT entry from NDN.PITTable
 						var index = NDN.PITTable.indexOf(pitEntry);
 						if (index >= 0)
-                            NDN.PITTable.splice(index, 1);
+							NDN.PITTable.splice(index, 1);
 						
-						// Raise callback
-						pitEntry.closure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+						var currentClosure = pitEntry.closure;
+						
+						// Cancel interest timer
+						clearTimeout(currentClosure.timerID);
+						//console.log("Clear interest timer");
+						//console.log(currentClosure.timerID);
+						
+						// Key verification
+						
+						// Recursive key fetching & verification closure
+						var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
+							this.contentObject = content;  // unverified content object
+							this.closure = closure;  // closure corresponding to the contentObject
+							this.keyName = key;  // name of current key to be fetched
+							this.sigHex = sig;  // hex signature string to be verified
+							this.witness = wit;
+							
+							Closure.call(this);
+						};
+						
+						KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
+							if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+								console.log("In KeyFetchClosure.upcall: interest time out.");
+								console.log(this.keyName.contentName.getName());
+							} else if (kind == Closure.UPCALL_CONTENT) {
+								if (LOG > 3) console.log("In KeyFetchClosure.upcall: signature verification passed");
+								
+								var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
+								var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
+								
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								//console.log("raise encapsulated closure");
+								this.closure.upcall(flag, new UpcallInfo(ndn, null, 0, this.contentObject));
+								
+								// Store key in cache
+								var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+								NDN.addKeyEntry(keyEntry);
+								//console.log(NDN.KeyStore);
+							}
+						};
+						
+						if (co.signedInfo && co.signedInfo.locator && co.signature) {
+							if (LOG > 3) console.log("Key verification...");
+							var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+							
+							var keylocator = co.signedInfo.locator;
+							if (keylocator.type == KeyLocatorType.KEYNAME) {
+								if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+								//var keyname = keylocator.keyName.contentName.getName();
+								//console.log(nameStr);
+								//console.log(keyname);
+								
+								if (keylocator.keyName.contentName.match(co.name)) {
+									if (LOG > 3) console.log("Content is key itself");
+									
+									var rsakey = decodeSubjectPublicKeyInfo(co.content);
+									var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+									var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+									
+									currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									
+									// SWT: We don't need to store key here since the same key will be
+									//      stored again in the closure.
+									//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+									//NDN.addKeyEntry(keyEntry);
+									//console.log(NDN.KeyStore);
+								} else {
+									// Check local key store
+									var keyEntry = NDN.getKeyByName(keylocator.keyName);
+									if (keyEntry) {
+										// Key found, verify now
+										if (LOG > 3) console.log("Local key cache hit");
+										var rsakey = keyEntry.rsaKey;
+										var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+										var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+										
+										// Raise callback
+										currentClosure.upcall(flag, new UpcallInfo(ndn, null, 0, co));
+									} else {
+										// Not found, fetch now
+										if (LOG > 3) console.log("Fetch key according to keylocator");
+										var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
+										interest.interestLifetime = 4.0;
+										self.expressInterest(ndn, interest, nextClosure);
+									}
+								}
+							} else if (keylocator.type == KeyLocatorType.KEY) {
+								if (LOG > 3) console.log("Keylocator contains KEY");
+								var verified = false;
+								
+								if (wit == null) {
+									var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+									verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+								} else {
+									
+								}
+								
+								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+								// Raise callback
+								currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(ndn, null, 0, co));
+								
+								// Since KeyLocator does not contain key name for this key,
+								// we have no way to store it as a key entry in KeyStore.
+							} else {
+								var cert = keylocator.certificate;
+								console.log("KeyLocator contains CERT");
+								console.log(cert);
+								
+								// TODO: verify certificate
+							}
+						}
 					}
 				}
 			} else {
@@ -171,7 +280,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
 
 		// Fetch ccndid now
-		var interest = new Interest(new Name(NDN.ccndIdFetcher));
+		var interest = new Interest(NDN.ccndIdFetcher);
 		interest.interestLifetime = 4000; // milliseconds
 		var subarray = encodeToBinaryInterest(interest);
 		

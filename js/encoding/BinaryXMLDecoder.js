@@ -429,9 +429,9 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-//returns a byte[]
+//returns a uint8array
 BinaryXMLDecoder.prototype.readBlob = function() {
-			//byte []
+			//uint8array
 			
 			var blob = this.decodeBlob();	
 			this.readEndElement();
@@ -649,7 +649,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		return this.decodeUString(tv.val());
 	}
 	else{
-		//byte [] 
+		//uint8array 
 		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);

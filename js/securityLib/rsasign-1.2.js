@@ -290,7 +290,7 @@ function _rsasign_verifyString(sMsg, hSig) {
  *                 non-hexadecimal charactors including new lines will be ignored.
  * @return returns 1 if valid, otherwise 0 
  */
-function _rsasign_verifyByteArray(byteArray, hSig) {
+function _rsasign_verifyByteArray(byteArray, witness, hSig) {
 	hSig = hSig.replace(_RE_HEXDECONLY, '');
 	  
 	  if(LOG>3)console.log('n is '+this.n);
@@ -306,10 +306,32 @@ function _rsasign_verifyByteArray(byteArray, hSig) {
 	  if (digestInfoAry.length == 0) return false;
 	  var algName = digestInfoAry[0];
 	  var diHashValue = digestInfoAry[1];
-	  var ff = _RSASIGN_HASHBYTEFUNC[algName];
-	  var msgHashValue = ff(byteArray);
+	  var msgHashValue = null;
+	  
+	  if (witness == null) {
+	  	var ff = _RSASIGN_HASHBYTEFUNC[algName];
+	  	msgHashValue = ff(byteArray);
+	  } else {
+	  	// Compute merkle hash
+		  h = hex_sha256_from_bytes(byteArray);
+		  index = witness.path.index;
+		  for (i = witness.path.digestList.length - 1; i >= 0; i--) {
+		  	var str = "";
+		  	if (index % 2 == 0) {
+		  		str = h + witness.path.digestList[i];
+		  	} else {
+		  		str = witness.path.digestList[i] + h;
+		  	}
+		  	h = hex_sha256_from_bytes(DataUtils.toNumbers(str));
+		  	index = Math.floor(index / 2);
+		  }
+		  msgHashValue = hex_sha256_from_bytes(DataUtils.toNumbers(h));
+	  }
+	  //console.log(diHashValue);
+	  //console.log(msgHashValue);
 	  return (diHashValue == msgHashValue);
 }
+
 
 RSAKey.prototype.signString = _rsasign_signString;
 
