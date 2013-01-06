@@ -59,6 +59,12 @@ NdnProtocol.prototype = {
             // Use the same default as NDN.expressInterest.
             template.interestLifetime = 4000; // milliseconds
             var searchWithoutNdn = extractNdnSearch(search, template);
+            
+            var segmentTemplate = new Interest(new Name([]));
+            // Only use the interest selectors which make sense for fetching further segments.
+            segmentTemplate.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+            segmentTemplate.scope = template.scope;
+            segmentTemplate.interestLifetime = template.interestLifetime;
     
             var requestContent = function(contentListener) {                
                 var name = new Name(nameString);
@@ -68,7 +74,7 @@ NdnProtocol.prototype = {
                 // Use the same NDN object each time.
                 thisNdnProtocol.ndn.expressInterest(name, 
                     new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
-                            aURI.originCharset, searchWithoutNdn + hash),
+                            aURI.originCharset, searchWithoutNdn + hash, segmentTemplate),
                     template);
             };
 
@@ -97,9 +103,11 @@ else
  * uriOriginCharset is the charset of the URI passed to newChannel (used for making a new URI)
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
  *    and/or '#' but without the interest selector fields.
+ * segmentTemplate is the template used in expressInterest to fetch further segments.
  */                                                
 var ContentClosure = function ContentClosure
-        (ndn, contentListener, uriEndsWithSegmentNumber, uriOriginCharset, uriSearchAndHash) {
+        (ndn, contentListener, uriEndsWithSegmentNumber, uriOriginCharset, uriSearchAndHash, 
+         segmentTemplate) {
     // Inherit from Closure.
     Closure.call(this);
     
@@ -108,6 +116,7 @@ var ContentClosure = function ContentClosure
     this.uriEndsWithSegmentNumber = uriEndsWithSegmentNumber;
     this.uriOriginCharset = uriOriginCharset;
     this.uriSearchAndHash = uriSearchAndHash;
+    this.segmentTemplate = segmentTemplate;
     
     this.firstReceivedSegmentNumber = null;
     this.firstReceivedContentObject = null;
@@ -143,7 +152,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
                 var componentsForZero = contentObject.name.components.slice
                     (0, contentObject.name.components.length - 1);
                 componentsForZero.push([0]);
-                this.ndn.expressInterest(new Name(componentsForZero), this); 
+                this.ndn.expressInterest(new Name(componentsForZero), this, this.segmentTemplate); 
                 return Closure.RESULT_OK;
             }
         }
@@ -204,7 +213,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
         components.push(nextSegmentNumber);
-        this.ndn.expressInterest(new Name(components), this);
+        this.ndn.expressInterest(new Name(components), this, this.segmentTemplate);
     }
     else {
         // Finished.
