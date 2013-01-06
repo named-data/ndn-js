@@ -180,7 +180,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
     console.log("Trying host from getHostAndPort: " + this.host);
     
     // Fetch the ccndId.
-    var interest = new Interest(new Name(NDN.ccndIdFetcher));
+    var interest = new Interest(NDN.ccndIdFetcher);
 	interest.interestLifetime = 4000; // milliseconds    
 
     var thisNDN = this;
