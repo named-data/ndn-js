@@ -8,7 +8,7 @@ function ndnToolbarGetLatest(event) {
   }
 
   // Parse the same as in ndnProtocolService newChannel.
-  var uriParts = splitUri(window._content.document.location.href);
+  var uriParts = NdnProtocolInfo.splitUri(window._content.document.location.href);
   var name = new Name(uriParts.name);
   var indexOfVersion = getIndexOfVersion(name);
   if (indexOfVersion < 0) {
@@ -43,4 +43,4 @@ function onNdnHubChanged(host, port) {
    document.getElementById("ndnHubLabel").setAttribute("value", "Hub: " + host + ":" + port);
 }
 
-window.addEventListener("load", function() { addNdnHubChangedListener(onNdnHubChanged); }, false);
+window.addEventListener("load", function() { NdnProtocolInfo.addNdnHubChangedListener(onNdnHubChanged); }, false);

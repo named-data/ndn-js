@@ -32,13 +32,13 @@ NdnProtocol.prototype = {
         var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
 
         // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
-        var uriParts = splitUri(aSpec);
+        var uriParts = NdnProtocolInfo.splitUri(aSpec);
         if (aBaseURI == null || uriParts.name.length < 1 || uriParts.name[0] == '/')
             // Just reconstruct the trimmed URI.
             uri.spec = "ndn:" + uriParts.name + uriParts.search + uriParts.hash;
         else {
             // Make a URI relative to the base name up to the file name component.
-            var baseUriParts = splitUri(aBaseURI.spec);
+            var baseUriParts = NdnProtocolInfo.splitUri(aBaseURI.spec);
             var baseName = new Name(baseUriParts.name);
             var iFileName = baseName.indexOfFileName();
             
@@ -70,7 +70,7 @@ NdnProtocol.prototype = {
         var thisNdnProtocol = this;
         
         try {            
-            var uriParts = splitUri(aURI.spec);
+            var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
@@ -153,7 +153,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     }
     
     // Now that we're connected, report the host and port.
-    setConnectedNdnHub(this.ndn.host, this.ndn.port);
+    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
 
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     var segmentNumber = null;
