@@ -8,17 +8,8 @@ function ndnToolbarGetLatest(event) {
   }
 
   // Parse the same as in ndnProtocolService newChannel.
-  var spec = window._content.document.location.href.trim();
-  var preHash = spec.split('#', 1)[0];
-  var hash = spec.substr(preHash.length).trim();
-  var preSearch = preHash.split('?', 1)[0];
-  var search = preHash.substr(preSearch.length).trim();
-  // Set nameString to the preSearch without the protocol.
-  var nameString = preSearch.trim();
-  if (nameString.indexOf(':') >= 0)
-    nameString = nameString.substr(nameString.indexOf(':') + 1).trim();
-
-  var name = new Name(nameString);
+  var uriParts = splitUri(window._content.document.location.href);
+  var name = new Name(uriParts.name);
   var indexOfVersion = getIndexOfVersion(name);
   if (indexOfVersion < 0) {
     alert("The ndn address does not have a version");
@@ -26,9 +17,10 @@ function ndnToolbarGetLatest(event) {
   }
 
   var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
-  var searchWithChildSelector = (search == "" ? "?" : search + "&") + "ndn.ChildSelector=1";
+  var searchWithChildSelector = 
+      (uriParts.search == "" ? "?" : uriParts.search + "&") + "ndn.ChildSelector=1";
     
-  var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + hash;
+  var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + uriParts.hash;
   window._content.document.location = uri;
 } 
 

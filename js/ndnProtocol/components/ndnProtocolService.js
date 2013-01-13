@@ -30,12 +30,9 @@ NdnProtocol.prototype = {
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
         // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
-        var spec = aSpec.trim();
-        var preSearch = spec.split('?', 1)[0];
-        var searchAndHash = spec.substr(preSearch.length).trim();
-
+        var uriParts = splitUri(aSpec);
         var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
-        uri.spec = preSearch.trim() + searchAndHash;
+        uri.spec = uriParts.protocol + uriParts.name + uriParts.search + uriParts.hash;
         return uri;
     },
 
@@ -44,21 +41,12 @@ NdnProtocol.prototype = {
         var thisNdnProtocol = this;
         
         try {            
-            // Decode manually since nsIURI doesn't have selectors for hash, etc.
-            var spec = aURI.spec.trim();
-            var preHash = spec.split('#', 1)[0];
-            var hash = spec.substr(preHash.length).trim();
-            var preSearch = preHash.split('?', 1)[0];
-            var search = preHash.substr(preSearch.length).trim();
-            // Set nameString to the preSearch without the protocol.
-            var nameString = preSearch.trim();
-            if (nameString.indexOf(':') >= 0)
-                nameString = nameString.substr(nameString.indexOf(':') + 1).trim();
+            var uriParts = splitUri(aURI.spec);
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
             template.interestLifetime = 4000; // milliseconds
-            var searchWithoutNdn = extractNdnSearch(search, template);
+            var searchWithoutNdn = extractNdnSearch(uriParts.search, template);
             
             var segmentTemplate = new Interest(new Name([]));
             // Only use the interest selectors which make sense for fetching further segments.
@@ -67,14 +55,14 @@ NdnProtocol.prototype = {
             segmentTemplate.interestLifetime = template.interestLifetime;
     
             var requestContent = function(contentListener) {                
-                var name = new Name(nameString);
+                var name = new Name(uriParts.name);
                 // TODO: Strip off an ending implicit digest before checking the last component?
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
                 
                 // Use the same NDN object each time.
                 thisNdnProtocol.ndn.expressInterest(name, 
                     new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
-                            aURI.originCharset, searchWithoutNdn + hash, segmentTemplate),
+                            aURI.originCharset, searchWithoutNdn + uriParts.hash, segmentTemplate),
                     template);
             };
 
