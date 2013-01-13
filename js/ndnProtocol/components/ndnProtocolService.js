@@ -29,10 +29,39 @@ NdnProtocol.prototype = {
 
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
+        var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
+
         // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
         var uriParts = splitUri(aSpec);
-        var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
-        uri.spec = uriParts.protocol + uriParts.name + uriParts.search + uriParts.hash;
+        if (aBaseURI == null || uriParts.name.length < 1 || uriParts.name[0] == '/')
+            // Just reconstruct the trimmed URI.
+            uri.spec = "ndn:" + uriParts.name + uriParts.search + uriParts.hash;
+        else {
+            // Make a URI relative to the base name up to the file name component.
+            var baseUriParts = splitUri(aBaseURI.spec);
+            var baseName = new Name(baseUriParts.name);
+            var iFileName = baseName.indexOfFileName();
+            
+            var relativeName = uriParts.name;
+            // Handle ../
+            while (true) {
+                if (relativeName.substr(0, 2) == "./")
+                    relativeName = relativeName.substr(2);
+                else if (relativeName.substr(0, 3) == "../") {
+                    relativeName = relativeName.substr(3);
+                    if (iFileName > 0)
+                        --iFileName;
+                }
+                else
+                    break;
+            }
+            
+            var prefixUri = "/";
+            if (iFileName > 0)
+                prefixUri = new Name(baseName.components.slice(0, iFileName)).to_uri() + "/";
+            uri.spec = "ndn:" + prefixUri + relativeName + uriParts.search + uriParts.hash;
+        }
+        
         return uri;
     },
 
