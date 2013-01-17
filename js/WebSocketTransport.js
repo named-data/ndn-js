@@ -231,7 +231,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 										if (LOG > 3) console.log("Fetch key according to keylocator");
 										var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
 										var interest = new Interest(keylocator.keyName.contentName.getPrefix(4));
-										interest.interestLifetime = 4.0;
+										interest.interestLifetime = 4000;  // milliseconds
 										self.expressInterest(ndn, interest, nextClosure);
 									}
 								}

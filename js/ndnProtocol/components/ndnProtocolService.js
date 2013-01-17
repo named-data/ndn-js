@@ -29,13 +29,39 @@ NdnProtocol.prototype = {
 
     newURI: function(aSpec, aOriginCharset, aBaseURI)
     {
-        // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
-        var spec = aSpec.trim();
-        var preSearch = spec.split('?', 1)[0];
-        var searchAndHash = spec.substr(preSearch.length).trim();
-
         var uri = Cc["@mozilla.org/network/simple-uri;1"].createInstance(Ci.nsIURI);
-        uri.spec = preSearch.trim() + searchAndHash;
+
+        // We have to trim now because nsIURI converts spaces to %20 and we can't trim in newChannel.
+        var uriParts = NdnProtocolInfo.splitUri(aSpec);
+        if (aBaseURI == null || uriParts.name.length < 1 || uriParts.name[0] == '/')
+            // Just reconstruct the trimmed URI.
+            uri.spec = "ndn:" + uriParts.name + uriParts.search + uriParts.hash;
+        else {
+            // Make a URI relative to the base name up to the file name component.
+            var baseUriParts = NdnProtocolInfo.splitUri(aBaseURI.spec);
+            var baseName = new Name(baseUriParts.name);
+            var iFileName = baseName.indexOfFileName();
+            
+            var relativeName = uriParts.name;
+            // Handle ../
+            while (true) {
+                if (relativeName.substr(0, 2) == "./")
+                    relativeName = relativeName.substr(2);
+                else if (relativeName.substr(0, 3) == "../") {
+                    relativeName = relativeName.substr(3);
+                    if (iFileName > 0)
+                        --iFileName;
+                }
+                else
+                    break;
+            }
+            
+            var prefixUri = "/";
+            if (iFileName > 0)
+                prefixUri = new Name(baseName.components.slice(0, iFileName)).to_uri() + "/";
+            uri.spec = "ndn:" + prefixUri + relativeName + uriParts.search + uriParts.hash;
+        }
+        
         return uri;
     },
 
@@ -44,21 +70,12 @@ NdnProtocol.prototype = {
         var thisNdnProtocol = this;
         
         try {            
-            // Decode manually since nsIURI doesn't have selectors for hash, etc.
-            var spec = aURI.spec.trim();
-            var preHash = spec.split('#', 1)[0];
-            var hash = spec.substr(preHash.length).trim();
-            var preSearch = preHash.split('?', 1)[0];
-            var search = preHash.substr(preSearch.length).trim();
-            // Set nameString to the preSearch without the protocol.
-            var nameString = preSearch.trim();
-            if (nameString.indexOf(':') >= 0)
-                nameString = nameString.substr(nameString.indexOf(':') + 1).trim();
+            var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
     
             var template = new Interest(new Name([]));
             // Use the same default as NDN.expressInterest.
             template.interestLifetime = 4000; // milliseconds
-            var searchWithoutNdn = extractNdnSearch(search, template);
+            var searchWithoutNdn = extractNdnSearch(uriParts.search, template);
             
             var segmentTemplate = new Interest(new Name([]));
             // Only use the interest selectors which make sense for fetching further segments.
@@ -67,14 +84,14 @@ NdnProtocol.prototype = {
             segmentTemplate.interestLifetime = template.interestLifetime;
     
             var requestContent = function(contentListener) {                
-                var name = new Name(nameString);
+                var name = new Name(uriParts.name);
                 // TODO: Strip off an ending implicit digest before checking the last component?
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
                 
                 // Use the same NDN object each time.
                 thisNdnProtocol.ndn.expressInterest(name, 
                     new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
-                            aURI.originCharset, searchWithoutNdn + hash, segmentTemplate),
+                            aURI.originCharset, searchWithoutNdn + uriParts.hash, segmentTemplate),
                     template);
             };
 
@@ -136,7 +153,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     }
     
     // Now that we're connected, report the host and port.
-    setConnectedNdnHub(this.ndn.host, this.ndn.port);
+    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
 
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     var segmentNumber = null;
