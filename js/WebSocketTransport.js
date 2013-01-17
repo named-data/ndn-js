@@ -327,7 +327,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 			var index = NDN.PITTable.indexOf(pitEntry);
 			//console.log(NDN.PITTable);
 			if (index >= 0) 
-                NDN.PITTable.splice(index, 1);
+	            NDN.PITTable.splice(index, 1);
 			//console.log(NDN.PITTable);
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
