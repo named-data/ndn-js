@@ -313,26 +313,30 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		var bytearray = new Uint8Array(binaryInterest.length);
 		bytearray.set(binaryInterest);
 		
-		var pitEntry = new PITEntry(interest, closure);
-		NDN.PITTable.push(pitEntry);
+		if (closure != null) {
+			var pitEntry = new PITEntry(interest, closure);
+			NDN.PITTable.push(pitEntry);
+		}
 		
 		this.ws.send(bytearray.buffer);
 		if (LOG > 3) console.log('ws.send() returned.');
 		
 		// Set interest timer
-		closure.timerID = setTimeout(function() {
-			if (LOG > 3) console.log("Interest time out.");
-			
-			// Remove PIT entry from NDN.PITTable
-			var index = NDN.PITTable.indexOf(pitEntry);
-			//console.log(NDN.PITTable);
-			if (index >= 0) 
-	            NDN.PITTable.splice(index, 1);
-			//console.log(NDN.PITTable);
-			// Raise closure callback
-			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
-		//console.log(closure.timerID);
+		if (closure != null) {
+			closure.timerID = setTimeout(function() {
+				if (LOG > 3) console.log("Interest time out.");
+				
+				// Remove PIT entry from NDN.PITTable
+				var index = NDN.PITTable.indexOf(pitEntry);
+				//console.log(NDN.PITTable);
+				if (index >= 0) 
+		            NDN.PITTable.splice(index, 1);
+				//console.log(NDN.PITTable);
+				// Raise closure callback
+				closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
+			}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+			//console.log(closure.timerID);
+		}
 	}
 	else
 		console.log('WebSocket connection is not established.');
