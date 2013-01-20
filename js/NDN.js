@@ -81,6 +81,7 @@ NDN.PITTable = new Array();
 var PITEntry = function PITEntry(interest, closure) {
 	this.interest = interest;  // Interest
 	this.closure = closure;    // Closure
+	this.timerID = -1;  // Timer ID
 };
 
 // Return the longest entry from NDN.PITTable that matches name.

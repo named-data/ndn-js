@@ -19,7 +19,7 @@ var Closure = function Closure() {
 	this.ndn_data = null;  // this holds the ndn_closure
     this.ndn_data_dirty = false;
     
-    this.timerID = -1;  // Store the interest timer; used to cancel the timer upon receiving interest
+    //this.timerID = -1;  // Store the interest timer; used to cancel the timer upon receiving interest
 };
 
 // Upcall result
@@ -209,7 +209,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 						var currentClosure = pitEntry.closure;
 						
 						// Cancel interest timer
-						clearTimeout(currentClosure.timerID);
+						clearTimeout(pitEntry.timerID);
 						//console.log("Clear interest timer");
 						//console.log(currentClosure.timerID);
 						
@@ -382,6 +382,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		if (closure != null) {
 			var pitEntry = new PITEntry(interest, closure);
 			NDN.PITTable.push(pitEntry);
+			closure.pitEntry = pitEntry;
 		}
 		
 		this.ws.send(bytearray.buffer);
@@ -389,7 +390,7 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 		
 		// Set interest timer
 		if (closure != null) {
-			closure.timerID = setTimeout(function() {
+			pitEntry.timerID = setTimeout(function() {
 				if (LOG > 3) console.log("Interest time out.");
 				
 				// Remove PIT entry from NDN.PITTable
@@ -398,6 +399,8 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 				if (index >= 0) 
 		            NDN.PITTable.splice(index, 1);
 				//console.log(NDN.PITTable);
+				//console.log(pitEntry.interest.name.getName());
+				
 				// Raise closure callback
 				closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
 			}, interest.interestLifetime);  // interestLifetime is in milliseconds.
@@ -7856,6 +7859,7 @@ NDN.PITTable = new Array();
 var PITEntry = function PITEntry(interest, closure) {
 	this.interest = interest;  // Interest
 	this.closure = closure;    // Closure
+	this.timerID = -1;  // Timer ID
 };
 
 // Return the longest entry from NDN.PITTable that matches name.

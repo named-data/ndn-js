@@ -19,7 +19,6 @@ var Closure = function Closure() {
 	this.ndn_data = null;  // this holds the ndn_closure
     this.ndn_data_dirty = false;
     
-    this.timerID = -1;  // Store the interest timer; used to cancel the timer upon receiving interest
 };
 
 // Upcall result
