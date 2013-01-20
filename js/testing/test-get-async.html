@@ -41,7 +41,12 @@
 				//console.log(content);
 				document.getElementById('content').innerHTML += contentObjectToHtml(content);
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
+				var content = upcallInfo.contentObject;
 				console.log("Closure.upcall: content signature verification fail.");
+				if (content.signature.signature)
+					console.log("Signature: " + DataUtils.toHex(content.signature.signature).toLowerCase());
+				if (content.signature.Witness)
+					console.log("Witness: " + DataUtils.toHex(content.signature.Witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out.");
 			}

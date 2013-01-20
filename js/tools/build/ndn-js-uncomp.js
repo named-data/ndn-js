@@ -4709,11 +4709,10 @@ Witness.prototype.decode = function(/* Uint8Array */ witness) {
 		} else if (witness[i] == 0x04) {
 			if ((witness[i + 1] & 0x80) != 0) {
 				len = witness[i+1] & 0x7F;
-			} else {
-				len = witness[i+1];
 			}
 			if (step == 4) {
 				// Start to decode digest hex string
+				len = witness[i+1];  // XXX: digest hex should always be 32 bytes
 				str = DataUtils.toHex(witness.subarray(i + 2, i + 2 + len));
 				this.path.digestList.push(str);  // digest hex string
 				//console.log(str);
