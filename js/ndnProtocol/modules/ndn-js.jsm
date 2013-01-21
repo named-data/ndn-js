@@ -34,24 +34,13 @@ function setTimeout(callback, delay) {
 function clearTimeout(timer) {
     timer.cancel();
 }
-var Closure=function(){this.ndn_data=null;this.ndn_data_dirty=!1;this.timerID=-1};Closure.RESULT_ERR=-1;Closure.RESULT_OK=0;Closure.RESULT_REEXPRESS=1;Closure.RESULT_INTEREST_CONSUMED=2;Closure.RESULT_VERIFY=3;Closure.RESULT_FETCHKEY=4;Closure.UPCALL_FINAL=0;Closure.UPCALL_INTEREST=1;Closure.UPCALL_CONSUMED_INTEREST=2;Closure.UPCALL_CONTENT=3;Closure.UPCALL_INTEREST_TIMED_OUT=4;Closure.UPCALL_CONTENT_UNVERIFIED=5;Closure.UPCALL_CONTENT_BAD=6;Closure.prototype.upcall=function(){return Closure.RESULT_OK};
+var Closure=function(){this.ndn_data=null;this.ndn_data_dirty=!1};Closure.RESULT_ERR=-1;Closure.RESULT_OK=0;Closure.RESULT_REEXPRESS=1;Closure.RESULT_INTEREST_CONSUMED=2;Closure.RESULT_VERIFY=3;Closure.RESULT_FETCHKEY=4;Closure.UPCALL_FINAL=0;Closure.UPCALL_INTEREST=1;Closure.UPCALL_CONSUMED_INTEREST=2;Closure.UPCALL_CONTENT=3;Closure.UPCALL_INTEREST_TIMED_OUT=4;Closure.UPCALL_CONTENT_UNVERIFIED=5;Closure.UPCALL_CONTENT_BAD=6;Closure.prototype.upcall=function(){return Closure.RESULT_OK};
 var UpcallInfo=function(a,b,c,d){this.ndn=a;this.interest=b;this.matchedComps=c;this.contentObject=d};UpcallInfo.prototype.toString=function(){var a="ndn = "+this.ndn,a=a+("\nInterest = "+this.interest),a=a+("\nmatchedComps = "+this.matchedComps);return a+="\nContentObject: "+this.contentObject};
-var WebSocketTransport=function(){this.ccndid=this.ws=null;this.maxBufferSize=1E4;this.buffer=new Uint8Array(this.maxBufferSize);this.bufferOffset=0;this.structureDecoder=new BinaryXMLStructureDecoder;this.defaultGetHostAndPort=NDN.makeShuffledGetHostAndPort(["A.ws.ndn.ucla.edu","B.ws.ndn.ucla.edu","C.ws.ndn.ucla.edu","D.ws.ndn.ucla.edu","E.ws.ndn.ucla.edu"],9696)};
-WebSocketTransport.prototype.connectWebSocket=function(a){null!=this.ws&&delete this.ws;this.ws=new WebSocket("ws://"+a.host+":"+a.port);0<LOG&&console.log("ws connection created.");this.ws.binaryType="arraybuffer";var b=this;this.ws.onmessage=function(c){c=c.data;if(null==c||void 0==c||""==c)console.log("INVALID ANSWER");else if(c instanceof ArrayBuffer){var d=new Uint8Array(c);3<LOG&&console.log("BINARY RESPONSE IS "+DataUtils.toHex(d));try{if(d.length+b.bufferOffset>=b.buffer.byteLength){3<LOG&&
-console.log("NDN.ws.onmessage: buffer overflow. Accumulate received length: "+b.bufferOffset+". Current packet length: "+d.length+".");delete b.structureDecoder;delete b.buffer;b.structureDecoder=new BinaryXMLStructureDecoder;b.buffer=new Uint8Array(b.maxBufferSize);b.bufferOffset=0;return}b.buffer.set(d,b.bufferOffset);b.bufferOffset+=d.length;if(!b.structureDecoder.findElementEnd(b.buffer.subarray(0,b.bufferOffset))){3<LOG&&console.log("Incomplete packet received. Length "+d.length+". Wait for more input.");
-return}3<LOG&&console.log("Complete packet received. Length "+d.length+". Start decoding.")}catch(e){console.log("NDN.ws.onmessage exception: "+e);return}c=new BinaryXMLDecoder(b.buffer);if(c.peekStartElement(CCNProtocolDTags.Interest)){3<LOG&&console.log("Interest packet received.");d=new Interest;d.from_ccnb(c);3<LOG&&console.log(d);var f=escape(d.name.getName());3<LOG&&console.log(f);f=getEntryForRegisteredPrefix(f);null!=f&&(d=new UpcallInfo(a,d,0,null),f.closure.upcall(Closure.UPCALL_INTEREST,
-d)==Closure.RESULT_INTEREST_CONSUMED&&null!=d.contentObject&&(f=encodeToBinaryContentObject(d.contentObject),d=new Uint8Array(f.length),d.set(f),b.ws.send(d.buffer)))}else if(c.peekStartElement(CCNProtocolDTags.ContentObject))if(3<LOG&&console.log("ContentObject packet received."),d=new ContentObject,d.from_ccnb(c),null==b.ccndid&&NDN.ccndIdFetcher.match(d.name))!d.signedInfo||!d.signedInfo.publisher||!d.signedInfo.publisher.publisherPublicKeyDigest?(console.log("Cannot contact router, close NDN now."),
-a.readyStatus=NDN.CLOSED,a.onclose()):(b.ccndid=d.signedInfo.publisher.publisherPublicKeyDigest,3<LOG&&console.log(b.ccndid),a.readyStatus=NDN.OPENED,a.onopen());else{if(f=NDN.getEntryForExpressedInterest(d.name),null!=f){var g=NDN.PITTable.indexOf(f);0<=g&&NDN.PITTable.splice(g,1);f=f.closure;clearTimeout(f.timerID);var j=function(a,b,c,d,e){this.contentObject=a;this.closure=b;this.keyName=c;this.sigHex=d;this.witness=e;Closure.call(this)};j.prototype.upcall=function(b,c){if(b==Closure.UPCALL_INTEREST_TIMED_OUT)console.log("In KeyFetchClosure.upcall: interest time out."),
-console.log(this.keyName.contentName.getName());else if(b==Closure.UPCALL_CONTENT){var d=decodeSubjectPublicKeyInfo(c.contentObject.content),e=!0==d.verifyByteArray(this.contentObject.rawSignatureData,this.witness,this.sigHex)?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD;this.closure.upcall(e,new UpcallInfo(a,null,0,this.contentObject));d=new KeyStoreEntry(l.keyName,d,(new Date).getTime());NDN.addKeyEntry(d)}else b==Closure.UPCALL_CONTENT_BAD&&console.log("In KeyFetchClosure.upcall: signature verification failed")};
-if(d.signedInfo&&d.signedInfo.locator&&d.signature){3<LOG&&console.log("Key verification...");var g=DataUtils.toHex(d.signature.signature).toLowerCase(),k=null;null!=d.signature.Witness&&(k=new Witness,k.decode(d.signature.Witness));var l=d.signedInfo.locator;if(l.type==KeyLocatorType.KEYNAME)if(3<LOG&&console.log("KeyLocator contains KEYNAME"),l.keyName.contentName.match(d.name))3<LOG&&console.log("Content is key itself"),j=decodeSubjectPublicKeyInfo(d.content),g=j.verifyByteArray(d.rawSignatureData,
-k,g),g=!0==g?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD,f.upcall(g,new UpcallInfo(a,null,0,d));else{var p=NDN.getKeyByName(l.keyName);p?(3<LOG&&console.log("Local key cache hit"),j=p.rsaKey,g=j.verifyByteArray(d.rawSignatureData,k,g),g=!0==g?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD,f.upcall(g,new UpcallInfo(a,null,0,d))):(3<LOG&&console.log("Fetch key according to keylocator"),f=new j(d,f,l.keyName,g,k),d=new Interest(l.keyName.contentName.getPrefix(4)),d.interestLifetime=4,b.expressInterest(a,
-d,f))}else l.type==KeyLocatorType.KEY?(3<LOG&&console.log("Keylocator contains KEY"),j=decodeSubjectPublicKeyInfo(d.signedInfo.locator.publicKey),g=j.verifyByteArray(d.rawSignatureData,k,g),g=!0==g?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD,f.upcall(Closure.UPCALL_CONTENT,new UpcallInfo(a,null,0,d))):(d=l.certificate,console.log("KeyLocator contains CERT"),console.log(d))}}}else console.log("Incoming packet is not Interest or ContentObject. Discard now.");delete c;delete b.structureDecoder;
-delete b.buffer;b.structureDecoder=new BinaryXMLStructureDecoder;b.buffer=new Uint8Array(b.maxBufferSize);b.bufferOffset=0}};this.ws.onopen=function(a){3<LOG&&console.log(a);3<LOG&&console.log("ws.onopen: WebSocket connection opened.");3<LOG&&console.log("ws.onopen: ReadyState: "+this.readyState);a=new Interest(NDN.ccndIdFetcher);a.interestLifetime=4E3;var a=encodeToBinaryInterest(a),d=new Uint8Array(a.length);d.set(a);b.ws.send(d.buffer)};this.ws.onerror=function(a){console.log("ws.onerror: ReadyState: "+
-this.readyState);console.log(a);console.log("ws.onerror: WebSocket error: "+a.data)};this.ws.onclose=function(){console.log("ws.onclose: WebSocket connection closed.");b.ws=null;a.readyStatus=NDN.CLOSED;a.onclose()}};
-WebSocketTransport.prototype.expressInterest=function(a,b,c){if(null!=this.ws){var d=encodeToBinaryInterest(b),e=new Uint8Array(d.length);e.set(d);var f=new PITEntry(b,c);NDN.PITTable.push(f);this.ws.send(e.buffer);3<LOG&&console.log("ws.send() returned.");c.timerID=setTimeout(function(){3<LOG&&console.log("Interest time out.");var d=NDN.PITTable.indexOf(f);0<=d&&NDN.PITTable.splice(d,1);c.upcall(Closure.UPCALL_INTEREST_TIMED_OUT,new UpcallInfo(a,b,0,null))},b.interestLifetime)}else console.log("WebSocket connection is not established.")};
-var CSTable=[],CSEntry=function(a,b){this.name=a;this.closure=b};function getEntryForRegisteredPrefix(a){for(var b=0;b<CSTable.length;b++)if(null!=CSTable[b].name.match(a))return CSTable[b];return null}
-WebSocketTransport.prototype.registerPrefix=function(a,b,c){if(null!=this.ws){if(null==this.ccndid)return console.log("ccnd node ID unkonwn. Cannot register prefix."),-1;var a=new ForwardingEntry("selfreg",b,null,null,3,2147483647),a=encodeForwardingEntry(a),d=new SignedInfo;d.setFields();a=new ContentObject(new Name,d,a,new Signature);a.sign();a=encodeToBinaryContentObject(a);a=new Name(["ccnx",this.ccndid,"selfreg",a]);a=new Interest(a);a.scope=1;d=encodeToBinaryInterest(a);a=new Uint8Array(d.length);
-a.set(d);3<LOG&&console.log("Send Interest registration packet.");b=new CSEntry(b.getName(),c);CSTable.push(b);this.ws.send(a.buffer);return 0}console.log("WebSocket connection is not established.");return-1};
+var WebSocketTransport=function(){this.elementReader=this.ws=null;this.defaultGetHostAndPort=NDN.makeShuffledGetHostAndPort(["A.ws.ndn.ucla.edu","B.ws.ndn.ucla.edu","C.ws.ndn.ucla.edu","D.ws.ndn.ucla.edu","E.ws.ndn.ucla.edu"],9696)};
+WebSocketTransport.prototype.connectWebSocket=function(a){null!=this.ws&&delete this.ws;this.ws=new WebSocket("ws://"+a.host+":"+a.port);0<LOG&&console.log("ws connection created.");this.ws.binaryType="arraybuffer";this.elementReader=new BinaryXmlElementReader(a);var b=this;this.ws.onmessage=function(a){a=a.data;if(null==a||void 0==a||""==a)console.log("INVALID ANSWER");else if(a instanceof ArrayBuffer){a=new Uint8Array(a);3<LOG&&console.log("BINARY RESPONSE IS "+DataUtils.toHex(a));try{b.elementReader.onReceivedData(a)}catch(d){console.log("NDN.ws.onmessage exception: "+
+d)}}};this.ws.onopen=function(a){3<LOG&&console.log(a);3<LOG&&console.log("ws.onopen: WebSocket connection opened.");3<LOG&&console.log("ws.onopen: ReadyState: "+this.readyState);a=new Interest(NDN.ccndIdFetcher);a.interestLifetime=4E3;this.send(encodeToBinaryInterest(a))};this.ws.onerror=function(a){console.log("ws.onerror: ReadyState: "+this.readyState);console.log(a);console.log("ws.onerror: WebSocket error: "+a.data)};this.ws.onclose=function(){console.log("ws.onclose: WebSocket connection closed.");
+b.ws=null;a.readyStatus=NDN.CLOSED;a.onclose()}};WebSocketTransport.prototype.send=function(a){if(null!=this.ws){var b=new Uint8Array(a.length);b.set(a);this.ws.send(b.buffer);3<LOG&&console.log("ws.send() returned.")}else console.log("WebSocket connection is not established.")};
+WebSocketTransport.prototype.expressInterest=function(a,b,c){if(a.readyStatus!=NDN.OPENED)console.log("Connection is not established.");else{if(null!=c){var d=new PITEntry(b,c);NDN.PITTable.push(d);c.pitEntry=d}null!=c&&(d.timerID=setTimeout(function(){3<LOG&&console.log("Interest time out.");var e=NDN.PITTable.indexOf(d);0<=e&&NDN.PITTable.splice(e,1);c.upcall(Closure.UPCALL_INTEREST_TIMED_OUT,new UpcallInfo(a,b,0,null))},b.interestLifetime));this.send(encodeToBinaryInterest(b))}};
 var CCNProtocolDTags={Any:13,Name:14,Component:15,Certificate:16,Collection:17,CompleteName:18,Content:19,SignedInfo:20,ContentDigest:21,ContentHash:22,Count:24,Header:25,Interest:26,Key:27,KeyLocator:28,KeyName:29,Length:30,Link:31,LinkAuthenticator:32,NameComponentCount:33,RootDigest:36,Signature:37,Start:38,Timestamp:39,Type:40,Nonce:41,Scope:42,Exclude:43,Bloom:44,BloomSeed:45,AnswerOriginKind:47,InterestLifetime:48,Witness:53,SignatureBits:54,DigestAlgorithm:55,BlockSize:56,FreshnessSeconds:58,
 FinalBlockID:59,PublisherPublicKeyDigest:60,PublisherCertificateDigest:61,PublisherIssuerKeyDigest:62,PublisherIssuerCertificateDigest:63,ContentObject:64,WrappedKey:65,WrappingKeyIdentifier:66,WrapAlgorithm:67,KeyAlgorithm:68,Label:69,EncryptedKey:70,EncryptedNonceKey:71,WrappingKeyName:72,Action:73,FaceID:74,IPProto:75,Host:76,Port:77,MulticastInterface:78,ForwardingFlags:79,FaceInstance:80,ForwardingEntry:81,MulticastTTL:82,MinSuffixComponents:83,MaxSuffixComponents:84,ChildSelector:85,RepositoryInfo:86,
 Version:87,RepositoryVersion:88,GlobalPrefix:89,LocalName:90,Policy:91,Namespace:92,GlobalPrefixName:93,PolicyVersion:94,KeyValueSet:95,KeyValuePair:96,IntegerValue:97,DecimalValue:98,StringValue:99,BinaryValue:100,NameValue:101,Entry:102,ACL:103,ParameterizedName:104,Prefix:105,Suffix:106,Root:107,ProfileName:108,Parameters:109,InfoString:110,StatusResponse:112,StatusCode:113,StatusText:114,SyncNode:115,SyncNodeKind:116,SyncNodeElement:117,SyncVersion:118,SyncNodeElements:119,SyncContentHash:120,
@@ -89,19 +78,19 @@ a.readBinaryElement(CCNProtocolDTags.FinalBlockID));a.peekStartElement(CCNProtoc
 SignedInfo.prototype.to_ccnb=function(a){if(!this.validate())throw Error("Cannot encode : field values missing.");a.writeStartElement(this.getElementLabel());null!=this.publisher&&(3<LOG&&console.log("ENCODING PUBLISHER KEY"+this.publisher.publisherPublicKeyDigest),this.publisher.to_ccnb(a));null!=this.timestamp&&a.writeDateTime(CCNProtocolDTags.Timestamp,this.timestamp);null!=this.type&&0!=this.type&&a.writeElement(CCNProtocolDTags.type,this.type);null!=this.freshnessSeconds&&a.writeElement(CCNProtocolDTags.FreshnessSeconds,
 this.freshnessSeconds);null!=this.finalBlockID&&a.writeElement(CCNProtocolDTags.FinalBlockID,this.finalBlockID);null!=this.locator&&this.locator.to_ccnb(a);a.writeEndElement()};SignedInfo.prototype.valueToType=function(){return null};SignedInfo.prototype.getElementLabel=function(){return CCNProtocolDTags.SignedInfo};SignedInfo.prototype.validate=function(){return null==this.publisher||null==this.timestamp||null==this.locator?!1:!0};
 var DateFormat=function(){var a=/d{1,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\1?|[LloSZ]|"[^"]*"|'[^']*'/g,b=/\b(?:[PMCEA][SDP]T|(?:Pacific|Mountain|Central|Eastern|Atlantic) (?:Standard|Daylight|Prevailing) Time|(?:GMT|UTC)(?:[-+]\d{4})?)\b/g,c=/[^-+\dA-Z]/g,d=function(a,b){a=String(a);for(b=b||2;a.length<b;)a="0"+a;return a};return function(e,f,g){var j=dateFormat;1==arguments.length&&("[object String]"==Object.prototype.toString.call(e)&&!/\d/.test(e))&&(f=e,e=void 0);e=e?new Date(e):new Date;if(isNaN(e))throw SyntaxError("invalid date");
-f=String(j.masks[f]||f||j.masks["default"]);"UTC:"==f.slice(0,4)&&(f=f.slice(4),g=!0);var k=g?"getUTC":"get",l=e[k+"Date"](),p=e[k+"Day"](),n=e[k+"Month"](),q=e[k+"FullYear"](),m=e[k+"Hours"](),r=e[k+"Minutes"](),t=e[k+"Seconds"](),k=e[k+"Milliseconds"](),s=g?0:e.getTimezoneOffset(),u={d:l,dd:d(l),ddd:j.i18n.dayNames[p],dddd:j.i18n.dayNames[p+7],m:n+1,mm:d(n+1),mmm:j.i18n.monthNames[n],mmmm:j.i18n.monthNames[n+12],yy:String(q).slice(2),yyyy:q,h:m%12||12,hh:d(m%12||12),H:m,HH:d(m),M:r,MM:d(r),s:t,
-ss:d(t),l:d(k,3),L:d(99<k?Math.round(k/10):k),t:12>m?"a":"p",tt:12>m?"am":"pm",T:12>m?"A":"P",TT:12>m?"AM":"PM",Z:g?"UTC":(String(e).match(b)||[""]).pop().replace(c,""),o:(0<s?"-":"+")+d(100*Math.floor(Math.abs(s)/60)+Math.abs(s)%60,4),S:["th","st","nd","rd"][3<l%10?0:(10!=l%100-l%10)*l%10]};return f.replace(a,function(a){return a in u?u[a]:a.slice(1,a.length-1)})}}();
+f=String(j.masks[f]||f||j.masks["default"]);"UTC:"==f.slice(0,4)&&(f=f.slice(4),g=!0);var k=g?"getUTC":"get",m=e[k+"Date"](),p=e[k+"Day"](),n=e[k+"Month"](),q=e[k+"FullYear"](),l=e[k+"Hours"](),r=e[k+"Minutes"](),t=e[k+"Seconds"](),k=e[k+"Milliseconds"](),s=g?0:e.getTimezoneOffset(),u={d:m,dd:d(m),ddd:j.i18n.dayNames[p],dddd:j.i18n.dayNames[p+7],m:n+1,mm:d(n+1),mmm:j.i18n.monthNames[n],mmmm:j.i18n.monthNames[n+12],yy:String(q).slice(2),yyyy:q,h:l%12||12,hh:d(l%12||12),H:l,HH:d(l),M:r,MM:d(r),s:t,
+ss:d(t),l:d(k,3),L:d(99<k?Math.round(k/10):k),t:12>l?"a":"p",tt:12>l?"am":"pm",T:12>l?"A":"P",TT:12>l?"AM":"PM",Z:g?"UTC":(String(e).match(b)||[""]).pop().replace(c,""),o:(0<s?"-":"+")+d(100*Math.floor(Math.abs(s)/60)+Math.abs(s)%60,4),S:["th","st","nd","rd"][3<m%10?0:(10!=m%100-m%10)*m%10]};return f.replace(a,function(a){return a in u?u[a]:a.slice(1,a.length-1)})}}();
 DateFormat.masks={"default":"ddd mmm dd yyyy HH:MM:ss",shortDate:"m/d/yy",mediumDate:"mmm d, yyyy",longDate:"mmmm d, yyyy",fullDate:"dddd, mmmm d, yyyy",shortTime:"h:MM TT",mediumTime:"h:MM:ss TT",longTime:"h:MM:ss TT Z",isoDate:"yyyy-mm-dd",isoTime:"HH:MM:ss",isoDateTime:"yyyy-mm-dd'T'HH:MM:ss",isoUtcDateTime:"UTC:yyyy-mm-dd'T'HH:MM:ss'Z'"};DateFormat.i18n={dayNames:"Sun Mon Tue Wed Thu Fri Sat Sunday Monday Tuesday Wednesday Thursday Friday Saturday".split(" "),monthNames:"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec January February March April May June July August September October November December".split(" ")};
-Date.prototype.format=function(a,b){return dateFormat(this,a,b)};var Interest=function(a,b,c,d,e,f,g,j,k,l,p){this.name=a;this.faceInstance=b;this.maxSuffixComponents=d;this.minSuffixComponents=c;this.publisherPublicKeyDigest=e;this.exclude=f;this.childSelector=g;this.answerOriginKind=j;this.scope=k;this.interestLifetime=l;this.nonce=p};Interest.RECURSIVE_POSTFIX="*";Interest.CHILD_SELECTOR_LEFT=0;Interest.CHILD_SELECTOR_RIGHT=1;Interest.ANSWER_CONTENT_STORE=1;Interest.ANSWER_GENERATED=2;
+Date.prototype.format=function(a,b){return dateFormat(this,a,b)};var Interest=function(a,b,c,d,e,f,g,j,k,m,p){this.name=a;this.faceInstance=b;this.maxSuffixComponents=d;this.minSuffixComponents=c;this.publisherPublicKeyDigest=e;this.exclude=f;this.childSelector=g;this.answerOriginKind=j;this.scope=k;this.interestLifetime=m;this.nonce=p};Interest.RECURSIVE_POSTFIX="*";Interest.CHILD_SELECTOR_LEFT=0;Interest.CHILD_SELECTOR_RIGHT=1;Interest.ANSWER_CONTENT_STORE=1;Interest.ANSWER_GENERATED=2;
 Interest.ANSWER_STALE=4;Interest.MARK_STALE=16;Interest.DEFAULT_ANSWER_ORIGIN_KIND=Interest.ANSWER_CONTENT_STORE|Interest.ANSWER_GENERATED;
 Interest.prototype.from_ccnb=function(a){a.readStartElement(CCNProtocolDTags.Interest);this.name=new Name;this.name.from_ccnb(a);a.peekStartElement(CCNProtocolDTags.MinSuffixComponents)&&(this.minSuffixComponents=a.readIntegerElement(CCNProtocolDTags.MinSuffixComponents));a.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)&&(this.maxSuffixComponents=a.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents));a.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)&&(this.publisherPublicKeyDigest=
 new PublisherPublicKeyDigest,this.publisherPublicKeyDigest.from_ccnb(a));a.peekStartElement(CCNProtocolDTags.Exclude)&&(this.exclude=new Exclude,this.exclude.from_ccnb(a));a.peekStartElement(CCNProtocolDTags.ChildSelector)&&(this.childSelector=a.readIntegerElement(CCNProtocolDTags.ChildSelector));a.peekStartElement(CCNProtocolDTags.AnswerOriginKind)&&(this.answerOriginKind=a.readIntegerElement(CCNProtocolDTags.AnswerOriginKind));a.peekStartElement(CCNProtocolDTags.Scope)&&(this.scope=a.readIntegerElement(CCNProtocolDTags.Scope));
 a.peekStartElement(CCNProtocolDTags.InterestLifetime)&&(this.interestLifetime=1E3*DataUtils.bigEndianToUnsignedInt(a.readBinaryElement(CCNProtocolDTags.InterestLifetime))/4096);a.peekStartElement(CCNProtocolDTags.Nonce)&&(this.nonce=a.readBinaryElement(CCNProtocolDTags.Nonce));a.readEndElement()};
 Interest.prototype.to_ccnb=function(a){a.writeStartElement(CCNProtocolDTags.Interest);this.name.to_ccnb(a);null!=this.minSuffixComponents&&a.writeElement(CCNProtocolDTags.MinSuffixComponents,this.minSuffixComponents);null!=this.maxSuffixComponents&&a.writeElement(CCNProtocolDTags.MaxSuffixComponents,this.maxSuffixComponents);null!=this.publisherPublicKeyDigest&&this.publisherPublicKeyDigest.to_ccnb(a);null!=this.exclude&&this.exclude.to_ccnb(a);null!=this.childSelector&&a.writeElement(CCNProtocolDTags.ChildSelector,
 this.childSelector);this.DEFAULT_ANSWER_ORIGIN_KIND!=this.answerOriginKind&&null!=this.answerOriginKind&&a.writeElement(CCNProtocolDTags.AnswerOriginKind,this.answerOriginKind);null!=this.scope&&a.writeElement(CCNProtocolDTags.Scope,this.scope);null!=this.interestLifetime&&a.writeElement(CCNProtocolDTags.InterestLifetime,DataUtils.nonNegativeIntToBigEndian(4096*(this.interestLifetime/1E3)));null!=this.nonce&&a.writeElement(CCNProtocolDTags.Nonce,this.nonce);a.writeEndElement()};
-Interest.prototype.matches_name=function(a){var b=this.name.components,a=a.components;if(b.length>a.length)return!1;for(var c=0;c<b.length;++c)if(!DataUtils.arraysEqual(b[c],a[c]))return!1;return!0};var Exclude=function(a){this.OPTIMUM_FILTER_SIZE=100;this.values=a};Exclude.prototype.from_ccnb=function(a){a.readStartElement(this.getElementLabel());a.readEndElement()};
-Exclude.prototype.to_ccnb=function(a){if(!validate())throw new ContentEncodingException("Cannot encode "+this.getClass().getName()+": field values missing.");empty()||(a.writeStartElement(getElementLabel()),a.writeEndElement())};Exclude.prototype.getElementLabel=function(){return CCNProtocolDTags.Exclude};var ExcludeAny=function(){};ExcludeAny.prototype.from_ccnb=function(a){a.readStartElement(this.getElementLabel());a.readEndElement()};
-ExcludeAny.prototype.to_ccnb=function(a){a.writeStartElement(this.getElementLabel());a.writeEndElement()};ExcludeAny.prototype.getElementLabel=function(){return CCNProtocolDTags.Any};var ExcludeComponent=function(a){this.body=a};ExcludeComponent.prototype.from_ccnb=function(a){this.body=a.readBinaryElement(this.getElementLabel())};ExcludeComponent.prototype.to_ccnb=function(a){a.writeElement(this.getElementLabel(),this.body)};ExcludeComponent.prototype.getElementLabel=function(){return CCNProtocolDTags.Component};
+Interest.prototype.matches_name=function(a){return this.name.match(a)};var Exclude=function(a){this.OPTIMUM_FILTER_SIZE=100;this.values=a};Exclude.prototype.from_ccnb=function(a){a.readStartElement(this.getElementLabel());a.readEndElement()};Exclude.prototype.to_ccnb=function(a){if(!validate())throw new ContentEncodingException("Cannot encode "+this.getClass().getName()+": field values missing.");empty()||(a.writeStartElement(getElementLabel()),a.writeEndElement())};
+Exclude.prototype.getElementLabel=function(){return CCNProtocolDTags.Exclude};var ExcludeAny=function(){};ExcludeAny.prototype.from_ccnb=function(a){a.readStartElement(this.getElementLabel());a.readEndElement()};ExcludeAny.prototype.to_ccnb=function(a){a.writeStartElement(this.getElementLabel());a.writeEndElement()};ExcludeAny.prototype.getElementLabel=function(){return CCNProtocolDTags.Any};var ExcludeComponent=function(a){this.body=a};ExcludeComponent.prototype.from_ccnb=function(a){this.body=a.readBinaryElement(this.getElementLabel())};
+ExcludeComponent.prototype.to_ccnb=function(a){a.writeElement(this.getElementLabel(),this.body)};ExcludeComponent.prototype.getElementLabel=function(){return CCNProtocolDTags.Component};
 var Key=function(){},KeyLocatorType={KEY:1,CERTIFICATE:2,KEYNAME:3},KeyLocator=function(a,b){this.type=b;b==KeyLocatorType.KEYNAME?(3<LOG&&console.log("KeyLocator: SET KEYNAME"),this.keyName=a):b==KeyLocatorType.KEY?(3<LOG&&console.log("KeyLocator: SET KEY"),this.publicKey=a):b==KeyLocatorType.CERTIFICATE&&(3<LOG&&console.log("KeyLocator: SET CERTIFICATE"),this.certificate=a)};
 KeyLocator.prototype.from_ccnb=function(a){a.readStartElement(this.getElementLabel());if(a.peekStartElement(CCNProtocolDTags.Key)){try{this.publicKey=encodedKey=a.readBinaryElement(CCNProtocolDTags.Key),this.type=KeyLocatorType.KEY,4<LOG&&console.log("PUBLIC KEY FOUND: "+this.publicKey)}catch(b){throw Error("Cannot parse key: ",b);}if(null==this.publicKey)throw Error("Cannot parse key: ");}else if(a.peekStartElement(CCNProtocolDTags.Certificate)){try{this.certificate=encodedCert=a.readBinaryElement(CCNProtocolDTags.Certificate),
 this.type=KeyLocatorType.CERTIFICATE,4<LOG&&console.log("CERTIFICATE FOUND: "+this.certificate)}catch(c){throw Error("Cannot decode certificate: "+c);}if(null==this.certificate)throw Error("Cannot parse certificate! ");}else this.type=KeyLocatorType.KEYNAME,this.keyName=new KeyName,this.keyName.from_ccnb(a);a.readEndElement()};
@@ -186,9 +175,9 @@ var KeyManager=function(){this.certificate="MIIBmzCCAQQCCQC32FyQa61S7jANBgkqhkiG
 "30819F300D06092A864886F70D010101050003818D0030818902818100E17D30A7D828AB1B840B17542DCAF6207AFD221E086B2A60D16CB7F54448BA9F3F08BCD099DB21DD162A779E61AA89EEE554D3A47DE230BC7AC590D524067C3898BBA6F5DC4360B845EDA48CBD9CF126A723445F0E1952D7325A75FAF556144F9A98AF7186B0278685B8E2C08BEA87171B4DEE585C1828295B5395EB4A17779F0203010001";this.privateKey="MIICXQIBAAKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQABAoGAGkv6T6jC3WmhFZYL6CdCWvlc6gysmKrhjarrLTxgavtFY6R5g2ft5BXAsCCVbUkWxkIFSKqxpVNl0gKZCNGEzPDN6mHJOQI/h0rlxNIHAuGfoAbCzALnqmyZivhJAPGijAyKuU9tczsst5+Kpn+bn7ehzHQuj7iwJonS5WbojqECQQD851K8TpW2GrRizNgG4dx6orZxAaon/Jnl8lS7soXhllQty7qG+oDfzznmdMsiznCqEABzHUUKOVGE9RWPN3aRAkEA5D/w9N55d0ibnChFJlc8cUAoaqH+w+U3oQP2Lb6AZHJpLptN4y4b/uf5d4wYU5/i/gC7SSBH3wFhh9bjRLUDLwJAVOx8vN0Kqt7myfKNbCo19jxjVSlA8TKCn1Oznl/BU1I+rC4oUaEW25DjmX6IpAR8kq7S59ThVSCQPjxqY/A08QJBAIRaF2zGPITQk3r/VumemCvLWiRK/yG0noc9dtibqHOWbCtcXtOm/xDWjq+lis2i3ssOvYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaMhndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861"};
 KeyManager.prototype.verify=function(a,b){var c=this.certificate,d=new X509;d.readCertPEM(c);return d.subjectPublicKeyRSA.verifyString(a,b)};KeyManager.prototype.sign=function(a){var b=this.privateKey,c=new RSAKey;c.readPrivateKeyFromPEMString(b);return c.signString(a,"sha256")};var globalKeyManager=new KeyManager,MerklePath=function(){this.index=null;this.digestList=[]},Witness=function(){this.oid=null;this.path=new MerklePath};
 function parseOID(a,b,c){for(var d,e=0,f=0;b<c;++b){var g=a[b],e=e<<7|g&127,f=f+7;g&128||(d=void 0==d?parseInt(e/40)+"."+e%40:d+("."+(31<=f?"bigint":e)),e=f=0);d+=String.fromCharCode()}return d}function parseInteger(a,b,c){for(var d=0;b<c;++b)d=d<<8|a[b];return d}
-Witness.prototype.decode=function(a){for(var b=0,c=0;b<a.length;){var d=0;48==a[b]?(0!=(a[b+1]&128)&&(d=a[b+1]&127),c++):6==a[b]?(d=a[b+1],this.oid=parseOID(a,b+2,b+2+d)):2==a[b]?(d=a[b+1],this.path.index=parseInteger(a,b+2,b+2+d)):4==a[b]&&(d=0!=(a[b+1]&128)?a[b+1]&127:a[b+1],4==c&&(str=DataUtils.toHex(a.subarray(b+2,b+2+d)),this.path.digestList.push(str)));b=b+2+d}};var hexcase=0,b64pad="";function hex_sha256_from_bytes(a){return rstr2hex(binb2rstr(binb_sha256(byteArray2binb(a),8*a.length)))}
-function hex_sha256(a){return rstr2hex(rstr_sha256(str2rstr_utf8(a)))}function b64_sha256(a){return rstr2b64(rstr_sha256(str2rstr_utf8(a)))}function any_sha256(a,b){return rstr2any(rstr_sha256(str2rstr_utf8(a)),b)}function hex_hmac_sha256(a,b){return rstr2hex(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)))}function b64_hmac_sha256(a,b){return rstr2b64(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)))}
-function any_hmac_sha256(a,b,c){return rstr2any(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)),c)}function sha256_vm_test(){return"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"==hex_sha256("abc").toLowerCase()}function rstr_sha256(a){return binb2rstr(binb_sha256(rstr2binb(a),8*a.length))}
+Witness.prototype.decode=function(a){for(var b=0,c=0;b<a.length;){var d=0;48==a[b]?(0!=(a[b+1]&128)&&(d=a[b+1]&127),c++):6==a[b]?(d=a[b+1],this.oid=parseOID(a,b+2,b+2+d)):2==a[b]?(d=a[b+1],this.path.index=parseInteger(a,b+2,b+2+d)):4==a[b]&&(0!=(a[b+1]&128)&&(d=a[b+1]&127),4==c&&(d=a[b+1],str=DataUtils.toHex(a.subarray(b+2,b+2+d)),this.path.digestList.push(str)));b=b+2+d}};var hexcase=0,b64pad="";
+function hex_sha256_from_bytes(a){return rstr2hex(binb2rstr(binb_sha256(byteArray2binb(a),8*a.length)))}function hex_sha256(a){return rstr2hex(rstr_sha256(str2rstr_utf8(a)))}function b64_sha256(a){return rstr2b64(rstr_sha256(str2rstr_utf8(a)))}function any_sha256(a,b){return rstr2any(rstr_sha256(str2rstr_utf8(a)),b)}function hex_hmac_sha256(a,b){return rstr2hex(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)))}
+function b64_hmac_sha256(a,b){return rstr2b64(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)))}function any_hmac_sha256(a,b,c){return rstr2any(rstr_hmac_sha256(str2rstr_utf8(a),str2rstr_utf8(b)),c)}function sha256_vm_test(){return"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"==hex_sha256("abc").toLowerCase()}function rstr_sha256(a){return binb2rstr(binb_sha256(rstr2binb(a),8*a.length))}
 function rstr_hmac_sha256(a,b){var c=rstr2binb(a);16<c.length&&(c=binb_sha256(c,8*a.length));for(var d=Array(16),e=Array(16),f=0;16>f;f++)d[f]=c[f]^909522486,e[f]=c[f]^1549556828;c=binb_sha256(d.concat(rstr2binb(b)),512+8*b.length);return binb2rstr(binb_sha256(e.concat(c),768))}function rstr2hex(a){try{hexcase}catch(b){hexcase=0}for(var c=hexcase?"0123456789ABCDEF":"0123456789abcdef",d="",e,f=0;f<a.length;f++)e=a.charCodeAt(f),d+=c.charAt(e>>>4&15)+c.charAt(e&15);return d}
 function rstr2b64(a){try{b64pad}catch(b){b64pad=""}for(var c="",d=a.length,e=0;e<d;e+=3)for(var f=a.charCodeAt(e)<<16|(e+1<d?a.charCodeAt(e+1)<<8:0)|(e+2<d?a.charCodeAt(e+2):0),g=0;4>g;g++)c=8*e+6*g>8*a.length?c+b64pad:c+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".charAt(f>>>6*(3-g)&63);return c}
 function rstr2any(a,b){var c=b.length,d=[],e,f,g,j,k=Array(Math.ceil(a.length/2));for(e=0;e<k.length;e++)k[e]=a.charCodeAt(2*e)<<8|a.charCodeAt(2*e+1);for(;0<k.length;){j=[];for(e=g=0;e<k.length;e++)if(g=(g<<16)+k[e],f=Math.floor(g/c),g-=f*c,0<j.length||0<f)j[j.length]=f;d[d.length]=g;k=j}c="";for(e=d.length-1;0<=e;e--)c+=b.charAt(d[e]);d=Math.ceil(8*a.length/(Math.log(b.length)/Math.log(2)));for(e=c.length;e<d;e++)c=b[0]+c;return c}
@@ -199,8 +188,8 @@ function sha256_Sigma1256(a){return sha256_S(a,6)^sha256_S(a,11)^sha256_S(a,25)}
 function sha256_Gamma1512(a){return sha256_S(a,19)^sha256_S(a,61)^sha256_R(a,6)}
 var sha256_K=[1116352408,1899447441,-1245643825,-373957723,961987163,1508970993,-1841331548,-1424204075,-670586216,310598401,607225278,1426881987,1925078388,-2132889090,-1680079193,-1046744716,-459576895,-272742522,264347078,604807628,770255983,1249150122,1555081692,1996064986,-1740746414,-1473132947,-1341970488,-1084653625,-958395405,-710438585,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,-2117940946,-1838011259,-1564481375,-1474664885,-1035236496,-949202525,
 -778901479,-694614492,-200395387,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,-2067236844,-1933114872,-1866530822,-1538233109,-1090935817,-965641998];function binb_sha256(a,b){var c=[1779033703,-1150833019,1013904242,-1521486534,1359893119,-1694144372,528734635,1541459225],d=Array(64);a[b>>5]|=128<<24-b%32;a[(b+64>>9<<4)+15]=b;for(var e=0;e<a.length;e+=16)processBlock_sha256(a,e,c,d);return c}
-function processBlock_sha256(a,b,c,d){var e,f,g,j,k,l,p,n,q,m,r;e=c[0];f=c[1];g=c[2];j=c[3];k=c[4];l=c[5];p=c[6];n=c[7];for(q=0;64>q;q++)d[q]=16>q?a[q+b]:safe_add(safe_add(safe_add(sha256_Gamma1256(d[q-2]),d[q-7]),sha256_Gamma0256(d[q-15])),d[q-16]),m=safe_add(safe_add(safe_add(safe_add(n,sha256_Sigma1256(k)),sha256_Ch(k,l,p)),sha256_K[q]),d[q]),r=safe_add(sha256_Sigma0256(e),sha256_Maj(e,f,g)),n=p,p=l,l=k,k=safe_add(j,m),j=g,g=f,f=e,e=safe_add(m,r);c[0]=safe_add(e,c[0]);c[1]=safe_add(f,c[1]);c[2]=
-safe_add(g,c[2]);c[3]=safe_add(j,c[3]);c[4]=safe_add(k,c[4]);c[5]=safe_add(l,c[5]);c[6]=safe_add(p,c[6]);c[7]=safe_add(n,c[7])}function safe_add(a,b){var c=(a&65535)+(b&65535);return(a>>16)+(b>>16)+(c>>16)<<16|c&65535}var Sha256=function(){this.W=Array(64);this.hash=[1779033703,-1150833019,1013904242,-1521486534,1359893119,-1694144372,528734635,1541459225];this.nTotalBytes=0;this.buffer=new Uint8Array(64);this.nBufferBytes=0};
+function processBlock_sha256(a,b,c,d){var e,f,g,j,k,m,p,n,q,l,r;e=c[0];f=c[1];g=c[2];j=c[3];k=c[4];m=c[5];p=c[6];n=c[7];for(q=0;64>q;q++)d[q]=16>q?a[q+b]:safe_add(safe_add(safe_add(sha256_Gamma1256(d[q-2]),d[q-7]),sha256_Gamma0256(d[q-15])),d[q-16]),l=safe_add(safe_add(safe_add(safe_add(n,sha256_Sigma1256(k)),sha256_Ch(k,m,p)),sha256_K[q]),d[q]),r=safe_add(sha256_Sigma0256(e),sha256_Maj(e,f,g)),n=p,p=m,m=k,k=safe_add(j,l),j=g,g=f,f=e,e=safe_add(l,r);c[0]=safe_add(e,c[0]);c[1]=safe_add(f,c[1]);c[2]=
+safe_add(g,c[2]);c[3]=safe_add(j,c[3]);c[4]=safe_add(k,c[4]);c[5]=safe_add(m,c[5]);c[6]=safe_add(p,c[6]);c[7]=safe_add(n,c[7])}function safe_add(a,b){var c=(a&65535)+(b&65535);return(a>>16)+(b>>16)+(c>>16)<<16|c&65535}var Sha256=function(){this.W=Array(64);this.hash=[1779033703,-1150833019,1013904242,-1521486534,1359893119,-1694144372,528734635,1541459225];this.nTotalBytes=0;this.buffer=new Uint8Array(64);this.nBufferBytes=0};
 Sha256.prototype.update=function(a){this.nTotalBytes+=a.length;if(0<this.nBufferBytes){var b=this.buffer.length-this.nBufferBytes;if(a.length<b){this.buffer.set(a,this.nBufferBytes);this.nBufferBytes+=a.length;return}this.buffer.set(a.subarray(0,b),this.nBufferBytes);processBlock_sha256(byteArray2binb(this.buffer),0,this.hash,this.W);this.nBufferBytes=0;a=a.subarray(b,a.length);if(0==a.length)return}b=a.length>>6;if(0<b){for(var b=64*b,c=byteArray2binb(a.subarray(0,b)),d=0;d<c.length;d+=16)processBlock_sha256(c,
 d,this.hash,this.W);a=a.subarray(b,a.length)}0<a.length&&(this.buffer.set(a),this.nBufferBytes=a.length)};Sha256.prototype.finalize=function(){var a=byteArray2binb(this.buffer.subarray(0,this.nBufferBytes)),b=8*this.nBufferBytes;a[b>>5]|=128<<24-b%32;a[(b+64>>9<<4)+15]=8*this.nTotalBytes;for(b=0;b<a.length;b+=16)processBlock_sha256(a,b,this.hash,this.W);return Sha256.binb2Uint8Array(this.hash)};
 Sha256.binb2Uint8Array=function(a){for(var b=new Uint8Array(4*a.length),c=0,d=0;d<32*a.length;d+=8)b[c++]=a[d>>5]>>>24-d%32&255;return b};var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",b64pad="=";
@@ -215,8 +204,8 @@ function RSASetPrivateEx(a,b,c,d,e,f,g,j){null!=a&&null!=b&&0<a.length&&0<b.leng
 function RSAGenerate(a,b){var c=new SecureRandom,d=a>>1;this.e=parseInt(b,16);for(var e=new BigInteger(b,16);;){for(;!(this.p=new BigInteger(a-d,1,c),0==this.p.subtract(BigInteger.ONE).gcd(e).compareTo(BigInteger.ONE)&&this.p.isProbablePrime(10)););for(;!(this.q=new BigInteger(d,1,c),0==this.q.subtract(BigInteger.ONE).gcd(e).compareTo(BigInteger.ONE)&&this.q.isProbablePrime(10)););if(0>=this.p.compareTo(this.q)){var f=this.p;this.p=this.q;this.q=f}var f=this.p.subtract(BigInteger.ONE),g=this.q.subtract(BigInteger.ONE),
 j=f.multiply(g);if(0==j.gcd(e).compareTo(BigInteger.ONE)){this.n=this.p.multiply(this.q);this.d=e.modInverse(j);this.dmp1=this.d.mod(f);this.dmq1=this.d.mod(g);this.coeff=this.q.modInverse(this.p);break}}}function RSADoPrivate(a){if(null==this.p||null==this.q)return a.modPow(this.d,this.n);for(var b=a.mod(this.p).modPow(this.dmp1,this.p),a=a.mod(this.q).modPow(this.dmq1,this.q);0>b.compareTo(a);)b=b.add(this.p);return b.subtract(a).multiply(this.coeff).mod(this.p).multiply(this.q).add(a)}
 function RSADecrypt(a){a=parseBigInt(a,16);a=this.doPrivate(a);return null==a?null:pkcs1unpad2(a,this.n.bitLength()+7>>3)}RSAKey.prototype.doPrivate=RSADoPrivate;RSAKey.prototype.setPrivate=RSASetPrivate;RSAKey.prototype.setPrivateEx=RSASetPrivateEx;RSAKey.prototype.generate=RSAGenerate;RSAKey.prototype.decrypt=RSADecrypt;function _rsapem_pemToBase64(a){a=a.replace("-----BEGIN RSA PRIVATE KEY-----","");a=a.replace("-----END RSA PRIVATE KEY-----","");return a=a.replace(/[ \n]+/g,"")}
-function _rsapem_getPosArrayOfChildrenFromHex(a){var b=[],c=ASN1HEX.getStartPosOfV_AtObj(a,0),d=ASN1HEX.getPosOfNextSibling_AtObj(a,c),e=ASN1HEX.getPosOfNextSibling_AtObj(a,d),f=ASN1HEX.getPosOfNextSibling_AtObj(a,e),g=ASN1HEX.getPosOfNextSibling_AtObj(a,f),j=ASN1HEX.getPosOfNextSibling_AtObj(a,g),k=ASN1HEX.getPosOfNextSibling_AtObj(a,j),l=ASN1HEX.getPosOfNextSibling_AtObj(a,k),a=ASN1HEX.getPosOfNextSibling_AtObj(a,l);b.push(c,d,e,f,g,j,k,l,a);return b}
-function _rsapem_getHexValueArrayOfChildrenFromHex(a){var b=_rsapem_getPosArrayOfChildrenFromHex(a),c=ASN1HEX.getHexOfV_AtObj(a,b[0]),d=ASN1HEX.getHexOfV_AtObj(a,b[1]),e=ASN1HEX.getHexOfV_AtObj(a,b[2]),f=ASN1HEX.getHexOfV_AtObj(a,b[3]),g=ASN1HEX.getHexOfV_AtObj(a,b[4]),j=ASN1HEX.getHexOfV_AtObj(a,b[5]),k=ASN1HEX.getHexOfV_AtObj(a,b[6]),l=ASN1HEX.getHexOfV_AtObj(a,b[7]),a=ASN1HEX.getHexOfV_AtObj(a,b[8]),b=[];b.push(c,d,e,f,g,j,k,l,a);return b}
+function _rsapem_getPosArrayOfChildrenFromHex(a){var b=[],c=ASN1HEX.getStartPosOfV_AtObj(a,0),d=ASN1HEX.getPosOfNextSibling_AtObj(a,c),e=ASN1HEX.getPosOfNextSibling_AtObj(a,d),f=ASN1HEX.getPosOfNextSibling_AtObj(a,e),g=ASN1HEX.getPosOfNextSibling_AtObj(a,f),j=ASN1HEX.getPosOfNextSibling_AtObj(a,g),k=ASN1HEX.getPosOfNextSibling_AtObj(a,j),m=ASN1HEX.getPosOfNextSibling_AtObj(a,k),a=ASN1HEX.getPosOfNextSibling_AtObj(a,m);b.push(c,d,e,f,g,j,k,m,a);return b}
+function _rsapem_getHexValueArrayOfChildrenFromHex(a){var b=_rsapem_getPosArrayOfChildrenFromHex(a),c=ASN1HEX.getHexOfV_AtObj(a,b[0]),d=ASN1HEX.getHexOfV_AtObj(a,b[1]),e=ASN1HEX.getHexOfV_AtObj(a,b[2]),f=ASN1HEX.getHexOfV_AtObj(a,b[3]),g=ASN1HEX.getHexOfV_AtObj(a,b[4]),j=ASN1HEX.getHexOfV_AtObj(a,b[5]),k=ASN1HEX.getHexOfV_AtObj(a,b[6]),m=ASN1HEX.getHexOfV_AtObj(a,b[7]),a=ASN1HEX.getHexOfV_AtObj(a,b[8]),b=[];b.push(c,d,e,f,g,j,k,m,a);return b}
 function _rsapem_readPrivateKeyFromPEMString(a){a=_rsapem_pemToBase64(a);a=b64tohex(a);a=_rsapem_getHexValueArrayOfChildrenFromHex(a);this.setPrivateEx(a[1],a[2],a[3],a[4],a[5],a[6],a[7],a[8])}RSAKey.prototype.readPrivateKeyFromPEMString=_rsapem_readPrivateKeyFromPEMString;var _RSASIGN_DIHEAD=[];_RSASIGN_DIHEAD.sha1="3021300906052b0e03021a05000414";_RSASIGN_DIHEAD.sha256="3031300d060960864801650304020105000420";_RSASIGN_DIHEAD.sha384="3041300d060960864801650304020205000430";
 _RSASIGN_DIHEAD.sha512="3051300d060960864801650304020305000440";_RSASIGN_DIHEAD.md2="3020300c06082a864886f70d020205000410";_RSASIGN_DIHEAD.md5="3020300c06082a864886f70d020505000410";_RSASIGN_DIHEAD.ripemd160="3021300906052b2403020105000414";var _RSASIGN_HASHHEXFUNC=[];_RSASIGN_HASHHEXFUNC.sha1=function(a){return hex_sha1(a)};_RSASIGN_HASHHEXFUNC.sha256=function(a){return hex_sha256(a)};_RSASIGN_HASHHEXFUNC.sha512=function(a){return hex_sha512(a)};_RSASIGN_HASHHEXFUNC.md5=function(a){return hex_md5(a)};
 _RSASIGN_HASHHEXFUNC.ripemd160=function(a){return hex_rmd160(a)};var _RSASIGN_HASHBYTEFUNC=[];_RSASIGN_HASHBYTEFUNC.sha256=function(a){return hex_sha256_from_bytes(a)};var _RE_HEXDECONLY=RegExp("");_RE_HEXDECONLY.compile("[^0-9a-f]","gi");function _rsasign_getHexPaddedDigestInfoForString(a,b,c){for(var b=b/4,a=(0,_RSASIGN_HASHHEXFUNC[c])(a),c="00"+_RSASIGN_DIHEAD[c]+a,a="",b=b-4-c.length,d=0;d<b;d+=2)a+="ff";return sPaddedMessageHex="0001"+a+c}
@@ -246,8 +235,8 @@ function _x509_readCertPEM(a){var a=_x509_pemToHex(a),b=_x509_getPublicKeyHexArr
 function _x509_readCertHex(a){var a=a.toLowerCase(),b=_x509_getPublicKeyHexArrayFromCertHex(a),c=new RSAKey;c.setPublic(b[0],b[1]);this.subjectPublicKeyRSA=c;this.subjectPublicKeyRSA_hN=b[0];this.subjectPublicKeyRSA_hE=b[1];this.hex=a}function _x509_readCertPEMWithoutRSAInit(a){var a=_x509_pemToHex(a),b=_x509_getPublicKeyHexArrayFromCertHex(a);this.subjectPublicKeyRSA.setPublic(b[0],b[1]);this.subjectPublicKeyRSA_hN=b[0];this.subjectPublicKeyRSA_hE=b[1];this.hex=a}
 function X509(){this.hex=this.subjectPublicKeyRSA_hE=this.subjectPublicKeyRSA_hN=this.subjectPublicKeyRSA=null}X509.prototype.readCertPEM=_x509_readCertPEM;X509.prototype.readCertHex=_x509_readCertHex;X509.prototype.readCertPEMWithoutRSAInit=_x509_readCertPEMWithoutRSAInit;X509.prototype.getSerialNumberHex=_x509_getSerialNumberHex;X509.prototype.getIssuerHex=_x509_getIssuerHex;X509.prototype.getSubjectHex=_x509_getSubjectHex;X509.prototype.getIssuerString=_x509_getIssuerString;
 X509.prototype.getSubjectString=_x509_getSubjectString;X509.prototype.getNotBefore=_x509_getNotBefore;X509.prototype.getNotAfter=_x509_getNotAfter;var dbits,canary=0xdeadbeefcafe,j_lm=15715070==(canary&16777215);function BigInteger(a,b,c){null!=a&&("number"==typeof a?this.fromNumber(a,b,c):null==b&&"string"!=typeof a?this.fromString(a,256):this.fromString(a,b))}function nbi(){return new BigInteger(null)}
-function am1(a,b,c,d,e,f){for(;0<=--f;){var g=b*this[a++]+c[d]+e,e=Math.floor(g/67108864);c[d++]=g&67108863}return e}function am2(a,b,c,d,e,f){for(var g=b&32767,b=b>>15;0<=--f;){var j=this[a]&32767,k=this[a++]>>15,l=b*j+k*g,j=g*j+((l&32767)<<15)+c[d]+(e&1073741823),e=(j>>>30)+(l>>>15)+b*k+(e>>>30);c[d++]=j&1073741823}return e}
-function am3(a,b,c,d,e,f){for(var g=b&16383,b=b>>14;0<=--f;){var j=this[a]&16383,k=this[a++]>>14,l=b*j+k*g,j=g*j+((l&16383)<<14)+c[d]+e,e=(j>>28)+(l>>14)+b*k;c[d++]=j&268435455}return e}j_lm&&"Microsoft Internet Explorer"==navigator.appName?(BigInteger.prototype.am=am2,dbits=30):j_lm&&"Netscape"!=navigator.appName?(BigInteger.prototype.am=am1,dbits=26):(BigInteger.prototype.am=am3,dbits=28);BigInteger.prototype.DB=dbits;BigInteger.prototype.DM=(1<<dbits)-1;BigInteger.prototype.DV=1<<dbits;
+function am1(a,b,c,d,e,f){for(;0<=--f;){var g=b*this[a++]+c[d]+e,e=Math.floor(g/67108864);c[d++]=g&67108863}return e}function am2(a,b,c,d,e,f){for(var g=b&32767,b=b>>15;0<=--f;){var j=this[a]&32767,k=this[a++]>>15,m=b*j+k*g,j=g*j+((m&32767)<<15)+c[d]+(e&1073741823),e=(j>>>30)+(m>>>15)+b*k+(e>>>30);c[d++]=j&1073741823}return e}
+function am3(a,b,c,d,e,f){for(var g=b&16383,b=b>>14;0<=--f;){var j=this[a]&16383,k=this[a++]>>14,m=b*j+k*g,j=g*j+((m&16383)<<14)+c[d]+e,e=(j>>28)+(m>>14)+b*k;c[d++]=j&268435455}return e}j_lm&&"Microsoft Internet Explorer"==navigator.appName?(BigInteger.prototype.am=am2,dbits=30):j_lm&&"Netscape"!=navigator.appName?(BigInteger.prototype.am=am1,dbits=26):(BigInteger.prototype.am=am3,dbits=28);BigInteger.prototype.DB=dbits;BigInteger.prototype.DM=(1<<dbits)-1;BigInteger.prototype.DV=1<<dbits;
 var BI_FP=52;BigInteger.prototype.FV=Math.pow(2,BI_FP);BigInteger.prototype.F1=BI_FP-dbits;BigInteger.prototype.F2=2*dbits-BI_FP;var BI_RM="0123456789abcdefghijklmnopqrstuvwxyz",BI_RC=[],rr,vv;rr=48;for(vv=0;9>=vv;++vv)BI_RC[rr++]=vv;rr=97;for(vv=10;36>vv;++vv)BI_RC[rr++]=vv;rr=65;for(vv=10;36>vv;++vv)BI_RC[rr++]=vv;function int2char(a){return BI_RM.charAt(a)}function intAt(a,b){var c=BI_RC[a.charCodeAt(b)];return null==c?-1:c}
 function bnpCopyTo(a){for(var b=this.t-1;0<=b;--b)a[b]=this[b];a.t=this.t;a.s=this.s}function bnpFromInt(a){this.t=1;this.s=0>a?-1:0;0<a?this[0]=a:-1>a?this[0]=a+DV:this.t=0}function nbv(a){var b=nbi();b.fromInt(a);return b}
 function bnpFromString(a,b){var c;if(16==b)c=4;else if(8==b)c=3;else if(256==b)c=8;else if(2==b)c=1;else if(32==b)c=5;else if(4==b)c=2;else{this.fromRadix(a,b);return}this.s=this.t=0;for(var d=a.length,e=!1,f=0;0<=--d;){var g=8==c?a[d]&255:intAt(a,d);0>g?"-"==a.charAt(d)&&(e=!0):(e=!1,0==f?this[this.t++]=g:f+c>this.DB?(this[this.t-1]|=(g&(1<<this.DB-f)-1)<<f,this[this.t++]=g>>this.DB-f):this[this.t-1]|=g<<f,f+=c,f>=this.DB&&(f-=this.DB))}8==c&&0!=(a[0]&128)&&(this.s=-1,0<f&&(this[this.t-1]|=(1<<this.DB-
@@ -259,8 +248,8 @@ function bnpLShiftTo(a,b){var c=a%this.DB,d=this.DB-c,e=(1<<d)-1,f=Math.floor(a/
 function bnpRShiftTo(a,b){b.s=this.s;var c=Math.floor(a/this.DB);if(c>=this.t)b.t=0;else{var d=a%this.DB,e=this.DB-d,f=(1<<d)-1;b[0]=this[c]>>d;for(var g=c+1;g<this.t;++g)b[g-c-1]|=(this[g]&f)<<e,b[g-c]=this[g]>>d;0<d&&(b[this.t-c-1]|=(this.s&f)<<e);b.t=this.t-c;b.clamp()}}
 function bnpSubTo(a,b){for(var c=0,d=0,e=Math.min(a.t,this.t);c<e;)d+=this[c]-a[c],b[c++]=d&this.DM,d>>=this.DB;if(a.t<this.t){for(d-=a.s;c<this.t;)d+=this[c],b[c++]=d&this.DM,d>>=this.DB;d+=this.s}else{for(d+=this.s;c<a.t;)d-=a[c],b[c++]=d&this.DM,d>>=this.DB;d-=a.s}b.s=0>d?-1:0;-1>d?b[c++]=this.DV+d:0<d&&(b[c++]=d);b.t=c;b.clamp()}
 function bnpMultiplyTo(a,b){var c=this.abs(),d=a.abs(),e=c.t;for(b.t=e+d.t;0<=--e;)b[e]=0;for(e=0;e<d.t;++e)b[e+c.t]=c.am(0,d[e],b,e,0,c.t);b.s=0;b.clamp();this.s!=a.s&&BigInteger.ZERO.subTo(b,b)}function bnpSquareTo(a){for(var b=this.abs(),c=a.t=2*b.t;0<=--c;)a[c]=0;for(c=0;c<b.t-1;++c){var d=b.am(c,b[c],a,2*c,0,1);if((a[c+b.t]+=b.am(c+1,2*b[c],a,2*c+1,d,b.t-c-1))>=b.DV)a[c+b.t]-=b.DV,a[c+b.t+1]=1}0<a.t&&(a[a.t-1]+=b.am(c,b[c],a,2*c,0,1));a.s=0;a.clamp()}
-function bnpDivRemTo(a,b,c){var d=a.abs();if(!(0>=d.t)){var e=this.abs();if(e.t<d.t)null!=b&&b.fromInt(0),null!=c&&this.copyTo(c);else{null==c&&(c=nbi());var f=nbi(),g=this.s,a=a.s,j=this.DB-nbits(d[d.t-1]);0<j?(d.lShiftTo(j,f),e.lShiftTo(j,c)):(d.copyTo(f),e.copyTo(c));d=f.t;e=f[d-1];if(0!=e){var k=e*(1<<this.F1)+(1<d?f[d-2]>>this.F2:0),l=this.FV/k,k=(1<<this.F1)/k,p=1<<this.F2,n=c.t,q=n-d,m=null==b?nbi():b;f.dlShiftTo(q,m);0<=c.compareTo(m)&&(c[c.t++]=1,c.subTo(m,c));BigInteger.ONE.dlShiftTo(d,
-m);for(m.subTo(f,f);f.t<d;)f[f.t++]=0;for(;0<=--q;){var r=c[--n]==e?this.DM:Math.floor(c[n]*l+(c[n-1]+p)*k);if((c[n]+=f.am(0,r,c,q,0,d))<r){f.dlShiftTo(q,m);for(c.subTo(m,c);c[n]<--r;)c.subTo(m,c)}}null!=b&&(c.drShiftTo(d,b),g!=a&&BigInteger.ZERO.subTo(b,b));c.t=d;c.clamp();0<j&&c.rShiftTo(j,c);0>g&&BigInteger.ZERO.subTo(c,c)}}}}function bnMod(a){var b=nbi();this.abs().divRemTo(a,null,b);0>this.s&&0<b.compareTo(BigInteger.ZERO)&&a.subTo(b,b);return b}function Classic(a){this.m=a}
+function bnpDivRemTo(a,b,c){var d=a.abs();if(!(0>=d.t)){var e=this.abs();if(e.t<d.t)null!=b&&b.fromInt(0),null!=c&&this.copyTo(c);else{null==c&&(c=nbi());var f=nbi(),g=this.s,a=a.s,j=this.DB-nbits(d[d.t-1]);0<j?(d.lShiftTo(j,f),e.lShiftTo(j,c)):(d.copyTo(f),e.copyTo(c));d=f.t;e=f[d-1];if(0!=e){var k=e*(1<<this.F1)+(1<d?f[d-2]>>this.F2:0),m=this.FV/k,k=(1<<this.F1)/k,p=1<<this.F2,n=c.t,q=n-d,l=null==b?nbi():b;f.dlShiftTo(q,l);0<=c.compareTo(l)&&(c[c.t++]=1,c.subTo(l,c));BigInteger.ONE.dlShiftTo(d,
+l);for(l.subTo(f,f);f.t<d;)f[f.t++]=0;for(;0<=--q;){var r=c[--n]==e?this.DM:Math.floor(c[n]*m+(c[n-1]+p)*k);if((c[n]+=f.am(0,r,c,q,0,d))<r){f.dlShiftTo(q,l);for(c.subTo(l,c);c[n]<--r;)c.subTo(l,c)}}null!=b&&(c.drShiftTo(d,b),g!=a&&BigInteger.ZERO.subTo(b,b));c.t=d;c.clamp();0<j&&c.rShiftTo(j,c);0>g&&BigInteger.ZERO.subTo(c,c)}}}}function bnMod(a){var b=nbi();this.abs().divRemTo(a,null,b);0>this.s&&0<b.compareTo(BigInteger.ZERO)&&a.subTo(b,b);return b}function Classic(a){this.m=a}
 function cConvert(a){return 0>a.s||0<=a.compareTo(this.m)?a.mod(this.m):a}function cRevert(a){return a}function cReduce(a){a.divRemTo(this.m,null,a)}function cMulTo(a,b,c){a.multiplyTo(b,c);this.reduce(c)}function cSqrTo(a,b){a.squareTo(b);this.reduce(b)}Classic.prototype.convert=cConvert;Classic.prototype.revert=cRevert;Classic.prototype.reduce=cReduce;Classic.prototype.mulTo=cMulTo;Classic.prototype.sqrTo=cSqrTo;
 function bnpInvDigit(){if(1>this.t)return 0;var a=this[0];if(0==(a&1))return 0;var b=a&3,b=b*(2-(a&15)*b)&15,b=b*(2-(a&255)*b)&255,b=b*(2-((a&65535)*b&65535))&65535,b=b*(2-a*b%this.DV)%this.DV;return 0<b?this.DV-b:-b}function Montgomery(a){this.m=a;this.mp=a.invDigit();this.mpl=this.mp&32767;this.mph=this.mp>>15;this.um=(1<<a.DB-15)-1;this.mt2=2*a.t}
 function montConvert(a){var b=nbi();a.abs().dlShiftTo(this.m.t,b);b.divRemTo(this.m,null,b);0>a.s&&0<b.compareTo(BigInteger.ZERO)&&this.m.subTo(b,b);return b}function montRevert(a){var b=nbi();a.copyTo(b);this.reduce(b);return b}
@@ -284,8 +273,8 @@ function bnpMultiplyLowerTo(a,b,c){var d=Math.min(this.t+a.t,b);c.s=0;for(c.t=d;
 function Barrett(a){this.r2=nbi();this.q3=nbi();BigInteger.ONE.dlShiftTo(2*a.t,this.r2);this.mu=this.r2.divide(a);this.m=a}function barrettConvert(a){if(0>a.s||a.t>2*this.m.t)return a.mod(this.m);if(0>a.compareTo(this.m))return a;var b=nbi();a.copyTo(b);this.reduce(b);return b}function barrettRevert(a){return a}
 function barrettReduce(a){a.drShiftTo(this.m.t-1,this.r2);a.t>this.m.t+1&&(a.t=this.m.t+1,a.clamp());this.mu.multiplyUpperTo(this.r2,this.m.t+1,this.q3);for(this.m.multiplyLowerTo(this.q3,this.m.t+1,this.r2);0>a.compareTo(this.r2);)a.dAddOffset(1,this.m.t+1);for(a.subTo(this.r2,a);0<=a.compareTo(this.m);)a.subTo(this.m,a)}function barrettSqrTo(a,b){a.squareTo(b);this.reduce(b)}function barrettMulTo(a,b,c){a.multiplyTo(b,c);this.reduce(c)}Barrett.prototype.convert=barrettConvert;
 Barrett.prototype.revert=barrettRevert;Barrett.prototype.reduce=barrettReduce;Barrett.prototype.mulTo=barrettMulTo;Barrett.prototype.sqrTo=barrettSqrTo;
-function bnModPow(a,b){var c=a.bitLength(),d,e=nbv(1),f;if(0>=c)return e;d=18>c?1:48>c?3:144>c?4:768>c?5:6;f=8>c?new Classic(b):b.isEven()?new Barrett(b):new Montgomery(b);var g=[],j=3,k=d-1,l=(1<<d)-1;g[1]=f.convert(this);if(1<d){c=nbi();for(f.sqrTo(g[1],c);j<=l;)g[j]=nbi(),f.mulTo(c,g[j-2],g[j]),j+=2}for(var p=a.t-1,n,q=!0,m=nbi(),c=nbits(a[p])-1;0<=p;){c>=k?n=a[p]>>c-k&l:(n=(a[p]&(1<<c+1)-1)<<k-c,0<p&&(n|=a[p-1]>>this.DB+c-k));for(j=d;0==(n&1);)n>>=1,--j;if(0>(c-=j))c+=this.DB,--p;if(q)g[n].copyTo(e),
-q=!1;else{for(;1<j;)f.sqrTo(e,m),f.sqrTo(m,e),j-=2;0<j?f.sqrTo(e,m):(j=e,e=m,m=j);f.mulTo(m,g[n],e)}for(;0<=p&&0==(a[p]&1<<c);)f.sqrTo(e,m),j=e,e=m,m=j,0>--c&&(c=this.DB-1,--p)}return f.revert(e)}
+function bnModPow(a,b){var c=a.bitLength(),d,e=nbv(1),f;if(0>=c)return e;d=18>c?1:48>c?3:144>c?4:768>c?5:6;f=8>c?new Classic(b):b.isEven()?new Barrett(b):new Montgomery(b);var g=[],j=3,k=d-1,m=(1<<d)-1;g[1]=f.convert(this);if(1<d){c=nbi();for(f.sqrTo(g[1],c);j<=m;)g[j]=nbi(),f.mulTo(c,g[j-2],g[j]),j+=2}for(var p=a.t-1,n,q=!0,l=nbi(),c=nbits(a[p])-1;0<=p;){c>=k?n=a[p]>>c-k&m:(n=(a[p]&(1<<c+1)-1)<<k-c,0<p&&(n|=a[p-1]>>this.DB+c-k));for(j=d;0==(n&1);)n>>=1,--j;if(0>(c-=j))c+=this.DB,--p;if(q)g[n].copyTo(e),
+q=!1;else{for(;1<j;)f.sqrTo(e,l),f.sqrTo(l,e),j-=2;0<j?f.sqrTo(e,l):(j=e,e=l,l=j);f.mulTo(l,g[n],e)}for(;0<=p&&0==(a[p]&1<<c);)f.sqrTo(e,l),j=e,e=l,l=j,0>--c&&(c=this.DB-1,--p)}return f.revert(e)}
 function bnGCD(a){var b=0>this.s?this.negate():this.clone(),a=0>a.s?a.negate():a.clone();if(0>b.compareTo(a))var c=b,b=a,a=c;var c=b.getLowestSetBit(),d=a.getLowestSetBit();if(0>d)return b;c<d&&(d=c);0<d&&(b.rShiftTo(d,b),a.rShiftTo(d,a));for(;0<b.signum();)0<(c=b.getLowestSetBit())&&b.rShiftTo(c,b),0<(c=a.getLowestSetBit())&&a.rShiftTo(c,a),0<=b.compareTo(a)?(b.subTo(a,b),b.rShiftTo(1,b)):(a.subTo(b,a),a.rShiftTo(1,a));0<d&&a.lShiftTo(d,a);return a}
 function bnpModInt(a){if(0>=a)return 0;var b=this.DV%a,c=0>this.s?a-1:0;if(0<this.t)if(0==b)c=this[0]%a;else for(var d=this.t-1;0<=d;--d)c=(b*c+this[d])%a;return c}
 function bnModInverse(a){var b=a.isEven();if(this.isEven()&&b||0==a.signum())return BigInteger.ZERO;for(var c=a.clone(),d=this.clone(),e=nbv(1),f=nbv(0),g=nbv(0),j=nbv(1);0!=c.signum();){for(;c.isEven();){c.rShiftTo(1,c);if(b){if(!e.isEven()||!f.isEven())e.addTo(this,e),f.subTo(a,f);e.rShiftTo(1,e)}else f.isEven()||f.subTo(a,f);f.rShiftTo(1,f)}for(;d.isEven();){d.rShiftTo(1,d);if(b){if(!g.isEven()||!j.isEven())g.addTo(this,g),j.subTo(a,j);g.rShiftTo(1,g)}else j.isEven()||j.subTo(a,j);j.rShiftTo(1,
@@ -297,15 +286,27 @@ BigInteger.prototype.toRadix=bnpToRadix;BigInteger.prototype.fromRadix=bnpFromRa
 BigInteger.prototype.millerRabin=bnpMillerRabin;BigInteger.prototype.clone=bnClone;BigInteger.prototype.intValue=bnIntValue;BigInteger.prototype.byteValue=bnByteValue;BigInteger.prototype.shortValue=bnShortValue;BigInteger.prototype.signum=bnSigNum;BigInteger.prototype.toByteArray=bnToByteArray;BigInteger.prototype.equals=bnEquals;BigInteger.prototype.min=bnMin;BigInteger.prototype.max=bnMax;BigInteger.prototype.and=bnAnd;BigInteger.prototype.or=bnOr;BigInteger.prototype.xor=bnXor;
 BigInteger.prototype.andNot=bnAndNot;BigInteger.prototype.not=bnNot;BigInteger.prototype.shiftLeft=bnShiftLeft;BigInteger.prototype.shiftRight=bnShiftRight;BigInteger.prototype.getLowestSetBit=bnGetLowestSetBit;BigInteger.prototype.bitCount=bnBitCount;BigInteger.prototype.testBit=bnTestBit;BigInteger.prototype.setBit=bnSetBit;BigInteger.prototype.clearBit=bnClearBit;BigInteger.prototype.flipBit=bnFlipBit;BigInteger.prototype.add=bnAdd;BigInteger.prototype.subtract=bnSubtract;
 BigInteger.prototype.multiply=bnMultiply;BigInteger.prototype.divide=bnDivide;BigInteger.prototype.remainder=bnRemainder;BigInteger.prototype.divideAndRemainder=bnDivideAndRemainder;BigInteger.prototype.modPow=bnModPow;BigInteger.prototype.modInverse=bnModInverse;BigInteger.prototype.pow=bnPow;BigInteger.prototype.gcd=bnGCD;BigInteger.prototype.isProbablePrime=bnIsProbablePrime;
-var LOG=0,NDN=function NDN(b){b=b||{};this.transport=(b.getTransport||function(){return new WebSocketTransport})();this.getHostAndPort=b.getHostAndPort||this.transport.defaultGetHostAndPort;this.host=void 0!==b.host?b.host:"localhost";this.port=b.port||9696;this.readyStatus=NDN.UNOPEN;this.onopen=b.onopen||function(){3<LOG&&console.log("NDN connection established.")};this.onclose=b.onclose||function(){3<LOG&&console.log("NDN connection closed.")}};NDN.UNOPEN=0;NDN.OPENED=1;NDN.CLOSED=2;
-NDN.ccndIdFetcher=new Name("/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY");NDN.prototype.createRoute=function(a,b){this.host=a;this.port=b};NDN.KeyStore=[];var KeyStoreEntry=function(a,b,c){this.keyName=a;this.rsaKey=b;this.timeStamp=c};NDN.addKeyEntry=function(a){null==NDN.getKeyByName(a.keyName)&&NDN.KeyStore.push(a)};
-NDN.getKeyByName=function(a){for(var b=null,c=0;c<NDN.KeyStore.length;c++)if(NDN.KeyStore[c].keyName.contentName.match(a.contentName)&&(null==b||NDN.KeyStore[c].keyName.contentName.components.length>b.keyName.contentName.components.length))b=NDN.KeyStore[c];return b};NDN.PITTable=[];var PITEntry=function(a,b){this.interest=a;this.closure=b};
-NDN.getEntryForExpressedInterest=function(a){for(var b=null,c=0;c<NDN.PITTable.length;c++)if(NDN.PITTable[c].interest.matches_name(a)&&(null==b||NDN.PITTable[c].interest.name.components.length>b.interest.name.components.length))b=NDN.PITTable[c];return b};NDN.makeShuffledGetHostAndPort=function(a,b){a=a.slice(0,a.length);DataUtils.shuffle(a);return function(){return 0==a.length?null:{host:a.splice(0,1)[0],port:b}}};
+var LOG=0,NDN=function NDN(b){b=b||{};this.transport=(b.getTransport||function(){return new WebSocketTransport})();this.getHostAndPort=b.getHostAndPort||this.transport.defaultGetHostAndPort;this.host=void 0!==b.host?b.host:"localhost";this.port=b.port||9696;this.readyStatus=NDN.UNOPEN;this.onopen=b.onopen||function(){3<LOG&&console.log("NDN connection established.")};this.onclose=b.onclose||function(){3<LOG&&console.log("NDN connection closed.")};this.ccndid=null};NDN.UNOPEN=0;NDN.OPENED=1;
+NDN.CLOSED=2;NDN.ccndIdFetcher=new Name("/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY");NDN.prototype.createRoute=function(a,b){this.host=a;this.port=b};NDN.KeyStore=[];var KeyStoreEntry=function(a,b,c){this.keyName=a;this.rsaKey=b;this.timeStamp=c};NDN.addKeyEntry=function(a){null==NDN.getKeyByName(a.keyName)&&NDN.KeyStore.push(a)};
+NDN.getKeyByName=function(a){for(var b=null,c=0;c<NDN.KeyStore.length;c++)if(NDN.KeyStore[c].keyName.contentName.match(a.contentName)&&(null==b||NDN.KeyStore[c].keyName.contentName.components.length>b.keyName.contentName.components.length))b=NDN.KeyStore[c];return b};NDN.PITTable=[];var PITEntry=function(a,b){this.interest=a;this.closure=b;this.timerID=-1};
+NDN.getEntryForExpressedInterest=function(a){for(var b=null,c=0;c<NDN.PITTable.length;c++)if(NDN.PITTable[c].interest.matches_name(a)&&(null==b||NDN.PITTable[c].interest.name.components.length>b.interest.name.components.length))b=NDN.PITTable[c];return b};NDN.CSTable=[];var CSEntry=function(a,b){this.name=a;this.closure=b};function getEntryForRegisteredPrefix(a){for(var b=0;b<NDN.CSTable.length;b++)if(null!=NDN.CSTable[b].name.match(a))return NDN.CSTable[b];return null}
+NDN.makeShuffledGetHostAndPort=function(a,b){a=a.slice(0,a.length);DataUtils.shuffle(a);return function(){return 0==a.length?null:{host:a.splice(0,1)[0],port:b}}};
 NDN.prototype.expressInterest=function(a,b,c){a=new Interest(a);null!=c?(a.minSuffixComponents=c.minSuffixComponents,a.maxSuffixComponents=c.maxSuffixComponents,a.publisherPublicKeyDigest=c.publisherPublicKeyDigest,a.exclude=c.exclude,a.childSelector=c.childSelector,a.answerOriginKind=c.answerOriginKind,a.scope=c.scope,a.interestLifetime=c.interestLifetime):a.interestLifetime=4E3;null==this.host||null==this.port?null==this.getHostAndPort?console.log("ERROR: host OR port NOT SET"):this.connectAndExpressInterest(a,
-b):this.transport.expressInterest(this,a,b)};NDN.prototype.registerPrefix=function(a,b,c){return this.transport.registerPrefix(this,a,b,c)};
-NDN.prototype.connectAndExpressInterest=function(a,b){var c=this.getHostAndPort();if(null==c)console.log("ERROR: No more hosts from getHostAndPort"),this.host=null;else if(c.host==this.host&&c.port==this.port)console.log("ERROR: The host returned by getHostAndPort is not alive: "+this.host+":"+this.port);else{this.host=c.host;this.port=c.port;console.log("Trying host from getHostAndPort: "+this.host);c=new Interest(NDN.ccndIdFetcher);c.interestLifetime=4E3;var d=this,e=setTimeout(function(){console.log("Timeout waiting for host "+
+b):this.transport.expressInterest(this,a,b)};
+NDN.prototype.registerPrefix=function(a,b){if(this.readyStatus!=NDN.OPENED)return console.log("Connection is not established."),-1;if(null==this.ccndid)return console.log("ccnd node ID unkonwn. Cannot register prefix."),-1;var c=new ForwardingEntry("selfreg",a,null,null,3,2147483647),c=encodeForwardingEntry(c),d=new SignedInfo;d.setFields();c=new ContentObject(new Name,d,c,new Signature);c.sign();c=encodeToBinaryContentObject(c);c=new Name(["ccnx",this.ccndid,"selfreg",c]);c=new Interest(c);c.scope=
+1;3<LOG&&console.log("Send Interest registration packet.");d=new CSEntry(a.getName(),b);NDN.CSTable.push(d);this.transport.send(encodeToBinaryInterest(c));return 0};
+NDN.prototype.onReceivedElement=function(a){3<LOG&&console.log("Complete element received. Length "+a.length+". Start decoding.");var b=new BinaryXMLDecoder(a);if(b.peekStartElement(CCNProtocolDTags.Interest))3<LOG&&console.log("Interest packet received."),a=new Interest,a.from_ccnb(b),3<LOG&&console.log(a),b=escape(a.name.getName()),3<LOG&&console.log(b),b=getEntryForRegisteredPrefix(b),null!=b&&(a=new UpcallInfo(this,a,0,null),b.closure.upcall(Closure.UPCALL_INTEREST,a)==Closure.RESULT_INTEREST_CONSUMED&&
+null!=a.contentObject&&this.transport.send(encodeToBinaryContentObject(a.contentObject)));else if(b.peekStartElement(CCNProtocolDTags.ContentObject))if(3<LOG&&console.log("ContentObject packet received."),a=new ContentObject,a.from_ccnb(b),null==this.ccndid&&NDN.ccndIdFetcher.match(a.name))!a.signedInfo||!a.signedInfo.publisher||!a.signedInfo.publisher.publisherPublicKeyDigest?(console.log("Cannot contact router, close NDN now."),this.readyStatus=NDN.CLOSED,this.onclose()):(this.ccndid=a.signedInfo.publisher.publisherPublicKeyDigest,
+3<LOG&&console.log(ndn.ccndid),this.readyStatus=NDN.OPENED,this.onopen());else{var c=NDN.getEntryForExpressedInterest(a.name);if(null!=c){b=NDN.PITTable.indexOf(c);0<=b&&NDN.PITTable.splice(b,1);b=c.closure;clearTimeout(c.timerID);var d=function(a,b,c,d,e){this.contentObject=a;this.closure=b;this.keyName=c;this.sigHex=d;this.witness=e;Closure.call(this)},e=this;d.prototype.upcall=function(a,b){if(a==Closure.UPCALL_INTEREST_TIMED_OUT)console.log("In KeyFetchClosure.upcall: interest time out."),console.log(this.keyName.contentName.getName());
+else if(a==Closure.UPCALL_CONTENT){var c=decodeSubjectPublicKeyInfo(b.contentObject.content),d=!0==c.verifyByteArray(this.contentObject.rawSignatureData,this.witness,this.sigHex)?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD;this.closure.upcall(d,new UpcallInfo(e,null,0,this.contentObject));c=new KeyStoreEntry(g.keyName,c,(new Date).getTime());NDN.addKeyEntry(c)}else a==Closure.UPCALL_CONTENT_BAD&&console.log("In KeyFetchClosure.upcall: signature verification failed")};if(a.signedInfo&&a.signedInfo.locator&&
+a.signature){3<LOG&&console.log("Key verification...");var c=DataUtils.toHex(a.signature.signature).toLowerCase(),f=null;null!=a.signature.Witness&&(f=new Witness,f.decode(a.signature.Witness));var g=a.signedInfo.locator;if(g.type==KeyLocatorType.KEYNAME)if(3<LOG&&console.log("KeyLocator contains KEYNAME"),g.keyName.contentName.match(a.name))3<LOG&&console.log("Content is key itself"),d=decodeSubjectPublicKeyInfo(a.content),c=d.verifyByteArray(a.rawSignatureData,f,c),c=!0==c?Closure.UPCALL_CONTENT:
+Closure.UPCALL_CONTENT_BAD,b.upcall(c,new UpcallInfo(this,null,0,a));else{var j=NDN.getKeyByName(g.keyName);j?(3<LOG&&console.log("Local key cache hit"),d=j.rsaKey,c=d.verifyByteArray(a.rawSignatureData,f,c),c=!0==c?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD,b.upcall(c,new UpcallInfo(this,null,0,a))):(3<LOG&&console.log("Fetch key according to keylocator"),a=new d(a,b,g.keyName,c,f),this.expressInterest(g.keyName.contentName.getPrefix(4),a))}else g.type==KeyLocatorType.KEY?(3<LOG&&console.log("Keylocator contains KEY"),
+d=decodeSubjectPublicKeyInfo(a.signedInfo.locator.publicKey),c=d.verifyByteArray(a.rawSignatureData,f,c),c=!0==c?Closure.UPCALL_CONTENT:Closure.UPCALL_CONTENT_BAD,b.upcall(Closure.UPCALL_CONTENT,new UpcallInfo(this,null,0,a))):(a=g.certificate,console.log("KeyLocator contains CERT"),console.log(a))}}}else console.log("Incoming packet is not Interest or ContentObject. Discard now.")};
+NDN.prototype.connectAndExpressInterest=function(a,b){var c=this.getHostAndPort();if(null==c)console.log("ERROR: No more hosts from getHostAndPort"),this.host=null;else if(c.host==this.host&&c.port==this.port)console.log("ERROR: The host returned by getHostAndPort is not alive: "+this.host+":"+this.port);else{this.host=c.host;this.port=c.port;console.log("Trying host from getHostAndPort: "+this.host);c=new Interest(new Name("/"));c.interestLifetime=4E3;var d=this,e=setTimeout(function(){console.log("Timeout waiting for host "+
 d.host);d.connectAndExpressInterest(a,b)},3E3);this.transport.expressInterest(this,c,new NDN.ConnectClosure(this,a,b,e))}};NDN.ConnectClosure=function(a,b,c,d){Closure.call(this);this.ndn=a;this.callerInterest=b;this.callerClosure=c;this.timerID=d};
-NDN.ConnectClosure.prototype.upcall=function(a){if(!(a==Closure.UPCALL_CONTENT||a==Closure.UPCALL_CONTENT_UNVERIFIED||a==Closure.UPCALL_INTEREST))return Closure.RESULT_ERR;clearTimeout(this.timerID);console.log(this.ndn.host+": Host is alive. Fetching callerInterest.");this.ndn.transport.expressInterest(this.ndn,this.callerInterest,this.callerClosure);return Closure.RESULT_OK};
+NDN.ConnectClosure.prototype.upcall=function(a){if(!(a==Closure.UPCALL_CONTENT||a==Closure.UPCALL_CONTENT_UNVERIFIED))return Closure.RESULT_ERR;clearTimeout(this.timerID);console.log(this.ndn.host+": Host is alive. Fetching callerInterest.");this.ndn.transport.expressInterest(this.ndn,this.callerInterest,this.callerClosure);return Closure.RESULT_OK};var BinaryXmlElementReader=function(a){this.elementListener=a;this.dataParts=[];this.structureDecoder=new BinaryXMLStructureDecoder};
+BinaryXmlElementReader.prototype.onReceivedData=function(a){for(;;)if(this.structureDecoder.seek(0),this.structureDecoder.findElementEnd(a)){if(this.dataParts.push(a.subarray(0,this.structureDecoder.offset)),this.elementListener.onReceivedElement(DataUtils.concatArrays(this.dataParts)),a=a.subarray(this.structureDecoder.offset,a.length),this.dataParts=[],this.structureDecoder=new BinaryXMLStructureDecoder,0==a.length)break}else{this.dataParts.push(a);3<LOG&&console.log("Incomplete packet received. Length "+
+a.length+". Wait for more input.");break}};
 /** 
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
@@ -332,10 +333,10 @@ var XpcomTransport = function XpcomTransport() {
 
 /*
  * Connect to the host and port in ndn.  This replaces a previous connection.
- * Listen on the port to read an entire binary XML encoded response and call
- *    listener.onReceivedData(data) where data is Uint8Array.
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    elementListener.onReceivedElement(element) where element is Uint8Array.
  */
-XpcomTransport.prototype.connect = function(ndn, listener) {
+XpcomTransport.prototype.connect = function(ndn, elementListener) {
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -357,8 +358,7 @@ XpcomTransport.prototype.connect = function(ndn, listener) {
 
     var inStream = this.socket.openInputStream(0, 0, 0);
 	var dataListener = {
-		dataParts: [],
-        structureDecoder: new BinaryXMLStructureDecoder(),
+        elementReader: new BinaryXmlElementReader(elementListener),
 		
 		onStartRequest: function (request, context) {
 		},
@@ -368,36 +368,10 @@ XpcomTransport.prototype.connect = function(ndn, listener) {
 			try {
 				// Use readInputStreamToString to handle binary data.
                 // TODO: Can we go directly from the stream to Uint8Array?
-				var rawData = DataUtils.toNumbersFromString
-                    (NetUtil.readInputStreamToString(inStream, count));
-				
-                // Process multiple objects in this packet.
-                while(true) {
-                    // Scan the input to check if a whole ccnb object has been read.
-                    this.structureDecoder.seek(0);
-                    if (this.structureDecoder.findElementEnd(rawData)) {
-                        // Got the remainder of an object.  Report to the caller.
-                        this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-                        listener.onReceivedData(DataUtils.concatArrays(this.dataParts));
-                    
-                        // Need to read a new object.
-                        rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-                        this.dataParts = [];
-                        this.structureDecoder = new BinaryXMLStructureDecoder();
-                        if (rawData.length == 0)
-                            // No more data in the packet.
-                            return;
-                        
-                        // else loop back to decode.
-                    }
-                    else {
-                        // Save for a later call to concatArrays so that we only copy data once.
-                        this.dataParts.push(rawData);
-                        return;
-                    }
-                }
+                this.elementReader.onReceivedData(DataUtils.toNumbersFromString
+                    (NetUtil.readInputStreamToString(inStream, count)));
 			} catch (ex) {
-				console.log("XpcomTransport.onDataAvailable exception: " + ex);
+				console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
 			}
 		}
     };
@@ -424,156 +398,88 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
     var thisXpcomTransport = this;
     
     if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
-      var dataListener = {
-		onReceivedData : function(data) {
-			if (data == null || data == undefined || data.length == 0)
-				console.log("XpcomTransport: received empty data from socket.");
-			else {
-                var decoder = new BinaryXMLDecoder(data);
-                if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
-                    // TODO: handle interest properly.  For now, assume the only use in getting
-                    //   an interest is knowing that the host is alive from NDN.ccndIdFetcher.
-					var pitEntry = NDN.getEntryForExpressedInterest(NDN.ccndIdFetcher);
-					if (pitEntry != null) {
-						// Remove PIT entry from NDN.PITTable.
-						var index = NDN.PITTable.indexOf(pitEntry);
-						if (index >= 0)
-							NDN.PITTable.splice(index, 1);
-                        
-                        pitEntry.closure.upcall(Closure.UPCALL_INTEREST, null);
-                    }
-                }
-                else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
-                    var co = new ContentObject();
-                    co.from_ccnb(decoder);
+      var elementListener = {
+		onReceivedElement : function(element) {
+            var decoder = new BinaryXMLDecoder(element);
+            if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
+                // TODO: handle interest properly. 
+            }
+            else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
+                var co = new ContentObject();
+                co.from_ccnb(decoder);
                    					
-					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-					if (pitEntry != null) {
-						// Remove PIT entry from NDN.PITTable.
-                        // TODO: This needs to be a single thread-safe transaction.
-						var index = NDN.PITTable.indexOf(pitEntry);
-						if (index >= 0)
-							NDN.PITTable.splice(index, 1);
-                    }
-   					if (pitEntry != null) {
-						var currentClosure = pitEntry.closure;
+				var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+				if (pitEntry != null) {
+					// Remove PIT entry from NDN.PITTable.
+                    // TODO: This needs to be a single thread-safe transaction.
+					var index = NDN.PITTable.indexOf(pitEntry);
+					if (index >= 0)
+						NDN.PITTable.splice(index, 1);
+                }
+   				if (pitEntry != null) {
+					var currentClosure = pitEntry.closure;
                         
-                        // TODO: verify the content object and set kind to UPCALL_CONTENT.
-                        var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                                    new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
-                        if (result == Closure.RESULT_OK) {
-                            // success
-                        }
-                        else if (result == Closure.RESULT_ERR)
-                            console.log("XpcomTransport: upcall returned RESULT_ERR.");
-                        else if (result == Closure.RESULT_REEXPRESS) {
-                            // TODO: Handl re-express interest.
-                        }
-                        else if (result == Closure.RESULT_VERIFY) {
-                            // TODO: force verification of content.
-                        }
-                        else if (result == Closure.RESULT_FETCHKEY) {
-                            // TODO: get the key in the key locator and re-call the interest
-                            //   with the key available in the local storage.
-                        }
+                    // Cancel interest timer
+                    clearTimeout(pitEntry.timerID);
+                    
+                    // TODO: verify the content object and set kind to UPCALL_CONTENT.
+                    var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                                new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
+                    if (result == Closure.RESULT_OK) {
+                        // success
+                    }
+                    else if (result == Closure.RESULT_ERR)
+                        console.log("XpcomTransport: upcall returned RESULT_ERR.");
+                    else if (result == Closure.RESULT_REEXPRESS) {
+                        // TODO: Handl re-express interest.
+                    }
+                    else if (result == Closure.RESULT_VERIFY) {
+                        // TODO: force verification of content.
+                    }
+                    else if (result == Closure.RESULT_FETCHKEY) {
+                        // TODO: get the key in the key locator and re-call the interest
+                        //   with the key available in the local storage.
                     }
                 }
-                else
-                    console.log('Incoming packet is not Interest or ContentObject. Discard now.');
-			}
+            }
+            else
+                console.log('Incoming packet is not Interest or ContentObject. Discard now.');
 		}
 	  }
       
-      this.connect(ndn, dataListener);
+      this.connect(ndn, elementListener);
     }
     
-    var binaryInterest = encodeToBinaryInterest(interest);
-    
-                        // TODO: This needs to be a single thread-safe transaction.
-	var pitEntry = new PITEntry(interest, closure);
-	NDN.PITTable.push(pitEntry);
+	//TODO: check local content store first
+	if (closure != null) {
+		var pitEntry = new PITEntry(interest, closure);
+        // TODO: This needs to be a single thread-safe transaction on a global object.
+		NDN.PITTable.push(pitEntry);
+		closure.pitEntry = pitEntry;
+	}
 
-    this.send(binaryInterest);
-};
-
-/** Send outputData (Uint8Array) to host:port, read the entire response and call 
- *    listener.onReceivedData(data) where data is Uint8Array and returns true if the data is consumed,
- *    false if need to keep reading.
- *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
- */
- /*
-XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
-	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
-        (Components.interfaces.nsISocketTransportService);
-	var transport = transportService.createTransport(null, 0, host, port, null);
-	var outStream = transport.openOutputStream(1, 0, 0);
-    var rawDataString = DataUtils.toString(outputData);
-	outStream.write(rawDataString, rawDataString.length);
-	outStream.flush();
-    outStream.close();
-	var inStream = transport.openInputStream(0, 0, 0);
-	var dataListener = {
-		dataParts: [],
-        structureDecoder: new BinaryXMLStructureDecoder(),
-		dataIsConsumed: false,
-		
-		onStartRequest: function (request, context) {
-		},
-		onStopRequest: function (request, context, status) {
-			inStream.close();
-		},
-		onDataAvailable: function (request, context, _inputStream, offset, count) {
-            if (this.dataIsConsumed)
-                // Already finished.  Ignore extra data.
-                return;
-            
-			try {
-				// Ignore _inputStream and use inStream.
-				// Use readInputStreamToString to handle binary data.
-                // TODO: Can we go directly from the stream to Uint8Array?
-				var rawData = DataUtils.toNumbersFromString
-                    (NetUtil.readInputStreamToString(inStream, count));
+	// Set interest timer
+	if (closure != null) {
+		pitEntry.timerID = setTimeout(function() {
+			if (LOG > 3) console.log("Interest time out.");
 				
-                // Process multiple objects in this packet.
-                while(true) {
-                    // Scan the input to check if a whole ccnb object has been read.
-                    this.structureDecoder.seek(0);
-                    if (this.structureDecoder.findElementEnd(rawData)) {
-                        // Got the remainder of an object.  Report to the caller.
-                        this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-                        if (listener.onReceivedData(DataUtils.concatArrays(this.dataParts))) {
-                            this.dataIsConsumed = true;
-                            this.onStopRequest();
-                            return;
-                        }
-                    
-                        // Need to read a new object.
-                        rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-                        this.dataParts = [];
-                        this.structureDecoder = new BinaryXMLStructureDecoder();
-                        if (rawData.length == 0)
-                            // No more data in the packet.
-                            return;
-                        // else loop back to decode.
-                    }
-                    else {
-                        // Save for a later call to concatArrays so that we only copy data once.
-                        this.dataParts.push(rawData);
-                        return;
-                    }
-                }
-			} catch (ex) {
-				console.log("readAllFromSocket.onDataAvailable exception: " + ex);
-			}
-		}
-    };
-	
-	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
-        (Components.interfaces.nsIInputStreamPump);
-	pump.init(inStream, -1, -1, 0, 0, true);
-    pump.asyncRead(dataListener, null);
-}
-*/
+			// Remove PIT entry from NDN.PITTable.
+            // TODO: Make this a thread-safe operation on the global PITTable.
+			var index = NDN.PITTable.indexOf(pitEntry);
+			//console.log(NDN.PITTable);
+			if (index >= 0) 
+	            NDN.PITTable.splice(index, 1);
+			//console.log(NDN.PITTable);
+			//console.log(pitEntry.interest.name.getName());
+				
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+		//console.log(closure.timerID);
+	}
+
+	this.send(encodeToBinaryInterest(interest));
+};
 
 /*
  * This class defines MOME types based on the filename extension.

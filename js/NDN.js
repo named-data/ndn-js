@@ -213,6 +213,7 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
  * Look up in the PITTable and call the closure callback.
  */
 NDN.prototype.onReceivedElement = function(element) {
+    if (LOG>3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
 	var decoder = new BinaryXMLDecoder(element);
 	// Dispatch according to packet type
 	if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {  // Interest packet
@@ -461,7 +462,6 @@ var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
 };
 
 BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawData) {
-    dump("got " + rawData.length + " bytes\n");
     // Process multiple objects in the data.
     while(true) {
         // Scan the input to check if a whole ccnb object has been read.
@@ -469,7 +469,6 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
         if (this.structureDecoder.findElementEnd(rawData)) {
             // Got the remainder of an object.  Report to the caller.
             this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-            dump("calling onReceivedElement\n");
             this.elementListener.onReceivedElement(DataUtils.concatArrays(this.dataParts));
         
             // Need to read a new object.
@@ -485,6 +484,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
         else {
             // Save for a later call to concatArrays so that we only copy data once.
             this.dataParts.push(rawData);
+			if (LOG>3) console.log('Incomplete packet received. Length ' + rawData.length + '. Wait for more input.');
             return;
         }
     }    
