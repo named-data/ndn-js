@@ -24,8 +24,8 @@ var XpcomTransport = function XpcomTransport() {
 
 /*
  * Connect to the host and port in ndn.  This replaces a previous connection.
- * Listen on the port to read an entire binary XML encoded response and call
- *    listener.onReceivedData(data) where data is Uint8Array.
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    listener.onReceivedElement(data) where data is Uint8Array.
  */
 XpcomTransport.prototype.connect = function(ndn, listener) {
     if (this.socket != null) {
@@ -70,7 +70,7 @@ XpcomTransport.prototype.connect = function(ndn, listener) {
                     if (this.structureDecoder.findElementEnd(rawData)) {
                         // Got the remainder of an object.  Report to the caller.
                         this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-                        listener.onReceivedData(DataUtils.concatArrays(this.dataParts));
+                        listener.onReceivedElement(DataUtils.concatArrays(this.dataParts));
                     
                         // Need to read a new object.
                         rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
@@ -117,7 +117,7 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
     
     if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
       var dataListener = {
-		onReceivedData : function(data) {
+		onReceivedElement : function(data) {
 			if (data == null || data == undefined || data.length == 0)
 				console.log("XpcomTransport: received empty data from socket.");
 			else {
@@ -187,83 +187,3 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
 
     this.send(binaryInterest);
 };
-
-/** Send outputData (Uint8Array) to host:port, read the entire response and call 
- *    listener.onReceivedData(data) where data is Uint8Array and returns true if the data is consumed,
- *    false if need to keep reading.
- *  Code derived from http://stackoverflow.com/questions/7816386/why-nsiscriptableinputstream-is-not-working .
- */
- /*
-XpcomTransport.readAllFromSocket = function(host, port, outputData, listener) {
-	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
-        (Components.interfaces.nsISocketTransportService);
-	var transport = transportService.createTransport(null, 0, host, port, null);
-	var outStream = transport.openOutputStream(1, 0, 0);
-    var rawDataString = DataUtils.toString(outputData);
-	outStream.write(rawDataString, rawDataString.length);
-	outStream.flush();
-    outStream.close();
-	var inStream = transport.openInputStream(0, 0, 0);
-	var dataListener = {
-		dataParts: [],
-        structureDecoder: new BinaryXMLStructureDecoder(),
-		dataIsConsumed: false,
-		
-		onStartRequest: function (request, context) {
-		},
-		onStopRequest: function (request, context, status) {
-			inStream.close();
-		},
-		onDataAvailable: function (request, context, _inputStream, offset, count) {
-            if (this.dataIsConsumed)
-                // Already finished.  Ignore extra data.
-                return;
-            
-			try {
-				// Ignore _inputStream and use inStream.
-				// Use readInputStreamToString to handle binary data.
-                // TODO: Can we go directly from the stream to Uint8Array?
-				var rawData = DataUtils.toNumbersFromString
-                    (NetUtil.readInputStreamToString(inStream, count));
-				
-                // Process multiple objects in this packet.
-                while(true) {
-                    // Scan the input to check if a whole ccnb object has been read.
-                    this.structureDecoder.seek(0);
-                    if (this.structureDecoder.findElementEnd(rawData)) {
-                        // Got the remainder of an object.  Report to the caller.
-                        this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-                        if (listener.onReceivedData(DataUtils.concatArrays(this.dataParts))) {
-                            this.dataIsConsumed = true;
-                            this.onStopRequest();
-                            return;
-                        }
-                    
-                        // Need to read a new object.
-                        rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-                        this.dataParts = [];
-                        this.structureDecoder = new BinaryXMLStructureDecoder();
-                        if (rawData.length == 0)
-                            // No more data in the packet.
-                            return;
-                        // else loop back to decode.
-                    }
-                    else {
-                        // Save for a later call to concatArrays so that we only copy data once.
-                        this.dataParts.push(rawData);
-                        return;
-                    }
-                }
-			} catch (ex) {
-				console.log("readAllFromSocket.onDataAvailable exception: " + ex);
-			}
-		}
-    };
-	
-	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
-        (Components.interfaces.nsIInputStreamPump);
-	pump.init(inStream, -1, -1, 0, 0, true);
-    pump.asyncRead(dataListener, null);
-}
-*/
-
