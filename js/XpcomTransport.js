@@ -25,9 +25,9 @@ var XpcomTransport = function XpcomTransport() {
 /*
  * Connect to the host and port in ndn.  This replaces a previous connection.
  * Listen on the port to read an entire binary XML encoded element and call
- *    listener.onReceivedElement(element) where element is Uint8Array.
+ *    elementListener.onReceivedElement(element) where element is Uint8Array.
  */
-XpcomTransport.prototype.connect = function(ndn, listener) {
+XpcomTransport.prototype.connect = function(ndn, elementListener) {
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -49,8 +49,7 @@ XpcomTransport.prototype.connect = function(ndn, listener) {
 
     var inStream = this.socket.openInputStream(0, 0, 0);
 	var dataListener = {
-		dataParts: [],
-        structureDecoder: new BinaryXMLStructureDecoder(),
+        elementReader: new BinaryXmlElementReader(elementListener),
 		
 		onStartRequest: function (request, context) {
 		},
@@ -60,36 +59,10 @@ XpcomTransport.prototype.connect = function(ndn, listener) {
 			try {
 				// Use readInputStreamToString to handle binary data.
                 // TODO: Can we go directly from the stream to Uint8Array?
-				var rawData = DataUtils.toNumbersFromString
-                    (NetUtil.readInputStreamToString(inStream, count));
-				
-                // Process multiple objects in this packet.
-                while(true) {
-                    // Scan the input to check if a whole ccnb object has been read.
-                    this.structureDecoder.seek(0);
-                    if (this.structureDecoder.findElementEnd(rawData)) {
-                        // Got the remainder of an object.  Report to the caller.
-                        this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-                        listener.onReceivedElement(DataUtils.concatArrays(this.dataParts));
-                    
-                        // Need to read a new object.
-                        rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-                        this.dataParts = [];
-                        this.structureDecoder = new BinaryXMLStructureDecoder();
-                        if (rawData.length == 0)
-                            // No more data in the packet.
-                            return;
-                        
-                        // else loop back to decode.
-                    }
-                    else {
-                        // Save for a later call to concatArrays so that we only copy data once.
-                        this.dataParts.push(rawData);
-                        return;
-                    }
-                }
+                this.elementReader.onReceivedData(DataUtils.toNumbersFromString
+                    (NetUtil.readInputStreamToString(inStream, count)));
 			} catch (ex) {
-				console.log("XpcomTransport.onDataAvailable exception: " + ex);
+				console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
 			}
 		}
     };
@@ -116,21 +89,11 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
     var thisXpcomTransport = this;
     
     if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
-      var dataListener = {
+      var elementListener = {
 		onReceivedElement : function(element) {
             var decoder = new BinaryXMLDecoder(element);
             if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
-                // TODO: handle interest properly.  For now, assume the only use in getting
-                //   an interest is knowing that the host is alive from NDN.ccndIdFetcher.
-                var pitEntry = NDN.getEntryForExpressedInterest(NDN.ccndIdFetcher);
-				if (pitEntry != null) {
-					// Remove PIT entry from NDN.PITTable.
-					var index = NDN.PITTable.indexOf(pitEntry);
-					if (index >= 0)
-						NDN.PITTable.splice(index, 1);
-                        
-                    pitEntry.closure.upcall(Closure.UPCALL_INTEREST, null);
-                }
+                // TODO: handle interest properly. 
             }
             else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
                 var co = new ContentObject();
@@ -147,6 +110,9 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
    				if (pitEntry != null) {
 					var currentClosure = pitEntry.closure;
                         
+                    // Cancel interest timer
+                    clearTimeout(pitEntry.timerID);
+                    
                     // TODO: verify the content object and set kind to UPCALL_CONTENT.
                     var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
                                 new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
@@ -172,14 +138,37 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
 		}
 	  }
       
-      this.connect(ndn, dataListener);
+      this.connect(ndn, elementListener);
     }
     
-    var binaryInterest = encodeToBinaryInterest(interest);
-    
-                        // TODO: This needs to be a single thread-safe transaction.
-	var pitEntry = new PITEntry(interest, closure);
-	NDN.PITTable.push(pitEntry);
+	//TODO: check local content store first
+	if (closure != null) {
+		var pitEntry = new PITEntry(interest, closure);
+        // TODO: This needs to be a single thread-safe transaction on a global object.
+		NDN.PITTable.push(pitEntry);
+		closure.pitEntry = pitEntry;
+	}
 
-    this.send(binaryInterest);
+	// Set interest timer
+	if (closure != null) {
+		pitEntry.timerID = setTimeout(function() {
+			if (LOG > 3) console.log("Interest time out.");
+				
+			// Remove PIT entry from NDN.PITTable.
+            // TODO: Make this a thread-safe operation on the global PITTable.
+			var index = NDN.PITTable.indexOf(pitEntry);
+			//console.log(NDN.PITTable);
+			if (index >= 0) 
+	            NDN.PITTable.splice(index, 1);
+			//console.log(NDN.PITTable);
+			//console.log(pitEntry.interest.name.getName());
+				
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+		//console.log(closure.timerID);
+	}
+
+	this.send(encodeToBinaryInterest(interest));
 };
+
