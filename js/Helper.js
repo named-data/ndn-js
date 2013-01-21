@@ -14,8 +14,6 @@ if(scripts && scripts.length>0) {
 }
 console.log(path);
 
-document.write('<script type="text/javascript" src="' + path + 'NDN.js"></script>');
-
 document.write('<script type="text/javascript" src="' + path + 'WebSocketTransport.js"></script>');
 
 document.write('<script type="text/javascript" src="' + path + 'util/CCNProtocolDTags.js"></script>');
@@ -55,6 +53,8 @@ document.write('<script type="text/javascript" src="' + path + 'encoding/DataUti
 document.write('<script type="text/javascript" src="' + path + 'encoding/EncodingUtils.js"></script>');
                 
 document.write('<script type="text/javascript" src="' + path + 'security/KeyManager.js"></script>');
+
+document.write('<script type="text/javascript" src="' + path + 'NDN.js"></script>');
 
 document.write('<script type="text/javascript" src="' + path + 'securityLib/jsbn.js"></script>');
 document.write('<script type="text/javascript" src="' + path + 'securityLib/jsbn2.js"></script>');
