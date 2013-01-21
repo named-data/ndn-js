@@ -25,7 +25,7 @@ var XpcomTransport = function XpcomTransport() {
 /*
  * Connect to the host and port in ndn.  This replaces a previous connection.
  * Listen on the port to read an entire binary XML encoded element and call
- *    listener.onReceivedElement(data) where data is Uint8Array.
+ *    listener.onReceivedElement(element) where element is Uint8Array.
  */
 XpcomTransport.prototype.connect = function(ndn, listener) {
     if (this.socket != null) {
@@ -117,62 +117,58 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
     
     if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
       var dataListener = {
-		onReceivedElement : function(data) {
-			if (data == null || data == undefined || data.length == 0)
-				console.log("XpcomTransport: received empty data from socket.");
-			else {
-                var decoder = new BinaryXMLDecoder(data);
-                if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
-                    // TODO: handle interest properly.  For now, assume the only use in getting
-                    //   an interest is knowing that the host is alive from NDN.ccndIdFetcher.
-					var pitEntry = NDN.getEntryForExpressedInterest(NDN.ccndIdFetcher);
-					if (pitEntry != null) {
-						// Remove PIT entry from NDN.PITTable.
-						var index = NDN.PITTable.indexOf(pitEntry);
-						if (index >= 0)
-							NDN.PITTable.splice(index, 1);
+		onReceivedElement : function(element) {
+            var decoder = new BinaryXMLDecoder(element);
+            if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
+                // TODO: handle interest properly.  For now, assume the only use in getting
+                //   an interest is knowing that the host is alive from NDN.ccndIdFetcher.
+                var pitEntry = NDN.getEntryForExpressedInterest(NDN.ccndIdFetcher);
+				if (pitEntry != null) {
+					// Remove PIT entry from NDN.PITTable.
+					var index = NDN.PITTable.indexOf(pitEntry);
+					if (index >= 0)
+						NDN.PITTable.splice(index, 1);
                         
-                        pitEntry.closure.upcall(Closure.UPCALL_INTEREST, null);
-                    }
+                    pitEntry.closure.upcall(Closure.UPCALL_INTEREST, null);
                 }
-                else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
-                    var co = new ContentObject();
-                    co.from_ccnb(decoder);
+            }
+            else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
+                var co = new ContentObject();
+                co.from_ccnb(decoder);
                    					
-					var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-					if (pitEntry != null) {
-						// Remove PIT entry from NDN.PITTable.
-                        // TODO: This needs to be a single thread-safe transaction.
-						var index = NDN.PITTable.indexOf(pitEntry);
-						if (index >= 0)
-							NDN.PITTable.splice(index, 1);
-                    }
-   					if (pitEntry != null) {
-						var currentClosure = pitEntry.closure;
+				var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+				if (pitEntry != null) {
+					// Remove PIT entry from NDN.PITTable.
+                    // TODO: This needs to be a single thread-safe transaction.
+					var index = NDN.PITTable.indexOf(pitEntry);
+					if (index >= 0)
+						NDN.PITTable.splice(index, 1);
+                }
+   				if (pitEntry != null) {
+					var currentClosure = pitEntry.closure;
                         
-                        // TODO: verify the content object and set kind to UPCALL_CONTENT.
-                        var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                                    new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
-                        if (result == Closure.RESULT_OK) {
-                            // success
-                        }
-                        else if (result == Closure.RESULT_ERR)
-                            console.log("XpcomTransport: upcall returned RESULT_ERR.");
-                        else if (result == Closure.RESULT_REEXPRESS) {
-                            // TODO: Handl re-express interest.
-                        }
-                        else if (result == Closure.RESULT_VERIFY) {
-                            // TODO: force verification of content.
-                        }
-                        else if (result == Closure.RESULT_FETCHKEY) {
-                            // TODO: get the key in the key locator and re-call the interest
-                            //   with the key available in the local storage.
-                        }
+                    // TODO: verify the content object and set kind to UPCALL_CONTENT.
+                    var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
+                                new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
+                    if (result == Closure.RESULT_OK) {
+                        // success
+                    }
+                    else if (result == Closure.RESULT_ERR)
+                        console.log("XpcomTransport: upcall returned RESULT_ERR.");
+                    else if (result == Closure.RESULT_REEXPRESS) {
+                        // TODO: Handl re-express interest.
+                    }
+                    else if (result == Closure.RESULT_VERIFY) {
+                        // TODO: force verification of content.
+                    }
+                    else if (result == Closure.RESULT_FETCHKEY) {
+                        // TODO: get the key in the key locator and re-call the interest
+                        //   with the key available in the local storage.
                     }
                 }
-                else
-                    console.log('Incoming packet is not Interest or ContentObject. Discard now.');
-			}
+            }
+            else
+                console.log('Incoming packet is not Interest or ContentObject. Discard now.');
 		}
 	  }
       
