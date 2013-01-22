@@ -137,7 +137,7 @@ var ContentClosure = function ContentClosure
     
     this.firstReceivedSegmentNumber = null;
     this.firstReceivedContentObject = null;
-    this.contentSha256 = null;
+    this.contentSha256 = new Sha256();
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -194,8 +194,6 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.uriOriginCharset, null));
-            
-        this.contentSha256 = new Sha256();
     }
 
     this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
