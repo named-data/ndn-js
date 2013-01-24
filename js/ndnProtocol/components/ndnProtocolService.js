@@ -135,12 +135,14 @@ var ContentClosure = function ContentClosure
     this.uriSearchAndHash = uriSearchAndHash;
     this.segmentTemplate = segmentTemplate;
     
-    this.firstReceivedSegmentNumber = null;
-    this.firstReceivedContentObject = null;
+    this.segmentStore = new SegmentStore();
     this.contentSha256 = new Sha256();
+    this.didRequestFinalSegment = false;
+    this.finalSegmentNumber = null;
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
+  try {
     if (!(kind == Closure.UPCALL_CONTENT ||
           kind == Closure.UPCALL_CONTENT_UNVERIFIED))
         // The upcall is not for us.
@@ -156,26 +158,15 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
 
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
+    // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
         segmentNumber = DataUtils.bigEndianToUnsignedInt
             (contentObject.name.components[contentObject.name.components.length - 1]);
-        if (this.firstReceivedSegmentNumber == null) {
-            // This is the first call.
-            this.firstReceivedSegmentNumber = segmentNumber;
-            if (segmentNumber != 0) {
-                // Special case: Save this content object for later and request segment zero.
-                this.firstReceivedContentObject = contentObject;
-                var componentsForZero = contentObject.name.components.slice
-                    (0, contentObject.name.components.length - 1);
-                componentsForZero.push([0]);
-                this.ndn.expressInterest(new Name(componentsForZero), this, this.segmentTemplate); 
-                return Closure.RESULT_OK;
-            }
-        }
+        this.segmentStore.storeContent(segmentNumber, contentObject);
     }
     
-    if (this.uriEndsWithSegmentNumber || segmentNumber == null || segmentNumber == 0) {
+    if (segmentNumber == null || segmentNumber == 0) {
         // This is the first or only segment, so start.
         // Get the URI from the ContentObject including the version.
         var contentUriSpec;
@@ -196,53 +187,199 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
             ioService.newURI(contentUriSpec, this.uriOriginCharset, null));
     }
 
-    this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-    this.contentSha256.update(contentObject.content);
-    
-    // Check for the special case if the saved content is for the next segment that we need.
-    if (this.firstReceivedContentObject != null && 
-        this.firstReceivedSegmentNumber == segmentNumber + 1) {
-        // Substitute the saved contentObject send its content and keep going.
-        contentObject = this.firstReceivedContentObject;
-        segmentNumber = segmentNumber + 1;
-        // Clear firstReceivedContentObject to save memory.
-        this.firstReceivedContentObject = null;
-        
-        this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));        
+    if (segmentNumber == null) {
+        // We are not doing segments, so just finish.
+        this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
         this.contentSha256.update(contentObject.content);
+        this.contentListener.onStop();
+
+        if (!this.uriEndsWithSegmentNumber) {
+            var nameContentDigest = contentObject.name.getContentDigestValue();
+            if (nameContentDigest != null &&
+                !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+                // TODO: How to show the user an error for invalid digest?
+                dump("Content does not match digest in name " + contentObject.name.to_uri());
+        }
+        return Closure.RESULT_OK;
+    }
+    
+    if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
+        this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
+
+    // The content was already put in the store.  Retrieve as much as possible.
+    var entry;
+    while ((entry = this.segmentStore.maybeRetrieveNextEntry()) != null) {
+        segmentNumber = entry.key;
+        contentObject = entry.value;
+        this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
+        this.contentSha256.update(contentObject.content);
+        
+        if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
+            // Finished.
+            this.contentListener.onStop();
+            var nameContentDigest = contentObject.name.getContentDigestValue();
+            if (nameContentDigest != null &&
+                !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+                // TODO: How to show the user an error for invalid digest?
+                dump("Content does not match digest in name " + contentObject.name.to_uri());
+
+            return Closure.RESULT_OK;
+        }
     }
 
-    var finalSegmentNumber = null;
-    if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
-        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
+    if (this.finalSegmentNumber == null && !this.didRequestFinalSegment) {
+        // Try to determine the final segment now.
+        var components = contentObject.name.components.slice
+            (0, contentObject.name.components.length - 1);
             
-    if (!this.uriEndsWithSegmentNumber &&
-        segmentNumber != null && 
-        (finalSegmentNumber == null || segmentNumber != finalSegmentNumber)) {
-        // Make a name for the next segment and get it.
-        var segmentNumberPlus1 = DataUtils.nonNegativeIntToBigEndian(segmentNumber + 1);
+        // Temporarily set the childSelector in the segmentTemplate.
+        this.segmentTemplate.childSelector = 1;
+        this.ndn.expressInterest(new Name(components), this, this.segmentTemplate);
+        this.segmentTemplate.childSelector = null;
+    }
+
+    // Request new segments.
+    var toRequest = this.segmentStore.requestSegmentNumbers(2);
+    for (var i = 0; i < toRequest.length; ++i) {
+        if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
+            continue;
+        
+        // Make a name for the segment and get it.
+        var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(toRequest[i]);
         // Put a 0 byte in front.
-        var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
-        nextSegmentNumber.set(segmentNumberPlus1, 1);
+        var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
+        segmentNumberComponent.set(segmentNumberBigEndian, 1);
         
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
-        components.push(nextSegmentNumber);
+        components.push(segmentNumberComponent);
         this.ndn.expressInterest(new Name(components), this, this.segmentTemplate);
-    }
-    else {
-        // Finished.
-        this.contentListener.onStop();
-        var nameContentDigest = contentObject.name.getContentDigestValue();
-        if (nameContentDigest != null &&
-            !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
-            // TODO: How to show the user an error for invalid digest?
-            dump("Content does not match digest in name " + contentObject.name.to_uri());
     }
         
     return Closure.RESULT_OK;
+  } catch (ex) {
+        dump("ContentClosure.upcall exception: " + ex + "\n" + ex.stack);
+        return Closure.RESULT_ERR;
+  }
 };
-             
+
+/*
+ * A SegmentStore stores segments until they are retrieved in order starting with segment 0.
+ */
+var SegmentStore = function SegmentStore() {
+    // Each entry is an object where the key is the segment number and value is null if
+    //   the segment number is requested or the contentObject if received.
+    this.store = new SortedArray();
+    this.maxRetrievedSegmentNumber = -1;
+};
+
+SegmentStore.prototype.storeContent = function(segmentNumber, contentObject) {
+    // We don't expect to try to store a segment that has already been retrieved, but check anyway.
+    if (segmentNumber > this.maxRetrievedSegmentNumber)
+        this.store.set(segmentNumber, contentObject);
+};
+
+/*
+ * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value is not null, 
+ *   then delete from the store, return the entry with key and value, and update maxRetrievedSegmentNumber.  
+ * Otherwise return null.
+ */
+SegmentStore.prototype.maybeRetrieveNextEntry = function() {
+    if (this.store.entries.length > 0 && this.store.entries[0].value != null &&
+        this.store.entries[0].key == this.maxRetrievedSegmentNumber + 1) {
+        var entry = this.store.entries[0];
+        this.store.removeAt(0);
+        ++this.maxRetrievedSegmentNumber;
+        return entry;
+    }
+    else
+        return null;
+};
+
+/*
+ * Return an array of the next segment numbers that need to be requested so that the total
+ *   requested segments is totalRequestedSegments.  If a segment store entry value is null, it is
+ *   already requested and is not returned.  If a segment number is returned, create a
+ *   entry in the segment store with a null value.
+ */
+SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments) {
+    // First, count how many are already requested.
+    var nRequestedSegments = 0;
+    for (var i = 0; i < this.store.entries.length; ++i) {
+        if (this.store.entries[i].value == null) {
+            ++nRequestedSegments;
+            if (nRequestedSegments >= totalRequestedSegments)
+                // Already maxed out on requests.
+                return [];
+        }
+    }
+    
+    var toRequest = [];
+    var nextSegmentNumber = this.maxRetrievedSegmentNumber + 1;
+    for (var i = 0; i < this.store.entries.length; ++i) {
+        var entry = this.store.entries[i];
+        // Fill in the gap before the segment number in the entry.
+        while (nextSegmentNumber < entry.key) {
+            toRequest.push(nextSegmentNumber);
+            ++nextSegmentNumber;
+            ++nRequestedSegments;
+            if (nRequestedSegments >= totalRequestedSegments)
+                break;
+        }
+        if (nRequestedSegments >= totalRequestedSegments)
+            break;
+        
+        nextSegmentNumber = entry.key + 1;
+    }
+    
+    // We already filled in the gaps for the segments in the store. Continue after the last.
+    while (nRequestedSegments < totalRequestedSegments) {
+        toRequest.push(nextSegmentNumber);
+        ++nextSegmentNumber;
+        ++nRequestedSegments;
+    }
+    
+    // Mark the new segment numbers as requested.
+    for (var i = 0; i < toRequest.length; ++i)
+        this.store.set(toRequest[i], null);
+    return toRequest;
+}
+
+/*
+ * A SortedArray is an array of objects with key and value, where the key is an integer.
+ */
+var SortedArray = function SortedArray() {
+    this.entries = [];
+}
+
+SortedArray.prototype.sortEntries = function() {
+    this.entries.sort(function(a, b) { return a.key - b.key; });
+};
+
+SortedArray.prototype.indexOfKey = function(key) {
+    for (var i = 0; i < this.entries.length; ++i) {
+        if (this.entries[i].key == key)
+            return i;
+    }
+
+    return -1;
+}
+
+SortedArray.prototype.set = function(key, value) {
+    var i = this.indexOfKey(key);
+    if (i >= 0) {
+        this.entries[i].value = value;
+        return;
+    }
+    
+    this.entries.push({ key: key, value: value});
+    this.sortEntries();
+}
+
+SortedArray.prototype.removeAt = function(index) {
+    this.entries.splice(index, 1);
+}
+
 /*
  * Scan the name from the last component to the first (skipping special name components)
  *   for a recognized file name extension, and return an object with properties contentType and charset.
