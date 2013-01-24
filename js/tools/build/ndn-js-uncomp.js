@@ -610,6 +610,9 @@ Name.prototype.add = function(component){
 
 // Return the escaped name string according to "CCNx URI Scheme".
 Name.prototype.to_uri = function() {	
+    if (this.components.length == 0)
+        return "/";
+    
 	var result = "";
 	
 	for(var i = 0; i < this.components.length; ++i)
