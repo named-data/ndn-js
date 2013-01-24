@@ -228,6 +228,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     }
 
     if (this.finalSegmentNumber == null && !this.didRequestFinalSegment) {
+        this.didRequestFinalSegment = true;
         // Try to determine the final segment now.
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
