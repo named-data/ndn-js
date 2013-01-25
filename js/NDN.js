@@ -28,6 +28,7 @@ var NDN = function NDN(settings) {
 	this.host = (settings.host !== undefined ? settings.host : 'localhost');
 	this.port = (settings.port || 9696);
     this.readyStatus = NDN.UNOPEN;
+    this.verify = (settings.verify !== undefined ? settings.verify : true);
     // Event handler
     this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
     this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
@@ -274,7 +275,13 @@ NDN.prototype.onReceivedElement = function(element) {
 				clearTimeout(pitEntry.timerID);
 				//console.log("Clear interest timer");
 				//console.log(currentClosure.timerID);
-						
+				
+				if (this.verify == false) {
+					// Pass content up without verifying the signature
+					currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
+					return;
+				}
+				
 				// Key verification
 						
 				// Recursive key fetching & verification closure
