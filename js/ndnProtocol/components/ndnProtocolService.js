@@ -18,7 +18,8 @@ Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
 function NdnProtocol() {
     // TODO: Remove host: null when null is the default.
-    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, host: null });
+    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, 
+        host: null, verify: false });
 }
 
 NdnProtocol.prototype = {
