@@ -7752,7 +7752,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				this.onclose();
 				//console.log("NDN.onclose event fired.");
 			} else {
-				console.log('Connected to ccnd.');
+				if (LOG>3) console.log('Connected to ccnd.');
 				this.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 				if (LOG>3) console.log(ndn.ccndid);
 						
