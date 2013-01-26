@@ -117,7 +117,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		// Fetch ccndid now
 		var interest = new Interest(NDN.ccndIdFetcher);
 		interest.interestLifetime = 4000; // milliseconds
-        this.send(encodeToBinaryInterest(interest));
+        self.send(encodeToBinaryInterest(interest));
 	}
 	
 	this.ws.onerror = function(ev) {
@@ -7752,7 +7752,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				this.onclose();
 				//console.log("NDN.onclose event fired.");
 			} else {
-				//console.log('Connected to ccnd.');
+				console.log('Connected to ccnd.');
 				this.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 				if (LOG>3) console.log(ndn.ccndid);
 						

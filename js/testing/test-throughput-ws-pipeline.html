@@ -10,8 +10,8 @@
 	<script type="text/javascript" src="../tools/build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		//hostip = "131.179.196.232";
-		hostip = "localhost";
+		hostip = "131.179.196.232";
+		//hostip = "localhost";
 		//var ndncon = new NDN({port:9696,host:hostip});
 		var ndncon = new NDN({port:9696,host:hostip,verify:false});
         ndncon.transport.connectWebSocket(ndncon);
@@ -326,7 +326,7 @@
 
 	<form>
 		Please Enter an Interest:<br />
-		<input id="interest" type="text" name="INTEREST" size="50" value="/wentao.shang/mars/%00" /> 
+		<input id="interest" type="text" name="INTEREST" size="50" value="/wentao.shang/mars.jpg/%00" /> 
 	</form>
 
 	<button onclick="run()">Fetch Content</button>

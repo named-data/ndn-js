@@ -52,7 +52,7 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		// Fetch ccndid now
 		var interest = new Interest(NDN.ccndIdFetcher);
 		interest.interestLifetime = 4000; // milliseconds
-        this.send(encodeToBinaryInterest(interest));
+        self.send(encodeToBinaryInterest(interest));
 	}
 	
 	this.ws.onerror = function(ev) {
