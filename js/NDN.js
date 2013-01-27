@@ -516,11 +516,16 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
         if (this.structureDecoder.findElementEnd(rawData)) {
             // Got the remainder of an object.  Report to the caller.
             this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-            this.elementListener.onReceivedElement(DataUtils.concatArrays(this.dataParts));
+            var element = DataUtils.concatArrays(this.dataParts);
+            this.dataParts = [];
+            try {
+                this.elementListener.onReceivedElement(element);
+            } catch (ex) {
+                console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+            }
         
             // Need to read a new object.
             rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-            this.dataParts = [];
             this.structureDecoder = new BinaryXMLStructureDecoder();
             if (rawData.length == 0)
                 // No more data in the packet.
