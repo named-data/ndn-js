@@ -161,44 +161,10 @@ WebSocketTransport.prototype.send = function(data) {
 }
 
 WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
-        var self = this;
-        this.connect(ndn, function() { self.expressInterestHelper(ndn, interest, closure); });
-    }
+    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port)
+        this.connect(ndn, function() { ndn.expressInterestHelper(interest, closure); });
     else
-        this.expressInterestHelper(ndn, interest, closure);
-};
-
-WebSocketTransport.prototype.expressInterestHelper = function(ndn, interest, closure) {
-	//TODO: check local content store first
-	if (closure != null) {
-		var pitEntry = new PITEntry(interest, closure);
-        // TODO: This needs to be a single thread-safe transaction on a global object.
-		NDN.PITTable.push(pitEntry);
-		closure.pitEntry = pitEntry;
-	}
-
-	// Set interest timer
-	if (closure != null) {
-		pitEntry.timerID = setTimeout(function() {
-			if (LOG > 3) console.log("Interest time out.");
-				
-			// Remove PIT entry from NDN.PITTable.
-            // TODO: Make this a thread-safe operation on the global PITTable.
-			var index = NDN.PITTable.indexOf(pitEntry);
-			//console.log(NDN.PITTable);
-			if (index >= 0) 
-	            NDN.PITTable.splice(index, 1);
-			//console.log(NDN.PITTable);
-			//console.log(pitEntry.interest.name.getName());
-				
-			// Raise closure callback
-			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
-		//console.log(closure.timerID);
-	}
-
-	this.send(encodeToBinaryInterest(interest));
+        ndn.expressInterestHelper(interest, closure);
 };
 /**
  * @author: Meki Cheraoui
@@ -7681,6 +7647,43 @@ NDN.prototype.expressInterest = function(
         this.transport.expressInterest(this, interest, closure);
 };
 
+/*
+ * Do the work of expressInterest once we know we are connected.  Set the PITTable and call
+ *   this.transport.send to send the interest.
+ */
+NDN.prototype.expressInterestHelper = function(interest, closure) {
+	//TODO: check local content store first
+	if (closure != null) {
+		var pitEntry = new PITEntry(interest, closure);
+        // TODO: This needs to be a single thread-safe transaction on a global object.
+		NDN.PITTable.push(pitEntry);
+		closure.pitEntry = pitEntry;
+	}
+
+	// Set interest timer
+    var thisNDN = this;
+	if (closure != null) {
+		pitEntry.timerID = setTimeout(function() {
+			if (LOG > 3) console.log("Interest time out.");
+				
+			// Remove PIT entry from NDN.PITTable.
+            // TODO: Make this a thread-safe operation on the global PITTable.
+			var index = NDN.PITTable.indexOf(pitEntry);
+			//console.log(NDN.PITTable);
+			if (index >= 0) 
+	            NDN.PITTable.splice(index, 1);
+			//console.log(NDN.PITTable);
+			//console.log(pitEntry.interest.name.getName());
+				
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null));
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+		//console.log(closure.timerID);
+	}
+
+	this.transport.send(encodeToBinaryInterest(interest));
+};
+
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     var thisNDN = this;
     var onConnected = function() {
@@ -7748,7 +7751,9 @@ NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
     return Closure.RESULT_OK;
 };
 
-// Do the work of registerPrefix once we know we are connected with a ccndid.
+/*
+ * Do the work of registerPrefix once we know we are connected with a ccndid.
+ */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
 	var bytes = encodeForwardingEntry(fe);
@@ -8022,11 +8027,16 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
         if (this.structureDecoder.findElementEnd(rawData)) {
             // Got the remainder of an object.  Report to the caller.
             this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
-            this.elementListener.onReceivedElement(DataUtils.concatArrays(this.dataParts));
+            var element = DataUtils.concatArrays(this.dataParts);
+            this.dataParts = [];
+            try {
+                this.elementListener.onReceivedElement(element);
+            } catch (ex) {
+                console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+            }
         
             // Need to read a new object.
             rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
-            this.dataParts = [];
             this.structureDecoder = new BinaryXMLStructureDecoder();
             if (rawData.length == 0)
                 // No more data in the packet.

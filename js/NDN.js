@@ -175,6 +175,43 @@ NDN.prototype.expressInterest = function(
         this.transport.expressInterest(this, interest, closure);
 };
 
+/*
+ * Do the work of expressInterest once we know we are connected.  Set the PITTable and call
+ *   this.transport.send to send the interest.
+ */
+NDN.prototype.expressInterestHelper = function(interest, closure) {
+	//TODO: check local content store first
+	if (closure != null) {
+		var pitEntry = new PITEntry(interest, closure);
+        // TODO: This needs to be a single thread-safe transaction on a global object.
+		NDN.PITTable.push(pitEntry);
+		closure.pitEntry = pitEntry;
+	}
+
+	// Set interest timer
+    var thisNDN = this;
+	if (closure != null) {
+		pitEntry.timerID = setTimeout(function() {
+			if (LOG > 3) console.log("Interest time out.");
+				
+			// Remove PIT entry from NDN.PITTable.
+            // TODO: Make this a thread-safe operation on the global PITTable.
+			var index = NDN.PITTable.indexOf(pitEntry);
+			//console.log(NDN.PITTable);
+			if (index >= 0) 
+	            NDN.PITTable.splice(index, 1);
+			//console.log(NDN.PITTable);
+			//console.log(pitEntry.interest.name.getName());
+				
+			// Raise closure callback
+			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null));
+		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+		//console.log(closure.timerID);
+	}
+
+	this.transport.send(encodeToBinaryInterest(interest));
+};
+
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     var thisNDN = this;
     var onConnected = function() {
@@ -242,7 +279,9 @@ NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
     return Closure.RESULT_OK;
 };
 
-// Do the work of registerPrefix once we know we are connected with a ccndid.
+/*
+ * Do the work of registerPrefix once we know we are connected with a ccndid.
+ */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
 	var bytes = encodeForwardingEntry(fe);
