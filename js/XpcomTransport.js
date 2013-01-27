@@ -25,9 +25,9 @@ var XpcomTransport = function XpcomTransport() {
 /*
  * Connect to the host and port in ndn.  This replaces a previous connection.
  * Listen on the port to read an entire binary XML encoded element and call
- *    elementListener.onReceivedElement(element) where element is Uint8Array.
+ *    ndn.onReceivedElement(element).
  */
-XpcomTransport.prototype.connect = function(ndn, elementListener) {
+XpcomTransport.prototype.connect = function(ndn) {
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -49,7 +49,7 @@ XpcomTransport.prototype.connect = function(ndn, elementListener) {
 
     var inStream = this.socket.openInputStream(0, 0, 0);
 	var dataListener = {
-        elementReader: new BinaryXmlElementReader(elementListener),
+        elementReader: new BinaryXmlElementReader(ndn),
 		
 		onStartRequest: function (request, context) {
 		},
@@ -86,91 +86,11 @@ XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
 };
 
 XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    console.log("expressInterest " + interest.name.to_uri());
     var thisXpcomTransport = this;
     
-    if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
-      var elementListener = {
-		onReceivedElement : function(element) {
-            var decoder = new BinaryXMLDecoder(element);
-            if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {
-                // TODO: handle interest properly. 
-            }
-            else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {
-                var co = new ContentObject();
-                co.from_ccnb(decoder);
-                   					
-				var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-				if (pitEntry != null) {
-					// Remove PIT entry from NDN.PITTable.
-                    // TODO: This needs to be a single thread-safe transaction.
-					var index = NDN.PITTable.indexOf(pitEntry);
-					if (index >= 0)
-						NDN.PITTable.splice(index, 1);
-                }
-   				if (pitEntry != null) {
-					var currentClosure = pitEntry.closure;
-                        
-                    // Cancel interest timer
-                    clearTimeout(pitEntry.timerID);
-                    
-                    // TODO: verify the content object and set kind to UPCALL_CONTENT.
-                    var result = currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED,
-                                new UpcallInfo(thisXpcomTransport.ndn, null, 0, co));
-                    if (result == Closure.RESULT_OK) {
-                        // success
-                    }
-                    else if (result == Closure.RESULT_ERR)
-                        console.log("XpcomTransport: upcall returned RESULT_ERR.");
-                    else if (result == Closure.RESULT_REEXPRESS) {
-                        // TODO: Handl re-express interest.
-                    }
-                    else if (result == Closure.RESULT_VERIFY) {
-                        // TODO: force verification of content.
-                    }
-                    else if (result == Closure.RESULT_FETCHKEY) {
-                        // TODO: get the key in the key locator and re-call the interest
-                        //   with the key available in the local storage.
-                    }
-                }
-            }
-            else
-                console.log('Incoming packet is not Interest or ContentObject. Discard now.');
-		}
-	  }
-      
-      this.connect(ndn, elementListener);
-// DEBUG      this.connect(ndn, ndn);
-    }
+    if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port)
+      this.connect(ndn);
     
-	//TODO: check local content store first
-	if (closure != null) {
-		var pitEntry = new PITEntry(interest, closure);
-        // TODO: This needs to be a single thread-safe transaction on a global object.
-		NDN.PITTable.push(pitEntry);
-		closure.pitEntry = pitEntry;
-	}
-
-	// Set interest timer
-	if (closure != null) {
-		pitEntry.timerID = setTimeout(function() {
-			if (LOG > 3) console.log("Interest time out.");
-				
-			// Remove PIT entry from NDN.PITTable.
-            // TODO: Make this a thread-safe operation on the global PITTable.
-			var index = NDN.PITTable.indexOf(pitEntry);
-			//console.log(NDN.PITTable);
-			if (index >= 0) 
-	            NDN.PITTable.splice(index, 1);
-			//console.log(NDN.PITTable);
-			//console.log(pitEntry.interest.name.getName());
-				
-			// Raise closure callback
-			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(ndn, interest, 0, null));
-		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
-		//console.log(closure.timerID);
-	}
-
-	this.send(encodeToBinaryInterest(interest));
+    ndn.expressInterestHelper(interest, closure);
 };
 
