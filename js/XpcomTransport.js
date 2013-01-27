@@ -13,8 +13,8 @@ var XpcomTransport = function XpcomTransport() {
     this.ndn = null;
     this.socket = null; // nsISocketTransport
     this.outStream = null;
-    this.connectedHost = null;
-    this.connectedPort = null;
+    this.connectedHost = null; // Read by NDN.
+    this.connectedPort = null; // Read by NDN.
     
     this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
         (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
@@ -23,11 +23,12 @@ var XpcomTransport = function XpcomTransport() {
 };
 
 /*
- * Connect to the host and port in ndn.  This replaces a previous connection.
+ * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
  *    ndn.onReceivedElement(element).
  */
-XpcomTransport.prototype.connect = function(ndn) {
+XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -69,6 +70,8 @@ XpcomTransport.prototype.connect = function(ndn) {
 	
 	pump.init(inStream, -1, -1, 0, 0, true);
     pump.asyncRead(dataListener, null);
+    
+    onopenCallback();
 };
 
 /*
@@ -84,13 +87,3 @@ XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
 	this.outStream.write(rawDataString, rawDataString.length);
 	this.outStream.flush();
 };
-
-XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    var thisXpcomTransport = this;
-    
-    if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port)
-      this.connect(ndn);
-    
-    ndn.expressInterestHelper(interest, closure);
-};
-

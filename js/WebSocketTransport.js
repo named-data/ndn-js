@@ -5,8 +5,8 @@
 
 var WebSocketTransport = function WebSocketTransport() {    
 	this.ws = null;
-    this.connectedHost = null;
-    this.connectedPort = null;
+    this.connectedHost = null; // Read by NDN.
+    this.connectedPort = null; // Read by NDN.
     this.elementReader = null;
     this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -14,6 +14,12 @@ var WebSocketTransport = function WebSocketTransport() {
          9696);
 };
 
+/*
+ * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ *   and connectedPort.  Once connected, call onopenCallback().
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    ndn.onReceivedElement(element).
+ */
 WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 	if (this.ws != null)
 		delete this.ws;
@@ -94,10 +100,3 @@ WebSocketTransport.prototype.send = function(data) {
 	else
 		console.log('WebSocket connection is not established.');
 }
-
-WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port)
-        this.connect(ndn, function() { ndn.expressInterestHelper(interest, closure); });
-    else
-        ndn.expressInterestHelper(interest, closure);
-};

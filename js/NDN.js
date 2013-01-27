@@ -168,15 +168,29 @@ NDN.prototype.expressInterest = function(
         else {
             var thisNDN = this;
             this.connectAndExecute
-                (function() { thisNDN.transport.expressInterest(thisNDN, interest, closure); });
+                (function() { thisNDN.reconnectAndExpressInterest(interest, closure); });
         }
     }
     else
-        this.transport.expressInterest(this, interest, closure);
+        this.reconnectAndExpressInterest(interest, closure);
 };
 
 /*
- * Do the work of expressInterest once we know we are connected.  Set the PITTable and call
+ * If the host and port are different than the ones in this.transport, then call
+ *   this.transport.connect to change the connection (or connect for the first time).
+ * Then call expressInterestHelper.
+ */
+NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
+    if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
+        var thisNDN = this;
+        this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
+    }
+    else
+        this.expressInterestHelper(interest, closure);
+};
+
+/*
+ * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
@@ -220,8 +234,8 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
             var interest = new Interest(NDN.ccndIdFetcher);
     		interest.interestLifetime = 4000; // milliseconds
             if (LOG>3) console.log('Expressing interest for ccndid from ccnd.');
-            thisNDN.transport.expressInterest
-               (thisNDN, interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
+            thisNDN.reconnectAndExpressInterest
+               (interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
         }
         else	
             thisNDN.registerPrefixHelper(name, closure, flag);
@@ -504,8 +518,8 @@ NDN.prototype.connectAndExecute = function(onConnected) {
         thisNDN.connectAndExecute(onConnected);
 	}, 3000);
   
-    this.transport.expressInterest
-        (this, interest, new NDN.ConnectClosure(this, onConnected, timerID));
+    this.reconnectAndExpressInterest
+        (interest, new NDN.ConnectClosure(this, onConnected, timerID));
 };
 
 NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {

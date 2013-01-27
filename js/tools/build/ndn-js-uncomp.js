@@ -70,8 +70,8 @@ UpcallInfo.prototype.toString = function() {
 
 var WebSocketTransport = function WebSocketTransport() {    
 	this.ws = null;
-    this.connectedHost = null;
-    this.connectedPort = null;
+    this.connectedHost = null; // Read by NDN.
+    this.connectedPort = null; // Read by NDN.
     this.elementReader = null;
     this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -79,6 +79,12 @@ var WebSocketTransport = function WebSocketTransport() {
          9696);
 };
 
+/*
+ * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ *   and connectedPort.  Once connected, call onopenCallback().
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    ndn.onReceivedElement(element).
+ */
 WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 	if (this.ws != null)
 		delete this.ws;
@@ -159,13 +165,6 @@ WebSocketTransport.prototype.send = function(data) {
 	else
 		console.log('WebSocket connection is not established.');
 }
-
-WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port)
-        this.connect(ndn, function() { ndn.expressInterestHelper(interest, closure); });
-    else
-        ndn.expressInterestHelper(interest, closure);
-};
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -7640,15 +7639,29 @@ NDN.prototype.expressInterest = function(
         else {
             var thisNDN = this;
             this.connectAndExecute
-                (function() { thisNDN.transport.expressInterest(thisNDN, interest, closure); });
+                (function() { thisNDN.reconnectAndExpressInterest(interest, closure); });
         }
     }
     else
-        this.transport.expressInterest(this, interest, closure);
+        this.reconnectAndExpressInterest(interest, closure);
 };
 
 /*
- * Do the work of expressInterest once we know we are connected.  Set the PITTable and call
+ * If the host and port are different than the ones in this.transport, then call
+ *   this.transport.connect to change the connection (or connect for the first time).
+ * Then call expressInterestHelper.
+ */
+NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
+    if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
+        var thisNDN = this;
+        this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
+    }
+    else
+        this.expressInterestHelper(interest, closure);
+};
+
+/*
+ * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
@@ -7692,8 +7705,8 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
             var interest = new Interest(NDN.ccndIdFetcher);
     		interest.interestLifetime = 4000; // milliseconds
             if (LOG>3) console.log('Expressing interest for ccndid from ccnd.');
-            thisNDN.transport.expressInterest
-               (thisNDN, interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
+            thisNDN.reconnectAndExpressInterest
+               (interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
         }
         else	
             thisNDN.registerPrefixHelper(name, closure, flag);
@@ -7976,8 +7989,8 @@ NDN.prototype.connectAndExecute = function(onConnected) {
         thisNDN.connectAndExecute(onConnected);
 	}, 3000);
   
-    this.transport.expressInterest
-        (this, interest, new NDN.ConnectClosure(this, onConnected, timerID));
+    this.reconnectAndExpressInterest
+        (interest, new NDN.ConnectClosure(this, onConnected, timerID));
 };
 
 NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {
