@@ -7666,8 +7666,11 @@ NDN.prototype.expressInterest = function(
 	if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
             console.log('ERROR: host OR port NOT SET');
-        else
-            this.connectAndExpressInterest(interest, closure);
+        else {
+            var thisNDN = this;
+            this.connectAndExecute
+                (function() { thisNDN.transport.expressInterest(thisNDN, interest, closure); });
+        }
     }
     else
         this.transport.expressInterest(this, interest, closure);
@@ -7898,9 +7901,9 @@ NDN.prototype.onReceivedElement = function(element) {
 
 /*
  * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
- *   is not alive.  Get a host and port, connect, then express callerInterest with callerClosure.
+ *   is not alive.  Get a host and port, connect, then execute onConnected().
  */
-NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure) {
+NDN.prototype.connectAndExecute = function(onConnected) {
     var hostAndPort = this.getHostAndPort();
     if (hostAndPort == null) {
         console.log('ERROR: No more hosts from getHostAndPort');
@@ -7916,7 +7919,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
         
     this.host = hostAndPort.host;
     this.port = hostAndPort.port;   
-    console.log("Trying host from getHostAndPort: " + this.host);
+    if (LOG>3) console.log("Connect: trying host from getHostAndPort: " + this.host);
     
     // Fetch any content.
     var interest = new Interest(new Name("/"));
@@ -7924,22 +7927,21 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
-        console.log("Timeout waiting for host " + thisNDN.host);
+        if (LOG>3) console.log("Connect: timeout waiting for host " + thisNDN.host);
         // Try again.
-        thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
+        thisNDN.connectAndExecute(onConnected);
 	}, 3000);
   
     this.transport.expressInterest
-        (this, interest, new NDN.ConnectClosure(this, callerInterest, callerClosure, timerID));
+        (this, interest, new NDN.ConnectClosure(this, onConnected, timerID));
 };
 
-NDN.ConnectClosure = function ConnectClosure(ndn, callerInterest, callerClosure, timerID) {
+NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {
     // Inherit from Closure.
     Closure.call(this);
     
     this.ndn = ndn;
-    this.callerInterest = callerInterest;
-    this.callerClosure = callerClosure;
+    this.onConnected = onConnected;
     this.timerID = timerID;
 };
 
@@ -7949,10 +7951,9 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
         // The upcall is not for us.
         return Closure.RESULT_ERR;
         
-    // The host is alive, so cancel the timeout and issue the caller's interest.
+    // The host is alive, so cancel the timeout and continue with onConnected().
     clearTimeout(this.timerID);
-    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
-    this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
+    this.onConnected();
 
     return Closure.RESULT_OK;
 };

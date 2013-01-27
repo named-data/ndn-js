@@ -86,6 +86,7 @@ XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
 };
 
 XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
+    console.log("expressInterest " + interest.name.to_uri());
     var thisXpcomTransport = this;
     
     if (this.socket == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
@@ -139,6 +140,7 @@ XpcomTransport.prototype.expressInterest = function(ndn, interest, closure) {
 	  }
       
       this.connect(ndn, elementListener);
+// DEBUG      this.connect(ndn, ndn);
     }
     
 	//TODO: check local content store first
