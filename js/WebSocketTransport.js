@@ -5,6 +5,8 @@
 
 var WebSocketTransport = function WebSocketTransport() {    
 	this.ws = null;
+    this.connectedHost = null;
+    this.connectedPort = null;
     this.elementReader = null;
     this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -12,12 +14,14 @@ var WebSocketTransport = function WebSocketTransport() {
          9696);
 };
 
-WebSocketTransport.prototype.connectWebSocket = function(ndn) {
+WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 	if (this.ws != null)
 		delete this.ws;
 	
 	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
 	if (LOG > 0) console.log('ws connection created.');
+    this.connectedHost = ndn.host;
+    this.connectedPort = ndn.port;
 	
 	this.ws.binaryType = "arraybuffer";
 	
@@ -48,11 +52,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log(ev);
 		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-
-		// Fetch ccndid now
-		var interest = new Interest(NDN.ccndIdFetcher);
-		interest.interestLifetime = 4000; // milliseconds
-        self.send(encodeToBinaryInterest(interest));
+        // NDN.registerPrefix will fetch the ccndid when needed.
+        
+        onopenCallback();
 	}
 	
 	this.ws.onerror = function(ev) {
@@ -94,11 +96,15 @@ WebSocketTransport.prototype.send = function(data) {
 }
 
 WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    if (ndn.readyStatus != NDN.OPENED) {
-		console.log('Connection is not established.');
-        return;
+    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
+        var self = this;
+        this.connect(ndn, function() { self.expressInterestHelper(ndn, interest, closure); });
     }
-    
+    else
+        this.expressInterestHelper(ndn, interest, closure);
+};
+
+WebSocketTransport.prototype.expressInterestHelper = function(ndn, interest, closure) {
 	//TODO: check local content store first
 	if (closure != null) {
 		var pitEntry = new PITEntry(interest, closure);
@@ -129,4 +135,3 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 
 	this.send(encodeToBinaryInterest(interest));
 };
-

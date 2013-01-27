@@ -70,6 +70,8 @@ UpcallInfo.prototype.toString = function() {
 
 var WebSocketTransport = function WebSocketTransport() {    
 	this.ws = null;
+    this.connectedHost = null;
+    this.connectedPort = null;
     this.elementReader = null;
     this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -77,12 +79,14 @@ var WebSocketTransport = function WebSocketTransport() {
          9696);
 };
 
-WebSocketTransport.prototype.connectWebSocket = function(ndn) {
+WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 	if (this.ws != null)
 		delete this.ws;
 	
 	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
 	if (LOG > 0) console.log('ws connection created.');
+    this.connectedHost = ndn.host;
+    this.connectedPort = ndn.port;
 	
 	this.ws.binaryType = "arraybuffer";
 	
@@ -113,11 +117,9 @@ WebSocketTransport.prototype.connectWebSocket = function(ndn) {
 		if (LOG > 3) console.log(ev);
 		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-
-		// Fetch ccndid now
-		var interest = new Interest(NDN.ccndIdFetcher);
-		interest.interestLifetime = 4000; // milliseconds
-        self.send(encodeToBinaryInterest(interest));
+        // NDN.registerPrefix will fetch the ccndid when needed.
+        
+        onopenCallback();
 	}
 	
 	this.ws.onerror = function(ev) {
@@ -159,11 +161,15 @@ WebSocketTransport.prototype.send = function(data) {
 }
 
 WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) {
-    if (ndn.readyStatus != NDN.OPENED) {
-		console.log('Connection is not established.');
-        return;
+    if (this.ws == null || this.connectedHost != ndn.host || this.connectedPort != ndn.port) {
+        var self = this;
+        this.connect(ndn, function() { self.expressInterestHelper(ndn, interest, closure); });
     }
-    
+    else
+        this.expressInterestHelper(ndn, interest, closure);
+};
+
+WebSocketTransport.prototype.expressInterestHelper = function(ndn, interest, closure) {
 	//TODO: check local content store first
 	if (closure != null) {
 		var pitEntry = new PITEntry(interest, closure);
@@ -194,7 +200,6 @@ WebSocketTransport.prototype.expressInterest = function(ndn, interest, closure) 
 
 	this.send(encodeToBinaryInterest(interest));
 };
-
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -7512,7 +7517,7 @@ var LOG = 0;
  * {
  *   getTransport: function() { return new WebSocketTransport(); }
  *   getHostAndPort: transport.defaultGetHostAndPort,
- *   host: 'localhost', // If null, use getHostAndPort when connecting.
+ *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696,
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
@@ -7526,7 +7531,7 @@ var NDN = function NDN(settings) {
     var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
     this.transport = getTransport();
     this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
-	this.host = (settings.host !== undefined ? settings.host : 'localhost');
+	this.host = (settings.host !== undefined ? settings.host : null);
 	this.port = (settings.port || 9696);
     this.readyStatus = NDN.UNOPEN;
     this.verify = (settings.verify !== undefined ? settings.verify : true);
@@ -7677,16 +7682,74 @@ NDN.prototype.expressInterest = function(
 };
 
 NDN.prototype.registerPrefix = function(name, closure, flag) {
-    if (this.readyStatus != NDN.OPENED) {
-		console.log('Connection is not established.');
-        return -1;
-    }
+    var thisNDN = this;
+    var onConnected = function() {
+    	if (thisNDN.ccndid == null) {
+            // Fetch ccndid first, then register.
+            var interest = new Interest(NDN.ccndIdFetcher);
+    		interest.interestLifetime = 4000; // milliseconds
+            if (LOG>3) console.log('Expressing interest for ccndid from ccnd.');
+            thisNDN.transport.expressInterest
+               (thisNDN, interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
+        }
+        else	
+            thisNDN.registerPrefixHelper(name, closure, flag);
+    };
 
-	if (this.ccndid == null) {
-		console.log('ccnd node ID unkonwn. Cannot register prefix.');
-		return -1;
+	if (this.host == null || this.port == null) {
+        if (this.getHostAndPort == null)
+            console.log('ERROR: host OR port NOT SET');
+        else
+            this.connectAndExecute(onConnected);
+    }
+    else
+        onConnected();
+};
+
+/*
+ * This is a closure to receive the ContentObject for NDN.ccndIdFetcher and call
+ *   registerPrefixHelper(name, callerClosure, flag).
+ */
+NDN.FetchCcndidClosure = function FetchCcndidClosure(ndn, name, callerClosure, flag) {
+    // Inherit from Closure.
+    Closure.call(this);
+    
+    this.ndn = ndn;
+    this.name = name;
+    this.callerClosure = callerClosure;
+    this.flag = flag;
+};
+
+NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
+    if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+        console.log("Timeout while requesting the ccndid.  Cannot registerPrefix for " +
+            this.name.to_uri() + " .");
+        return Closure.RESULT_OK;
+    }
+    if (!(kind == Closure.UPCALL_CONTENT ||
+          kind == Closure.UPCALL_CONTENT_UNVERIFIED))
+        // The upcall is not for us.
+        return Closure.RESULT_ERR;
+       
+    var co = upcallInfo.contentObject;
+    if (!co.signedInfo || !co.signedInfo.publisher 
+		|| !co.signedInfo.publisher.publisherPublicKeyDigest)
+        console.log
+          ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ccndid and registerPrefix for "
+           + this.name.to_uri() + " .");
+    else {
+		if (LOG>3) console.log('Got ccndid from ccnd.');
+		this.ndn.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
+		if (LOG>3) console.log(this.ndn.ccndid);
+        
+        this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flag);
 	}
-		
+    
+    return Closure.RESULT_OK;
+};
+
+// Do the work of registerPrefix once we know we are connected with a ccndid.
+NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
 	var bytes = encodeForwardingEntry(fe);
 		
@@ -7709,8 +7772,6 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
 	NDN.CSTable.push(csEntry);
     
     this.transport.send(encodeToBinaryInterest(interest));
-		
-	return 0;
 };
 
 /*
@@ -7744,154 +7805,132 @@ NDN.prototype.onReceivedElement = function(element) {
 		var co = new ContentObject();
 		co.from_ccnb(decoder);
 				
-		if (this.ccndid == null && NDN.ccndIdFetcher.match(co.name)) {
-			// We are in starting phase, record publisherPublicKeyDigest in ccndid
-			if(!co.signedInfo || !co.signedInfo.publisher 
-				|| !co.signedInfo.publisher.publisherPublicKeyDigest) {
-				console.log("Cannot contact router, close NDN now.");
+		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+		if (pitEntry != null) {
+			//console.log(pitEntry);
+			// Remove PIT entry from NDN.PITTable
+			var index = NDN.PITTable.indexOf(pitEntry);
+			if (index >= 0)
+				NDN.PITTable.splice(index, 1);
 						
-				// Close NDN if we fail to connect to a ccn router
-				this.readyStatus = NDN.CLOSED;
-				this.onclose();
-				//console.log("NDN.onclose event fired.");
-			} else {
-				if (LOG>3) console.log('Connected to ccnd.');
-				this.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
-				if (LOG>3) console.log(ndn.ccndid);
+			var currentClosure = pitEntry.closure;
 						
-				// Call NDN.onopen after success
-				this.readyStatus = NDN.OPENED;
-				this.onopen();
-				//console.log("NDN.onopen event fired.");
+			// Cancel interest timer
+			clearTimeout(pitEntry.timerID);
+			//console.log("Clear interest timer");
+			//console.log(currentClosure.timerID);
+				
+			if (this.verify == false) {
+				// Pass content up without verifying the signature
+				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
+				return;
 			}
-		} else {
-			var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-			if (pitEntry != null) {
-				//console.log(pitEntry);
-				// Remove PIT entry from NDN.PITTable
-				var index = NDN.PITTable.indexOf(pitEntry);
-				if (index >= 0)
-					NDN.PITTable.splice(index, 1);
-						
-				var currentClosure = pitEntry.closure;
-						
-				// Cancel interest timer
-				clearTimeout(pitEntry.timerID);
-				//console.log("Clear interest timer");
-				//console.log(currentClosure.timerID);
 				
-				if (this.verify == false) {
-					// Pass content up without verifying the signature
-					currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
-					return;
+			// Key verification
+						
+			// Recursive key fetching & verification closure
+			var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
+				this.contentObject = content;  // unverified content object
+				this.closure = closure;  // closure corresponding to the contentObject
+				this.keyName = key;  // name of current key to be fetched
+				this.sigHex = sig;  // hex signature string to be verified
+				this.witness = wit;
+						
+				Closure.call(this);
+			};
+						
+            var thisNDN = this;
+			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
+				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+					console.log("In KeyFetchClosure.upcall: interest time out.");
+					console.log(this.keyName.contentName.getName());
+				} else if (kind == Closure.UPCALL_CONTENT) {
+					//console.log("In KeyFetchClosure.upcall: signature verification passed");
+								
+					var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
+					var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
+								
+					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+					//console.log("raise encapsulated closure");
+					this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.contentObject));
+								
+					// Store key in cache
+					var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+					NDN.addKeyEntry(keyEntry);
+					//console.log(NDN.KeyStore);
+				} else if (kind == Closure.UPCALL_CONTENT_BAD) {
+					console.log("In KeyFetchClosure.upcall: signature verification failed");
 				}
-				
-				// Key verification
+			};
 						
-				// Recursive key fetching & verification closure
-				var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-					this.contentObject = content;  // unverified content object
-					this.closure = closure;  // closure corresponding to the contentObject
-					this.keyName = key;  // name of current key to be fetched
-					this.sigHex = sig;  // hex signature string to be verified
-					this.witness = wit;
-						
-					Closure.call(this);
-				};
-						
-                var thisNdn = this;
-				KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
-					if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-						console.log("In KeyFetchClosure.upcall: interest time out.");
-						console.log(this.keyName.contentName.getName());
-					} else if (kind == Closure.UPCALL_CONTENT) {
-						//console.log("In KeyFetchClosure.upcall: signature verification passed");
-								
-						var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
-						var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
-								
-						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-						//console.log("raise encapsulated closure");
-						this.closure.upcall(flag, new UpcallInfo(thisNdn, null, 0, this.contentObject));
-								
-						// Store key in cache
-						var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-						NDN.addKeyEntry(keyEntry);
-						//console.log(NDN.KeyStore);
-					} else if (kind == Closure.UPCALL_CONTENT_BAD) {
-						console.log("In KeyFetchClosure.upcall: signature verification failed");
-					}
-				};
-						
-				if (co.signedInfo && co.signedInfo.locator && co.signature) {
-					if (LOG > 3) console.log("Key verification...");
-					var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+			if (co.signedInfo && co.signedInfo.locator && co.signature) {
+				if (LOG > 3) console.log("Key verification...");
+				var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
 							
-					var wit = null;
-					if (co.signature.Witness != null) {
-						wit = new Witness();
-						wit.decode(co.signature.Witness);
-					}
+				var wit = null;
+				if (co.signature.Witness != null) {
+					wit = new Witness();
+					wit.decode(co.signature.Witness);
+				}
 							
-					var keylocator = co.signedInfo.locator;
-					if (keylocator.type == KeyLocatorType.KEYNAME) {
-						if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-						//var keyname = keylocator.keyName.contentName.getName();
-						//console.log(nameStr);
-						//console.log(keyname);
+				var keylocator = co.signedInfo.locator;
+				if (keylocator.type == KeyLocatorType.KEYNAME) {
+					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+					//var keyname = keylocator.keyName.contentName.getName();
+					//console.log(nameStr);
+					//console.log(keyname);
 								
-						if (keylocator.keyName.contentName.match(co.name)) {
-							if (LOG > 3) console.log("Content is key itself");
+					if (keylocator.keyName.contentName.match(co.name)) {
+						if (LOG > 3) console.log("Content is key itself");
 									
-							var rsakey = decodeSubjectPublicKeyInfo(co.content);
+						var rsakey = decodeSubjectPublicKeyInfo(co.content);
+						var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+									
+						currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
+									
+						// SWT: We don't need to store key here since the same key will be
+						//      stored again in the closure.
+						//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+						//NDN.addKeyEntry(keyEntry);
+						//console.log(NDN.KeyStore);
+					} else {
+						// Check local key store
+						var keyEntry = NDN.getKeyByName(keylocator.keyName);
+						if (keyEntry) {
+							// Key found, verify now
+							if (LOG > 3) console.log("Local key cache hit");
+							var rsakey = keyEntry.rsaKey;
 							var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
 							var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-									
-							currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
-									
-							// SWT: We don't need to store key here since the same key will be
-							//      stored again in the closure.
-							//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-							//NDN.addKeyEntry(keyEntry);
-							//console.log(NDN.KeyStore);
-						} else {
-							// Check local key store
-							var keyEntry = NDN.getKeyByName(keylocator.keyName);
-							if (keyEntry) {
-								// Key found, verify now
-								if (LOG > 3) console.log("Local key cache hit");
-								var rsakey = keyEntry.rsaKey;
-								var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-								var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 										
-								// Raise callback
-								currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
-							} else {
-								// Not found, fetch now
-								if (LOG > 3) console.log("Fetch key according to keylocator");
-								var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
-								this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
-							}
+							// Raise callback
+							currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
+						} else {
+							// Not found, fetch now
+							if (LOG > 3) console.log("Fetch key according to keylocator");
+							var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+							this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
 						}
-					} else if (keylocator.type == KeyLocatorType.KEY) {
-						if (LOG > 3) console.log("Keylocator contains KEY");
-								
-						var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
-						var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-								
-						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-						// Raise callback
-						currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, null, 0, co));
-								
-						// Since KeyLocator does not contain key name for this key,
-						// we have no way to store it as a key entry in KeyStore.
-					} else {
-						var cert = keylocator.certificate;
-						console.log("KeyLocator contains CERT");
-						console.log(cert);
-								
-						// TODO: verify certificate
 					}
+				} else if (keylocator.type == KeyLocatorType.KEY) {
+					if (LOG > 3) console.log("Keylocator contains KEY");
+								
+					var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+					var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+							
+					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+					// Raise callback
+					currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, null, 0, co));
+								
+					// Since KeyLocator does not contain key name for this key,
+					// we have no way to store it as a key entry in KeyStore.
+				} else {
+					var cert = keylocator.certificate;
+					console.log("KeyLocator contains CERT");
+					console.log(cert);
+								
+					// TODO: verify certificate
 				}
 			}
 		}
@@ -7953,6 +7992,11 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
         
     // The host is alive, so cancel the timeout and continue with onConnected().
     clearTimeout(this.timerID);
+
+    // Call NDN.onopen after success
+	this.ndn.readyStatus = NDN.OPENED;
+	this.ndn.onopen();
+
     this.onConnected();
 
     return Closure.RESULT_OK;
