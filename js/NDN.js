@@ -415,7 +415,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
         
     this.host = hostAndPort.host;
     this.port = hostAndPort.port;   
-    console.log("Trying host from getHostAndPort: " + this.host);
+    if (LOG>3) console.log("Trying host from getHostAndPort: " + this.host);
     
     // Fetch any content.
     var interest = new Interest(new Name("/"));
@@ -423,7 +423,7 @@ NDN.prototype.connectAndExpressInterest = function(callerInterest, callerClosure
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
-        console.log("Timeout waiting for host " + thisNDN.host);
+        if (LOG>3) console.log("Timeout waiting for host " + thisNDN.host);
         // Try again.
         thisNDN.connectAndExpressInterest(callerInterest, callerClosure);
 	}, 3000);
@@ -450,7 +450,7 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
         
     // The host is alive, so cancel the timeout and issue the caller's interest.
     clearTimeout(this.timerID);
-    console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
+    if (LOG>3) console.log(this.ndn.host + ": Host is alive. Fetching callerInterest.");
     this.ndn.transport.expressInterest(this.ndn, this.callerInterest, this.callerClosure);
 
     return Closure.RESULT_OK;
