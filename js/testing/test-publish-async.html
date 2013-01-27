@@ -15,11 +15,6 @@
 	
 	<script type="text/javascript">
 		var ndn = new NDN();
-        ndn.transport.connectWebSocket(ndn);
-        
-        ndn.onopen = function() {
-        	document.getElementById("testBtn").disabled = false;
-        };
         
         var AsyncPutClosure = function AsyncPutClosure() {
         	// Inherit from Closure.
@@ -31,6 +26,7 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_INTEREST) {
 				console.log('AsyncPutClosure.upcall() called.');
+                console.log("Host: " + ndn.host + ":" + ndn.port);
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
 				var nameStr = interest.name.getName();
@@ -50,10 +46,10 @@
 		function run() {
 			var contentName = document.getElementById('contentname').value;		
 			
-			var result = ndn.registerPrefix(new Name(contentName), new AsyncPutClosure());
+			ndn.registerPrefix(new Name(contentName), new AsyncPutClosure());
 			
 			document.getElementById('result').innerHTML = 'Content name \'' + contentName 
-					+'\' published. Result: ' + result;
+					+'\' published.';
 		}
 	
 		</script>
@@ -74,7 +70,7 @@
 		</div>
 	</form>
 	<div>
-		<button id="testBtn" onclick="run()" disabled="disabled">Publish Content</button>
+		<button id="testBtn" onclick="run()">Publish Content</button>
 	</div>
 	
 	<p id="result"></p>

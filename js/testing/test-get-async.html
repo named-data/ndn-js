@@ -13,12 +13,7 @@
 	<script type="text/javascript" src="../tools/build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		var ndn = new NDN({port:9696,host:"localhost"});
-        ndn.transport.connectWebSocket(ndn);
-        
-        ndn.onopen = function() {
-        	document.getElementById("testBtn").disabled = false;
-        };
+		var ndn = new NDN();
         
         var AsyncGetClosure = function AsyncGetClosure() {
         	// Inherit from Closure.
@@ -31,6 +26,7 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_CONTENT) {
 				console.log("Closure.upcall: content signature verification pass.");
+                console.log("Host: " + ndn.host + ":" + ndn.port);
 				var content = upcallInfo.contentObject;
 				//console.log(content.name);
 				nameStr = escape(content.name.getName());
@@ -43,12 +39,14 @@
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
 				var content = upcallInfo.contentObject;
 				console.log("Closure.upcall: content signature verification fail.");
+                console.log("Host: " + ndn.host + ":" + ndn.port);
 				if (content.signature.signature)
 					console.log("Signature: " + DataUtils.toHex(content.signature.signature).toLowerCase());
 				if (content.signature.Witness)
 					console.log("Witness: " + DataUtils.toHex(content.signature.Witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out.");
+                console.log("Host: " + ndn.host + ":" + ndn.port);
 			}
 			return Closure.RESULT_OK;
 		};
@@ -68,7 +66,7 @@
 		<input id="interest" type="text" name="INTEREST" size="50" value="/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY" /> 
 	</form>
 
-	<button id="testBtn" onclick="run()" disabled="disabled">Fetch Content</button>
+	<button id="testBtn" onclick="run()">Fetch Content</button>
 	
 	<p id="content">Content: <br/></p>
 
