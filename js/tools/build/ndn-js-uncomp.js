@@ -1429,22 +1429,20 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
  * Exclude
  */
 var Exclude = function Exclude(_values){ 
-	
 	this.OPTIMUM_FILTER_SIZE = 100;
-	
-
 	this.values = _values; //array of elements
-	
 }
 
 Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-
-
-		
 		decoder.readStartElement(this.getElementLabel());
 
-		//TODO APPLY FILTERS/EXCLUDE
-		
+		//TODO APPLY FILTERS/EXCLUDE.  For now, just skip the element.
+        var structureDecoder = new BinaryXMLStructureDecoder();
+        structureDecoder.seek(decoder.offset);
+        if (!structureDecoder.findElementEnd(decoder.istream))
+            throw new ContentDecodingException(new Error("Cannot find the end of interest Exclude element"));
+        decoder.seek(structureDecoder.offset);
+        
 		//TODO 
 		/*var component;
 		var any = false;
@@ -1455,9 +1453,6 @@ Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			ee.decode(decoder);
 			_values.add(ee);
 		}*/
-
-		decoder.readEndElement();
-
 };
 
 Exclude.prototype.to_ccnb=function(/*XMLEncoder*/ encoder)  {
