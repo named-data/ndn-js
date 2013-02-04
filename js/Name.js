@@ -67,27 +67,16 @@ Name.createNameArray = function(name) {
     
     // Unescape the components.
     for (var i = 0; i < array.length; ++i) {
-        var component = unescape(array[i].trim());
+        var component = Name.fromEscapedString(array[i]);
         
-        if (component.match(/[^.]/) == null) {
-            // Special case for component of only periods.  
-            if (component.length <= 2) {
-                // Zero, one or two periods is illegal.  Ignore this componenent to be
-                //   consistent with the C implmentation.
-                // This also gets rid of a trailing '/'.
-                array.splice(i, 1);
-                --i;  
-                continue;
-            }
-            else
-                // Remove 3 periods.
-                array[i] = component.substr(3, component.length - 3);
+        if (component == null) {
+            // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
+            array.splice(i, 1);
+            --i;  
+            continue;
         }
         else
             array[i] = component;
-        
-        // Change the component to Uint8Array now.
-        array[i] = DataUtils.toNumbersFromString(array[i]);
     }
 
 	return array;
@@ -255,7 +244,7 @@ Name.getComponentContentDigestValue = function(component) {
 Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
 Name.ContentDigestSuffix = new Uint8Array([0x00]);
 
-/**
+/*
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  */
@@ -288,6 +277,27 @@ Name.toEscapedString = function(component) {
     }
     return result;
 };
+
+/*
+ * Return component as a Uint8Array by decoding the escapedString according to "CCNx URI Scheme".
+ * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ */
+Name.fromEscapedString = function(escapedString) {
+    var component = unescape(escapedString.trim());
+        
+    if (component.match(/[^.]/) == null) {
+        // Special case for component of only periods.  
+        if (component.length <= 2)
+            // Zero, one or two periods is illegal.  Ignore this componenent to be
+            //   consistent with the C implementation.
+            return null;
+        else
+            // Remove 3 periods.
+            return DataUtils.toNumbersFromString(component.substr(3, component.length - 3));
+    }
+    else
+        return DataUtils.toNumbersFromString(component);
+}
 
 Name.prototype.match = function(/*Name*/ name) {
 	var i_name = this.components;
