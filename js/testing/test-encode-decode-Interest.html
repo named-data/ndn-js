@@ -27,6 +27,7 @@
             for (i = 0; i < 32; ++i)
                 pkd.push(i);
 			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Uint8Array(pkd));
+            interest.exclude = new Exclude([Name.fromEscapedString("abc"), Exclude.ANY]);
                 
 			var output = encodeToHexInterest(interest);
 			
@@ -46,59 +47,27 @@
 			
 			var output ="";
 			
-			if (interest.name != null && interest.name.components != null) {
-				output += "Name: ";
-				output += interest.name.getName();
-				output += "<br/>";
-			}
-				
-			if (interest.minSuffixComponents != null ) {
-				output += "MinSuffixComponents : ";
-				output +=  interest.minSuffixComponents;
-				output += "<br/>";
-			}
-			
-			if (interest.maxSuffixComponents != null ) {
-				output += "MaxSuffixComponents : ";
-				output +=  interest.maxSuffixComponents;
-				output += "<br/>";
-			}
-	
-			if (interest.publisherPublicKeyDigest != null ) {
-				output += "PublisherPublicKeyDigest: ";
-				output +=  DataUtils.toHex(interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
-				output += "<br/>";
-			}
-			
-			if (interest.childSelector != null ) {
-				output += "ChildSelector: ";
-				output +=  interest.childSelector;
-				output += "<br/>";
-			}
-			
-			if (interest.answerOriginKind != null ) {
-				output += "AnswerOriginKind: ";
-				output +=  interest.answerOriginKind;
-				output += "<br/>";
-			}
-			
-			if (interest.scope != null ) {
-				output += "Scope: ";
-				output +=  interest.scope;
-				output += "<br/>";
-			}
-			
-			if (interest.interestLifetime != null ) {
-				output += "InterestLifetime (milliseconds): ";
-				output +=  interest.interestLifetime;
-				output += "<br/>";
-			}
-	
-			if (interest.nonce != null ) {
-				output += "Nonce: ";
-				output +=  DataUtils.toHex(interest.nonce);
-				output += "<br/>";
-			}
+			if (interest.name != null && interest.name.components != null)
+				output += "Name: " + interest.name.getName() + "<br/>";
+			if (interest.minSuffixComponents != null )
+				output += "MinSuffixComponents : " + interest.minSuffixComponents + "<br/>";
+			if (interest.maxSuffixComponents != null )
+				output += "MaxSuffixComponents : " + interest.maxSuffixComponents + "<br/>";
+			if (interest.publisherPublicKeyDigest != null )
+				output += "PublisherPublicKeyDigest: " + 
+				  DataUtils.toHex(interest.publisherPublicKeyDigest.publisherPublicKeyDigest) + "<br/>";
+			if (interest.childSelector != null )
+				output += "ChildSelector: " + interest.childSelector + "<br/>";
+			if (interest.answerOriginKind != null )
+				output += "AnswerOriginKind: " + interest.answerOriginKind + "<br/>";
+			if (interest.scope != null )
+				output += "Scope: " + interest.scope + "<br/>";
+			if (interest.interestLifetime != null )
+				output += "InterestLifetime (milliseconds): " + interest.interestLifetime + "<br/>";
+			if (interest.nonce != null )
+				output += "Nonce: " + DataUtils.toHex(interest.nonce) + "<br/>";
+			if (interest.exclude != null )
+				output += "Exclude: " + interest.exclude.to_uri() + "<br/>";
 			
 			document.getElementById('result').innerHTML = output;
 		}

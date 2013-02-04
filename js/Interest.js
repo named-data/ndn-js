@@ -118,90 +118,72 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
     return this.name.match(name);
 }
 
-/**
- * Exclude
+/*
+ * Handle the interest Exclude element.
+ * _values is an array where each element is either Uint8Array component or Exclude.ANY.
  */
-var Exclude = function Exclude(_values){ 
-	this.OPTIMUM_FILTER_SIZE = 100;
-	this.values = _values; //array of elements
+var Exclude = function Exclude(_values) { 
+	this.values = (_values || []);
 }
 
+Exclude.ANY = "*";
+
 Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-		decoder.readStartElement(this.getElementLabel());
+	decoder.readStartElement(CCNProtocolDTags.Exclude);
 
-		//TODO APPLY FILTERS/EXCLUDE.  For now, just skip the element.
-        var structureDecoder = new BinaryXMLStructureDecoder();
-        structureDecoder.seek(decoder.offset);
-        if (!structureDecoder.findElementEnd(decoder.istream))
-            throw new ContentDecodingException(new Error("Cannot find the end of interest Exclude element"));
-        decoder.seek(structureDecoder.offset);
+	while (true) {
+        if (decoder.peekStartElement(CCNProtocolDTags.Component))
+            this.values.push(decoder.readBinaryElement(CCNProtocolDTags.Component));
+        else if (decoder.peekStartElement(CCNProtocolDTags.Any)) {
+            decoder.readStartElement(CCNProtocolDTags.Any);
+            decoder.readEndElement();
+            this.values.push(Exclude.ANY);
+        }
+        else if (decoder.peekStartElement(CCNProtocolDTags.Bloom)) {
+            // Skip the Bloom and treat it as Any.
+            decoder.readBinaryElement(CCNProtocolDTags.Bloom);
+            this.values.push(Exclude.ANY);
+        }
+        else
+            break;
+	}
+    
+    decoder.readEndElement();
+};
+
+Exclude.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+	if (this.values == null || this.values.length == 0)
+		return;
+
+	encoder.writeStartElement(CCNProtocolDTags.Exclude);
+    
+    // TODO: Do we want to order the components (except for ANY)?
+    for (var i = 0; i < this.values.length; ++i) {
+        if (this.values[i] == Exclude.ANY) {
+            encoder.writeStartElement(CCNProtocolDTags.Any);
+            encoder.writeEndElement();
+        }
+        else
+            encoder.writeElement(CCNProtocolDTags.Component, this.values[i]);
+    }
+
+	encoder.writeEndElement();
+};
+
+// Return a string with elements separated by "," and Exclude.ANY shown as "*".
+Exclude.prototype.to_uri = function() {
+	if (this.values == null || this.values.length == 0)
+		return "";
+
+    var result = "";
+    for (var i = 0; i < this.values.length; ++i) {
+        if (i > 0)
+            result += ",";
         
-		//TODO 
-		/*var component;
-		var any = false;
-		while ((component = decoder.peekStartElement(CCNProtocolDTags.Component)) || 
-				(any = decoder.peekStartElement(CCNProtocolDTags.Any)) ||
-					decoder.peekStartElement(CCNProtocolDTags.Bloom)) {
-			var ee = component?new ExcludeComponent(): any ? new ExcludeAny() : new BloomFilter();
-			ee.decode(decoder);
-			_values.add(ee);
-		}*/
+        if (this.values[i] == Exclude.ANY)
+            result += "*";
+        else
+            result += Name.toEscapedString(this.values[i]);
+    }
+    return result;
 };
-
-Exclude.prototype.to_ccnb=function(/*XMLEncoder*/ encoder)  {
-		if (!validate()) {
-			throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-		}
-
-		if (empty())
-			return;
-
-		encoder.writeStartElement(getElementLabel());
-
-		encoder.writeEndElement();
-		
-	};
-
-Exclude.prototype.getElementLabel = function() { return CCNProtocolDTags.Exclude; };
-
-
-/**
- * ExcludeAny
- */
-var ExcludeAny = function ExcludeAny() {
-
-};
-
-ExcludeAny.prototype.from_ccnb = function(decoder) {
-		decoder.readStartElement(this.getElementLabel());
-		decoder.readEndElement();
-};
-
-
-ExcludeAny.prototype.to_ccnb = function( encoder) {
-		encoder.writeStartElement(this.getElementLabel());
-		encoder.writeEndElement();
-};
-
-ExcludeAny.prototype.getElementLabel=function() { return CCNProtocolDTags.Any; };
-
-
-/**
- * ExcludeComponent
- */
-var ExcludeComponent = function ExcludeComponent(_body) {
-
-	//TODO Check BODY is an Array of componenets.
-	
-	this.body = _body
-};
-
-ExcludeComponent.prototype.from_ccnb = function( decoder)  {
-		this.body = decoder.readBinaryElement(this.getElementLabel());
-};
-
-ExcludeComponent.prototype.to_ccnb = function(encoder) {
-		encoder.writeElement(this.getElementLabel(), this.body);
-};
-
-ExcludeComponent.prototype.getElementLabel = function() { return CCNProtocolDTags.Component; };
