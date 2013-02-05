@@ -91,7 +91,7 @@ NdnProtocol.prototype = {
                 // Use the same NDN object each time.
                 thisNdnProtocol.ndn.expressInterest(name, 
                     new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
-                            aURI.originCharset, searchWithoutNdn + uriParts.hash, segmentTemplate),
+                            aURI, searchWithoutNdn + uriParts.hash, segmentTemplate),
                     template);
             };
 
@@ -117,13 +117,13 @@ else
  * contentListener is from the call to requestContent.
  * uriEndsWithSegmentNumber is true if the URI passed to newChannel has a segment number
  *    (used to determine whether to request only that segment number and for updating the URL bar).
- * uriOriginCharset is the charset of the URI passed to newChannel (used for making a new URI)
+ * aURI is the URI passed to newChannel.
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
  *    and/or '#' but without the interest selector fields.
  * segmentTemplate is the template used in expressInterest to fetch further segments.
  */                                                
 var ContentClosure = function ContentClosure
-        (ndn, contentListener, uriEndsWithSegmentNumber, uriOriginCharset, uriSearchAndHash, 
+        (ndn, contentListener, uriEndsWithSegmentNumber, aURI, uriSearchAndHash, 
          segmentTemplate) {
     // Inherit from Closure.
     Closure.call(this);
@@ -131,7 +131,7 @@ var ContentClosure = function ContentClosure
     this.ndn = ndn;
     this.contentListener = contentListener;
     this.uriEndsWithSegmentNumber = uriEndsWithSegmentNumber;
-    this.uriOriginCharset = uriOriginCharset;
+    this.aURI = aURI;
     this.uriSearchAndHash = uriSearchAndHash;
     this.segmentTemplate = segmentTemplate;
     
@@ -143,6 +143,24 @@ var ContentClosure = function ContentClosure
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
   try {
+    if (this.contentListener.done)
+        // We are getting unexpected extra results.
+        return Closure.RESULT_ERR;
+    
+    if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+        if (this.segmentStore.store.entries.length == 0) {
+            // We have not received any segments yet, so assume the URI can't be fetched.
+            this.contentListener.onStart("text/plain", "utf-8", this.aURI);
+            this.contentListener.onReceivedContent
+                ("Interest timeout after " + upcallInfo.interest.interestLifetime + " milliseconds.");
+            this.contentListener.onStop();
+            return Closure.RESULT_OK;
+        }
+        else
+            // TODO: re-express the interest a few times.
+            return Closure.RESULT_ERR;
+    }  
+      
     if (!(kind == Closure.UPCALL_CONTENT ||
           kind == Closure.UPCALL_CONTENT_UNVERIFIED))
         // The upcall is not for us.
@@ -184,7 +202,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var contentTypeEtc = getNameContentTypeAndCharset(contentObject.name);
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
-            ioService.newURI(contentUriSpec, this.uriOriginCharset, null));
+            ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
     }
 
     if (segmentNumber == null) {
