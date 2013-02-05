@@ -7,8 +7,17 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <toolbox id="navigator-toolbox">
   <toolbar id="NdnToolbar" toolbarname="ndnToolbar" >
       <label value="NDN"/>
+      <toolbarseparator/>
+      <label value="Get Version:"/>
+      <toolbarbutton id="ndnToolbarGetEarliestButton"
+        label="Earliest" oncommand="ndnToolbarGetVersion('earliest')"/>
+      <toolbarbutton id="ndnToolbarGetPrevButton"
+        label="Prev." oncommand="ndnToolbarGetVersion('previous')"/>
+      <toolbarbutton id="ndnToolbarGetNextButton"
+        label="Next" oncommand="ndnToolbarGetVersion('next')"/>
       <toolbarbutton id="ndnToolbarGetLatestButton"
-        label="Get Latest" oncommand="ndnToolbarGetLatest(event)"/>
+        label="Latest" oncommand="ndnToolbarGetVersion('latest')"/>
+      <toolbarseparator/>
       <label id="ndnHubLabel" value="Hub: not connected"/>
   </toolbar>
 </toolbox>

@@ -1,7 +1,8 @@
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
-function ndnToolbarGetLatest(event) {
+function ndnToolbarGetVersion(selector) {
+ try {
   if (window._content.document.location.protocol != "ndn:") {
     alert("The address must start with ndn:");
     return;
@@ -15,13 +16,30 @@ function ndnToolbarGetLatest(event) {
     alert("The ndn address does not have a version");
     return;
   }
+  
+  var escapedVersion = Name.toEscapedString(name.components[indexOfVersion]);
+
+  var childSelector;
+  if (selector == "earliest")
+      childSelector = "ndn.ChildSelector=0";
+  else if (selector == "latest")
+      childSelector = "ndn.ChildSelector=1";
+  else if (selector == "previous")
+      childSelector = "ndn.ChildSelector=1&ndn.Exclude=" + escapedVersion + ",*";
+  else if (selector == "next")
+      childSelector = "ndn.ChildSelector=0&ndn.Exclude=*," + escapedVersion;
+  else
+      // Don't expect this to happen.
+      return;
 
   var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
-  var searchWithChildSelector = 
-      (uriParts.search == "" ? "?" : uriParts.search + "&") + "ndn.ChildSelector=1";
+  var searchWithChildSelector = (uriParts.search == "" ? "?" : uriParts.search + "&") + childSelector;
     
   var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + uriParts.hash;
   window._content.document.location = uri;
+ } catch (ex) {
+       dump("ndnToolbarGetVersion exception: " + ex + "\n" + ex.stack);
+ }
 } 
 
 /*
