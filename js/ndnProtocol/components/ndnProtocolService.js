@@ -425,21 +425,22 @@ function extractNdnSearch(search, template) {
                 
                 if (key == "ndn.MinSuffixComponents" && nonNegativeInt >= 0)
                     template.minSuffixComponents = nonNegativeInt;
-                if (key == "ndn.MaxSuffixComponents" && nonNegativeInt >= 0)
+                else if (key == "ndn.MaxSuffixComponents" && nonNegativeInt >= 0)
                     template.maxSuffixComponents = nonNegativeInt;
-                if (key == "ndn.ChildSelector" && nonNegativeInt >= 0)
+                else if (key == "ndn.ChildSelector" && nonNegativeInt >= 0)
                     template.childSelector = nonNegativeInt;
-                if (key == "ndn.AnswerOriginKind" && nonNegativeInt >= 0)
+                else if (key == "ndn.AnswerOriginKind" && nonNegativeInt >= 0)
                     template.answerOriginKind = nonNegativeInt;
-                if (key == "ndn.Scope" && nonNegativeInt >= 0)
+                else if (key == "ndn.Scope" && nonNegativeInt >= 0)
                     template.scope = nonNegativeInt;
-                if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
+                else if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
                     template.interestLifetime = nonNegativeInt;
-                if (key == "ndn.PublisherPublicKeyDigest" && nonNegativeInt >= 0)
+                else if (key == "ndn.PublisherPublicKeyDigest")
                     template.publisherPublicKeyDigest = DataUtils.toNumbersFromString(unescape(value));
-                if (key == "ndn.Nonce" && nonNegativeInt >= 0)
+                else if (key == "ndn.Nonce")
                     template.nonce = DataUtils.toNumbersFromString(unescape(value));
-                // TODO: handle Exclude.
+                else if (key == "ndn.Exclude")
+                    template.exclude = parseExclude(value);
             }
         
             // Remove the "ndn." term and don't advance i.
@@ -453,4 +454,22 @@ function extractNdnSearch(search, template) {
         return "";
     else
         return "?" + terms.join('&');
+}
+
+/*
+ * Parse the comma-separated list of exclude components and return an Exclude. 
+ */
+function parseExclude(value) {
+    var excludeValues = [];
+    
+    var splitValue = value.split(',');
+    for (var i = 0; i < splitValue.length; ++i) {
+        var element = splitValue[i].trim();
+        if (element == "*")
+            excludeValues.push("*")
+        else
+            excludeValues.push(Name.fromEscapedString(element));
+    }
+
+    return new Exclude(excludeValues);
 }

@@ -153,8 +153,7 @@ ndn.Scope= non-negative int
 ndn.InterestLifetime= non-negative int (milliseconds)
 ndn.PublisherPublicKeyDigest= % escaped value
 ndn.Nonce= % escaped value
-
-TODO: implement ndn.Exclude. 
+ndn.Exclude= comma-separated list of % escaped values or * for ANY
 
 * Multiple segments in the ndn protocol
 
