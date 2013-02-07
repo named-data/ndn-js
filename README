@@ -122,15 +122,12 @@ or use js/ndnProtocol.xpi in the distribution.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
 ndnProtocol.xpi.  Restart Firefox.
 
-Firefox uses the protocol extension to load any URI starting with ndn, for example
-ndn:/ndn/ucla.edu/apps/lwndn-test/trig-table
+Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples
+ndn:/ndn/ucla.edu/apps/ndn-js-test/NDNProtocolExamples.html?ndn.ChildSelector=1
 
 When the page is loaded, Firefox updates the address bar with the full matched name from
 the retrieved content object including the version, but without the implicit digest or
 segment number (see below).
-
-
-
 
 * Interest selectors in the ndn protocol:
 
@@ -162,6 +159,7 @@ number, just retrieve that segment and return the content to the browser.
 
 Otherwise look at the name in the returned ContentObject.  If the returned name has no
 segment number, just return the content to the browser. If the name has a segment number
-which isn't 0, store it and express an interest for segment 0. Read segments in order and
-return each content to the browser as we go until we get the segment for FinalBlockID.
+which isn't 0, store it and express an interest for segment 0. Also express an interest for
+the highest segment to try to determine the FinalBlockID early. Fetch multiple segments in order and
+return each content to the browser (in order) as the arrive until we get the segment for FinalBlockID.
 
