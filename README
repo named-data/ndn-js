@@ -78,7 +78,6 @@ the tests in testing/
 A simple example of the current API to express an Interest and receive data:
 
 var ndn = new NDN();	// connect to a default hub/proxy
-ndn.transport.connectWebSocket(ndn);
         
 var AsyncGetClosure = function AsyncGetClosure() {
     // Inherit from Closure.
