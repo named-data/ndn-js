@@ -7663,6 +7663,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 	// Set interest timer
     var thisNDN = this;
 	if (closure != null) {
+        var timeoutMilliseconds = (interest.interestLifetime || 4000);
 		pitEntry.timerID = setTimeout(function() {
 			if (LOG > 3) console.log("Interest time out.");
 				
@@ -7677,7 +7678,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 				
 			// Raise closure callback
 			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null));
-		}, interest.interestLifetime);  // interestLifetime is in milliseconds.
+		}, timeoutMilliseconds);
 		//console.log(closure.timerID);
 	}
 
