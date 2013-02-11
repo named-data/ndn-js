@@ -114,8 +114,26 @@ Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
 
 };
 
+/*
+ * Return true if this.name.match(name) and the name conforms to the interest selectors.
+ */
 Interest.prototype.matches_name = function(/*Name*/ name) {
-    return this.name.match(name);
+    if (!this.name.match(name))
+        return false;
+    
+    if (this.minSuffixComponents != null &&
+        // Add 1 for the implicit digest.
+        !(name.components.length + 1 - this.name.components.length >= this.minSuffixComponents))
+        return false;
+    if (this.maxSuffixComponents != null &&
+        // Add 1 for the implicit digest.
+        !(name.components.length + 1 - this.name.components.length <= this.maxSuffixComponents))
+        return false;
+    if (this.exclude != null && name.components.length > this.name.components.length &&
+        this.exclude.matches(name.components[this.name.components.length]))
+        return false;
+    
+    return true;
 }
 
 /*
@@ -170,7 +188,9 @@ Exclude.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 	encoder.writeEndElement();
 };
 
-// Return a string with elements separated by "," and Exclude.ANY shown as "*".
+/*
+ * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
+ */
 Exclude.prototype.to_uri = function() {
 	if (this.values == null || this.values.length == 0)
 		return "";
@@ -186,4 +206,79 @@ Exclude.prototype.to_uri = function() {
             result += Name.toEscapedString(this.values[i]);
     }
     return result;
+};
+
+/*
+ * Return true if the component matches any of the exclude criteria.
+ */
+Exclude.prototype.matches = function(/*Uint8Array*/ component) {
+    for (var i = 0; i < this.values.length; ++i) {
+        if (this.values[i] == Exclude.ANY) {
+            var lowerBound = null;
+            if (i > 0)
+                lowerBound = this.values[i - 1];
+            
+            // Find the upper bound, possibly skipping over multiple ANY in a row.
+            var iUpperBound;
+            var upperBound = null;
+            for (iUpperBound = i + 1; iUpperBound < this.values.length; ++iUpperBound) {
+                if (this.values[iUpperBound] != Exclude.ANY) {
+                    upperBound = this.values[iUpperBound];
+                    break;
+                }
+            }
+            
+            // If lowerBound != null, we already checked component equals lowerBound on the last pass.
+            // If upperBound != null, we will check component equals upperBound on the next pass.
+            if (upperBound != null) {
+                if (lowerBound != null) {
+                    if (Exclude.compareComponents(component, lowerBound) > 0 &&
+                        Exclude.compareComponents(component, upperBound) < 0)
+                        return true;
+                }
+                else {
+                    if (Exclude.compareComponents(component, upperBound) < 0)
+                        return true;
+                }
+                
+                // Make i equal iUpperBound on the next pass.
+                i = iUpperBound - 1;
+            }
+            else {
+                if (lowerBound != null) {
+                    if (Exclude.compareComponents(component, lowerBound) > 0)
+                        return true;
+                }
+                else
+                    // this.values has only ANY.
+                    return true;
+            }
+        }
+        else {
+            if (DataUtils.arraysEqual(component, this.values[i]))
+                return true;
+        }
+    }
+    
+    return false;
+};
+
+/*
+ * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
+ * A component is less if it is shorter, otherwise if equal length do a byte comparison.
+ */
+Exclude.compareComponents = function(/*Uint8Array*/ component1, /*Uint8Array*/ component2) {
+    if (component1.length < component2.length)
+        return -1;
+    if (component1.length > component2.length)
+        return 1;
+    
+    for (var i = 0; i < component1.length; ++i) {
+        if (component1[i] < component2[i])
+            return -1;
+        if (component1[i] > component2[i])
+            return 1;
+    }
+
+    return 0;
 };

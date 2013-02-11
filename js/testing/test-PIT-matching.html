@@ -1,0 +1,148 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!-- 
+	See COPYING for copyright and distribution information.
+-->
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8"/>
+
+<head>
+	<title>NDN PIT Matching</title>
+	
+	<script type="text/javascript" src="../Helper.js"></script>
+
+	<script type="text/javascript">
+		var ndn = new NDN({verify:false});
+        
+        var AsyncGetClosure = function AsyncGetClosure(target) {
+        	// Inherit from Closure.
+			Closure.call(this);
+            
+            this.target = target;
+		};
+		
+		AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
+			if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
+				document.getElementById(this.target).innerHTML = 
+                    DataUtils.toString(upcallInfo.contentObject.content);
+                return Closure.RESULT_OK;
+            }
+            else
+                return Closure.RESULT_ERR;
+		};
+		
+        var name = new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt");
+        
+        var interestSelector1 = new Interest();
+        interestSelector1.interestLifetime = 10000;
+        interestSelector1.minSuffixComponents = 3;
+        interestSelector1.maxSuffixComponents = 3;
+        
+        var interestSelector2 = new Interest();
+        interestSelector2.interestLifetime = 10000;
+        interestSelector2.minSuffixComponents = 4;
+        interestSelector2.maxSuffixComponents = 4;
+
+        var interestSelector3 = new Interest();
+        interestSelector3.interestLifetime = 10000;
+        interestSelector3.exclude = new Exclude([Exclude.ANY, DataUtils.toNumbersFromString("zzzzzz")]);
+
+        var interestSelector4 = new Interest();
+        interestSelector4.interestLifetime = 10000;
+        interestSelector4.exclude = new Exclude([DataUtils.toNumbersFromString("zzzzzz"), Exclude.ANY]);
+
+		function run() {
+            ndn.onopen = function() {
+              for (var i = 0; i < 10; ++i) {
+                // "col1Content0" is already fetched.
+                if (i != 0)
+                    ndn.expressInterest(name, new AsyncGetClosure("col1Content" + i), interestSelector1);
+                ndn.expressInterest(name, new AsyncGetClosure("col2Content" + i), interestSelector2);
+                ndn.expressInterest(name, new AsyncGetClosure("col3Content" + i), interestSelector3);
+                ndn.expressInterest(name, new AsyncGetClosure("col4Content" + i), interestSelector4);
+              }
+              // For testing, make sure we don't just process in the order returned.
+              DataUtils.shuffle(NDN.PITTable);
+            };
+            
+			ndn.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
+		}
+	</script>	
+</head>
+<body >
+  <button id="runBtn" onclick="run()">Run</button>
+  <table style="text-align: left;" border="1" cellpadding="2" cellspacing="0">
+  <tbody>
+    <tr>
+      <td style="vertical-align: top;">minSuffixComponents=3,<br/>maxSuffixComponents=3<br/>should be:<br/>
+                                       hello</td>
+      <td style="vertical-align: top;">minSuffixComponents=4,<br/>maxSuffixComponents=4<br/>should be:<br/>
+                                       hello world</td>
+      <td style="vertical-align: top;">exclude=*,zzzzzz<br/><br/>should be:<br/>hello</td>
+      <td style="vertical-align: top;">exclude=zzzzzz,*<br/><br/>should be:<br/>hello world</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content0"/></td>
+      <td style="vertical-align: top;"><div id="col2Content0"/></td>
+      <td style="vertical-align: top;"><div id="col3Content0"/></td>
+      <td style="vertical-align: top;"><div id="col4Content0"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content1"/></td>
+      <td style="vertical-align: top;"><div id="col2Content1"/></td>
+      <td style="vertical-align: top;"><div id="col3Content1"/></td>
+      <td style="vertical-align: top;"><div id="col4Content1"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content2"/></td>
+      <td style="vertical-align: top;"><div id="col2Content2"/></td>
+      <td style="vertical-align: top;"><div id="col3Content2"/></td>
+      <td style="vertical-align: top;"><div id="col4Content2"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content3"/></td>
+      <td style="vertical-align: top;"><div id="col2Content3"/></td>
+      <td style="vertical-align: top;"><div id="col3Content3"/></td>
+      <td style="vertical-align: top;"><div id="col4Content3"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content4"/></td>
+      <td style="vertical-align: top;"><div id="col2Content4"/></td>
+      <td style="vertical-align: top;"><div id="col3Content4"/></td>
+      <td style="vertical-align: top;"><div id="col4Content4"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content5"/></td>
+      <td style="vertical-align: top;"><div id="col2Content5"/></td>
+      <td style="vertical-align: top;"><div id="col3Content5"/></td>
+      <td style="vertical-align: top;"><div id="col4Content5"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content6"/></td>
+      <td style="vertical-align: top;"><div id="col2Content6"/></td>
+      <td style="vertical-align: top;"><div id="col3Content6"/></td>
+      <td style="vertical-align: top;"><div id="col4Content6"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content7"/></td>
+      <td style="vertical-align: top;"><div id="col2Content7"/></td>
+      <td style="vertical-align: top;"><div id="col3Content7"/></td>
+      <td style="vertical-align: top;"><div id="col4Content7"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content8"/></td>
+      <td style="vertical-align: top;"><div id="col2Content8"/></td>
+      <td style="vertical-align: top;"><div id="col3Content8"/></td>
+      <td style="vertical-align: top;"><div id="col4Content8"/></td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;"><div id="col1Content9"/></td>
+      <td style="vertical-align: top;"><div id="col2Content9"/></td>
+      <td style="vertical-align: top;"><div id="col3Content9"/></td>
+      <td style="vertical-align: top;"><div id="col4Content9"/></td>
+    </tr>
+  </tbody>
+  </table>	
+</body>
+</html>

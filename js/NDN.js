@@ -86,10 +86,11 @@ var PITEntry = function PITEntry(interest, closure) {
 	this.timerID = -1;  // Timer ID
 };
 
-// Return the longest entry from NDN.PITTable that matches name.
+/*
+ * Return the entry from NDN.PITTable where the name conforms to the interest selectors, and
+ * the interest name is the longest that matches name.
+ */
 NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
-    // TODO: handle multiple matches?  Maybe not from registerPrefix because multiple ContentObject
-    //   could be sent for one Interest?
     var result = null;
     
 	for (var i = 0; i < NDN.PITTable.length; i++) {
