@@ -5,7 +5,9 @@
  */
 
 // _interestLifetime is in milliseconds.
-var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
+var Interest = function Interest
+   (_name, _faceInstance, _minSuffixComponents, _maxSuffixComponents, _publisherPublicKeyDigest, _exclude, 
+    _childSelector, _answerOriginKind, _scope, _interestLifetime, _nonce) {
 		
 	this.name = _name;
 	this.faceInstance = _faceInstance;
@@ -134,7 +136,18 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
         return false;
     
     return true;
-}
+};
+
+/*
+ * Return a new Interest with the same fields as this Interest.  
+ * Note: This does NOT make a deep clone of the name, exclue or other objects.
+ */
+Interest.prototype.clone = function() {
+    return new Interest
+       (this.name, this.faceInstance, this.minSuffixComponents, this.maxSuffixComponents, 
+        this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
+        this.scope, this.interestLifetime, this.nonce);
+};
 
 /*
  * Handle the interest Exclude element.
