@@ -7748,37 +7748,40 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
+    var binaryInterest = encodeToBinaryInterest(interest);
+    var thisNDN = this;    
 	//TODO: check local content store first
 	if (closure != null) {
 		var pitEntry = new PITEntry(interest, closure);
         // TODO: This needs to be a single thread-safe transaction on a global object.
 		NDN.PITTable.push(pitEntry);
 		closure.pitEntry = pitEntry;
-	}
 
-	// Set interest timer
-    var thisNDN = this;
-	if (closure != null) {
+        // Set interest timer.
         var timeoutMilliseconds = (interest.interestLifetime || 4000);
-		pitEntry.timerID = setTimeout(function() {
-			if (LOG > 3) console.log("Interest time out.");
+        var timeoutCallback = function() {
+			if (LOG > 3) console.log("Interest time out: " + interest.name.to_uri());
 				
-			// Remove PIT entry from NDN.PITTable.
+			// Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
+            //   the interest because we don't want to match it in the mean time.
             // TODO: Make this a thread-safe operation on the global PITTable.
 			var index = NDN.PITTable.indexOf(pitEntry);
-			//console.log(NDN.PITTable);
 			if (index >= 0) 
 	            NDN.PITTable.splice(index, 1);
-			//console.log(NDN.PITTable);
-			//console.log(pitEntry.interest.name.getName());
 				
 			// Raise closure callback
-			closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null));
-		}, timeoutMilliseconds);
-		//console.log(closure.timerID);
+			if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
+                  new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
+			    if (LOG > 3) console.log("Re-express interest: " + interest.name.to_uri());
+                pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+                NDN.PITTable.push(pitEntry);
+                thisNDN.transport.send(binaryInterest);
+            }
+		};
+		pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
 	}
 
-	this.transport.send(encodeToBinaryInterest(interest));
+	this.transport.send(binaryInterest);
 };
 
 NDN.prototype.registerPrefix = function(name, closure, flag) {
