@@ -45,8 +45,9 @@
 				if (content.signature.Witness)
 					console.log("Witness: " + DataUtils.toHex(content.signature.Witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-				console.log("Closure.upcall called with interest time out.");
+				console.log("Closure.upcall called with interest time out. Re-expressing the interest.");
                 console.log("Host: " + ndn.host + ":" + ndn.port);
+                return Closure.RESULT_REEXPRESS;
 			}
 			return Closure.RESULT_OK;
 		};
