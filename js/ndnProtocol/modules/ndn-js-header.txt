@@ -6,8 +6,8 @@
  * See COPYING for copyright and distribution information.
  */
 
-var EXPORTED_SYMBOLS = ["Closure", "ContentObject", "DataUtils", "Exclude", "Interest", "MimeTypes", "NDN", 
-      "Name", "Sha256", "XpcomTransport"];
+var EXPORTED_SYMBOLS = ["Closure", "ContentObject", "DataUtils", "Exclude", "ExponentialReExpressClosure",
+    "Interest", "MimeTypes", "NDN", "Name", "Sha256", "XpcomTransport"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");

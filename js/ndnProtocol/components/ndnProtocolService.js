@@ -89,9 +89,9 @@ NdnProtocol.prototype = {
                 var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
                 
                 // Use the same NDN object each time.
-                thisNdnProtocol.ndn.expressInterest(name, 
-                    new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
-                            aURI, searchWithoutNdn + uriParts.hash, segmentTemplate),
+                thisNdnProtocol.ndn.expressInterest(name, new ExponentialReExpressClosure 
+                    (new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
+                            aURI, searchWithoutNdn + uriParts.hash, segmentTemplate)),
                     template);
             };
 
@@ -121,6 +121,7 @@ else
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
  *    and/or '#' but without the interest selector fields.
  * segmentTemplate is the template used in expressInterest to fetch further segments.
+ * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  */                                                
 var ContentClosure = function ContentClosure
         (ndn, contentListener, uriEndsWithSegmentNumber, aURI, uriSearchAndHash, 
@@ -139,10 +140,14 @@ var ContentClosure = function ContentClosure
     this.contentSha256 = new Sha256();
     this.didRequestFinalSegment = false;
     this.finalSegmentNumber = null;
+    this.didOnStart = false;
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
   try {
+    // Assume this is only called once we're connected, report the host and port.
+    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
+    
     if (this.contentListener.done)
         // We are getting unexpected extra results.
         return Closure.RESULT_ERR;
@@ -157,7 +162,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
             return Closure.RESULT_OK;
         }
         else
-            // TODO: re-express the interest a few times.
+            // ExponentialReExpressClosure already tried to re-express, so quit.
             return Closure.RESULT_ERR;
     }  
       
@@ -172,9 +177,6 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         return Closure.RESULT_ERR;
     }
     
-    // Now that we're connected, report the host and port.
-    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
-
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
@@ -184,8 +186,10 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         this.segmentStore.storeContent(segmentNumber, contentObject);
     }
     
-    if (segmentNumber == null || segmentNumber == 0) {
+    if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
         // This is the first or only segment, so start.
+        this.didOnStart = true;
+        
         // Get the URI from the ContentObject including the version.
         var contentUriSpec;
         if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
@@ -253,7 +257,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
             
         // Temporarily set the childSelector in the segmentTemplate.
         this.segmentTemplate.childSelector = 1;
-        this.ndn.expressInterest(new Name(components), this, this.segmentTemplate);
+        this.ndn.expressInterest
+            (new Name(components), new ExponentialReExpressClosure(this), this.segmentTemplate);
         this.segmentTemplate.childSelector = null;
     }
 
@@ -272,7 +277,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
         components.push(segmentNumberComponent);
-        this.ndn.expressInterest(new Name(components), this, this.segmentTemplate);
+        this.ndn.expressInterest
+            (new Name(components), new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
         
     return Closure.RESULT_OK;
