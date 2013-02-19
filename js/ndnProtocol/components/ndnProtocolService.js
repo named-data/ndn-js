@@ -153,11 +153,11 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         return Closure.RESULT_ERR;
     
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-        if (this.segmentStore.store.entries.length == 0) {
-            // We have not received any segments yet, so assume the URI can't be fetched.
+        if (!this.didOnStart) {
+            // We have not received a segments to start the content yet, so assume the URI can't be fetched.
             this.contentListener.onStart("text/plain", "utf-8", this.aURI);
             this.contentListener.onReceivedContent
-                ("Interest timeout after " + upcallInfo.interest.interestLifetime + " milliseconds.");
+                ("The latest interest timed out after " + upcallInfo.interest.interestLifetime + " milliseconds.");
             this.contentListener.onStop();
             return Closure.RESULT_OK;
         }
