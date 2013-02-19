@@ -6,6 +6,7 @@ cat ../../Closure.js \
   ../../WebSocketTransport.js \
   ../../util/CCNProtocolDTags.js \
   ../../util/CCNTime.js \
+  ../../util/ExponentialReExpressClosure.js \
   ../../Name.js \
   ../../ContentObject.js \
   ../../encoding/DateFormat.js \

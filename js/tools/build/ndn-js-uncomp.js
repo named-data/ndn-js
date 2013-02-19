@@ -425,6 +425,61 @@ unsignedLongToByteArray= function( value) {
 }*/
 	
 /**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * This is the closure class for use in expressInterest to re express with exponential falloff.
+ */
+
+/*
+ * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
+ *   by expressing the interest again with double the interestLifetime. If the interesLifetime goes
+ *   over maxInterestLifetime, then call callerClosure.upcall with UPCALL_INTEREST_TIMED_OUT.
+ * When upcall is not UPCALL_INTEREST_TIMED_OUT, just call callerClosure.upcall.
+ * 
+ * settings is an associative array with the following defaults:
+ * {
+ *   maxInterestLifetime: 16000 // milliseconds
+ * }
+ */
+var ExponentialReExpressClosure = function ExponentialReExpressClosure
+        (callerClosure, settings) {
+    // Inherit from Closure.
+    Closure.call(this);
+    
+    this.callerClosure = callerClosure;
+    settings = (settings || {});
+	this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
+};
+
+ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
+    try {
+        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+            var interestLifetime = upcallInfo.interest.interestLifetime;
+            if (interestLifetime == null)
+                return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
+            
+            var nextInterestLifetime = interestLifetime * 2;
+            if (nextInterestLifetime > this.maxInterestLifetime) 
+                console.log("nextInterestLifetime " + nextInterestLifetime + " > max " + 
+                this.maxInterestLifetime + ". Timing out for " + upcallInfo.interest.name.to_uri()); // DEBUG
+            if (nextInterestLifetime > this.maxInterestLifetime)
+                return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
+            
+            var nextInterest = upcallInfo.interest.clone();
+            nextInterest.interestLifetime = nextInterestLifetime;
+            console.log("Re-express nextInterestLifetime " + nextInterestLifetime + 
+                " for " + upcallInfo.interest.name.to_uri()); // DEBUG
+            upcallInfo.ndn.expressInterest(nextInterest.name, this, nextInterest);
+            return Closure.RESULT_OK;
+        }  
+        else
+            return this.callerClosure.upcall(kind, upcallInfo);
+    } catch (ex) {
+        console.log("ExponentialReExpressClosure.upcall exception: " + ex);
+        return Closure.RESULT_ERR;
+    }
+};
+/**
  * @author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
@@ -1322,7 +1377,9 @@ Date.prototype.format = function (mask, utc) {
  */
 
 // _interestLifetime is in milliseconds.
-var Interest = function Interest(_name,_faceInstance,_minSuffixComponents,_maxSuffixComponents,_publisherPublicKeyDigest, _exclude, _childSelector,_answerOriginKind,_scope,_interestLifetime,_nonce){
+var Interest = function Interest
+   (_name, _faceInstance, _minSuffixComponents, _maxSuffixComponents, _publisherPublicKeyDigest, _exclude, 
+    _childSelector, _answerOriginKind, _scope, _interestLifetime, _nonce) {
 		
 	this.name = _name;
 	this.faceInstance = _faceInstance;
@@ -1451,7 +1508,18 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
         return false;
     
     return true;
-}
+};
+
+/*
+ * Return a new Interest with the same fields as this Interest.  
+ * Note: This does NOT make a deep clone of the name, exclue or other objects.
+ */
+Interest.prototype.clone = function() {
+    return new Interest
+       (this.name, this.faceInstance, this.minSuffixComponents, this.maxSuffixComponents, 
+        this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
+        this.scope, this.interestLifetime, this.nonce);
+};
 
 /*
  * Handle the interest Exclude element.
@@ -7633,7 +7701,9 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 // For fetching data
 NDN.PITTable = new Array();
 
+var DebugPITEntryCounter = 0;
 var PITEntry = function PITEntry(interest, closure) {
+    this.debugId = ++DebugPITEntryCounter;
 	this.interest = interest;  // Interest
 	this.closure = closure;    // Closure
 	this.timerID = -1;  // Timer ID
@@ -7747,7 +7817,9 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
+var DebugExpressInterestCounter = 0;
 NDN.prototype.expressInterestHelper = function(interest, closure) {
+    var expressInterestId = ++DebugExpressInterestCounter; //DEBUG
     var binaryInterest = encodeToBinaryInterest(interest);
     var thisNDN = this;    
 	//TODO: check local content store first
@@ -7766,6 +7838,8 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
             //   the interest because we don't want to match it in the mean time.
             // TODO: Make this a thread-safe operation on the global PITTable.
 			var index = NDN.PITTable.indexOf(pitEntry);
+            if (index >= 0) console.log("expressInterest " + expressInterestId + ": timeout. remove PIT " + 
+                pitEntry.debugId); else console.log("can't find PIT " + pitEntry.debugId); //DEBUG
 			if (index >= 0) 
 	            NDN.PITTable.splice(index, 1);
 				
@@ -7779,6 +7853,9 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
             }
 		};
 		pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+        console.log("expressInterest " + expressInterestId + ": (lifetime " + interest.interestLifetime + 
+            ") PIT " + pitEntry.debugId + " " + interest.name.to_uri() + 
+            (interest.childSelector != null ? " childSelector " + interest.childSelector : "")); //DEBUG
 	}
 
 	this.transport.send(binaryInterest);
@@ -7911,20 +7988,20 @@ NDN.prototype.onReceivedElement = function(element) {
 		co.from_ccnb(decoder);
 				
 		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+        if (pitEntry == null) console.log("PIT search failed for " + co.name.to_uri());//DEBUG
 		if (pitEntry != null) {
-			//console.log(pitEntry);
+			// Cancel interest timer
+			clearTimeout(pitEntry.timerID);
+            
 			// Remove PIT entry from NDN.PITTable
 			var index = NDN.PITTable.indexOf(pitEntry);
+            if (index >= 0) console.log("received. remove PIT " + pitEntry.debugId + ". " + co.name.to_uri()); 
+               else console.log("can't find PIT " + pitEntry.debugId); //DEBUG
 			if (index >= 0)
 				NDN.PITTable.splice(index, 1);
 						
 			var currentClosure = pitEntry.closure;
-						
-			// Cancel interest timer
-			clearTimeout(pitEntry.timerID);
-			//console.log("Clear interest timer");
-			//console.log(currentClosure.timerID);
-				
+										
 			if (this.verify == false) {
 				// Pass content up without verifying the signature
 				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
