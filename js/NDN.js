@@ -9,12 +9,13 @@ var LOG = 0;
 /**
  * settings is an associative array with the following defaults:
  * {
- *   getTransport: function() { return new WebSocketTransport(); }
+ *   getTransport: function() { return new WebSocketTransport(); },
  *   getHostAndPort: transport.defaultGetHostAndPort,
  *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696,
- *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); }
- *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); }
+ *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
+ *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
+ *   verify: true // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  * 
  * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
