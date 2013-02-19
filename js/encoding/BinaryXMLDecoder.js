@@ -74,52 +74,6 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(istream){
 	this.offset = 0;
 };
 
-BinaryXMLDecoder.prototype.readAttributes = function(
-	//TreeMap<String,String> 
-	attributes){
-	
-	if (null == attributes) {
-		return;
-	}
-
-	try {
-
-		//this.TypeAndVal 
-		var nextTV = this.peekTypeAndVal();
-
-		while ((null != nextTV) && ((XML_ATTR == nextTV.type()) ||
-				(XML_DATTR == nextTV.type()))) {
-
-			//this.TypeAndVal 
-			var thisTV = this.decodeTypeAndVal();
-
-			var attributeName = null;
-			if (XML_ATTR == thisTV.type()) {
-				
-				attributeName = this.decodeUString(thisTV.val()+1);
-
-			} else if (XML_DATTR == thisTV.type()) {
-				// DKS TODO are attributes same or different dictionary?
-				attributeName = tagToString(thisTV.val());
-				if (null == attributeName) {
-					throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
-				}
-			}
-			
-			var attributeValue = this.decodeUString();
-
-			attributes.put(attributeName, attributeValue);
-
-			nextTV = this.peekTypeAndVal();
-		}
-
-	} catch ( e) {
-
-		throw new ContentDecodingException(new Error("readStartElement", e));
-	}
-};
-
-
 BinaryXMLDecoder.prototype.initializeDecoding = function() {
 		//if (!this.istream.markSupported()) {
 			//throw new IllegalArgumentException(this.getClass().getName() + ": input stream must support marking!");
@@ -146,7 +100,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 			//startTag = tagToString(startTag);
 		
 			//TypeAndVal 
-			tv = this.decodeTypeAndVal();
+			var tv = this.decodeTypeAndVal();
 			
 			if (null == tv) {
 				throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
@@ -200,7 +154,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
 	
 
 BinaryXMLDecoder.prototype.readAttributes = function(
-	//TreeMap<String,String> 
+	// array of [attributeName, attributeValue] 
 	attributes) {
 	
 	if (null == attributes) {
@@ -224,11 +178,11 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 			if (XML_ATTR == thisTV.type()) {
 				// Tag value represents length-1 as attribute names cannot be empty.
 				var valval ;
-				if(typeof tv.val() == 'string'){
-					valval = (parseInt(tv.val())) + 1;
+				if(typeof thisTV.val() == 'string'){
+					valval = (parseInt(thisTV.val())) + 1;
 				}
 				else
-					valval = (tv.val())+ 1;
+					valval = (thisTV.val())+ 1;
 				
 				attributeName = this.decodeUString(valval);
 
@@ -564,68 +518,10 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	return bytes;
 };
 
-var count =0;
-
 //String
 BinaryXMLDecoder.prototype.decodeUString = function(
 		//int 
 		byteLength) {
-	
-	/*
-	console.log('COUNT IS '+count);
-	console.log('INPUT BYTELENGTH IS '+byteLength);
-	count++;
-	if(null == byteLength||  undefined == byteLength){
-		console.log("!!!!");
-		tv = this.decodeTypeAndVal();
-		var valval ;
-		if(typeof tv.val() == 'string'){
-			valval = (parseInt(tv.val()));
-		}
-		else
-			valval = (tv.val());
-		
-		if(LOG>4) console.log('valval  is ' + valval);
-		byteLength= this.decodeUString(valval);
-		
-		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength.charCodeAt(0));
-		byteLength = parseInt(byteLength);
-		
-		
-		//byteLength = byteLength.charCodeAt(0);
-		//if(LOG>4) console.log('byte Length found in type val is '+ byteLength);
-	}
-	if(LOG>4)console.log('byteLength is '+byteLength);
-	if(LOG>4)console.log('type of byteLength is '+typeof byteLength);
-	
-	stringBytes = this.decodeBlob(byteLength);
-	
-	//console.log('String bytes are '+ stringBytes);
-	//console.log('stringBytes);
-	
-	if(LOG>4)console.log('byteLength is '+byteLength);
-	if(LOG>4)console.log('this.offset is '+this.offset);
-
-	tempBuffer = this.istream.slice(this.offset, this.offset+byteLength);
-	if(LOG>4)console.log('TEMPBUFFER IS' + tempBuffer);
-	if(LOG>4)console.log( tempBuffer);
-
-	if(LOG>4)console.log('ADDING to offset value' + byteLength);
-	this.offset+= byteLength;
-	//if(LOG>3)console.log('read the String' + tempBuffer.toString('ascii'));
-	//return tempBuffer.toString('ascii');//
-	
-	
-	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(stringBytes) ) ;
-	//if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
-	//if(LOG>3)console.log(DataUtils.getUTF8StringFromBytes(tempBuffer) ) ;
-	//return DataUtils.getUTF8StringFromBytes(tempBuffer);
-	
-	if(LOG>3)console.log( 'STRING READ IS '+ DataUtils.toString(stringBytes) ) ;
-	if(LOG>3)console.log( 'TYPE OF STRING READ IS '+ typeof DataUtils.toString(stringBytes) ) ;
-
-	return  DataUtils.toString(stringBytes);*/
-
 	if(null == byteLength ){
 		var tempStreamPosition = this.offset;
 			
@@ -657,9 +553,6 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		
 	}
 };
-
-
-
 
 //OBject containg a pair of type and value
 var TypeAndVal = function TypeAndVal(_type,_val) {
