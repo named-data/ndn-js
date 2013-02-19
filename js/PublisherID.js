@@ -75,7 +75,7 @@ PublisherID.prototype.to_ccnb = function(encoder) {
 PublisherID.peek = function(/* XMLDecoder */ decoder) {
 
 		//Long
-		nextTag = decoder.peekStartElementAsLong();
+		var nextTag = decoder.peekStartElementAsLong();
 		
 		if (null == nextTag) {
 			// on end element

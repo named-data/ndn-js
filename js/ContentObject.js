@@ -351,7 +351,7 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 		}
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
-			binType = decoder.readBinaryElement(CCNProtocolDTags.Type);//byte [] 
+			var binType = decoder.readBinaryElement(CCNProtocolDTags.Type);//byte [] 
 		
 			
 			//TODO Implement type of Key Reading

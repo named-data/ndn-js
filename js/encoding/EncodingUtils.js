@@ -47,7 +47,7 @@ function decodeHexFaceInstance(result){
 	var numbers = DataUtils.toNumbers(result);
 			
 	
-	decoder = new BinaryXMLDecoder(numbers);
+	var decoder = new BinaryXMLDecoder(numbers);
 	
 	if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
 
@@ -64,7 +64,7 @@ function decodeHexFaceInstance(result){
 function decodeHexInterest(result){
 	var numbers = DataUtils.toNumbers(result);	
 	
-	decoder = new BinaryXMLDecoder(numbers);
+	var decoder = new BinaryXMLDecoder(numbers);
 	
 	if(LOG>3)console.log('DECODING HEX INTERST  \n'+numbers);
 
@@ -81,11 +81,11 @@ function decodeHexInterest(result){
 function decodeHexContentObject(result){
 	var numbers = DataUtils.toNumbers(result);
 	
-	decoder = new BinaryXMLDecoder(numbers);
+	var decoder = new BinaryXMLDecoder(numbers);
 	
 	if(LOG>3)console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
 	
-	co = new ContentObject();
+	var co = new ContentObject();
 
 	co.from_ccnb(decoder);
 
@@ -98,11 +98,11 @@ function decodeHexContentObject(result){
 function decodeHexForwardingEntry(result){
 	var numbers = DataUtils.toNumbers(result);
 
-	decoder = new BinaryXMLDecoder(numbers);
+	var decoder = new BinaryXMLDecoder(numbers);
 	
 	if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
 	
-	forwardingEntry = new ForwardingEntry();
+	var forwardingEntry = new ForwardingEntry();
 
 	forwardingEntry.from_ccnb(decoder);
 

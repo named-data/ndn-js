@@ -120,7 +120,7 @@ Witness.prototype.decode = function(/* Uint8Array */ witness) {
 			if (step == 4) {
 				// Start to decode digest hex string
 				len = witness[i+1];  // XXX: digest hex should always be 32 bytes
-				str = DataUtils.toHex(witness.subarray(i + 2, i + 2 + len));
+				var str = DataUtils.toHex(witness.subarray(i + 2, i + 2 + len));
 				this.path.digestList.push(str);  // digest hex string
 				//console.log(str);
 			}

@@ -313,9 +313,9 @@ function _rsasign_verifyByteArray(byteArray, witness, hSig) {
 	  	msgHashValue = ff(byteArray);
 	  } else {
 	  	// Compute merkle hash
-		  h = hex_sha256_from_bytes(byteArray);
-		  index = witness.path.index;
-		  for (i = witness.path.digestList.length - 1; i >= 0; i--) {
+		  var h = hex_sha256_from_bytes(byteArray);
+		  var index = witness.path.index;
+		  for (var i = witness.path.digestList.length - 1; i >= 0; i--) {
 		  	var str = "";
 		  	if (index % 2 == 0) {
 		  		str = h + witness.path.digestList[i];

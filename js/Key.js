@@ -50,7 +50,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 
 	if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
 		try {
-			encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
+			var encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
 			// This is a DER-encoded SubjectPublicKeyInfo.
 			
 			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
@@ -73,7 +73,7 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 
 	} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
 		try {
-			encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
+			var encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
 			
 			/*
 			 * Certificates not yet working
