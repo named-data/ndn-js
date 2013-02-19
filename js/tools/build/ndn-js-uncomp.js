@@ -459,16 +459,11 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
                 return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
             var nextInterestLifetime = interestLifetime * 2;
-            if (nextInterestLifetime > this.maxInterestLifetime) 
-                console.log("nextInterestLifetime " + nextInterestLifetime + " > max " + 
-                this.maxInterestLifetime + ". Timing out for " + upcallInfo.interest.name.to_uri()); // DEBUG
             if (nextInterestLifetime > this.maxInterestLifetime)
                 return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
             var nextInterest = upcallInfo.interest.clone();
             nextInterest.interestLifetime = nextInterestLifetime;
-            console.log("Re-express nextInterestLifetime " + nextInterestLifetime + 
-                " for " + upcallInfo.interest.name.to_uri()); // DEBUG
             upcallInfo.ndn.expressInterest(nextInterest.name, this, nextInterest);
             return Closure.RESULT_OK;
         }  
@@ -7701,9 +7696,7 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 // For fetching data
 NDN.PITTable = new Array();
 
-var DebugPITEntryCounter = 0;
 var PITEntry = function PITEntry(interest, closure) {
-    this.debugId = ++DebugPITEntryCounter;
 	this.interest = interest;  // Interest
 	this.closure = closure;    // Closure
 	this.timerID = -1;  // Timer ID
@@ -7817,9 +7810,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
-var DebugExpressInterestCounter = 0;
 NDN.prototype.expressInterestHelper = function(interest, closure) {
-    var expressInterestId = ++DebugExpressInterestCounter; //DEBUG
     var binaryInterest = encodeToBinaryInterest(interest);
     var thisNDN = this;    
 	//TODO: check local content store first
@@ -7838,8 +7829,6 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
             //   the interest because we don't want to match it in the mean time.
             // TODO: Make this a thread-safe operation on the global PITTable.
 			var index = NDN.PITTable.indexOf(pitEntry);
-            if (index >= 0) console.log("expressInterest " + expressInterestId + ": timeout. remove PIT " + 
-                pitEntry.debugId); else console.log("can't find PIT " + pitEntry.debugId); //DEBUG
 			if (index >= 0) 
 	            NDN.PITTable.splice(index, 1);
 				
@@ -7853,9 +7842,6 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
             }
 		};
 		pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-        console.log("expressInterest " + expressInterestId + ": (lifetime " + interest.interestLifetime + 
-            ") PIT " + pitEntry.debugId + " " + interest.name.to_uri() + 
-            (interest.childSelector != null ? " childSelector " + interest.childSelector : "")); //DEBUG
 	}
 
 	this.transport.send(binaryInterest);
@@ -7988,15 +7974,12 @@ NDN.prototype.onReceivedElement = function(element) {
 		co.from_ccnb(decoder);
 				
 		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-        if (pitEntry == null) console.log("PIT search failed for " + co.name.to_uri());//DEBUG
 		if (pitEntry != null) {
 			// Cancel interest timer
 			clearTimeout(pitEntry.timerID);
             
 			// Remove PIT entry from NDN.PITTable
 			var index = NDN.PITTable.indexOf(pitEntry);
-            if (index >= 0) console.log("received. remove PIT " + pitEntry.debugId + ". " + co.name.to_uri()); 
-               else console.log("can't find PIT " + pitEntry.debugId); //DEBUG
 			if (index >= 0)
 				NDN.PITTable.splice(index, 1);
 						
