@@ -359,19 +359,16 @@ NDN.prototype.onReceivedElement = function(element) {
 				
 		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 		if (pitEntry != null) {
-			//console.log(pitEntry);
+			// Cancel interest timer
+			clearTimeout(pitEntry.timerID);
+            
 			// Remove PIT entry from NDN.PITTable
 			var index = NDN.PITTable.indexOf(pitEntry);
 			if (index >= 0)
 				NDN.PITTable.splice(index, 1);
 						
 			var currentClosure = pitEntry.closure;
-						
-			// Cancel interest timer
-			clearTimeout(pitEntry.timerID);
-			//console.log("Clear interest timer");
-			//console.log(currentClosure.timerID);
-				
+										
 			if (this.verify == false) {
 				// Pass content up without verifying the signature
 				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
