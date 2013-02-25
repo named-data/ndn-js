@@ -20,8 +20,13 @@ var LOG = 0;
  * 
  * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
  *   null if there are no more hosts.
+ *   
+ * This throws an exception if NDN.supported is false.
  */
 var NDN = function NDN(settings) {
+    if (!NDN.supported)
+        throw new Error("The necessary JavaScript support is not available on this platform.");
+    
     settings = (settings || {});
     var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
     this.transport = getTransport();
@@ -39,6 +44,22 @@ var NDN = function NDN(settings) {
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
+
+/*
+ * Return true if necessary JavaScript support is available, else log an error and return false.
+ */
+NDN.getSupported = function() {
+    try {
+        var dummy = new Uint8Array(1).subarray(0, 1);
+    } catch (ex) {
+        console.log("NDN not available: Uint8Array not supported. " + ex);
+        return false;
+    }
+    
+    return true;
+};
+
+NDN.supported = NDN.getSupported();
 
 NDN.ccndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY');
 
