@@ -69,6 +69,9 @@ UpcallInfo.prototype.toString = function() {
  */
 
 var WebSocketTransport = function WebSocketTransport() {    
+    if (!WebSocket)
+        throw new Error("WebSocket support is not available on this platform.");
+    
 	this.ws = null;
     this.connectedHost = null; // Read by NDN.
     this.connectedPort = null; // Read by NDN.
