@@ -158,6 +158,39 @@ Name.prototype.add = function(component){
     return this;
 };
 
+/**
+ * @brief Add component that represents a segment number
+ *
+ * @param number Segment number (integer is expected)
+ *
+ * This component has a special format handling:
+ * - if number is zero, then %00 is added
+ * - if number is between 1 and 255, %00%01 .. %00%FF is added
+ * - ...
+ */
+Name.prototype.addSegment = function(number) {
+    // step 1: figure out how many bytes will be needed
+    var bytes = 1; // at least 1 byte
+    var test_number = number;
+    while (test_number > 0) {
+        bytes ++;
+        test_number >>= 8;
+    }
+
+    var result = new Uint8Array (bytes);
+    var index = 0;
+    result[index] = 0;
+    index ++;
+    while (number > 0) {
+        result[index] = number & 0xFF;
+        number >>= 8;
+        index ++;
+    }
+
+    this.components.push(result);
+    return this;
+}
+
 // Return the escaped name string according to "CCNx URI Scheme".
 Name.prototype.to_uri = function() {
     if (this.components.length == 0)
