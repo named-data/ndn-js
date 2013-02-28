@@ -3,20 +3,20 @@
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
  */
- 
+
 /*
  * Create a new Name from _components.
  * If _components is a string, parse it as a URI.  Otherwise it is an array of components
- * where each is a string, byte array, ArrayBuffer or Uint8Array. 
+ * where each is a string, byte array, ArrayBuffer or Uint8Array.
  * Convert and store as an array of Uint8Array.
  * If a component is a string, encode as utf8.
  */
 var Name = function Name(_components){
-	if( typeof _components == 'string') {		
+	if( typeof _components == 'string') {
 		if(LOG>3)console.log('Content Name String '+_components);
 		this.components = Name.createNameArray(_components);
 	}
-	else if(typeof _components === 'object'){		
+	else if(typeof _components === 'object'){
 		if(LOG>4)console.log('Content Name Array '+_components);
 		this.components = [];
         for (var i = 0; i < _components.length; ++i)
@@ -48,7 +48,7 @@ Name.createNameArray = function(name) {
             // Omit the leading protocol such as ndn:
             name = name.substr(iColon + 1, name.length - iColon - 1).trim();
     }
-    
+
   	if (name[0] == '/') {
         if (name.length >= 2 && name[1] == '/') {
             // Strip the authority following "//".
@@ -64,15 +64,15 @@ Name.createNameArray = function(name) {
     }
 
 	var array = name.split('/');
-    
+
     // Unescape the components.
     for (var i = 0; i < array.length; ++i) {
         var component = Name.fromEscapedString(array[i]);
-        
+
         if (component == null) {
             // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
             array.splice(i, 1);
-            --i;  
+            --i;
             continue;
         }
         else
@@ -86,19 +86,19 @@ Name.createNameArray = function(name) {
 Name.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
 		decoder.readStartElement(this.getElementLabel());
 
-		
+
 		this.components = new Array(); //new ArrayList<byte []>();
 
 		while (decoder.peekStartElement(CCNProtocolDTags.Component)) {
 			this.add(decoder.readBinaryElement(CCNProtocolDTags.Component));
 		}
-		
+
 		decoder.readEndElement();
 };
 
 Name.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
-		
-		if( this.components ==null ) 
+
+		if( this.components ==null )
 			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
 		encoder.writeStartElement(this.getElementLabel());
@@ -121,37 +121,87 @@ Name.prototype.getElementLabel = function(){
  */
 Name.prototype.add = function(component){
     var result;
-    if(typeof component == 'string')
+    if(typeof component == 'string') {
         result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Uint8Array)
+        this.components.push (result);
+    }
+    else if(typeof component == 'object' && component instanceof Uint8Array) {
         result = new Uint8Array(component);
-	else if(typeof component == 'object' && component instanceof ArrayBuffer) {
+        this.components.push (result);
+    }
+    else if(typeof component == 'object' && component instanceof ArrayBuffer) {
         // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
         result = new Uint8Array(new ArrayBuffer(component.byteLength));
         result.set(new Uint8Array(component));
+        this.components.push(result);
     }
-	else if(typeof component == 'object')
+    else if(typeof component == 'object' && component instanceof Name) {
+        components = component;
+        if (this == component) {
+            components = new Name (component.components); // special case, when we need to create a copy
+        }
+	for(var i = 0; i < components.components.length; ++i) {
+            result = new Uint8Array (components.components[i]);
+            this.components.push (result);
+        }
+    }
+    else if(typeof component == 'object') {
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
         result = new Uint8Array(component);
-	else 
-		throw new Error("Cannot add Name element at index " + this.components.length + 
-            ": Invalid type");
-    
-	return this.components.push(result);
+        this.components.push(result);
+    }
+    else
+	throw new Error("Cannot add Name element at index " + this.components.length +
+                        ": Invalid type");
+
+    return this;
 };
 
+/**
+ * @brief Add component that represents a segment number
+ *
+ * @param number Segment number (integer is expected)
+ *
+ * This component has a special format handling:
+ * - if number is zero, then %00 is added
+ * - if number is between 1 and 255, %00%01 .. %00%FF is added
+ * - ...
+ */
+Name.prototype.addSegment = function(number) {
+    // step 1: figure out how many bytes will be needed
+    var bytes = 1; // at least 1 byte
+    var test_number = number;
+    while (test_number > 0) {
+        bytes ++;
+        test_number >>= 8;
+    }
+
+    var result = new Uint8Array (bytes);
+    var index = 0;
+    result[index] = 0;
+    index ++;
+    while (number > 0) {
+        result[index] = number & 0xFF;
+        number >>= 8;
+        index ++;
+    }
+
+    this.components.push(result);
+    return this;
+}
+
 // Return the escaped name string according to "CCNx URI Scheme".
-Name.prototype.to_uri = function() {	
+Name.prototype.to_uri = function() {
     if (this.components.length == 0)
         return "/";
-    
+
 	var result = "";
-	
+
 	for(var i = 0; i < this.components.length; ++i)
 		result += "/"+ Name.toEscapedString(this.components[i]);
-	
-	return result;	
+
+	return result;
 };
 
 /*
@@ -180,14 +230,14 @@ Name.prototype.indexOfFileName = function() {
         var component = this.components[i];
         if (component.length <= 0)
             continue;
-        
-        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 ||
             (component[0] >= 0xF5 && component[0] <= 0xFF))
             continue;
-        
+
         return i;
     }
-    
+
     return -1;
 }
 
@@ -197,18 +247,18 @@ Name.prototype.indexOfFileName = function() {
 Name.prototype.equalsName = function(name) {
     if (this.components.length != name.components.length)
         return false;
-    
+
     // Start from the last component because they are more likely to differ.
     for (var i = this.components.length - 1; i >= 0; --i) {
         if (!DataUtils.arraysEqual(this.components[i], name.components[i]))
             return false;
     }
-    
+
     return true;
 }
 
 /*
- * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array,
  *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() {
@@ -217,7 +267,7 @@ Name.prototype.getContentDigestValue = function() {
         if (digestValue != null)
            return digestValue;
     }
-    
+
     return null;
 }
 
@@ -227,10 +277,10 @@ Name.prototype.getContentDigestValue = function() {
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
  */
 Name.getComponentContentDigestValue = function(component) {
-    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length;
     // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
     if (component.length == digestComponentLength &&
-        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length),
                               Name.ContentDigestPrefix) &&
         DataUtils.arraysEqual(component.subarray
            (component.length - Name.ContentDigestSuffix.length, component.length),
@@ -240,7 +290,7 @@ Name.getComponentContentDigestValue = function(component) {
        return null;
 }
 
-// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
+// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB.
 Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
 Name.ContentDigestSuffix = new Uint8Array([0x00]);
 
@@ -268,7 +318,7 @@ Name.toEscapedString = function(component) {
             var value = component[i];
             // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
             if (value >= 0x30 && value <= 0x39 || value >= 0x41 && value <= 0x5a ||
-                value >= 0x61 && value <= 0x7a || value == 0x2b || value == 0x2d || 
+                value >= 0x61 && value <= 0x7a || value == 0x2b || value == 0x2d ||
                 value == 0x2e || value == 0x5f)
                 result += String.fromCharCode(value);
             else
@@ -284,9 +334,9 @@ Name.toEscapedString = function(component) {
  */
 Name.fromEscapedString = function(escapedString) {
     var component = unescape(escapedString.trim());
-        
+
     if (component.match(/[^.]/) == null) {
-        // Special case for component of only periods.  
+        // Special case for component of only periods.
         if (component.length <= 2)
             // Zero, one or two periods is illegal.  Ignore this componenent to be
             //   consistent with the C implementation.
