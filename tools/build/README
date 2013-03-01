@@ -1,8 +1,0 @@
-
-The script make-js.sh combines all of the NDN.JS scripts into a file called
-ndn-js-uncomp.js that can be more easily included in a webpage.  It them runs Google's
-Closure Compiler to create a compressed version, ndn-js.js.   This is what we recommend
-including in applications.
-
-
-
