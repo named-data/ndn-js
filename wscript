@@ -16,6 +16,8 @@ def options (opt):
 
     js.add_option('--no-js',action='store_false',default=True,dest='js',
                   help='''Disable ndn.js compilation and installation''')
+    js.add_option('--js-dir',action='store',dest='jsdir',
+                  help='''Directory where .js files will be installed (Default: ${PREFIX}/share/ndn-js)''')
     js.add_option('--yui',action='store_true',default=False,dest='yui',
                   help='''Download and use yuicompressor-2.4.7 (http://yui.github.com/yuicompressor/)''')
     js.add_option('--compiler',action='store_true',default=False,dest='compiler',
@@ -28,6 +30,12 @@ def options (opt):
 def configure (conf):
     if conf.options.js:
         conf.env.JS = 1
+        if not conf.env.JSDIR:
+            if conf.options.jsdir or Utils.is_win32:
+                conf.env.JSDIR=os.path.abspath (os.path.expanduser (conf.options.jsdir))
+            else:
+                conf.env.JSDIR=Utils.subst_vars ('${PREFIX}/bin',conf.env)
+
         if conf.options.yui:
             conf.start_msg ("Checking for yuicompressor")
             if os.path.exists('tools/yuicompressor.jar'):
@@ -100,7 +108,7 @@ def build (bld):
         ndnjs = bld (features="combine",
                      target="ndn",
                      source=ndnjs,
-                     install_path="${PREFIX}")
+                     install_path="${JSDIR}")
 
         if bld.env['HAVE_YUI']:
             ndnjs.yui = True
@@ -109,8 +117,8 @@ def build (bld):
             ndnjs.compiler = True
 
     if bld.env['WS']:
-        bld.install_as ('${BINDIR}/websocket-ccnd-proxy-tcp', 'wsproxy/wsproxy-tcp.js', chmod=Utils.O755)
-        bld.install_as ('${BINDIR}/websocket-ccnd-proxy-udp', 'wsproxy/wsproxy-udp.js', chmod=Utils.O755)
+        bld.install_as ('${BINDIR}/ccnx-wsproxy-tcp.js', 'wsproxy/wsproxy-tcp.js', chmod=Utils.O755)
+        bld.install_as ('${BINDIR}/ccnx-wsproxy-udp.js', 'wsproxy/wsproxy-udp.js', chmod=Utils.O755)
 
 @TaskGen.extension('.js')
 def js_hook(self, node):
