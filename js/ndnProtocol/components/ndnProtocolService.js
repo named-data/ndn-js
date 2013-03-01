@@ -280,17 +280,10 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
         
-        // Make a name for the segment and get it.
-        var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(toRequest[i]);
-        // Put a 0 byte in front.
-        var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
-        segmentNumberComponent.set(segmentNumberBigEndian, 1);
-        
-        var components = contentObject.name.components.slice
-            (0, contentObject.name.components.length - 1);
-        components.push(segmentNumberComponent);
         this.ndn.expressInterest
-            (new Name(components), new ExponentialReExpressClosure(this), this.segmentTemplate);
+            (new Name(contentObject.name.components.slice
+                      (0, contentObject.name.components.length - 1)).addSegment(toRequest[i]), 
+             new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
         
     return Closure.RESULT_OK;
