@@ -12,95 +12,105 @@ from waflib import Task, TaskGen, Utils, Logs
 import urllib, subprocess, os, shutil
 
 def options (opt):
-    opt.add_option('--js-path', action='store',dest='js_path',
-                   help='''Path to install combined and compressed .js files''')
-    opt.add_option('--yui',action='store_true',default=False,dest='yui',
-                   help='''Download and use yuicompressor-2.4.7 (http://yui.github.com/yuicompressor/)''')
-    opt.add_option('--compiler',action='store_true',default=False,dest='compiler',
-                   help='''Download and use closure-compiler-r2388 (https://code.google.com/p/closure-compiler/)''')
+    js = opt.add_option_group ("ndn.js compilation options")
+
+    js.add_option('--no-js',action='store_false',default=True,dest='js',
+                  help='''Disable ndn.js compilation and installation''')
+    js.add_option('--yui',action='store_true',default=False,dest='yui',
+                  help='''Download and use yuicompressor-2.4.7 (http://yui.github.com/yuicompressor/)''')
+    js.add_option('--compiler',action='store_true',default=False,dest='compiler',
+                  help='''Download and use closure-compiler-r2388 (https://code.google.com/p/closure-compiler/)''')
+
+    ws = opt.add_option_group ("ws-proxy options")
+    ws.add_option ('--no-ws',action='store_false',default=True,dest='ws',
+                   help='''Disable ws-proxy installation''')
 
 def configure (conf):
-    if conf.options.yui:
-        conf.start_msg ("Checking for yuicompressor")
-        if os.path.exists('tools/yuicompressor.jar'):
-            conf.end_msg('tools/yuicompressor.jar')
-            conf.env.HAVE_YUI = 1
-        else:
-            conf.end_msg('not found','YELLOW')
-            url="%s%s.zip" % (YUICOMPRESSOR_URL, YUICOMPRESSOR_NAME)
-            Logs.info ("Downloading yuicompressor from %s..." % url)
-            urllib.urlretrieve (url, "build/yuicompressor.zip")
+    if conf.options.js:
+        conf.env.JS = 1
+        if conf.options.yui:
+            conf.start_msg ("Checking for yuicompressor")
+            if os.path.exists('tools/yuicompressor.jar'):
+                conf.end_msg('tools/yuicompressor.jar')
+                conf.env.HAVE_YUI = 1
+            else:
+                conf.end_msg('not found','YELLOW')
+                url="%s%s.zip" % (YUICOMPRESSOR_URL, YUICOMPRESSOR_NAME)
+                Logs.info ("Downloading yuicompressor from %s..." % url)
+                urllib.urlretrieve (url, "build/yuicompressor.zip")
 
-            filename='%s/build/%s.jar' % (YUICOMPRESSOR_NAME,YUICOMPRESSOR_NAME)
-            subprocess.check_call (['unzip', '-qq', '-o', '-j', 'build/yuicompressor.zip',
-                                    filename, '-d', 'tools/'])
-            os.rename ("tools/%s.jar" % YUICOMPRESSOR_NAME, "tools/yuicompressor.jar")
-            conf.env.HAVE_YUI = 1
+                filename='%s/build/%s.jar' % (YUICOMPRESSOR_NAME,YUICOMPRESSOR_NAME)
+                subprocess.check_call (['unzip', '-qq', '-o', '-j', 'build/yuicompressor.zip',
+                                        filename, '-d', 'tools/'])
+                os.rename ("tools/%s.jar" % YUICOMPRESSOR_NAME, "tools/yuicompressor.jar")
+                conf.env.HAVE_YUI = 1
 
-    if conf.options.compiler:
-        conf.start_msg ("Checking for closure-compiler")
-        if os.path.exists('tools/compiler.jar'):
-            conf.end_msg('tools/compiler.jar')
-            conf.env.HAVE_COMPILER = 1
-        else:
-            conf.end_msg('not found','YELLOW')
-            Logs.info ("Downloading closure-compiler from %s..." % CLOSURE_COMPILER)
-            urllib.urlretrieve (CLOSURE_COMPILER, "build/closure-compiler.zip")
+        if conf.options.compiler:
+            conf.start_msg ("Checking for closure-compiler")
+            if os.path.exists('tools/compiler.jar'):
+                conf.end_msg('tools/compiler.jar')
+                conf.env.HAVE_COMPILER = 1
+            else:
+                conf.end_msg('not found','YELLOW')
+                Logs.info ("Downloading closure-compiler from %s..." % CLOSURE_COMPILER)
+                urllib.urlretrieve (CLOSURE_COMPILER, "build/closure-compiler.zip")
 
-            subprocess.check_call (['unzip', '-qq', '-o', '-j', 'build/closure-compiler.zip', 'compiler.jar', '-d', 'tools/'])
-            conf.env.HAVE_COMPILER = 1
+                subprocess.check_call (['unzip', '-qq', '-o', '-j', 'build/closure-compiler.zip', 'compiler.jar', '-d', 'tools/'])
+                conf.env.HAVE_COMPILER = 1
 
-    if conf.options.js_path:
-        conf.env.JS_PATH = conf.options.js_path
+    if conf.options.ws:
+        conf.env.WS = 1
 
 def build (bld):
-    securityLib = ["contrib/securityLib/sha256.js",
-                   "contrib/securityLib/base64.js",
-                   "contrib/securityLib/rsa.js",
-                   "contrib/securityLib/rsa2.js",
-                   "contrib/securityLib/rsapem-1.1.js",
-                   "contrib/securityLib/rsasign-1.2.js",
-                   "contrib/securityLib/asn1hex-1.1.js",
-                   "contrib/securityLib/x509-1.1.js",
-                   "contrib/securityLib/jsbn.js",
-                   "contrib/securityLib/jsbn2.js"]
+    if bld.env['JS']:
+        securityLib = ["contrib/securityLib/sha256.js",
+                       "contrib/securityLib/base64.js",
+                       "contrib/securityLib/rsa.js",
+                       "contrib/securityLib/rsa2.js",
+                       "contrib/securityLib/rsapem-1.1.js",
+                       "contrib/securityLib/rsasign-1.2.js",
+                       "contrib/securityLib/asn1hex-1.1.js",
+                       "contrib/securityLib/x509-1.1.js",
+                       "contrib/securityLib/jsbn.js",
+                       "contrib/securityLib/jsbn2.js"]
 
-    ndnjs = ["js/Closure.js",
-             "js/WebSocketTransport.js",
-             "js/util/CCNProtocolDTags.js",
-             "js/util/CCNTime.js",
-             "js/util/ExponentialReExpressClosure.js",
-             "js/Name.js",
-             "js/ContentObject.js",
-             "js/encoding/DateFormat.js",
-             "js/Interest.js",
-             "js/Key.js",
-             "js/PublisherID.js",
-             "js/PublisherPublicKeyDigest.js",
-             "js/FaceInstance.js",
-             "js/ForwardingEntry.js",
-             "js/encoding/DynamicUint8Array.js",
-             "js/encoding/BinaryXMLEncoder.js",
-             "js/encoding/BinaryXMLDecoder.js",
-             "js/encoding/BinaryXMLStructureDecoder.js",
-             "js/encoding/DataUtils.js",
-             "js/encoding/EncodingUtils.js",
-             "js/security/KeyManager.js",
-             "js/security/Witness.js"] + securityLib + ["js/NDN.js"]
+        ndnjs = ["js/Closure.js",
+                 "js/WebSocketTransport.js",
+                 "js/util/CCNProtocolDTags.js",
+                 "js/util/CCNTime.js",
+                 "js/util/ExponentialReExpressClosure.js",
+                 "js/Name.js",
+                 "js/ContentObject.js",
+                 "js/encoding/DateFormat.js",
+                 "js/Interest.js",
+                 "js/Key.js",
+                 "js/PublisherID.js",
+                 "js/PublisherPublicKeyDigest.js",
+                 "js/FaceInstance.js",
+                 "js/ForwardingEntry.js",
+                 "js/encoding/DynamicUint8Array.js",
+                 "js/encoding/BinaryXMLEncoder.js",
+                 "js/encoding/BinaryXMLDecoder.js",
+                 "js/encoding/BinaryXMLStructureDecoder.js",
+                 "js/encoding/DataUtils.js",
+                 "js/encoding/EncodingUtils.js",
+                 "js/security/KeyManager.js",
+                 "js/security/Witness.js"] + securityLib + ["js/NDN.js"]
 
-    ndnjs = bld (features="combine",
-                 target="ndn",
-                 source=ndnjs)
+        ndnjs = bld (features="combine",
+                     target="ndn",
+                     source=ndnjs,
+                     install_path="${PREFIX}")
 
-    if bld.env['HAVE_YUI']:
-        ndnjs.yui = True
+        if bld.env['HAVE_YUI']:
+            ndnjs.yui = True
 
-    if bld.env['HAVE_COMPILER']:
-        ndnjs.compiler = True
+        if bld.env['HAVE_COMPILER']:
+            ndnjs.compiler = True
 
-    if bld.env['JS_PATH']:
-        ndnjs.install_path = bld.env['JS_PATH']
-
+    if bld.env['WS']:
+        bld.install_as ('${BINDIR}/websocket-ccnd-proxy-tcp', 'wsproxy/wsproxy-tcp.js', chmod=Utils.O755)
+        bld.install_as ('${BINDIR}/websocket-ccnd-proxy-udp', 'wsproxy/wsproxy-udp.js', chmod=Utils.O755)
 
 @TaskGen.extension('.js')
 def js_hook(self, node):
@@ -126,7 +136,7 @@ def apply_combine(self):
         out_min = "%s.min.js" % self.target
         compiler = self.create_task ('closure_compiler')
         compiler.combine = task
-        compiler.set_outputs (yui.generator.path.find_or_declare (out_min))
+        compiler.set_outputs (compiler.generator.path.find_or_declare (out_min))
         tasks.append (compiler)
 
     try:
