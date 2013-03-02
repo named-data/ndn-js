@@ -232,6 +232,14 @@ Name.prototype.getPrefix = function(nComponents) {
     return new Name(this.components.slice(0, nComponents));
 }
 
+/**
+ * @brief Get prefix of the name, containing less minusComponents right components
+ * @param minusComponents number of components to cut from the back
+ */
+Name.prototype.cut = function (minusComponents) {
+    return new Name(this.components.slice(0, this.components.length-1));
+}
+
 /*
  * Return a new ArrayBuffer of the component at i.
  */
