@@ -85,12 +85,9 @@ NdnProtocol.prototype = {
     
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
-                // TODO: Strip off an ending implicit digest before checking the last component?
-                var uriEndsWithSegmentNumber = endsWithSegmentNumber(name);
-                
                 // Use the same NDN object each time.
                 thisNdnProtocol.ndn.expressInterest(name, new ExponentialReExpressClosure 
-                    (new ContentClosure(thisNdnProtocol.ndn, contentListener, uriEndsWithSegmentNumber, 
+                    (new ContentClosure(thisNdnProtocol.ndn, contentListener, name, 
                             aURI, searchWithoutNdn + uriParts.hash, segmentTemplate)),
                     template);
             };
@@ -115,8 +112,8 @@ else
 /*
  * Create a closure for calling expressInterest.
  * contentListener is from the call to requestContent.
- * uriEndsWithSegmentNumber is true if the URI passed to newChannel has a segment number
- *    (used to determine whether to request only that segment number and for updating the URL bar).
+ * uriName is the name in the URI passed to newChannel (used in part to determine whether to request 
+ *   only that segment number and for updating the URL bar).
  * aURI is the URI passed to newChannel.
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
  *    and/or '#' but without the interest selector fields.
@@ -124,14 +121,13 @@ else
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  */                                                
 var ContentClosure = function ContentClosure
-        (ndn, contentListener, uriEndsWithSegmentNumber, aURI, uriSearchAndHash, 
-         segmentTemplate) {
+      (ndn, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) {
     // Inherit from Closure.
     Closure.call(this);
     
     this.ndn = ndn;
     this.contentListener = contentListener;
-    this.uriEndsWithSegmentNumber = uriEndsWithSegmentNumber;
+    this.uriName = uriName;
     this.aURI = aURI;
     this.uriSearchAndHash = uriSearchAndHash;
     this.segmentTemplate = segmentTemplate;
@@ -141,6 +137,7 @@ var ContentClosure = function ContentClosure
     this.didRequestFinalSegment = false;
     this.finalSegmentNumber = null;
     this.didOnStart = false;
+    this.uriEndsWithSegmentNumber = endsWithSegmentNumber(uriName);
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -187,7 +184,22 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     }
     
     if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
-        // This is the first or only segment, so start.
+        // This is the first or only segment.
+        /* TODO: Finish implementing check for META.
+        var iMetaComponent = getIndexOfMetaComponent(contentObject.name);
+        if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 &&
+            getIndexOfMetaComponent(this.uriName) < 0) {
+            // The matched content name has a META component that wasn't requiested in the original
+            //   URI.  Try to exclude the META component to get the "real" content.
+            var nameWithoutMeta = new Name(contentObject.name.components.slice(0, iMetaComponent));
+            var excludeMetaTemplate = this.segmentTemplate.clone();
+            excludeMetaTemplate.exclude = new Exclude([MetaComponentPrefix, Exclude.ANY]);
+            
+            this.ndn.expressInterest
+                (nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
+        }
+        */
+        
         this.didOnStart = true;
         
         // Get the URI from the ContentObject including the version.
@@ -255,11 +267,11 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var components = contentObject.name.components.slice
             (0, contentObject.name.components.length - 1);
             
-        // Temporarily set the childSelector in the segmentTemplate.
-        this.segmentTemplate.childSelector = 1;
+        // Clone the template to set the childSelector.
+        var childSelectorTemplate = this.segmentTemplate.clone();
+        childSelectorTemplate.childSelector = 1;
         this.ndn.expressInterest
-            (new Name(components), new ExponentialReExpressClosure(this), this.segmentTemplate);
-        this.segmentTemplate.childSelector = null;
+            (new Name(components), new ExponentialReExpressClosure(this), childSelectorTemplate);
     }
 
     // Request new segments.
@@ -268,17 +280,10 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
         
-        // Make a name for the segment and get it.
-        var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(toRequest[i]);
-        // Put a 0 byte in front.
-        var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
-        segmentNumberComponent.set(segmentNumberBigEndian, 1);
-        
-        var components = contentObject.name.components.slice
-            (0, contentObject.name.components.length - 1);
-        components.push(segmentNumberComponent);
         this.ndn.expressInterest
-            (new Name(components), new ExponentialReExpressClosure(this), this.segmentTemplate);
+            (new Name(contentObject.name.components.slice
+                      (0, contentObject.name.components.length - 1)).addSegment(toRequest[i]), 
+             new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
         
     return Closure.RESULT_OK;
@@ -490,10 +495,27 @@ function parseExclude(value) {
     for (var i = 0; i < splitValue.length; ++i) {
         var element = splitValue[i].trim();
         if (element == "*")
-            excludeValues.push("*")
+            excludeValues.push(Exclude.ANY)
         else
             excludeValues.push(Name.fromEscapedString(element));
     }
 
     return new Exclude(excludeValues);
 }
+
+/*
+ * Return the index of the first compoment that starts with %C1.META, or -1 if not found.
+ */
+function getIndexOfMetaComponent(name) {
+    for (var i = 0; i < name.components.length; ++i) {
+        var component = name.components[i];
+        if (component.length >= MetaComponentPrefix.length &&
+            DataUtils.arraysEqual(component.subarray(0, MetaComponentPrefix.length), 
+                                  MetaComponentPrefix))
+            return i;
+    }
+    
+    return -1;
+}
+
+var MetaComponentPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);

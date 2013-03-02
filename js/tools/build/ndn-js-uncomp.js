@@ -633,6 +633,26 @@ Name.prototype.to_uri = function() {
 	return result;	
 };
 
+/**
+* @brief Add component that represents a segment number
+*
+* @param number Segment number (integer is expected)
+*
+* This component has a special format handling:
+* - if number is zero, then %00 is added
+* - if number is between 1 and 255, %00%01 .. %00%FF is added
+* - ...
+*/
+Name.prototype.addSegment = function(number) {
+    var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+    // Put a 0 byte in front.
+    var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
+    segmentNumberComponent.set(segmentNumberBigEndian, 1);
+
+    this.components.push(segmentNumberComponent);
+    return this;
+};
+
 /*
  * Return a new Name with the first nComponents components of this Name.
  */
