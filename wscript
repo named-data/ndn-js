@@ -106,7 +106,7 @@ def build (bld):
                  "js/security/Witness.js"] + securityLib + ["js/NDN.js"]
 
         ndnjs = bld (features="combine",
-                     target="ndn",
+                     target="ndn-js",
                      source=ndnjs,
                      install_path="${JSDIR}")
 
