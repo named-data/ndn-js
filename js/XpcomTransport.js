@@ -44,6 +44,7 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
 	this.socket = transportService.createTransport(null, 0, ndn.host, ndn.port, null);
+    if (LOG > 0) console.log('XpcomTransport: Connected to ' + ndn.host + ":" + ndn.port);
     this.connectedHost = ndn.host;
     this.connectedPort = ndn.port;
     this.outStream = this.socket.openOutputStream(1, 0, 0);
