@@ -16,9 +16,7 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
 Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
-function NdnProtocol() {
-    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, 
-                       verify: false });
+function NdnProtocol() {    
 }
 
 NdnProtocol.prototype = {
@@ -67,8 +65,6 @@ NdnProtocol.prototype = {
 
     newChannel: function(aURI)
     {
-        var thisNdnProtocol = this;
-        
         try {            
             var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
     
@@ -86,8 +82,8 @@ NdnProtocol.prototype = {
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
                 // Use the same NDN object each time.
-                thisNdnProtocol.ndn.expressInterest(name, new ExponentialReExpressClosure 
-                    (new ContentClosure(thisNdnProtocol.ndn, contentListener, name, 
+                NdnProtocolInfo.ndn.expressInterest(name, new ExponentialReExpressClosure 
+                    (new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
                             aURI, searchWithoutNdn + uriParts.hash, segmentTemplate)),
                     template);
             };
