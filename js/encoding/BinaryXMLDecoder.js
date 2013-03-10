@@ -467,27 +467,20 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 	return new TypeAndVal(type, val);
 };
 
-
-
 //TypeAndVal
-BinaryXMLDecoder.peekTypeAndVal = function() {
+BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	//TypeAndVal 
 	var tv = null;
-	
-	//this.istream.mark(LONG_BYTES*2);		
-	
 	var previousOffset = this.offset;
 	
 	try {
 		tv = this.decodeTypeAndVal();
 	} finally {
-		//this.istream.reset();
 		this.offset = previousOffset;
 	}
 	
 	return tv;
 };
-
 
 //Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
