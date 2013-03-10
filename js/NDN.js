@@ -229,7 +229,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
         // Set interest timer.
         var timeoutMilliseconds = (interest.interestLifetime || 4000);
         var timeoutCallback = function() {
-			if (LOG > 3) console.log("Interest time out: " + interest.name.to_uri());
+			if (LOG > 1) console.log("Interest time out: " + interest.name.to_uri());
 				
 			// Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
             //   the interest because we don't want to match it in the mean time.
@@ -241,7 +241,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 			// Raise closure callback
 			if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
                   new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-			    if (LOG > 3) console.log("Re-express interest: " + interest.name.to_uri());
+			    if (LOG > 1) console.log("Re-express interest: " + interest.name.to_uri());
                 pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
                 NDN.PITTable.push(pitEntry);
                 thisNDN.transport.send(binaryInterest);
@@ -529,7 +529,7 @@ NDN.prototype.connectAndExecute = function(onConnected) {
         
     this.host = hostAndPort.host;
     this.port = hostAndPort.port;   
-    if (LOG>3) console.log("Connect: trying host from getHostAndPort: " + this.host);
+    if (LOG>0) console.log("connectAndExecute: trying host from getHostAndPort: " + this.host);
     
     // Fetch any content.
     var interest = new Interest(new Name("/"));
@@ -537,7 +537,7 @@ NDN.prototype.connectAndExecute = function(onConnected) {
 
     var thisNDN = this;
 	var timerID = setTimeout(function() {
-        if (LOG>3) console.log("Connect: timeout waiting for host " + thisNDN.host);
+        if (LOG>0) console.log("connectAndExecute: timeout waiting for host " + thisNDN.host);
         // Try again.
         thisNDN.connectAndExecute(onConnected);
 	}, 3000);
@@ -568,6 +568,7 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
 	this.ndn.readyStatus = NDN.OPENED;
 	this.ndn.onopen();
 
+    if (LOG>0) console.log("connectAndExecute: connected to host " + this.ndn.host);
     this.onConnected();
 
     return Closure.RESULT_OK;
