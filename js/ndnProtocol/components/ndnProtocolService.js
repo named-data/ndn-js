@@ -138,16 +138,13 @@ var ContentClosure = function ContentClosure
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
   try {
-    // Assume this is only called once we're connected, report the host and port.
-    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
-    
     if (this.contentListener.done)
         // We are getting unexpected extra results.
         return Closure.RESULT_ERR;
     
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         if (!this.didOnStart) {
-            // We have not received a segments to start the content yet, so assume the URI can't be fetched.
+            // We have not received a segment to start the content yet, so assume the URI can't be fetched.
             this.contentListener.onStart("text/plain", "utf-8", this.aURI);
             this.contentListener.onReceivedContent
                 ("The latest interest timed out after " + upcallInfo.interest.interestLifetime + " milliseconds.");
@@ -169,6 +166,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         dump("NdnProtocol.ContentClosure: contentObject.content is null\n");
         return Closure.RESULT_ERR;
     }
+    
+    // Assume this is only called once we're connected, report the host and port.
+    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
     
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
