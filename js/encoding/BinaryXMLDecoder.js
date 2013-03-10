@@ -413,8 +413,8 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 
 	//if(lontimestamp<0) lontimestamp =  - lontimestamp;
 
-	if(LOG>3) console.log('DECODED DATE WITH VALUE');
-	if(LOG>3) console.log(lontimestamp);
+	if(LOG>4) console.log('DECODED DATE WITH VALUE');
+	if(LOG>4) console.log(lontimestamp);
 	
 
 	//CCNTime 
@@ -462,7 +462,7 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 		
 	} while (more);
 	
-	if(LOG>3)console.log('TYPE is '+ type + ' VAL is '+ val);
+	if(LOG>4)console.log('TYPE is '+ type + ' VAL is '+ val);
 
 	return new TypeAndVal(type, val);
 };
@@ -521,10 +521,10 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		//TypeAndVal 
 		var tv = this.decodeTypeAndVal();
 		
-		if(LOG>3)console.log('TV is '+tv);
-		if(LOG>3)console.log(tv);
+		if(LOG>4)console.log('TV is '+tv);
+		if(LOG>4)console.log(tv);
 		
-		if(LOG>3)console.log('Type of TV is '+typeof tv);
+		if(LOG>4)console.log('Type of TV is '+typeof tv);
 	
 		if ((null == tv) || (XML_UDATA != tv.type())) { // if we just have closers left, will get back null
 			//if (Log.isLoggable(Log.FAC_ENCODING, Level.FINEST))
