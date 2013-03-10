@@ -140,13 +140,13 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.signedInfo = new SignedInfo();
 			this.signedInfo.from_ccnb(decoder);
 		}
-		
-		this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
 
+        if (decoder.peekTypeAndVal() == null)
+            this.content = null;
+        else
+            this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
 		
-		//this.endContent = decoder.offset;
 		this.endSIG = decoder.offset;
-
 		
 		decoder.readEndElement();
 		

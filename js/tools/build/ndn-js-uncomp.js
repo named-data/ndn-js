@@ -485,8 +485,10 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
  
 /*
  * Create a new Name from _components.
- * If _components is a string, parse it as a URI.  Otherwise it is an array of components
- * where each is a string, byte array, ArrayBuffer or Uint8Array. 
+ * If _components is a string, parse it as a URI.
+ * If _components is a Name, add a deep copy of its components.
+ * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Uint8Array
+ *   or Name. 
  * Convert and store as an array of Uint8Array.
  * If a component is a string, encode as utf8.
  */
@@ -496,10 +498,13 @@ var Name = function Name(_components){
 		this.components = Name.createNameArray(_components);
 	}
 	else if(typeof _components === 'object'){		
-		if(LOG>4)console.log('Content Name Array '+_components);
 		this.components = [];
-        for (var i = 0; i < _components.length; ++i)
-            this.add(_components[i]);
+        if (_components instanceof Name)
+            this.add(_components);
+        else {
+            for (var i = 0; i < _components.length; ++i)
+                this.add(_components[i]);
+        }
 	}
 	else if(_components==null)
 		this.components =[];
@@ -593,10 +598,10 @@ Name.prototype.getElementLabel = function(){
 };
 
 /*
- * component is a string, byte array, ArrayBuffer or Uint8Array.
+ * component is a string, byte array, ArrayBuffer, Uint8Array or Name.
  * Convert to Uint8Array and add to this Name.
  * If a component is a string, encode as utf8.
- * Return the converted value.
+ * Return this Name object to allow chaining calls to add.
  */
 Name.prototype.add = function(component){
     var result;
@@ -609,6 +614,18 @@ Name.prototype.add = function(component){
         result = new Uint8Array(new ArrayBuffer(component.byteLength));
         result.set(new Uint8Array(component));
     }
+    else if (typeof component == 'object' && component instanceof Name) {
+        var components;
+        if (component == this)
+            // special case, when we need to create a copy
+            components = this.components.slice(0, this.components.length);
+        else
+            components = component.components;
+        
+        for (var i = 0; i < components.length; ++i)
+            this.components.push(new Uint8Array(components[i]));
+        return this;
+    }
 	else if(typeof component == 'object')
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
@@ -617,7 +634,8 @@ Name.prototype.add = function(component){
 		throw new Error("Cannot add Name element at index " + this.components.length + 
             ": Invalid type");
     
-	return this.components.push(result);
+    this.components.push(result);
+	return this;
 };
 
 // Return the escaped name string according to "CCNx URI Scheme".
@@ -956,13 +974,13 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 			this.signedInfo = new SignedInfo();
 			this.signedInfo.from_ccnb(decoder);
 		}
-		
-		this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
 
+        if (decoder.peekTypeAndVal() == null)
+            this.content = null;
+        else
+            this.content = decoder.readBinaryElement(CCNProtocolDTags.Content);
 		
-		//this.endContent = decoder.offset;
 		this.endSIG = decoder.offset;
-
 		
 		decoder.readEndElement();
 		
@@ -3196,27 +3214,20 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 	return new TypeAndVal(type, val);
 };
 
-
-
 //TypeAndVal
-BinaryXMLDecoder.peekTypeAndVal = function() {
+BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	//TypeAndVal 
 	var tv = null;
-	
-	//this.istream.mark(LONG_BYTES*2);		
-	
 	var previousOffset = this.offset;
 	
 	try {
 		tv = this.decodeTypeAndVal();
 	} finally {
-		//this.istream.reset();
 		this.offset = previousOffset;
 	}
 	
 	return tv;
 };
-
 
 //Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
