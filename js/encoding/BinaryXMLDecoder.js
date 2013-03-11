@@ -344,9 +344,11 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
 		//TreeMap<String, String> 
-		attributes){
+		attributes,
+		//boolean
+		allowNull){
 	this.readStartElement(startTag, attributes);
-	return this.readBlob();	
+	return this.readBlob(allowNull);	
 };
 	
 	
@@ -378,8 +380,17 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-// Read a blob as well as the end element. Returns a Uint8Array.
-BinaryXMLDecoder.prototype.readBlob = function() {
+/*
+ * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
+ * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
+ *   just read the end element and return null.
+ */
+BinaryXMLDecoder.prototype.readBlob = function(allowNull) {
+    if (this.istream[this.offset] == XML_CLOSE && allowNull) {
+        this.readEndElement();
+        return null;
+    }
+    
 	var blob = this.decodeBlob();	
 	this.readEndElement();
 	return blob;
