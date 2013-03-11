@@ -339,19 +339,14 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 	};
 
 
-// returns a byte[]
+// Returns a Uint8Array.
 BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
 		//TreeMap<String, String> 
 		attributes){
-	//byte [] 
-	var blob = null;
-	
 	this.readStartElement(startTag, attributes);
-	blob = this.readBlob();	
-
-	return blob;
+	return this.readBlob();	
 };
 	
 	
@@ -383,15 +378,12 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-//returns a uint8array
+// Read a blob as well as the end element. Returns a Uint8Array.
 BinaryXMLDecoder.prototype.readBlob = function() {
-			//uint8array
-			
-			var blob = this.decodeBlob();	
-			this.readEndElement();
-			return blob;
-
-	};
+	var blob = this.decodeBlob();	
+	this.readEndElement();
+	return blob;
+};
 
 
 //CCNTime
