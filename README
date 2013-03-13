@@ -116,7 +116,7 @@ library.   It currently obtains NDN connectivity through the NDN testbed.  (This
 hard-coded.)
 
 To install, either download
-https://github.com/remap/ndn-js/blob/master/js/ndnProtocol.xpi
+https://github.com/named-data/ndn-js/blob/master/js/ndnProtocol.xpi
 or use js/ndnProtocol.xpi in the distribution.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
 ndnProtocol.xpi.  Restart Firefox.
