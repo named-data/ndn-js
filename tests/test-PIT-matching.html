@@ -10,12 +10,12 @@
 <head>
 	<title>NDN PIT Matching</title>
 	
-	<script type="text/javascript" src="../Helper.js"></script>
+	<script type="text/javascript" src="../build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		var ndn = new NDN({verify:false});
+		var ndn = new NDN({port:9696,host:"localhost", verify:false});
         
-        var AsyncGetClosure = function AsyncGetClosure(target) {
+                var AsyncGetClosure = function AsyncGetClosure(target) {
         	// Inherit from Closure.
 			Closure.call(this);
             
