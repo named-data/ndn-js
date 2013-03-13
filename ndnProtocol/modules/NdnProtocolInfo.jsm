@@ -10,12 +10,17 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("chrome://modules/content/ndn-js.jsm");
 
 var NdnProtocolInfo = function NdnProtocolInfo(){
 };
 
-NdnProtocolInfo.ndnHubHost = null;
-NdnProtocolInfo.ndnHubPort = null;
+NdnProtocolInfo.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, 
+                              verify: false });
+
+// These are set once a connection is established.
+NdnProtocolInfo.connectedNdnHubHost = null;
+NdnProtocolInfo.connectedNdnHubPort = null;
 NdnProtocolInfo.ndnHubChangedListenerList = [];
 
 /*
@@ -25,9 +30,9 @@ NdnProtocolInfo.ndnHubChangedListenerList = [];
 NdnProtocolInfo.addNdnHubChangedListener = function(listener) {
     NdnProtocolInfo.ndnHubChangedListenerList.push(listener);
     
-    if (NdnProtocolInfo.ndnHubHost != null && NdnProtocolInfo.ndnHubPort != null) {
+    if (NdnProtocolInfo.connectedNdnHubHost != null && NdnProtocolInfo.connectedNdnHubPort != null) {
         try {
-            listener(NdnProtocolInfo.ndnHubHost, NdnProtocolInfo.ndnHubPort);
+            listener(NdnProtocolInfo.connectedNdnHubHost, NdnProtocolInfo.connectedNdnHubPort);
         }
         catch (ex) {
             // Ignore error from the listener.
@@ -40,12 +45,12 @@ NdnProtocolInfo.addNdnHubChangedListener = function(listener) {
  * listener in ndnHubChangedListenerList.
  */
 NdnProtocolInfo.setConnectedNdnHub = function(host, port) {
-    if (host == NdnProtocolInfo.ndnHubHost && port == NdnProtocolInfo.ndnHubPort)
+    if (host == NdnProtocolInfo.connectedNdnHubHost && port == NdnProtocolInfo.connectedNdnHubPort)
         // No change.
         return;
     
-    NdnProtocolInfo.ndnHubHost = host;
-    NdnProtocolInfo.ndnHubPort = port;
+    NdnProtocolInfo.connectedNdnHubHost = host;
+    NdnProtocolInfo.connectedNdnHubPort = port;
     for (var i = 0; i < NdnProtocolInfo.ndnHubChangedListenerList.length; ++i) {
         try {
             NdnProtocolInfo.ndnHubChangedListenerList[i](host, port);

@@ -16,9 +16,7 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
 Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
-function NdnProtocol() {
-    this.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, 
-                       verify: false });
+function NdnProtocol() {    
 }
 
 NdnProtocol.prototype = {
@@ -67,8 +65,6 @@ NdnProtocol.prototype = {
 
     newChannel: function(aURI)
     {
-        var thisNdnProtocol = this;
-        
         try {            
             var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
     
@@ -86,8 +82,8 @@ NdnProtocol.prototype = {
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
                 // Use the same NDN object each time.
-                thisNdnProtocol.ndn.expressInterest(name, new ExponentialReExpressClosure 
-                    (new ContentClosure(thisNdnProtocol.ndn, contentListener, name, 
+                NdnProtocolInfo.ndn.expressInterest(name, new ExponentialReExpressClosure 
+                    (new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
                             aURI, searchWithoutNdn + uriParts.hash, segmentTemplate)),
                     template);
             };
@@ -142,16 +138,13 @@ var ContentClosure = function ContentClosure
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
   try {
-    // Assume this is only called once we're connected, report the host and port.
-    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
-    
     if (this.contentListener.done)
         // We are getting unexpected extra results.
         return Closure.RESULT_ERR;
     
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         if (!this.didOnStart) {
-            // We have not received a segments to start the content yet, so assume the URI can't be fetched.
+            // We have not received a segment to start the content yet, so assume the URI can't be fetched.
             this.contentListener.onStart("text/plain", "utf-8", this.aURI);
             this.contentListener.onReceivedContent
                 ("The latest interest timed out after " + upcallInfo.interest.interestLifetime + " milliseconds.");
@@ -173,6 +166,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         dump("NdnProtocol.ContentClosure: contentObject.content is null\n");
         return Closure.RESULT_ERR;
     }
+    
+    // Assume this is only called once we're connected, report the host and port.
+    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
     
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.

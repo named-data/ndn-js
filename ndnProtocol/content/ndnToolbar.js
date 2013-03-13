@@ -62,3 +62,24 @@ function onNdnHubChanged(host, port) {
 }
 
 window.addEventListener("load", function() { NdnProtocolInfo.addNdnHubChangedListener(onNdnHubChanged); }, false);
+
+function ndnToolbarSetHub() {
+    var host = prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
+    if (!host)
+        return;
+    
+    host = host.trim();
+    if (host == "")
+        return;
+    if (host == NdnProtocolInfo.ndn.host)
+        // No change.
+        return;
+    
+    var port = 9695;
+    NdnProtocolInfo.ndn.createRoute(host, port);
+    document.getElementById("ndnHubLabel").setAttribute("value", "Hub: trying " + host + ":" + port);
+    
+    if (window._content.document.location.protocol == "ndn:")
+        // Reload with the new hub.
+        window._content.document.location = window._content.document.location.href;
+}

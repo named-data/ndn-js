@@ -339,19 +339,16 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 	};
 
 
-// returns a byte[]
+// Returns a Uint8Array.
 BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
 		//TreeMap<String, String> 
-		attributes){
-	//byte [] 
-	var blob = null;
-	
+		attributes,
+		//boolean
+		allowNull){
 	this.readStartElement(startTag, attributes);
-	blob = this.readBlob();	
-
-	return blob;
+	return this.readBlob(allowNull);	
 };
 	
 	
@@ -383,15 +380,21 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-//returns a uint8array
-BinaryXMLDecoder.prototype.readBlob = function() {
-			//uint8array
-			
-			var blob = this.decodeBlob();	
-			this.readEndElement();
-			return blob;
-
-	};
+/*
+ * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
+ * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
+ *   just read the end element and return null.
+ */
+BinaryXMLDecoder.prototype.readBlob = function(allowNull) {
+    if (this.istream[this.offset] == XML_CLOSE && allowNull) {
+        this.readEndElement();
+        return null;
+    }
+    
+	var blob = this.decodeBlob();	
+	this.readEndElement();
+	return blob;
+};
 
 
 //CCNTime
@@ -413,8 +416,8 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 
 	//if(lontimestamp<0) lontimestamp =  - lontimestamp;
 
-	if(LOG>3) console.log('DECODED DATE WITH VALUE');
-	if(LOG>3) console.log(lontimestamp);
+	if(LOG>4) console.log('DECODED DATE WITH VALUE');
+	if(LOG>4) console.log(lontimestamp);
 	
 
 	//CCNTime 
@@ -462,32 +465,25 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 		
 	} while (more);
 	
-	if(LOG>3)console.log('TYPE is '+ type + ' VAL is '+ val);
+	if(LOG>4)console.log('TYPE is '+ type + ' VAL is '+ val);
 
 	return new TypeAndVal(type, val);
 };
 
-
-
 //TypeAndVal
-BinaryXMLDecoder.peekTypeAndVal = function() {
+BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	//TypeAndVal 
 	var tv = null;
-	
-	//this.istream.mark(LONG_BYTES*2);		
-	
 	var previousOffset = this.offset;
 	
 	try {
 		tv = this.decodeTypeAndVal();
 	} finally {
-		//this.istream.reset();
 		this.offset = previousOffset;
 	}
 	
 	return tv;
 };
-
 
 //Uint8Array
 BinaryXMLDecoder.prototype.decodeBlob = function(
@@ -528,10 +524,10 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		//TypeAndVal 
 		var tv = this.decodeTypeAndVal();
 		
-		if(LOG>3)console.log('TV is '+tv);
-		if(LOG>3)console.log(tv);
+		if(LOG>4)console.log('TV is '+tv);
+		if(LOG>4)console.log(tv);
 		
-		if(LOG>3)console.log('Type of TV is '+typeof tv);
+		if(LOG>4)console.log('Type of TV is '+typeof tv);
 	
 		if ((null == tv) || (XML_UDATA != tv.type())) { // if we just have closers left, will get back null
 			//if (Log.isLoggable(Log.FAC_ENCODING, Level.FINEST))

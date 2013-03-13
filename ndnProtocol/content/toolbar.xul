@@ -19,6 +19,8 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
         label="Latest" oncommand="ndnToolbarGetVersion('latest')"/>
       <toolbarseparator/>
       <label id="ndnHubLabel" value="Hub: not connected"/>
+      <toolbarbutton id="ndnToolbarSetHubButton"
+        label="Set..." oncommand="ndnToolbarSetHub()"/>
   </toolbar>
 </toolbox>
 
