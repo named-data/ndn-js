@@ -20,8 +20,8 @@ def options (opt):
                   help='''Directory where .js files will be installed (Default: ${PREFIX}/share/ndn-js)''')
     js.add_option('--yui',action='store_true',default=False,dest='yui',
                   help='''Download and use yuicompressor-2.4.7 (http://yui.github.com/yuicompressor/)''')
-    js.add_option('--compiler',action='store_true',default=False,dest='compiler',
-                  help='''Download and use closure-compiler-r2388 (https://code.google.com/p/closure-compiler/)''')
+    js.add_option('--no-compiler',action='store_false',default=True,dest='compiler',
+                  help='''Disable download and use of closure-compiler-r2388 (https://code.google.com/p/closure-compiler/)''')
 
     ws = opt.add_option_group ("ws-proxy options")
     ws.add_option ('--no-ws',action='store_false',default=True,dest='ws',
