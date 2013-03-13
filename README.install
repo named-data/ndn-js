@@ -18,7 +18,7 @@ possible.
 
 To create a combined and optionally compressed version of NDN.JS scripts:
 
-    ./waf configure --no-ws --prefix=<PREFIX_TO_INSTALL_JS> --compiler
+    ./waf configure --no-ws --prefix=<PREFIX_TO_INSTALL_JS> 
     ./waf install
 
 These commands will create a combined version, combined version compressed using  Google's
@@ -37,6 +37,10 @@ for, but that doesn't have to be the case).  See wsproxy/README.md
 THE FIREFOX ADD-ON
 ==================
 
-If the compressed library js/tools/build/ndn-js.js is out of date, first build it (see above).
-Go to js/ndnProtocol and run make-ndnProtocol.sh which makes js/ndnProtocol.xpi.
+Build first compressed version of NDN.js
+
+    ./waf configure
+    ./waf
+
+Then go to ndnProtocol and run ./make-ndnProtocol.sh which makes ndnProtocol.xpi.
 

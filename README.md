@@ -52,7 +52,7 @@ specify a local or remote ccnd as well, as an argument to the NDN constructor.
 JAVASCRIPT API
 --------------
 
-See files in js/  and examples in js/testing, js/examples
+See files in js/  and examples in tests/, examples/
 
 NDN.JS currently supports expressing Interests (and receiving data) and publishing Data
 (that answers Interests).  This includes encoding and decoding data packets as well as
@@ -101,7 +101,7 @@ AsyncGetClosure());
 // on a way to either obtain that prefix or use the /local
 // convention. 
 
-For now, see testing/test-publish-async.html
+For now, see tests/test-publish-async.html
 
 
 
@@ -109,15 +109,16 @@ For now, see testing/test-publish-async.html
 FIREFOX ADD-ON FOR THE NDN PROTOCOL
 -----------------------------------
 
-See files in js/ndnProtocol
+See files in ndnProtocol/
 
 NDN.JS includes a Firefox extension for the ndn protocol built using the Javascript
 library.   It currently obtains NDN connectivity through the NDN testbed.  (This is
 hard-coded.)
 
 To install, either download
-https://github.com/named-data/ndn-js/blob/master/js/ndnProtocol.xpi
-or use js/ndnProtocol.xpi in the distribution.  In Firefox, open
+https://github.com/named-data/ndn-js/raw/downloads/ndnProtocol.xpi
+
+or use ndnProtocol.xpi from `downloads` branch.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
 ndnProtocol.xpi.  Restart Firefox.
 
