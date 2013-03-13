@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /* 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.

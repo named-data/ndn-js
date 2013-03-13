@@ -393,7 +393,7 @@ NDN.prototype.onReceivedElement = function(element) {
 										
 			if (this.verify == false) {
 				// Pass content up without verifying the signature
-				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, null, 0, co));
+				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, co));
 				return;
 			}
 				
@@ -457,9 +457,9 @@ NDN.prototype.onReceivedElement = function(element) {
 						var rsakey = decodeSubjectPublicKeyInfo(co.content);
 						var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
 						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-									
-						currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
-									
+
+						currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+
 						// SWT: We don't need to store key here since the same key will be
 						//      stored again in the closure.
 						//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
@@ -474,9 +474,9 @@ NDN.prototype.onReceivedElement = function(element) {
 							var rsakey = keyEntry.rsaKey;
 							var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
 							var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-										
+
 							// Raise callback
-							currentClosure.upcall(flag, new UpcallInfo(this, null, 0, co));
+							currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
 						} else {
 							// Not found, fetch now
 							if (LOG > 3) console.log("Fetch key according to keylocator");
@@ -492,8 +492,8 @@ NDN.prototype.onReceivedElement = function(element) {
 							
 					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 					// Raise callback
-					currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, null, 0, co));
-								
+					currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, co));
+
 					// Since KeyLocator does not contain key name for this key,
 					// we have no way to store it as a key entry in KeyStore.
 				} else {

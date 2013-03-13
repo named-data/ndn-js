@@ -1,0 +1,46 @@
+NDN.JS: A javascript client library for Named Data Networking
+-------------------------------------------------------------
+
+BASIC LIBRARY: NO BUILD REQUIRED
+================================
+The basic NDN.JS library does not need to be "built".  For the library, you can manually
+include the necessary scripts in a web page or include Helper.js to have it load all of
+the scripts.
+
+BUILD A COMBINED, COMPRESSED LIBRARY 
+====================================
+
+A more efficient way to include the library is to used the combined, compressed library
+ndn-js.js that can be made using the js/tools/build/make-js.sh script.  See the README in
+that directly.  While we try to keep a built version in that directory for convenience, it
+may fall out of sync with the library, so we recommend building it using the script if
+possible.
+
+To create a combined and optionally compressed version of NDN.JS scripts:
+
+    ./waf configure --no-ws --prefix=<PREFIX_TO_INSTALL_JS> 
+    ./waf install
+
+These commands will create a combined version, combined version compressed using  Google's
+Closure Compiler, and install it into <PREFIX_TO_INSTALL_JS> folder.
+
+The compressed version is what we recommend including in applications.
+
+
+WEBSOCKETS PROXY
+================
+
+If you wish to run your own WebSockets proxy instead of using the NDN testbed, you must
+build and install Node.js (often on the machine also running the ccnd you wish to proxy
+for, but that doesn't have to be the case).  See wsproxy/README.md
+
+THE FIREFOX ADD-ON
+==================
+
+Build first compressed version of NDN.js
+
+    ./waf configure
+    ./waf
+
+Then go to ndnProtocol and run ./make-ndnProtocol.sh which makes ndnProtocol.xpi.
+
