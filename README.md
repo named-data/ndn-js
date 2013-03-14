@@ -68,13 +68,26 @@ the same host.
 ** Including the scripts in a web page **
 To use NDN.JS in a web page, one of two scripts must be included using a <script> tag:
 
-1. ndn-js.js, a combined, compressed library designed for efficient distribution.  It can
-be built using js/tools/build/make-js.sh     This is used in examples/ndn-ping.html
+ndn-js.js is a combined library (and ndn-js.min.js is a compressed version of the combined library),
+designed for efficient distribution.  Bother can be either build in ./build/ndn-js.min.js using 
+the following commands:
 
-2. Helper.js, which loads each component script independently.  This is used in most of
-the tests in testing/
+    ./waf configure
+    ./waf
 
-** Example to retrieve content **
+Or downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
+
+- http://raw.github.com/named-data/ndn-js/downloads/ndn-js.js
+- http://raw.github.com/named-data/ndn-js/downloads/ndn-js.min.js
+
+** Examples **
+
+*** ndn-ping
+
+You can check out `examples/ndn-ping.html` to see an example how to implement ndn-ping in NDN.js
+
+*** Example to retrieve content ***
+
 A simple example of the current API to express an Interest and receive data:
 
 var ndn = new NDN();	// connect to a default hub/proxy
@@ -102,7 +115,6 @@ AsyncGetClosure());
 // convention. 
 
 For now, see tests/test-publish-async.html
-
 
 
 
