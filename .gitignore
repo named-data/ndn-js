@@ -5,3 +5,5 @@ tools/yui*.jar
 tools/compiler*.jar
 build
 ndnProtocol.xpi
+ndnProtocol/modules/ndn-js.jsm
+
