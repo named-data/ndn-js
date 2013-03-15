@@ -135,6 +135,8 @@ var ContentClosure = function ContentClosure
     this.didOnStart = false;
     this.uriEndsWithSegmentNumber = endsWithSegmentNumber(uriName);
     this.nameWithoutSegment = null;
+    this.excludedMetaComponents = [];
+    this.iMetaComponent = null;
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -180,21 +182,26 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     
     if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
         // This is the first or only segment.
-        /*
         var iMetaComponent = getIndexOfMetaComponent(contentObject.name);
         if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 &&
             getIndexOfMetaComponent(this.uriName) < 0) {
             // The matched content name has a META component that wasn't requested in the original
             //   URI.  Add this to the excluded META components to try to get the "real" content.
             var nameWithoutMeta = new Name(contentObject.name.components.slice(0, iMetaComponent));
-            var excludeMetaTemplate = this.segmentTemplate.clone();
-            excludeMetaTemplate.exclude = new Exclude([contentObject.name.components[iMetaComponent]]);
+            if (this.excludedMetaComponents.length > 0 && iMetaComponent != this.iMetaComponent)
+                // We are excluding META components at a new position in the name, so start over.
+                this.excludedMetaComponents = [];
+            this.iMetaComponent = iMetaComponent;
+            this.excludedMetaComponents.push(contentObject.name.components[iMetaComponent]);
+            // Exclude components are required to be sorted.
+            this.excludedMetaComponents.sort(Exclude.compareComponents);
             
+            var excludeMetaTemplate = this.segmentTemplate.clone();
+            excludeMetaTemplate.exclude = new Exclude(this.excludedMetaComponents);
             this.ndn.expressInterest
                 (nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
-        */
         
         this.didOnStart = true;
         
