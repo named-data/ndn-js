@@ -134,6 +134,7 @@ var ContentClosure = function ContentClosure
     this.finalSegmentNumber = null;
     this.didOnStart = false;
     this.uriEndsWithSegmentNumber = endsWithSegmentNumber(uriName);
+    this.nameWithoutSegment = null;
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -173,26 +174,25 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
-    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
+    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
             (contentObject.name.components[contentObject.name.components.length - 1]);
-        this.segmentStore.storeContent(segmentNumber, contentObject);
-    }
     
     if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
         // This is the first or only segment.
-        /* TODO: Finish implementing check for META.
+        /*
         var iMetaComponent = getIndexOfMetaComponent(contentObject.name);
         if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 &&
             getIndexOfMetaComponent(this.uriName) < 0) {
-            // The matched content name has a META component that wasn't requiested in the original
-            //   URI.  Try to exclude the META component to get the "real" content.
+            // The matched content name has a META component that wasn't requested in the original
+            //   URI.  Add this to the excluded META components to try to get the "real" content.
             var nameWithoutMeta = new Name(contentObject.name.components.slice(0, iMetaComponent));
             var excludeMetaTemplate = this.segmentTemplate.clone();
-            excludeMetaTemplate.exclude = new Exclude([MetaComponentPrefix, Exclude.ANY]);
+            excludeMetaTemplate.exclude = new Exclude([contentObject.name.components[iMetaComponent]]);
             
             this.ndn.expressInterest
                 (nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
+            return Closure.RESULT_OK;
         }
         */
         
@@ -215,24 +215,39 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
-    }
 
-    if (segmentNumber == null) {
-        // We are not doing segments, so just finish.
-        this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-        this.contentSha256.update(contentObject.content);
-        this.contentListener.onStop();
+        if (segmentNumber == null) {
+            // We are not doing segments, so just finish.
+            this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
+            this.contentSha256.update(contentObject.content);
+            this.contentListener.onStop();
 
-        if (!this.uriEndsWithSegmentNumber) {
-            var nameContentDigest = contentObject.name.getContentDigestValue();
-            if (nameContentDigest != null &&
-                !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
-                // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + contentObject.name.to_uri());
+            if (!this.uriEndsWithSegmentNumber) {
+                var nameContentDigest = contentObject.name.getContentDigestValue();
+                if (nameContentDigest != null &&
+                    !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+                    // TODO: How to show the user an error for invalid digest?
+                    dump("Content does not match digest in name " + contentObject.name.to_uri());
+            }
+            return Closure.RESULT_OK;
         }
-        return Closure.RESULT_OK;
+        else
+            // We are doing segments.  Make sure we always request the same base name.
+            this.nameWithoutSegment = new Name(contentObject.name.components.slice
+                (0, contentObject.name.components.length - 1));
     }
     
+    if (segmentNumber == null)
+        // We should be doing segments at this point.
+        return Closure.RESULT_ERR;
+    
+    if (!(contentObject.name.components.length == this.nameWithoutSegment.components.length + 1 &&
+          this.nameWithoutSegment.match(contentObject.name)))
+        // The content object name is not part of our sequence of segments.
+        return Closure.RESULT_ERR;
+    
+    this.segmentStore.storeContent(segmentNumber, contentObject);
+
     if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
         this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
 
@@ -260,14 +275,11 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
     if (this.finalSegmentNumber == null && !this.didRequestFinalSegment) {
         this.didRequestFinalSegment = true;
         // Try to determine the final segment now.
-        var components = contentObject.name.components.slice
-            (0, contentObject.name.components.length - 1);
-            
         // Clone the template to set the childSelector.
         var childSelectorTemplate = this.segmentTemplate.clone();
         childSelectorTemplate.childSelector = 1;
         this.ndn.expressInterest
-            (new Name(components), new ExponentialReExpressClosure(this), childSelectorTemplate);
+            (this.nameWithoutSegment, new ExponentialReExpressClosure(this), childSelectorTemplate);
     }
 
     // Request new segments.
@@ -277,8 +289,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
             continue;
         
         this.ndn.expressInterest
-            (new Name(contentObject.name.components.slice
-                      (0, contentObject.name.components.length - 1)).addSegment(toRequest[i]), 
+            (new Name(this.nameWithoutSegment).addSegment(toRequest[i]), 
              new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
         
