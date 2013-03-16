@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /* 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
@@ -49,6 +47,7 @@ wss.on('connection', function(ws) {
 	}
 	
 	var sock_ready = false;
+	var ws_ready = true;
 	var send_queue = [];
 	var sock = net.connect({port: 9695, host: ccndhost});
 	
@@ -76,6 +75,7 @@ wss.on('connection', function(ws) {
 	
 	ws.on('close', function() {
 		if (LOG > 0) console.log('WebSocket connection closed.');
+		ws_ready = false;
 		sock.end();
 	});
 	
@@ -100,7 +100,9 @@ wss.on('connection', function(ws) {
 				console.log(logMsg);
 			}
 			
-			ws.send(bytesView.buffer, {binary: true, mask: false});
+			if (ws_ready == true) {
+				ws.send(bytesView.buffer, {binary: true, mask: false});
+			}
 		}
 	});
 	
