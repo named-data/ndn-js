@@ -129,7 +129,7 @@ var ContentClosure = function ContentClosure
     this.segmentTemplate = segmentTemplate;
     
     this.segmentStore = new SegmentStore();
-    this.contentSha256 = new Sha256();
+    this.contentSha256 = null;
     this.didRequestFinalSegment = false;
     this.finalSegmentNumber = null;
     this.didOnStart = false;
@@ -223,15 +223,20 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
 
+        if (contentObject.name.getContentDigestValue() != null)
+            // Prepare to compute the content digest.
+            this.contentSha256 = new Sha256();
+
         if (segmentNumber == null) {
             // We are not doing segments, so just finish.
             this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-            this.contentSha256.update(contentObject.content);
+            if (this.contentSha256 != null)
+                this.contentSha256.update(contentObject.content);
             this.contentListener.onStop();
 
             if (!this.uriEndsWithSegmentNumber) {
                 var nameContentDigest = contentObject.name.getContentDigestValue();
-                if (nameContentDigest != null &&
+                if (nameContentDigest != null && this.contentSha256 != null &&
                     !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
                     // TODO: How to show the user an error for invalid digest?
                     dump("Content does not match digest in name " + contentObject.name.to_uri());
@@ -264,13 +269,14 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         segmentNumber = entry.key;
         contentObject = entry.value;
         this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-        this.contentSha256.update(contentObject.content);
+        if (this.contentSha256 != null)
+            this.contentSha256.update(contentObject.content);
         
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
             var nameContentDigest = contentObject.name.getContentDigestValue();
-            if (nameContentDigest != null &&
+            if (nameContentDigest != null && this.contentSha256 != null &&
                 !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
                 // TODO: How to show the user an error for invalid digest?
                 dump("Content does not match digest in name " + contentObject.name.to_uri());
