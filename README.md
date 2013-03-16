@@ -66,7 +66,7 @@ currently listens on port 9696 and passes messages (using either TCP or UDP) to 
 the same host. 
 
 ** Including the scripts in a web page **
-To use NDN.JS in a web page, one of two scripts must be included using a <script> tag:
+To use NDN.JS in a web page, one of two scripts must be included using a script tag:
 
 ndn-js.js is a combined library (and ndn-js.min.js is a compressed version of the combined library),
 designed for efficient distribution.  Bother can be either build in ./build/ndn-js.min.js using 
