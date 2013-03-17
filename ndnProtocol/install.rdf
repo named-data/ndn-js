@@ -13,5 +13,12 @@
         <em:maxVersion>4.0.*</em:maxVersion>
       </Description>
     </em:targetApplication>
+    <em:targetApplication>
+      <Description>
+        <em:id>{aa3c5121-dab2-40e2-81ca-7ea25febc110}</em:id> <!-- Firefox on Android -->
+        <em:minVersion>15.0</em:minVersion>
+        <em:maxVersion>18.*</em:maxVersion>
+      </Description>
+    </em:targetApplication>
   </Description>
 </RDF>
