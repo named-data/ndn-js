@@ -15,7 +15,8 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 var NdnProtocolInfo = function NdnProtocolInfo(){
 };
 
-NdnProtocolInfo.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); }, 
+NdnProtocolInfo.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); },
+                              host: "A.hub.ndn.ucla.edu", port: 9695,
                               verify: false });
 
 // These are set once a connection is established.
@@ -38,7 +39,7 @@ NdnProtocolInfo.addNdnHubChangedListener = function(listener) {
             // Ignore error from the listener.
         }
     }
-}
+};
 
 /*
  * If host and port are different than ndnHubHost or ndnHubPort, set them and call each
@@ -59,7 +60,7 @@ NdnProtocolInfo.setConnectedNdnHub = function(host, port) {
             // Ignore error from the listener.
         }
     }
-}
+};
 
 /*
  * Split the URI spec and return an object with protocol (including ':'), name, 
@@ -87,4 +88,64 @@ NdnProtocolInfo.splitUri = function(spec) {
     }
     
     return result;
+};
+
+/*
+ * Do the work of the NDN Get Version buttons.
+ * selector is "earliest", "latest", "previous" or "next".
+ * currentWindow is the window with the address.
+ * alertFunction(message) shows an alert.
+ */
+NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction) {
+ alertFunction("ndnGetVersion called");
+ try {
+  if (currentWindow._content.document.location.protocol != "ndn:") {
+    alertFunction("The address must start with ndn:");
+    return;
+  }
+
+  // Parse the same as in ndnProtocolService newChannel.
+  var uriParts = NdnProtocolInfo.splitUri(currentWindow._content.document.location.href);
+  var name = new Name(uriParts.name);
+  var indexOfVersion = getIndexOfVersion(name);
+  if (indexOfVersion < 0) {
+    alertFunction("The ndn address does not have a version");
+    return;
+  }
+  
+  var escapedVersion = Name.toEscapedString(name.components[indexOfVersion]);
+
+  var childSelector;
+  if (selector == "earliest")
+      childSelector = "ndn.ChildSelector=0";
+  else if (selector == "latest")
+      childSelector = "ndn.ChildSelector=1";
+  else if (selector == "previous")
+      childSelector = "ndn.ChildSelector=1&ndn.Exclude=" + escapedVersion + ",*";
+  else if (selector == "next")
+      childSelector = "ndn.ChildSelector=0&ndn.Exclude=*," + escapedVersion;
+  else
+      // Don't expect this to happen.
+      return;
+
+  var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
+  var searchWithChildSelector = (uriParts.search == "" ? "?" : uriParts.search + "&") + childSelector;
+    
+  var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + uriParts.hash;
+  currentWindow._content.document.location = uri;
+ } catch (ex) {
+       dump("ndnToolbarGetVersion exception: " + ex + "\n" + ex.stack);
+ }
+};
+
+/*
+ * Return the index of the last component that starts with 0xfd, or -1 if not found.
+ */
+function getIndexOfVersion(name) {
+  for (var i = name.components.length - 1; i >= 0; --i) {
+    if (name.components[i].length >= 1 && name.components[i][0] == 0xfd)
+      return i;
+  }
+
+  return -1;
 }
