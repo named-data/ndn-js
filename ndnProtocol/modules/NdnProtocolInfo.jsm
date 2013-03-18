@@ -148,6 +148,33 @@ function getIndexOfVersion(name) {
   return -1;
 }
 
+/*
+ * Prompt the user and set the hub.  If the current address is ndn: then try to reload.
+ * If changing the hub, then return a message to display such as "Hub: trying host:port", 
+ *   otherwise null for no message.
+ * currentWindow is the window with the address.
+ */
+NdnProtocolInfo.setHub = function(currentWindow) {
+    var host = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
+    if (!host)
+        return null;
+    
+    host = host.trim();
+    if (host == "")
+        return null;
+    if (host == NdnProtocolInfo.ndn.host)
+        // No change.
+        return null;
+    
+    var port = 9695;
+    NdnProtocolInfo.ndn.createRoute(host, port);    
+    if (currentWindow._content.document.location.protocol == "ndn:")
+        // Reload with the new hub.
+        currentWindow._content.document.location = currentWindow._content.document.location.href;
+    
+    return "Hub: trying " + host + ":" + port;
+}
+
 /// The following is only used by Firefox for Android to set up the menus.
 /// It really doesn't belong in this file, but it needs to be in a module that we know is
 ///   run on startup. If it can be put somewhere else without circular references, then it should be.
@@ -204,8 +231,11 @@ function ndnHubClick(window) {
   
   var buttons = [
     {
-      label: "OK",
+      label: "Set...",
       callback: function () {
+        var message = NdnProtocolInfo.setHub(window);
+        if (message != null)
+          androidHubMessage = message;    
       }
     }
   ];
