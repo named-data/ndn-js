@@ -96,7 +96,6 @@ NdnProtocolInfo.splitUri = function(spec) {
  * alertFunction(message) shows an alert.
  */
 NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction) {
- alertFunction("ndnGetVersion called");
  try {
   if (currentWindow._content.document.location.protocol != "ndn:") {
     alertFunction("The address must start with ndn:");
@@ -148,3 +147,83 @@ function getIndexOfVersion(name) {
 
   return -1;
 }
+
+/// The following is only used by Firefox for Android to set up the menus.
+/// It really doesn't belong in this file, but it needs to be in a module that we know is
+///   run on startup. If it can be put somewhere else without circular references, then it should be.
+
+function loadIntoWindow(window) {
+  if (!window)
+    return;
+
+  // Add to Firefox for Android menu.
+  ndnGetVersionMenuId = window.NativeWindow.menu.add("NDN Get Version...", null, function() {
+    ndnGetVersionClick(window);
+  });
+}
+ 
+function ndnGetVersionClick(window) {
+  var alertFunction = function(message) { window.NativeWindow.toast.show(message, "short"); };
+  
+  var buttons = [
+    {
+      label: "Earliest",
+      callback: function () {
+        NdnProtocolInfo.getVersion("earliest", window, alertFunction);
+      }
+    },
+    {
+      label: "Prev.",
+      callback: function () {
+        NdnProtocolInfo.getVersion("previous", window, alertFunction);
+      }
+    },
+    {
+      label: "Next",
+      callback: function () {
+        NdnProtocolInfo.getVersion("next", window, alertFunction);
+      }
+    },
+    {
+      label: "Latest",
+      callback: function () {
+        NdnProtocolInfo.getVersion("latest", window, alertFunction);
+      }
+    }
+  ];
+ 
+  window.NativeWindow.doorhanger.show("NDN Get Version", "ndn-get-version", buttons, 
+     window.BrowserApp.selectedTab.id, { persistence: 1 });
+}
+
+var windowListener = {
+  onOpenWindow: function(aWindow) {
+    // Wait for the window to finish loading
+    let domWindow = aWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal || Ci.nsIDOMWindow);
+    domWindow.addEventListener("load", function() {
+      domWindow.removeEventListener("load", arguments.callee, false);
+      loadIntoWindow(domWindow);
+    }, false);
+  },
+  
+  onCloseWindow: function(aWindow) {},
+  onWindowTitleChange: function(aWindow, aTitle) {}
+};
+ 
+function androidStartup(aData, aReason) {
+  let wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+ 
+  // Load into any existing windows
+  let windows = wm.getEnumerator("navigator:browser");
+  while (windows.hasMoreElements()) {
+    let domWindow = windows.getNext().QueryInterface(Ci.nsIDOMWindow);
+    loadIntoWindow(domWindow);
+  }
+ 
+  // Load into any new windows
+  wm.addListener(windowListener);
+}
+
+// startup() will only succeed on Android.
+// Do this here instead of using bootstrap.js since we don't want to set bootstrap true in install.rdf.
+try { androidStartup(); } catch (ex) {}
