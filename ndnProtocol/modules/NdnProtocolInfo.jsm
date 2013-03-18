@@ -16,7 +16,6 @@ var NdnProtocolInfo = function NdnProtocolInfo(){
 };
 
 NdnProtocolInfo.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); },
-                              host: "A.hub.ndn.ucla.edu", port: 9695,
                               verify: false });
 
 // These are set once a connection is established.
