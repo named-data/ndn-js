@@ -157,8 +157,11 @@ function loadIntoWindow(window) {
     return;
 
   // Add to Firefox for Android menu.
-  ndnGetVersionMenuId = window.NativeWindow.menu.add("NDN Get Version...", null, function() {
+  window.NativeWindow.menu.add("NDN Get Version...", null, function() {
     ndnGetVersionClick(window);
+  });
+  window.NativeWindow.menu.add("NDN Hub...", null, function() {
+    ndnHubClick(window);
   });
 }
  
@@ -195,6 +198,21 @@ function ndnGetVersionClick(window) {
   window.NativeWindow.doorhanger.show("NDN Get Version", "ndn-get-version", buttons, 
      window.BrowserApp.selectedTab.id, { persistence: 1 });
 }
+ 
+function ndnHubClick(window) {
+  var alertFunction = function(message) { window.NativeWindow.toast.show(message, "short"); };
+  
+  var buttons = [
+    {
+      label: "OK",
+      callback: function () {
+      }
+    }
+  ];
+ 
+  window.NativeWindow.doorhanger.show(androidHubMessage, "ndn-hub", buttons, 
+     window.BrowserApp.selectedTab.id, { persistence: 1 });
+}
 
 var windowListener = {
   onOpenWindow: function(aWindow) {
@@ -224,6 +242,15 @@ function androidStartup(aData, aReason) {
   wm.addListener(windowListener);
 }
 
-// startup() will only succeed on Android.
+var androidHubMessage = "Hub: not connected";
+
+function androidOnNdnHubChanged(host, port) {
+  androidHubMessage = "Hub: " + host + ":" + port;
+}
+
 // Do this here instead of using bootstrap.js since we don't want to set bootstrap true in install.rdf.
-try { androidStartup(); } catch (ex) {}
+try { 
+  // startup() will only succeed on Android.
+  androidStartup(); 
+  NdnProtocolInfo.addNdnHubChangedListener(androidOnNdnHubChanged);
+} catch (ex) {}
