@@ -16,7 +16,7 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ContentChannel.jsm");
 Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
 
-function NdnProtocol() {    
+function NdnProtocol() {
 }
 
 NdnProtocol.prototype = {
@@ -129,7 +129,8 @@ var ContentClosure = function ContentClosure
     this.segmentTemplate = segmentTemplate;
     
     this.segmentStore = new SegmentStore();
-    this.contentSha256 = null;
+    this.contentSha256 = Cc["@mozilla.org/security/hash;1"].createInstance(Ci.nsICryptoHash);
+    this.contentSha256.init(this.contentSha256.SHA256);
     this.didRequestFinalSegment = false;
     this.finalSegmentNumber = null;
     this.didOnStart = false;
@@ -223,23 +224,19 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
 
-        if (contentObject.name.getContentDigestValue() != null)
-            // Prepare to compute the content digest.
-            this.contentSha256 = new Sha256();
-
         if (segmentNumber == null) {
             // We are not doing segments, so just finish.
             this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-            if (this.contentSha256 != null)
-                this.contentSha256.update(contentObject.content);
+            this.contentSha256.update(contentObject.content, contentObject.content.length);
             this.contentListener.onStop();
 
             if (!this.uriEndsWithSegmentNumber) {
                 var nameContentDigest = contentObject.name.getContentDigestValue();
                 if (nameContentDigest != null && this.contentSha256 != null &&
-                    !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+                    !DataUtils.arraysEqual(nameContentDigest, 
+                              DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                     // TODO: How to show the user an error for invalid digest?
-                    dump("Content does not match digest in name " + contentObject.name.to_uri());
+                    dump("Content does not match digest in name " + contentObject.name.to_uri() + "\n");
             }
             return Closure.RESULT_OK;
         }
@@ -269,17 +266,17 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         segmentNumber = entry.key;
         contentObject = entry.value;
         this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-        if (this.contentSha256 != null)
-            this.contentSha256.update(contentObject.content);
+        this.contentSha256.update(contentObject.content, contentObject.content.length);
         
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
             var nameContentDigest = contentObject.name.getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
-                !DataUtils.arraysEqual(nameContentDigest, this.contentSha256.finalize()))
+                !DataUtils.arraysEqual(nameContentDigest, 
+                      DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                 // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + contentObject.name.to_uri());
+                dump("Content does not match digest in name " + contentObject.name.to_uri() + "\n");
 
             return Closure.RESULT_OK;
         }
