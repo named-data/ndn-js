@@ -82,10 +82,15 @@ NdnProtocol.prototype = {
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
                 // Use the same NDN object each time.
-                NdnProtocolInfo.ndn.expressInterest(name, new ExponentialReExpressClosure 
-                    (new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
-                            aURI, searchWithoutNdn + uriParts.hash, segmentTemplate)),
-                    template);
+                var closure = new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
+                     aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
+                     
+                if (contentChannel.loadFlags & (1<<19))
+                    // Load flags bit 19 means this channel is for the main window with the URL bar.
+                    ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
+                
+                NdnProtocolInfo.ndn.expressInterest
+                    (name, new ExponentialReExpressClosure(closure), template);
             };
 
             var contentChannel = new ContentChannel(aURI, requestContent);
@@ -230,6 +235,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
             this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
             this.contentSha256.update(contentObject.content, contentObject.content.length);
             this.contentListener.onStop();
+            ContentClosure.removeClosureForWindow(this);
 
             if (!this.uriEndsWithSegmentNumber) {
                 var nameContentDigest = contentObject.name.getContentDigestValue();
@@ -272,6 +278,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
+            ContentClosure.removeClosureForWindow(this);
             var nameContentDigest = contentObject.name.getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
                 !DataUtils.arraysEqual(nameContentDigest, 
@@ -310,6 +317,42 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         return Closure.RESULT_ERR;
   }
 };
+
+ContentClosure.closureForWindowList = [];
+
+/*
+ * We use closureForWindowList to keep only one closure for each document window.
+ * window is the window with the URL bar.
+ * closure is the ContentClosure to associate with it.  
+ * If there is already another closure for window, callits contentListener.onStop(); so
+ *   that further calls to upcall will do nothing.
+ */
+ContentClosure.setClosureForWindow = function(window, closure) {
+    for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
+        var entry = ContentClosure.closureForWindowList[i];
+        if (entry.window == window) {
+            try {
+                entry.closure.contentListener.onStop();
+            } catch (ex) {
+                // Ignore any errors when stopping.
+            }
+            entry.closure = closure;
+            return;
+        }
+    }
+    
+    ContentClosure.closureForWindowList.push({ window: window, closure: closure });
+};
+
+/*
+ * Remove any entry in closureForWindowList for closure.  This is called when the closure is done.
+ */
+ContentClosure.removeClosureForWindow = function(closure) {
+    for (var i = ContentClosure.closureForWindowList.length - 1; i >= 0; --i) {
+        if (ContentClosure.closureForWindowList[i].closure == closure)
+            ContentClosure.closureForWindowList.splice(i, 1);
+    }
+}
 
 /*
  * A SegmentStore stores segments until they are retrieved in order starting with segment 0.
