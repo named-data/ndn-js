@@ -85,9 +85,11 @@ NdnProtocol.prototype = {
                 var closure = new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
                      
+                /* Disable until bug is fixed for opening multiple tabs.
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
                     ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
+                 */
                 
                 NdnProtocolInfo.ndn.expressInterest
                     (name, new ExponentialReExpressClosure(closure), template);
