@@ -97,7 +97,7 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
 		var callingThread = threadManager.currentThread; 
             
         var contentListener = {
-            onStart : function(contentType, contentCharset, uri) {
+            onStart: function(contentType, contentCharset, uri) {
                 if (uri)
                     thisContentChannel.URI = uri;
                 thisContentChannel.contentType = contentType;
@@ -117,7 +117,7 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
 				}, 0);
             },		
 
-            onReceivedContent : function(content) {
+            onReceivedContent: function(content) {
                 var pipe = Cc["@mozilla.org/pipe;1"].createInstance(Ci.nsIPipe);
                 pipe.init(true, true, 0, 0, null);
                 pipe.outputStream.write(content, content.length);
@@ -133,7 +133,7 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
 				}, 0);
             },
 
-            onStop : function() {
+            onStop: function() {
                 thisContentChannel.done = true;
                 
                 // nsIChannel requires us to call aListener on its calling thread.
@@ -143,7 +143,9 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
                             thisContentChannel.status);
 					}
 				}, 0);
-            }
+            },
+            
+            isDone: function() { return thisContentChannel.done; }
         };
 		
         this.requestContent(contentListener);

@@ -88,7 +88,8 @@ NdnProtocol.prototype = {
                     template);
             };
 
-            return new ContentChannel(aURI, requestContent);
+            var contentChannel = new ContentChannel(aURI, requestContent);
+            return contentChannel;
         } catch (ex) {
             dump("NdnProtocol.newChannel exception: " + ex + "\n" + ex.stack);
         }
@@ -142,7 +143,7 @@ var ContentClosure = function ContentClosure
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo) {
   try {
-    if (this.contentListener.done)
+    if (this.contentListener.isDone())
         // We are getting unexpected extra results.
         return Closure.RESULT_ERR;
     
