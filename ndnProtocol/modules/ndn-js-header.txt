@@ -20,7 +20,8 @@ var navigator = {
 // Some code calls console.log without checking LOG>0.  Until this is cleaned up, make a local hack console.
 var console = {
     log: function(message) {
-        dump(message + "\n");
+        dump(message);
+        dump("\n");
     }
 };
 
