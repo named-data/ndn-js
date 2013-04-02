@@ -10,7 +10,7 @@
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
 var XpcomTransport = function XpcomTransport() {
-    this.ndn = null;
+    this.elementListener = null;
     this.socket = null; // nsISocketTransport
     this.outStream = null;
     this.connectedHost = null; // Read by NDN.
@@ -29,6 +29,19 @@ var XpcomTransport = function XpcomTransport() {
  *    ndn.onReceivedElement(element).
  */
 XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
+    this.elementListener = ndn;
+    this.connectHelper(ndn.host, ndn.port, ndn);
+    
+    onopenCallback();
+};
+
+/*
+ * Do the work to connect to host and port.  This replaces a previous connection and sets connectedHost
+ *   and connectedPort.
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    elementListener.onReceivedElement(element).
+ */
+XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -37,21 +50,20 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
 		}
         this.socket = null;
     }
-    this.ndn = ndn;
 
 	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
         (Components.interfaces.nsISocketTransportService);
 	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
-	this.socket = transportService.createTransport(null, 0, ndn.host, ndn.port, null);
-    if (LOG > 0) console.log('XpcomTransport: Connected to ' + ndn.host + ":" + ndn.port);
-    this.connectedHost = ndn.host;
-    this.connectedPort = ndn.port;
+	this.socket = transportService.createTransport(null, 0, host, port, null);
+    if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
+    this.connectedHost = host;
+    this.connectedPort = port;
     this.outStream = this.socket.openOutputStream(1, 0, 0);
 
     var inStream = this.socket.openInputStream(0, 0, 0);
 	var dataListener = {
-        elementReader: new BinaryXmlElementReader(ndn),
+        elementReader: new BinaryXmlElementReader(elementListener),
 		
 		onStartRequest: function (request, context) {
 		},
@@ -71,20 +83,32 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
 	
 	pump.init(inStream, -1, -1, 0, 0, true);
     pump.asyncRead(dataListener, null);
-    
-    onopenCallback();
 };
 
 /*
  * Send the data over the connection created by connect.
  */
 XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
-    if (this.socket == null) {
+    if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
         console.log("XpcomTransport connection is not established.");
         return;
     }
     
     var rawDataString = DataUtils.toString(data);
-	this.outStream.write(rawDataString, rawDataString.length);
-	this.outStream.flush();
+    try {
+        this.outStream.write(rawDataString, rawDataString.length);
+        this.outStream.flush();
+    } catch (ex) {
+        if (this.socket.isAlive())
+            // The socket is still alive. Assume there could still be incoming data. Just throw the exception.
+            throw ex;
+        
+        if (LOG > 0) 
+            console.log("XpcomTransport.send: Trying to reconnect to " + this.connectedHost + ":" + 
+                this.connectedPort + " and resend after exception: " + ex);
+        
+        this.connectHelper(this.connectedHost, this.connectedPort, this.elementListener);
+        this.outStream.write(rawDataString, rawDataString.length);
+        this.outStream.flush();
+    }
 };
