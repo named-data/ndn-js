@@ -99,20 +99,17 @@ wss.on('connection', function(ws) {
 	});
 	
 	udp.on('message', function(msg, rinfo) {
-		if (typeof msg == 'object') {
-			// From Buffer to ArrayBuffer
-			var bytesView = new Uint8Array(msg);
-			
+		if (msg instanceof Buffer) {
 			if (LOG > 2) {
 				console.log('udp.onmessage: Byte array from server: ');
-				console.log('udp.onmessage: bytesView.length ' + bytesView.length);
+				console.log('udp.onmessage: msg.length ' + msg.length);
 				var logMsg = "";
-				for (var i = 0; i < bytesView.length; i++)
-					logMsg += String.fromCharCode(bytesView[i]);
+				for (var i = 0; i < msg.length; i++)
+					logMsg += String.fromCharCode(msg[i]);
 				console.log(logMsg);
 			}
 			
-			ws.send(bytesView.buffer, {binary: true, mask: false});
+			ws.send(msg, {binary: true, mask: false});
 		}
 	});
 	

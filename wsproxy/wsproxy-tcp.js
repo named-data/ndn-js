@@ -56,7 +56,7 @@ wss.on('connection', function(ws) {
 			if (LOG > 1) console.log("Message from clinet: " + message);
 		}
 		else if (typeof message == 'object') {
-			var bytesView = new Uint8Array(message);
+			var bytesView = new Buffer(message);
 
 			if (LOG > 1) {
 				var logMsg = 'Byte array from client: ';
@@ -66,7 +66,7 @@ wss.on('connection', function(ws) {
 			}
 			
 			if (sock_ready) {
-				sock.write(bytesView.buffer);
+				sock.write(bytesView);
 			} else {
 				send_queue.push(message);
 			}
@@ -90,7 +90,7 @@ wss.on('connection', function(ws) {
 	
 	sock.on('data', function(data) {
 		if (typeof data == 'object') {
-			var bytesView = new Uint8Array(data);
+			var bytesView = new Buffer(data);
 			
 			if (LOG > 1) {
 				console.log('Byte array from server: ');
@@ -101,7 +101,7 @@ wss.on('connection', function(ws) {
 			}
 			
 			if (ws_ready == true) {
-				ws.send(bytesView.buffer, {binary: true, mask: false});
+				ws.send(bytesView, {binary: true, mask: false});
 			}
 		}
 	});
