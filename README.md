@@ -135,8 +135,7 @@ Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File
 ndnProtocol.xpi.  (In Firefox for Android, type file: in the address bar and click the
 downloaded ndnProtocol.xpi.)  Restart Firefox.
 
-Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples
-
+Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples:  
 [ndn:/ndn/ucla.edu/apps/ndn-js-test/NDNProtocolExamples.html?ndn.ChildSelector=1](ndn:/ndn/ucla.edu/apps/ndn-js-test/NDNProtocolExamples.html?ndn.ChildSelector=1)
 
 When the page is loaded, Firefox updates the address bar with the full matched name from
@@ -146,10 +145,10 @@ segment number (see below).
 * Interest selectors in the ndn protocol:
 
 You can add interest selectors. For example, this uses 1 to select the "rightmost" child
-(latest version).
+(latest version):  
 [ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref](ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref)
 
-The browser loads the latest version and changes the address to:
+The browser loads the latest version and changes the address to:  
 [ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref](ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt/%FD%05%0B%16z%22%D1?key=value#ref)
 
 The child selector was used and removed. Note that the other non-ndn query values and 
