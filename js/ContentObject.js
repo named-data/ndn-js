@@ -147,7 +147,7 @@ ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 		
 		decoder.readEndElement();
 		
-		this.saveRawData(decoder.istream);
+		this.saveRawData(decoder.input);
 };
 
 ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {

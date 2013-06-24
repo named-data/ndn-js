@@ -66,16 +66,16 @@ stringToTag =  function(/*String*/ tagName) {
 };
 
 //console.log(stringToTag(64));
-var BinaryXMLDecoder = function BinaryXMLDecoder(istream){
+var BinaryXMLDecoder = function BinaryXMLDecoder(input){
 	var MARK_LEN=512;
 	var DEBUG_MAX_LEN =  32768;
 	
-	this.istream = istream;
+	this.input = input;
 	this.offset = 0;
 };
 
 BinaryXMLDecoder.prototype.initializeDecoding = function() {
-		//if (!this.istream.markSupported()) {
+		//if (!this.input.markSupported()) {
 			//throw new IllegalArgumentException(this.getClass().getName() + ": input stream must support marking!");
 		//}
 }
@@ -209,7 +209,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
 
 //returns a string
 BinaryXMLDecoder.prototype.peekStartElementAsString = function() {
-	//this.istream.mark(MARK_LEN);
+	//this.input.mark(MARK_LEN);
 
 	//String 
 	var decodedTag = null;
@@ -283,7 +283,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
 }
 //returns Long
 BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
-		//this.istream.mark(MARK_LEN);
+		//this.input.mark(MARK_LEN);
 
 		//Long
 		var decodedTag = null;
@@ -328,7 +328,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 			
 		} finally {
 			try {
-				//this.istream.reset();
+				//this.input.reset();
 				this.offset = previousOffset;
 			} catch ( e) {
 				Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
@@ -355,7 +355,7 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
 BinaryXMLDecoder.prototype.readEndElement = function(){
 			if(LOG>4)console.log('this.offset is '+this.offset);
 			
-			var next = this.istream[this.offset]; 
+			var next = this.input[this.offset]; 
 			
 			this.offset++;
 			//read();
@@ -386,7 +386,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
  *   just read the end element and return null.
  */
 BinaryXMLDecoder.prototype.readBlob = function(allowNull) {
-    if (this.istream[this.offset] == XML_CLOSE && allowNull) {
+    if (this.input[this.offset] == XML_CLOSE && allowNull) {
         this.readEndElement();
         return null;
     }
@@ -438,7 +438,7 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 
 	do {
 		
-		var next = this.istream[this.offset ];
+		var next = this.input[this.offset ];
 		
 		
 		if (next < 0) {
@@ -508,7 +508,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	
 	//
 	//Uint8Array
-	var bytes = this.istream.subarray(this.offset, this.offset+ blobLength);
+	var bytes = this.input.subarray(this.offset, this.offset+ blobLength);
 	this.offset += blobLength;
 	
 	return bytes;
