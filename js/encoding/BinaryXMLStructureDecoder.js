@@ -8,7 +8,7 @@
 
 var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.gotElementEnd = false;
-	this.offset = 0;
+    this.offset = 0;
     this.level = 0;
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
@@ -49,11 +49,13 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                     ++this.offset;
                     // Close the level.
                     --this.level;
-                    if (this.level == 0)
+                    if (this.level == 0) {
                         // Finished.
+                        this.gotElementEnd = true;
                         return true;
+                    }
                     if (this.level < 0)
-                        throw new Error("BinaryXMLStructureDecoder: Unexepected close tag at offset " +
+                        throw new Error("BinaryXMLStructureDecoder: Unexpected close tag at offset " +
                             (this.offset - 1));
                     
                     // Get ready for the next header.
