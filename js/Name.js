@@ -37,38 +37,38 @@ Name.prototype.getName = function() {
     return this.to_uri();
 };
 
-/* Parse name as a URI and return an array of Uint8Array components.
+/* Parse uri as a URI and return an array of Uint8Array components.
  *
  */
-Name.createNameArray = function(name) {
-    name = name.trim();
-    if (name.length <= 0)
+Name.createNameArray = function(uri) {
+    uri = uri.trim();
+    if (uri.length <= 0)
         return [];
 
-    var iColon = name.indexOf(':');
+    var iColon = uri.indexOf(':');
     if (iColon >= 0) {
         // Make sure the colon came before a '/'.
-        var iFirstSlash = name.indexOf('/');
+        var iFirstSlash = uri.indexOf('/');
         if (iFirstSlash < 0 || iColon < iFirstSlash)
             // Omit the leading protocol such as ndn:
-            name = name.substr(iColon + 1, name.length - iColon - 1).trim();
+            uri = uri.substr(iColon + 1, uri.length - iColon - 1).trim();
     }
     
-  	if (name[0] == '/') {
-        if (name.length >= 2 && name[1] == '/') {
+  	if (uri[0] == '/') {
+        if (uri.length >= 2 && uri[1] == '/') {
             // Strip the authority following "//".
-            var iAfterAuthority = name.indexOf('/', 2);
+            var iAfterAuthority = uri.indexOf('/', 2);
             if (iAfterAuthority < 0)
                 // Unusual case: there was only an authority.
                 return [];
             else
-                name = name.substr(iAfterAuthority + 1, name.length - iAfterAuthority - 1).trim();
+                uri = uri.substr(iAfterAuthority + 1, uri.length - iAfterAuthority - 1).trim();
         }
         else
-            name = name.substr(1, name.length - 1).trim();
+            uri = uri.substr(1, uri.length - 1).trim();
     }
 
-	var array = name.split('/');
+	var array = uri.split('/');
     
     // Unescape the components.
     for (var i = 0; i < array.length; ++i) {
@@ -344,14 +344,14 @@ Name.toEscapedString = function(component) {
     }
     else {
         for (var i = 0; i < component.length; ++i) {
-            var value = component[i];
+            var x = component[i];
             // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
-            if (value >= 0x30 && value <= 0x39 || value >= 0x41 && value <= 0x5a ||
-                value >= 0x61 && value <= 0x7a || value == 0x2b || value == 0x2d || 
-                value == 0x2e || value == 0x5f)
-                result += String.fromCharCode(value);
+            if (x >= 0x30 && x <= 0x39 || x >= 0x41 && x <= 0x5a ||
+                x >= 0x61 && x <= 0x7a || x == 0x2b || x == 0x2d || 
+                x == 0x2e || x == 0x5f)
+                result += String.fromCharCode(x);
             else
-                result += "%" + (value < 16 ? "0" : "") + value.toString(16).toUpperCase();
+                result += "%" + (x < 16 ? "0" : "") + x.toString(16).toUpperCase();
         }
     }
     return result;
