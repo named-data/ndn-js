@@ -12,14 +12,20 @@
 */
 
 		// One of NDN project default hubs
-		hostip="A.ws.ndn.ucla.edu";
+		var hostip = "B.ws.ndn.ucla.edu";
 
-        var AsyncGetClosure = function AsyncGetClosure(T0) {
-        	this.T0 = T0;
+		var AsyncGetClosure = function AsyncGetClosure(T0) {
+			this.T0 = T0;
 			Closure.call(this);
 		};
 		
+    AsyncGetClosure.gotFirstUpcall = false;
 		AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
+      if (!AsyncGetClosure.gotFirstUpcall) {
+        AsyncGetClosure.gotFirstUpcall = true;
+        dopings();
+      }
+      
 			if (kind == Closure.UPCALL_FINAL) {
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
@@ -46,7 +52,6 @@
 		};
 	
 	 	function dopings() {
-     		ping("/ndn/arizona.edu");
      		ping("/ndn/caida.org");
      		ping("/ndn/colostate.edu/netsec")
      		ping("/ndn/memphis.edu/netlab")
@@ -58,11 +63,9 @@
      		ping("/ndn/ucla.edu/apps");    		
      		ping("/ndn/uiuc.edu");
      		ping("/ndn/wustl.edu");
-     		
 		};
 		
-		openHandle = function() { dopings(); };
-		var ndn = new NDN({host:hostip, onopen:openHandle});
+		var ndn = new NDN({host:hostip});
 		var T0 = 0;
-        ndn.transport.connectWebSocket(ndn);
-		
+    // Do the first ping to get started.  The remaining pings are requested on the first upcall.
+    ping("/ndn/arizona.edu");
