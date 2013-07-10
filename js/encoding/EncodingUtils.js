@@ -151,8 +151,20 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output+= "<br />";
 	    output+= "<br />";
 	}
+	if(co.signature !=null && co.signature.digestAlgorithm!=null){
+	    output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signature !=null && co.signature.witness!=null){
+	    output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
 	if(co.signature !=null && co.signature.signature!=null){
-	    output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
+	    output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
 	    
 	    output+= "<br />";
 	    output+= "<br />";
