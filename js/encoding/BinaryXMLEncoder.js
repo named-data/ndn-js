@@ -330,9 +330,11 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
 
 	//parse to hex
 	var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
+  if (binarydate.length % 2 == 1)
+    binarydate = '0' + binarydate;
 
-	//HACK
-	var binarydate =  DataUtils.toNumbers( '0'.concat(binarydate,'0')) ;
+  // Hack toNumbers by appending a 0 which is ignored.
+	var binarydate =  DataUtils.toNumbers( binarydate + '0') ;
 
 	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');
