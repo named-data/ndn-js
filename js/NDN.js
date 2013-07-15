@@ -586,14 +586,14 @@ var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
     this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawData) {
+BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {
     // Process multiple objects in the data.
     while(true) {
         // Scan the input to check if a whole ccnb object has been read.
         this.structureDecoder.seek(0);
-        if (this.structureDecoder.findElementEnd(rawData)) {
+        if (this.structureDecoder.findElementEnd(data)) {
             // Got the remainder of an object.  Report to the caller.
-            this.dataParts.push(rawData.subarray(0, this.structureDecoder.offset));
+            this.dataParts.push(data.subarray(0, this.structureDecoder.offset));
             var element = DataUtils.concatArrays(this.dataParts);
             this.dataParts = [];
             try {
@@ -603,9 +603,9 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
             }
         
             // Need to read a new object.
-            rawData = rawData.subarray(this.structureDecoder.offset, rawData.length);
+            data = data.subarray(this.structureDecoder.offset, data.length);
             this.structureDecoder = new BinaryXMLStructureDecoder();
-            if (rawData.length == 0)
+            if (data.length == 0)
                 // No more data in the packet.
                 return;
             
@@ -613,9 +613,9 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ rawD
         }
         else {
             // Save for a later call to concatArrays so that we only copy data once.
-            this.dataParts.push(rawData);
-			if (LOG>3) console.log('Incomplete packet received. Length ' + rawData.length + '. Wait for more input.');
-            return;
+            this.dataParts.push(data);
+            if (LOG>3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
+                return;
         }
     }    
-}
+};
