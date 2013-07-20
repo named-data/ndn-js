@@ -16,7 +16,8 @@ contributions to the library if they are willing to do so under the same license
 ---
 
 This is a young project, with minimal documentation that we are slowly enhancing.  Please
-email Jeff Burke (jburke@remap.ucla.edu) with any questions. 
+submit any bugs or issues to the NDN-JS issue tracker:
+http://redmine.named-data.net/projects/ndn-js/issues
 
 The primary goal of NDN-JS is to provide a pure Javascript implementation of the NDN API
 that enables developers to create browser-based applications using Named Data Networking.
