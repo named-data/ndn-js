@@ -1,15 +1,15 @@
 
-NDN.JS:  A javascript client library for Named Data Networking
+NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------
 
-NDN.JS is the first native version of the NDN protocol written in JavaScript.  It is wire
+NDN-JS is the first native version of the NDN protocol written in JavaScript.  It is wire
 format compatible with PARC's CCNx. 
 
 The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
 	
-NDN.JS is open source under a license described in the file COPYING.  While the license
+NDN-JS is open source under a license described in the file COPYING.  While the license
 does not require it, we really would appreciate it if others would share their
 contributions to the library if they are willing to do so under the same license. 
 
@@ -18,7 +18,7 @@ contributions to the library if they are willing to do so under the same license
 This is a young project, with minimal documentation that we are slowly enhancing.  Please
 email Jeff Burke (jburke@remap.ucla.edu) with any questions. 
 
-The primary goal of NDN.JS is to provide a pure Javascript implementation of the NDN API
+The primary goal of NDN-JS is to provide a pure Javascript implementation of the NDN API
 that enables developers to create browser-based applications using Named Data Networking.
 The approach requires no native code or signed Java applets, and thus can be delivered
 over the current web to modern browsers with no hassle for the end user.
@@ -54,7 +54,7 @@ JAVASCRIPT API
 
 See files in js/  and examples in tests/, examples/
 
-NDN.JS currently supports expressing Interests (and receiving data) and publishing Data
+NDN-JS currently supports expressing Interests (and receiving data) and publishing Data
 (that answers Interests).  This includes encoding and decoding data packets as well as
 signing and verifying them using RSA keys.
 
@@ -66,7 +66,7 @@ currently listens on port 9696 and passes messages (using either TCP or UDP) to 
 the same host. 
 
 ** Including the scripts in a web page **
-To use NDN.JS in a web page, one of two scripts must be included using a script tag:
+To use NDN-JS in a web page, one of two scripts must be included using a script tag:
 
 ndn-js.js is a combined library (and ndn-js.min.js is a compressed version of the combined library),
 designed for efficient distribution.  Bother can be either build in ./build/ndn-js.min.js using 
@@ -123,7 +123,7 @@ FIREFOX ADD-ON FOR THE NDN PROTOCOL
 
 See files in ndnProtocol/
 
-NDN.JS includes a Firefox extension for the ndn protocol built using the Javascript
+NDN-JS includes a Firefox extension for the ndn protocol built using the Javascript
 library.   It currently obtains NDN connectivity through the NDN testbed, but you can
 click Set on the NDN Toolbar to change the connected hub.
 
