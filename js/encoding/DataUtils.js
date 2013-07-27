@@ -26,7 +26,7 @@ DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
  * Raw String to Base 64
  */
 DataUtils.stringtoBase64=function stringtoBase64(input) {
-     input = escape(input);
+     //input = escape(input);
      var output = "";
      var chr1, chr2, chr3 = "";
      var enc1, enc2, enc3, enc4 = "";
@@ -104,7 +104,7 @@ DataUtils.base64toString = function base64toString(input) {
 
      } while (i < input.length);
 
-     return unescape(output);
+     //return unescape(output);
   };
 
 //byte [] 
