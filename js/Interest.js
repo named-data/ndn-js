@@ -44,35 +44,53 @@ Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents))
 			this.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
+    else
+      this.minSuffixComponents = null;
 
 		if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) 
 			this.maxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
+    else
+      this.maxSuffixComponents = null;
 			
 		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
 			this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
 			this.publisherPublicKeyDigest.from_ccnb(decoder);
 		}
+    else
+      this.publisherPublicKeyDigest = null;
 
 		if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
 			this.exclude = new Exclude();
 			this.exclude.from_ccnb(decoder);
 		}
+    else
+      this.exclude = null;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector))
 			this.childSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
+    else
+      this.childSelector = null;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind))
 			this.answerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
+    else
+      this.answerOriginKind = null;
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Scope))
 			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
+    else
+      this.scope = null;
 
 		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
 			this.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
                 (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
+    else
+      this.interestLifetime = null;              
 		
 		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
 			this.nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
+    else
+      this.nonce = null;
 		
 		decoder.readEndElement();
 };
