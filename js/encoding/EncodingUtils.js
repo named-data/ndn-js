@@ -5,30 +5,24 @@
  */
 
 function encodeToHexInterest(interest){
-    return DataUtils.toHex(encodeToBinaryInterest(interest));
+  return DataUtils.toHex(interest.encode());
 }
 
-
+// Deprecated: Use interest.encode().
 function encodeToBinaryInterest(interest) {
-	var enc = new BinaryXMLEncoder();
-	interest.to_ccnb(enc);
-	
-	return enc.getReducedOstream();
+  return interest.encode();
 }
 
-
-function encodeToHexContentObject(co){
-    return DataUtils.toHex(encodeToBinaryContentObject(co));
+function encodeToHexContentObject(contentObject) {
+  return DataUtils.toHex(contentObject.encode());
 }
 
-function encodeToBinaryContentObject(co){
-	var enc = new BinaryXMLEncoder();
-	co.to_ccnb(enc);
-
-	return enc.getReducedOstream();
+// Deprecated: Use contentObject.encode().
+function encodeToBinaryContentObject(contentObject) {
+  contentObject.encode();
 }
 
-function encodeForwardingEntry(co){
+function encodeForwardingEntry(co) {
 	var enc = new BinaryXMLEncoder();
  
 	co.to_ccnb(enc);
@@ -59,41 +53,17 @@ function decodeHexFaceInstance(result){
 	
 }
 
-
-
-function decodeHexInterest(result){
-	var numbers = DataUtils.toNumbers(result);	
-	
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODING HEX INTERST  \n'+numbers);
-
+function decodeHexInterest(input){
 	var interest = new Interest();
-
-	interest.from_ccnb(decoder);
-
+	interest.decode(DataUtils.toNumbers(input));
 	return interest;
-	
 }
 
-
-
-function decodeHexContentObject(result){
-	var numbers = DataUtils.toNumbers(result);
-	
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODED HEX CONTENT OBJECT \n'+numbers);
-	
-	var co = new ContentObject();
-
-	co.from_ccnb(decoder);
-
-	return co;
-	
+function decodeHexContentObject(input){
+	var contentObject = new ContentObject();
+	contentObject.decode(DataUtils.toNumbers(input));
+	return contentObject;
 }
-
-
 
 function decodeHexForwardingEntry(result){
 	var numbers = DataUtils.toNumbers(result);
