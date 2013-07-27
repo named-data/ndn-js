@@ -17,8 +17,7 @@ var BinaryXMLWireFormat = function BinaryXMLWireFormat() {
  */
 BinaryXMLWireFormat.prototype.encodeInterest = function(interest) {
 	var encoder = new BinaryXMLEncoder();
-	interest.to_ccnb(encoder);
-	
+	BinaryXMLWireFormat.encodeInterest(interest, encoder);	
 	return encoder.getReducedOstream();  
 };
 
@@ -39,8 +38,7 @@ BinaryXMLWireFormat.prototype.decodeInterest = function(interest, input) {
  */
 BinaryXMLWireFormat.prototype.encodeContentObject = function(contentObject) {
 	var encoder = new BinaryXMLEncoder();
-	BinaryXMLWireFormat(contentObject, encoder);
-
+	BinaryXMLWireFormat.encodeContentObject(contentObject, encoder);	
 	return encoder.getReducedOstream();  
 };
 
@@ -51,7 +49,7 @@ BinaryXMLWireFormat.prototype.encodeContentObject = function(contentObject) {
  */
 BinaryXMLWireFormat.prototype.decodeContentObject = function(contentObject, input) {
 	var decoder = new BinaryXMLDecoder(input);
-	contentObject.from_ccnb(decoder);  
+  BinaryXMLWireFormat.decodeContentObject(contentObject, decoder);
 };
 
 // Default object.
