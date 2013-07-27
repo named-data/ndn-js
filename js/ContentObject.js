@@ -114,74 +114,34 @@ ContentObject.prototype.saveRawData = function(bytes){
 	this.rawSignatureData = sigBits;
 };
 
+// Deprecated.  Use BinaryXMLWireFormat.decodeContentObject.
 ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-	// TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readStartElement(this.getElementLabel());
-
-	if( decoder.peekStartElement(CCNProtocolDTags.Signature) ){
-		this.signature = new Signature();
-		this.signature.from_ccnb(decoder);
-	}
-  else
-    this.signature = null;
-		
-	this.startSIG = decoder.offset;
-
-	this.name = new Name();
-	this.name.from_ccnb(decoder);
-		
-	if( decoder.peekStartElement(CCNProtocolDTags.SignedInfo) ){
-		this.signedInfo = new SignedInfo();
-		this.signedInfo.from_ccnb(decoder);
-	}
-  else
-    this.signedInfo = null;
-
-  this.content = decoder.readBinaryElement(CCNProtocolDTags.Content, null, true);
-		
-	this.endSIG = decoder.offset;
-		
-	decoder.readEndElement();
-		
-	this.saveRawData(decoder.input);
+  BinaryXMLWireFormat.decodeContentObject(this, decoder);
 };
 
+// Deprecated.  Use BinaryXMLWireFormat.encodeContentObject.
 ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+  BinaryXMLWireFormat.encodeContentObject(this, encoder);
+};
 
-	//TODO verify name, SignedInfo and Signature is present
+/**
+ * Encode this ContentObject for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @returns {Uint8Array}
+ */
+ContentObject.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  return wireFormat.encodeContentObject(this);
+};
 
-
-	encoder.writeStartElement(this.getElementLabel());
-
-	
-
-
-	if(null!=this.signature) this.signature.to_ccnb(encoder);
-	
-	
-	this.startSIG = encoder.offset;
-	
-
-	if(null!=this.name) this.name.to_ccnb(encoder);
-	
-	//this.endSIG = encoder.offset;
-	//this.startSignedInfo = encoder.offset;
-	
-	
-	if(null!=this.signedInfo) this.signedInfo.to_ccnb(encoder);
-
-	encoder.writeElement(CCNProtocolDTags.Content, this.content);
-
-	
-	this.endSIG = encoder.offset;
-	
-	//this.endContent = encoder.offset;
-	
-
-	encoder.writeEndElement();
-	
-	this.saveRawData(encoder.ostream);
-	
+/**
+ * Decode the input using a particular wire format and update this ContentObject.
+ * @param {Uint8Array} input
+ * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ */
+ContentObject.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat.decodeContentObject(this, input);
 };
 
 ContentObject.prototype.getElementLabel= function(){return CCNProtocolDTags.ContentObject;};

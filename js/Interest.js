@@ -34,104 +34,34 @@ Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
-
+// Deprecated.  Use BinaryXMLWireFormat.decodeInterest.
 Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-
-		decoder.readStartElement(CCNProtocolDTags.Interest);
-
-		this.name = new Name();
-		this.name.from_ccnb(decoder);
-
-		if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents))
-			this.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
-    else
-      this.minSuffixComponents = null;
-
-		if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) 
-			this.maxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
-    else
-      this.maxSuffixComponents = null;
-			
-		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-			this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-			this.publisherPublicKeyDigest.from_ccnb(decoder);
-		}
-    else
-      this.publisherPublicKeyDigest = null;
-
-		if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
-			this.exclude = new Exclude();
-			this.exclude.from_ccnb(decoder);
-		}
-    else
-      this.exclude = null;
-		
-		if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector))
-			this.childSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
-    else
-      this.childSelector = null;
-		
-		if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind))
-			this.answerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
-    else
-      this.answerOriginKind = null;
-		
-		if (decoder.peekStartElement(CCNProtocolDTags.Scope))
-			this.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
-    else
-      this.scope = null;
-
-		if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
-			this.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-                (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
-    else
-      this.interestLifetime = null;              
-		
-		if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
-			this.nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
-    else
-      this.nonce = null;
-		
-		decoder.readEndElement();
+  BinaryXMLWireFormat.decodeInterest(this, decoder);
 };
 
+// Deprecated. Use BinaryXMLWireFormat.encodeInterest.
 Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
-		//Could check if name is present
-		
-		encoder.writeStartElement(CCNProtocolDTags.Interest);
-		
-		this.name.to_ccnb(encoder);
-	
-		if (null != this.minSuffixComponents) 
-			encoder.writeElement(CCNProtocolDTags.MinSuffixComponents, this.minSuffixComponents);	
+  BinaryXMLWireFormat.encodeInterest(this, encoder);
+};
 
-		if (null != this.maxSuffixComponents) 
-			encoder.writeElement(CCNProtocolDTags.MaxSuffixComponents, this.maxSuffixComponents);
+/**
+ * Encode this Interest for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @returns {Uint8Array}
+ */
+Interest.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  return wireFormat.encodeInterest(this);
+};
 
-		if (null != this.publisherPublicKeyDigest)
-			this.publisherPublicKeyDigest.to_ccnb(encoder);
-		
-		if (null != this.exclude)
-			this.exclude.to_ccnb(encoder);
-		
-		if (null != this.childSelector) 
-			encoder.writeElement(CCNProtocolDTags.ChildSelector, this.childSelector);
-
-		if (this.DEFAULT_ANSWER_ORIGIN_KIND != this.answerOriginKind && this.answerOriginKind!=null) 
-			encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, this.answerOriginKind);
-		
-		if (null != this.scope) 
-			encoder.writeElement(CCNProtocolDTags.Scope, this.scope);
-		
-		if (null != this.interestLifetime) 
-			encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian((this.interestLifetime / 1000.0) * 4096));
-		
-		if (null != this.nonce)
-			encoder.writeElement(CCNProtocolDTags.Nonce, this.nonce);
-		
-		encoder.writeEndElement();
-
+/**
+ * Decode the input using a particular wire format and update this Interest.
+ * @param {Uint8Array} input
+ * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ */
+Interest.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat.decodeInterest(this, input);
 };
 
 /*
