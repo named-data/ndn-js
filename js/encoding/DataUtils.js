@@ -4,14 +4,16 @@
  * See COPYING for copyright and distribution information.
  */
  
+/**
+ * A DataUtils has static methods for converting data.
+ * @constructor
+ */
 var DataUtils = function DataUtils(){
-	
-	
 };
 
 
 /*
- * NOTE THIS IS CURRENTLY NOT BEHING USED
+ * NOTE THIS IS CURRENTLY NOT BEING USED
  * 
  */
 
@@ -107,108 +109,6 @@ DataUtils.base64toString = function base64toString(input) {
      //return unescape(output);
   };
 
-//byte [] 
-
-/**
- * NOT WORKING!!!!!
- * 
- * Unsiged Long Number to Byte Array
- */
-	
- /*
-DataUtils.unsignedLongToByteArray= function( value) {
-	
-	if(LOG>4)console.log('INPUT IS '+value);
-	
-	if( 0 == value )
-		return [0];
-
-	if( 0 <= value && value <= 0x00FF ) {
-		//byte [] 
-		var bb = new Array(1);
-		bb[0] = (value & 0x00FF);
-		return bb;
-	}
-
-	if(LOG>4) console.log('type of value is '+typeof value);
-	if(LOG>4) console.log('value is '+value);
-	//byte [] 
-	var out = null;
-	//int
-	var offset = -1;
-	for(var i = 7; i >=0; --i) {
-		//byte
-		console.log(i);
-		console.log('value is '+value);
-		console.log('(value >> (i * 8)) '+ (value >> (i * 8))  );
-		console.log(' ((value >> (i * 8)) & 0xFF) '+ ((value >> (i * 8)) & 0xFF)  );
-
-		var b = ((value >> (i * 8)) & 0xFF)  ;
-		
-		if(LOG>4) console.log('b is '+b);
-		
-		if( out == null && b != 0 ) {
-			//out = new byte[i+1];
-			out = new Array(i+1);
-			offset = i;
-		}
-		
-		if( out != null )
-			out[ offset - i ] = b;
-	}
-	if(LOG>4)console.log('OUTPUT IS ');
-	if(LOG>4)console.log(out);
-	return out;
-}
-*/
-	
-/**
- * NOT WORKING!!!!!
- * 
- * Unsiged Long Number to Byte Array
- *//*
-DataUtils.byteArrayToUnsignedLong = function(//final byte [] 
-	src) {
-		if(LOG>4) console.log('INPUT IS ');
-		if(LOG>4) console.log(src);
-		
-		var value = 0;
-		for(var i = 0; i < src.length; i++) {
-			value = value << 8;
-			// Java will assume the byte is signed, so extend it and trim it.
-			
-			
-			var b = ((src[i]) & 0xFF );
-			value |= b;
-		}
-		
-		if(LOG>4) console.log('OUTPUT IS ');
-		
-		if(LOG>4) console.log(value);
-
-		return value;
-	}*/
-
-
-/**
- * Hex String to Byte Array
- */
-	//THIS IS NOT WORKING
-/*
-DataUtils.HexStringtoByteArray = function(str) {
-    var byteArray = [];
-    for (var i = 0; i < str.length; i++)
-        if (str.charCodeAt(i) <= 0x7F)
-            byteArray.push(str.charCodeAt(i));
-        else {
-            var h = encodeURIComponent(str.charAt(i)).substr(1).split('%');
-            for (var j = 0; j < h.length; j++)
-                byteArray.push(parseInt(h[j], 16));
-        }
-    return byteArray;
-};
-*/
-
 /**
  * Uint8Array to Hex String
  */
@@ -283,7 +183,7 @@ DataUtils.toNumbersFromString = function(str) {
 	return bytes;
 }
 
-/*
+/**
  * Encode str as utf8 and return as Uint8Array.
  * TODO: Use TextEncoder when available.
  */
@@ -291,7 +191,7 @@ DataUtils.stringToUtf8Array = function(str) {
     return DataUtils.toNumbersFromString(str2rstr_utf8(str));
 }
 
-/*
+/**
  * arrays is an array of Uint8Array. Return a new Uint8Array which is the concatenation of all.
  */
 DataUtils.concatArrays = function(arrays) {
@@ -342,46 +242,6 @@ DataUtils.decodeUtf8 = function (utftext) {
 		return string;
 	};
 
-//NOT WORKING
-/*
-DataUtils.getUTF8StringFromBytes = function(bytes) {
-	
-	bytes = toString(bytes);
-
-    var ix = 0;
- 
-    if( bytes.slice(0,3) == "\xEF\xBB\xBF") {
-        ix = 3;
-    }
- 
-    var string = "";
-    for( ; ix < bytes.length; ix++ ) {
-        var byte1 = bytes[ix].charCodeAt(0);
-        if( byte1 < 0x80 ) {
-            string += String.fromCharCode(byte1);
-        } else if( byte1 >= 0xC2 && byte1 < 0xE0 ) {
-            var byte2 = bytes[++ix].charCodeAt(0);
-            string += String.fromCharCode(((byte1&0x1F)<<6) + (byte2&0x3F));
-        } else if( byte1 >= 0xE0 && byte1 < 0xF0 ) {
-            var byte2 = bytes[++ix].charCodeAt(0);
-            var byte3 = bytes[++ix].charCodeAt(0);
-            string += String.fromCharCode(((byte1&0xFF)<<12) + ((byte2&0x3F)<<6) + (byte3&0x3F));
-        } else if( byte1 >= 0xF0 && byte1 < 0xF5) {
-            var byte2 = bytes[++ix].charCodeAt(0);
-            var byte3 = bytes[++ix].charCodeAt(0);
-            var byte4 = bytes[++ix].charCodeAt(0);
-            var codepoint = ((byte1&0x07)<<18) + ((byte2&0x3F)<<12)+ ((byte3&0x3F)<<6) + (byte4&0x3F);
-            codepoint -= 0x10000;
-            string += String.fromCharCode(
-                (codepoint>>10) + 0xD800,
-                (codepoint&0x3FF) + 0xDC00
-            );
-        }
-    }
- 
-    return string;
-}*/
-
 /**
  * Return true if a1 and a2 are the same length with equal elements.
  */
@@ -397,7 +257,7 @@ DataUtils.arraysEqual = function(a1, a2){
     return true;
 };
 
-/*
+/**
  * Convert the big endian Uint8Array to an unsigned int.
  * Don't check for overflow.
  */
@@ -410,7 +270,7 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
     return result;
 };
 
-/*
+/**
  * Convert the int value to a new big endian Uint8Array and return.
  * If value is 0 or negative, return Uint8Array(0). 
  */
@@ -431,7 +291,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
     return result.subarray(size - i, size);
 };
 
-/*
+/**
  * Modify array to randomly shuffle the elements.
  */
 DataUtils.shuffle = function(array) {
@@ -442,4 +302,4 @@ DataUtils.shuffle = function(array) {
         array[i] = array[j];
         array[j] = temp;
     }
-}
+};
