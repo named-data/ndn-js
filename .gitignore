@@ -1,4 +1,3 @@
-.DS_Store
 .waf*
 .lock*
 tools/yui*.jar
@@ -6,4 +5,11 @@ tools/compiler*.jar
 build
 ndnProtocol.xpi
 ndnProtocol/modules/ndn-js.jsm
+
+# Doxygen output
+/doc/html
+/doc/latex
+
+# Mac OSX
+.DS_Store
 
