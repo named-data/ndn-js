@@ -6,9 +6,8 @@ build
 ndnProtocol.xpi
 ndnProtocol/modules/ndn-js.jsm
 
-# Doxygen output
-/doc/html
-/doc/latex
+# JSDoc output
+/doc
 
 # Mac OSX
 .DS_Store
