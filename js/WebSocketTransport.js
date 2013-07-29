@@ -3,6 +3,9 @@
  * See COPYING for copyright and distribution information.
  */
 
+/**
+ * @constructor
+ */
 var WebSocketTransport = function WebSocketTransport() {    
     if (!WebSocket)
         throw new Error("WebSocket support is not available on this platform.");
@@ -17,7 +20,7 @@ var WebSocketTransport = function WebSocketTransport() {
          9696);
 };
 
-/*
+/**
  * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
@@ -83,7 +86,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 	}
 };
 
-/*
+/**
  * Send the Uint8Array data.
  */
 WebSocketTransport.prototype.send = function(data) {

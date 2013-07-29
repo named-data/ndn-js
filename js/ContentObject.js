@@ -3,31 +3,35 @@
  * See COPYING for copyright and distribution information.
  * This class represents ContentObject Objects
  */
-var ContentObject = function ContentObject(_name,_signedInfo,_content,_signature){
-	
-	
-	if (typeof _name == 'string') {
-		this.name = new Name(_name);
-	}
-	else{
-		//TODO Check the class of _name
-		this.name = _name;
-	}
-	this.signedInfo = _signedInfo;
-	
-	if (typeof _content == 'string') {
-		this.content = DataUtils.toNumbersFromString(_content);
-	} else {
-		this.content = _content;
-	}
-	
-	this.signature = _signature;
 
+/**
+ * Create a new ContentObject with the optional values.
+ * 
+ * @constructor
+ * @param {Name} name
+ * @param {SignedInfo} signedInfo
+ * @param {Uint8Array} content
+ * @param {Signature} signature
+ */
+var ContentObject = function ContentObject(name, signedInfo, content, signature) {
+	if (typeof name == 'string')
+		this.name = new Name(name);
+	else
+		//TODO Check the class of name
+		this.name = name;
+	
+	this.signedInfo = signedInfo;
+	
+	if (typeof content == 'string') 
+		this.content = DataUtils.toNumbersFromString(content);
+	else 
+		this.content = content;
+	
+	this.signature = signature;
 	
 	this.startSIG = null;
 	this.endSIG = null;
 	
-	//this.startSignedInfo = null;
 	this.endContent = null;
 	
 	this.rawSignatureData = null;
@@ -114,12 +118,16 @@ ContentObject.prototype.saveRawData = function(bytes){
 	this.rawSignatureData = sigBits;
 };
 
-// Deprecated.  Use BinaryXMLWireFormat.decodeContentObject.
+/**
+ * @deprecated Use BinaryXMLWireFormat.decodeContentObject.
+ */
 ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
   BinaryXMLWireFormat.decodeContentObject(this, decoder);
 };
 
-// Deprecated.  Use BinaryXMLWireFormat.encodeContentObject.
+/**
+ * @deprecated Use BinaryXMLWireFormat.encodeContentObject.
+ */
 ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
   BinaryXMLWireFormat.encodeContentObject(this, encoder);
 };
@@ -147,13 +155,13 @@ ContentObject.prototype.decode = function(input, wireFormat) {
 ContentObject.prototype.getElementLabel= function(){return CCNProtocolDTags.ContentObject;};
 
 /**
- * Signature
+ * Create a new Signature with the optional values.
+ * @constructor
  */
-var Signature = function Signature(_witness,_signature,_digestAlgorithm) {
-	
-    this.Witness = _witness;//byte [] _witness;
-	this.signature = _signature;//byte [] _signature;
-	this.digestAlgorithm = _digestAlgorithm//String _digestAlgorithm;
+var Signature = function Signature(witness, signature, digestAlgorithm) {
+  this.Witness = witness;
+	this.signature = signature;
+	this.digestAlgorithm = digestAlgorithm
 };
 
 Signature.prototype.from_ccnb =function( decoder) {
@@ -210,27 +218,23 @@ Signature.prototype.validate = function() {
 };
 
 
-/**
- * SignedInfo
- */
 var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
 var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
 var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
 
-var SignedInfo = function SignedInfo(_publisher,_timestamp,_type,_locator,_freshnessSeconds,_finalBlockID){
-
-	//TODO, Check types
-
-    this.publisher = _publisher; //publisherPublicKeyDigest
-    this.timestamp=_timestamp; // CCN Time
-    this.type=_type; // ContentType
-    this.locator =_locator;//KeyLocator
-    this.freshnessSeconds =_freshnessSeconds; // Integer
-    this.finalBlockID=_finalBlockID; //byte array
+/**
+ * Create a new SignedInfo with the optional values.
+ * @constructor
+ */
+var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) {
+  this.publisher = publisher; //publisherPublicKeyDigest
+  this.timestamp=timestamp; // CCN Time
+  this.type=type; // ContentType
+  this.locator =locator;//KeyLocator
+  this.freshnessSeconds =freshnessSeconds; // Integer
+  this.finalBlockID=finalBlockID; //byte array
     
-    // SWT: merge setFields() method into constructor
-    this.setFields();
-
+  this.setFields();
 };
 
 SignedInfo.prototype.setFields = function(){

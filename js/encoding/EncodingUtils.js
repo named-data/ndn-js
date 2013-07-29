@@ -8,7 +8,9 @@ function encodeToHexInterest(interest){
   return DataUtils.toHex(interest.encode());
 }
 
-// Deprecated: Use interest.encode().
+/**
+ * @deprecated Use interest.encode().
+ */
 function encodeToBinaryInterest(interest) {
   return interest.encode();
 }
@@ -17,7 +19,9 @@ function encodeToHexContentObject(contentObject) {
   return DataUtils.toHex(contentObject.encode());
 }
 
-// Deprecated: Use contentObject.encode().
+/**
+ * @deprecated Use contentObject.encode().
+ */
 function encodeToBinaryContentObject(contentObject) {
   contentObject.encode();
 }
@@ -80,7 +84,7 @@ function decodeHexForwardingEntry(result){
 	
 }
 
-/*
+/**
  * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
 function decodeSubjectPublicKeyInfo(array) {
@@ -91,8 +95,9 @@ function decodeSubjectPublicKeyInfo(array) {
     return rsaKey;
 }
 
-/* Return a user friendly HTML string with the contents of co.
-   This also outputs to console.log.
+/**
+ * Return a user friendly HTML string with the contents of co.
+ * This also outputs to console.log.
  */
 function contentObjectToHtml(/* ContentObject */ co) {
     var output ="";

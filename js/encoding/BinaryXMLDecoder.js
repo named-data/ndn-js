@@ -65,7 +65,9 @@ stringToTag =  function(/*String*/ tagName) {
 	return null;
 };
 
-//console.log(stringToTag(64));
+/**
+ * @constructor
+ */
 var BinaryXMLDecoder = function BinaryXMLDecoder(input){
 	var MARK_LEN=512;
 	var DEBUG_MAX_LEN =  32768;
@@ -380,7 +382,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	};
 	
 
-/*
+/**
  * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
  * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
  *   just read the end element and return null.
@@ -564,9 +566,6 @@ TypeAndVal.prototype.val = function(){
 	return this.v;
 };
 
-
-
-
 BinaryXMLDecoder.prototype.readIntegerElement =function(
 	//String 
 	startTag) {
@@ -579,7 +578,6 @@ BinaryXMLDecoder.prototype.readIntegerElement =function(
 	
 	return parseInt(strVal);
 };
-
 
 BinaryXMLDecoder.prototype.readUTF8Element =function(
 			//String 
@@ -594,8 +592,7 @@ BinaryXMLDecoder.prototype.readUTF8Element =function(
 		return strElementText;
 };
 
-
-/* 
+/**
  * Set the offset into the input, used for the next read.
  */
 BinaryXMLDecoder.prototype.seek = function(

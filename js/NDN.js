@@ -4,40 +4,42 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
+/**
+ * Set this to a higher number to dump more debugging log messages.
+ * @type Number
+ */
 var LOG = 0;
 
 /**
- * settings is an associative array with the following defaults:
+ * Create a new NDN with the given settings.
+ * This throws an exception if NDN.supported is false.
+ * @constructor
+ * @param {Object} settings if not null, an associative array with the following defaults:
  * {
  *   getTransport: function() { return new WebSocketTransport(); },
- *   getHostAndPort: transport.defaultGetHostAndPort,
+ *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696,
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: true // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
- * 
- * getHostAndPort is a function, on each call it returns a new { host: host, port: port } or
- *   null if there are no more hosts.
- *   
- * This throws an exception if NDN.supported is false.
  */
 var NDN = function NDN(settings) {
-    if (!NDN.supported)
-        throw new Error("The necessary JavaScript support is not available on this platform.");
+  if (!NDN.supported)
+    throw new Error("The necessary JavaScript support is not available on this platform.");
     
-    settings = (settings || {});
-    var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
-    this.transport = getTransport();
-    this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
+  settings = (settings || {});
+  var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+  this.transport = getTransport();
+  this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
 	this.port = (settings.port || 9696);
-    this.readyStatus = NDN.UNOPEN;
-    this.verify = (settings.verify !== undefined ? settings.verify : true);
-    // Event handler
-    this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
-    this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
+  this.readyStatus = NDN.UNOPEN;
+  this.verify = (settings.verify !== undefined ? settings.verify : true);
+  // Event handler
+  this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
+  this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 	this.ccndid = null;
 };
 
@@ -45,7 +47,7 @@ NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ccnd opened
 NDN.CLOSED = 2;  // connection to ccnd closed
 
-/*
+/**
  * Return true if necessary JavaScript support is available, else log an error and return false.
  */
 NDN.getSupported = function() {
@@ -102,13 +104,16 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 // For fetching data
 NDN.PITTable = new Array();
 
+/**
+ * @constructor
+ */
 var PITEntry = function PITEntry(interest, closure) {
 	this.interest = interest;  // Interest
 	this.closure = closure;    // Closure
 	this.timerID = -1;  // Timer ID
 };
 
-/*
+/**
  * Return the entry from NDN.PITTable where the name conforms to the interest selectors, and
  * the interest name is the longest that matches name.
  */
@@ -129,6 +134,9 @@ NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
 // For publishing data
 NDN.CSTable = new Array();
 
+/**
+ * @constructor
+ */
 var CSEntry = function CSEntry(name, closure) {
 	this.name = name;        // String
 	this.closure = closure;  // Closure
@@ -142,7 +150,7 @@ function getEntryForRegisteredPrefix(name) {
 	return null;
 }
 
-/*
+/**
  * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
  * If no more hosts remain, return null.
  */
@@ -159,20 +167,17 @@ NDN.makeShuffledGetHostAndPort = function(hostList, port) {
     };
 };
 
-/** Encode name as an Interest. If template is not null, use its attributes.
- *  Send the interest to host:port, read the entire response and call
+/**
+ * Encode name as an Interest and send the it to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)).                 
+ *                 new UpcallInfo(this, interest, 0, contentObject)). 
+ * @param {Name} name
+ * @param {Closure} closure
+ * @param {Interest} template if not null, use its attributes
  */
-NDN.prototype.expressInterest = function(
-        // Name
-        name,
-        // Closure
-        closure,
-        // Interest
-        template) {
+NDN.prototype.expressInterest = function (name, closure, template) {
 	var interest = new Interest(name);
-    if (template != null) {
+  if (template != null) {
 		interest.minSuffixComponents = template.minSuffixComponents;
 		interest.maxSuffixComponents = template.maxSuffixComponents;
 		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
@@ -181,9 +186,9 @@ NDN.prototype.expressInterest = function(
 		interest.answerOriginKind = template.answerOriginKind;
 		interest.scope = template.scope;
 		interest.interestLifetime = template.interestLifetime;
-    }
-    else
-        interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+  }
+  else
+    interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
 
 	if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
@@ -198,7 +203,7 @@ NDN.prototype.expressInterest = function(
         this.reconnectAndExpressInterest(interest, closure);
 };
 
-/*
+/**
  * If the host and port are different than the ones in this.transport, then call
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
@@ -212,7 +217,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
         this.expressInterestHelper(interest, closure);
 };
 
-/*
+/**
  * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
@@ -253,6 +258,12 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 	this.transport.send(binaryInterest);
 };
 
+/**
+ * Register name with the connected NDN hub and receive interests with closure.upcall.
+ * @param {Name} name
+ * @param {Closure} closure
+ * @param {number} flag
+ */
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     var thisNDN = this;
     var onConnected = function() {
@@ -278,7 +289,7 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
         onConnected();
 };
 
-/*
+/**
  * This is a closure to receive the ContentObject for NDN.ccndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flag).
  */
@@ -320,7 +331,7 @@ NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
     return Closure.RESULT_OK;
 };
 
-/*
+/**
  * Do the work of registerPrefix once we know we are connected with a ccndid.
  */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
@@ -348,7 +359,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
     this.transport.send(encodeToBinaryInterest(interest));
 };
 
-/*
+/**
  * This is called when an entire binary XML element is received, such as a ContentObject or Interest.
  * Look up in the PITTable and call the closure callback.
  */
@@ -509,7 +520,7 @@ NDN.prototype.onReceivedElement = function(element) {
 		console.log('Incoming packet is not Interest or ContentObject. Discard now.');
 };
 
-/*
+/**
  * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
  *   is not alive.  Get a host and port, connect, then execute onConnected().
  */
@@ -574,16 +585,18 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
     return Closure.RESULT_OK;
 };
 
-/*
+/**
  * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
- *   BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
- *   elementListener.onReceivedElement(element) with the element. 
+ * BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
+ * elementListener.onReceivedElement(element) with the element. 
  * This handles the case where a single call to onReceivedData may contain multiple elements.
+ * @constructor
+ * @param {{onReceivedElement:function}} elementListener
  */
 var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
-    this.elementListener = elementListener;
+  this.elementListener = elementListener;
 	this.dataParts = [];
-    this.structureDecoder = new BinaryXMLStructureDecoder();
+  this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
 BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {

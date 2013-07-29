@@ -4,6 +4,9 @@
  * This class represents Key Objects
  */
 
+/**
+ * @constructor
+ */
 var Key = function Key(){
     /* TODO: Port from PyCCN:
 	generateRSA()
@@ -25,23 +28,24 @@ var KeyLocatorType = {
 	KEYNAME:3
 };
 
-var KeyLocator = function KeyLocator(_input,_type){ 
-
-    this.type = _type;
+/**
+ * @constructor
+ */
+var KeyLocator = function KeyLocator(input,type) { 
+  this.type = type;
     
-    if (_type == KeyLocatorType.KEYNAME){
-    	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
-    	this.keyName = _input;
-    }
-    else if (_type == KeyLocatorType.KEY){
-    	if (LOG>3) console.log('KeyLocator: SET KEY');
-    	this.publicKey = _input;
-    }
-    else if (_type == KeyLocatorType.CERTIFICATE){
-    	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
-    	this.certificate = _input;
-    }
-
+  if (type == KeyLocatorType.KEYNAME){
+  	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
+   	this.keyName = input;
+  }
+  else if (type == KeyLocatorType.KEY){
+   	if (LOG>3) console.log('KeyLocator: SET KEY');
+   	this.publicKey = input;
+  }
+  else if (type == KeyLocatorType.CERTIFICATE){
+   	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
+   	this.certificate = input;
+  }
 };
 
 KeyLocator.prototype.from_ccnb = function(decoder) {
@@ -146,6 +150,7 @@ KeyLocator.prototype.validate = function() {
 
 /**
  * KeyName is only used by KeyLocator.
+ * @constructor
  */
 var KeyName = function KeyName() {
 	this.contentName = this.contentName;  //contentName

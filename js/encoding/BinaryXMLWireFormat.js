@@ -6,6 +6,7 @@
 
 /**
  * A BinaryXMLWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
+ * @constructor
  */
 var BinaryXMLWireFormat = function BinaryXMLWireFormat() {
 };

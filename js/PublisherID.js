@@ -4,14 +4,16 @@
  * This class represents Publisher and PublisherType Objects
  */
 
-
-var PublisherType = function PublisherType(_tag){
+/**
+ * @constructor
+ */
+var PublisherType = function PublisherType(tag){
     	this.KEY =(CCNProtocolDTags.PublisherPublicKeyDigest);
     	this.CERTIFICATE= (CCNProtocolDTags.PublisherCertificateDigest);
     	this.ISSUER_KEY=	(CCNProtocolDTags.PublisherIssuerKeyDigest);
     	this.ISSUER_CERTIFICATE	=(CCNProtocolDTags.PublisherIssuerCertificateDigest);
 
-    	this.Tag = _tag;
+    	this.Tag = tag;
 }; 
 
 var isTypeTagVal = function(tagVal) {
@@ -24,9 +26,9 @@ var isTypeTagVal = function(tagVal) {
 		return false;
 };
 
-
-
-
+/**
+ * @constructor
+ */
 var PublisherID = function PublisherID() {
 
 	this.PUBLISHER_ID_DIGEST_ALGORITHM = "SHA-256";

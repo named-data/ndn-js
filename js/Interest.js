@@ -4,23 +4,38 @@
  * This class represents Interest Objects
  */
 
-// _interestLifetime is in milliseconds.
+/**
+ * Create a new Interest with the optional values.
+ * 
+ * @constructor
+ * @param {Name} name
+ * @param {FaceInstance} faceInstance
+ * @param {number} minSuffixComponents
+ * @param {number} maxSuffixComponents
+ * @param {Uint8Array} publisherPublicKeyDigest
+ * @param {Exclude} exclude
+ * @param {number} childSelector
+ * @param {number} answerOriginKind
+ * @param {number} scope
+ * @param {number} interestLifetime in milliseconds
+ * @param {Uint8Array} nonce
+ */
 var Interest = function Interest
-   (_name, _faceInstance, _minSuffixComponents, _maxSuffixComponents, _publisherPublicKeyDigest, _exclude, 
-    _childSelector, _answerOriginKind, _scope, _interestLifetime, _nonce) {
+   (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+    childSelector, answerOriginKind, scope, interestLifetime, nonce) {
 		
-	this.name = _name;
-	this.faceInstance = _faceInstance;
-	this.maxSuffixComponents = _maxSuffixComponents;
-	this.minSuffixComponents = _minSuffixComponents;
+	this.name = name;
+	this.faceInstance = faceInstance;
+	this.maxSuffixComponents = maxSuffixComponents;
+	this.minSuffixComponents = minSuffixComponents;
 	
-	this.publisherPublicKeyDigest = _publisherPublicKeyDigest;
-	this.exclude = _exclude;
-	this.childSelector = _childSelector;
-	this.answerOriginKind = _answerOriginKind;
-	this.scope = _scope;
-	this.interestLifetime = _interestLifetime;  // milli seconds
-	this.nonce = _nonce;	
+	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+	this.exclude = exclude;
+	this.childSelector = childSelector;
+	this.answerOriginKind = answerOriginKind;
+	this.scope = scope;
+	this.interestLifetime = interestLifetime;  // milli seconds
+	this.nonce = nonce;	
 };
 
 Interest.RECURSIVE_POSTFIX = "*";
@@ -34,12 +49,16 @@ Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
-// Deprecated.  Use BinaryXMLWireFormat.decodeInterest.
+/**
+ * @deprecated Use BinaryXMLWireFormat.decodeInterest.
+ */
 Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
   BinaryXMLWireFormat.decodeInterest(this, decoder);
 };
 
-// Deprecated. Use BinaryXMLWireFormat.encodeInterest.
+/**
+ * @deprecated Use BinaryXMLWireFormat.encodeInterest.
+ */
 Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
   BinaryXMLWireFormat.encodeInterest(this, encoder);
 };
@@ -64,7 +83,7 @@ Interest.prototype.decode = function(input, wireFormat) {
   wireFormat.decodeInterest(this, input);
 };
 
-/*
+/**
  * Return true if this.name.match(name) and the name conforms to the interest selectors.
  */
 Interest.prototype.matches_name = function(/*Name*/ name) {
@@ -86,7 +105,7 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
     return true;
 };
 
-/*
+/**
  * Return a new Interest with the same fields as this Interest.  
  * Note: This does NOT make a deep clone of the name, exclue or other objects.
  */
@@ -99,10 +118,16 @@ Interest.prototype.clone = function() {
 
 /*
  * Handle the interest Exclude element.
- * _values is an array where each element is either Uint8Array component or Exclude.ANY.
+ * values is 
  */
-var Exclude = function Exclude(_values) { 
-	this.values = (_values || []);
+
+/**
+ * 
+ * @constructor
+ * @param {Array<Uint8Array|Exclude.ANY>} values an array where each element is either Uint8Array component or Exclude.ANY.
+ */
+var Exclude = function Exclude(values) { 
+	this.values = (values || []);
 }
 
 Exclude.ANY = "*";
@@ -149,7 +174,7 @@ Exclude.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 	encoder.writeEndElement();
 };
 
-/*
+/**
  * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
  */
 Exclude.prototype.to_uri = function() {
@@ -169,7 +194,7 @@ Exclude.prototype.to_uri = function() {
     return result;
 };
 
-/*
+/**
  * Return true if the component matches any of the exclude criteria.
  */
 Exclude.prototype.matches = function(/*Uint8Array*/ component) {
@@ -224,7 +249,7 @@ Exclude.prototype.matches = function(/*Uint8Array*/ component) {
     return false;
 };
 
-/*
+/**
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */

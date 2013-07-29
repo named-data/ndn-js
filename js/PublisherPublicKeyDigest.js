@@ -3,13 +3,17 @@
  * See COPYING for copyright and distribution information.
  * This class represents PublisherPublicKeyDigest Objects
  */
-var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(_pkd){ 
+
+/**
+ * @constructor
+ */
+var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){ 
 	
  	 //this.PUBLISHER_ID_LEN = 256/8;
 	 this.PUBLISHER_ID_LEN = 512/8;
  	 
 
-	 this.publisherPublicKeyDigest = _pkd;
+	 this.publisherPublicKeyDigest = pkd;
  	 //if( typeof _pkd == "object") this.publisherPublicKeyDigest = _pkd; // Byte Array
  	 //else if( typeof _pkd == "PublicKey") ;//TODO...
     

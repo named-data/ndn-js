@@ -4,30 +4,29 @@
  * This class represents a Name as an array of components where each is a byte array.
  */
  
-/*
- * Create a new Name from _components.
- * If _components is a string, parse it as a URI.
- * If _components is a Name, add a deep copy of its components.
- * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Uint8Array
- *   or Name. 
- * Convert and store as an array of Uint8Array.
- * If a component is a string, encode as utf8.
+/**
+ * Create a new Name from components.
+ * 
+ * @constructor
+ * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Uint8Array|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
+ * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Uint8Array or Name.
+ * Convert each and store as an array of Uint8Array.  If a component is a string, encode as utf8.
  */
-var Name = function Name(_components){
-	if( typeof _components == 'string') {		
-		if(LOG>3)console.log('Content Name String '+_components);
-		this.components = Name.createNameArray(_components);
+var Name = function Name(components) {
+	if( typeof components == 'string') {		
+		if(LOG>3)console.log('Content Name String '+components);
+		this.components = Name.createNameArray(components);
 	}
-	else if(typeof _components === 'object'){		
+	else if(typeof components === 'object'){		
 		this.components = [];
-        if (_components instanceof Name)
-            this.add(_components);
-        else {
-            for (var i = 0; i < _components.length; ++i)
-                this.add(_components[i]);
-        }
+    if (components instanceof Name)
+      this.add(components);
+    else {
+      for (var i = 0; i < components.length; ++i)
+        this.add(components[i]);
+    }
 	}
-	else if(_components==null)
+	else if(components==null)
 		this.components =[];
 	else
 		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
@@ -37,8 +36,7 @@ Name.prototype.getName = function() {
     return this.to_uri();
 };
 
-/* Parse uri as a URI and return an array of Uint8Array components.
- *
+/** Parse uri as a URI and return an array of Uint8Array components.
  */
 Name.createNameArray = function(uri) {
     uri = uri.trim();
@@ -118,11 +116,11 @@ Name.prototype.getElementLabel = function(){
 	return CCNProtocolDTags.Name;
 };
 
-/*
- * component is a string, byte array, ArrayBuffer, Uint8Array or Name.
- * Convert to Uint8Array and add to this Name.
- * If a component is a string, encode as utf8.
+/**
+ * Convert the component to a Uint8Array and add to this Name.
  * Return this Name object to allow chaining calls to add.
+ * @param {String|Array<number>|ArrayBuffer|Uint8Array|Name} component If a component is a string, encode as utf8.
+ * @returns {Name}
  */
 Name.prototype.add = function(component){
     var result;
@@ -160,39 +158,9 @@ Name.prototype.add = function(component){
 };
 
 /**
- * @brief Add component that represents a segment number
- *
- * @param number Segment number (integer is expected)
- *
- * This component has a special format handling:
- * - if number is zero, then %00 is added
- * - if number is between 1 and 255, %00%01 .. %00%FF is added
- * - ...
+ * Return the escaped name string according to "NDNx URI Scheme".
+ * @returns {String}
  */
-Name.prototype.addSegment = function(number) {
-    // step 1: figure out how many bytes will be needed
-    var bytes = 1; // at least 1 byte
-    var test_number = number;
-    while (test_number > 0) {
-        bytes ++;
-        test_number >>= 8;
-    }
-
-    var result = new Uint8Array (bytes);
-    var index = 0;
-    result[index] = 0;
-    index ++;
-    while (number > 0) {
-        result[index] = number & 0xFF;
-        number >>= 8;
-        index ++;
-    }
-
-    this.components.push(result);
-    return this;
-}
-
-// Return the escaped name string according to "CCNx URI Scheme".
 Name.prototype.to_uri = function() {	
     if (this.components.length == 0)
         return "/";
@@ -206,15 +174,15 @@ Name.prototype.to_uri = function() {
 };
 
 /**
-* @brief Add component that represents a segment number
-*
-* @param number Segment number (integer is expected)
-*
-* This component has a special format handling:
-* - if number is zero, then %00 is added
-* - if number is between 1 and 255, %00%01 .. %00%FF is added
-* - ...
-*/
+ * Add a component that represents a segment number
+ *
+ * This component has a special format handling:
+ * - if number is zero, then %00 is added
+ * - if number is between 1 and 255, %00%01 .. %00%FF is added
+ * - ...
+ * @param {number} number the segment number (integer is expected)
+ * @returns {Name}
+ */
 Name.prototype.addSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
@@ -225,7 +193,7 @@ Name.prototype.addSegment = function(number) {
     return this;
 };
 
-/*
+/**
  * Return a new Name with the first nComponents components of this Name.
  */
 Name.prototype.getPrefix = function(nComponents) {
@@ -240,7 +208,7 @@ Name.prototype.cut = function (minusComponents) {
     return new Name(this.components.slice(0, this.components.length-1));
 }
 
-/*
+/**
  * Return a new ArrayBuffer of the component at i.
  */
 Name.prototype.getComponent = function(i) {
@@ -249,7 +217,7 @@ Name.prototype.getComponent = function(i) {
     return result;
 }
 
-/*
+/**
  * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
  *   special marker octets (for version, etc.).  Return the index in this.components of
  *   the file name, or -1 if not found.
@@ -270,7 +238,7 @@ Name.prototype.indexOfFileName = function() {
     return -1;
 }
 
-/*
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equalsName = function(name) {
@@ -286,7 +254,7 @@ Name.prototype.equalsName = function(name) {
     return true;
 }
 
-/*
+/**
  * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
  *   or null if not found.  See Name.getComponentContentDigestValue.
  */
@@ -300,7 +268,7 @@ Name.prototype.getContentDigestValue = function() {
     return null;
 }
 
-/*
+/**
  * If component is a ContentDigest, return the digest value as a Uint8Array subarray (don't modify!).
  * If not a ContentDigest, return null.
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
@@ -323,7 +291,7 @@ Name.getComponentContentDigestValue = function(component) {
 Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
 Name.ContentDigestSuffix = new Uint8Array([0x00]);
 
-/*
+/**
  * Return component as an escaped string according to "CCNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  */
@@ -357,7 +325,7 @@ Name.toEscapedString = function(component) {
     return result;
 };
 
-/*
+/**
  * Return component as a Uint8Array by decoding the escapedString according to "CCNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  */

@@ -39,14 +39,16 @@ var bits_11 = 0x0000007FF;
 var bits_18 = 0x00003FFFF;
 var bits_32 = 0x0FFFFFFFF;
 
-
+/**
+ * @constructor
+ */
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
 	this.ostream = new DynamicUint8Array(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
 
-/*
+/**
  * Encode utf8Content as utf8.
  */
 BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
@@ -142,7 +144,7 @@ tagToString =  function(/*String*/ tagName) {
 	return null;
 };
 
-/*
+/**
  * If Content is a string, then encode as utf8 and write UDATA.
  */
 BinaryXMLEncoder.prototype.writeElement = function(
@@ -234,7 +236,7 @@ BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
 	return numEncodingBytes;
 };
 
-/*
+/**
  * Encode ustring as utf8.
  */
 BinaryXMLEncoder.prototype.encodeUString = function(

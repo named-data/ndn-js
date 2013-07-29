@@ -4,8 +4,11 @@
  * See COPYING for copyright and distribution information.
  */
  
+/**
+ * MimeTypes contains a mapping of filename extension to MIME type, and a function getContentTypeAndCharset to select it.
+ */
 var MimeTypes = {
-  /*
+  /**
    * Based on filename, return an object with properties contentType and charset.
    */
   getContentTypeAndCharset: function(filename) {      

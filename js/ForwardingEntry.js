@@ -4,35 +4,23 @@
  * This class represents Forwarding Entries
  */
 
-var ForwardingEntry = function ForwardingEntry(
-                                               //ActionType 
-		_action, 
-		//Name 
-		_prefixName, 
-		//PublisherPublicKeyDigest
-		_ccndId, 
-		//Integer 
-		_faceID, 
-		//Integer 
-		_flags, 
-		//Integer 
-		_lifetime){
-		
-		
-	
-		//String
-	this.action = _action;
-		//Name\
-	this.prefixName = _prefixName;
-		//PublisherPublicKeyDigest 
-	this.ccndID = _ccndId;
-		//Integer		
-	this.faceID = _faceID;
-		//Integer		
-	this.flags = _flags;
-		//Integer 		
-	this.lifetime = _lifetime;  // in seconds
-
+/**
+ * Create a new ForwardingEntry with the optional arguments.
+ * @constructor
+ * @param {String} action
+ * @param {Name} prefixName
+ * @param {PublisherPublicKeyDigest} ccndId
+ * @param {number} faceID
+ * @param {number} flags
+ * @param {number} lifetime in seconds
+ */
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ccndId, faceID, flags, lifetime) {
+	this.action = action;
+	this.prefixName = prefixName;
+	this.ccndID = ccndId;
+	this.faceID = faceID;
+	this.flags = flags;
+	this.lifetime = lifetime;
 };
 
 ForwardingEntry.prototype.from_ccnb =function(
@@ -64,9 +52,6 @@ ForwardingEntry.prototype.from_ccnb =function(
 			decoder.readEndElement();
 		};
 
-		/**
-		 * Used by NetworkObject to encode the object to a network stream.
-		 */
 ForwardingEntry.prototype.to_ccnb =function(
 	//XMLEncoder 
 encoder) 

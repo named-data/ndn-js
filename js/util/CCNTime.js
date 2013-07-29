@@ -4,24 +4,14 @@
  * This class represents CCNTime Objects
  */
 
-var CCNTime = function CCNTime(
-                               
-		input) {
-
-
-
-
+/**
+ * @constructor
+ */
+var CCNTime = function CCNTime(input) {
 	this.NANOS_MAX = 999877929;
 	
-	/*if(typeof input =='object'){
-		this.longDate = DataUtils.byteArrayToUnsignedLong(input);
-		this.binaryDate = input;
-	}*/
-	if(typeof input =='number'){
+	if(typeof input =='number')
 		this.msec = input;
-		//this.binaryDate = DataUtils.unsignedLongToByteArray(input);
-
-	}
 	else{
 		if(LOG>1) console.log('UNRECOGNIZED TYPE FOR TIME');
 	}

@@ -6,38 +6,20 @@
 
 var NetworkProtocol = { TCP:6, UDP:17};
 
-var FaceInstance  = function FaceInstance(
-	    _action,
-		_publisherPublicKeyDigest,
-		_faceID,
-		_ipProto,
-		_host,
-		_port,
-		_multicastInterface,
-		_multicastTTL,
-		_freshnessSeconds){
-	
-
-	this.action = _action;
-	this.publisherPublicKeyDigest = _publisherPublicKeyDigest;
-	this.faceID = _faceID;
-	this.ipProto = _ipProto;
-	this.host = _host;
-	this.Port = _port;
-	this.multicastInterface =_multicastInterface;
-	this.multicastTTL =_multicastTTL;
-	this.freshnessSeconds = _freshnessSeconds;
-	
-	//action           ::= ("newface" | "destroyface" | "queryface")
-	//publisherPublicKeyDigest ::= SHA-256 digest
-	//faceID           ::= nonNegativeInteger
-	//ipProto          ::= nonNegativeInteger [IANA protocol number, 6=TCP, 17=UDP]
-	//Host             ::= textual representation of numeric IPv4 or IPv6 address
-	//Port             ::= nonNegativeInteger [1..65535]
-	//MulticastInterface ::= textual representation of numeric IPv4 or IPv6 address
-	//MulticastTTL     ::= nonNegativeInteger [1..255]
-	//freshnessSeconds ::= nonNegativeInteger
-
+/**
+ * @constructor
+ */
+var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
+		multicastTTL, freshnessSeconds) {
+	this.action = action;
+	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+	this.faceID = faceID;
+	this.ipProto = ipProto;
+	this.host = host;
+	this.Port = port;
+	this.multicastInterface =multicastInterface;
+	this.multicastTTL =multicastTTL;
+	this.freshnessSeconds = freshnessSeconds;
 };
 
 /**
@@ -155,5 +137,7 @@ FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 }
 
 
-FaceInstance.prototype.getElementLabel= function(){return CCNProtocolDTags.FaceInstance;};
+FaceInstance.prototype.getElementLabel = function() {
+  return CCNProtocolDTags.FaceInstance;
+};
 

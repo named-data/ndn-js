@@ -3,11 +3,17 @@
  * See COPYING for copyright and distribution information.
  */
 
+/**
+ * @constructor
+ */
 var MerklePath = function MerkelPath() {
 	this.index = null;  // int
 	this.digestList = [];  // array of hex string
 };
 
+/**
+ * @constructor
+ */
 var Witness = function Witness() {
 	this.oid = null;  // string
 	this.path = new MerklePath();  // MerklePath

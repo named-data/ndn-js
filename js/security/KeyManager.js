@@ -3,6 +3,9 @@
  * See COPYING for copyright and distribution information.
  */
 
+/**
+ * @constructor
+ */
 var KeyManager = function KeyManager(){
 
 	

@@ -6,6 +6,9 @@
  * See COPYING for copyright and distribution information.
  */
 
+/**
+ * @constructor
+ */
 var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.gotElementEnd = false;
     this.offset = 0;
@@ -20,7 +23,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
 BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
 BinaryXMLStructureDecoder.READ_BYTES = 1;
 
-/*
+/**
  * Continue scanning input starting from this.offset.  If found the end of the element
  *   which started at offset 0 then return true, else false.
  * If this returns false, you should read more into input and call again.
@@ -148,20 +151,18 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
     }
 };
 
-/*
+/**
  * Set the state to READ_HEADER_OR_CLOSE and set up to start reading the header
  */
 BinaryXMLStructureDecoder.prototype.startHeader = function() {
-    this.headerLength = 0;
-    this.useHeaderBuffer = false;
-    this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;    
+  this.headerLength = 0;
+  this.useHeaderBuffer = false;
+  this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;    
 }
 
-/*
+/**
  *  Set the offset into the input, used for the next read.
  */
-BinaryXMLStructureDecoder.prototype.seek = function(
-        //int
-        offset) {
-    this.offset = offset;
+BinaryXMLStructureDecoder.prototype.seek = function(offset) {
+  this.offset = offset;
 }

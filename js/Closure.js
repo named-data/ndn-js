@@ -7,8 +7,9 @@
  * Jeff Burke <jburke@ucla.edu>
  */
 
-/*
- * Create a subclass of Closure and pass an object to async calls.
+/**
+ * You should create a subclass of Closure and pass an object to async calls.
+ * @constructor
  */
 var Closure = function Closure() {
 	// I don't think storing NDN's closure is needed
@@ -39,7 +40,7 @@ Closure.UPCALL_INTEREST_TIMED_OUT = 4; // interest timed out
 Closure.UPCALL_CONTENT_UNVERIFIED = 5; // content that has not been verified
 Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
 
-/*
+/**
  * Override this in your subclass.
  * If you're getting strange errors in upcall()
  * check your code whether you're returning a value.
@@ -49,6 +50,10 @@ Closure.prototype.upcall = function(kind, upcallInfo) {
 	return Closure.RESULT_OK;
 };
 
+/**
+ * An UpcallInfo is passed to Closure.upcall.
+ * @constructor
+ */
 var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) {
 	this.ndn = ndn;  // NDN object (not used)
 	this.interest = interest;  // Interest object

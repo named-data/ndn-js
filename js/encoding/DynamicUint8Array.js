@@ -4,11 +4,12 @@
  * Encapsulate an Uint8Array and support dynamic reallocation.
  */
 
-/*
+/**
  * Create a DynamicUint8Array where this.array is a Uint8Array of size length.
- * If length is not supplied, use a default initial length.
  * The methods will update this.length.
  * To access the array, use this.array or call subarray.
+ * @constructor
+ * @param {number} length the initial length of the array.  If null, use a default.
  */
 var DynamicUint8Array = function DynamicUint8Array(length) {
 	if (!length)
@@ -18,7 +19,7 @@ var DynamicUint8Array = function DynamicUint8Array(length) {
     this.length = length;
 };
 
-/*
+/**
  * Ensure that this.array has the length, reallocate and copy if necessary.
  * Update this.length which may be greater than length.
  */
@@ -38,7 +39,7 @@ DynamicUint8Array.prototype.ensureLength = function(length) {
     this.length = newLength;
 };
 
-/*
+/**
  * Call this.array.set(value, offset), reallocating if necessary. 
  */
 DynamicUint8Array.prototype.set = function(value, offset) {
@@ -46,9 +47,9 @@ DynamicUint8Array.prototype.set = function(value, offset) {
     this.array.set(value, offset);
 };
 
-/*
+/**
  * Return this.array.subarray(begin, end);
  */
 DynamicUint8Array.prototype.subarray = function(begin, end) {
     return this.array.subarray(begin, end);
-}
+};

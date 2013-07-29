@@ -9,6 +9,9 @@
 // Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 // Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
+/**
+ * @constructor
+ */
 var XpcomTransport = function XpcomTransport() {
     this.elementListener = null;
     this.socket = null; // nsISocketTransport
@@ -22,7 +25,7 @@ var XpcomTransport = function XpcomTransport() {
          9695);
 };
 
-/*
+/**
  * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
@@ -35,7 +38,7 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
     onopenCallback();
 };
 
-/*
+/**
  * Do the work to connect to host and port.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.
  * Listen on the port to read an entire binary XML encoded element and call
@@ -85,7 +88,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
     pump.asyncRead(dataListener, null);
 };
 
-/*
+/**
  * Send the data over the connection created by connect.
  */
 XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
