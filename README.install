@@ -26,6 +26,13 @@ Closure Compiler, and install it into <PREFIX_TO_INSTALL_JS> folder.
 
 The compressed version is what we recommend including in applications.
 
+DOCUMENTATION
+================
+The documentation is auto-generated using JSDoc.  If you don't have JSDoc installed, download and unzip from:
+https://github.com/jsdoc3/jsdoc/archive/master.zip
+
+To make doc, cd to the root directory of ndn-js and run the following command to put the output in subdirectory doc:
+<path-to-jsdoc>/jsdoc --recurse --destination doc js
 
 WEBSOCKETS PROXY
 ================
