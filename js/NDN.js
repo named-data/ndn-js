@@ -341,7 +341,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var si = new SignedInfo();
 	si.setFields();
 		
-	var co = new ContentObject(new Name(), si, bytes, new Signature()); 
+	var co = new ContentObject(new Name(), si, bytes); 
 	co.sign();
 	var coBinary = encodeToBinaryContentObject(co);
 		

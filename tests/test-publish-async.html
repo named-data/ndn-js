@@ -33,7 +33,7 @@
 
 				var si = new SignedInfo();
 
-				var co = new ContentObject(new Name(nameStr), si, content, new Signature());
+				var co = new ContentObject(new Name(nameStr), si, content);
 				co.sign();
 
 				upcallInfo.contentObject = co;

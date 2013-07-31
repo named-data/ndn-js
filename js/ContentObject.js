@@ -11,9 +11,8 @@
  * @param {Name} name
  * @param {SignedInfo} signedInfo
  * @param {Uint8Array} content
- * @param {Signature} signature
  */
-var ContentObject = function ContentObject(name, signedInfo, content, signature) {
+var ContentObject = function ContentObject(name, signedInfo, content) {
 	if (typeof name == 'string')
 		this.name = new Name(name);
 	else
@@ -27,7 +26,7 @@ var ContentObject = function ContentObject(name, signedInfo, content, signature)
 	else 
 		this.content = content;
 	
-	this.signature = signature;
+	this.signature = new Signature();
 	
 	this.startSIG = null;
 	this.endSIG = null;

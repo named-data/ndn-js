@@ -22,11 +22,7 @@
 			
 			signedInfo.setFields();
 			
-			//witness is null
-			var signature = new Signature();
-			
-			
-			var co = new ContentObject(contentname,signedInfo,content,signature); 
+			var co = new ContentObject(contentname, signedInfo, content); 
 			
 			co.sign();
 			
