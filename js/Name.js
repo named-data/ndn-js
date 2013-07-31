@@ -346,19 +346,24 @@ Name.fromEscapedString = function(escapedString) {
         return DataUtils.toNumbersFromString(component);
 }
 
-Name.prototype.match = function(/*Name*/ name) {
+/**
+ * Return true if the N components of this name are the same as the first N components of the given name.
+ * @param {Name} name The name to check.
+ * @returns {Boolean} true if this matches the given name.  This always returns true if this name is empty.
+ */
+Name.prototype.match = function(name) {
 	var i_name = this.components;
 	var o_name = name.components;
 
-	// The intrest name is longer than the name we are checking it against.
+	// This name is longer than the name we are checking it against.
 	if (i_name.length > o_name.length)
-            return false;
+    return false;
 
 	// Check if at least one of given components doesn't match.
-    for (var i = 0; i < i_name.length; ++i) {
-        if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
-            return false;
-    }
+  for (var i = 0; i < i_name.length; ++i) {
+    if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+      return false;
+  }
 
 	return true;
 };
