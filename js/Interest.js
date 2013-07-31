@@ -22,7 +22,7 @@
  */
 var Interest = function Interest
    (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
-    childSelector, answerOriginKind, scope, interestLifetime, nonce) {
+    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) {
 		
 	this.name = name;
 	this.faceInstance = faceInstance;
@@ -34,7 +34,7 @@ var Interest = function Interest
 	this.childSelector = childSelector;
 	this.answerOriginKind = answerOriginKind;
 	this.scope = scope;
-	this.interestLifetime = interestLifetime;  // milli seconds
+	this.interestLifetime = interestLifetimeMilliseconds;
 	this.nonce = nonce;	
 };
 
