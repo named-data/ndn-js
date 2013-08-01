@@ -9,6 +9,8 @@
  * @constructor
  */
 var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
+  // Inherit from WireFormat.
+  WireFormat.call(this);
 };
 
 /**
