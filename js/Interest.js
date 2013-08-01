@@ -50,36 +50,36 @@ Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
 /**
- * @deprecated Use BinaryXMLWireFormat.decodeInterest.
+ * @deprecated Use BinaryXmlWireFormat.decodeInterest.
  */
 Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXMLWireFormat.decodeInterest(this, decoder);
+  BinaryXmlWireFormat.decodeInterest(this, decoder);
 };
 
 /**
- * @deprecated Use BinaryXMLWireFormat.encodeInterest.
+ * @deprecated Use BinaryXmlWireFormat.encodeInterest.
  */
 Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
-  BinaryXMLWireFormat.encodeInterest(this, encoder);
+  BinaryXmlWireFormat.encodeInterest(this, encoder);
 };
 
 /**
  * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  * @returns {Uint8Array}
  */
 Interest.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   return wireFormat.encodeInterest(this);
 };
 
 /**
  * Decode the input using a particular wire format and update this Interest.
  * @param {Uint8Array} input
- * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 Interest.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   wireFormat.decodeInterest(this, input);
 };
 

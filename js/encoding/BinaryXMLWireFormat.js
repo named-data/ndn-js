@@ -5,10 +5,10 @@
  */
 
 /**
- * A BinaryXMLWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
+ * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
  * @constructor
  */
-var BinaryXMLWireFormat = function BinaryXMLWireFormat() {
+var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
 };
 
 /**
@@ -16,9 +16,9 @@ var BinaryXMLWireFormat = function BinaryXMLWireFormat() {
  * @param {Interest} interest
  * @returns {UInt8Array}
  */
-BinaryXMLWireFormat.prototype.encodeInterest = function(interest) {
+BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 	var encoder = new BinaryXMLEncoder();
-	BinaryXMLWireFormat.encodeInterest(interest, encoder);	
+	BinaryXmlWireFormat.encodeInterest(interest, encoder);	
 	return encoder.getReducedOstream();  
 };
 
@@ -27,9 +27,9 @@ BinaryXMLWireFormat.prototype.encodeInterest = function(interest) {
  * @param {Interest} interest
  * @param {Uint8Array} input
  */
-BinaryXMLWireFormat.prototype.decodeInterest = function(interest, input) {
+BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 	var decoder = new BinaryXMLDecoder(input);
-  BinaryXMLWireFormat.decodeInterest(interest, decoder);
+  BinaryXmlWireFormat.decodeInterest(interest, decoder);
 };
 
 /**
@@ -37,9 +37,9 @@ BinaryXMLWireFormat.prototype.decodeInterest = function(interest, input) {
  * @param {ContentObject} contentObject
  * @returns {Uint8Array}
  */
-BinaryXMLWireFormat.prototype.encodeContentObject = function(contentObject) {
+BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 	var encoder = new BinaryXMLEncoder();
-	BinaryXMLWireFormat.encodeContentObject(contentObject, encoder);	
+	BinaryXmlWireFormat.encodeContentObject(contentObject, encoder);	
 	return encoder.getReducedOstream();  
 };
 
@@ -48,20 +48,20 @@ BinaryXMLWireFormat.prototype.encodeContentObject = function(contentObject) {
  * @param {ContentObject} contentObject
  * @param {Uint8Array} input
  */
-BinaryXMLWireFormat.prototype.decodeContentObject = function(contentObject, input) {
+BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) {
 	var decoder = new BinaryXMLDecoder(input);
-  BinaryXMLWireFormat.decodeContentObject(contentObject, decoder);
+  BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
 };
 
 // Default object.
-BinaryXMLWireFormat.instance = new BinaryXMLWireFormat();
+BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXMLWireFormat.encodeInterest = function(interest, encoder) {
+BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 	encoder.writeStartElement(CCNProtocolDTags.Interest);
 		
 	interest.name.to_ccnb(encoder);
@@ -102,7 +102,7 @@ BinaryXMLWireFormat.encodeInterest = function(interest, encoder) {
  * @param {Interest} interest
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXMLWireFormat.decodeInterest = function(interest, decoder) {
+BinaryXmlWireFormat.decodeInterest = function(interest, decoder) {
 	decoder.readStartElement(CCNProtocolDTags.Interest);
 
 	interest.name = new Name();
@@ -166,7 +166,7 @@ BinaryXMLWireFormat.decodeInterest = function(interest, decoder) {
  * @param {ContentObject} contentObject
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXMLWireFormat.encodeContentObject = function(contentObject, encoder)  {
+BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	//TODO verify name, SignedInfo and Signature is present
 	encoder.writeStartElement(contentObject.getElementLabel());
 
@@ -195,7 +195,7 @@ BinaryXMLWireFormat.encodeContentObject = function(contentObject, encoder)  {
  * @param {ContentObject} contentObject
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXMLWireFormat.decodeContentObject = function(contentObject, decoder) {
+BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
 	// TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
   decoder.readStartElement(contentObject.getElementLabel());
 

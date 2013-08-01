@@ -118,36 +118,36 @@ ContentObject.prototype.saveRawData = function(bytes){
 };
 
 /**
- * @deprecated Use BinaryXMLWireFormat.decodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
  */
 ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXMLWireFormat.decodeContentObject(this, decoder);
+  BinaryXmlWireFormat.decodeContentObject(this, decoder);
 };
 
 /**
- * @deprecated Use BinaryXMLWireFormat.encodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
  */
 ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
-  BinaryXMLWireFormat.encodeContentObject(this, encoder);
+  BinaryXmlWireFormat.encodeContentObject(this, encoder);
 };
 
 /**
  * Encode this ContentObject for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  * @returns {Uint8Array}
  */
 ContentObject.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   return wireFormat.encodeContentObject(this);
 };
 
 /**
  * Decode the input using a particular wire format and update this ContentObject.
  * @param {Uint8Array} input
- * @param {WireFormat} wireFormat if null, use BinaryXMLWireFormat.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 ContentObject.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXMLWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   wireFormat.decodeContentObject(this, input);
 };
 

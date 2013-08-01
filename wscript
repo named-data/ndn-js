@@ -100,7 +100,7 @@ def build (bld):
                  "js/encoding/BinaryXMLEncoder.js",
                  "js/encoding/BinaryXMLDecoder.js",
                  "js/encoding/BinaryXMLStructureDecoder.js",
-                 "js/encoding/BinaryXMLWireFormat.js",
+                 "js/encoding/BinaryXmlWireFormat.js",
                  "js/encoding/DataUtils.js",
                  "js/encoding/EncodingUtils.js",
                  "js/security/KeyManager.js",
