@@ -1,8 +1,10 @@
 .waf*
 .lock*
-tools/yui*.jar
-tools/compiler*.jar
-build
+/tools/yui*.jar
+/tools/compiler*.jar
+/build/c4che
+/build/*.zip
+/build/*.log
 ndnProtocol.xpi
 ndnProtocol/modules/ndn-js.jsm
 
@@ -11,4 +13,8 @@ ndnProtocol/modules/ndn-js.jsm
 
 # Mac OSX
 .DS_Store
+
+# Emacs temp files
+*~
+
 
