@@ -1,0 +1,52 @@
+NDN-JS: A javascript client library for Named Data Networking
+-------------------------------------------------------------
+
+BASIC LIBRARY: NO BUILD REQUIRED
+================================
+The basic NDN-JS library does not need to be "built".  For the library, you can manually
+include the necessary scripts in a web page or include build/ndn-js.js to have it load all of
+the scripts.
+
+BUILD A COMBINED, COMPRESSED LIBRARY 
+====================================
+
+While the combined file ndn-js.js is useful for debugging, a more efficient way to include the library 
+is to used the combined, compressed library build/ndn-js.min.js.
+While we try to keep a built version in that directory for convenience, it
+may fall out of sync with the library, so we recommend building it as follows if possible.
+
+To create a combined and compressed versions of NDN-JS scripts:
+
+    ./waf configure
+    ./waf
+
+These commands will create a combined version build/ndn-js.js, and combined version build/ndn-js.min.js, compressed 
+using  Google's Closure Compiler.
+
+The compressed version is what we recommend including in applications.
+
+DOCUMENTATION
+================
+The documentation is auto-generated using JSDoc.  If you don't have JSDoc installed, download and unzip from:
+https://github.com/jsdoc3/jsdoc/archive/master.zip
+
+To make doc, cd to the root directory of ndn-js and run the following command to put the output in subdirectory doc:
+<path-to-jsdoc>/jsdoc --recurse --destination doc js
+
+WEBSOCKETS PROXY
+================
+
+If you wish to run your own WebSockets proxy instead of using the NDN testbed, you must
+build and install Node.js (often on the machine also running the ccnd you wish to proxy
+for, but that doesn't have to be the case).  See wsproxy/README.md
+
+THE FIREFOX ADD-ON
+==================
+
+First build the compressed version of NDN.js
+
+    ./waf configure
+    ./waf
+
+Then go to the ndnProtocol directory and run ./make-ndnProtocol.sh which makes ndnProtocol.xpi in the top directory.
+

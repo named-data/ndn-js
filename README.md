@@ -13,6 +13,8 @@ NDN-JS is open source under a license described in the file COPYING.  While the 
 does not require it, we really would appreciate it if others would share their
 contributions to the library if they are willing to do so under the same license. 
 
+See the file INSTALL for build and install instructions.
+
 ---
 
 This is a young project, with minimal documentation that we are slowly enhancing.  Please
