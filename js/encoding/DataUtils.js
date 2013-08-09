@@ -106,7 +106,7 @@ DataUtils.base64toString = function base64toString(input) {
 
      } while (i < input.length);
 
-     //return unescape(output);
+     return output;
   };
 
 /**
