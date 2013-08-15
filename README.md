@@ -3,7 +3,7 @@ NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------
 
 NDN-JS is the first native version of the NDN protocol written in JavaScript.  It is wire
-format compatible with PARC's CCNx. 
+format compatible with PARC's NDNx. 
 
 The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
@@ -30,25 +30,25 @@ Additional goals for the project:
 - Websockets transport (rather than TCP or UDP, which are not directly supported in
 Javascript).
 - Relatively lightweight and compact, to enable efficient use on the web.	
-- Wire format compatible with PARC's CCNx implementation of NDN.
+- Wire format compatible with PARC's NDNx implementation of NDN.
 	
-The library currently requires a remote NDN daemon, and has been tested with ccnd, from
-the's CCNx package: http://ccnx.org/
+The library currently requires a remote NDN daemon, and has been tested with ndnd, from
+the's NDNx package: http://ndnx.org/
 
 Currently, the library has two APIs for developers: 
 
 	1. The Javascript API for asynchronous Interest/Data exchange.
 	   This uses WebSockets for transport and currently requires a 
-	   proxy for communication with a remote ccnd daemon.
+	   proxy for communication with a remote ndnd daemon.
 
 	2. A Firefox plug-in, which implements an "ndn:/" url scheme
-	   following CCNx repository conventions for file retrieval.
+	   following NDNx repository conventions for file retrieval.
 	   
 By default, both parts of the library connect automatically to a set of proxies and hubs
 that are part of the NDN research project's testbed.  http://named-data.net/testbed.html
 There are currently no restrictions on non-commercial, research-oriented data exchange on
 this testbed. (Contact jburke@remap.ucla.edu for more details.)   The developer can also
-specify a local or remote ccnd as well, as an argument to the NDN constructor. 
+specify a local or remote ndnd as well, as an argument to the NDN constructor. 
 
 	
 
@@ -62,10 +62,10 @@ NDN-JS currently supports expressing Interests (and receiving data) and publishi
 signing and verifying them using RSA keys.
 
 ** NDN connectivity **
-The only way (for now) to get connectivity to other NDN nodes is via ccnd.  For the
-Javascript API, a Websockets proxy that can communicate the target ccnd is currently
+The only way (for now) to get connectivity to other NDN nodes is via ndnd.  For the
+Javascript API, a Websockets proxy that can communicate the target ndnd is currently
 required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It
-currently listens on port 9696 and passes messages (using either TCP or UDP) to ccnd on
+currently listens on port 9696 and passes messages (using either TCP or UDP) to ndnd on
 the same host. 
 
 ** Including the scripts in a web page **
@@ -113,7 +113,7 @@ AsyncGetClosure());
 ** Example to publish content **
 
 // Note that publishing content requires knowledge of a 
-// routable prefix for your upstream ccnd.  We are working
+// routable prefix for your upstream ndnd.  We are working
 // on a way to either obtain that prefix or use the /local
 // convention. 
 

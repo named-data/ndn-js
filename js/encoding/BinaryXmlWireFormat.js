@@ -64,37 +64,37 @@ BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
  * @param {BinaryXMLEncoder} encoder
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
-	encoder.writeStartElement(CCNProtocolDTags.Interest);
+	encoder.writeStartElement(NDNProtocolDTags.Interest);
 		
-	interest.name.to_ccnb(encoder);
+	interest.name.to_ndnb(encoder);
 	
 	if (null != interest.minSuffixComponents) 
-		encoder.writeElement(CCNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);	
+		encoder.writeElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);	
 
 	if (null != interest.maxSuffixComponents) 
-		encoder.writeElement(CCNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+		encoder.writeElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
 	if (null != interest.publisherPublicKeyDigest)
-		interest.publisherPublicKeyDigest.to_ccnb(encoder);
+		interest.publisherPublicKeyDigest.to_ndnb(encoder);
 		
 	if (null != interest.exclude)
-		interest.exclude.to_ccnb(encoder);
+		interest.exclude.to_ndnb(encoder);
 		
 	if (null != interest.childSelector) 
-		encoder.writeElement(CCNProtocolDTags.ChildSelector, interest.childSelector);
+		encoder.writeElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
 
 	if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-		encoder.writeElement(CCNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+		encoder.writeElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
 		
 	if (null != interest.scope) 
-		encoder.writeElement(CCNProtocolDTags.Scope, interest.scope);
+		encoder.writeElement(NDNProtocolDTags.Scope, interest.scope);
 		
 	if (null != interest.interestLifetime) 
-		encoder.writeElement(CCNProtocolDTags.InterestLifetime, 
+		encoder.writeElement(NDNProtocolDTags.InterestLifetime, 
                 DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
 		
 	if (null != interest.nonce)
-		encoder.writeElement(CCNProtocolDTags.Nonce, interest.nonce);
+		encoder.writeElement(NDNProtocolDTags.Nonce, interest.nonce);
 		
 	encoder.writeEndElement();
 };
@@ -105,58 +105,58 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
  * @param {BinaryXMLDecoder} decoder
  */
 BinaryXmlWireFormat.decodeInterest = function(interest, decoder) {
-	decoder.readStartElement(CCNProtocolDTags.Interest);
+	decoder.readStartElement(NDNProtocolDTags.Interest);
 
 	interest.name = new Name();
-	interest.name.from_ccnb(decoder);
+	interest.name.from_ndnb(decoder);
 
-	if (decoder.peekStartElement(CCNProtocolDTags.MinSuffixComponents))
-		interest.minSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MinSuffixComponents);
+	if (decoder.peekStartElement(NDNProtocolDTags.MinSuffixComponents))
+		interest.minSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MinSuffixComponents);
   else
     interest.minSuffixComponents = null;
 
-	if (decoder.peekStartElement(CCNProtocolDTags.MaxSuffixComponents)) 
-		interest.maxSuffixComponents = decoder.readIntegerElement(CCNProtocolDTags.MaxSuffixComponents);
+	if (decoder.peekStartElement(NDNProtocolDTags.MaxSuffixComponents)) 
+		interest.maxSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MaxSuffixComponents);
   else
     interest.maxSuffixComponents = null;
 			
-	if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
 		interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-		interest.publisherPublicKeyDigest.from_ccnb(decoder);
+		interest.publisherPublicKeyDigest.from_ndnb(decoder);
 	}
   else
     interest.publisherPublicKeyDigest = null;
 
-	if (decoder.peekStartElement(CCNProtocolDTags.Exclude)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.Exclude)) {
 		interest.exclude = new Exclude();
-		interest.exclude.from_ccnb(decoder);
+		interest.exclude.from_ndnb(decoder);
 	}
   else
     interest.exclude = null;
 		
-	if (decoder.peekStartElement(CCNProtocolDTags.ChildSelector))
-		interest.childSelector = decoder.readIntegerElement(CCNProtocolDTags.ChildSelector);
+	if (decoder.peekStartElement(NDNProtocolDTags.ChildSelector))
+		interest.childSelector = decoder.readIntegerElement(NDNProtocolDTags.ChildSelector);
   else
     interest.childSelector = null;
 		
-	if (decoder.peekStartElement(CCNProtocolDTags.AnswerOriginKind))
-		interest.answerOriginKind = decoder.readIntegerElement(CCNProtocolDTags.AnswerOriginKind);
+	if (decoder.peekStartElement(NDNProtocolDTags.AnswerOriginKind))
+		interest.answerOriginKind = decoder.readIntegerElement(NDNProtocolDTags.AnswerOriginKind);
   else
     interest.answerOriginKind = null;
 		
-	if (decoder.peekStartElement(CCNProtocolDTags.Scope))
-		interest.scope = decoder.readIntegerElement(CCNProtocolDTags.Scope);
+	if (decoder.peekStartElement(NDNProtocolDTags.Scope))
+		interest.scope = decoder.readIntegerElement(NDNProtocolDTags.Scope);
   else
     interest.scope = null;
 
-	if (decoder.peekStartElement(CCNProtocolDTags.InterestLifetime))
+	if (decoder.peekStartElement(NDNProtocolDTags.InterestLifetime))
 		interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryElement(CCNProtocolDTags.InterestLifetime)) / 4096;
+               (decoder.readBinaryElement(NDNProtocolDTags.InterestLifetime)) / 4096;
   else
     interest.interestLifetime = null;              
 		
-	if (decoder.peekStartElement(CCNProtocolDTags.Nonce))
-		interest.nonce = decoder.readBinaryElement(CCNProtocolDTags.Nonce);
+	if (decoder.peekStartElement(NDNProtocolDTags.Nonce))
+		interest.nonce = decoder.readBinaryElement(NDNProtocolDTags.Nonce);
   else
     interest.nonce = null;
 		
@@ -173,17 +173,17 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	encoder.writeStartElement(contentObject.getElementLabel());
 
 	if (null != contentObject.signature) 
-    contentObject.signature.to_ccnb(encoder);
+    contentObject.signature.to_ndnb(encoder);
 		
 	contentObject.startSIG = encoder.offset;
 
 	if (null != contentObject.name) 
-    contentObject.name.to_ccnb(encoder);
+    contentObject.name.to_ndnb(encoder);
 	
 	if (null != contentObject.signedInfo) 
-    contentObject.signedInfo.to_ccnb(encoder);
+    contentObject.signedInfo.to_ndnb(encoder);
 
-	encoder.writeElement(CCNProtocolDTags.Content, contentObject.content);
+	encoder.writeElement(NDNProtocolDTags.Content, contentObject.content);
 	
 	contentObject.endSIG = encoder.offset;
 	
@@ -201,9 +201,9 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
 	// TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
   decoder.readStartElement(contentObject.getElementLabel());
 
-	if( decoder.peekStartElement(CCNProtocolDTags.Signature) ){
+	if( decoder.peekStartElement(NDNProtocolDTags.Signature) ){
 		contentObject.signature = new Signature();
-		contentObject.signature.from_ccnb(decoder);
+		contentObject.signature.from_ndnb(decoder);
 	}
   else
     contentObject.signature = null;
@@ -211,16 +211,16 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
 	contentObject.startSIG = decoder.offset;
 
 	contentObject.name = new Name();
-	contentObject.name.from_ccnb(decoder);
+	contentObject.name.from_ndnb(decoder);
 		
-	if( decoder.peekStartElement(CCNProtocolDTags.SignedInfo) ){
+	if( decoder.peekStartElement(NDNProtocolDTags.SignedInfo) ){
 		contentObject.signedInfo = new SignedInfo();
-		contentObject.signedInfo.from_ccnb(decoder);
+		contentObject.signedInfo.from_ndnb(decoder);
 	}
   else
     contentObject.signedInfo = null;
 
-  contentObject.content = decoder.readBinaryElement(CCNProtocolDTags.Content, null, true);
+  contentObject.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
 		
 	contentObject.endSIG = decoder.offset;
 		

@@ -1,5 +1,5 @@
 /**
- * This class is used to encode ccnb binary elements (blob, type/value pairs).
+ * This class is used to encode ndnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -122,10 +122,10 @@ BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/
 
 //returns a string
 stringToTag = function(/*long*/ tagVal) {
-	if ((tagVal >= 0) && (tagVal < CCNProtocolDTagsStrings.length)) {
-		return CCNProtocolDTagsStrings[tagVal];
-	} else if (tagVal == CCNProtocolDTags.CCNProtocolDataUnit) {
-		return CCNProtocolDTags.CCNPROTOCOL_DATA_UNIT;
+	if ((tagVal >= 0) && (tagVal < NDNProtocolDTagsStrings.length)) {
+		return NDNProtocolDTagsStrings[tagVal];
+	} else if (tagVal == NDNProtocolDTags.NDNProtocolDataUnit) {
+		return NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT;
 	}
 	return null;
 };
@@ -133,13 +133,13 @@ stringToTag = function(/*long*/ tagVal) {
 //returns a Long
 tagToString =  function(/*String*/ tagName) {
 	// the slow way, but right now we don't care.... want a static lookup for the forward direction
-	for (var i=0; i < CCNProtocolDTagsStrings.length; ++i) {
-		if ((null != CCNProtocolDTagsStrings[i]) && (CCNProtocolDTagsStrings[i] == tagName)) {
+	for (var i=0; i < NDNProtocolDTagsStrings.length; ++i) {
+		if ((null != NDNProtocolDTagsStrings[i]) && (NDNProtocolDTagsStrings[i] == tagName)) {
 			return i;
 		}
 	}
-	if (CCNProtocolDTags.CCNPROTOCOL_DATA_UNIT == tagName) {
-		return CCNProtocolDTags.CCNProtocolDataUnit;
+	if (NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT == tagName) {
+		return NDNProtocolDTags.NDNProtocolDataUnit;
 	}
 	return null;
 };
@@ -321,7 +321,7 @@ BinaryXMLEncoder.prototype.numEncodingBytes = function(
 BinaryXMLEncoder.prototype.writeDateTime = function(
 		//String 
 		tag, 
-		//CCNTime 
+		//NDNTime 
 		dateTime) {
 	
 	if(LOG>4)console.log('ENCODING DATE with LONG VALUE');

@@ -2,7 +2,7 @@
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  * Provide the callback closure for the async communication methods in the NDN class.
- * This is a port of Closure.py from PyCCN, written by: 
+ * This is a port of Closure.py from PyNDN, written by: 
  * Derek Kulinski <takeda@takeda.tk>
  * Jeff Burke <jburke@ucla.edu>
  */

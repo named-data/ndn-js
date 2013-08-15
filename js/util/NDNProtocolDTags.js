@@ -1,11 +1,11 @@
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
- * This class contains all CCNx tags
+ * This class contains all NDNx tags
  */
 
 
-var CCNProtocolDTags = {
+var NDNProtocolDTags = {
 
 	/**
 	 * Note if you add one of these, add it to the reverse string map as well.
@@ -122,11 +122,11 @@ var CCNProtocolDTags = {
 	 ConfigSliceOp : 126,
 
 	// Remember to keep in sync with schema/tagnames.csvsdict
-	 CCNProtocolDataUnit : 17702112,
-	 CCNPROTOCOL_DATA_UNIT : "CCNProtocolDataUnit"
+	 NDNProtocolDataUnit : 17702112,
+	 NDNPROTOCOL_DATA_UNIT : "NDNProtocolDataUnit"
 };
 
-var CCNProtocolDTagsStrings = [
+var NDNProtocolDTagsStrings = [
 	null, null, null, null, null, null, null, null, null, null, null,
 	null, null,
 	"Any", "Name", "Component", "Certificate", "Collection", "CompleteName",
@@ -152,5 +152,5 @@ var CCNProtocolDTagsStrings = [
 
 
 //TESTING
-//console.log(exports.CCNProtocolDTagsStrings[17]);
+//console.log(exports.NDNProtocolDTagsStrings[17]);
 

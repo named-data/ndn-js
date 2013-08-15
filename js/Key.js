@@ -8,7 +8,7 @@
  * @constructor
  */
 var Key = function Key(){
-    /* TODO: Port from PyCCN:
+    /* TODO: Port from PyNDN:
 	generateRSA()
 	privateToDER()
 	publicToDER()
@@ -48,13 +48,13 @@ var KeyLocator = function KeyLocator(input,type) {
   }
 };
 
-KeyLocator.prototype.from_ccnb = function(decoder) {
+KeyLocator.prototype.from_ndnb = function(decoder) {
 
 	decoder.readStartElement(this.getElementLabel());
 
-	if (decoder.peekStartElement(CCNProtocolDTags.Key)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.Key)) {
 		try {
-			var encodedKey = decoder.readBinaryElement(CCNProtocolDTags.Key);
+			var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
 			// This is a DER-encoded SubjectPublicKeyInfo.
 			
 			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
@@ -75,9 +75,9 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 			throw new Error("Cannot parse key: ");
 		}
 
-	} else if ( decoder.peekStartElement(CCNProtocolDTags.Certificate)) {
+	} else if ( decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
 		try {
-			var encodedCert = decoder.readBinaryElement(CCNProtocolDTags.Certificate);
+			var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
 			
 			/*
 			 * Certificates not yet working
@@ -102,13 +102,13 @@ KeyLocator.prototype.from_ccnb = function(decoder) {
 		this.type = KeyLocatorType.KEYNAME;
 		
 		this.keyName = new KeyName();
-		this.keyName.from_ccnb(decoder);
+		this.keyName.from_ndnb(decoder);
 	}
 	decoder.readEndElement();
 };
 	
 
-KeyLocator.prototype.to_ccnb = function( encoder) {
+KeyLocator.prototype.to_ndnb = function( encoder) {
 	
 	if(LOG>4) console.log('type is is ' + this.type);
 	//TODO Check if Name is missing
@@ -122,26 +122,26 @@ KeyLocator.prototype.to_ccnb = function( encoder) {
 	
 	if (this.type == KeyLocatorType.KEY) {
 		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
-		encoder.writeElement(CCNProtocolDTags.Key, this.publicKey);
+		encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);
 		
 	} else if (this.type == KeyLocatorType.CERTIFICATE) {
 		
 		try {
-			encoder.writeElement(CCNProtocolDTags.Certificate, this.certificate);
+			encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
 		} catch ( e) {
 			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
 		}
 		
 	} else if (this.type == KeyLocatorType.KEYNAME) {
 		
-		this.keyName.to_ccnb(encoder);
+		this.keyName.to_ndnb(encoder);
 	}
 	encoder.writeEndElement();
 	
 };
 
 KeyLocator.prototype.getElementLabel = function() {
-	return CCNProtocolDTags.KeyLocator; 
+	return NDNProtocolDTags.KeyLocator; 
 };
 
 KeyLocator.prototype.validate = function() {
@@ -158,39 +158,39 @@ var KeyName = function KeyName() {
 
 };
 
-KeyName.prototype.from_ccnb=function( decoder){
+KeyName.prototype.from_ndnb=function( decoder){
 	
 
 	decoder.readStartElement(this.getElementLabel());
 
 	this.contentName = new Name();
-	this.contentName.from_ccnb(decoder);
+	this.contentName.from_ndnb(decoder);
 	
 	if(LOG>4) console.log('KEY NAME FOUND: ');
 	
 	if ( PublisherID.peek(decoder) ) {
 		this.publisherID = new PublisherID();
-		this.publisherID.from_ccnb(decoder);
+		this.publisherID.from_ndnb(decoder);
 	}
 	
 	decoder.readEndElement();
 };
 
-KeyName.prototype.to_ccnb = function( encoder) {
+KeyName.prototype.to_ndnb = function( encoder) {
 	if (!this.validate()) {
 		throw new Error("Cannot encode : field values missing.");
 	}
 	
 	encoder.writeStartElement(this.getElementLabel());
 	
-	this.contentName.to_ccnb(encoder);
+	this.contentName.to_ndnb(encoder);
 	if (null != this.publisherID)
-		this.publisherID.to_ccnb(encoder);
+		this.publisherID.to_ndnb(encoder);
 
 	encoder.writeEndElement();   		
 };
 	
-KeyName.prototype.getElementLabel = function() { return CCNProtocolDTags.KeyName; };
+KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
 KeyName.prototype.validate = function() {
 		// DKS -- do we do recursive validation?

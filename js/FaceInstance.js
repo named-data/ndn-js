@@ -25,31 +25,31 @@ var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, face
 /**
  * Used by NetworkObject to decode the object from a network stream.
  */
-FaceInstance.prototype.from_ccnb = function(//XMLDecoder 
+FaceInstance.prototype.from_ndnb = function(//XMLDecoder 
 	decoder) {
 
 	decoder.readStartElement(this.getElementLabel());
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
 		
-		this.action = decoder.readUTF8Element(CCNProtocolDTags.Action);
+		this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
 		
 	}
-	if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
 		
 		this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-		this.publisherPublicKeyDigest.from_ccnb(decoder);
+		this.publisherPublicKeyDigest.from_ndnb(decoder);
 		
 	}
-	if (decoder.peekStartElement(CCNProtocolDTags.FaceID)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
 		
-		this.faceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID);
+		this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID);
 		
 	}
-	if (decoder.peekStartElement(CCNProtocolDTags.IPProto)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.IPProto)) {
 		
 		//int
-		var pI = decoder.readIntegerElement(CCNProtocolDTags.IPProto);
+		var pI = decoder.readIntegerElement(NDNProtocolDTags.IPProto);
 		
 		this.ipProto = null;
 		
@@ -64,31 +64,31 @@ FaceInstance.prototype.from_ccnb = function(//XMLDecoder
 		} else {
 			
 			throw new Error("FaceInstance.decoder.  Invalid " + 
-					CCNProtocolDTags.tagToString(CCNProtocolDTags.IPProto) + " field: " + pI);
+					NDNProtocolDTags.tagToString(NDNProtocolDTags.IPProto) + " field: " + pI);
 			
 		}
 	}
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.Host)) {
+	if (decoder.peekStartElement(NDNProtocolDTags.Host)) {
 		
-		this.host = decoder.readUTF8Element(CCNProtocolDTags.Host);
+		this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
 		
 	}
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.Port)) {
-		this.Port = decoder.readIntegerElement(CCNProtocolDTags.Port); 
+	if (decoder.peekStartElement(NDNProtocolDTags.Port)) {
+		this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
 	}
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.MulticastInterface)) {
-		this.multicastInterface = decoder.readUTF8Element(CCNProtocolDTags.MulticastInterface); 
+	if (decoder.peekStartElement(NDNProtocolDTags.MulticastInterface)) {
+		this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
 	}
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.MulticastTTL)) {
-		this.multicastTTL = decoder.readIntegerElement(CCNProtocolDTags.MulticastTTL); 
+	if (decoder.peekStartElement(NDNProtocolDTags.MulticastTTL)) {
+		this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
 	}
 	
-	if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
-		this.freshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
+	if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+		this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 	}
 	decoder.readEndElement();
 }
@@ -96,7 +96,7 @@ FaceInstance.prototype.from_ccnb = function(//XMLDecoder
 /**
  * Used by NetworkObject to encode the object to a network stream.
  */
-FaceInstance.prototype.to_ccnb = function(//XMLEncoder
+FaceInstance.prototype.to_ndnb = function(//XMLEncoder
 	encoder){
 
 	//if (!this.validate()) {
@@ -106,38 +106,38 @@ FaceInstance.prototype.to_ccnb = function(//XMLEncoder
 	encoder.writeStartElement(this.getElementLabel());
 	
 	if (null != this.action && this.action.length != 0)
-		encoder.writeElement(CCNProtocolDTags.Action, this.action);	
+		encoder.writeElement(NDNProtocolDTags.Action, this.action);	
 	
 	if (null != this.publisherPublicKeyDigest) {
-		this.publisherPublicKeyDigest.to_ccnb(encoder);
+		this.publisherPublicKeyDigest.to_ndnb(encoder);
 	}
 	if (null != this.faceID) {
-		encoder.writeElement(CCNProtocolDTags.FaceID, this.faceID);
+		encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
 	}
 	if (null != this.ipProto) {
-		//encoder.writeElement(CCNProtocolDTags.IPProto, this.IpProto.value());
-		encoder.writeElement(CCNProtocolDTags.IPProto, this.ipProto);
+		//encoder.writeElement(NDNProtocolDTags.IPProto, this.IpProto.value());
+		encoder.writeElement(NDNProtocolDTags.IPProto, this.ipProto);
 	}
 	if (null != this.host && this.host.length != 0) {
-		encoder.writeElement(CCNProtocolDTags.Host, this.host);	
+		encoder.writeElement(NDNProtocolDTags.Host, this.host);	
 	}
 	if (null != this.Port) {
-		encoder.writeElement(CCNProtocolDTags.Port, this.Port);
+		encoder.writeElement(NDNProtocolDTags.Port, this.Port);
 	}
 	if (null != this.multicastInterface && this.multicastInterface.length != 0) {
-		encoder.writeElement(CCNProtocolDTags.MulticastInterface, this.multicastInterface);
+		encoder.writeElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
 	}
 	if (null !=  this.multicastTTL) {
-		encoder.writeElement(CCNProtocolDTags.MulticastTTL, this.multicastTTL);
+		encoder.writeElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
 	}
 	if (null != this.freshnessSeconds) {
-		encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+		encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 	}
 	encoder.writeEndElement();   			
 }
 
 
 FaceInstance.prototype.getElementLabel = function() {
-  return CCNProtocolDTags.FaceInstance;
+  return NDNProtocolDTags.FaceInstance;
 };
 

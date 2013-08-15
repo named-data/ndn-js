@@ -1,13 +1,13 @@
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
- * This class represents CCNTime Objects
+ * This class represents NDNTime Objects
  */
 
 /**
  * @constructor
  */
-var CCNTime = function CCNTime(input) {
+var NDNTime = function NDNTime(input) {
 	this.NANOS_MAX = 999877929;
 	
 	if(typeof input =='number')
@@ -18,23 +18,23 @@ var CCNTime = function CCNTime(input) {
 };
 
 
-CCNTime.prototype.getJavascriptDate = function(){
+NDNTime.prototype.getJavascriptDate = function(){
 	var d = new Date();
 	d.setTime( this.msec );
 	return d
 };
 
 	/**
-	 * Create a CCNTime
+	 * Create a NDNTime
 	 * @param timestamp source timestamp to initialize from, some precision will be lost
 	 */
 
 
 	/**
-	 * Create a CCNTime from its binary encoding
-	 * @param binaryTime12 the binary representation of a CCNTime
+	 * Create a NDNTime from its binary encoding
+	 * @param binaryTime12 the binary representation of a NDNTime
 	 */
-/*CCNTime.prototype.setDateBinary = function(
+/*NDNTime.prototype.setDateBinary = function(
 	//byte [] 
 		binaryTime12) {
 
@@ -56,7 +56,7 @@ CCNTime.prototype.getJavascriptDate = function(){
 };
 
 //byte[]
-CCNTime.prototype.toBinaryTime = function() {
+NDNTime.prototype.toBinaryTime = function() {
 
 	return this.msec; //unsignedLongToByteArray(this.date.getTime());
 

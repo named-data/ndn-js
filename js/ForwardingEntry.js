@@ -9,50 +9,50 @@
  * @constructor
  * @param {String} action
  * @param {Name} prefixName
- * @param {PublisherPublicKeyDigest} ccndId
+ * @param {PublisherPublicKeyDigest} ndndId
  * @param {number} faceID
  * @param {number} flags
  * @param {number} lifetime in seconds
  */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ccndId, faceID, flags, lifetime) {
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime) {
 	this.action = action;
 	this.prefixName = prefixName;
-	this.ccndID = ccndId;
+	this.ndndID = ndndId;
 	this.faceID = faceID;
 	this.flags = flags;
 	this.lifetime = lifetime;
 };
 
-ForwardingEntry.prototype.from_ccnb =function(
+ForwardingEntry.prototype.from_ndnb =function(
 	//XMLDecoder 
 	decoder) 
 	//throws ContentDecodingException
 	{
 			decoder.readStartElement(this.getElementLabel());
-			if (decoder.peekStartElement(CCNProtocolDTags.Action)) {
-				this.action = decoder.readUTF8Element(CCNProtocolDTags.Action); 
+			if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
+				this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
 			}
-			if (decoder.peekStartElement(CCNProtocolDTags.Name)) {
+			if (decoder.peekStartElement(NDNProtocolDTags.Name)) {
 				this.prefixName = new Name();
-				this.prefixName.from_ccnb(decoder) ;
+				this.prefixName.from_ndnb(decoder) ;
 			}
-			if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
-				this.CcndId = new PublisherPublicKeyDigest();
-				this.CcndId.from_ccnb(decoder);
+			if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+				this.NdndId = new PublisherPublicKeyDigest();
+				this.NdndId.from_ndnb(decoder);
 			}
-			if (decoder.peekStartElement(CCNProtocolDTags.FaceID)) {
-				this.faceID = decoder.readIntegerElement(CCNProtocolDTags.FaceID); 
+			if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
+				this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
 			}
-			if (decoder.peekStartElement(CCNProtocolDTags.ForwardingFlags)) {
-				this.flags = decoder.readIntegerElement(CCNProtocolDTags.ForwardingFlags); 
+			if (decoder.peekStartElement(NDNProtocolDTags.ForwardingFlags)) {
+				this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
 			}
-			if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
-				this.lifetime = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds); 
+			if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+				this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 			}
 			decoder.readEndElement();
 		};
 
-ForwardingEntry.prototype.to_ccnb =function(
+ForwardingEntry.prototype.to_ndnb =function(
 	//XMLEncoder 
 encoder) 
 {
@@ -63,23 +63,23 @@ encoder)
 			//}
 			encoder.writeStartElement(this.getElementLabel());
 			if (null != this.action && this.action.length != 0)
-				encoder.writeElement(CCNProtocolDTags.Action, this.action);	
+				encoder.writeElement(NDNProtocolDTags.Action, this.action);	
 			if (null != this.prefixName) {
-				this.prefixName.to_ccnb(encoder);
+				this.prefixName.to_ndnb(encoder);
 			}
-			if (null != this.CcndId) {
-				this.CcndId.to_ccnb(encoder);
+			if (null != this.NdndId) {
+				this.NdndId.to_ndnb(encoder);
 			}
 			if (null != this.faceID) {
-				encoder.writeElement(CCNProtocolDTags.FaceID, this.faceID);
+				encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
 			}
 			if (null != this.flags) {
-				encoder.writeElement(CCNProtocolDTags.ForwardingFlags, this.flags);
+				encoder.writeElement(NDNProtocolDTags.ForwardingFlags, this.flags);
 			}
 			if (null != this.lifetime) {
-				encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.lifetime);
+				encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
 			}
 			encoder.writeEndElement();   			
 		};
 
-ForwardingEntry.prototype.getElementLabel = function() { return CCNProtocolDTags.ForwardingEntry; }
+ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }

@@ -1,14 +1,14 @@
 /* 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
- * Implement WebSocket proxy between ccnd and javascript stack.
+ * Implement WebSocket proxy between ndnd and javascript stack.
  */
 
 var WebSocketServer = require('ws').Server;
 var net = require('net');
 
 var opt = require('node-getopt').create([
-  ['c' , 'ccnd=ARG', 'host name or ip of ccnd router'],
+  ['c' , 'ndnd=ARG', 'host name or ip of ndnd router'],
   ['p' , 'port=ARG', 'port number on which the proxy will listen'],
   ['m' , 'maxclient=ARG', 'maximum number of concurrent client'],
   ['L' , 'LOG=ARG', 'level of log message display'],
@@ -19,14 +19,14 @@ var opt = require('node-getopt').create([
 
 //console.log(opt);
 
-var ccndhost = opt.options.ccnd || 'localhost';
-//console.log(ccndhost);
+var ndndhost = opt.options.ndnd || 'localhost';
+//console.log(ndndhost);
 
 var wsport = opt.options.port || 9696;
 //console.log(wsport);
 
 var wss = new WebSocketServer({port:wsport, host:'0.0.0.0'});   // Set host to '0.0.0.0' so that we can accept connections from anywhere
-                                                                // This host has nothing to do with ccndhost.
+                                                                // This host has nothing to do with ndndhost.
 
 var MaxNumOfClients = opt.options.maxclient || 40;
 //console.log(MaxNumOfClients);
@@ -49,7 +49,7 @@ wss.on('connection', function(ws) {
 	var sock_ready = false;
 	var ws_ready = true;
 	var send_queue = [];
-	var sock = net.connect({port: 9695, host: ccndhost});
+	var sock = net.connect({port: 9695, host: ndndhost});
 	
 	ws.on('message', function(message) {
 		if (typeof message == 'string') {
@@ -85,7 +85,7 @@ wss.on('connection', function(ws) {
 			sock.write(message);
 		}
 		sock_ready = true;
-		if (LOG > 0) console.log('ccnd socket connection ready.');
+		if (LOG > 0) console.log('ndnd socket connection ready.');
 	});
 	
 	sock.on('data', function(data) {
@@ -107,12 +107,12 @@ wss.on('connection', function(ws) {
 	});
 	
 	sock.on('end', function() {
-		if (LOG > 0) console.log('TCP connection terminated by ccnd. Shut down WS connection to client.');
+		if (LOG > 0) console.log('TCP connection terminated by ndnd. Shut down WS connection to client.');
 		ws.terminate();
 	});
 	
 	sock.on('error', function() {
-		if (LOG > 0) console.log('Error on TCP connection to ccnd. Shut down WS connection to client.');
+		if (LOG > 0) console.log('Error on TCP connection to ndnd. Shut down WS connection to client.');
 		ws.terminate();
 	});
 });

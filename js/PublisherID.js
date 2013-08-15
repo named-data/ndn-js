@@ -8,19 +8,19 @@
  * @constructor
  */
 var PublisherType = function PublisherType(tag){
-    	this.KEY =(CCNProtocolDTags.PublisherPublicKeyDigest);
-    	this.CERTIFICATE= (CCNProtocolDTags.PublisherCertificateDigest);
-    	this.ISSUER_KEY=	(CCNProtocolDTags.PublisherIssuerKeyDigest);
-    	this.ISSUER_CERTIFICATE	=(CCNProtocolDTags.PublisherIssuerCertificateDigest);
+    	this.KEY =(NDNProtocolDTags.PublisherPublicKeyDigest);
+    	this.CERTIFICATE= (NDNProtocolDTags.PublisherCertificateDigest);
+    	this.ISSUER_KEY=	(NDNProtocolDTags.PublisherIssuerKeyDigest);
+    	this.ISSUER_CERTIFICATE	=(NDNProtocolDTags.PublisherIssuerCertificateDigest);
 
     	this.Tag = tag;
 }; 
 
 var isTypeTagVal = function(tagVal) {
-		if ((tagVal == CCNProtocolDTags.PublisherPublicKeyDigest) ||
-			(tagVal == CCNProtocolDTags.PublisherCertificateDigest) ||
-			(tagVal == CCNProtocolDTags.PublisherIssuerKeyDigest) ||
-			(tagVal == CCNProtocolDTags.PublisherIssuerCertificateDigest)) {
+		if ((tagVal == NDNProtocolDTags.PublisherPublicKeyDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherCertificateDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherIssuerKeyDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherIssuerCertificateDigest)) {
 			return true;
 		}
 		return false;
@@ -46,7 +46,7 @@ var PublisherID = function PublisherID() {
 };
 
 
-PublisherID.prototype.from_ccnb = function(decoder) {
+PublisherID.prototype.from_ndnb = function(decoder) {
 		
 		// We have a choice here of one of 4 binary element types.
 		var nextTag = decoder.peekStartElementAsLong();
@@ -66,7 +66,7 @@ PublisherID.prototype.from_ccnb = function(decoder) {
 		}
 };
 
-PublisherID.prototype.to_ccnb = function(encoder) {
+PublisherID.prototype.to_ndnb = function(encoder) {
 	if (!this.validate()) {
 		throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 	}

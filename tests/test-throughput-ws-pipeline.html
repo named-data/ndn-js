@@ -115,7 +115,7 @@
 	            if (segmentNumber != 0) {
 	                // Special case: Save this content object for later and request segment zero.
 	                // SWT: this should not happen in normal case; 
-	                //      ccnd should always return the first segment if no seg# is specified
+	                //      ndnd should always return the first segment if no seg# is specified
 	                this.firstReceivedContentObject = contentObject;
 	                var componentsForZero = contentObject.name.components.slice
 	                    (0, contentObject.name.components.length - 1);

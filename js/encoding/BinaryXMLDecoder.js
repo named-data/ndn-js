@@ -1,5 +1,5 @@
 /**
- * This class is used to decode ccnb binary elements (blob, type/value pairs).
+ * This class is used to decode ndnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -43,10 +43,10 @@ var bits_32 = 0x0FFFFFFFF;
 
 //returns a string
 tagToString = function(/*long*/ tagVal) {
-	if ((tagVal >= 0) && (tagVal < CCNProtocolDTagsStrings.length)) {
-		return CCNProtocolDTagsStrings[tagVal];
-	} else if (tagVal == CCNProtocolDTags.CCNProtocolDataUnit) {
-		return CCNProtocolDTags.CCNPROTOCOL_DATA_UNIT;
+	if ((tagVal >= 0) && (tagVal < NDNProtocolDTagsStrings.length)) {
+		return NDNProtocolDTagsStrings[tagVal];
+	} else if (tagVal == NDNProtocolDTags.NDNProtocolDataUnit) {
+		return NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT;
 	}
 	return null;
 };
@@ -54,13 +54,13 @@ tagToString = function(/*long*/ tagVal) {
 //returns a Long
 stringToTag =  function(/*String*/ tagName) {
 	// the slow way, but right now we don't care.... want a static lookup for the forward direction
-	for (var i=0; i < CCNProtocolDTagsStrings.length; ++i) {
-		if ((null != CCNProtocolDTagsStrings[i]) && (CCNProtocolDTagsStrings[i] == tagName)) {
+	for (var i=0; i < NDNProtocolDTagsStrings.length; ++i) {
+		if ((null != NDNProtocolDTagsStrings[i]) && (NDNProtocolDTagsStrings[i] == tagName)) {
 			return i;
 		}
 	}
-	if (CCNProtocolDTags.CCNPROTOCOL_DATA_UNIT == tagName) {
-		return CCNProtocolDTags.CCNProtocolDataUnit;
+	if (NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT == tagName) {
+		return NDNProtocolDTags.NDNProtocolDataUnit;
 	}
 	return null;
 };
@@ -399,7 +399,7 @@ BinaryXMLDecoder.prototype.readBlob = function(allowNull) {
 };
 
 
-//CCNTime
+//NDNTime
 BinaryXMLDecoder.prototype.readDateTime = function(
 	//long 
 	startTag)  {
@@ -422,8 +422,8 @@ BinaryXMLDecoder.prototype.readDateTime = function(
 	if(LOG>4) console.log(lontimestamp);
 	
 
-	//CCNTime 
-	var timestamp = new CCNTime(lontimestamp);
+	//NDNTime 
+	var timestamp = new NDNTime(lontimestamp);
 	//timestamp.setDateBinary(byteTimestamp);
 	
 	if (null == timestamp) {

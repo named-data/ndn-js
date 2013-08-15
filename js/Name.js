@@ -86,20 +86,20 @@ Name.createNameArray = function(uri) {
 }
 
 
-Name.prototype.from_ccnb = function(/*XMLDecoder*/ decoder)  {
+Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
 		decoder.readStartElement(this.getElementLabel());
 
 		
 		this.components = new Array(); //new ArrayList<byte []>();
 
-		while (decoder.peekStartElement(CCNProtocolDTags.Component)) {
-			this.add(decoder.readBinaryElement(CCNProtocolDTags.Component));
+		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
+			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
 		}
 		
 		decoder.readEndElement();
 };
 
-Name.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 		
 		if( this.components ==null ) 
 			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
@@ -107,13 +107,13 @@ Name.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
 		encoder.writeStartElement(this.getElementLabel());
 		var count = this.components.length;
 		for (var i=0; i < count; i++) {
-			encoder.writeElement(CCNProtocolDTags.Component, this.components[i]);
+			encoder.writeElement(NDNProtocolDTags.Component, this.components[i]);
 		}
 		encoder.writeEndElement();
 };
 
 Name.prototype.getElementLabel = function(){
-	return CCNProtocolDTags.Name;
+	return NDNProtocolDTags.Name;
 };
 
 /**
@@ -292,7 +292,7 @@ Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0
 Name.ContentDigestSuffix = new Uint8Array([0x00]);
 
 /**
- * Return component as an escaped string according to "CCNx URI Scheme".
+ * Return component as an escaped string according to "NDNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  */
 Name.toEscapedString = function(component) {
@@ -326,7 +326,7 @@ Name.toEscapedString = function(component) {
 };
 
 /**
- * Return component as a Uint8Array by decoding the escapedString according to "CCNx URI Scheme".
+ * Return component as a Uint8Array by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  */
 Name.fromEscapedString = function(escapedString) {

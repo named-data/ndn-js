@@ -1,5 +1,5 @@
 /**
- * This class uses BinaryXMLDecoder to follow the structure of a ccnb binary element to 
+ * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to 
  * determine its end.
  * 
  * @author: Jeff Thompson
@@ -28,7 +28,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  *   which started at offset 0 then return true, else false.
  * If this returns false, you should read more into input and call again.
  * You have to pass in input each time because the array could be reallocated.
- * This throws an exception for badly formed ccnb.
+ * This throws an exception for badly formed ndnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
     // Uint8Array
@@ -107,7 +107,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                 var type = typeAndVal.t;
                 if (type == XML_DATTR)
                     // We already consumed the item. READ_HEADER_OR_CLOSE again.
-                    // ccnb has rules about what must follow an attribute, but we are just scanning.
+                    // ndnb has rules about what must follow an attribute, but we are just scanning.
                     this.startHeader();
                 else if (type == XML_DTAG || type == XML_EXT) {
                     // Start a new level and READ_HEADER_OR_CLOSE again.
@@ -121,7 +121,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                     // Minimum tag or attribute length is 1.
                     this.nBytesToRead = typeAndVal.v + 1;
                     this.state = BinaryXMLStructureDecoder.READ_BYTES;
-                    // ccnb has rules about what must follow an attribute, but we are just scanning.
+                    // ndnb has rules about what must follow an attribute, but we are just scanning.
                 }
                 else if (type == XML_BLOB || type == XML_UDATA) {
                     this.nBytesToRead = typeAndVal.v;

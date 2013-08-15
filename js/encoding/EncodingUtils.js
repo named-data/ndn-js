@@ -29,7 +29,7 @@ function encodeToBinaryContentObject(contentObject) {
 function encodeForwardingEntry(co) {
 	var enc = new BinaryXMLEncoder();
  
-	co.to_ccnb(enc);
+	co.to_ndnb(enc);
 	
 	var bytes = enc.getReducedOstream();
 
@@ -51,7 +51,7 @@ function decodeHexFaceInstance(result){
 
 	var faceInstance = new FaceInstance();
 
-	faceInstance.from_ccnb(decoder);
+	faceInstance.from_ndnb(decoder);
 
 	return faceInstance;
 	
@@ -78,7 +78,7 @@ function decodeHexForwardingEntry(result){
 	
 	var forwardingEntry = new ForwardingEntry();
 
-	forwardingEntry.from_ccnb(decoder);
+	forwardingEntry.from_ndnb(decoder);
 
 	return forwardingEntry;
 	

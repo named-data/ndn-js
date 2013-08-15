@@ -19,7 +19,7 @@ var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){
     
 };
 
-PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {		
+PublisherPublicKeyDigest.prototype.from_ndnb = function( decoder) {		
 
 		this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
 		
@@ -39,7 +39,7 @@ PublisherPublicKeyDigest.prototype.from_ccnb = function( decoder) {
 		}
 	};
 
-PublisherPublicKeyDigest.prototype.to_ccnb= function( encoder) {
+PublisherPublicKeyDigest.prototype.to_ndnb= function( encoder) {
 		//TODO Check that the ByteArray for the key is present
 		if (!this.validate()) {
 			throw new Error("Cannot encode : field values missing.");
@@ -48,7 +48,7 @@ PublisherPublicKeyDigest.prototype.to_ccnb= function( encoder) {
 		encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
 };
 	
-PublisherPublicKeyDigest.prototype.getElementLabel = function() { return CCNProtocolDTags.PublisherPublicKeyDigest; };
+PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };
 
 PublisherPublicKeyDigest.prototype.validate =function() {
 		return (null != this.publisherPublicKeyDigest);

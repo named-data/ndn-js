@@ -52,14 +52,14 @@ Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.A
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeInterest.
  */
-Interest.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
   BinaryXmlWireFormat.decodeInterest(this, decoder);
 };
 
 /**
  * @deprecated Use BinaryXmlWireFormat.encodeInterest.
  */
-Interest.prototype.to_ccnb = function(/*XMLEncoder*/ encoder){
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
   BinaryXmlWireFormat.encodeInterest(this, encoder);
 };
 
@@ -132,20 +132,20 @@ var Exclude = function Exclude(values) {
 
 Exclude.ANY = "*";
 
-Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
-	decoder.readStartElement(CCNProtocolDTags.Exclude);
+Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+	decoder.readStartElement(NDNProtocolDTags.Exclude);
 
 	while (true) {
-        if (decoder.peekStartElement(CCNProtocolDTags.Component))
-            this.values.push(decoder.readBinaryElement(CCNProtocolDTags.Component));
-        else if (decoder.peekStartElement(CCNProtocolDTags.Any)) {
-            decoder.readStartElement(CCNProtocolDTags.Any);
+        if (decoder.peekStartElement(NDNProtocolDTags.Component))
+            this.values.push(decoder.readBinaryElement(NDNProtocolDTags.Component));
+        else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
+            decoder.readStartElement(NDNProtocolDTags.Any);
             decoder.readEndElement();
             this.values.push(Exclude.ANY);
         }
-        else if (decoder.peekStartElement(CCNProtocolDTags.Bloom)) {
+        else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
             // Skip the Bloom and treat it as Any.
-            decoder.readBinaryElement(CCNProtocolDTags.Bloom);
+            decoder.readBinaryElement(NDNProtocolDTags.Bloom);
             this.values.push(Exclude.ANY);
         }
         else
@@ -155,20 +155,20 @@ Exclude.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
     decoder.readEndElement();
 };
 
-Exclude.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 	if (this.values == null || this.values.length == 0)
 		return;
 
-	encoder.writeStartElement(CCNProtocolDTags.Exclude);
+	encoder.writeStartElement(NDNProtocolDTags.Exclude);
     
     // TODO: Do we want to order the components (except for ANY)?
     for (var i = 0; i < this.values.length; ++i) {
         if (this.values[i] == Exclude.ANY) {
-            encoder.writeStartElement(CCNProtocolDTags.Any);
+            encoder.writeStartElement(NDNProtocolDTags.Any);
             encoder.writeEndElement();
         }
         else
-            encoder.writeElement(CCNProtocolDTags.Component, this.values[i]);
+            encoder.writeElement(NDNProtocolDTags.Component, this.values[i]);
     }
 
 	encoder.writeEndElement();

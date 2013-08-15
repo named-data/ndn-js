@@ -3,7 +3,7 @@
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * 
- * Encodes CCN object into xml tags
+ * Encodes NDN object into xml tags
  */
 var DataUtils = require('./DataUtils').DataUtils;
 	
@@ -14,10 +14,10 @@ var DataUtils = require('./DataUtils').DataUtils;
 
 var TextXMLCodec =  function TextXMLCodec(){
 
-	this.CCN_NAMESPACE = "http://www.parc.com/ccn"; // String
-	this.CCN_PREFIX = "ccn";	// String
+	this.NDN_NAMESPACE = "http://www.parc.com/ndn"; // String
+	this.NDN_PREFIX = "ndn";	// String
 	this.CODEC_NAME = "Text";// String
-	this.BINARY_ATTRIBUTE = "ccnbencoding";// String
+	this.BINARY_ATTRIBUTE = "ndnbencoding";// String
 	this.BINARY_ATTRIBUTE_VALUE = "base64Binary";// String
 
 

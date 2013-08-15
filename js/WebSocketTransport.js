@@ -64,7 +64,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		if (LOG > 3) console.log(ev);
 		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
 		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-        // NDN.registerPrefix will fetch the ccndid when needed.
+        // NDN.registerPrefix will fetch the ndndid when needed.
         
         onopenCallback();
 	}

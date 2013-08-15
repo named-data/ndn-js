@@ -89,7 +89,7 @@ ContentObject.prototype.sign = function(){
 ContentObject.prototype.encodeObject = function encodeObject(obj){
 	var enc = new BinaryXMLEncoder();
  
-	obj.to_ccnb(enc);
+	obj.to_ndnb(enc);
 	
 	var num = enc.getReducedOstream();
 
@@ -101,7 +101,7 @@ ContentObject.prototype.encodeObject = function encodeObject(obj){
 ContentObject.prototype.encodeContent = function encodeContent(obj){
 	var enc = new BinaryXMLEncoder();
 	 
-	enc.writeElement(CCNProtocolDTags.Content, this.content);
+	enc.writeElement(NDNProtocolDTags.Content, this.content);
 
 	var num = enc.getReducedOstream();
 
@@ -120,14 +120,14 @@ ContentObject.prototype.saveRawData = function(bytes){
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
  */
-ContentObject.prototype.from_ccnb = function(/*XMLDecoder*/ decoder) {
+ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
   BinaryXmlWireFormat.decodeContentObject(this, decoder);
 };
 
 /**
  * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
  */
-ContentObject.prototype.to_ccnb = function(/*XMLEncoder*/ encoder)  {
+ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
   BinaryXmlWireFormat.encodeContentObject(this, encoder);
 };
 
@@ -151,7 +151,7 @@ ContentObject.prototype.decode = function(input, wireFormat) {
   wireFormat.decodeContentObject(this, input);
 };
 
-ContentObject.prototype.getElementLabel= function(){return CCNProtocolDTags.ContentObject;};
+ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
 
 /**
  * Create a new Signature with the optional values.
@@ -163,31 +163,31 @@ var Signature = function Signature(witness, signature, digestAlgorithm) {
 	this.digestAlgorithm = digestAlgorithm
 };
 
-Signature.prototype.from_ccnb =function( decoder) {
+Signature.prototype.from_ndnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
 		
 		if(LOG>4)console.log('STARTED DECODING SIGNATURE');
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.DigestAlgorithm)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.DigestAlgorithm)) {
 			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
-			this.digestAlgorithm = decoder.readUTF8Element(CCNProtocolDTags.DigestAlgorithm); 
+			this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
 		}
-		if (decoder.peekStartElement(CCNProtocolDTags.Witness)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
 			if(LOG>4)console.log('WITNESS FOUND');
-			this.Witness = decoder.readBinaryElement(CCNProtocolDTags.Witness); 
+			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
 
 			if(LOG>4)console.log('SIGNATURE FOUND');
-			this.signature = decoder.readBinaryElement(CCNProtocolDTags.SignatureBits);
+			this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
 
 		decoder.readEndElement();
 	
 };
 
 
-Signature.prototype.to_ccnb= function( encoder){
+Signature.prototype.to_ndnb= function( encoder){
     	
 	if (!this.validate()) {
 		throw new Error("Cannot encode: field values missing.");
@@ -195,21 +195,21 @@ Signature.prototype.to_ccnb= function( encoder){
 	
 	encoder.writeStartElement(this.getElementLabel());
 	
-	if ((null != this.digestAlgorithm) && (!this.digestAlgorithm.equals(CCNDigestHelper.DEFAULT_DIGEST_ALGORITHM))) {
-		encoder.writeElement(CCNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+	if ((null != this.digestAlgorithm) && (!this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))) {
+		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
 	}
 	
 	if (null != this.Witness) {
 		// needs to handle null witness
-		encoder.writeElement(CCNProtocolDTags.Witness, this.Witness);
+		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
 	}
 
-	encoder.writeElement(CCNProtocolDTags.SignatureBits, this.signature);
+	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
 
 	encoder.writeEndElement();   		
 };
 
-Signature.prototype.getElementLabel = function() { return CCNProtocolDTags.Signature; };
+Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
 
 Signature.prototype.validate = function() {
@@ -227,7 +227,7 @@ var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C
  */
 var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) {
   this.publisher = publisher; //publisherPublicKeyDigest
-  this.timestamp=timestamp; // CCN Time
+  this.timestamp=timestamp; // NDN Time
   this.type=type; // ContentType
   this.locator =locator;//KeyLocator
   this.freshnessSeconds =freshnessSeconds; // Integer
@@ -271,7 +271,7 @@ SignedInfo.prototype.setFields = function(){
 	var time = d.getTime();
 	
 
-    this.timestamp = new CCNTime( time );
+    this.timestamp = new NDNTime( time );
     
     if(LOG>4)console.log('TIME msec is');
 
@@ -291,23 +291,23 @@ SignedInfo.prototype.setFields = function(){
 
 };
 
-SignedInfo.prototype.from_ccnb = function( decoder){
+SignedInfo.prototype.from_ndnb = function( decoder){
 
 		decoder.readStartElement( this.getElementLabel() );
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.PublisherPublicKeyDigest)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
 			if(LOG>4)console.log('DECODING PUBLISHER KEY');
 			this.publisher = new PublisherPublicKeyDigest();
-			this.publisher.from_ccnb(decoder);
+			this.publisher.from_ndnb(decoder);
 		}
 
-		if (decoder.peekStartElement(CCNProtocolDTags.Timestamp)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.Timestamp)) {
 			if(LOG>4)console.log('DECODING TIMESTAMP');
-			this.timestamp = decoder.readDateTime(CCNProtocolDTags.Timestamp);
+			this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
 		}
 
-		if (decoder.peekStartElement(CCNProtocolDTags.Type)) {
-			var binType = decoder.readBinaryElement(CCNProtocolDTags.Type);//byte [] 
+		if (decoder.peekStartElement(NDNProtocolDTags.Type)) {
+			var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
 		
 			
 			//TODO Implement type of Key Reading
@@ -328,26 +328,26 @@ SignedInfo.prototype.from_ccnb = function( decoder){
 			this.type = ContentType.DATA; // default
 		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.FreshnessSeconds)) {
-			this.freshnessSeconds = decoder.readIntegerElement(CCNProtocolDTags.FreshnessSeconds);
+		if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+			this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
 			if(LOG>4)console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
 		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.FinalBlockID)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.FinalBlockID)) {
 			if(LOG>4)console.log('DECODING FINAL BLOCKID');
-			this.finalBlockID = decoder.readBinaryElement(CCNProtocolDTags.FinalBlockID);
+			this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
 		}
 		
-		if (decoder.peekStartElement(CCNProtocolDTags.KeyLocator)) {
+		if (decoder.peekStartElement(NDNProtocolDTags.KeyLocator)) {
 			if(LOG>4)console.log('DECODING KEY LOCATOR');
 			this.locator = new KeyLocator();
-			this.locator.from_ccnb(decoder);
+			this.locator.from_ndnb(decoder);
 		}
 				
 		decoder.readEndElement();
 };
 
-SignedInfo.prototype.to_ccnb = function( encoder)  {
+SignedInfo.prototype.to_ndnb = function( encoder)  {
 		if (!this.validate()) {
 			throw new Error("Cannot encode : field values missing.");
 		}
@@ -356,28 +356,28 @@ SignedInfo.prototype.to_ccnb = function( encoder)  {
 		if (null!=this.publisher) {
 			if(LOG>3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
 
-			this.publisher.to_ccnb(encoder);
+			this.publisher.to_ndnb(encoder);
 		}
 
 		if (null!=this.timestamp) {
-			encoder.writeDateTime(CCNProtocolDTags.Timestamp, this.timestamp );
+			encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp );
 		}
 		
 		if (null!=this.type && this.type !=0) {
 			
-			encoder.writeElement(CCNProtocolDTags.type, this.type);
+			encoder.writeElement(NDNProtocolDTags.type, this.type);
 		}
 		
 		if (null!=this.freshnessSeconds) {
-			encoder.writeElement(CCNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+			encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 		}
 
 		if (null!=this.finalBlockID) {
-			encoder.writeElement(CCNProtocolDTags.FinalBlockID, this.finalBlockID);
+			encoder.writeElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
 		}
 
 		if (null!=this.locator) {
-			this.locator.to_ccnb(encoder);
+			this.locator.to_ndnb(encoder);
 		}
 
 		encoder.writeEndElement();   		
@@ -393,7 +393,7 @@ SignedInfo.prototype.valueToType = function(){
 };
 
 SignedInfo.prototype.getElementLabel = function() { 
-	return CCNProtocolDTags.SignedInfo;
+	return NDNProtocolDTags.SignedInfo;
 };
 
 SignedInfo.prototype.validate = function() {

@@ -40,12 +40,12 @@ var NDN = function NDN(settings) {
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
-	this.ccndid = null;
+	this.ndndid = null;
 };
 
 NDN.UNOPEN = 0;  // created but not opened yet
-NDN.OPENED = 1;  // connection to ccnd opened
-NDN.CLOSED = 2;  // connection to ccnd closed
+NDN.OPENED = 1;  // connection to ndnd opened
+NDN.CLOSED = 2;  // connection to ndnd closed
 
 /**
  * Return true if necessary JavaScript support is available, else log an error and return false.
@@ -63,7 +63,7 @@ NDN.getSupported = function() {
 
 NDN.supported = NDN.getSupported();
 
-NDN.ccndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ccnd/KEY');
+NDN.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
 
 NDN.prototype.createRoute = function(host, port) {
 	this.host=host;
@@ -267,13 +267,13 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 NDN.prototype.registerPrefix = function(name, closure, flag) {
     var thisNDN = this;
     var onConnected = function() {
-    	if (thisNDN.ccndid == null) {
-            // Fetch ccndid first, then register.
-            var interest = new Interest(NDN.ccndIdFetcher);
+    	if (thisNDN.ndndid == null) {
+            // Fetch ndndid first, then register.
+            var interest = new Interest(NDN.ndndIdFetcher);
     		interest.interestLifetime = 4000; // milliseconds
-            if (LOG>3) console.log('Expressing interest for ccndid from ccnd.');
+            if (LOG>3) console.log('Expressing interest for ndndid from ndnd.');
             thisNDN.reconnectAndExpressInterest
-               (interest, new NDN.FetchCcndidClosure(thisNDN, name, closure, flag));
+               (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flag));
         }
         else	
             thisNDN.registerPrefixHelper(name, closure, flag);
@@ -290,10 +290,10 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
 };
 
 /**
- * This is a closure to receive the ContentObject for NDN.ccndIdFetcher and call
+ * This is a closure to receive the ContentObject for NDN.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flag).
  */
-NDN.FetchCcndidClosure = function FetchCcndidClosure(ndn, name, callerClosure, flag) {
+NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flag) {
     // Inherit from Closure.
     Closure.call(this);
     
@@ -303,9 +303,9 @@ NDN.FetchCcndidClosure = function FetchCcndidClosure(ndn, name, callerClosure, f
     this.flag = flag;
 };
 
-NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
+NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-        console.log("Timeout while requesting the ccndid.  Cannot registerPrefix for " +
+        console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
             this.name.to_uri() + " .");
         return Closure.RESULT_OK;
     }
@@ -318,12 +318,12 @@ NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
     if (!co.signedInfo || !co.signedInfo.publisher 
 		|| !co.signedInfo.publisher.publisherPublicKeyDigest)
         console.log
-          ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ccndid and registerPrefix for "
+          ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
            + this.name.to_uri() + " .");
     else {
-		if (LOG>3) console.log('Got ccndid from ccnd.');
-		this.ndn.ccndid = co.signedInfo.publisher.publisherPublicKeyDigest;
-		if (LOG>3) console.log(this.ndn.ccndid);
+		if (LOG>3) console.log('Got ndndid from ndnd.');
+		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
+		if (LOG>3) console.log(this.ndn.ndndid);
         
         this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flag);
 	}
@@ -332,7 +332,7 @@ NDN.FetchCcndidClosure.prototype.upcall = function(kind, upcallInfo) {
 };
 
 /**
- * Do the work of registerPrefix once we know we are connected with a ccndid.
+ * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
@@ -346,8 +346,8 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var coBinary = encodeToBinaryContentObject(co);
 		
 	//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
-	var nodename = this.ccndid;
-	var interestName = new Name(['ccnx', nodename, 'selfreg', coBinary]);
+	var nodename = this.ndndid;
+	var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
 
 	var interest = new Interest(interestName);
 	interest.scope = 1;
@@ -367,11 +367,11 @@ NDN.prototype.onReceivedElement = function(element) {
     if (LOG>3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
 	var decoder = new BinaryXMLDecoder(element);
 	// Dispatch according to packet type
-	if (decoder.peekStartElement(CCNProtocolDTags.Interest)) {  // Interest packet
+	if (decoder.peekStartElement(NDNProtocolDTags.Interest)) {  // Interest packet
 		if (LOG > 3) console.log('Interest packet received.');
 				
 		var interest = new Interest();
-		interest.from_ccnb(decoder);
+		interest.from_ndnb(decoder);
 		if (LOG > 3) console.log(interest);
 		var nameStr = escape(interest.name.getName());
 		if (LOG > 3) console.log(nameStr);
@@ -384,11 +384,11 @@ NDN.prototype.onReceivedElement = function(element) {
 			if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
 				this.transport.send(encodeToBinaryContentObject(info.contentObject));
 		}				
-	} else if (decoder.peekStartElement(CCNProtocolDTags.ContentObject)) {  // Content packet
+	} else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
 		if (LOG > 3) console.log('ContentObject packet received.');
 				
 		var co = new ContentObject();
-		co.from_ccnb(decoder);
+		co.from_ndnb(decoder);
 				
 		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
 		if (pitEntry != null) {
@@ -602,7 +602,7 @@ var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
 BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {
     // Process multiple objects in the data.
     while(true) {
-        // Scan the input to check if a whole ccnb object has been read.
+        // Scan the input to check if a whole ndnb object has been read.
         this.structureDecoder.seek(0);
         if (this.structureDecoder.findElementEnd(data)) {
             // Got the remainder of an object.  Report to the caller.

@@ -84,8 +84,8 @@ def build (bld):
 
         ndnjs = ["js/Closure.js",
                  "js/WebSocketTransport.js",
-                 "js/util/CCNProtocolDTags.js",
-                 "js/util/CCNTime.js",
+                 "js/util/NDNProtocolDTags.js",
+                 "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
                  "js/Name.js",
                  "js/ContentObject.js",
@@ -119,8 +119,8 @@ def build (bld):
             ndnjs.compiler = True
 
     if bld.env['WS']:
-        bld.install_as ('${BINDIR}/ccnx-wsproxy-tcp.js', 'wsproxy/wsproxy-tcp.js', chmod=Utils.O755)
-        bld.install_as ('${BINDIR}/ccnx-wsproxy-udp.js', 'wsproxy/wsproxy-udp.js', chmod=Utils.O755)
+        bld.install_as ('${BINDIR}/ndnx-wsproxy-tcp.js', 'wsproxy/wsproxy-tcp.js', chmod=Utils.O755)
+        bld.install_as ('${BINDIR}/ndnx-wsproxy-udp.js', 'wsproxy/wsproxy-udp.js', chmod=Utils.O755)
 
 @TaskGen.extension('.js')
 def js_hook(self, node):
