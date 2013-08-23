@@ -24,7 +24,7 @@
 			//console.log("Closure.upcall() executed.");
 			if (kind == Closure.UPCALL_FINAL) {
 				// Do nothing.
-			} else if (kind == Closure.UPCALL_CONTENT) {
+			} else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
 				console.log("Closure.upcall: content signature verification pass.");
                 console.log("Host: " + ndn.host + ":" + ndn.port);
 				var content = upcallInfo.contentObject;
