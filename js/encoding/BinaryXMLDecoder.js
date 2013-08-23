@@ -441,7 +441,9 @@ BinaryXMLDecoder.prototype.decodeTypeAndVal = function() {
 	do {
 		
 		var next = this.input[this.offset ];
-		
+		if (next == null)
+      // Quit the loop.
+      return null; 
 		
 		if (next < 0) {
 			return null; 
