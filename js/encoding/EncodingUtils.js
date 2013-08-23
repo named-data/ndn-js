@@ -23,7 +23,7 @@ function encodeToHexContentObject(contentObject) {
  * @deprecated Use contentObject.encode().
  */
 function encodeToBinaryContentObject(contentObject) {
-  contentObject.encode();
+  return contentObject.encode();
 }
 
 function encodeForwardingEntry(co) {
