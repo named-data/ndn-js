@@ -22,7 +22,7 @@ var LOG = 0;
  *   port: 9696,
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
- *   verify: true // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
+ *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
 var NDN = function NDN(settings) {
@@ -36,7 +36,7 @@ var NDN = function NDN(settings) {
 	this.host = (settings.host !== undefined ? settings.host : null);
 	this.port = (settings.port || 9696);
   this.readyStatus = NDN.UNOPEN;
-  this.verify = (settings.verify !== undefined ? settings.verify : true);
+  this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
