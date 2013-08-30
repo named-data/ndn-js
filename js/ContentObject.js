@@ -37,54 +37,30 @@ var ContentObject = function ContentObject(name, signedInfo, content) {
 };
 
 ContentObject.prototype.sign = function(){
+    var n1 = this.encodeObject(this.name);
+    var n2 = this.encodeObject(this.signedInfo);
+    var n3 = this.encodeContent();
+	
+    var rsa = require("crypto").createSign('RSA-SHA256');
+    rsa.update(n1);
+    rsa.update(n2);
+    rsa.update(n3);
+	
+    var sig = new Buffer(rsa.sign(key.privateKeyPem));
 
-	var n1 = this.encodeObject(this.name);
-	var n2 = this.encodeObject(this.signedInfo);
-	var n3 = this.encodeContent();
-	/*console.log('sign: ');
-	console.log(n1);
-	console.log(n2);
-	console.log(n3);*/
-	
-	//var n = n1.concat(n2,n3);
-	var tempBuf = new ArrayBuffer(n1.length + n2.length + n3.length);
-	var n = new Uint8Array(tempBuf);
-	//console.log(n);
-	n.set(n1, 0);
-	//console.log(n);
-	n.set(n2, n1.length);
-	//console.log(n);
-	n.set(n3, n1.length + n2.length);
-	//console.log(n);
-	
-	if(LOG>4)console.log('Signature Data is (binary) '+n);
-	
-	if(LOG>4)console.log('Signature Data is (RawString)');
-	
-	if(LOG>4)console.log( DataUtils.toString(n) );
-	
-	//var sig = DataUtils.toString(n);
-
-	
-	var rsa = new RSAKey();
-			
-	rsa.readPrivateKeyFromPEMString(globalKeyManager.privateKey);
-	
-	//var hSig = rsa.signString(sig, "sha256");
-
-	var hSig = rsa.signByteArrayWithSHA256(n);
-
-	
-	if(LOG>4)console.log('SIGNATURE SAVED IS');
-	
-	if(LOG>4)console.log(hSig);
-	
-	if(LOG>4)console.log(  DataUtils.toNumbers(hSig.trim()));
-
-	this.signature.signature = DataUtils.toNumbers(hSig.trim());
-	
-
+    this.signature.signature = sig;
 };
+
+ContentObject.prototype.verify = function (/*Key*/ key) {
+    if (key == null || key.publicKeyPem == null) {
+	throw new Error('Cannot verify ContentObject without a public key.');
+    }
+
+    var verifier = require('crypto').createVerify('RSA-SHA256');
+    verifier.update(this.signedData);
+    return verifier.verify(key.publicKeyPem, this.signature.signature);
+};
+
 
 ContentObject.prototype.encodeObject = function encodeObject(obj){
 	var enc = new BinaryXMLEncoder();

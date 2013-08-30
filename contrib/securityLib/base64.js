@@ -17,7 +17,7 @@ function hex2b64(h) {
     c = parseInt(h.substring(i,i+2),16);
     ret += b64map.charAt(c >> 2) + b64map.charAt((c & 3) << 4);
   }
-  while((ret.length & 3) > 0) ret += b64pad;
+  if (b64pad) while((ret.length & 3) > 0) ret += b64pad;
   return ret;
 }
 
@@ -29,7 +29,7 @@ function b64tohex(s) {
   var slop;
   for(i = 0; i < s.length; ++i) {
     if(s.charAt(i) == b64pad) break;
-    var v = b64map.indexOf(s.charAt(i));
+    v = b64map.indexOf(s.charAt(i));
     if(v < 0) continue;
     if(k == 0) {
       ret += int2char(v >> 2);

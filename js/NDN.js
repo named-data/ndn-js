@@ -415,13 +415,13 @@ NDN.prototype.onReceivedElement = function(element) {
 				this.contentObject = content;  // unverified content object
 				this.closure = closure;  // closure corresponding to the contentObject
 				this.keyName = key;  // name of current key to be fetched
-				this.sigHex = sig;  // hex signature string to be verified
-				this.witness = wit;
+				//this.sigHex = sig;  // hex signature string to be verified
+				//this.witness = wit;
 						
 				Closure.call(this);
 			};
 						
-            var thisNDN = this;
+		    var thisNDN = this;
 			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 					console.log("In KeyFetchClosure.upcall: interest time out.");
@@ -429,8 +429,9 @@ NDN.prototype.onReceivedElement = function(element) {
 				} else if (kind == Closure.UPCALL_CONTENT) {
 					//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
-					var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
-					var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
+				    var rsakey = new Key();
+				    rsakey.readDerPublicKey(upcallInfo.contentObject.content);
+				    var verified = co.verify(rsakey);
 								
 					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 					//console.log("raise encapsulated closure");
@@ -451,10 +452,12 @@ NDN.prototype.onReceivedElement = function(element) {
 							
 				var wit = null;
 				if (co.signature.Witness != null) {
-					wit = new Witness();
-					wit.decode(co.signature.Witness);
+				    //wit = new Witness();
+				    //wit.decode(co.signature.Witness);
+				    //SWT: deprecate support for Witness decoding and Merkle hash tree verification
+				    currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
 				}
-							
+			    
 				var keylocator = co.signedInfo.locator;
 				if (keylocator.type == KeyLocatorType.KEYNAME) {
 					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
@@ -465,11 +468,12 @@ NDN.prototype.onReceivedElement = function(element) {
 					if (keylocator.keyName.contentName.match(co.name)) {
 						if (LOG > 3) console.log("Content is key itself");
 									
-						var rsakey = decodeSubjectPublicKeyInfo(co.content);
-						var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-						currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+					    var rsakey = new Key();
+					    rsakey.readDerPublicKey(co.content);
+					    var verified = co.verify(rsakey);
+					    var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+					    
+					    currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
 
 						// SWT: We don't need to store key here since the same key will be
 						//      stored again in the closure.
@@ -483,7 +487,7 @@ NDN.prototype.onReceivedElement = function(element) {
 							// Key found, verify now
 							if (LOG > 3) console.log("Local key cache hit");
 							var rsakey = keyEntry.rsaKey;
-							var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+						    var verified = co.verify(rsakey);
 							var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 
 							// Raise callback
@@ -498,8 +502,9 @@ NDN.prototype.onReceivedElement = function(element) {
 				} else if (keylocator.type == KeyLocatorType.KEY) {
 					if (LOG > 3) console.log("Keylocator contains KEY");
 								
-					var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
-					var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+				    var rsakey = new Key();
+				    rsakey.readDerPublicKey(keylocator.publicKey);
+				    var verified = co.verify(rsakey);
 							
 					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 					// Raise callback

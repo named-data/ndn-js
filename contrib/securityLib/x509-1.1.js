@@ -19,6 +19,14 @@
 //   rsa.js
 //   asn1hex.js
 
+/**
+ * @fileOverview
+ * @name x509-1.1.js
+ * @author Kenji Urushima kenji.urushima@gmail.com
+ * @version 1.1
+ * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
+ */
+
 function _x509_pemToBase64(sCertPEM) {
   var s = sCertPEM;
   s = s.replace("-----BEGIN CERTIFICATE-----", "");
@@ -54,13 +62,10 @@ function _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert) {
 }
 
 // NOTE: Without BITSTRING encapsulation.
-// If pInfo is supplied, it is the position in hCert of the SubjectPublicKeyInfo.
-function _x509_getSubjectPublicKeyPosFromCertHex(hCert, pInfo) {
-  if (pInfo == null)
-      pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
+function _x509_getSubjectPublicKeyPosFromCertHex(hCert) {
+  var pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
   if (pInfo == -1) return -1;    
   var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pInfo); 
-  
   if (a.length != 2) return -1;
   var pBitString = a[1];
   if (hCert.substring(pBitString, pBitString + 2) != '03') return -1;
@@ -70,20 +75,10 @@ function _x509_getSubjectPublicKeyPosFromCertHex(hCert, pInfo) {
   return pBitStringV + 2;
 }
 
-// If p is supplied, it is the public key position in hCert.
-function _x509_getPublicKeyHexArrayFromCertHex(hCert, p) {
-  if (p == null)
-      p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
+function _x509_getPublicKeyHexArrayFromCertHex(hCert) {
+  var p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
   var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, p); 
-  //var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, a[3]); 
-  if(LOG>4){
-	  console.log('a is now');
-	  console.log(a);
-  }
-  
-  //if (a.length != 2) return [];
-  if (a.length < 2) return [];
-
+  if (a.length != 2) return [];
   var hN = ASN1HEX.getHexOfV_AtObj(hCert, a[0]);
   var hE = ASN1HEX.getHexOfV_AtObj(hCert, a[1]);
   if (hN != null && hE != null) {
@@ -220,32 +215,6 @@ function _x509_hex2rdn(hRDN) {
 function _x509_readCertPEM(sCertPEM) {
   var hCert = _x509_pemToHex(sCertPEM);
   var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
-  if(LOG>4){
-	  console.log('HEX VALUE IS ' + hCert);
-	  console.log('type of a' + typeof a);
-	  console.log('a VALUE IS ');
-	  console.log(a);
-	  console.log('a[0] VALUE IS ' + a[0]);
-	  console.log('a[1] VALUE IS ' + a[1]);
-  }
-  var rsa = new RSAKey();
-  rsa.setPublic(a[0], a[1]);
-  this.subjectPublicKeyRSA = rsa;
-  this.subjectPublicKeyRSA_hN = a[0];
-  this.subjectPublicKeyRSA_hE = a[1];
-  this.hex = hCert;
-}
-
-/**
- * read hex formatted X.509 certificate from string.
- * @name readCertHex
- * @memberOf X509#
- * @function
- * @param {String} hCert string for hex formatted X.509 certificate
- */
-function _x509_readCertHex(hCert) {
-  hCert = hCert.toLowerCase();
-  var a = _x509_getPublicKeyHexArrayFromCertHex(hCert);
   var rsa = new RSAKey();
   rsa.setPublic(a[0], a[1]);
   this.subjectPublicKeyRSA = rsa;
@@ -282,7 +251,6 @@ function X509() {
 }
 
 X509.prototype.readCertPEM = _x509_readCertPEM;
-X509.prototype.readCertHex = _x509_readCertHex;
 X509.prototype.readCertPEMWithoutRSAInit = _x509_readCertPEMWithoutRSAInit;
 X509.prototype.getSerialNumberHex = _x509_getSerialNumberHex;
 X509.prototype.getIssuerHex = _x509_getIssuerHex;
