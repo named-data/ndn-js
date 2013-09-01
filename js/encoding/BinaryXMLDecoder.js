@@ -512,7 +512,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	
 	//
 	//Uint8Array
-	var bytes = this.input.subarray(this.offset, this.offset+ blobLength);
+    var bytes = new Buffer(this.input.subarray(this.offset, this.offset+ blobLength));
 	this.offset += blobLength;
 	
 	return bytes;

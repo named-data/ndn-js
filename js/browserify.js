@@ -181,7 +181,7 @@ exports.createVerify = function (alg) {
 	signer.initVerifyByPublicKey(rsa);
 	for (var i = 0; i < this.arr.length; i++)
 	    signer.updateHex(this.arr[i].toString('hex'));
-	var hSig = this.signature.signature.toString('hex');
+	var hSig = sig.toString('hex');
 	return signer.verify(hSig);
     };
 

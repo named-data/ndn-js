@@ -45,8 +45,8 @@ ContentObject.prototype.sign = function(){
     rsa.update(n1);
     rsa.update(n2);
     rsa.update(n3);
-	
-    var sig = new Buffer(rsa.sign(key.privateKeyPem));
+    
+    var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
 
     this.signature.signature = sig;
 };
@@ -57,7 +57,7 @@ ContentObject.prototype.verify = function (/*Key*/ key) {
     }
 
     var verifier = require('crypto').createVerify('RSA-SHA256');
-    verifier.update(this.signedData);
+    verifier.update(this.rawSignatureData);
     return verifier.verify(key.publicKeyPem, this.signature.signature);
 };
 
@@ -90,7 +90,7 @@ ContentObject.prototype.saveRawData = function(bytes){
 	
 	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
 
-	this.rawSignatureData = sigBits;
+    this.rawSignatureData = new Buffer(sigBits);
 };
 
 /**
@@ -159,7 +159,7 @@ Signature.prototype.from_ndnb =function( decoder) {
 			this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
 
 		decoder.readEndElement();
-	
+
 };
 
 
@@ -216,7 +216,7 @@ SignedInfo.prototype.setFields = function(){
 	//BASE64 -> RAW STRING
 	
 	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
-	
+/*	
 	var publicKeyHex = globalKeyManager.publicKey;
 
 	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
@@ -241,11 +241,14 @@ SignedInfo.prototype.setFields = function(){
 	this.publisher = new PublisherPublicKeyDigest(  DataUtils.toNumbers(  publisherKeyDigest )  );
 	
 	//this.publisher = new PublisherPublicKeyDigest(publisherkey);
+*/
+    var key = new Key();
+    key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
+    this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 
-	var d = new Date();
-	
-	var time = d.getTime();
-	
+    var d = new Date();
+    
+    var time = d.getTime();	
 
     this.timestamp = new NDNTime( time );
     
@@ -261,7 +264,7 @@ SignedInfo.prototype.setFields = function(){
 	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
 	if(LOG>4)console.log(publicKeyBytes);
 
-	this.locator = new KeyLocator(  publicKeyBytes  ,KeyLocatorType.KEY );
+    this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY );
 
 	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
 

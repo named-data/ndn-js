@@ -71,10 +71,12 @@ def configure (conf):
 
 def build (bld):
     if bld.env['JS']:
-        securityLib = ["contrib/securityLib/sha256.js",
+        securityLib = ["contrib/securityLib/core.js",
+                       "contrib/securityLib/sha256.js",
                        "contrib/securityLib/base64.js",
                        "contrib/securityLib/rsa.js",
                        "contrib/securityLib/rsa2.js",
+                       "contrib/securityLib/crypto-1.0.js",
                        "contrib/securityLib/rsapem-1.1.js",
                        "contrib/securityLib/rsasign-1.2.js",
                        "contrib/securityLib/asn1hex-1.1.js",
@@ -84,6 +86,7 @@ def build (bld):
 
         ndnjs = ["js/Closure.js",
                  "js/WebSocketTransport.js",
+                 "js/browserify.js",
                  "js/util/NDNProtocolDTags.js",
                  "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
@@ -105,7 +108,8 @@ def build (bld):
                  "js/encoding/DataUtils.js",
                  "js/encoding/EncodingUtils.js",
                  "js/security/KeyManager.js",
-                 "js/security/Witness.js"] + securityLib + ["js/NDN.js"]
+                 "js/security/Witness.js",
+                 "js/NDN.js"] + securityLib
 
         ndnjs = bld (features="combine",
                      target="ndn-js",
