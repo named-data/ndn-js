@@ -210,8 +210,8 @@ exports.createVerify = function (alg) {
   };
 
   var readPublicDER = function (pub_der) {
-    //var hex = pub_der.toString('hex');
-    var hex = DataUtils.toHex(pub_der);
+    //var hex = pub_der.toString('hex'); 
+    var hex = DataUtils.toHex(pub_der); 
     var p = getSubjectPublicKeyPosFromHex(hex);
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
     if (a.length != 2) 
@@ -232,8 +232,8 @@ exports.createVerify = function (alg) {
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
       signer.updateHex(DataUtils.toHex(this.arr[i]));
-    //var hSig = sig.toString('hex');
-    var hSig = DataUtils.toHex(sig);
+    //var hSig = sig.toString('hex'); 
+    var hSig = DataUtils.toHex(sig); 
     return signer.verify(hSig);
   };
 
