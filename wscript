@@ -84,6 +84,7 @@ def build (bld):
 
         ndnjs = ["js/Closure.js",
                  "js/WebSocketTransport.js",
+                 "js/util/name-enumeration.js",
                  "js/util/NDNProtocolDTags.js",
                  "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
