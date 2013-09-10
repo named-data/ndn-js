@@ -5,7 +5,6 @@
 /build/c4che
 /build/*.zip
 /build/*.log
-ndnProtocol.xpi
 ndnProtocol/modules/ndn-js.jsm
 
 # JSDoc output
