@@ -231,7 +231,7 @@ var Buffer = function Buffer (data, format) {
 
   obj.__proto__ = Buffer.prototype;
 
-  obj.toString = function (encoding) {
+  obj.__proto__.toString = function (encoding) {
     if (encoding == null) {
       var ret = "";
       for (var i = 0; i < this.length; i++ )
@@ -251,11 +251,11 @@ var Buffer = function Buffer (data, format) {
       throw new Error('Buffer.toString: unknown encoding format ' + encoding);
   };
 
-  obj.slice = function (begin, end) {
+  obj.__proto__.slice = function (begin, end) {
     return new Buffer(obj.subarray(begin, end));
   };
 
-  obj.copy = function (target, targetStart) {
+  obj.__proto__.copy = function (target, targetStart) {
     target.set(this, targetStart);
   };
 
@@ -353,7 +353,7 @@ exports.createSign = function (alg) {
     var signer = new KJUR.crypto.Signature({"alg": "SHA256withRSA", "prov": "cryptojs/jsrsa"});
     signer.initSign(rsa);
     for (var i = 0; i < this.arr.length; ++i)
-      signer.updateHex(DataUtils.toHex(this.arr[i]));
+      signer.updateHex(this.arr[i].toString('hex'));
 
     return new Buffer(signer.sign(), 'hex');
   };
@@ -388,8 +388,7 @@ exports.createVerify = function (alg) {
   };
 
   var readPublicDER = function (pub_der) {
-    //var hex = pub_der.toString('hex');
-    var hex = DataUtils.toHex(pub_der);
+    var hex = pub_der.toString('hex'); 
     var p = getSubjectPublicKeyPosFromHex(hex);
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
     if (a.length != 2) 
@@ -409,9 +408,8 @@ exports.createVerify = function (alg) {
     var signer = new KJUR.crypto.Signature({"alg": "SHA256withRSA", "prov": "cryptojs/jsrsa"});
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
-      signer.updateHex(DataUtils.toHex(this.arr[i]));
-    //var hSig = sig.toString('hex');
-    var hSig = DataUtils.toHex(sig);
+      signer.updateHex(this.arr[i].toString('hex'));
+    var hSig = sig.toString('hex'); 
     return signer.verify(hSig);
   };
 
@@ -1934,8 +1932,7 @@ Key.prototype.readDerPublicKey = function (/*Buffer*/pub_der) {
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(hash.digest());
     
-//    var keyStr = pub_der.toString('base64');
-    var keyStr = hex2b64(DataUtils.toHex(pub_der));
+    var keyStr = pub_der.toString('base64'); 
     var keyPem = "-----BEGIN PUBLIC KEY-----\n";
     for (var i = 0; i < keyStr.length; i += 64)
 	keyPem += (keyStr.substr(i, 64) + "\n");
