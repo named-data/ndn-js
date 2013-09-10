@@ -131,7 +131,7 @@ library.   It currently obtains NDN connectivity through the NDN testbed, but yo
 click Set on the NDN Toolbar to change the connected hub.
 
 To install, either download
-https://github.com/named-data/ndn-js/raw/downloads/ndnProtocol.xpi
+https://github.com/named-data/ndn-js/raw/master/ndnProtocol.xpi
 
 or use ndnProtocol.xpi from `downloads` branch.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
