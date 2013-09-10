@@ -60,12 +60,12 @@ Key.prototype.readDerPublicKey = function (/*Buffer*/pub_der) {
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(hash.digest());
     
-    var keyStr = pub_der.toString('base64');
+//    var keyStr = pub_der.toString('base64');
+    var keyStr = hex2b64(DataUtils.toHex(pub_der));
     var keyPem = "-----BEGIN PUBLIC KEY-----\n";
     for (var i = 0; i < keyStr.length; i += 64)
 	keyPem += (keyStr.substr(i, 64) + "\n");
     keyPem += "-----END PUBLIC KEY-----";
-
     this.publicKeyPem = keyPem;
 
     if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);

@@ -185,10 +185,9 @@ DataUtils.toNumbersFromString = function(str) {
 
 /**
  * Encode str as utf8 and return as Uint8Array.
- * TODO: Use TextEncoder when available.
  */
 DataUtils.stringToUtf8Array = function(str) {
-    return DataUtils.toNumbersFromString(str2rstr_utf8(str));
+  return new Buffer(str, 'utf8');
 }
 
 /**
