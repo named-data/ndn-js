@@ -224,7 +224,14 @@ var Buffer = function Buffer (data, format) {
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer || data instanceof ArrayBuffer))
+  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer)) {
+    // The second argument is a boolean for "copy", default true.
+    if (format == false)
+      obj = data.subarray(0);
+    else
+      obj = new Uint8Array(data);
+  }
+  else if (typeof data == 'object' && data instanceof ArrayBuffer)
     // Copy.
     obj = new Uint8Array(data);
   else if (typeof data == 'object')
@@ -257,7 +264,7 @@ var Buffer = function Buffer (data, format) {
   };
 
   obj.__proto__.slice = function (begin, end) {
-    return new Buffer(obj.subarray(begin, end));
+    return new Buffer(obj.subarray(begin, end), false);
   };
 
   obj.__proto__.copy = function (target, targetStart) {
