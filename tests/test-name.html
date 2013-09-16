@@ -14,10 +14,6 @@
 	<script type="text/javascript">
 	
 function testName() {
-    var a = new ArrayBuffer(3);
-    console.log("typeof " + (typeof ArrayBufferzzz));
-    if (typeof ArrayBufferzzz != 'undefined')
-      console.log("instanceof ArrayBufferzzz " + (a instanceof ArrayBufferzzz));
     var result = document.getElementById('result');
     result.innerHTML = "";
     
@@ -30,7 +26,7 @@ function testName() {
     // \u00E9 is e with accent.
     var entree = "entr\u00E9e";
 
-    // When Name constructor is passed an array, each item is a name component represented with ArrayBuffer, 
+    // When Name constructor is passed an array, each item is a name component represented with Buffer, 
     //   typed array, or string (parsed as UTF-8)
     var name1 = new Name([entree, comp1, comp2]);
     var name1Uri = name1.to_uri();
