@@ -86,10 +86,10 @@ var Buffer = function Buffer (data, format) {
   };
 
   obj.__proto__.slice = function (begin, end) {
-    if (end)
-      return new Buffer(obj.subarray(begin, end), false);
+    if (end !== undefined)
+      return new Buffer(this.subarray(begin, end), false);
     else
-      return new Buffer(obj.subarray(begin), false);
+      return new Buffer(this.subarray(begin), false);
   };
 
   obj.__proto__.copy = function (target, targetStart) {
