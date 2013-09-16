@@ -16,7 +16,7 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
     this.useHeaderBuffer = false;
-    this.headerBuffer = new DynamicUint8Array(5);
+    this.headerBuffer = new DynamicBuffer(5);
     this.nBytesToRead = 0;
 };
 

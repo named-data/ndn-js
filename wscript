@@ -99,7 +99,7 @@ def build (bld):
                  "js/PublisherPublicKeyDigest.js",
                  "js/FaceInstance.js",
                  "js/ForwardingEntry.js",
-                 "js/encoding/DynamicUint8Array.js",
+                 "js/encoding/DynamicBuffer.js",
                  "js/encoding/BinaryXMLEncoder.js",
                  "js/encoding/BinaryXMLDecoder.js",
                  "js/encoding/BinaryXMLStructureDecoder.js",

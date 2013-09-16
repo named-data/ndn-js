@@ -5,13 +5,13 @@
  */
 
 /**
- * Create a DynamicUint8Array where this.array is a Buffer of size length.
+ * Create a DynamicBuffer where this.array is a Buffer of size length.
  * The methods will update this.length.
  * To access the array, use this.array or call subarray.
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
  */
-var DynamicUint8Array = function DynamicUint8Array(length) {
+var DynamicBuffer = function DynamicBuffer(length) {
 	if (!length)
         length = 16;
     
@@ -23,7 +23,7 @@ var DynamicUint8Array = function DynamicUint8Array(length) {
  * Ensure that this.array has the length, reallocate and copy if necessary.
  * Update this.length which may be greater than length.
  */
-DynamicUint8Array.prototype.ensureLength = function(length) {
+DynamicBuffer.prototype.ensureLength = function(length) {
     if (this.array.length >= length)
         return;
     
@@ -42,7 +42,7 @@ DynamicUint8Array.prototype.ensureLength = function(length) {
 /**
  * Call this.array.set(value, offset), reallocating if necessary. 
  */
-DynamicUint8Array.prototype.set = function(value, offset) {
+DynamicBuffer.prototype.set = function(value, offset) {
     this.ensureLength(value.length + offset);
     this.array.set(value, offset);
 };
@@ -50,6 +50,6 @@ DynamicUint8Array.prototype.set = function(value, offset) {
 /**
  * Return this.array.subarray(begin, end);
  */
-DynamicUint8Array.prototype.subarray = function(begin, end) {
+DynamicBuffer.prototype.subarray = function(begin, end) {
     return this.array.subarray(begin, end);
 };

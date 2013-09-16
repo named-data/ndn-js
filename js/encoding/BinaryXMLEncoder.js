@@ -43,7 +43,7 @@ var bits_32 = 0x0FFFFFFFF;
  * @constructor
  */
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-	this.ostream = new DynamicUint8Array(100);
+	this.ostream = new DynamicBuffer(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
