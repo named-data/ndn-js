@@ -119,15 +119,20 @@ Name.prototype.getElementLabel = function(){
 /**
  * Convert the component to a Buffer and add to this Name.
  * Return this Name object to allow chaining calls to add.
- * @param {String|Array<number>|Buffer|Name} component If a component is a string, encode as utf8.
+ * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
  * @returns {Name}
  */
 Name.prototype.add = function(component){
   var result;
   if (typeof component == 'string')
     result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Buffer)
-        result = new Buffer(component);
+	else if (typeof component == 'object' && component instanceof Buffer)
+    result = new Buffer(component);
+  else if (typeof component == 'object' && typeof ArrayBuffer != 'undefined' &&  component instanceof ArrayBuffer) {
+    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
+    result = new Buffer(new ArrayBuffer(component.byteLength));
+    result.set(new Buffer(component));
+  }
   else if (typeof component == 'object' && component instanceof Name) {
     var components;
     if (component == this)
