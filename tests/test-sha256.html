@@ -25,8 +25,8 @@
             var chunkSize = 3;
             var nCalls = Math.floor(data / chunkSize);
             for (var i = 0; i < nCalls; ++i)
-                sha256.update(data.subarray(i * chunkSize, chunkSize));
-            sha256.update(data.subarray(i * nCalls, data.length));
+                sha256.update(data.slice(i * chunkSize, chunkSize));
+            sha256.update(data.slice(i * nCalls, data.length));
 			output += "from bytes-- " + DataUtils.toHex(sha256.finalize()) + "<br/>";			
             
 			output += "reference---- " + CryptoJS.SHA256(input);

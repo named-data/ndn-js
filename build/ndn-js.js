@@ -264,10 +264,10 @@ var Buffer = function Buffer (data, format) {
   };
 
   obj.__proto__.slice = function (begin, end) {
-    if (end)
-      return new Buffer(obj.subarray(begin, end), false);
+    if (end !== undefined)
+      return new Buffer(this.subarray(begin, end), false);
     else
-      return new Buffer(obj.subarray(begin), false);
+      return new Buffer(this.subarray(begin), false);
   };
 
   obj.__proto__.copy = function (target, targetStart) {
@@ -1016,12 +1016,12 @@ Name.getComponentContentDigestValue = function(component) {
     var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
     // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
     if (component.length == digestComponentLength &&
-        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+        DataUtils.arraysEqual(component.slice(0, Name.ContentDigestPrefix.length), 
                               Name.ContentDigestPrefix) &&
-        DataUtils.arraysEqual(component.subarray
+        DataUtils.arraysEqual(component.slice
            (component.length - Name.ContentDigestSuffix.length, component.length),
                               Name.ContentDigestSuffix))
-       return component.subarray(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+       return component.slice(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
    else
        return null;
 }
@@ -1196,7 +1196,7 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
+	var sigBits = bytes.slice(this.startSIG, this.endSIG);
 
     this.rawSignatureData = new Buffer(sigBits);
 };
@@ -2576,7 +2576,7 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
 /**
  * Create a DynamicBuffer where this.array is a Buffer of size length.
  * The methods will update this.length.
- * To access the array, use this.array or call subarray.
+ * To access the array, use this.array or call slice.
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
  */
@@ -2617,10 +2617,10 @@ DynamicBuffer.prototype.set = function(value, offset) {
 };
 
 /**
- * Return this.array.subarray(begin, end);
+ * Return this.array.slice(begin, end);
  */
-DynamicBuffer.prototype.subarray = function(begin, end) {
-    return this.array.subarray(begin, end);
+DynamicBuffer.prototype.slice = function(begin, end) {
+    return this.array.slice(begin, end);
 };
 /**
  * This class is used to encode ndnb binary elements (blob, type/value pairs).
@@ -3010,7 +3010,7 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 
 
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
-	return this.ostream.subarray(0, this.offset);
+	return this.ostream.slice(0, this.offset);
 };
 
 /**
@@ -3527,7 +3527,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	
 	//
 	//Buffer
-    var bytes = new Buffer(this.input.subarray(this.offset, this.offset+ blobLength));
+    var bytes = new Buffer(this.input.slice(this.offset, this.offset+ blobLength));
 	this.offset += blobLength;
 	
 	return bytes;
@@ -3705,7 +3705,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
                         this.headerBuffer.set
-                            (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                            (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
                     }
@@ -3721,7 +3721,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
                     this.headerBuffer.set
-                        (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                        (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
                     typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }
@@ -4349,7 +4349,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
         result[size - i] = value & 0xff;
         value >>= 8;
     }
-    return result.subarray(size - i, size);
+    return result.slice(size - i, size);
 };
 
 /**
@@ -4899,7 +4899,7 @@ Witness.prototype.decode = function(/* Buffer */ witness) {
 			if (step == 4) {
 				// Start to decode digest hex string
 				len = witness[i+1];  // XXX: digest hex should always be 32 bytes
-				var str = DataUtils.toHex(witness.subarray(i + 2, i + 2 + len));
+				var str = DataUtils.toHex(witness.slice(i + 2, i + 2 + len));
 				this.path.digestList.push(str);  // digest hex string
 				//console.log(str);
 			}
@@ -5520,7 +5520,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
         this.structureDecoder.seek(0);
         if (this.structureDecoder.findElementEnd(data)) {
             // Got the remainder of an object.  Report to the caller.
-            this.dataParts.push(data.subarray(0, this.structureDecoder.offset));
+            this.dataParts.push(data.slice(0, this.structureDecoder.offset));
             var element = DataUtils.concatArrays(this.dataParts);
             this.dataParts = [];
             try {
@@ -5530,7 +5530,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
             }
         
             // Need to read a new object.
-            data = data.subarray(this.structureDecoder.offset, data.length);
+            data = data.slice(this.structureDecoder.offset, data.length);
             this.structureDecoder = new BinaryXMLStructureDecoder();
             if (data.length == 0)
                 // No more data in the packet.

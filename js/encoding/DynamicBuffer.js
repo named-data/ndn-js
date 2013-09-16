@@ -7,7 +7,7 @@
 /**
  * Create a DynamicBuffer where this.array is a Buffer of size length.
  * The methods will update this.length.
- * To access the array, use this.array or call subarray.
+ * To access the array, use this.array or call slice.
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
  */
@@ -48,8 +48,8 @@ DynamicBuffer.prototype.set = function(value, offset) {
 };
 
 /**
- * Return this.array.subarray(begin, end);
+ * Return this.array.slice(begin, end);
  */
-DynamicBuffer.prototype.subarray = function(begin, end) {
-    return this.array.subarray(begin, end);
+DynamicBuffer.prototype.slice = function(begin, end) {
+    return this.array.slice(begin, end);
 };

@@ -265,7 +265,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value) {
         result[size - i] = value & 0xff;
         value >>= 8;
     }
-    return result.subarray(size - i, size);
+    return result.slice(size - i, size);
 };
 
 /**

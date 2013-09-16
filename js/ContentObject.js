@@ -88,7 +88,7 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
+	var sigBits = bytes.slice(this.startSIG, this.endSIG);
 
     this.rawSignatureData = new Buffer(sigBits);
 };

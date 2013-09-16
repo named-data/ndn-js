@@ -573,7 +573,7 @@ function getIndexOfMetaComponent(name) {
     for (var i = 0; i < name.components.length; ++i) {
         var component = name.components[i];
         if (component.length >= MetaComponentPrefix.length &&
-            DataUtils.arraysEqual(component.subarray(0, MetaComponentPrefix.length), 
+            DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), 
                                   MetaComponentPrefix))
             return i;
     }

@@ -611,7 +611,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
         this.structureDecoder.seek(0);
         if (this.structureDecoder.findElementEnd(data)) {
             // Got the remainder of an object.  Report to the caller.
-            this.dataParts.push(data.subarray(0, this.structureDecoder.offset));
+            this.dataParts.push(data.slice(0, this.structureDecoder.offset));
             var element = DataUtils.concatArrays(this.dataParts);
             this.dataParts = [];
             try {
@@ -621,7 +621,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
             }
         
             // Need to read a new object.
-            data = data.subarray(this.structureDecoder.offset, data.length);
+            data = data.slice(this.structureDecoder.offset, data.length);
             this.structureDecoder = new BinaryXMLStructureDecoder();
             if (data.length == 0)
                 // No more data in the packet.

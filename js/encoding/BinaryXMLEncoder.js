@@ -386,6 +386,6 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 
 
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
-	return this.ostream.subarray(0, this.offset);
+	return this.ostream.slice(0, this.offset);
 };
 

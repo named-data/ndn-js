@@ -277,12 +277,12 @@ Name.getComponentContentDigestValue = function(component) {
     var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
     // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
     if (component.length == digestComponentLength &&
-        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+        DataUtils.arraysEqual(component.slice(0, Name.ContentDigestPrefix.length), 
                               Name.ContentDigestPrefix) &&
-        DataUtils.arraysEqual(component.subarray
+        DataUtils.arraysEqual(component.slice
            (component.length - Name.ContentDigestSuffix.length, component.length),
                               Name.ContentDigestSuffix))
-       return component.subarray(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+       return component.slice(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
    else
        return null;
 }

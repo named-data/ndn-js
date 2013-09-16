@@ -73,7 +73,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
                         this.headerBuffer.set
-                            (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                            (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
                     }
@@ -89,7 +89,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
                     this.headerBuffer.set
-                        (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                        (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
                     typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }
