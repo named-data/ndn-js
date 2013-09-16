@@ -46,8 +46,13 @@ var Buffer = function Buffer (data, format) {
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (data instanceof Uint8Array)
-    obj = data.subarray(0);
+  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer))
+    // Copy.
+    obj = new Uint8Array(data);
+  else if (typeof data == 'object')
+    // Assume component is a byte array.  We can't check instanceof Array because
+    //   this doesn't work in JavaScript if the array comes from a different module.
+    obj = new Uint8Array(data);
   else
     throw new Error('Buffer: unknown data type.');
 
