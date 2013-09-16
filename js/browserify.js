@@ -46,7 +46,7 @@ var Buffer = function Buffer (data, format) {
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer))
+  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer || data instanceof ArrayBuffer))
     // Copy.
     obj = new Uint8Array(data);
   else if (typeof data == 'object')
