@@ -12,13 +12,13 @@
  * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
- * @param {Uint8Array} publisherPublicKeyDigest
+ * @param {Buffer} publisherPublicKeyDigest
  * @param {Exclude} exclude
  * @param {number} childSelector
  * @param {number} answerOriginKind
  * @param {number} scope
  * @param {number} interestLifetime in milliseconds
- * @param {Uint8Array} nonce
+ * @param {Buffer} nonce
  */
 var Interest = function Interest
    (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
@@ -66,7 +66,7 @@ Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
 /**
  * Encode this Interest for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 Interest.prototype.encode = function(wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
@@ -75,7 +75,7 @@ Interest.prototype.encode = function(wireFormat) {
 
 /**
  * Decode the input using a particular wire format and update this Interest.
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 Interest.prototype.decode = function(input, wireFormat) {
@@ -124,7 +124,7 @@ Interest.prototype.clone = function() {
 /**
  * 
  * @constructor
- * @param {Array<Uint8Array|Exclude.ANY>} values an array where each element is either Uint8Array component or Exclude.ANY.
+ * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) { 
 	this.values = (values || []);
@@ -197,7 +197,7 @@ Exclude.prototype.to_uri = function() {
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Uint8Array*/ component) {
+Exclude.prototype.matches = function(/*Buffer*/ component) {
     for (var i = 0; i < this.values.length; ++i) {
         if (this.values[i] == Exclude.ANY) {
             var lowerBound = null;
@@ -253,7 +253,7 @@ Exclude.prototype.matches = function(/*Uint8Array*/ component) {
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */
-Exclude.compareComponents = function(/*Uint8Array*/ component1, /*Uint8Array*/ component2) {
+Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) {
     if (component1.length < component2.length)
         return -1;
     if (component1.length > component2.length)

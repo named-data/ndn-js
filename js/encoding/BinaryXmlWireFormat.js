@@ -14,9 +14,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
 };
 
 /**
- * Encode the interest and return a Uint8Array.
+ * Encode the interest and return a Buffer.
  * @param {Interest} interest
- * @returns {UInt8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 	var encoder = new BinaryXMLEncoder();
@@ -27,7 +27,7 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 /**
  * Decode the input and put the result in interest.
  * @param {Interest} interest
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 	var decoder = new BinaryXMLDecoder(input);
@@ -35,9 +35,9 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 };
 
 /**
- * Encode the contentObject and return a Uint8Array. 
+ * Encode the contentObject and return a Buffer. 
  * @param {ContentObject} contentObject
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 	var encoder = new BinaryXMLEncoder();
@@ -48,7 +48,7 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 /**
  * Decode the input and put the result in contentObject.
  * @param {ContentObject} contentObject
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) {
 	var decoder = new BinaryXMLDecoder(input);

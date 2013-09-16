@@ -14,14 +14,17 @@
 	<script type="text/javascript">
 	
 function testName() {
+    var a = new ArrayBuffer(3);
+    console.log("typeof " + (typeof ArrayBufferzzz));
+    if (typeof ArrayBufferzzz != 'undefined')
+      console.log("instanceof ArrayBufferzzz " + (a instanceof ArrayBufferzzz));
     var result = document.getElementById('result');
     result.innerHTML = "";
     
-    var comp1 = new Uint8Array(1); 
+    var comp1 = new Buffer(1); 
     comp1.set(['.'.charCodeAt(0)]);
     
-    var ab2 = new ArrayBuffer(4); 
-    var comp2 = new Uint8Array(ab2); 
+    var comp2 = new Buffer(4); 
     comp2.set([0x00, 0x01, 0x02, 0x03]);
 
     // \u00E9 is e with accent.
@@ -29,10 +32,10 @@ function testName() {
 
     // When Name constructor is passed an array, each item is a name component represented with ArrayBuffer, 
     //   typed array, or string (parsed as UTF-8)
-    var name1 = new Name([entree, comp1, ab2]);
+    var name1 = new Name([entree, comp1, comp2]);
     var name1Uri = name1.to_uri();
     var name1UriExpected = "/entr%C3%A9e/..../%00%01%02%03";
-    result.innerHTML += "Name from '" + entree + "', Uint8Array of '.' and ArrayBuffer of 0,1,2,3:<br/>";
+    result.innerHTML += "Name from '" + entree + "', Buffer of '.' and Buffer of 0,1,2,3:<br/>";
     if (name1Uri == name1UriExpected)
         result.innerHTML += "SUCCESS: " + name1Uri + ".<br/>";
     else
@@ -47,7 +50,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name2.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name2.getComponent(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -65,7 +68,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name3.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name3.getComponent(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -83,7 +86,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name4.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name4.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name4.getComponent(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -94,7 +97,7 @@ function testName() {
     
     result.innerHTML += "Check with Name component at index 2:<br/>";
     // Returns ArrayBuffer of "%00%01%02%03"
-    var component2Out = new Uint8Array(name1.getComponent(2));
+    var component2Out = name1.getComponent(2);
     if (DataUtils.arraysEqual(component2Out, comp2))
         result.innerHTML += "SUCCESS: Components at index 2 are equal.<br/>";
     else

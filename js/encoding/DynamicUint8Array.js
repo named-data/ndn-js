@@ -1,11 +1,11 @@
 /**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
- * Encapsulate an Uint8Array and support dynamic reallocation.
+ * Encapsulate a Buffer and support dynamic reallocation.
  */
 
 /**
- * Create a DynamicUint8Array where this.array is a Uint8Array of size length.
+ * Create a DynamicUint8Array where this.array is a Buffer of size length.
  * The methods will update this.length.
  * To access the array, use this.array or call subarray.
  * @constructor
@@ -15,7 +15,7 @@ var DynamicUint8Array = function DynamicUint8Array(length) {
 	if (!length)
         length = 16;
     
-    this.array = new Uint8Array(length);
+    this.array = new Buffer(length);
     this.length = length;
 };
 
@@ -33,7 +33,7 @@ DynamicUint8Array.prototype.ensureLength = function(length) {
         // The needed length is much greater, so use it.
         newLength = length;
     
-    var newArray = new Uint8Array(newLength);
+    var newArray = new Buffer(newLength);
     newArray.set(this.array);
     this.array = newArray;
     this.length = newLength;

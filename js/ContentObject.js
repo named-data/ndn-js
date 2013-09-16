@@ -10,7 +10,7 @@
  * @constructor
  * @param {Name} name
  * @param {SignedInfo} signedInfo
- * @param {Uint8Array} content
+ * @param {Buffer} content
  */
 var ContentObject = function ContentObject(name, signedInfo, content) {
 	if (typeof name == 'string')
@@ -110,7 +110,7 @@ ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 /**
  * Encode this ContentObject for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 ContentObject.prototype.encode = function(wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
@@ -119,7 +119,7 @@ ContentObject.prototype.encode = function(wireFormat) {
 
 /**
  * Decode the input using a particular wire format and update this ContentObject.
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 ContentObject.prototype.decode = function(input, wireFormat) {

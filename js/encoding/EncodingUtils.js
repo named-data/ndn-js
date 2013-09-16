@@ -85,7 +85,7 @@ function decodeHexForwardingEntry(result){
 }
 
 /**
- * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
+ * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
 function decodeSubjectPublicKeyInfo(array) {
     var hex = DataUtils.toHex(array).toLowerCase();

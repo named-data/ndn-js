@@ -12,9 +12,9 @@ var WireFormat = function WireFormat() {
 };
 
 /**
- * The override method in the derived class should encode the interest and return a Uint8Array.
+ * The override method in the derived class should encode the interest and return a Buffer.
  * @param {Interest} interest
- * @returns {UInt8Array}
+ * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest) {
@@ -24,7 +24,7 @@ WireFormat.prototype.encodeInterest = function(interest) {
 /**
  * The override method in the derived class should decode the input and put the result in interest.
  * @param {Interest} interest
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeInterest = function(interest, input) {
@@ -32,9 +32,9 @@ WireFormat.prototype.decodeInterest = function(interest, input) {
 };
 
 /**
- * The override method in the derived class should encode the contentObject and return a Uint8Array. 
+ * The override method in the derived class should encode the contentObject and return a Buffer. 
  * @param {ContentObject} contentObject
- * @returns {Uint8Array}
+ * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeContentObject = function(contentObject) {
@@ -44,7 +44,7 @@ WireFormat.prototype.encodeContentObject = function(contentObject) {
 /**
  * The override method in the derived class should decode the input and put the result in contentObject.
  * @param {ContentObject} contentObject
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeContentObject = function(contentObject, input) {

@@ -116,7 +116,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		if(result == null || result == undefined || result == "" ) {
 			console.log('INVALID ANSWER');
 		} else if (result instanceof ArrayBuffer) {
-	        var bytearray = new Uint8Array(result);
+	        var bytearray = new Buffer(result);
 	        
 			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			
@@ -224,8 +224,13 @@ var Buffer = function Buffer (data, format) {
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (data instanceof Uint8Array)
-    obj = data.subarray(0);
+  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer || data instanceof ArrayBuffer))
+    // Copy.
+    obj = new Uint8Array(data);
+  else if (typeof data == 'object')
+    // Assume component is a byte array.  We can't check instanceof Array because
+    //   this doesn't work in JavaScript if the array comes from a different module.
+    obj = new Uint8Array(data);
   else
     throw new Error('Buffer: unknown data type.');
 
@@ -732,9 +737,9 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
  * Create a new Name from components.
  * 
  * @constructor
- * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Uint8Array|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
- * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Uint8Array or Name.
- * Convert each and store as an array of Uint8Array.  If a component is a string, encode as utf8.
+ * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
+ * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Buffer or Name.
+ * Convert each and store as an array of Buffer.  If a component is a string, encode as utf8.
  */
 var Name = function Name(components) {
 	if( typeof components == 'string') {		
@@ -760,7 +765,7 @@ Name.prototype.getName = function() {
     return this.to_uri();
 };
 
-/** Parse uri as a URI and return an array of Uint8Array components.
+/** Parse uri as a URI and return an array of Buffer components.
  */
 Name.createNameArray = function(uri) {
     uri = uri.trim();
@@ -841,38 +846,33 @@ Name.prototype.getElementLabel = function(){
 };
 
 /**
- * Convert the component to a Uint8Array and add to this Name.
+ * Convert the component to a Buffer and add to this Name.
  * Return this Name object to allow chaining calls to add.
- * @param {String|Array<number>|ArrayBuffer|Uint8Array|Name} component If a component is a string, encode as utf8.
+ * @param {String|Array<number>|Buffer|Name} component If a component is a string, encode as utf8.
  * @returns {Name}
  */
 Name.prototype.add = function(component){
-    var result;
-    if(typeof component == 'string')
-        result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Uint8Array)
-        result = new Uint8Array(component);
-	else if(typeof component == 'object' && component instanceof ArrayBuffer) {
-        // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
-        result = new Uint8Array(new ArrayBuffer(component.byteLength));
-        result.set(new Uint8Array(component));
-    }
-    else if (typeof component == 'object' && component instanceof Name) {
-        var components;
-        if (component == this)
-            // special case, when we need to create a copy
-            components = this.components.slice(0, this.components.length);
-        else
-            components = component.components;
-        
-        for (var i = 0; i < components.length; ++i)
-            this.components.push(new Uint8Array(components[i]));
-        return this;
-    }
+  var result;
+  if (typeof component == 'string')
+    result = DataUtils.stringToUtf8Array(component);
+	else if(typeof component == 'object' && component instanceof Buffer)
+        result = new Buffer(component);
+  else if (typeof component == 'object' && component instanceof Name) {
+    var components;
+    if (component == this)
+      // special case, when we need to create a copy
+      components = this.components.slice(0, this.components.length);
+    else
+      components = component.components;
+      
+    for (var i = 0; i < components.length; ++i)
+      this.components.push(new Buffer(components[i]));
+    return this;
+  }
 	else if(typeof component == 'object')
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
-        result = new Uint8Array(component);
+        result = new Buffer(component);
 	else 
 		throw new Error("Cannot add Name element at index " + this.components.length + 
             ": Invalid type");
@@ -910,7 +910,7 @@ Name.prototype.to_uri = function() {
 Name.prototype.addSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
-    var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
+    var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
     segmentNumberComponent.set(segmentNumberBigEndian, 1);
 
     this.components.push(segmentNumberComponent);
@@ -933,11 +933,11 @@ Name.prototype.cut = function (minusComponents) {
 }
 
 /**
- * Return a new ArrayBuffer of the component at i.
+ * Return a new Buffer of the component at i.
  */
 Name.prototype.getComponent = function(i) {
-    var result = new ArrayBuffer(this.components[i].length);
-    new Uint8Array(result).set(this.components[i]);
+    var result = new Buffer(this.components[i].length);
+    result.set(this.components[i]);
     return result;
 }
 
@@ -979,7 +979,7 @@ Name.prototype.equalsName = function(name) {
 }
 
 /**
- * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ * Find the last component in name that has a ContentDigest and return the digest value as Buffer, 
  *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() {
@@ -993,7 +993,7 @@ Name.prototype.getContentDigestValue = function() {
 }
 
 /**
- * If component is a ContentDigest, return the digest value as a Uint8Array subarray (don't modify!).
+ * If component is a ContentDigest, return the digest value as a Buffer slice (don't modify!).
  * If not a ContentDigest, return null.
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
  */
@@ -1012,8 +1012,8 @@ Name.getComponentContentDigestValue = function(component) {
 }
 
 // Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
-Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
-Name.ContentDigestSuffix = new Uint8Array([0x00]);
+Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return component as an escaped string according to "NDNx URI Scheme".
@@ -1050,7 +1050,7 @@ Name.toEscapedString = function(component) {
 };
 
 /**
- * Return component as a Uint8Array by decoding the escapedString according to "NDNx URI Scheme".
+ * Return component as a Buffer by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  */
 Name.fromEscapedString = function(escapedString) {
@@ -1103,7 +1103,7 @@ Name.prototype.match = function(name) {
  * @constructor
  * @param {Name} name
  * @param {SignedInfo} signedInfo
- * @param {Uint8Array} content
+ * @param {Buffer} content
  */
 var ContentObject = function ContentObject(name, signedInfo, content) {
 	if (typeof name == 'string')
@@ -1203,7 +1203,7 @@ ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 /**
  * Encode this ContentObject for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 ContentObject.prototype.encode = function(wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
@@ -1212,7 +1212,7 @@ ContentObject.prototype.encode = function(wireFormat) {
 
 /**
  * Decode the input using a particular wire format and update this ContentObject.
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 ContentObject.prototype.decode = function(input, wireFormat) {
@@ -1614,13 +1614,13 @@ Date.prototype.format = function (mask, utc) {
  * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
- * @param {Uint8Array} publisherPublicKeyDigest
+ * @param {Buffer} publisherPublicKeyDigest
  * @param {Exclude} exclude
  * @param {number} childSelector
  * @param {number} answerOriginKind
  * @param {number} scope
  * @param {number} interestLifetime in milliseconds
- * @param {Uint8Array} nonce
+ * @param {Buffer} nonce
  */
 var Interest = function Interest
    (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
@@ -1668,7 +1668,7 @@ Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
 /**
  * Encode this Interest for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 Interest.prototype.encode = function(wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
@@ -1677,7 +1677,7 @@ Interest.prototype.encode = function(wireFormat) {
 
 /**
  * Decode the input using a particular wire format and update this Interest.
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
 Interest.prototype.decode = function(input, wireFormat) {
@@ -1726,7 +1726,7 @@ Interest.prototype.clone = function() {
 /**
  * 
  * @constructor
- * @param {Array<Uint8Array|Exclude.ANY>} values an array where each element is either Uint8Array component or Exclude.ANY.
+ * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) { 
 	this.values = (values || []);
@@ -1799,7 +1799,7 @@ Exclude.prototype.to_uri = function() {
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Uint8Array*/ component) {
+Exclude.prototype.matches = function(/*Buffer*/ component) {
     for (var i = 0; i < this.values.length; ++i) {
         if (this.values[i] == Exclude.ANY) {
             var lowerBound = null;
@@ -1855,7 +1855,7 @@ Exclude.prototype.matches = function(/*Uint8Array*/ component) {
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */
-Exclude.compareComponents = function(/*Uint8Array*/ component1, /*Uint8Array*/ component2) {
+Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) {
     if (component1.length < component2.length)
         return -1;
     if (component1.length > component2.length)
@@ -2555,11 +2555,11 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
 /**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
- * Encapsulate an Uint8Array and support dynamic reallocation.
+ * Encapsulate a Buffer and support dynamic reallocation.
  */
 
 /**
- * Create a DynamicUint8Array where this.array is a Uint8Array of size length.
+ * Create a DynamicUint8Array where this.array is a Buffer of size length.
  * The methods will update this.length.
  * To access the array, use this.array or call subarray.
  * @constructor
@@ -2569,7 +2569,7 @@ var DynamicUint8Array = function DynamicUint8Array(length) {
 	if (!length)
         length = 16;
     
-    this.array = new Uint8Array(length);
+    this.array = new Buffer(length);
     this.length = length;
 };
 
@@ -2587,7 +2587,7 @@ DynamicUint8Array.prototype.ensureLength = function(length) {
         // The needed length is much greater, so use it.
         newLength = length;
     
-    var newArray = new Uint8Array(newLength);
+    var newArray = new Buffer(newLength);
     newArray.set(this.array);
     this.array = newArray;
     this.length = newLength;
@@ -2666,7 +2666,7 @@ BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
 
 
 BinaryXMLEncoder.prototype.writeBlob = function(
-		/*Uint8Array*/ binaryContent
+		/*Buffer*/ binaryContent
 		) {
 	
 	if(LOG >3) console.log(binaryContent);
@@ -2880,7 +2880,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 
 
 BinaryXMLEncoder.prototype.encodeBlob = function(
-		//Uint8Array 
+		//Buffer 
 		blob, 
 		//int 
 		length) {
@@ -2985,7 +2985,7 @@ BinaryXMLEncoder.prototype.writeString = function(input) {
 
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
-		//Uint8Array 
+		//Buffer 
 		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
@@ -3341,7 +3341,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 	};
 
 
-// Returns a Uint8Array.
+// Returns a Buffer.
 BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
@@ -3383,7 +3383,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	
 
 /**
- * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
+ * Read a blob as well as the end element. Returns a Buffer (or null for missing blob).
  * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
  *   just read the end element and return null.
  */
@@ -3489,7 +3489,7 @@ BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	return tv;
 };
 
-//Uint8Array
+//Buffer
 BinaryXMLDecoder.prototype.decodeBlob = function(
 		//int 
 		blobLength) {
@@ -3511,7 +3511,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	}
 	
 	//
-	//Uint8Array
+	//Buffer
     var bytes = new Buffer(this.input.subarray(this.offset, this.offset+ blobLength));
 	this.offset += blobLength;
 	
@@ -3545,7 +3545,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		return this.decodeUString(tv.val());
 	}
 	else{
-		//uint8array 
+		//Buffer 
 		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);
@@ -3648,7 +3648,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  * This throws an exception for badly formed ndnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-    // Uint8Array
+    // Buffer
     input)
 {
     if (this.gotElementEnd)
@@ -3797,9 +3797,9 @@ var WireFormat = function WireFormat() {
 };
 
 /**
- * The override method in the derived class should encode the interest and return a Uint8Array.
+ * The override method in the derived class should encode the interest and return a Buffer.
  * @param {Interest} interest
- * @returns {UInt8Array}
+ * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest) {
@@ -3809,7 +3809,7 @@ WireFormat.prototype.encodeInterest = function(interest) {
 /**
  * The override method in the derived class should decode the input and put the result in interest.
  * @param {Interest} interest
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeInterest = function(interest, input) {
@@ -3817,9 +3817,9 @@ WireFormat.prototype.decodeInterest = function(interest, input) {
 };
 
 /**
- * The override method in the derived class should encode the contentObject and return a Uint8Array. 
+ * The override method in the derived class should encode the contentObject and return a Buffer. 
  * @param {ContentObject} contentObject
- * @returns {Uint8Array}
+ * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeContentObject = function(contentObject) {
@@ -3829,7 +3829,7 @@ WireFormat.prototype.encodeContentObject = function(contentObject) {
 /**
  * The override method in the derived class should decode the input and put the result in contentObject.
  * @param {ContentObject} contentObject
- * @param {Uint8Array} input
+ * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeContentObject = function(contentObject, input) {
@@ -3853,9 +3853,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
 };
 
 /**
- * Encode the interest and return a Uint8Array.
+ * Encode the interest and return a Buffer.
  * @param {Interest} interest
- * @returns {UInt8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 	var encoder = new BinaryXMLEncoder();
@@ -3866,7 +3866,7 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 /**
  * Decode the input and put the result in interest.
  * @param {Interest} interest
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 	var decoder = new BinaryXMLDecoder(input);
@@ -3874,9 +3874,9 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 };
 
 /**
- * Encode the contentObject and return a Uint8Array. 
+ * Encode the contentObject and return a Buffer. 
  * @param {ContentObject} contentObject
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 	var encoder = new BinaryXMLEncoder();
@@ -3887,7 +3887,7 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 /**
  * Decode the input and put the result in contentObject.
  * @param {ContentObject} contentObject
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) {
 	var decoder = new BinaryXMLDecoder(input);
@@ -4179,17 +4179,10 @@ DataUtils.base64toString = function base64toString(input) {
   };
 
 /**
- * Uint8Array to Hex String
+ * Buffer to Hex String
  */
-//http://ejohn.org/blog/numbers-hex-and-colors/
-DataUtils.toHex = function(args){
-	if (LOG>4) console.log('ABOUT TO CONVERT '+ args);
-	//console.log(args);
-  	var ret = "";
-  	for ( var i = 0; i < args.length; i++ )
-    	ret += (args[i] < 16 ? "0" : "") + args[i].toString(16);
-  	if (LOG>4) console.log('Converted to: ' + ret);
-  	return ret; //.toUpperCase();
+DataUtils.toHex = function(buffer) {
+  return buffer.toString('hex');
 }
 
 /**
@@ -4205,28 +4198,17 @@ DataUtils.stringToHex = function(args){
 }
 
 /**
- * Uint8Array to raw string.
+ * Buffer to raw string.
  */
-DataUtils.toString = function(args){
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < args.length; i++ )
-    ret += String.fromCharCode(args[i]);
-  return ret;
+DataUtils.toString = function(buffer) {
+  return buffer.toString();
 }
 
 /**
- * Hex String to Uint8Array.
+ * Hex String to Buffer.
  */
 DataUtils.toNumbers = function(str) {
-	if (typeof str == 'string') {
-		var ret = new Uint8Array(Math.floor(str.length / 2));
-        var i = 0;
-		str.replace(/(..)/g, function(str) {
-		    ret[i++] = parseInt(str, 16);
-		});
-		return ret;
-    }
+  return new Buffer(str, 'hex');
 }
 
 /**
@@ -4243,41 +4225,37 @@ DataUtils.hexToRawString = function(str) {
 }
 
 /**
- * Raw String to Uint8Array.
+ * Raw String to Buffer.
  */
 DataUtils.toNumbersFromString = function(str) {
-	var bytes = new Uint8Array(str.length);
-	for(var i=0;i<str.length;i++)
-		bytes[i] = str.charCodeAt(i);
-	return bytes;
+  return new Buffer(str, 'binary');
 }
 
 /**
- * Encode str as utf8 and return as Uint8Array.
+ * Encode str as utf8 and return as Buffer.
  */
 DataUtils.stringToUtf8Array = function(str) {
   return new Buffer(str, 'utf8');
 }
 
 /**
- * arrays is an array of Uint8Array. Return a new Uint8Array which is the concatenation of all.
+ * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
  */
 DataUtils.concatArrays = function(arrays) {
-    var totalLength = 0;
+  var totalLength = 0;
 	for (var i = 0; i < arrays.length; ++i)
-        totalLength += arrays[i].length;
+    totalLength += arrays[i].length;
     
-    var result = new Uint8Array(totalLength);
-    var offset = 0;
+  var result = new Buffer(totalLength);
+  var offset = 0;
 	for (var i = 0; i < arrays.length; ++i) {
-        result.set(arrays[i], offset);
-        offset += arrays[i].length;
-    }
-    return result;
-    
+     result.set(arrays[i], offset);
+     offset += arrays[i].length;
+  }
+  return result;  
 }
  
-// TODO: Take Uint8Array and use TextDecoder when available.
+// TODO: Take Buffer and use TextDecoder when available.
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
@@ -4326,7 +4304,7 @@ DataUtils.arraysEqual = function(a1, a2){
 };
 
 /**
- * Convert the big endian Uint8Array to an unsigned int.
+ * Convert the big endian Buffer to an unsigned int.
  * Don't check for overflow.
  */
 DataUtils.bigEndianToUnsignedInt = function(bytes) {
@@ -4339,17 +4317,17 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
 };
 
 /**
- * Convert the int value to a new big endian Uint8Array and return.
- * If value is 0 or negative, return Uint8Array(0). 
+ * Convert the int value to a new big endian Buffer and return.
+ * If value is 0 or negative, return new Buffer(0). 
  */
 DataUtils.nonNegativeIntToBigEndian = function(value) {
     value = Math.round(value);
     if (value <= 0)
-        return new Uint8Array(0);
+        return new Buffer(0);
     
     // Assume value is not over 64 bits.
     var size = 8;
-    var result = new Uint8Array(size);
+    var result = new Buffer(size);
     var i = 0;
     while (value != 0) {
         ++i;
@@ -4458,7 +4436,7 @@ function decodeHexForwardingEntry(result){
 }
 
 /**
- * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
+ * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
 function decodeSubjectPublicKeyInfo(array) {
     var hex = DataUtils.toHex(array).toLowerCase();
@@ -4824,7 +4802,7 @@ function parseInteger(bytes, start, end) {
     return n;
 }
 
-Witness.prototype.decode = function(/* Uint8Array */ witness) {
+Witness.prototype.decode = function(/* Buffer */ witness) {
 	/* The asn1.js decoder has some bug and 
 	 * cannot decode certain kind of witness.
 	 * So we use an alternative (and dirty) hack
@@ -4968,9 +4946,9 @@ NDN.CLOSED = 2;  // connection to ndnd closed
  */
 NDN.getSupported = function() {
     try {
-        var dummy = new Uint8Array(1).subarray(0, 1);
+        var dummy = new Buffer(1).slice(0, 1);
     } catch (ex) {
-        console.log("NDN not available: Uint8Array not supported. " + ex);
+        console.log("NDN not available: Buffer not supported. " + ex);
         return false;
     }
     
@@ -5520,7 +5498,7 @@ var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
   this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {
+BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
     // Process multiple objects in the data.
     while(true) {
         // Scan the input to check if a whole ndnb object has been read.

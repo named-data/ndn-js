@@ -110,17 +110,10 @@ DataUtils.base64toString = function base64toString(input) {
   };
 
 /**
- * Uint8Array to Hex String
+ * Buffer to Hex String
  */
-//http://ejohn.org/blog/numbers-hex-and-colors/
-DataUtils.toHex = function(args){
-	if (LOG>4) console.log('ABOUT TO CONVERT '+ args);
-	//console.log(args);
-  	var ret = "";
-  	for ( var i = 0; i < args.length; i++ )
-    	ret += (args[i] < 16 ? "0" : "") + args[i].toString(16);
-  	if (LOG>4) console.log('Converted to: ' + ret);
-  	return ret; //.toUpperCase();
+DataUtils.toHex = function(buffer) {
+  return buffer.toString('hex');
 }
 
 /**
@@ -136,28 +129,17 @@ DataUtils.stringToHex = function(args){
 }
 
 /**
- * Uint8Array to raw string.
+ * Buffer to raw string.
  */
-DataUtils.toString = function(args){
-  //console.log(arguments);
-  var ret = "";
-  for ( var i = 0; i < args.length; i++ )
-    ret += String.fromCharCode(args[i]);
-  return ret;
+DataUtils.toString = function(buffer) {
+  return buffer.toString();
 }
 
 /**
- * Hex String to Uint8Array.
+ * Hex String to Buffer.
  */
 DataUtils.toNumbers = function(str) {
-	if (typeof str == 'string') {
-		var ret = new Uint8Array(Math.floor(str.length / 2));
-        var i = 0;
-		str.replace(/(..)/g, function(str) {
-		    ret[i++] = parseInt(str, 16);
-		});
-		return ret;
-    }
+  return new Buffer(str, 'hex');
 }
 
 /**
@@ -174,41 +156,37 @@ DataUtils.hexToRawString = function(str) {
 }
 
 /**
- * Raw String to Uint8Array.
+ * Raw String to Buffer.
  */
 DataUtils.toNumbersFromString = function(str) {
-	var bytes = new Uint8Array(str.length);
-	for(var i=0;i<str.length;i++)
-		bytes[i] = str.charCodeAt(i);
-	return bytes;
+  return new Buffer(str, 'binary');
 }
 
 /**
- * Encode str as utf8 and return as Uint8Array.
+ * Encode str as utf8 and return as Buffer.
  */
 DataUtils.stringToUtf8Array = function(str) {
   return new Buffer(str, 'utf8');
 }
 
 /**
- * arrays is an array of Uint8Array. Return a new Uint8Array which is the concatenation of all.
+ * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
  */
 DataUtils.concatArrays = function(arrays) {
-    var totalLength = 0;
+  var totalLength = 0;
 	for (var i = 0; i < arrays.length; ++i)
-        totalLength += arrays[i].length;
+    totalLength += arrays[i].length;
     
-    var result = new Uint8Array(totalLength);
-    var offset = 0;
+  var result = new Buffer(totalLength);
+  var offset = 0;
 	for (var i = 0; i < arrays.length; ++i) {
-        result.set(arrays[i], offset);
-        offset += arrays[i].length;
-    }
-    return result;
-    
+     result.set(arrays[i], offset);
+     offset += arrays[i].length;
+  }
+  return result;  
 }
  
-// TODO: Take Uint8Array and use TextDecoder when available.
+// TODO: Take Buffer and use TextDecoder when available.
 DataUtils.decodeUtf8 = function (utftext) {
 		var string = "";
 		var i = 0;
@@ -257,7 +235,7 @@ DataUtils.arraysEqual = function(a1, a2){
 };
 
 /**
- * Convert the big endian Uint8Array to an unsigned int.
+ * Convert the big endian Buffer to an unsigned int.
  * Don't check for overflow.
  */
 DataUtils.bigEndianToUnsignedInt = function(bytes) {
@@ -270,17 +248,17 @@ DataUtils.bigEndianToUnsignedInt = function(bytes) {
 };
 
 /**
- * Convert the int value to a new big endian Uint8Array and return.
- * If value is 0 or negative, return Uint8Array(0). 
+ * Convert the int value to a new big endian Buffer and return.
+ * If value is 0 or negative, return new Buffer(0). 
  */
 DataUtils.nonNegativeIntToBigEndian = function(value) {
     value = Math.round(value);
     if (value <= 0)
-        return new Uint8Array(0);
+        return new Buffer(0);
     
     // Assume value is not over 64 bits.
     var size = 8;
-    var result = new Uint8Array(size);
+    var result = new Buffer(size);
     var i = 0;
     while (value != 0) {
         ++i;

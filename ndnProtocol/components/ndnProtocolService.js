@@ -581,4 +581,4 @@ function getIndexOfMetaComponent(name) {
     return -1;
 }
 
-var MetaComponentPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
+var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);

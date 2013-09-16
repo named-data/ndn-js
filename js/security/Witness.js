@@ -44,7 +44,7 @@ function parseInteger(bytes, start, end) {
     return n;
 }
 
-Witness.prototype.decode = function(/* Uint8Array */ witness) {
+Witness.prototype.decode = function(/* Buffer */ witness) {
 	/* The asn1.js decoder has some bug and 
 	 * cannot decode certain kind of witness.
 	 * So we use an alternative (and dirty) hack

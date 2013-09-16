@@ -46,7 +46,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		if(result == null || result == undefined || result == "" ) {
 			console.log('INVALID ANSWER');
 		} else if (result instanceof ArrayBuffer) {
-	        var bytearray = new Uint8Array(result);
+	        var bytearray = new Buffer(result);
 	        
 			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
 			

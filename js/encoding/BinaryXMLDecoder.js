@@ -341,7 +341,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 	};
 
 
-// Returns a Uint8Array.
+// Returns a Buffer.
 BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
@@ -383,7 +383,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	
 
 /**
- * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
+ * Read a blob as well as the end element. Returns a Buffer (or null for missing blob).
  * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
  *   just read the end element and return null.
  */
@@ -489,7 +489,7 @@ BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	return tv;
 };
 
-//Uint8Array
+//Buffer
 BinaryXMLDecoder.prototype.decodeBlob = function(
 		//int 
 		blobLength) {
@@ -511,7 +511,7 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	}
 	
 	//
-	//Uint8Array
+	//Buffer
     var bytes = new Buffer(this.input.subarray(this.offset, this.offset+ blobLength));
 	this.offset += blobLength;
 	
@@ -545,7 +545,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		return this.decodeUString(tv.val());
 	}
 	else{
-		//uint8array 
+		//Buffer 
 		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);

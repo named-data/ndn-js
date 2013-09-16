@@ -52,9 +52,9 @@ NDN.CLOSED = 2;  // connection to ndnd closed
  */
 NDN.getSupported = function() {
     try {
-        var dummy = new Uint8Array(1).subarray(0, 1);
+        var dummy = new Buffer(1).slice(0, 1);
     } catch (ex) {
-        console.log("NDN not available: Uint8Array not supported. " + ex);
+        console.log("NDN not available: Buffer not supported. " + ex);
         return false;
     }
     
@@ -604,7 +604,7 @@ var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
   this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {
+BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
     // Process multiple objects in the data.
     while(true) {
         // Scan the input to check if a whole ndnb object has been read.

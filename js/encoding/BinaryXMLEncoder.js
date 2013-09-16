@@ -57,7 +57,7 @@ BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
 
 
 BinaryXMLEncoder.prototype.writeBlob = function(
-		/*Uint8Array*/ binaryContent
+		/*Buffer*/ binaryContent
 		) {
 	
 	if(LOG >3) console.log(binaryContent);
@@ -271,7 +271,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 
 
 BinaryXMLEncoder.prototype.encodeBlob = function(
-		//Uint8Array 
+		//Buffer 
 		blob, 
 		//int 
 		length) {
@@ -376,7 +376,7 @@ BinaryXMLEncoder.prototype.writeString = function(input) {
 
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
-		//Uint8Array 
+		//Buffer 
 		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
