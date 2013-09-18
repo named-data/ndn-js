@@ -8,10 +8,10 @@ var ndn = {};
 
 var exports = ndn;
 
-var require = function (ignore) { return ndn; };
+var require = function(ignore) { return ndn; };
 
 // Factory method to create node.js compatible buffer objects
-var Buffer = function Buffer (data, format) {
+var Buffer = function Buffer(data, format) {
   var obj;
 
   if (typeof data == 'number')
@@ -65,7 +65,7 @@ var Buffer = function Buffer (data, format) {
 
   obj.__proto__ = Buffer.prototype;
 
-  obj.__proto__.toString = function (encoding) {
+  obj.__proto__.toString = function(encoding) {
     if (encoding == null) {
       var ret = "";
       for (var i = 0; i < this.length; i++ )
@@ -85,14 +85,14 @@ var Buffer = function Buffer (data, format) {
       throw new Error('Buffer.toString: unknown encoding format ' + encoding);
   };
 
-  obj.__proto__.slice = function (begin, end) {
+  obj.__proto__.slice = function(begin, end) {
     if (end !== undefined)
       return new Buffer(this.subarray(begin, end), false);
     else
       return new Buffer(this.subarray(begin), false);
   };
 
-  obj.__proto__.copy = function (target, targetStart) {
+  obj.__proto__.copy = function(target, targetStart) {
     target.set(this, targetStart);
   };
 
@@ -101,7 +101,7 @@ var Buffer = function Buffer (data, format) {
 
 Buffer.prototype = Uint8Array.prototype;
 
-Buffer.concat = function (arrays) {
+Buffer.concat = function(arrays) {
   var totalLength = 0;
   for (var i = 0; i < arrays.length; ++i)
     totalLength += arrays[i].length;
@@ -152,7 +152,7 @@ Buffer.str2rstr_utf8 = function(input)
 };
 
 // Factory method to create hasher objects
-exports.createHash = function (alg) {
+exports.createHash = function(alg) {
   if (alg != 'sha256')
     throw new Error('createHash: unsupported algorithm.');
 
@@ -160,11 +160,11 @@ exports.createHash = function (alg) {
 
   obj.md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
 
-  obj.update = function (buf) {
+  obj.update = function(buf) {
     this.md.updateHex(buf.toString('hex'));
   };
 
-  obj.digest = function () {
+  obj.digest = function() {
     return new Buffer(this.md.digest(), 'hex');
   };
 
@@ -172,7 +172,7 @@ exports.createHash = function (alg) {
 };
 
 // Factory method to create RSA signer objects
-exports.createSign = function (alg) {
+exports.createSign = function(alg) {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
@@ -180,11 +180,11 @@ exports.createSign = function (alg) {
 
   obj.arr = [];
 
-  obj.update = function (buf) {
+  obj.update = function(buf) {
     this.arr.push(buf);
   };
 
-  obj.sign = function (keypem) {
+  obj.sign = function(keypem) {
     var rsa = new RSAKey();
     rsa.readPrivateKeyFromPEMString(keypem);
     var signer = new KJUR.crypto.Signature({"alg": "SHA256withRSA", "prov": "cryptojs/jsrsa"});
@@ -199,7 +199,7 @@ exports.createSign = function (alg) {
 };
 
 // Factory method to create RSA verifier objects
-exports.createVerify = function (alg) {
+exports.createVerify = function(alg) {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
@@ -207,11 +207,11 @@ exports.createVerify = function (alg) {
     
   obj.arr = [];
 
-  obj.update = function (buf) {
+  obj.update = function(buf) {
     this.arr.push(buf);
   };
 
-  var getSubjectPublicKeyPosFromHex = function (hPub) {  
+  var getSubjectPublicKeyPosFromHex = function(hPub) {  
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0); 
     if (a.length != 2) 
       return -1;
@@ -224,7 +224,7 @@ exports.createVerify = function (alg) {
     return pBitStringV + 2;
   };
 
-  var readPublicDER = function (pub_der) {
+  var readPublicDER = function(pub_der) {
     var hex = pub_der.toString('hex'); 
     var p = getSubjectPublicKeyPosFromHex(hex);
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
@@ -237,7 +237,7 @@ exports.createVerify = function (alg) {
     return rsaKey;
   };
 
-  obj.verify = function (keypem, sig) {
+  obj.verify = function(keypem, sig) {
     var key = new ndn.Key();
     key.fromPemString(keypem);
 
