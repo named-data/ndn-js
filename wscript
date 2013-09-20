@@ -84,9 +84,9 @@ def build (bld):
                        "contrib/securityLib/jsbn.js",
                        "contrib/securityLib/jsbn2.js"]
 
-        ndnjs = ["js/Closure.js",
+        ndnjs = ["js/browserify.js",
                  "js/WebSocketTransport.js",
-                 "js/browserify.js",
+                 "js/Closure.js",
                  "js/util/NDNProtocolDTags.js",
                  "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
