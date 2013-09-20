@@ -187,7 +187,7 @@ exports.createSign = function(alg) {
   obj.sign = function(keypem) {
     var rsa = new RSAKey();
     rsa.readPrivateKeyFromPEMString(keypem);
-    var signer = new KJUR.crypto.Signature({"alg": "SHA256withRSA", "prov": "cryptojs/jsrsa"});
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
     signer.initSign(rsa);
     for (var i = 0; i < this.arr.length; ++i)
       signer.updateHex(this.arr[i].toString('hex'));
@@ -242,7 +242,7 @@ exports.createVerify = function(alg) {
     key.fromPemString(keypem);
 
     var rsa = readPublicDER(key.publicToDER());
-    var signer = new KJUR.crypto.Signature({"alg": "SHA256withRSA", "prov": "cryptojs/jsrsa"});
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
       signer.updateHex(this.arr[i].toString('hex'));
