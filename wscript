@@ -86,6 +86,7 @@ def build (bld):
 
         ndnjs = ["js/browserify.js",
                  "js/WebSocketTransport.js",
+                 "js/browserifyTcpTransport.js",
                  "js/Closure.js",
                  "js/util/NDNProtocolDTags.js",
                  "js/util/NDNTime.js",

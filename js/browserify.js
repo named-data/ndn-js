@@ -252,6 +252,3 @@ exports.createVerify = function(alg) {
 
   return obj;
 };
-
-//XXX: pure hack
-exports.TcpTransport = WebSocketTransport;
