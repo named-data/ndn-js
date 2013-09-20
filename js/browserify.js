@@ -4,7 +4,7 @@
  */
 
 // Library namespace
-var ndn = {};
+var ndn = ndn || {};
 
 var exports = ndn;
 
