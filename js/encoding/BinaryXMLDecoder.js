@@ -5,6 +5,11 @@
  * See COPYING for copyright and distribution information.
  */
 
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('../util/NDNTime.js').NDNTime;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
+
 var XML_EXT = 0x00; 
 	
 var XML_TAG = 0x01; 
@@ -75,6 +80,8 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input){
 	this.input = input;
 	this.offset = 0;
 };
+
+exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
 BinaryXMLDecoder.prototype.initializeDecoding = function() {
 		//if (!this.input.markSupported()) {

@@ -4,6 +4,9 @@
  * This class represents PublisherPublicKeyDigest Objects
  */
 
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -18,6 +21,8 @@ var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){
  	 //else if( typeof _pkd == "PublicKey") ;//TODO...
     
 };
+
+exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
 
 PublisherPublicKeyDigest.prototype.from_ndnb = function( decoder) {		
 

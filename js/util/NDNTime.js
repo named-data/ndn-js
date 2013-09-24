@@ -4,6 +4,8 @@
  * This class represents NDNTime Objects
  */
 
+var LOG = require('../Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -17,6 +19,7 @@ var NDNTime = function NDNTime(input) {
 	}
 };
 
+exports.NDNTime = NDNTime;
 
 NDNTime.prototype.getJavascriptDate = function(){
 	var d = new Date();

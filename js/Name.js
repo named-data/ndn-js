@@ -4,6 +4,12 @@
  * This class represents a Name as an array of components where each is a byte array.
  */
  
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new Name from components.
  * 
@@ -35,6 +41,8 @@ var Name = function Name(components) {
 Name.prototype.getName = function() {
     return this.to_uri();
 };
+
+exports.Name = Name;
 
 /** Parse uri as a URI and return an array of Buffer components.
  */
@@ -187,7 +195,8 @@ Name.prototype.addSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
     var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-    segmentNumberComponent.set(segmentNumberBigEndian, 1);
+    segmentNumberComponent[0] = 0;
+    segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
     this.components.push(segmentNumberComponent);
     return this;
@@ -212,9 +221,7 @@ Name.prototype.cut = function (minusComponents) {
  * Return a new Buffer of the component at i.
  */
 Name.prototype.getComponent = function(i) {
-    var result = new Buffer(this.components[i].length);
-    result.set(this.components[i]);
-    return result;
+    return new Buffer(this.components[i]);
 }
 
 /**

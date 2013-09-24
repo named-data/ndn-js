@@ -4,6 +4,14 @@
  * This class represents Interest Objects
  */
 
+var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new Interest with the optional values.
  * 
@@ -38,6 +46,8 @@ var Interest = function Interest
 	this.nonce = nonce;	
 };
 
+exports.Interest = Interest;
+
 Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
@@ -48,40 +58,6 @@ Interest.ANSWER_STALE = 4;		// Stale answer OK
 Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeInterest.
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeInterest.
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-Interest.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeInterest(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this Interest.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-Interest.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeInterest(this, input);
-};
 
 /**
  * Return true if this.name.match(name) and the name conforms to the interest selectors.
@@ -129,6 +105,8 @@ Interest.prototype.clone = function() {
 var Exclude = function Exclude(values) { 
 	this.values = (values || []);
 }
+
+exports.Exclude = Exclude;
 
 Exclude.ANY = "*";
 
@@ -267,4 +245,41 @@ Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component
     }
 
     return 0;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeInterest.
+ */
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeInterest(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeInterest.
+ */
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
+  BinaryXmlWireFormat.encodeInterest(this, encoder);
+};
+
+/**
+ * Encode this Interest for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+Interest.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeInterest(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Interest.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+Interest.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeInterest(this, input);
 };

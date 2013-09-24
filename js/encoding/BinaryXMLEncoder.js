@@ -5,6 +5,13 @@
  * See COPYING for copyright and distribution information.
  */
 
+var LOG = require('../Log.js').Log.LOG;
+
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var DynamicBuffer = require('./DynamicBuffer.js').DynamicBuffer;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
+
 var XML_EXT = 0x00; 
 	
 var XML_TAG = 0x01; 
@@ -47,6 +54,8 @@ var BinaryXMLEncoder = function BinaryXMLEncoder(){
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
+
+exports.BinaryXMLEncoder = BinaryXMLEncoder;
 
 /**
  * Encode utf8Content as utf8.

@@ -11,6 +11,8 @@
 var WireFormat = function WireFormat() {
 };
 
+exports.WireFormat = WireFormat;
+
 /**
  * The override method in the derived class should encode the interest and return a Buffer.
  * @param {Interest} interest

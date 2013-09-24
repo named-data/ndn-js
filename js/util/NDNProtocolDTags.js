@@ -126,6 +126,8 @@ var NDNProtocolDTags = {
 	 NDNPROTOCOL_DATA_UNIT : "NDNProtocolDataUnit"
 };
 
+exports.NDNProtocolDTags = NDNProtocolDTags;
+
 var NDNProtocolDTagsStrings = [
 	null, null, null, null, null, null, null, null, null, null, null,
 	null, null,
@@ -150,7 +152,4 @@ var NDNProtocolDTagsStrings = [
     "SyncVersion", "SyncNodeElements", "SyncContentHash", "SyncLeafCount", "SyncTreeDepth", "SyncByteCount",
     "ConfigSlice", "ConfigSliceList", "ConfigSliceOp" ];
 
-
-//TESTING
-//console.log(exports.NDNProtocolDTagsStrings[17]);
-
+exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;

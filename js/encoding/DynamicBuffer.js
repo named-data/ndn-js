@@ -19,6 +19,8 @@ var DynamicBuffer = function DynamicBuffer(length) {
     this.length = length;
 };
 
+exports.DynamicBuffer = DynamicBuffer;
+
 /**
  * Ensure that this.array has the length, reallocate and copy if necessary.
  * Update this.length which may be greater than length.
@@ -34,17 +36,22 @@ DynamicBuffer.prototype.ensureLength = function(length) {
         newLength = length;
     
     var newArray = new Buffer(newLength);
-    newArray.set(this.array);
+    this.array.copy(newArray);
     this.array = newArray;
     this.length = newLength;
 };
 
 /**
- * Call this.array.set(value, offset), reallocating if necessary. 
+ * Copy the value to this.array at offset, reallocating if necessary. 
  */
 DynamicBuffer.prototype.set = function(value, offset) {
     this.ensureLength(value.length + offset);
-    this.array.set(value, offset);
+    
+    if (typeof value == 'object' && value instanceof Buffer)
+      value.copy(this.array, offset);
+    else
+      // Need to make value a Buffer to copy.
+      new Buffer(value).copy(this.array, offset);
 };
 
 /**

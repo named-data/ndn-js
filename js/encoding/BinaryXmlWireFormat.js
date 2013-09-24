@@ -4,6 +4,15 @@
  * This class represents Interest Objects
  */
 
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var WireFormat = require('./WireFormat.js').WireFormat;
+var Name = require('../Name.js').Name;
+var Exclude = require('../Interest.js').Exclude;
+var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./DataUtils.js').DataUtils;
+
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
  * @constructor
@@ -12,6 +21,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
+
+exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
+BinaryXmlWireFormat.Debug1 = Exclude.ANY;
 
 /**
  * Encode the interest and return a Buffer.
