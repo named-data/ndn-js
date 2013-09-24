@@ -11,6 +11,7 @@
 var DataUtils = function DataUtils(){
 };
 
+exports.DataUtils = DataUtils;
 
 /*
  * NOTE THIS IS CURRENTLY NOT BEING USED
@@ -173,17 +174,7 @@ DataUtils.stringToUtf8Array = function(str) {
  * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
  */
 DataUtils.concatArrays = function(arrays) {
-  var totalLength = 0;
-	for (var i = 0; i < arrays.length; ++i)
-    totalLength += arrays[i].length;
-    
-  var result = new Buffer(totalLength);
-  var offset = 0;
-	for (var i = 0; i < arrays.length; ++i) {
-     result.set(arrays[i], offset);
-     offset += arrays[i].length;
-  }
-  return result;  
+  return Buffer.concat(arrays);
 }
  
 // TODO: Take Buffer and use TextDecoder when available.
