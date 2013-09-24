@@ -93,7 +93,10 @@ var Buffer = function Buffer(data, format) {
   };
 
   obj.__proto__.copy = function(target, targetStart) {
-    target.set(this, targetStart);
+    if (targetStart !== undefined)
+      target.set(this, targetStart);
+    else
+      target.set(this);
   };
 
   return obj;
