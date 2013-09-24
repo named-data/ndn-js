@@ -85,6 +85,7 @@ def build (bld):
                        "contrib/securityLib/jsbn2.js"]
 
         ndnjs = ["js/browserify.js",
+                 "js/Log.js",
                  "js/WebSocketTransport.js",
                  "js/browserifyTcpTransport.js",
                  "js/Closure.js",
