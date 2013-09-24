@@ -17,11 +17,8 @@ function testName() {
     var result = document.getElementById('result');
     result.innerHTML = "";
     
-    var comp1 = new Buffer(1); 
-    comp1.set(['.'.charCodeAt(0)]);
-    
-    var comp2 = new Buffer(4); 
-    comp2.set([0x00, 0x01, 0x02, 0x03]);
+    var comp1 = new Buffer(['.'.charCodeAt(0)]);
+    var comp2 = new Buffer([0x00, 0x01, 0x02, 0x03]);
 
     // \u00E9 is e with accent.
     var entree = "entr\u00E9e";
@@ -37,7 +34,7 @@ function testName() {
     else
         result.innerHTML += "ERROR: got " + name1Uri + ", expected " + name1UriExpected + " .<br/>";
 
-    result.innerHTML += "Compare with same Name from '" + entree + "', '.' and ArrayBuffer:<br/>";
+    result.innerHTML += "Compare with same Name from '" + entree + "', '.' and Buffer:<br/>";
     // Equivalent with name1
     var name2 = new Name([entree, ".", comp2]);
     if (name2.components.length != name1.components.length)
@@ -48,7 +45,7 @@ function testName() {
         for (var i = 0; i < name1.components.length; ++i) {
             if (!DataUtils.arraysEqual(name1.getComponent(i), name2.getComponent(i))) {
                 allEqual = false;
-                result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
+                result.innerHTML += "ERROR: Compare with " + name2.to_uri() + ": Names differ at component at index " + i + ".<br/>";
             }
         }
         if (allEqual)
