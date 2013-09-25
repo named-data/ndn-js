@@ -7,6 +7,7 @@
  */
 
 var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
 
 var XML_EXT = 0x00; 
 var XML_TAG = 0x01; 
