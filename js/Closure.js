@@ -70,3 +70,5 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
+
+exports.UpcallInfo = UpcallInfo;

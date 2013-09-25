@@ -4,16 +4,32 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var Interest = require('./Interest.js').Interest;
+var ContentObject = require('./ContentObject.js').ContentObject;
+var ForwardingEntry = require('./ForwardingEntry.js').ForwardingEntry;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var Key = require('./Key.js').Key;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var Closure = require('./Closure.js').Closure;
+var UpcallInfo = require('./Closure.js').UpcallInfo;
+var TcpTransport = require('./TcpTransport.js').TcpTransport;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new NDN with the given settings.
  * This throws an exception if NDN.supported is false.
  * @constructor
  * @param {Object} settings if not null, an associative array with the following defaults:
  * {
- *   getTransport: function() { return new WebSocketTransport(); },
+ *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
+ *              OR function() { return new TcpTransport(); },       // If in Node.js.
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
- *   port: 9696,
+ *   port: 9696, // If in the browser.
+ *      OR 9695, // If in Node.js.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -24,11 +40,12 @@ var NDN = function NDN(settings) {
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
-  var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+  // For the browser, browserifyTcpTransport.js replaces TcpTransport with WebSocketTransport.
+  var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || 9696);
+	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 9695));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
@@ -36,6 +53,8 @@ var NDN = function NDN(settings) {
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 	this.ndndid = null;
 };
+
+exports.NDN = NDN;
 
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ndnd opened
@@ -216,7 +235,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
-    var binaryInterest = encodeToBinaryInterest(interest);
+    var binaryInterest = interest.encode();
     var thisNDN = this;    
 	//TODO: check local content store first
 	if (closure != null) {
@@ -330,14 +349,17 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
-	var bytes = encodeForwardingEntry(fe);
+  	
+  var encoder = new BinaryXMLEncoder();
+	fe.to_ndnb(encoder);
+	var bytes = encoder.getReducedOstream();
 		
 	var si = new SignedInfo();
 	si.setFields();
 		
 	var co = new ContentObject(new Name(), si, bytes); 
 	co.sign();
-	var coBinary = encodeToBinaryContentObject(co);
+	var coBinary = co.encode();;
 		
 	//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
 	var nodename = this.ndndid;
@@ -350,7 +372,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
     var csEntry = new CSEntry(name.getName(), closure);
 	NDN.CSTable.push(csEntry);
     
-    this.transport.send(encodeToBinaryInterest(interest));
+    this.transport.send(interest.encode());
 };
 
 /**
@@ -376,7 +398,7 @@ NDN.prototype.onReceivedElement = function(element) {
 			var info = new UpcallInfo(this, interest, 0, null);
 			var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
 			if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-				this.transport.send(encodeToBinaryContentObject(info.contentObject));
+				this.transport.send(info.contentObject.encode());
 		}				
 	} else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
 		if (LOG > 3) console.log('ContentObject packet received.');
@@ -552,6 +574,14 @@ NDN.prototype.connectAndExecute = function(onConnected) {
   
     this.reconnectAndExpressInterest
         (interest, new NDN.ConnectClosure(this, onConnected, timerID));
+};
+
+/**
+ * This is called by the Transport when the connection is closed by the remote host.
+ */
+NDN.prototype.closeByTransport = function () {
+    this.readyStatus = NDN.CLOSED;
+    this.onclose();
 };
 
 NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {

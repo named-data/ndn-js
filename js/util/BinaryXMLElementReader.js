@@ -3,6 +3,7 @@
  * See COPYING for copyright and distribution information.
  */
 
+var DataUtils = require('../encoding/DataUtils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
 
 /**

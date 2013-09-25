@@ -531,6 +531,8 @@ unsignedLongToByteArray= function( value) {
  * This is the closure class for use in expressInterest to re express with exponential falloff.
  */
 
+var Closure = require('../Closure.js').Closure;
+
 /**
  * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
  *   by expressing the interest again with double the interestLifetime. If the interesLifetime goes
@@ -552,6 +554,8 @@ var ExponentialReExpressClosure = function ExponentialReExpressClosure
     settings = (settings || {});
 	this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
 };
+
+exports.ExponentialReExpressClosure = ExponentialReExpressClosure;
 
 /**
  * Wrap this.callerClosure to responds to UPCALL_INTEREST_TIMED_OUT
@@ -579,6 +583,68 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
         console.log("ExponentialReExpressClosure.upcall exception: " + ex);
         return Closure.RESULT_ERR;
     }
+};
+/**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * Encapsulate a Buffer and support dynamic reallocation.
+ */
+
+/**
+ * Create a DynamicBuffer where this.array is a Buffer of size length.
+ * The methods will update this.length.
+ * To access the array, use this.array or call slice.
+ * @constructor
+ * @param {number} length the initial length of the array.  If null, use a default.
+ */
+var DynamicBuffer = function DynamicBuffer(length) {
+	if (!length)
+        length = 16;
+    
+    this.array = new Buffer(length);
+    this.length = length;
+};
+
+exports.DynamicBuffer = DynamicBuffer;
+
+/**
+ * Ensure that this.array has the length, reallocate and copy if necessary.
+ * Update this.length which may be greater than length.
+ */
+DynamicBuffer.prototype.ensureLength = function(length) {
+    if (this.array.length >= length)
+        return;
+    
+    // See if double is enough.
+    var newLength = this.array.length * 2;
+    if (length > newLength)
+        // The needed length is much greater, so use it.
+        newLength = length;
+    
+    var newArray = new Buffer(newLength);
+    this.array.copy(newArray);
+    this.array = newArray;
+    this.length = newLength;
+};
+
+/**
+ * Copy the value to this.array at offset, reallocating if necessary. 
+ */
+DynamicBuffer.prototype.set = function(value, offset) {
+    this.ensureLength(value.length + offset);
+    
+    if (typeof value == 'object' && value instanceof Buffer)
+      value.copy(this.array, offset);
+    else
+      // Need to make value a Buffer to copy.
+      new Buffer(value).copy(this.array, offset);
+};
+
+/**
+ * Return this.array.slice(begin, end);
+ */
+DynamicBuffer.prototype.slice = function(begin, end) {
+    return this.array.slice(begin, end);
 };
 /**
  * This class contains utilities to help parse the data
@@ -853,68 +919,6 @@ DataUtils.shuffle = function(array) {
         array[j] = temp;
     }
 };
-/**
- * @author: Jeff Thompson
- * See COPYING for copyright and distribution information.
- * Encapsulate a Buffer and support dynamic reallocation.
- */
-
-/**
- * Create a DynamicBuffer where this.array is a Buffer of size length.
- * The methods will update this.length.
- * To access the array, use this.array or call slice.
- * @constructor
- * @param {number} length the initial length of the array.  If null, use a default.
- */
-var DynamicBuffer = function DynamicBuffer(length) {
-	if (!length)
-        length = 16;
-    
-    this.array = new Buffer(length);
-    this.length = length;
-};
-
-exports.DynamicBuffer = DynamicBuffer;
-
-/**
- * Ensure that this.array has the length, reallocate and copy if necessary.
- * Update this.length which may be greater than length.
- */
-DynamicBuffer.prototype.ensureLength = function(length) {
-    if (this.array.length >= length)
-        return;
-    
-    // See if double is enough.
-    var newLength = this.array.length * 2;
-    if (length > newLength)
-        // The needed length is much greater, so use it.
-        newLength = length;
-    
-    var newArray = new Buffer(newLength);
-    this.array.copy(newArray);
-    this.array = newArray;
-    this.length = newLength;
-};
-
-/**
- * Copy the value to this.array at offset, reallocating if necessary. 
- */
-DynamicBuffer.prototype.set = function(value, offset) {
-    this.ensureLength(value.length + offset);
-    
-    if (typeof value == 'object' && value instanceof Buffer)
-      value.copy(this.array, offset);
-    else
-      // Need to make value a Buffer to copy.
-      new Buffer(value).copy(this.array, offset);
-};
-
-/**
- * Return this.array.slice(begin, end);
- */
-DynamicBuffer.prototype.slice = function(begin, end) {
-    return this.array.slice(begin, end);
-};
 /*
  * Date Format 1.2.3
  * (c) 2007-2009 Steven Levithan <stevenlevithan.com>
@@ -1050,7 +1054,7 @@ Date.prototype.format = function (mask, utc) {
 var LOG = require('../Log.js').Log.LOG;
 
 var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var DynamicBuffer = require('./DynamicBuffer.js').DynamicBuffer;
+var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
 var DataUtils = require('./DataUtils.js').DataUtils;
 var LOG = require('../Log.js').Log.LOG;
 
@@ -1386,8 +1390,7 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
   if (binarydate.length % 2 == 1)
     binarydate = '0' + binarydate;
 
-  // Hack toNumbers by appending a 0 which is ignored.
-	var binarydate =  DataUtils.toNumbers( binarydate + '0') ;
+	var binarydate =  DataUtils.toNumbers( binarydate) ;
 
 	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');
@@ -2073,6 +2076,7 @@ ContentDecodingException.prototype.name = "ContentDecodingException";
  */
 
 var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
 
 var XML_EXT = 0x00; 
 var XML_TAG = 0x01; 
@@ -2316,6 +2320,7 @@ WireFormat.prototype.decodeContentObject = function(contentObject, input) {
  * See COPYING for copyright and distribution information.
  */
 
+var DataUtils = require('../encoding/DataUtils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
 
 /**
@@ -2372,6 +2377,9 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
  * See COPYING for copyright and distribution information.
  */
 
+var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -2388,6 +2396,8 @@ var WebSocketTransport = function WebSocketTransport() {
           "E.ws.ndn.ucla.edu"],
          9696);
 };
+
+exports.WebSocketTransport = WebSocketTransport;
 
 /**
  * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
@@ -2417,7 +2427,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		} else if (result instanceof ArrayBuffer) {
 	        var bytearray = new Buffer(result);
 	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 			
 			try {
                 // Find the end of the binary XML element and call ndn.onReceivedElement.
@@ -2506,6 +2516,8 @@ var Closure = function Closure() {
     
 };
 
+exports.Closure = Closure;
+
 // Upcall result
 Closure.RESULT_ERR               = -1; // upcall detected an error
 Closure.RESULT_OK                =  0; // normal upcall return
@@ -2552,6 +2564,8 @@ UpcallInfo.prototype.toString = function() {
 	ret += "\nContentObject: " + this.contentObject;
 	return ret;
 }
+
+exports.UpcallInfo = UpcallInfo;
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -2618,6 +2632,9 @@ PublisherPublicKeyDigest.prototype.validate =function() {
  * This class represents Publisher and PublisherType Objects
  */
 
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNProtocolDTagsStrings = require('./util/NDNProtocolDTags.js').NDNProtocolDTagsStrings;
+
 /**
  * @constructor
  */
@@ -2659,6 +2676,7 @@ var PublisherID = function PublisherID() {
     
 };
 
+exports.PublisherID = PublisherID;
 
 PublisherID.prototype.from_ndnb = function(decoder) {
 		
@@ -3089,8 +3107,158 @@ Name.prototype.match = function(name) {
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * @constructor
+ */
+var KeyManager = function KeyManager(){
+
+/*	
+//Certificate
+
+this.certificate = 'MIIBmzCCAQQCCQC32FyQa61S7jANBgkqhkiG9w0BAQUFADASMRAwDgYDVQQDEwd'+
+
+'heGVsY2R2MB4XDTEyMDQyODIzNDQzN1oXDTEyMDUyODIzNDQzN1owEjEQMA4GA1'+
+
+'UEAxMHYXhlbGNkdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA4X0wp9goq'+
+
+'xuECxdULcr2IHr9Ih4Iaypg0Wy39URIup8/CLzQmdsh3RYqd55hqonu5VTTpH3i'+
+
+'MLx6xZDVJAZ8OJi7pvXcQ2C4Re2kjL2c8SanI0RfDhlS1zJadfr1VhRPmpivcYa'+
+
+'wJ4aFuOLAi+qHFxtN7lhcGCgpW1OV60oXd58CAwEAATANBgkqhkiG9w0BAQUFAA'+
+
+'OBgQDLOrA1fXzSrpftUB5Ro6DigX1Bjkf7F5Bkd69hSVp+jYeJFBBlsILQAfSxU'+
+
+'ZPQtD+2Yc3iCmSYNyxqu9PcufDRJlnvB7PG29+L3y9lR37tetzUV9eTscJ7rdp8'+
+
+'Wt6AzpW32IJ/54yKNfP7S6ZIoIG+LP6EIxq6s8K1MXRt8uBJKw==';
+
+
+//this.publicKey = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQAB';
+this.publicKey ='30819F300D06092A864886F70D010101050003818D0030818902818100E17D30A7D828AB1B840B17542DCAF6207AFD221E086B2A60D16CB7F54448BA9F3F08BCD099DB21DD162A779E61AA89EEE554D3A47DE230BC7AC590D524067C3898BBA6F5DC4360B845EDA48CBD9CF126A723445F0E1952D7325A75FAF556144F9A98AF7186B0278685B8E2C08BEA87171B4DEE585C1828295B5395EB4A17779F0203010001';
+//Private Key
+
+this.privateKey ='MIICXQIBAAKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQABAoGAGkv6T6jC3WmhFZYL6CdCWvlc6gysmKrhjarrLTxgavtFY6R5g2ft5BXAsCCVbUkWxkIFSKqxpVNl0gKZCNGEzPDN6mHJOQI/h0rlxNIHAuGfoAbCzALnqmyZivhJAPGijAyKuU9tczsst5+Kpn+bn7ehzHQuj7iwJonS5WbojqECQQD851K8TpW2GrRizNgG4dx6orZxAaon/Jnl8lS7soXhllQty7qG+oDfzznmdMsiznCqEABzHUUKOVGE9RWPN3aRAkEA5D/w9N55d0ibnChFJlc8cUAoaqH+w+U3oQP2Lb6AZHJpLptN4y4b/uf5d4wYU5/i/gC7SSBH3wFhh9bjRLUDLwJAVOx8vN0Kqt7myfKNbCo19jxjVSlA8TKCn1Oznl/BU1I+rC4oUaEW25DjmX6IpAR8kq7S59ThVSCQPjxqY/A08QJBAIRaF2zGPITQk3r/VumemCvLWiRK/yG0noc9dtibqHOWbCtcXtOm/xDWjq+lis2i3ssOvYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaMhndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861';
+*/
+
+	// Public Key
+    this.publicKey = 
+	"-----BEGIN PUBLIC KEY-----\n" +
+	"MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDNpgZFC23yGSLsMo8mzTcmdni\n" +
+	"pkUHI+i8CYagTEqHO+PnejF9Ep/D+MBvEtPXHSgExsDCHP8X7B6If1df58OWXB9G\n" +
+	"PnXUsAsjKKXgOaKoMJr9NZXPqlBbJSrT0h5590hCm2ePPUVkvJKsOX6gCFnptbLz\n" +
+	"F7pvb3zKDc+zXjyHPwIDAQAB\n" +
+	"-----END PUBLIC KEY-----";
+	// Private Key
+    this.privateKey = 
+	"-----BEGIN RSA PRIVATE KEY-----\n" +
+	"MIICXAIBAAKBgQDDNpgZFC23yGSLsMo8mzTcmdnipkUHI+i8CYagTEqHO+PnejF9\n" +
+	"Ep/D+MBvEtPXHSgExsDCHP8X7B6If1df58OWXB9GPnXUsAsjKKXgOaKoMJr9NZXP\n" +
+	"qlBbJSrT0h5590hCm2ePPUVkvJKsOX6gCFnptbLzF7pvb3zKDc+zXjyHPwIDAQAB\n" +
+	"AoGBALR4BTayI+3SkblekChlaAJFLVxOUGRgeylTOSV6QjAxWulFWvkAvbijf+tv\n" +
+	"oW4uIy//OnZ57g6EmFmiN/mOvo3meBvWijHxUJG1suKrEgG8Gm0LZn0CyycTtutl\n" +
+	"ziSDJ3F4whEZfuqciAFOTTgAXPRHMa/cZbSDo4aGR5mbqE0ZAkEA3+HmB/1SgwMB\n" +
+	"bopCmkh+sslFhtD2xUxlXnlC3ur4rOmjtH7YE0Q2UDsJFj9eg/BA4fQ/orh9usGv\n" +
+	"AVph7o6lswJBAN830Xc7cjxeF3vQyJk1vqqPf15FGvkraq7gHb5MPAtofh78PtzD\n" +
+	"+hyblvWAYBstR/K6up1KG+LP6RXA43q7qkUCQA49540wjzQoV8n5X51C6VRkO1kF\n" +
+	"J/2LC5PD8P4PQnx1bGWKACLRnwbhioVwyIlqGiaFjBrE07KyqXhTkJFFX8MCQAjW\n" +
+	"qfmhpfVT+HQToU3HvgP86Jsv+1Bwcqn3/9WAKUR+X7gUXtzY+bdWRdT0v1l0Iowu\n" +
+	"7qK5w37oop8U4y0B700CQBKRizBt1Nc02UMDzdamQsgnRjuIjlfmryfZpemyx238\n" +
+	"Q0s2+cKlqbfDOUY/CAj/z1M6RaISQ0TawCX9NIGa9GI=\n" +
+	"-----END RSA PRIVATE KEY-----";
+
+
+/*
+	this.certificate = 
+			'MIIBvTCCASYCCQD55fNzc0WF7TANBgkqhkiG9w0BAQUFADAjMQswCQYDVQQGEwJK'+
+			'UDEUMBIGA1UEChMLMDAtVEVTVC1SU0EwHhcNMTAwNTI4MDIwODUxWhcNMjAwNTI1'+
+			'MDIwODUxWjAjMQswCQYDVQQGEwJKUDEUMBIGA1UEChMLMDAtVEVTVC1SU0EwgZ8w'+
+			'DQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBANGEYXtfgDRlWUSDn3haY4NVVQiKI9Cz'+
+			'Thoua9+DxJuiseyzmBBe7Roh1RPqdvmtOHmEPbJ+kXZYhbozzPRbFGHCJyBfCLzQ'+
+			'fVos9/qUQ88u83b0SFA2MGmQWQAlRtLy66EkR4rDRwTj2DzR4EEXgEKpIvo8VBs/'+
+			'3+sHLF3ESgAhAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAEZ6mXFFq3AzfaqWHmCy1'+
+			'ARjlauYAa8ZmUFnLm0emg9dkVBJ63aEqARhtok6bDQDzSJxiLpCEF6G4b/Nv/M/M'+
+			'LyhP+OoOTmETMegAVQMq71choVJyOFE5BtQa6M/lCHEOya5QUfoRF2HF9EjRF44K'+
+			'3OK+u3ivTSj3zwjtpudY5Xo=';
+	
+	this.privateKey =
+			'MIICWwIBAAKBgQDRhGF7X4A0ZVlEg594WmODVVUIiiPQs04aLmvfg8SborHss5gQ'+
+			'Xu0aIdUT6nb5rTh5hD2yfpF2WIW6M8z0WxRhwicgXwi80H1aLPf6lEPPLvN29EhQ'+
+			'NjBpkFkAJUbS8uuhJEeKw0cE49g80eBBF4BCqSL6PFQbP9/rByxdxEoAIQIDAQAB'+
+			'AoGAA9/q3Zk6ib2GFRpKDLO/O2KMnAfR+b4XJ6zMGeoZ7Lbpi3MW0Nawk9ckVaX0'+
+			'ZVGqxbSIX5Cvp/yjHHpww+QbUFrw/gCjLiiYjM9E8C3uAF5AKJ0r4GBPl4u8K4bp'+
+			'bXeSxSB60/wPQFiQAJVcA5xhZVzqNuF3EjuKdHsw+dk+dPECQQDubX/lVGFgD/xY'+
+			'uchz56Yc7VHX+58BUkNSewSzwJRbcueqknXRWwj97SXqpnYfKqZq78dnEF10SWsr'+
+			'/NMKi+7XAkEA4PVqDv/OZAbWr4syXZNv/Mpl4r5suzYMMUD9U8B2JIRnrhmGZPzL'+
+			'x23N9J4hEJ+Xh8tSKVc80jOkrvGlSv+BxwJAaTOtjA3YTV+gU7Hdza53sCnSw/8F'+
+			'YLrgc6NOJtYhX9xqdevbyn1lkU0zPr8mPYg/F84m6MXixm2iuSz8HZoyzwJARi2p'+
+			'aYZ5/5B2lwroqnKdZBJMGKFpUDn7Mb5hiSgocxnvMkv6NjT66Xsi3iYakJII9q8C'+
+			'Ma1qZvT/cigmdbAh7wJAQNXyoizuGEltiSaBXx4H29EdXNYWDJ9SS5f070BRbAIl'+
+			'dqRh3rcNvpY6BKJqFapda1DjdcncZECMizT/GMrc1w==';
+			
+			*/
+};
+
+/*
+KeyManager.prototype.verify = function verify(message,signature){
+	
+	var input = message;
+
+	var  _PEM_X509CERT_STRING_ = this.certificate;
+	
+	var x509 = new X509();
+	
+	x509.readCertPEM(_PEM_X509CERT_STRING_);
+	
+	var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
+	
+	return result;
+};
+
+KeyManager.prototype.sign= function sign(message){
+	
+	var input = message;
+		
+	var  _PEM_PRIVATE_KEY_STRING_ = this.privateKey;
+	
+	var rsa = new RSAKey();
+	
+	rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
+	
+	var hSig = rsa.signString(input, "sha256");
+	
+	return hSig;
+
+};
+
+*/
+
+var globalKeyManager = globalKeyManager || new KeyManager();
+exports.globalKeyManager = globalKeyManager;
+
+//var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
+
+
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
  * This class represents ContentObject Objects
  */
+
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('./util/NDNTime.js').NDNTime;
+var Key = require('./Key.js').Key;
+var KeyLocator = require('./Key.js').KeyLocator;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var globalKeyManager = require('./security/KeyManager.js').globalKeyManager;
+var LOG = require('./Log.js').Log.LOG;
 
 /**
  * Create a new ContentObject with the optional values.
@@ -3123,6 +3291,8 @@ var ContentObject = function ContentObject(name, signedInfo, content) {
 	
 	this.rawSignatureData = null;
 };
+
+exports.ContentObject = ContentObject;
 
 ContentObject.prototype.sign = function(){
     var n1 = this.encodeObject(this.name);
@@ -3181,40 +3351,6 @@ ContentObject.prototype.saveRawData = function(bytes){
     this.rawSignatureData = new Buffer(sigBits);
 };
 
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
- */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
- */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
-};
-
-/**
- * Encode this ContentObject for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-ContentObject.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this ContentObject.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-ContentObject.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
-};
-
 ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
 
 /**
@@ -3222,10 +3358,12 @@ ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.Cont
  * @constructor
  */
 var Signature = function Signature(witness, signature, digestAlgorithm) {
-  this.Witness = witness;
+  this.witness = witness;
 	this.signature = signature;
 	this.digestAlgorithm = digestAlgorithm
 };
+
+exports.Signature = Signature;
 
 Signature.prototype.from_ndnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
@@ -3238,7 +3376,7 @@ Signature.prototype.from_ndnb =function( decoder) {
 		}
 		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
 			if(LOG>4)console.log('WITNESS FOUND');
-			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+			this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
@@ -3263,9 +3401,9 @@ Signature.prototype.to_ndnb= function( encoder){
 		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
 	}
 	
-	if (null != this.Witness) {
+	if (null != this.witness) {
 		// needs to handle null witness
-		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
+		encoder.writeElement(NDNProtocolDTags.Witness, this.witness);
 	}
 
 	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
@@ -3299,6 +3437,8 @@ var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshn
     
   this.setFields();
 };
+
+exports.SignedInfo = SignedInfo;
 
 SignedInfo.prototype.setFields = function(){
 	//BASE64 -> RAW STRING
@@ -3469,6 +3609,43 @@ SignedInfo.prototype.validate = function() {
 		if (null ==this.publisher || null==this.timestamp ||null== this.locator)
 			return false;
 		return true;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ */
+ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ */
+ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+};
+
+/**
+ * Encode this ContentObject for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+ContentObject.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeContentObject(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this ContentObject.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+ContentObject.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeContentObject(this, input);
 };
 /**
  * @author: Meki Cheraoui
@@ -3761,6 +3938,11 @@ Interest.prototype.decode = function(input, wireFormat) {
  * This class represents Key Objects
  */
 
+var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherID = require('./PublisherID.js').PublisherID;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -3774,6 +3956,7 @@ var Key = function Key() {
     this.privateKeyPem = null;    // String
 };
 
+exports.Key = Key;
 
 /**
  * Helper functions to read Key fields
@@ -3886,6 +4069,8 @@ var KeyLocatorType = {
 	KEYNAME:3
 };
 
+exports.KeyLocatorType = KeyLocatorType;
+
 /**
  * @constructor
  */
@@ -3905,6 +4090,8 @@ var KeyLocator = function KeyLocator(input,type) {
    	this.certificate = input;
   }
 };
+
+exports.KeyLocator = KeyLocator;
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
@@ -4016,6 +4203,8 @@ var KeyName = function KeyName() {
 
 };
 
+exports.KeyName = KeyName;
+
 KeyName.prototype.from_ndnb=function( decoder){
 	
 
@@ -4062,7 +4251,8 @@ KeyName.prototype.validate = function() {
  * This class represents Face Instances
  */
 
-var NetworkProtocol = { TCP:6, UDP:17};
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
 
 /**
  * @constructor
@@ -4079,6 +4269,10 @@ var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, face
 	this.multicastTTL =multicastTTL;
 	this.freshnessSeconds = freshnessSeconds;
 };
+
+exports.FaceInstance = FaceInstance;
+
+FaceInstance.NetworkProtocol = { TCP:6, UDP:17};
 
 /**
  * Used by NetworkObject to decode the object from a network stream.
@@ -4111,13 +4305,13 @@ FaceInstance.prototype.from_ndnb = function(//XMLDecoder
 		
 		this.ipProto = null;
 		
-		if (NetworkProtocol.TCP == pI) {
+		if (FaceInstance.NetworkProtocol.TCP == pI) {
 			
-			this.ipProto = NetworkProtocol.TCP;
+			this.ipProto = FaceInstance.NetworkProtocol.TCP;
 			
-		} else if (NetworkProtocol.UDP == pI) {
+		} else if (FaceInstance.NetworkProtocol.UDP == pI) {
 			
-			this.ipProto = NetworkProtocol.UDP;
+			this.ipProto = FaceInstance.NetworkProtocol.UDP;
 			
 		} else {
 			
@@ -4205,6 +4399,10 @@ FaceInstance.prototype.getElementLabel = function() {
  * This class represents Forwarding Entries
  */
 
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var Name = require('./Name.js').Name;
+
 /**
  * Create a new ForwardingEntry with the optional arguments.
  * @constructor
@@ -4223,6 +4421,8 @@ var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceI
 	this.flags = flags;
 	this.lifetime = lifetime;
 };
+
+exports.ForwardingEntry = ForwardingEntry;
 
 ForwardingEntry.prototype.from_ndnb =function(
 	//XMLDecoder 
@@ -4295,7 +4495,6 @@ var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
 var WireFormat = require('./WireFormat.js').WireFormat;
 var Name = require('../Name.js').Name;
-var Exclude = require('../Interest.js').Exclude;
 var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./DataUtils.js').DataUtils;
 
@@ -4309,7 +4508,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
 };
 
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
-BinaryXmlWireFormat.Debug1 = Exclude.ANY;
+
+// Default object.
+BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
  * Encode the interest and return a Buffer.
@@ -4353,9 +4554,6 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, inpu
   BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
 };
 
-// Default object.
-BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
-
 /**
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
@@ -4396,6 +4594,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 		
 	encoder.writeEndElement();
 };
+
+var Exclude = require('../Interest.js').Exclude;
 
 /**
  * Use the decoder to place the result in interest.
@@ -4490,6 +4690,9 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	contentObject.saveRawData(encoder.ostream);	
 };
 
+var Signature = require('../ContentObject.js').Signature;
+var SignedInfo = require('../ContentObject.js').SignedInfo;
+
 /**
  * Use the decoder to place the result in contentObject.
  * @param {ContentObject} contentObject
@@ -4527,281 +4730,20 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
 	contentObject.saveRawData(decoder.input);
 };
 /**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- */
-
-/**
- * @constructor
- */
-var KeyManager = function KeyManager(){
-
-/*	
-//Certificate
-
-this.certificate = 'MIIBmzCCAQQCCQC32FyQa61S7jANBgkqhkiG9w0BAQUFADASMRAwDgYDVQQDEwd'+
-
-'heGVsY2R2MB4XDTEyMDQyODIzNDQzN1oXDTEyMDUyODIzNDQzN1owEjEQMA4GA1'+
-
-'UEAxMHYXhlbGNkdjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA4X0wp9goq'+
-
-'xuECxdULcr2IHr9Ih4Iaypg0Wy39URIup8/CLzQmdsh3RYqd55hqonu5VTTpH3i'+
-
-'MLx6xZDVJAZ8OJi7pvXcQ2C4Re2kjL2c8SanI0RfDhlS1zJadfr1VhRPmpivcYa'+
-
-'wJ4aFuOLAi+qHFxtN7lhcGCgpW1OV60oXd58CAwEAATANBgkqhkiG9w0BAQUFAA'+
-
-'OBgQDLOrA1fXzSrpftUB5Ro6DigX1Bjkf7F5Bkd69hSVp+jYeJFBBlsILQAfSxU'+
-
-'ZPQtD+2Yc3iCmSYNyxqu9PcufDRJlnvB7PG29+L3y9lR37tetzUV9eTscJ7rdp8'+
-
-'Wt6AzpW32IJ/54yKNfP7S6ZIoIG+LP6EIxq6s8K1MXRt8uBJKw==';
-
-
-//this.publicKey = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQAB';
-this.publicKey ='30819F300D06092A864886F70D010101050003818D0030818902818100E17D30A7D828AB1B840B17542DCAF6207AFD221E086B2A60D16CB7F54448BA9F3F08BCD099DB21DD162A779E61AA89EEE554D3A47DE230BC7AC590D524067C3898BBA6F5DC4360B845EDA48CBD9CF126A723445F0E1952D7325A75FAF556144F9A98AF7186B0278685B8E2C08BEA87171B4DEE585C1828295B5395EB4A17779F0203010001';
-//Private Key
-
-this.privateKey ='MIICXQIBAAKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQABAoGAGkv6T6jC3WmhFZYL6CdCWvlc6gysmKrhjarrLTxgavtFY6R5g2ft5BXAsCCVbUkWxkIFSKqxpVNl0gKZCNGEzPDN6mHJOQI/h0rlxNIHAuGfoAbCzALnqmyZivhJAPGijAyKuU9tczsst5+Kpn+bn7ehzHQuj7iwJonS5WbojqECQQD851K8TpW2GrRizNgG4dx6orZxAaon/Jnl8lS7soXhllQty7qG+oDfzznmdMsiznCqEABzHUUKOVGE9RWPN3aRAkEA5D/w9N55d0ibnChFJlc8cUAoaqH+w+U3oQP2Lb6AZHJpLptN4y4b/uf5d4wYU5/i/gC7SSBH3wFhh9bjRLUDLwJAVOx8vN0Kqt7myfKNbCo19jxjVSlA8TKCn1Oznl/BU1I+rC4oUaEW25DjmX6IpAR8kq7S59ThVSCQPjxqY/A08QJBAIRaF2zGPITQk3r/VumemCvLWiRK/yG0noc9dtibqHOWbCtcXtOm/xDWjq+lis2i3ssOvYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaMhndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861';
-*/
-
-	// Public Key
-    this.publicKey = 
-	"-----BEGIN PUBLIC KEY-----\n" +
-	"MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDNpgZFC23yGSLsMo8mzTcmdni\n" +
-	"pkUHI+i8CYagTEqHO+PnejF9Ep/D+MBvEtPXHSgExsDCHP8X7B6If1df58OWXB9G\n" +
-	"PnXUsAsjKKXgOaKoMJr9NZXPqlBbJSrT0h5590hCm2ePPUVkvJKsOX6gCFnptbLz\n" +
-	"F7pvb3zKDc+zXjyHPwIDAQAB\n" +
-	"-----END PUBLIC KEY-----";
-	// Private Key
-    this.privateKey = 
-	"-----BEGIN RSA PRIVATE KEY-----\n" +
-	"MIICXAIBAAKBgQDDNpgZFC23yGSLsMo8mzTcmdnipkUHI+i8CYagTEqHO+PnejF9\n" +
-	"Ep/D+MBvEtPXHSgExsDCHP8X7B6If1df58OWXB9GPnXUsAsjKKXgOaKoMJr9NZXP\n" +
-	"qlBbJSrT0h5590hCm2ePPUVkvJKsOX6gCFnptbLzF7pvb3zKDc+zXjyHPwIDAQAB\n" +
-	"AoGBALR4BTayI+3SkblekChlaAJFLVxOUGRgeylTOSV6QjAxWulFWvkAvbijf+tv\n" +
-	"oW4uIy//OnZ57g6EmFmiN/mOvo3meBvWijHxUJG1suKrEgG8Gm0LZn0CyycTtutl\n" +
-	"ziSDJ3F4whEZfuqciAFOTTgAXPRHMa/cZbSDo4aGR5mbqE0ZAkEA3+HmB/1SgwMB\n" +
-	"bopCmkh+sslFhtD2xUxlXnlC3ur4rOmjtH7YE0Q2UDsJFj9eg/BA4fQ/orh9usGv\n" +
-	"AVph7o6lswJBAN830Xc7cjxeF3vQyJk1vqqPf15FGvkraq7gHb5MPAtofh78PtzD\n" +
-	"+hyblvWAYBstR/K6up1KG+LP6RXA43q7qkUCQA49540wjzQoV8n5X51C6VRkO1kF\n" +
-	"J/2LC5PD8P4PQnx1bGWKACLRnwbhioVwyIlqGiaFjBrE07KyqXhTkJFFX8MCQAjW\n" +
-	"qfmhpfVT+HQToU3HvgP86Jsv+1Bwcqn3/9WAKUR+X7gUXtzY+bdWRdT0v1l0Iowu\n" +
-	"7qK5w37oop8U4y0B700CQBKRizBt1Nc02UMDzdamQsgnRjuIjlfmryfZpemyx238\n" +
-	"Q0s2+cKlqbfDOUY/CAj/z1M6RaISQ0TawCX9NIGa9GI=\n" +
-	"-----END RSA PRIVATE KEY-----";
-
-
-/*
-	this.certificate = 
-			'MIIBvTCCASYCCQD55fNzc0WF7TANBgkqhkiG9w0BAQUFADAjMQswCQYDVQQGEwJK'+
-			'UDEUMBIGA1UEChMLMDAtVEVTVC1SU0EwHhcNMTAwNTI4MDIwODUxWhcNMjAwNTI1'+
-			'MDIwODUxWjAjMQswCQYDVQQGEwJKUDEUMBIGA1UEChMLMDAtVEVTVC1SU0EwgZ8w'+
-			'DQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBANGEYXtfgDRlWUSDn3haY4NVVQiKI9Cz'+
-			'Thoua9+DxJuiseyzmBBe7Roh1RPqdvmtOHmEPbJ+kXZYhbozzPRbFGHCJyBfCLzQ'+
-			'fVos9/qUQ88u83b0SFA2MGmQWQAlRtLy66EkR4rDRwTj2DzR4EEXgEKpIvo8VBs/'+
-			'3+sHLF3ESgAhAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAEZ6mXFFq3AzfaqWHmCy1'+
-			'ARjlauYAa8ZmUFnLm0emg9dkVBJ63aEqARhtok6bDQDzSJxiLpCEF6G4b/Nv/M/M'+
-			'LyhP+OoOTmETMegAVQMq71choVJyOFE5BtQa6M/lCHEOya5QUfoRF2HF9EjRF44K'+
-			'3OK+u3ivTSj3zwjtpudY5Xo=';
-	
-	this.privateKey =
-			'MIICWwIBAAKBgQDRhGF7X4A0ZVlEg594WmODVVUIiiPQs04aLmvfg8SborHss5gQ'+
-			'Xu0aIdUT6nb5rTh5hD2yfpF2WIW6M8z0WxRhwicgXwi80H1aLPf6lEPPLvN29EhQ'+
-			'NjBpkFkAJUbS8uuhJEeKw0cE49g80eBBF4BCqSL6PFQbP9/rByxdxEoAIQIDAQAB'+
-			'AoGAA9/q3Zk6ib2GFRpKDLO/O2KMnAfR+b4XJ6zMGeoZ7Lbpi3MW0Nawk9ckVaX0'+
-			'ZVGqxbSIX5Cvp/yjHHpww+QbUFrw/gCjLiiYjM9E8C3uAF5AKJ0r4GBPl4u8K4bp'+
-			'bXeSxSB60/wPQFiQAJVcA5xhZVzqNuF3EjuKdHsw+dk+dPECQQDubX/lVGFgD/xY'+
-			'uchz56Yc7VHX+58BUkNSewSzwJRbcueqknXRWwj97SXqpnYfKqZq78dnEF10SWsr'+
-			'/NMKi+7XAkEA4PVqDv/OZAbWr4syXZNv/Mpl4r5suzYMMUD9U8B2JIRnrhmGZPzL'+
-			'x23N9J4hEJ+Xh8tSKVc80jOkrvGlSv+BxwJAaTOtjA3YTV+gU7Hdza53sCnSw/8F'+
-			'YLrgc6NOJtYhX9xqdevbyn1lkU0zPr8mPYg/F84m6MXixm2iuSz8HZoyzwJARi2p'+
-			'aYZ5/5B2lwroqnKdZBJMGKFpUDn7Mb5hiSgocxnvMkv6NjT66Xsi3iYakJII9q8C'+
-			'Ma1qZvT/cigmdbAh7wJAQNXyoizuGEltiSaBXx4H29EdXNYWDJ9SS5f070BRbAIl'+
-			'dqRh3rcNvpY6BKJqFapda1DjdcncZECMizT/GMrc1w==';
-			
-			*/
-};
-
-/*
-KeyManager.prototype.verify = function verify(message,signature){
-	
-	var input = message;
-
-	var  _PEM_X509CERT_STRING_ = this.certificate;
-	
-	var x509 = new X509();
-	
-	x509.readCertPEM(_PEM_X509CERT_STRING_);
-	
-	var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
-	
-	return result;
-};
-
-KeyManager.prototype.sign= function sign(message){
-	
-	var input = message;
-		
-	var  _PEM_PRIVATE_KEY_STRING_ = this.privateKey;
-	
-	var rsa = new RSAKey();
-	
-	rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
-	
-	var hSig = rsa.signString(input, "sha256");
-	
-	return hSig;
-
-};
-
-*/
-
-var globalKeyManager = new KeyManager();
-//var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
-
-
-/** 
- * @author: Wentao Shang
- * See COPYING for copyright and distribution information.
- */
-
-/**
- * @constructor
- */
-var MerklePath = function MerkelPath() {
-	this.index = null;  // int
-	this.digestList = [];  // array of hex string
-};
-
-/**
- * @constructor
- */
-var Witness = function Witness() {
-	this.oid = null;  // string
-	this.path = new MerklePath();  // MerklePath
-};
-
-function parseOID(bytes, start, end) {
-    var s, n = 0, bits = 0;
-    for (var i = start; i < end; ++i) {
-        var v = bytes[i];
-        n = (n << 7) | (v & 0x7F);
-        bits += 7;
-        if (!(v & 0x80)) { // finished
-            if (s == undefined)
-                s = parseInt(n / 40) + "." + (n % 40);
-            else
-                s += "." + ((bits >= 31) ? "bigint" : n);
-            n = bits = 0;
-        }
-        s += String.fromCharCode();
-    }
-    return s;
-}
-
-function parseInteger(bytes, start, end) {
-    var n = 0;
-    for (var i = start; i < end; ++i)
-        n = (n << 8) | bytes[i];
-    return n;
-}
-
-Witness.prototype.decode = function(/* Buffer */ witness) {
-	/* The asn1.js decoder has some bug and 
-	 * cannot decode certain kind of witness.
-	 * So we use an alternative (and dirty) hack
-	 * to read witness from byte streams
-	 *      ------Wentao
-	 */
-	/*
-	var wit = DataUtils.toHex(witness).toLowerCase();
-	try {
-		var der = Hex.decode(wit);
-		var asn1 = ASN1.decode(der);
-	}
-	catch (e) {
-		console.log(e);
-		console.log(wit);
-	}
-	//console.log(asn1.toPrettyString());
-	
-	this.oid = asn1.sub[0].sub[0].content();  // OID
-	//console.log(this.oid);
-	this.path.index = asn1.sub[1].sub[0].sub[0].content();  // index
-	//console.log(this.path.index);
-	for (i = 0; i < asn1.sub[1].sub[0].sub[1].sub.length; i++) {
-		pos = asn1.sub[1].sub[0].sub[1].sub[i].stream.pos;
-		str = wit.substring(2 * pos + 4, 2 * pos + 68);
-		this.path.digestList.push(str);  // digest hex string
-		//console.log(str);
-	}
-	*/
-	
-	// FIXME: Need to be fixed to support arbitrary ASN1 encoding,
-	// But do we really nned that????  -------Wentao
-	
-	// The structure of Witness is fixed as follows:
-	// SEQUENCE  (2 elem)
-	//   SEQUENCE  (1 elem)
-	//     OBJECT IDENTIFIER  1.2.840.113550.11.1.2.2
-	//   OCTET STRING  (1 elem)
-	//     SEQUENCE  (2 elem)
-	//       INTEGER  index
-	//       SEQUENCE  (n elem)
-	//         OCTET STRING(32 byte) 345FB4B5E9A1D2FF450ECA87EB87601683027A1A...
-	//         OCTET STRING(32 byte) DBCEE5B7A6C2B851B029324197DDBD9A655723DC...
-	//         OCTET STRING(32 byte) 4C79B2D256E4CD657A27F01DCB51AC3C56A24E71...
-	//         OCTET STRING(32 byte) 7F7FB169604A87EAC94378F0BDB4FC5D5899AB88...
-	//         ......
-	// Hence we can follow this structure to extract witness fields at fixed level
-	// Tag numbers for ASN1:
-	//    SEQUENCE            0x10
-	//    OCT STRING          0x04
-	//    INTEGER             0x02
-	//    OBJECT IDENTIFIER   0x06
-	var i = 0;
-	var step = 0;  // count of sequence tag
-	while (i < witness.length) {
-		var len = 0;
-		
-		if (witness[i] == 0x30) {
-			// Sequence (constructed)
-			// There is no primitive sequence in Witness
-			if ((witness[i + 1] & 0x80) != 0) {
-				len = witness[i+1] & 0x7F;
-			}
-			step++;
-		} else if (witness[i] == 0x06) {
-			// Decode OID
-			len = witness[i+1];  // XXX: OID will not be longer than 127 bytes
-			this.oid = parseOID(witness, i + 2, i + 2 + len);
-			//console.log(this.oid);
-		} else if (witness[i] == 0x02) {
-			// Decode node index
-			len = witness[i+1];  // XXX: index will not be longer than 127 bytes
-			this.path.index = parseInteger(witness, i + 2, i + 2 + len);
-			//console.log(this.path.index);
-		} else if (witness[i] == 0x04) {
-			if ((witness[i + 1] & 0x80) != 0) {
-				len = witness[i+1] & 0x7F;
-			}
-			if (step == 4) {
-				// Start to decode digest hex string
-				len = witness[i+1];  // XXX: digest hex should always be 32 bytes
-				var str = DataUtils.toHex(witness.slice(i + 2, i + 2 + len));
-				this.path.digestList.push(str);  // digest hex string
-				//console.log(str);
-			}
-		}
-		i = i + 2 + len;
-	}
-};
-/**
  * This file contains utilities to help encode and decode NDN objects.
  * author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
+
+var DataUtils = require('./DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var Key = require('../Key.js').Key;
+var Interest = require('../Interest.js').Interest;
+var ContentObject = require('../ContentObject.js').ContentObject;
+var FaceInstance = require('../FaceInstance.js').FaceInstance;
+var ForwardingEntry = require('../ForwardingEntry.js').ForwardingEntry;
+var LOG = require('../Log.js').Log.LOG;
 
 /**
  * An EncodingUtils has static methods for encoding data.
@@ -4958,58 +4900,15 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
 	    output+= "<br />";
 	}
-/*	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    output += "Hex Certificate: "+ certificateHex ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    var x509 = new X509();
-	    x509.readCertHex(certificateHex);
-	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
-	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
-	    output += "<br/>";
-	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
-	    if(LOG>2) console.log('result is '+result);
-	    
-	    var n = x509.subjectPublicKeyRSA.n;
-	    var e =  x509.subjectPublicKeyRSA.e;
-	    
-	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(e);
-	    
-	    if(result)
-            output += 'SIGNATURE VALID';
-	    else
-            output += 'SIGNATURE INVALID';
-	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
-	}*/
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
 	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    //var wit = null;
 	    var witHex = "";
-		if (co.signature.Witness != null) {
-			//wit = new Witness();
-			//wit.decode(co.signature.Witness);
-			witHex = DataUtils.toHex(co.signature.Witness);
+		if (co.signature.witness != null) {
+			witHex = DataUtils.toHex(co.signature.witness);
 		}
 	    
 	    output += "Public key: " + publickeyHex;
@@ -5031,30 +4930,14 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	    var rsakey = new Key();
 	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
 
-/*	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
-	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
-	    output += "<br/>";
-*/	   	    
 	    var result = co.verify(rsakey);
-	    // var result = rsakey.verifyString(input, signature);
-	    
-/*	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(rsakey.n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(rsakey.e);
-*/	    
 	    if(result)
 			output += 'SIGNATURE VALID';
 	    else
 			output += 'SIGNATURE INVALID';
 	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
 	    output+= "<br />";
 	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
 	}
     }
 
@@ -5064,11 +4947,44 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 //
 // Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
 //
+
+var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
+var encodeToHexContentObject = function(co) { return EncodingUtils.encodeToHexContentObject(co); }
+var encodeForwardingEntry = function(co) { return EncodingUtils.encodeForwardingEntry(co); }
+var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
+var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
+var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexContentObject(input); }
+var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
+var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
+var contentObjectToHtml = function(co) { return EncodingUtils.contentObjectToHtml(co); }
+
+/**
+ * @deprecated Use interest.encode().
+ */
+function encodeToBinaryInterest(interest) { return interest.encode(); }
+/**
+ * @deprecated Use contentObject.encode().
+ */
+function encodeToBinaryContentObject(contentObject) { return contentObject.encode(); }
 /**
  * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.
  */
+
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var Interest = require('./Interest.js').Interest;
+var ContentObject = require('./ContentObject.js').ContentObject;
+var ForwardingEntry = require('./ForwardingEntry.js').ForwardingEntry;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var Key = require('./Key.js').Key;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var Closure = require('./Closure.js').Closure;
+var UpcallInfo = require('./Closure.js').UpcallInfo;
+var TcpTransport = require('./TcpTransport.js').TcpTransport;
+var LOG = require('./Log.js').Log.LOG;
 
 /**
  * Create a new NDN with the given settings.
@@ -5076,10 +4992,12 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
  * @constructor
  * @param {Object} settings if not null, an associative array with the following defaults:
  * {
- *   getTransport: function() { return new WebSocketTransport(); },
+ *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
+ *              OR function() { return new TcpTransport(); },       // If in Node.js.
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
- *   port: 9696,
+ *   port: 9696, // If in the browser.
+ *      OR 9695, // If in Node.js.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -5090,11 +5008,12 @@ var NDN = function NDN(settings) {
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
-  var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+  // For the browser, browserifyTcpTransport.js replaces TcpTransport with WebSocketTransport.
+  var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || 9696);
+	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 9695));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
@@ -5102,6 +5021,8 @@ var NDN = function NDN(settings) {
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 	this.ndndid = null;
 };
+
+exports.NDN = NDN;
 
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ndnd opened
@@ -5282,7 +5203,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
-    var binaryInterest = encodeToBinaryInterest(interest);
+    var binaryInterest = interest.encode();
     var thisNDN = this;    
 	//TODO: check local content store first
 	if (closure != null) {
@@ -5396,14 +5317,17 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
 	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
-	var bytes = encodeForwardingEntry(fe);
+  	
+  var encoder = new BinaryXMLEncoder();
+	fe.to_ndnb(encoder);
+	var bytes = encoder.getReducedOstream();
 		
 	var si = new SignedInfo();
 	si.setFields();
 		
 	var co = new ContentObject(new Name(), si, bytes); 
 	co.sign();
-	var coBinary = encodeToBinaryContentObject(co);
+	var coBinary = co.encode();;
 		
 	//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
 	var nodename = this.ndndid;
@@ -5416,7 +5340,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
     var csEntry = new CSEntry(name.getName(), closure);
 	NDN.CSTable.push(csEntry);
     
-    this.transport.send(encodeToBinaryInterest(interest));
+    this.transport.send(interest.encode());
 };
 
 /**
@@ -5442,7 +5366,7 @@ NDN.prototype.onReceivedElement = function(element) {
 			var info = new UpcallInfo(this, interest, 0, null);
 			var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
 			if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-				this.transport.send(encodeToBinaryContentObject(info.contentObject));
+				this.transport.send(info.contentObject.encode());
 		}				
 	} else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
 		if (LOG > 3) console.log('ContentObject packet received.');
@@ -5511,9 +5435,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
 							
 				var wit = null;
-				if (co.signature.Witness != null) {
-				    //wit = new Witness();
-				    //wit.decode(co.signature.Witness);
+				if (co.signature.witness != null) {
 				    //SWT: deprecate support for Witness decoding and Merkle hash tree verification
 				    currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
 				}
@@ -5620,6 +5542,14 @@ NDN.prototype.connectAndExecute = function(onConnected) {
   
     this.reconnectAndExpressInterest
         (interest, new NDN.ConnectClosure(this, onConnected, timerID));
+};
+
+/**
+ * This is called by the Transport when the connection is closed by the remote host.
+ */
+NDN.prototype.closeByTransport = function () {
+    this.readyStatus = NDN.CLOSED;
+    this.onclose();
 };
 
 NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {
