@@ -29,7 +29,7 @@
 			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Buffer(pkd));
             interest.exclude = new Exclude([Name.fromEscapedString("abc"), Exclude.ANY]);
                 
-			var output = encodeToHexInterest(interest);
+			var output = EncodingUtils.encodeToHexInterest(interest);
 			
 			document.getElementById('result').innerHTML = output;
 
@@ -38,7 +38,7 @@
 		function decode() {
 			var input = document.getElementById('result').innerHTML;
 			
-			var interest = decodeHexInterest(input);
+			var interest = EncodingUtils.decodeHexInterest(input);
 			
 			if (LOG>3)console.log('INTEREST DECODED');
 			if (LOG>3)console.log(interest);
