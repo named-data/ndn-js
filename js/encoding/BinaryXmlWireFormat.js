@@ -9,7 +9,6 @@ var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
 var WireFormat = require('./WireFormat.js').WireFormat;
 var Name = require('../Name.js').Name;
-var Exclude = require('../Interest.js').Exclude;
 var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./DataUtils.js').DataUtils;
 
@@ -23,7 +22,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
 };
 
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
-BinaryXmlWireFormat.Debug1 = Exclude.ANY;
+
+// Default object.
+BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
  * Encode the interest and return a Buffer.
@@ -67,9 +68,6 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, inpu
   BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
 };
 
-// Default object.
-BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
-
 /**
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
@@ -110,6 +108,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 		
 	encoder.writeEndElement();
 };
+
+var Exclude = require('../Interest.js').Exclude;
 
 /**
  * Use the decoder to place the result in interest.
@@ -203,6 +203,9 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	
 	contentObject.saveRawData(encoder.ostream);	
 };
+
+var Signature = require('../ContentObject.js').Signature;
+var SignedInfo = require('../ContentObject.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in contentObject.
