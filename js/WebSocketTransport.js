@@ -4,6 +4,7 @@
  */
 
 var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
+var LOG = require('./Log.js').Log.LOG;
 
 /**
  * @constructor
@@ -52,7 +53,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		} else if (result instanceof ArrayBuffer) {
 	        var bytearray = new Buffer(result);
 	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 			
 			try {
                 // Find the end of the binary XML element and call ndn.onReceivedElement.
