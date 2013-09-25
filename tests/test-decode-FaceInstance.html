@@ -20,7 +20,7 @@
 			var input = document.getElementById('result').innerHTML;
 
 			
-			var faceInstance = decodeHexFaceInstance(input);
+			var faceInstance = EncodingUtils.decodeHexFaceInstance(input);
 			
 			if(LOG>3)console.log('FACE INSTANCE DECODED');
 			if(LOG>3)console.log(faceInstance);

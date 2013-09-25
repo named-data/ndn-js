@@ -27,7 +27,7 @@
 			co.sign();
 			
 			
-			var output = encodeToHexContentObject(co);
+			var output = EncodingUtils.encodeToHexContentObject(co);
 			
 			document.getElementById('result').innerHTML = output;
 
@@ -38,12 +38,12 @@
 
 			input = input.toUpperCase();
 			
-			var co = decodeHexContentObject(input);
+			var co = EncodingUtils.decodeHexContentObject(input);
 			
 			if(LOG>3)console.log('CONTENT OBJECT DECODED');
 			if(LOG>3)console.log(co);
 			
-			document.getElementById('result').innerHTML = contentObjectToHtml(co);
+			document.getElementById('result').innerHTML = EncodingUtils.contentObjectToHtml(co);
 		}
 
 	</script>

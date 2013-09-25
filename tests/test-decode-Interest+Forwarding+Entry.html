@@ -20,7 +20,7 @@
 			var input = document.getElementById('result').innerHTML;
 
 			
-			var interest = decodeHexInterest(input);
+			var interest = EncodingUtils.decodeHexInterest(input);
 			
 			if(LOG>3)console.log('INTEREST DECODED');
 			if(LOG>3)console.log(interest);
@@ -136,7 +136,7 @@
 				
 				var input = DataUtils.toHex(interest.name.components[3]) ;
 
-				var contentObject = decodeHexContentObject(input);
+				var contentObject = EncodingUtils.decodeHexContentObject(input);
 				
 				if(contentObject.content!=null ){
 					output+= "Content of content Object: ";
@@ -338,7 +338,7 @@
 				////////////////////////////////////////
 				
 				
-				var forwardingEntry = decodeHexForwardingEntry(content);
+				var forwardingEntry = EncodingUtils.decodeHexForwardingEntry(content);
 				
 				if(LOG>3)console.log('FORWARDING ENTRY IS PRESENT');
 				if(LOG>3)console.log(forwardingEntry);
