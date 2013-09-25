@@ -103,14 +103,14 @@ def build (bld):
                  "js/PublisherPublicKeyDigest.js",
                  "js/PublisherID.js",
                  "js/Name.js",
+                 "js/security/KeyManager.js",
+                 "js/security/Witness.js",
                  "js/ContentObject.js",
                  "js/Interest.js",
                  "js/Key.js",
                  "js/FaceInstance.js",
                  "js/ForwardingEntry.js",
                  "js/encoding/BinaryXmlWireFormat.js",
-                 "js/security/KeyManager.js",
-                 "js/security/Witness.js",
                  "js/encoding/EncodingUtils.js",
                  "js/NDN.js"] + securityLib
 
