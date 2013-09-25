@@ -11,6 +11,7 @@ var Key = require('../Key.js').Key;
 var Interest = require('../Interest.js').Interest;
 var ContentObject = require('../ContentObject.js').ContentObject;
 var FaceInstance = require('../FaceInstance.js').FaceInstance;
+var ForwardingEntry = require('../ForwardingEntry.js').ForwardingEntry;
 var LOG = require('../Log.js').Log.LOG;
 
 /**

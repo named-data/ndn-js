@@ -4,6 +4,10 @@
  * This class represents Forwarding Entries
  */
 
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var Name = require('./Name.js').Name;
+
 /**
  * Create a new ForwardingEntry with the optional arguments.
  * @constructor
@@ -22,6 +26,8 @@ var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceI
 	this.flags = flags;
 	this.lifetime = lifetime;
 };
+
+exports.ForwardingEntry = ForwardingEntry;
 
 ForwardingEntry.prototype.from_ndnb =function(
 	//XMLDecoder 

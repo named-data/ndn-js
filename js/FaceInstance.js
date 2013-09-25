@@ -4,7 +4,8 @@
  * This class represents Face Instances
  */
 
-var NetworkProtocol = { TCP:6, UDP:17};
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
 
 /**
  * @constructor
@@ -21,6 +22,10 @@ var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, face
 	this.multicastTTL =multicastTTL;
 	this.freshnessSeconds = freshnessSeconds;
 };
+
+exports.FaceInstance = FaceInstance;
+
+FaceInstance.NetworkProtocol = { TCP:6, UDP:17};
 
 /**
  * Used by NetworkObject to decode the object from a network stream.
@@ -53,13 +58,13 @@ FaceInstance.prototype.from_ndnb = function(//XMLDecoder
 		
 		this.ipProto = null;
 		
-		if (NetworkProtocol.TCP == pI) {
+		if (FaceInstance.NetworkProtocol.TCP == pI) {
 			
-			this.ipProto = NetworkProtocol.TCP;
+			this.ipProto = FaceInstance.NetworkProtocol.TCP;
 			
-		} else if (NetworkProtocol.UDP == pI) {
+		} else if (FaceInstance.NetworkProtocol.UDP == pI) {
 			
-			this.ipProto = NetworkProtocol.UDP;
+			this.ipProto = FaceInstance.NetworkProtocol.UDP;
 			
 		} else {
 			

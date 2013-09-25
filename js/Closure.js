@@ -22,6 +22,8 @@ var Closure = function Closure() {
     
 };
 
+exports.Closure = Closure;
+
 // Upcall result
 Closure.RESULT_ERR               = -1; // upcall detected an error
 Closure.RESULT_OK                =  0; // normal upcall return
