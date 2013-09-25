@@ -4,6 +4,11 @@
  * This class represents Key Objects
  */
 
+var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var PublisherID = require('./PublisherID.js').PublisherID;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -17,6 +22,7 @@ var Key = function Key() {
     this.privateKeyPem = null;    // String
 };
 
+exports.Key = Key;
 
 /**
  * Helper functions to read Key fields
@@ -129,6 +135,8 @@ var KeyLocatorType = {
 	KEYNAME:3
 };
 
+exports.KeyLocatorType = KeyLocatorType;
+
 /**
  * @constructor
  */
@@ -148,6 +156,8 @@ var KeyLocator = function KeyLocator(input,type) {
    	this.certificate = input;
   }
 };
+
+exports.KeyLocator = KeyLocator;
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
@@ -258,6 +268,8 @@ var KeyName = function KeyName() {
 	this.publisherID = this.publisherID;  //publisherID
 
 };
+
+exports.KeyName = KeyName;
 
 KeyName.prototype.from_ndnb=function( decoder){
 	

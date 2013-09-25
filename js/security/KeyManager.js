@@ -129,7 +129,9 @@ KeyManager.prototype.sign= function sign(message){
 
 */
 
-var globalKeyManager = new KeyManager();
+var globalKeyManager = globalKeyManager || new KeyManager();
+exports.globalKeyManager = globalKeyManager;
+
 //var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
 
 

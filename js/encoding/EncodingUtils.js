@@ -4,6 +4,15 @@
  * See COPYING for copyright and distribution information.
  */
 
+var DataUtils = require('./DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var Key = require('../Key.js').Key;
+var Interest = require('../Interest.js').Interest;
+var ContentObject = require('../ContentObject.js').ContentObject;
+var FaceInstance = require('../FaceInstance.js').FaceInstance;
+var LOG = require('../Log.js').Log.LOG;
+
 /**
  * An EncodingUtils has static methods for encoding data.
  * @constructor

@@ -344,8 +344,7 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
   if (binarydate.length % 2 == 1)
     binarydate = '0' + binarydate;
 
-  // Hack toNumbers by appending a 0 which is ignored.
-	var binarydate =  DataUtils.toNumbers( binarydate + '0') ;
+	var binarydate =  DataUtils.toNumbers( binarydate) ;
 
 	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');

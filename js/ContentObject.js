@@ -4,6 +4,19 @@
  * This class represents ContentObject Objects
  */
 
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('./util/NDNTime.js').NDNTime;
+var Key = require('./Key.js').Key;
+var KeyLocator = require('./Key.js').KeyLocator;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var globalKeyManager = require('./security/KeyManager.js').globalKeyManager;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new ContentObject with the optional values.
  * 
@@ -35,6 +48,8 @@ var ContentObject = function ContentObject(name, signedInfo, content) {
 	
 	this.rawSignatureData = null;
 };
+
+exports.ContentObject = ContentObject;
 
 ContentObject.prototype.sign = function(){
     var n1 = this.encodeObject(this.name);
@@ -93,40 +108,6 @@ ContentObject.prototype.saveRawData = function(bytes){
     this.rawSignatureData = new Buffer(sigBits);
 };
 
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
- */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
- */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
-};
-
-/**
- * Encode this ContentObject for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-ContentObject.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this ContentObject.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-ContentObject.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
-};
-
 ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
 
 /**
@@ -138,6 +119,8 @@ var Signature = function Signature(witness, signature, digestAlgorithm) {
 	this.signature = signature;
 	this.digestAlgorithm = digestAlgorithm
 };
+
+exports.Signature = Signature;
 
 Signature.prototype.from_ndnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
@@ -211,6 +194,8 @@ var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshn
     
   this.setFields();
 };
+
+exports.SignedInfo = SignedInfo;
 
 SignedInfo.prototype.setFields = function(){
 	//BASE64 -> RAW STRING
@@ -381,4 +366,41 @@ SignedInfo.prototype.validate = function() {
 		if (null ==this.publisher || null==this.timestamp ||null== this.locator)
 			return false;
 		return true;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ */
+ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ */
+ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+};
+
+/**
+ * Encode this ContentObject for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+ContentObject.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeContentObject(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this ContentObject.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+ContentObject.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeContentObject(this, input);
 };

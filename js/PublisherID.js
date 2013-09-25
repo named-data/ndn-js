@@ -4,6 +4,9 @@
  * This class represents Publisher and PublisherType Objects
  */
 
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNProtocolDTagsStrings = require('./util/NDNProtocolDTags.js').NDNProtocolDTagsStrings;
+
 /**
  * @constructor
  */
@@ -45,6 +48,7 @@ var PublisherID = function PublisherID() {
     
 };
 
+exports.PublisherID = PublisherID;
 
 PublisherID.prototype.from_ndnb = function(decoder) {
 		
