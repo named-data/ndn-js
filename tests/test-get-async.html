@@ -35,7 +35,7 @@
 				//console.log("In callback, nameStr: " + nameStr);
 				//console.log("In callback, content: ");
 				//console.log(content);
-				document.getElementById('content').innerHTML += contentObjectToHtml(content);
+				document.getElementById('content').innerHTML += EncodingUtils.contentObjectToHtml(content);
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
 				var content = upcallInfo.contentObject;
 				console.log("Closure.upcall: content signature verification fail.");
