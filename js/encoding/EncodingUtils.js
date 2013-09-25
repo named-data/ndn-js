@@ -4,29 +4,24 @@
  * See COPYING for copyright and distribution information.
  */
 
-function encodeToHexInterest(interest){
+/**
+ * An EncodingUtils has static methods for encoding data.
+ * @constructor
+ */
+var EncodingUtils = function EncodingUtils(){
+};
+
+exports.EncodingUtils = EncodingUtils;
+
+EncodingUtils.encodeToHexInterest = function(interest){
   return DataUtils.toHex(interest.encode());
 }
 
-/**
- * @deprecated Use interest.encode().
- */
-function encodeToBinaryInterest(interest) {
-  return interest.encode();
-}
-
-function encodeToHexContentObject(contentObject) {
+EncodingUtils.encodeToHexContentObject = function(contentObject) {
   return DataUtils.toHex(contentObject.encode());
 }
 
-/**
- * @deprecated Use contentObject.encode().
- */
-function encodeToBinaryContentObject(contentObject) {
-  return contentObject.encode();
-}
-
-function encodeForwardingEntry(co) {
+EncodingUtils.encodeForwardingEntry = function(co) {
 	var enc = new BinaryXMLEncoder();
  
 	co.to_ndnb(enc);
@@ -38,9 +33,7 @@ function encodeForwardingEntry(co) {
 	
 }
 
-
-
-function decodeHexFaceInstance(result){
+EncodingUtils.decodeHexFaceInstance = function(result){
 	
 	var numbers = DataUtils.toNumbers(result);
 			
@@ -57,19 +50,19 @@ function decodeHexFaceInstance(result){
 	
 }
 
-function decodeHexInterest(input){
+EncodingUtils.decodeHexInterest = function(input){
 	var interest = new Interest();
 	interest.decode(DataUtils.toNumbers(input));
 	return interest;
 }
 
-function decodeHexContentObject(input){
+EncodingUtils.decodeHexContentObject = function(input){
 	var contentObject = new ContentObject();
 	contentObject.decode(DataUtils.toNumbers(input));
 	return contentObject;
 }
 
-function decodeHexForwardingEntry(result){
+EncodingUtils.decodeHexForwardingEntry = function(result){
 	var numbers = DataUtils.toNumbers(result);
 
 	var decoder = new BinaryXMLDecoder(numbers);
@@ -87,7 +80,7 @@ function decodeHexForwardingEntry(result){
 /**
  * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
-function decodeSubjectPublicKeyInfo(array) {
+EncodingUtils.decodeSubjectPublicKeyInfo = function(array) {
     var hex = DataUtils.toHex(array).toLowerCase();
     var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
     var rsaKey = new RSAKey();
@@ -99,7 +92,7 @@ function decodeSubjectPublicKeyInfo(array) {
  * Return a user friendly HTML string with the contents of co.
  * This also outputs to console.log.
  */
-function contentObjectToHtml(/* ContentObject */ co) {
+EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
     var output ="";
 			
     if(co==-1)
@@ -269,4 +262,25 @@ function contentObjectToHtml(/* ContentObject */ co) {
     return output;
 }
 
+//
+// Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
+//
 
+var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
+var encodeToHexContentObject = function(co) { return EncodingUtils.encodeToHexContentObject(co); }
+var encodeForwardingEntry = function(co) { return EncodingUtils.encodeForwardingEntry(co); }
+var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
+var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
+var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexContentObject(input); }
+var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
+var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
+var contentObjectToHtml = function(co) { return EncodingUtils.contentObjectToHtml(co); }
+
+/**
+ * @deprecated Use interest.encode().
+ */
+function encodeToBinaryInterest(interest) { return interest.encode(); }
+/**
+ * @deprecated Use contentObject.encode().
+ */
+function encodeToBinaryContentObject(contentObject) { return contentObject.encode(); }
