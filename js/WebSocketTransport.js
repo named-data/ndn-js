@@ -3,6 +3,8 @@
  * See COPYING for copyright and distribution information.
  */
 
+var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
+
 /**
  * @constructor
  */
@@ -19,6 +21,8 @@ var WebSocketTransport = function WebSocketTransport() {
           "E.ws.ndn.ucla.edu"],
          9696);
 };
+
+exports.WebSocketTransport = WebSocketTransport;
 
 /**
  * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
