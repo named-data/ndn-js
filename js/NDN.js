@@ -445,9 +445,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
 							
 				var wit = null;
-				if (co.signature.Witness != null) {
-				    //wit = new Witness();
-				    //wit.decode(co.signature.Witness);
+				if (co.signature.witness != null) {
 				    //SWT: deprecate support for Witness decoding and Merkle hash tree verification
 				    currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
 				}

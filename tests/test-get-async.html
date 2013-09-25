@@ -42,8 +42,8 @@
                 console.log("Host: " + ndn.host + ":" + ndn.port);
 				if (content.signature.signature)
 					console.log("Signature: " + DataUtils.toHex(content.signature.signature).toLowerCase());
-				if (content.signature.Witness)
-					console.log("Witness: " + DataUtils.toHex(content.signature.Witness).toLowerCase());
+				if (content.signature.witness)
+					console.log("Witness: " + DataUtils.toHex(content.signature.witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out. Re-expressing the interest.");
                 console.log("Host: " + ndn.host + ":" + ndn.port);

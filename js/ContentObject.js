@@ -115,7 +115,7 @@ ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.Cont
  * @constructor
  */
 var Signature = function Signature(witness, signature, digestAlgorithm) {
-  this.Witness = witness;
+  this.witness = witness;
 	this.signature = signature;
 	this.digestAlgorithm = digestAlgorithm
 };
@@ -133,7 +133,7 @@ Signature.prototype.from_ndnb =function( decoder) {
 		}
 		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
 			if(LOG>4)console.log('WITNESS FOUND');
-			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+			this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
@@ -158,9 +158,9 @@ Signature.prototype.to_ndnb= function( encoder){
 		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
 	}
 	
-	if (null != this.Witness) {
+	if (null != this.witness) {
 		// needs to handle null witness
-		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
+		encoder.writeElement(NDNProtocolDTags.Witness, this.witness);
 	}
 
 	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);

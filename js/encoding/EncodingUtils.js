@@ -168,58 +168,15 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
 	    output+= "<br />";
 	}
-/*	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    output += "Hex Certificate: "+ certificateHex ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    var x509 = new X509();
-	    x509.readCertHex(certificateHex);
-	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
-	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
-	    output += "<br/>";
-	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
-	    if(LOG>2) console.log('result is '+result);
-	    
-	    var n = x509.subjectPublicKeyRSA.n;
-	    var e =  x509.subjectPublicKeyRSA.e;
-	    
-	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(e);
-	    
-	    if(result)
-            output += 'SIGNATURE VALID';
-	    else
-            output += 'SIGNATURE INVALID';
-	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
-	}*/
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
 	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    //var wit = null;
 	    var witHex = "";
-		if (co.signature.Witness != null) {
-			//wit = new Witness();
-			//wit.decode(co.signature.Witness);
-			witHex = DataUtils.toHex(co.signature.Witness);
+		if (co.signature.witness != null) {
+			witHex = DataUtils.toHex(co.signature.witness);
 		}
 	    
 	    output += "Public key: " + publickeyHex;
@@ -241,30 +198,14 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	    var rsakey = new Key();
 	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
 
-/*	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
-	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
-	    output += "<br/>";
-*/	   	    
 	    var result = co.verify(rsakey);
-	    // var result = rsakey.verifyString(input, signature);
-	    
-/*	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(rsakey.n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(rsakey.e);
-*/	    
 	    if(result)
 			output += 'SIGNATURE VALID';
 	    else
 			output += 'SIGNATURE INVALID';
 	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
 	    output+= "<br />";
 	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
 	}
     }
 
