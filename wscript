@@ -90,13 +90,13 @@ def build (bld):
                  "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
                  "js/encoding/DataUtils.js",
-                 "js/encoding/EncodingUtils.js",
                  "js/encoding/DynamicBuffer.js",
                  "js/encoding/DateFormat.js",
                  "js/encoding/BinaryXMLEncoder.js",
                  "js/encoding/BinaryXMLDecoder.js",
                  "js/encoding/BinaryXMLStructureDecoder.js",
                  "js/encoding/WireFormat.js",
+                 "js/util/BinaryXmlElementReader.js",
                  "js/WebSocketTransport.js",
                  "js/browserifyTcpTransport.js",
                  "js/Closure.js",
@@ -111,6 +111,7 @@ def build (bld):
                  "js/encoding/BinaryXmlWireFormat.js",
                  "js/security/KeyManager.js",
                  "js/security/Witness.js",
+                 "js/encoding/EncodingUtils.js",
                  "js/NDN.js"] + securityLib
 
         ndnjs = bld (features="combine",

@@ -93,7 +93,10 @@ var Buffer = function Buffer(data, format) {
   };
 
   obj.__proto__.copy = function(target, targetStart) {
-    target.set(this, targetStart);
+    if (targetStart !== undefined)
+      target.set(this, targetStart);
+    else
+      target.set(this);
   };
 
   return obj;
@@ -252,191 +255,25 @@ exports.createVerify = function(alg) {
 
   return obj;
 };
-/** 
- * @author: Wentao Shang
- * See COPYING for copyright and distribution information.
- */
-
-/**
- * @constructor
- */
-var WebSocketTransport = function WebSocketTransport() {    
-    if (!WebSocket)
-        throw new Error("WebSocket support is not available on this platform.");
-    
-	this.ws = null;
-    this.connectedHost = null; // Read by NDN.
-    this.connectedPort = null; // Read by NDN.
-    this.elementReader = null;
-    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
-        (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
-          "E.ws.ndn.ucla.edu"],
-         9696);
-};
-
-/**
- * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
- *   and connectedPort.  Once connected, call onopenCallback().
- * Listen on the port to read an entire binary XML encoded element and call
- *    ndn.onReceivedElement(element).
- */
-WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
-	if (this.ws != null)
-		delete this.ws;
-	
-	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
-	if (LOG > 0) console.log('ws connection created.');
-    this.connectedHost = ndn.host;
-    this.connectedPort = ndn.port;
-	
-	this.ws.binaryType = "arraybuffer";
-	
-    this.elementReader = new BinaryXmlElementReader(ndn);
-	var self = this;
-	this.ws.onmessage = function(ev) {
-		var result = ev.data;
-		//console.log('RecvHandle called.');
-			
-		if(result == null || result == undefined || result == "" ) {
-			console.log('INVALID ANSWER');
-		} else if (result instanceof ArrayBuffer) {
-	        var bytearray = new Buffer(result);
-	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
-			
-			try {
-                // Find the end of the binary XML element and call ndn.onReceivedElement.
-                self.elementReader.onReceivedData(bytearray);
-			} catch (ex) {
-				console.log("NDN.ws.onmessage exception: " + ex);
-				return;
-			}
-		}
-	}
-	
-	this.ws.onopen = function(ev) {
-		if (LOG > 3) console.log(ev);
-		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
-		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-        // NDN.registerPrefix will fetch the ndndid when needed.
-        
-        onopenCallback();
-	}
-	
-	this.ws.onerror = function(ev) {
-		console.log('ws.onerror: ReadyState: ' + this.readyState);
-		console.log(ev);
-		console.log('ws.onerror: WebSocket error: ' + ev.data);
-	}
-	
-	this.ws.onclose = function(ev) {
-		console.log('ws.onclose: WebSocket connection closed.');
-		self.ws = null;
-		
-		// Close NDN when WebSocket is closed
-		ndn.readyStatus = NDN.CLOSED;
-		ndn.onclose();
-		//console.log("NDN.onclose event fired.");
-	}
-};
-
-/**
- * Send the Uint8Array data.
- */
-WebSocketTransport.prototype.send = function(data) {
-	if (this.ws != null) {
-        // If we directly use data.buffer to feed ws.send(), 
-        // WebSocket may end up sending a packet with 10000 bytes of data.
-        // That is, WebSocket will flush the entire buffer
-        // regardless of the offset of the Uint8Array. So we have to create
-        // a new Uint8Array buffer with just the right size and copy the 
-        // content from binaryInterest to the new buffer.
-        //    ---Wentao
-        var bytearray = new Uint8Array(data.length);
-        bytearray.set(data);
-        this.ws.send(bytearray.buffer);
-		if (LOG > 3) console.log('ws.send() returned.');
-	}
-	else
-		console.log('WebSocket connection is not established.');
-}
 /**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  */
 
-// The NDN constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
-exports.TcpTransport = ndn.WebSocketTransport;
 /**
- * @author: Jeff Thompson
- * See COPYING for copyright and distribution information.
- * Provide the callback closure for the async communication methods in the NDN class.
- * This is a port of Closure.py from PyNDN, written by: 
- * Derek Kulinski <takeda@takeda.tk>
- * Jeff Burke <jburke@ucla.edu>
+ * The Log class holds the global static variable LOG.
  */
-
-/**
- * You should create a subclass of Closure and pass an object to async calls.
- * @constructor
- */
-var Closure = function Closure() {
-	// I don't think storing NDN's closure is needed
-	// and it creates a reference loop, as of now both
-	// of those variables are never set -- Derek
-	//
-	// Use instance variables to return data to callback
-	this.ndn_data = null;  // this holds the ndn_closure
-    this.ndn_data_dirty = false;
-    
-};
-
-// Upcall result
-Closure.RESULT_ERR               = -1; // upcall detected an error
-Closure.RESULT_OK                =  0; // normal upcall return
-Closure.RESULT_REEXPRESS         =  1; // reexpress the same interest again
-Closure.RESULT_INTEREST_CONSUMED =  2; // upcall claims to consume interest
-Closure.RESULT_VERIFY            =  3; // force an unverified result to be verified
-Closure.RESULT_FETCHKEY          =  4; // get the key in the key locator and re-call the interest
-                                       //   with the key available in the local storage
-
-// Upcall kind
-Closure.UPCALL_FINAL              = 0; // handler is about to be deregistered
-Closure.UPCALL_INTEREST           = 1; // incoming interest
-Closure.UPCALL_CONSUMED_INTEREST  = 2; // incoming interest, someone has answered
-Closure.UPCALL_CONTENT            = 3; // incoming verified content
-Closure.UPCALL_INTEREST_TIMED_OUT = 4; // interest timed out
-Closure.UPCALL_CONTENT_UNVERIFIED = 5; // content that has not been verified
-Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
-
-/**
- * Override this in your subclass.
- * If you're getting strange errors in upcall()
- * check your code whether you're returning a value.
- */
-Closure.prototype.upcall = function(kind, upcallInfo) {
-	//dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
-	return Closure.RESULT_OK;
-};
-
-/**
- * An UpcallInfo is passed to Closure.upcall.
- * @constructor
- */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) {
-	this.ndn = ndn;  // NDN object (not used)
-	this.interest = interest;  // Interest object
-	this.matchedComps = matchedComps;  // int
-	this.contentObject = contentObject;  // Content object
-};
-
-UpcallInfo.prototype.toString = function() {
-	var ret = "ndn = " + this.ndn;
-	ret += "\nInterest = " + this.interest;
-	ret += "\nmatchedComps = " + this.matchedComps;
-	ret += "\nContentObject: " + this.contentObject;
-	return ret;
+var Log = function Log() 
+{
 }
+
+exports.Log = Log;
+
+/**
+ * LOG is the level for logging debugging statements.  0 means no log messages. 
+ * @type Number
+ */
+Log.LOG = 0;
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -565,6 +402,8 @@ var NDNProtocolDTags = {
 	 NDNPROTOCOL_DATA_UNIT : "NDNProtocolDataUnit"
 };
 
+exports.NDNProtocolDTags = NDNProtocolDTags;
+
 var NDNProtocolDTagsStrings = [
 	null, null, null, null, null, null, null, null, null, null, null,
 	null, null,
@@ -589,15 +428,14 @@ var NDNProtocolDTagsStrings = [
     "SyncVersion", "SyncNodeElements", "SyncContentHash", "SyncLeafCount", "SyncTreeDepth", "SyncByteCount",
     "ConfigSlice", "ConfigSliceList", "ConfigSliceOp" ];
 
-
-//TESTING
-//console.log(exports.NDNProtocolDTagsStrings[17]);
-
+exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents NDNTime Objects
  */
+
+var LOG = require('../Log.js').Log.LOG;
 
 /**
  * @constructor
@@ -612,6 +450,7 @@ var NDNTime = function NDNTime(input) {
 	}
 };
 
+exports.NDNTime = NDNTime;
 
 NDNTime.prototype.getJavascriptDate = function(){
 	var d = new Date();
@@ -742,757 +581,339 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
     }
 };
 /**
- * @author: Meki Cheraoui, Jeff Thompson
+ * This class contains utilities to help parse the data
+ * author: Meki Cheraoui, Jeff Thompson
  * See COPYING for copyright and distribution information.
- * This class represents a Name as an array of components where each is a byte array.
  */
  
 /**
- * Create a new Name from components.
- * 
+ * A DataUtils has static methods for converting data.
  * @constructor
- * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
- * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Buffer or Name.
- * Convert each and store as an array of Buffer.  If a component is a string, encode as utf8.
  */
-var Name = function Name(components) {
-	if( typeof components == 'string') {		
-		if(LOG>3)console.log('Content Name String '+components);
-		this.components = Name.createNameArray(components);
-	}
-	else if(typeof components === 'object'){		
-		this.components = [];
-    if (components instanceof Name)
-      this.add(components);
-    else {
-      for (var i = 0; i < components.length; ++i)
-        this.add(components[i]);
-    }
-	}
-	else if(components==null)
-		this.components =[];
-	else
-		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
+var DataUtils = function DataUtils(){
 };
 
-Name.prototype.getName = function() {
-    return this.to_uri();
-};
+exports.DataUtils = DataUtils;
 
-/** Parse uri as a URI and return an array of Buffer components.
+/*
+ * NOTE THIS IS CURRENTLY NOT BEING USED
+ * 
  */
-Name.createNameArray = function(uri) {
-    uri = uri.trim();
-    if (uri.length <= 0)
-        return [];
 
-    var iColon = uri.indexOf(':');
-    if (iColon >= 0) {
-        // Make sure the colon came before a '/'.
-        var iFirstSlash = uri.indexOf('/');
-        if (iFirstSlash < 0 || iColon < iFirstSlash)
-            // Omit the leading protocol such as ndn:
-            uri = uri.substr(iColon + 1, uri.length - iColon - 1).trim();
-    }
-    
-  	if (uri[0] == '/') {
-        if (uri.length >= 2 && uri[1] == '/') {
-            // Strip the authority following "//".
-            var iAfterAuthority = uri.indexOf('/', 2);
-            if (iAfterAuthority < 0)
-                // Unusual case: there was only an authority.
-                return [];
-            else
-                uri = uri.substr(iAfterAuthority + 1, uri.length - iAfterAuthority - 1).trim();
+DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
+               "QRSTUVWXYZabcdef" +
+               "ghijklmnopqrstuv" +
+               "wxyz0123456789+/" +
+               "=";
+
+               
+/**
+ * Raw String to Base 64
+ */
+DataUtils.stringtoBase64=function stringtoBase64(input) {
+     //input = escape(input);
+     var output = "";
+     var chr1, chr2, chr3 = "";
+     var enc1, enc2, enc3, enc4 = "";
+     var i = 0;
+
+     do {
+        chr1 = input.charCodeAt(i++);
+        chr2 = input.charCodeAt(i++);
+        chr3 = input.charCodeAt(i++);
+
+        enc1 = chr1 >> 2;
+        enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+        enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+        enc4 = chr3 & 63;
+
+        if (isNaN(chr2)) {
+           enc3 = enc4 = 64;
+        } else if (isNaN(chr3)) {
+           enc4 = 64;
         }
-        else
-            uri = uri.substr(1, uri.length - 1).trim();
-    }
 
-	var array = uri.split('/');
-    
-    // Unescape the components.
-    for (var i = 0; i < array.length; ++i) {
-        var component = Name.fromEscapedString(array[i]);
-        
-        if (component == null) {
-            // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
-            array.splice(i, 1);
-            --i;  
-            continue;
+        output = output +
+           DataUtils.keyStr.charAt(enc1) +
+           DataUtils.keyStr.charAt(enc2) +
+           DataUtils.keyStr.charAt(enc3) +
+           DataUtils.keyStr.charAt(enc4);
+        chr1 = chr2 = chr3 = "";
+        enc1 = enc2 = enc3 = enc4 = "";
+     } while (i < input.length);
+
+     return output;
+  }
+
+/**
+ * Base 64 to Raw String 
+ */
+DataUtils.base64toString = function base64toString(input) {
+     var output = "";
+     var chr1, chr2, chr3 = "";
+     var enc1, enc2, enc3, enc4 = "";
+     var i = 0;
+
+     // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
+     var base64test = /[^A-Za-z0-9\+\/\=]/g;
+     /* Test for invalid characters. */
+     if (base64test.exec(input)) {
+        alert("There were invalid base64 characters in the input text.\n" +
+              "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
+              "Expect errors in decoding.");
+     }
+     
+     input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+     do {
+        enc1 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc2 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc3 = DataUtils.keyStr.indexOf(input.charAt(i++));
+        enc4 = DataUtils.keyStr.indexOf(input.charAt(i++));
+
+        chr1 = (enc1 << 2) | (enc2 >> 4);
+        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+        chr3 = ((enc3 & 3) << 6) | enc4;
+
+        output = output + String.fromCharCode(chr1);
+
+        if (enc3 != 64) {
+           output = output + String.fromCharCode(chr2);
         }
-        else
-            array[i] = component;
+        if (enc4 != 64) {
+           output = output + String.fromCharCode(chr3);
+        }
+
+        chr1 = chr2 = chr3 = "";
+        enc1 = enc2 = enc3 = enc4 = "";
+
+     } while (i < input.length);
+
+     return output;
+  };
+
+/**
+ * Buffer to Hex String
+ */
+DataUtils.toHex = function(buffer) {
+  return buffer.toString('hex');
+}
+
+/**
+ * Raw string to hex string.
+ */
+DataUtils.stringToHex = function(args){
+	var ret = "";
+	for (var i = 0; i < args.length; ++i) {
+		var value = args.charCodeAt(i);
+		ret += (value < 16 ? "0" : "") + value.toString(16);
+	}
+	return ret;
+}
+
+/**
+ * Buffer to raw string.
+ */
+DataUtils.toString = function(buffer) {
+  return buffer.toString();
+}
+
+/**
+ * Hex String to Buffer.
+ */
+DataUtils.toNumbers = function(str) {
+  return new Buffer(str, 'hex');
+}
+
+/**
+ * Hex String to raw string.
+ */
+DataUtils.hexToRawString = function(str) {
+    if(typeof str =='string') {
+		var ret = "";
+		str.replace(/(..)/g, function(s) {
+			ret += String.fromCharCode(parseInt(s, 16));
+		});
+		return ret;
     }
-
-	return array;
 }
 
+/**
+ * Raw String to Buffer.
+ */
+DataUtils.toNumbersFromString = function(str) {
+  return new Buffer(str, 'binary');
+}
 
-Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
-		decoder.readStartElement(this.getElementLabel());
+/**
+ * Encode str as utf8 and return as Buffer.
+ */
+DataUtils.stringToUtf8Array = function(str) {
+  return new Buffer(str, 'utf8');
+}
 
-		
-		this.components = new Array(); //new ArrayList<byte []>();
-
-		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
-			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
+/**
+ * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
+ */
+DataUtils.concatArrays = function(arrays) {
+  return Buffer.concat(arrays);
+}
+ 
+// TODO: Take Buffer and use TextDecoder when available.
+DataUtils.decodeUtf8 = function (utftext) {
+		var string = "";
+		var i = 0;
+		var c = 0;
+        var c1 = 0;
+        var c2 = 0;
+ 
+		while ( i < utftext.length ) {
+ 
+			c = utftext.charCodeAt(i);
+ 
+			if (c < 128) {
+				string += String.fromCharCode(c);
+				i++;
+			}
+			else if((c > 191) && (c < 224)) {
+				c2 = utftext.charCodeAt(i+1);
+				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			}
+			else {
+				c2 = utftext.charCodeAt(i+1);
+				var c3 = utftext.charCodeAt(i+2);
+				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+ 
 		}
-		
-		decoder.readEndElement();
-};
-
-Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-		
-		if( this.components ==null ) 
-			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
-
-		encoder.writeStartElement(this.getElementLabel());
-		var count = this.components.length;
-		for (var i=0; i < count; i++) {
-			encoder.writeElement(NDNProtocolDTags.Component, this.components[i]);
-		}
-		encoder.writeEndElement();
-};
-
-Name.prototype.getElementLabel = function(){
-	return NDNProtocolDTags.Name;
-};
+ 
+		return string;
+	};
 
 /**
- * Convert the component to a Buffer and add to this Name.
- * Return this Name object to allow chaining calls to add.
- * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
- * @returns {Name}
+ * Return true if a1 and a2 are the same length with equal elements.
  */
-Name.prototype.add = function(component){
-  var result;
-  if (typeof component == 'string')
-    result = DataUtils.stringToUtf8Array(component);
-	else if (typeof component == 'object' && component instanceof Buffer)
-    result = new Buffer(component);
-  else if (typeof component == 'object' && typeof ArrayBuffer != 'undefined' &&  component instanceof ArrayBuffer) {
-    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
-    result = new Buffer(new ArrayBuffer(component.byteLength));
-    result.set(new Buffer(component));
-  }
-  else if (typeof component == 'object' && component instanceof Name) {
-    var components;
-    if (component == this)
-      // special case, when we need to create a copy
-      components = this.components.slice(0, this.components.length);
-    else
-      components = component.components;
-      
-    for (var i = 0; i < components.length; ++i)
-      this.components.push(new Buffer(components[i]));
-    return this;
-  }
-	else if(typeof component == 'object')
-        // Assume component is a byte array.  We can't check instanceof Array because
-        //   this doesn't work in JavaScript if the array comes from a different module.
-        result = new Buffer(component);
-	else 
-		throw new Error("Cannot add Name element at index " + this.components.length + 
-            ": Invalid type");
-    
-    this.components.push(result);
-	return this;
-};
-
-/**
- * Return the escaped name string according to "NDNx URI Scheme".
- * @returns {String}
- */
-Name.prototype.to_uri = function() {	
-    if (this.components.length == 0)
-        return "/";
-    
-	var result = "";
-	
-	for(var i = 0; i < this.components.length; ++i)
-		result += "/"+ Name.toEscapedString(this.components[i]);
-	
-	return result;	
-};
-
-/**
- * Add a component that represents a segment number
- *
- * This component has a special format handling:
- * - if number is zero, then %00 is added
- * - if number is between 1 and 255, %00%01 .. %00%FF is added
- * - ...
- * @param {number} number the segment number (integer is expected)
- * @returns {Name}
- */
-Name.prototype.addSegment = function(number) {
-    var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
-    // Put a 0 byte in front.
-    var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-    segmentNumberComponent.set(segmentNumberBigEndian, 1);
-
-    this.components.push(segmentNumberComponent);
-    return this;
-};
-
-/**
- * Return a new Name with the first nComponents components of this Name.
- */
-Name.prototype.getPrefix = function(nComponents) {
-    return new Name(this.components.slice(0, nComponents));
-}
-
-/**
- * @brief Get prefix of the name, containing less minusComponents right components
- * @param minusComponents number of components to cut from the back
- */
-Name.prototype.cut = function (minusComponents) {
-    return new Name(this.components.slice(0, this.components.length-1));
-}
-
-/**
- * Return a new Buffer of the component at i.
- */
-Name.prototype.getComponent = function(i) {
-    var result = new Buffer(this.components[i].length);
-    result.set(this.components[i]);
-    return result;
-}
-
-/**
- * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
- *   special marker octets (for version, etc.).  Return the index in this.components of
- *   the file name, or -1 if not found.
- */
-Name.prototype.indexOfFileName = function() {
-    for (var i = this.components.length - 1; i >= 0; --i) {
-        var component = this.components[i];
-        if (component.length <= 0)
-            continue;
-        
-        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
-            (component[0] >= 0xF5 && component[0] <= 0xFF))
-            continue;
-        
-        return i;
-    }
-    
-    return -1;
-}
-
-/**
- * Return true if this Name has the same components as name.
- */
-Name.prototype.equalsName = function(name) {
-    if (this.components.length != name.components.length)
+DataUtils.arraysEqual = function(a1, a2){
+    if (a1.length != a2.length)
         return false;
     
-    // Start from the last component because they are more likely to differ.
-    for (var i = this.components.length - 1; i >= 0; --i) {
-        if (!DataUtils.arraysEqual(this.components[i], name.components[i]))
+    for (var i = 0; i < a1.length; ++i) {
+        if (a1[i] != a2[i])
             return false;
     }
-    
+
     return true;
-}
+};
 
 /**
- * Find the last component in name that has a ContentDigest and return the digest value as Buffer, 
- *   or null if not found.  See Name.getComponentContentDigestValue.
+ * Convert the big endian Buffer to an unsigned int.
+ * Don't check for overflow.
  */
-Name.prototype.getContentDigestValue = function() {
-    for (var i = this.components.length - 1; i >= 0; --i) {
-        var digestValue = Name.getComponentContentDigestValue(this.components[i]);
-        if (digestValue != null)
-           return digestValue;
-    }
-    
-    return null;
-}
-
-/**
- * If component is a ContentDigest, return the digest value as a Buffer slice (don't modify!).
- * If not a ContentDigest, return null.
- * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
- */
-Name.getComponentContentDigestValue = function(component) {
-    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
-    // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
-    if (component.length == digestComponentLength &&
-        DataUtils.arraysEqual(component.slice(0, Name.ContentDigestPrefix.length), 
-                              Name.ContentDigestPrefix) &&
-        DataUtils.arraysEqual(component.slice
-           (component.length - Name.ContentDigestSuffix.length, component.length),
-                              Name.ContentDigestSuffix))
-       return component.slice(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
-   else
-       return null;
-}
-
-// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
-Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
-Name.ContentDigestSuffix = new Buffer([0x00]);
-
-/**
- * Return component as an escaped string according to "NDNx URI Scheme".
- * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
- */
-Name.toEscapedString = function(component) {
-    var result = "";
-    var gotNonDot = false;
-    for (var i = 0; i < component.length; ++i) {
-        if (component[i] != 0x2e) {
-            gotNonDot = true;
-            break;
-        }
-    }
-    if (!gotNonDot) {
-        // Special case for component of zero or more periods.  Add 3 periods.
-        result = "...";
-        for (var i = 0; i < component.length; ++i)
-            result += ".";
-    }
-    else {
-        for (var i = 0; i < component.length; ++i) {
-            var x = component[i];
-            // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
-            if (x >= 0x30 && x <= 0x39 || x >= 0x41 && x <= 0x5a ||
-                x >= 0x61 && x <= 0x7a || x == 0x2b || x == 0x2d || 
-                x == 0x2e || x == 0x5f)
-                result += String.fromCharCode(x);
-            else
-                result += "%" + (x < 16 ? "0" : "") + x.toString(16).toUpperCase();
-        }
+DataUtils.bigEndianToUnsignedInt = function(bytes) {
+    var result = 0;
+    for (var i = 0; i < bytes.length; ++i) {
+        result <<= 8;
+        result += bytes[i];
     }
     return result;
 };
 
 /**
- * Return component as a Buffer by decoding the escapedString according to "NDNx URI Scheme".
- * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * Convert the int value to a new big endian Buffer and return.
+ * If value is 0 or negative, return new Buffer(0). 
  */
-Name.fromEscapedString = function(escapedString) {
-    var component = unescape(escapedString.trim());
-        
-    if (component.match(/[^.]/) == null) {
-        // Special case for component of only periods.  
-        if (component.length <= 2)
-            // Zero, one or two periods is illegal.  Ignore this componenent to be
-            //   consistent with the C implementation.
-            return null;
-        else
-            // Remove 3 periods.
-            return DataUtils.toNumbersFromString(component.substr(3, component.length - 3));
+DataUtils.nonNegativeIntToBigEndian = function(value) {
+    value = Math.round(value);
+    if (value <= 0)
+        return new Buffer(0);
+    
+    // Assume value is not over 64 bits.
+    var size = 8;
+    var result = new Buffer(size);
+    var i = 0;
+    while (value != 0) {
+        ++i;
+        result[size - i] = value & 0xff;
+        value >>= 8;
     }
-    else
-        return DataUtils.toNumbersFromString(component);
-}
+    return result.slice(size - i, size);
+};
 
 /**
- * Return true if the N components of this name are the same as the first N components of the given name.
- * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name.  This always returns true if this name is empty.
+ * Modify array to randomly shuffle the elements.
  */
-Name.prototype.match = function(name) {
-	var i_name = this.components;
-	var o_name = name.components;
-
-	// This name is longer than the name we are checking it against.
-	if (i_name.length > o_name.length)
-    return false;
-
-	// Check if at least one of given components doesn't match.
-  for (var i = 0; i < i_name.length; ++i) {
-    if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
-      return false;
-  }
-
-	return true;
+DataUtils.shuffle = function(array) {
+    for (var i = array.length - 1; i >= 1; --i) {
+        // j is from 0 to i.
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
 };
 /**
- * @author: Meki Cheraoui
+ * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
- * This class represents ContentObject Objects
+ * Encapsulate a Buffer and support dynamic reallocation.
  */
 
 /**
- * Create a new ContentObject with the optional values.
- * 
+ * Create a DynamicBuffer where this.array is a Buffer of size length.
+ * The methods will update this.length.
+ * To access the array, use this.array or call slice.
  * @constructor
- * @param {Name} name
- * @param {SignedInfo} signedInfo
- * @param {Buffer} content
+ * @param {number} length the initial length of the array.  If null, use a default.
  */
-var ContentObject = function ContentObject(name, signedInfo, content) {
-	if (typeof name == 'string')
-		this.name = new Name(name);
-	else
-		//TODO Check the class of name
-		this.name = name;
-	
-	this.signedInfo = signedInfo;
-	
-	if (typeof content == 'string') 
-		this.content = DataUtils.toNumbersFromString(content);
-	else 
-		this.content = content;
-	
-	this.signature = new Signature();
-	
-	this.startSIG = null;
-	this.endSIG = null;
-	
-	this.endContent = null;
-	
-	this.rawSignatureData = null;
-};
-
-ContentObject.prototype.sign = function(){
-    var n1 = this.encodeObject(this.name);
-    var n2 = this.encodeObject(this.signedInfo);
-    var n3 = this.encodeContent();
-	
-    var rsa = require("crypto").createSign('RSA-SHA256');
-    rsa.update(n1);
-    rsa.update(n2);
-    rsa.update(n3);
+var DynamicBuffer = function DynamicBuffer(length) {
+	if (!length)
+        length = 16;
     
-    var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
-
-    this.signature.signature = sig;
+    this.array = new Buffer(length);
+    this.length = length;
 };
 
-ContentObject.prototype.verify = function (/*Key*/ key) {
-    if (key == null || key.publicKeyPem == null) {
-	throw new Error('Cannot verify ContentObject without a public key.');
-    }
-
-    var verifier = require('crypto').createVerify('RSA-SHA256');
-    verifier.update(this.rawSignatureData);
-    return verifier.verify(key.publicKeyPem, this.signature.signature);
-};
-
-
-ContentObject.prototype.encodeObject = function encodeObject(obj){
-	var enc = new BinaryXMLEncoder();
- 
-	obj.to_ndnb(enc);
-	
-	var num = enc.getReducedOstream();
-
-	return num;
-
-	
-};
-
-ContentObject.prototype.encodeContent = function encodeContent(obj){
-	var enc = new BinaryXMLEncoder();
-	 
-	enc.writeElement(NDNProtocolDTags.Content, this.content);
-
-	var num = enc.getReducedOstream();
-
-	return num;
-
-	
-};
-
-ContentObject.prototype.saveRawData = function(bytes){
-	
-	var sigBits = bytes.slice(this.startSIG, this.endSIG);
-
-    this.rawSignatureData = new Buffer(sigBits);
-};
+exports.DynamicBuffer = DynamicBuffer;
 
 /**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ * Ensure that this.array has the length, reallocate and copy if necessary.
+ * Update this.length which may be greater than length.
  */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
- */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
-};
-
-/**
- * Encode this ContentObject for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-ContentObject.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this ContentObject.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-ContentObject.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
-};
-
-ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
-
-/**
- * Create a new Signature with the optional values.
- * @constructor
- */
-var Signature = function Signature(witness, signature, digestAlgorithm) {
-  this.Witness = witness;
-	this.signature = signature;
-	this.digestAlgorithm = digestAlgorithm
-};
-
-Signature.prototype.from_ndnb =function( decoder) {
-		decoder.readStartElement(this.getElementLabel());
-		
-		if(LOG>4)console.log('STARTED DECODING SIGNATURE');
-		
-		if (decoder.peekStartElement(NDNProtocolDTags.DigestAlgorithm)) {
-			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
-			this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
-		}
-		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
-			if(LOG>4)console.log('WITNESS FOUND');
-			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
-		}
-		
-		//FORCE TO READ A SIGNATURE
-
-			if(LOG>4)console.log('SIGNATURE FOUND');
-			this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
-
-		decoder.readEndElement();
-
-};
-
-
-Signature.prototype.to_ndnb= function( encoder){
-    	
-	if (!this.validate()) {
-		throw new Error("Cannot encode: field values missing.");
-	}
-	
-	encoder.writeStartElement(this.getElementLabel());
-	
-	if ((null != this.digestAlgorithm) && (!this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))) {
-		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-	}
-	
-	if (null != this.Witness) {
-		// needs to handle null witness
-		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
-	}
-
-	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
-
-	encoder.writeEndElement();   		
-};
-
-Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
-
-Signature.prototype.validate = function() {
-		return null != this.signature;
-};
-
-
-var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
-var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
-var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
-
-/**
- * Create a new SignedInfo with the optional values.
- * @constructor
- */
-var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) {
-  this.publisher = publisher; //publisherPublicKeyDigest
-  this.timestamp=timestamp; // NDN Time
-  this.type=type; // ContentType
-  this.locator =locator;//KeyLocator
-  this.freshnessSeconds =freshnessSeconds; // Integer
-  this.finalBlockID=finalBlockID; //byte array
+DynamicBuffer.prototype.ensureLength = function(length) {
+    if (this.array.length >= length)
+        return;
     
-  this.setFields();
-};
-
-SignedInfo.prototype.setFields = function(){
-	//BASE64 -> RAW STRING
-	
-	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
-/*	
-	var publicKeyHex = globalKeyManager.publicKey;
-
-	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	if(LOG>4)console.log(publicKeyHex);
-	
-	var publicKeyBytes = DataUtils.toNumbers(globalKeyManager.publicKey) ; 
-
-	
-
-	//var stringCertificate = DataUtils.base64toString(globalKeyManager.certificate);
-	
-	//if(LOG>3)console.log('string Certificate is '+stringCertificate);
-
-	//HEX -> BYTE ARRAY
-	//var publisherkey = DataUtils.toNumbers(hex_sha256(stringCertificate));
-	
-	//if(LOG>3)console.log('publisher key is ');
-	//if(LOG>3)console.log(publisherkey);
-	
-	var publisherKeyDigest = hex_sha256_from_bytes(publicKeyBytes);
-
-	this.publisher = new PublisherPublicKeyDigest(  DataUtils.toNumbers(  publisherKeyDigest )  );
-	
-	//this.publisher = new PublisherPublicKeyDigest(publisherkey);
-*/
-    var key = new Key();
-    key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
-    this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
-
-    var d = new Date();
+    // See if double is enough.
+    var newLength = this.array.length * 2;
+    if (length > newLength)
+        // The needed length is much greater, so use it.
+        newLength = length;
     
-    var time = d.getTime();	
+    var newArray = new Buffer(newLength);
+    this.array.copy(newArray);
+    this.array = newArray;
+    this.length = newLength;
+};
 
-    this.timestamp = new NDNTime( time );
+/**
+ * Copy the value to this.array at offset, reallocating if necessary. 
+ */
+DynamicBuffer.prototype.set = function(value, offset) {
+    this.ensureLength(value.length + offset);
     
-    if(LOG>4)console.log('TIME msec is');
-
-    if(LOG>4)console.log(this.timestamp.msec);
-
-    //DATA
-	this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
-	
-	//if(LOG>4)console.log('toNumbersFromString(stringCertificate) '+DataUtils.toNumbersFromString(stringCertificate));
-	
-	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
-	if(LOG>4)console.log(publicKeyBytes);
-
-    this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY );
-
-	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
-
+    if (typeof value == 'object' && value instanceof Buffer)
+      value.copy(this.array, offset);
+    else
+      // Need to make value a Buffer to copy.
+      new Buffer(value).copy(this.array, offset);
 };
 
-SignedInfo.prototype.from_ndnb = function( decoder){
-
-		decoder.readStartElement( this.getElementLabel() );
-		
-		if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-			if(LOG>4)console.log('DECODING PUBLISHER KEY');
-			this.publisher = new PublisherPublicKeyDigest();
-			this.publisher.from_ndnb(decoder);
-		}
-
-		if (decoder.peekStartElement(NDNProtocolDTags.Timestamp)) {
-			if(LOG>4)console.log('DECODING TIMESTAMP');
-			this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
-		}
-
-		if (decoder.peekStartElement(NDNProtocolDTags.Type)) {
-			var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
-		
-			
-			//TODO Implement type of Key Reading
-			
-			if(LOG>4)console.log('Binary Type of of Signed Info is '+binType);
-
-			this.type = binType;
-			
-			
-			//TODO Implement type of Key Reading
-			
-			
-			if (null == this.type) {
-				throw new Error("Cannot parse signedInfo type: bytes.");
-			}
-			
-		} else {
-			this.type = ContentType.DATA; // default
-		}
-		
-		if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
-			this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
-			if(LOG>4)console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
-		}
-		
-		if (decoder.peekStartElement(NDNProtocolDTags.FinalBlockID)) {
-			if(LOG>4)console.log('DECODING FINAL BLOCKID');
-			this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
-		}
-		
-		if (decoder.peekStartElement(NDNProtocolDTags.KeyLocator)) {
-			if(LOG>4)console.log('DECODING KEY LOCATOR');
-			this.locator = new KeyLocator();
-			this.locator.from_ndnb(decoder);
-		}
-				
-		decoder.readEndElement();
-};
-
-SignedInfo.prototype.to_ndnb = function( encoder)  {
-		if (!this.validate()) {
-			throw new Error("Cannot encode : field values missing.");
-		}
-		encoder.writeStartElement(this.getElementLabel());
-		
-		if (null!=this.publisher) {
-			if(LOG>3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
-
-			this.publisher.to_ndnb(encoder);
-		}
-
-		if (null!=this.timestamp) {
-			encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp );
-		}
-		
-		if (null!=this.type && this.type !=0) {
-			
-			encoder.writeElement(NDNProtocolDTags.type, this.type);
-		}
-		
-		if (null!=this.freshnessSeconds) {
-			encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-		}
-
-		if (null!=this.finalBlockID) {
-			encoder.writeElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
-		}
-
-		if (null!=this.locator) {
-			this.locator.to_ndnb(encoder);
-		}
-
-		encoder.writeEndElement();   		
-};
-	
-SignedInfo.prototype.valueToType = function(){
-	//for (Entry<byte [], ContentType> entry : ContentValueTypes.entrySet()) {
-		//if (Arrays.equals(value, entry.getKey()))
-			//return entry.getValue();
-		//}
-	return null;
-	
-};
-
-SignedInfo.prototype.getElementLabel = function() { 
-	return NDNProtocolDTags.SignedInfo;
-};
-
-SignedInfo.prototype.validate = function() {
-		// We don't do partial matches any more, even though encoder/decoder
-		// is still pretty generous.
-		if (null ==this.publisher || null==this.timestamp ||null== this.locator)
-			return false;
-		return true;
+/**
+ * Return this.array.slice(begin, end);
+ */
+DynamicBuffer.prototype.slice = function(begin, end) {
+    return this.array.slice(begin, end);
 };
 /*
  * Date Format 1.2.3
@@ -1620,1018 +1041,18 @@ Date.prototype.format = function (mask, utc) {
 	return dateFormat(this, mask, utc);
 };
 /**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents Interest Objects
- */
-
-/**
- * Create a new Interest with the optional values.
- * 
- * @constructor
- * @param {Name} name
- * @param {FaceInstance} faceInstance
- * @param {number} minSuffixComponents
- * @param {number} maxSuffixComponents
- * @param {Buffer} publisherPublicKeyDigest
- * @param {Exclude} exclude
- * @param {number} childSelector
- * @param {number} answerOriginKind
- * @param {number} scope
- * @param {number} interestLifetime in milliseconds
- * @param {Buffer} nonce
- */
-var Interest = function Interest
-   (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) {
-		
-	this.name = name;
-	this.faceInstance = faceInstance;
-	this.maxSuffixComponents = maxSuffixComponents;
-	this.minSuffixComponents = minSuffixComponents;
-	
-	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-	this.exclude = exclude;
-	this.childSelector = childSelector;
-	this.answerOriginKind = answerOriginKind;
-	this.scope = scope;
-	this.interestLifetime = interestLifetimeMilliseconds;
-	this.nonce = nonce;	
-};
-
-Interest.RECURSIVE_POSTFIX = "*";
-
-Interest.CHILD_SELECTOR_LEFT = 0;
-Interest.CHILD_SELECTOR_RIGHT = 1;
-Interest.ANSWER_CONTENT_STORE = 1;
-Interest.ANSWER_GENERATED = 2;
-Interest.ANSWER_STALE = 4;		// Stale answer OK
-Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
-
-Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeInterest.
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeInterest.
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-Interest.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeInterest(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this Interest.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-Interest.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeInterest(this, input);
-};
-
-/**
- * Return true if this.name.match(name) and the name conforms to the interest selectors.
- */
-Interest.prototype.matches_name = function(/*Name*/ name) {
-    if (!this.name.match(name))
-        return false;
-    
-    if (this.minSuffixComponents != null &&
-        // Add 1 for the implicit digest.
-        !(name.components.length + 1 - this.name.components.length >= this.minSuffixComponents))
-        return false;
-    if (this.maxSuffixComponents != null &&
-        // Add 1 for the implicit digest.
-        !(name.components.length + 1 - this.name.components.length <= this.maxSuffixComponents))
-        return false;
-    if (this.exclude != null && name.components.length > this.name.components.length &&
-        this.exclude.matches(name.components[this.name.components.length]))
-        return false;
-    
-    return true;
-};
-
-/**
- * Return a new Interest with the same fields as this Interest.  
- * Note: This does NOT make a deep clone of the name, exclue or other objects.
- */
-Interest.prototype.clone = function() {
-    return new Interest
-       (this.name, this.faceInstance, this.minSuffixComponents, this.maxSuffixComponents, 
-        this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
-        this.scope, this.interestLifetime, this.nonce);
-};
-
-/*
- * Handle the interest Exclude element.
- * values is 
- */
-
-/**
- * 
- * @constructor
- * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
- */
-var Exclude = function Exclude(values) { 
-	this.values = (values || []);
-}
-
-Exclude.ANY = "*";
-
-Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-	decoder.readStartElement(NDNProtocolDTags.Exclude);
-
-	while (true) {
-        if (decoder.peekStartElement(NDNProtocolDTags.Component))
-            this.values.push(decoder.readBinaryElement(NDNProtocolDTags.Component));
-        else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
-            decoder.readStartElement(NDNProtocolDTags.Any);
-            decoder.readEndElement();
-            this.values.push(Exclude.ANY);
-        }
-        else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
-            // Skip the Bloom and treat it as Any.
-            decoder.readBinaryElement(NDNProtocolDTags.Bloom);
-            this.values.push(Exclude.ANY);
-        }
-        else
-            break;
-	}
-    
-    decoder.readEndElement();
-};
-
-Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-	if (this.values == null || this.values.length == 0)
-		return;
-
-	encoder.writeStartElement(NDNProtocolDTags.Exclude);
-    
-    // TODO: Do we want to order the components (except for ANY)?
-    for (var i = 0; i < this.values.length; ++i) {
-        if (this.values[i] == Exclude.ANY) {
-            encoder.writeStartElement(NDNProtocolDTags.Any);
-            encoder.writeEndElement();
-        }
-        else
-            encoder.writeElement(NDNProtocolDTags.Component, this.values[i]);
-    }
-
-	encoder.writeEndElement();
-};
-
-/**
- * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
- */
-Exclude.prototype.to_uri = function() {
-	if (this.values == null || this.values.length == 0)
-		return "";
-
-    var result = "";
-    for (var i = 0; i < this.values.length; ++i) {
-        if (i > 0)
-            result += ",";
-        
-        if (this.values[i] == Exclude.ANY)
-            result += "*";
-        else
-            result += Name.toEscapedString(this.values[i]);
-    }
-    return result;
-};
-
-/**
- * Return true if the component matches any of the exclude criteria.
- */
-Exclude.prototype.matches = function(/*Buffer*/ component) {
-    for (var i = 0; i < this.values.length; ++i) {
-        if (this.values[i] == Exclude.ANY) {
-            var lowerBound = null;
-            if (i > 0)
-                lowerBound = this.values[i - 1];
-            
-            // Find the upper bound, possibly skipping over multiple ANY in a row.
-            var iUpperBound;
-            var upperBound = null;
-            for (iUpperBound = i + 1; iUpperBound < this.values.length; ++iUpperBound) {
-                if (this.values[iUpperBound] != Exclude.ANY) {
-                    upperBound = this.values[iUpperBound];
-                    break;
-                }
-            }
-            
-            // If lowerBound != null, we already checked component equals lowerBound on the last pass.
-            // If upperBound != null, we will check component equals upperBound on the next pass.
-            if (upperBound != null) {
-                if (lowerBound != null) {
-                    if (Exclude.compareComponents(component, lowerBound) > 0 &&
-                        Exclude.compareComponents(component, upperBound) < 0)
-                        return true;
-                }
-                else {
-                    if (Exclude.compareComponents(component, upperBound) < 0)
-                        return true;
-                }
-                
-                // Make i equal iUpperBound on the next pass.
-                i = iUpperBound - 1;
-            }
-            else {
-                if (lowerBound != null) {
-                    if (Exclude.compareComponents(component, lowerBound) > 0)
-                        return true;
-                }
-                else
-                    // this.values has only ANY.
-                    return true;
-            }
-        }
-        else {
-            if (DataUtils.arraysEqual(component, this.values[i]))
-                return true;
-        }
-    }
-    
-    return false;
-};
-
-/**
- * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
- * A component is less if it is shorter, otherwise if equal length do a byte comparison.
- */
-Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) {
-    if (component1.length < component2.length)
-        return -1;
-    if (component1.length > component2.length)
-        return 1;
-    
-    for (var i = 0; i < component1.length; ++i) {
-        if (component1[i] < component2[i])
-            return -1;
-        if (component1[i] > component2[i])
-            return 1;
-    }
-
-    return 0;
-};
-/**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents Key Objects
- */
-
-/**
- * @constructor
- */
-/**
- * Key
- */
-var Key = function Key() {
-    this.publicKeyDer = null;     // Buffer
-    this.publicKeyDigest = null;  // Buffer
-    this.publicKeyPem = null;     // String
-    this.privateKeyPem = null;    // String
-};
-
-
-/**
- * Helper functions to read Key fields
- * TODO: generateRSA()
- */
-
-Key.prototype.publicToDER = function () {
-    return this.publicKeyDer;  // Buffer
-};
-
-Key.prototype.privateToDER = function () {
-    // Remove the '-----XXX-----' from the beginning and the end of the key
-    // and also remove any \n in the key string
-    var lines = this.privateKeyPem.split('\n');
-    priKey = "";
-    for (var i = 1; i < lines.length - 1; i++)
-	priKey += lines[i];
-    return new Buffer(priKey, 'base64');    
-};
-
-Key.prototype.publicToPEM = function () {
-    return this.publicKeyPem;
-};
-
-Key.prototype.privateToPEM = function () {
-    return this.privateKeyPem;
-};
-
-Key.prototype.getKeyID = function () {
-    return this.publicKeyDigest;
-};
-
-exports.Key = Key;
-
-Key.prototype.readDerPublicKey = function (/*Buffer*/pub_der) {
-    if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
-
-    this.publicKeyDer = pub_der;
-
-    var hash = require("crypto").createHash('sha256');
-    hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(hash.digest());
-    
-    var keyStr = pub_der.toString('base64'); 
-    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-    for (var i = 0; i < keyStr.length; i += 64)
-	keyPem += (keyStr.substr(i, 64) + "\n");
-    keyPem += "-----END PUBLIC KEY-----";
-    this.publicKeyPem = keyPem;
-
-    if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);
-};
-
-/**
- * Load RSA key pair from PEM-encoded strings.
- * Will throw an Error if both 'pub' and 'pri' are null.
- */
-Key.prototype.fromPemString = function (pub, pri) {
-    if (pub == null && pri == null)
-	throw new Error('Cannot create Key object if both public and private PEM string is empty.');
-
-    // Read public key
-    if (pub != null) {
-	this.publicKeyPem = pub;
-	if (LOG>4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
-	
-	// Remove the '-----XXX-----' from the beginning and the end of the public key
-	// and also remove any \n in the public key string
-	var lines = pub.split('\n');
-	pub = "";
-	for (var i = 1; i < lines.length - 1; i++)
-	    pub += lines[i];
-	this.publicKeyDer = new Buffer(pub, 'base64');
-	if (LOG>4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
-	
-	var hash = require("crypto").createHash('sha256');
-	hash.update(this.publicKeyDer);
-	this.publicKeyDigest = new Buffer(hash.digest());
-	if (LOG>4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
-    }
-    
-    // Read private key
-    if (pri != null) {
-	this.privateKeyPem = pri;
-	if (LOG>4) console.log("Key.privateKeyPem: \n" + this.privateKeyPem);
-    }
-};
-
-Key.prototype.fromPem = Key.prototype.fromPemString;
-
-/**
- * Static method that create a Key object.
- * Parameter 'obj' is a JSON object that has two properties:
- *   pub: the PEM string for the public key
- *   pri: the PEM string for the private key
- * Will throw an Error if both obj.pub and obj.pri are null.
- */
-Key.createFromPEM = function (obj) {
-    var key = new Key();
-    key.fromPemString(obj.pub, obj.pri);
-    return key;
-};
-
-/**
- * KeyLocator
- */
-var KeyLocatorType = {
-	KEY:1,
-	CERTIFICATE:2,
-	KEYNAME:3
-};
-
-/**
- * @constructor
- */
-var KeyLocator = function KeyLocator(input,type) { 
-  this.type = type;
-    
-  if (type == KeyLocatorType.KEYNAME){
-  	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
-   	this.keyName = input;
-  }
-  else if (type == KeyLocatorType.KEY){
-   	if (LOG>3) console.log('KeyLocator: SET KEY');
-   	this.publicKey = input;
-  }
-  else if (type == KeyLocatorType.CERTIFICATE){
-   	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
-   	this.certificate = input;
-  }
-};
-
-KeyLocator.prototype.from_ndnb = function(decoder) {
-
-	decoder.readStartElement(this.getElementLabel());
-
-	if (decoder.peekStartElement(NDNProtocolDTags.Key)) {
-		try {
-			var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
-			// This is a DER-encoded SubjectPublicKeyInfo.
-			
-			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-			this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-			this.type = KeyLocatorType.KEY;
-			
-
-			if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-			//this.publicKey = encodedKey;
-			
-			
-		} catch (e) {
-			throw new Error("Cannot parse key: ", e);
-		} 
-
-		if (null == this.publicKey) {
-			throw new Error("Cannot parse key: ");
-		}
-
-	} else if ( decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
-		try {
-			var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
-			
-			/*
-			 * Certificates not yet working
-			 */
-			
-			//CertificateFactory factory = CertificateFactory.getInstance("X.509");
-			//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
-			
-
-			this.certificate = encodedCert;
-			this.type = KeyLocatorType.CERTIFICATE;
-
-			if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-			
-		} catch ( e) {
-			throw new Error("Cannot decode certificate: " +  e);
-		}
-		if (null == this.certificate) {
-			throw new Error("Cannot parse certificate! ");
-		}
-	} else  {
-		this.type = KeyLocatorType.KEYNAME;
-		
-		this.keyName = new KeyName();
-		this.keyName.from_ndnb(decoder);
-	}
-	decoder.readEndElement();
-};
-	
-
-KeyLocator.prototype.to_ndnb = function( encoder) {
-	
-	if(LOG>4) console.log('type is is ' + this.type);
-	//TODO Check if Name is missing
-	if (!this.validate()) {
-		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-	}
-
-	
-	//TODO FIX THIS TOO
-	encoder.writeStartElement(this.getElementLabel());
-	
-	if (this.type == KeyLocatorType.KEY) {
-		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
-		encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);
-		
-	} else if (this.type == KeyLocatorType.CERTIFICATE) {
-		
-		try {
-			encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
-		} catch ( e) {
-			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-		}
-		
-	} else if (this.type == KeyLocatorType.KEYNAME) {
-		
-		this.keyName.to_ndnb(encoder);
-	}
-	encoder.writeEndElement();
-	
-};
-
-KeyLocator.prototype.getElementLabel = function() {
-	return NDNProtocolDTags.KeyLocator; 
-};
-
-KeyLocator.prototype.validate = function() {
-	return (  (null != this.keyName) || (null != this.publicKey) || (null != this.certificate)   );
-};
-
-/**
- * KeyName is only used by KeyLocator.
- * @constructor
- */
-var KeyName = function KeyName() {
-	this.contentName = this.contentName;  //contentName
-	this.publisherID = this.publisherID;  //publisherID
-
-};
-
-KeyName.prototype.from_ndnb=function( decoder){
-	
-
-	decoder.readStartElement(this.getElementLabel());
-
-	this.contentName = new Name();
-	this.contentName.from_ndnb(decoder);
-	
-	if(LOG>4) console.log('KEY NAME FOUND: ');
-	
-	if ( PublisherID.peek(decoder) ) {
-		this.publisherID = new PublisherID();
-		this.publisherID.from_ndnb(decoder);
-	}
-	
-	decoder.readEndElement();
-};
-
-KeyName.prototype.to_ndnb = function( encoder) {
-	if (!this.validate()) {
-		throw new Error("Cannot encode : field values missing.");
-	}
-	
-	encoder.writeStartElement(this.getElementLabel());
-	
-	this.contentName.to_ndnb(encoder);
-	if (null != this.publisherID)
-		this.publisherID.to_ndnb(encoder);
-
-	encoder.writeEndElement();   		
-};
-	
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
-
-KeyName.prototype.validate = function() {
-		// DKS -- do we do recursive validation?
-		// null signedInfo ok
-		return (null != this.contentName);
-};
-
-/**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents Publisher and PublisherType Objects
- */
-
-/**
- * @constructor
- */
-var PublisherType = function PublisherType(tag){
-    	this.KEY =(NDNProtocolDTags.PublisherPublicKeyDigest);
-    	this.CERTIFICATE= (NDNProtocolDTags.PublisherCertificateDigest);
-    	this.ISSUER_KEY=	(NDNProtocolDTags.PublisherIssuerKeyDigest);
-    	this.ISSUER_CERTIFICATE	=(NDNProtocolDTags.PublisherIssuerCertificateDigest);
-
-    	this.Tag = tag;
-}; 
-
-var isTypeTagVal = function(tagVal) {
-		if ((tagVal == NDNProtocolDTags.PublisherPublicKeyDigest) ||
-			(tagVal == NDNProtocolDTags.PublisherCertificateDigest) ||
-			(tagVal == NDNProtocolDTags.PublisherIssuerKeyDigest) ||
-			(tagVal == NDNProtocolDTags.PublisherIssuerCertificateDigest)) {
-			return true;
-		}
-		return false;
-};
-
-/**
- * @constructor
- */
-var PublisherID = function PublisherID() {
-
-	this.PUBLISHER_ID_DIGEST_ALGORITHM = "SHA-256";
-	this.PUBLISHER_ID_LEN = 256/8;
-    
-	//TODO, implement publisherID creation and key creation
-
-    //TODO implement generatePublicKeyDigest
-    this.publisherID =null;//= generatePublicKeyDigest(key);//ByteArray
-    
-    //TODO implement generate key
-    //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
-    this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
-    
-};
-
-
-PublisherID.prototype.from_ndnb = function(decoder) {
-		
-		// We have a choice here of one of 4 binary element types.
-		var nextTag = decoder.peekStartElementAsLong();
-		
-		if (null == nextTag) {
-			throw new Error("Cannot parse publisher ID.");
-		} 
-		
-		this.publisherType = new PublisherType(nextTag); 
-		
-		if (!isTypeTagVal(nextTag)) {
-			throw new Error("Invalid publisher ID, got unexpected type: " + nextTag);
-		}
-		this.publisherID = decoder.readBinaryElement(nextTag);
-		if (null == this.publisherID) {
-			throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
-		}
-};
-
-PublisherID.prototype.to_ndnb = function(encoder) {
-	if (!this.validate()) {
-		throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
-	}
-
-	encoder.writeElement(this.getElementLabel(), this.publisherID);
-};
-	
-PublisherID.peek = function(/* XMLDecoder */ decoder) {
-
-		//Long
-		var nextTag = decoder.peekStartElementAsLong();
-		
-		if (null == nextTag) {
-			// on end element
-			return false;
-		}
-		return (isTypeTagVal(nextTag));
-	};
-
-PublisherID.prototype.getElementLabel = function() { 
-	return this.publisherType.Tag;
-};
-
-PublisherID.prototype.validate = function(){
-	return ((null != id() && (null != type())));
-};
-
-
-
-/**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents PublisherPublicKeyDigest Objects
- */
-
-/**
- * @constructor
- */
-var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){ 
-	
- 	 //this.PUBLISHER_ID_LEN = 256/8;
-	 this.PUBLISHER_ID_LEN = 512/8;
- 	 
-
-	 this.publisherPublicKeyDigest = pkd;
- 	 //if( typeof _pkd == "object") this.publisherPublicKeyDigest = _pkd; // Byte Array
- 	 //else if( typeof _pkd == "PublicKey") ;//TODO...
-    
-};
-
-PublisherPublicKeyDigest.prototype.from_ndnb = function( decoder) {		
-
-		this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
-		
-		if(LOG>4)console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
-
-		if (null == this.publisherPublicKeyDigest) {
-			throw new Error("Cannot parse publisher key digest.");
-		}
-		
-		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
-
-		if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
-			if (LOG > 0)
-                console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
-			
-			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;		
-		}
-	};
-
-PublisherPublicKeyDigest.prototype.to_ndnb= function( encoder) {
-		//TODO Check that the ByteArray for the key is present
-		if (!this.validate()) {
-			throw new Error("Cannot encode : field values missing.");
-		}
-		if(LOG>3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
-		encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
-};
-	
-PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };
-
-PublisherPublicKeyDigest.prototype.validate =function() {
-		return (null != this.publisherPublicKeyDigest);
-};
-/**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents Face Instances
- */
-
-var NetworkProtocol = { TCP:6, UDP:17};
-
-/**
- * @constructor
- */
-var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
-		multicastTTL, freshnessSeconds) {
-	this.action = action;
-	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-	this.faceID = faceID;
-	this.ipProto = ipProto;
-	this.host = host;
-	this.Port = port;
-	this.multicastInterface =multicastInterface;
-	this.multicastTTL =multicastTTL;
-	this.freshnessSeconds = freshnessSeconds;
-};
-
-/**
- * Used by NetworkObject to decode the object from a network stream.
- */
-FaceInstance.prototype.from_ndnb = function(//XMLDecoder 
-	decoder) {
-
-	decoder.readStartElement(this.getElementLabel());
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
-		
-		this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
-		
-	}
-	if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-		
-		this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-		this.publisherPublicKeyDigest.from_ndnb(decoder);
-		
-	}
-	if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
-		
-		this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID);
-		
-	}
-	if (decoder.peekStartElement(NDNProtocolDTags.IPProto)) {
-		
-		//int
-		var pI = decoder.readIntegerElement(NDNProtocolDTags.IPProto);
-		
-		this.ipProto = null;
-		
-		if (NetworkProtocol.TCP == pI) {
-			
-			this.ipProto = NetworkProtocol.TCP;
-			
-		} else if (NetworkProtocol.UDP == pI) {
-			
-			this.ipProto = NetworkProtocol.UDP;
-			
-		} else {
-			
-			throw new Error("FaceInstance.decoder.  Invalid " + 
-					NDNProtocolDTags.tagToString(NDNProtocolDTags.IPProto) + " field: " + pI);
-			
-		}
-	}
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.Host)) {
-		
-		this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
-		
-	}
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.Port)) {
-		this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
-	}
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.MulticastInterface)) {
-		this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
-	}
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.MulticastTTL)) {
-		this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
-	}
-	
-	if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
-		this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
-	}
-	decoder.readEndElement();
-}
-
-/**
- * Used by NetworkObject to encode the object to a network stream.
- */
-FaceInstance.prototype.to_ndnb = function(//XMLEncoder
-	encoder){
-
-	//if (!this.validate()) {
-		//throw new Error("Cannot encode : field values missing.");
-		//throw new Error("")
-	//}
-	encoder.writeStartElement(this.getElementLabel());
-	
-	if (null != this.action && this.action.length != 0)
-		encoder.writeElement(NDNProtocolDTags.Action, this.action);	
-	
-	if (null != this.publisherPublicKeyDigest) {
-		this.publisherPublicKeyDigest.to_ndnb(encoder);
-	}
-	if (null != this.faceID) {
-		encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
-	}
-	if (null != this.ipProto) {
-		//encoder.writeElement(NDNProtocolDTags.IPProto, this.IpProto.value());
-		encoder.writeElement(NDNProtocolDTags.IPProto, this.ipProto);
-	}
-	if (null != this.host && this.host.length != 0) {
-		encoder.writeElement(NDNProtocolDTags.Host, this.host);	
-	}
-	if (null != this.Port) {
-		encoder.writeElement(NDNProtocolDTags.Port, this.Port);
-	}
-	if (null != this.multicastInterface && this.multicastInterface.length != 0) {
-		encoder.writeElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
-	}
-	if (null !=  this.multicastTTL) {
-		encoder.writeElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
-	}
-	if (null != this.freshnessSeconds) {
-		encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-	}
-	encoder.writeEndElement();   			
-}
-
-
-FaceInstance.prototype.getElementLabel = function() {
-  return NDNProtocolDTags.FaceInstance;
-};
-
-/**
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- * This class represents Forwarding Entries
- */
-
-/**
- * Create a new ForwardingEntry with the optional arguments.
- * @constructor
- * @param {String} action
- * @param {Name} prefixName
- * @param {PublisherPublicKeyDigest} ndndId
- * @param {number} faceID
- * @param {number} flags
- * @param {number} lifetime in seconds
- */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime) {
-	this.action = action;
-	this.prefixName = prefixName;
-	this.ndndID = ndndId;
-	this.faceID = faceID;
-	this.flags = flags;
-	this.lifetime = lifetime;
-};
-
-ForwardingEntry.prototype.from_ndnb =function(
-	//XMLDecoder 
-	decoder) 
-	//throws ContentDecodingException
-	{
-			decoder.readStartElement(this.getElementLabel());
-			if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
-				this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
-			}
-			if (decoder.peekStartElement(NDNProtocolDTags.Name)) {
-				this.prefixName = new Name();
-				this.prefixName.from_ndnb(decoder) ;
-			}
-			if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-				this.NdndId = new PublisherPublicKeyDigest();
-				this.NdndId.from_ndnb(decoder);
-			}
-			if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
-				this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
-			}
-			if (decoder.peekStartElement(NDNProtocolDTags.ForwardingFlags)) {
-				this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
-			}
-			if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
-				this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
-			}
-			decoder.readEndElement();
-		};
-
-ForwardingEntry.prototype.to_ndnb =function(
-	//XMLEncoder 
-encoder) 
-{
-
-
-			//if (!validate()) {
-				//throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
-			//}
-			encoder.writeStartElement(this.getElementLabel());
-			if (null != this.action && this.action.length != 0)
-				encoder.writeElement(NDNProtocolDTags.Action, this.action);	
-			if (null != this.prefixName) {
-				this.prefixName.to_ndnb(encoder);
-			}
-			if (null != this.NdndId) {
-				this.NdndId.to_ndnb(encoder);
-			}
-			if (null != this.faceID) {
-				encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
-			}
-			if (null != this.flags) {
-				encoder.writeElement(NDNProtocolDTags.ForwardingFlags, this.flags);
-			}
-			if (null != this.lifetime) {
-				encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
-			}
-			encoder.writeEndElement();   			
-		};
-
-ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
-/**
- * @author: Jeff Thompson
- * See COPYING for copyright and distribution information.
- * Encapsulate a Buffer and support dynamic reallocation.
- */
-
-/**
- * Create a DynamicBuffer where this.array is a Buffer of size length.
- * The methods will update this.length.
- * To access the array, use this.array or call slice.
- * @constructor
- * @param {number} length the initial length of the array.  If null, use a default.
- */
-var DynamicBuffer = function DynamicBuffer(length) {
-	if (!length)
-        length = 16;
-    
-    this.array = new Buffer(length);
-    this.length = length;
-};
-
-/**
- * Ensure that this.array has the length, reallocate and copy if necessary.
- * Update this.length which may be greater than length.
- */
-DynamicBuffer.prototype.ensureLength = function(length) {
-    if (this.array.length >= length)
-        return;
-    
-    // See if double is enough.
-    var newLength = this.array.length * 2;
-    if (length > newLength)
-        // The needed length is much greater, so use it.
-        newLength = length;
-    
-    var newArray = new Buffer(newLength);
-    newArray.set(this.array);
-    this.array = newArray;
-    this.length = newLength;
-};
-
-/**
- * Call this.array.set(value, offset), reallocating if necessary. 
- */
-DynamicBuffer.prototype.set = function(value, offset) {
-    this.ensureLength(value.length + offset);
-    this.array.set(value, offset);
-};
-
-/**
- * Return this.array.slice(begin, end);
- */
-DynamicBuffer.prototype.slice = function(begin, end) {
-    return this.array.slice(begin, end);
-};
-/**
  * This class is used to encode ndnb binary elements (blob, type/value pairs).
  * 
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
+
+var LOG = require('../Log.js').Log.LOG;
+
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var DynamicBuffer = require('./DynamicBuffer.js').DynamicBuffer;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
 
 var XML_EXT = 0x00; 
 	
@@ -2675,6 +1096,8 @@ var BinaryXMLEncoder = function BinaryXMLEncoder(){
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
+
+exports.BinaryXMLEncoder = BinaryXMLEncoder;
 
 /**
  * Encode utf8Content as utf8.
@@ -3024,6 +1447,11 @@ BinaryXMLEncoder.prototype.getReducedOstream = function() {
  * See COPYING for copyright and distribution information.
  */
 
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('../util/NDNTime.js').NDNTime;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
+
 var XML_EXT = 0x00; 
 	
 var XML_TAG = 0x01; 
@@ -3094,6 +1522,8 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input){
 	this.input = input;
 	this.offset = 0;
 };
+
+exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
 BinaryXMLDecoder.prototype.initializeDecoding = function() {
 		//if (!this.input.markSupported()) {
@@ -3642,6 +2072,27 @@ ContentDecodingException.prototype.name = "ContentDecodingException";
  * See COPYING for copyright and distribution information.
  */
 
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+
+var XML_EXT = 0x00; 
+var XML_TAG = 0x01; 
+var XML_DTAG = 0x02; 
+var XML_ATTR = 0x03; 
+var XML_DATTR = 0x04; 
+var XML_BLOB = 0x05; 
+var XML_UDATA = 0x06; 	
+var XML_CLOSE = 0x0;
+
+var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16; 
+
+var XML_TT_BITS = 3;
+var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
+var XML_TT_VAL_BITS = XML_TT_BITS + 1;
+var XML_TT_VAL_MASK = ((1 << (XML_TT_VAL_BITS)) - 1);
+var XML_REG_VAL_BITS = 7;
+var XML_REG_VAL_MASK = ((1 << XML_REG_VAL_BITS) - 1);
+var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
+
 /**
  * @constructor
  */
@@ -3655,6 +2106,8 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.headerBuffer = new DynamicBuffer(5);
     this.nBytesToRead = 0;
 };
+
+exports.BinaryXMLStructureDecoder = BinaryXMLStructureDecoder;
 
 BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
 BinaryXMLStructureDecoder.READ_BYTES = 1;
@@ -3815,6 +2268,8 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset) {
 var WireFormat = function WireFormat() {
 };
 
+exports.WireFormat = WireFormat;
+
 /**
  * The override method in the derived class should encode the interest and return a Buffer.
  * @param {Interest} interest
@@ -3859,8 +2314,1990 @@ WireFormat.prototype.decodeContentObject = function(contentObject, input) {
 /**
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
+ */
+
+var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
+
+/**
+ * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
+ * BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
+ * elementListener.onReceivedElement(element) with the element. 
+ * This handles the case where a single call to onReceivedData may contain multiple elements.
+ * @constructor
+ * @param {{onReceivedElement:function}} elementListener
+ */
+var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
+  this.elementListener = elementListener;
+	this.dataParts = [];
+  this.structureDecoder = new BinaryXMLStructureDecoder();
+};
+
+exports.BinaryXmlElementReader = BinaryXmlElementReader;
+
+BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
+    // Process multiple objects in the data.
+    while(true) {
+        // Scan the input to check if a whole ndnb object has been read.
+        this.structureDecoder.seek(0);
+        if (this.structureDecoder.findElementEnd(data)) {
+            // Got the remainder of an object.  Report to the caller.
+            this.dataParts.push(data.slice(0, this.structureDecoder.offset));
+            var element = DataUtils.concatArrays(this.dataParts);
+            this.dataParts = [];
+            try {
+                this.elementListener.onReceivedElement(element);
+            } catch (ex) {
+                console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+            }
+        
+            // Need to read a new object.
+            data = data.slice(this.structureDecoder.offset, data.length);
+            this.structureDecoder = new BinaryXMLStructureDecoder();
+            if (data.length == 0)
+                // No more data in the packet.
+                return;
+            
+            // else loop back to decode.
+        }
+        else {
+            // Save for a later call to concatArrays so that we only copy data once.
+            this.dataParts.push(data);
+            if (LOG>3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
+                return;
+        }
+    }    
+};
+/** 
+ * @author: Wentao Shang
+ * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * @constructor
+ */
+var WebSocketTransport = function WebSocketTransport() {    
+    if (!WebSocket)
+        throw new Error("WebSocket support is not available on this platform.");
+    
+	this.ws = null;
+    this.connectedHost = null; // Read by NDN.
+    this.connectedPort = null; // Read by NDN.
+    this.elementReader = null;
+    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+        (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
+          "E.ws.ndn.ucla.edu"],
+         9696);
+};
+
+/**
+ * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ *   and connectedPort.  Once connected, call onopenCallback().
+ * Listen on the port to read an entire binary XML encoded element and call
+ *    ndn.onReceivedElement(element).
+ */
+WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
+	if (this.ws != null)
+		delete this.ws;
+	
+	this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
+	if (LOG > 0) console.log('ws connection created.');
+    this.connectedHost = ndn.host;
+    this.connectedPort = ndn.port;
+	
+	this.ws.binaryType = "arraybuffer";
+	
+    this.elementReader = new BinaryXmlElementReader(ndn);
+	var self = this;
+	this.ws.onmessage = function(ev) {
+		var result = ev.data;
+		//console.log('RecvHandle called.');
+			
+		if(result == null || result == undefined || result == "" ) {
+			console.log('INVALID ANSWER');
+		} else if (result instanceof ArrayBuffer) {
+	        var bytearray = new Buffer(result);
+	        
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
+			
+			try {
+                // Find the end of the binary XML element and call ndn.onReceivedElement.
+                self.elementReader.onReceivedData(bytearray);
+			} catch (ex) {
+				console.log("NDN.ws.onmessage exception: " + ex);
+				return;
+			}
+		}
+	}
+	
+	this.ws.onopen = function(ev) {
+		if (LOG > 3) console.log(ev);
+		if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
+		if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
+        // NDN.registerPrefix will fetch the ndndid when needed.
+        
+        onopenCallback();
+	}
+	
+	this.ws.onerror = function(ev) {
+		console.log('ws.onerror: ReadyState: ' + this.readyState);
+		console.log(ev);
+		console.log('ws.onerror: WebSocket error: ' + ev.data);
+	}
+	
+	this.ws.onclose = function(ev) {
+		console.log('ws.onclose: WebSocket connection closed.');
+		self.ws = null;
+		
+		// Close NDN when WebSocket is closed
+		ndn.readyStatus = NDN.CLOSED;
+		ndn.onclose();
+		//console.log("NDN.onclose event fired.");
+	}
+};
+
+/**
+ * Send the Uint8Array data.
+ */
+WebSocketTransport.prototype.send = function(data) {
+	if (this.ws != null) {
+        // If we directly use data.buffer to feed ws.send(), 
+        // WebSocket may end up sending a packet with 10000 bytes of data.
+        // That is, WebSocket will flush the entire buffer
+        // regardless of the offset of the Uint8Array. So we have to create
+        // a new Uint8Array buffer with just the right size and copy the 
+        // content from binaryInterest to the new buffer.
+        //    ---Wentao
+        var bytearray = new Uint8Array(data.length);
+        bytearray.set(data);
+        this.ws.send(bytearray.buffer);
+		if (LOG > 3) console.log('ws.send() returned.');
+	}
+	else
+		console.log('WebSocket connection is not established.');
+}
+/**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ */
+
+// The NDN constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
+exports.TcpTransport = ndn.WebSocketTransport;
+/**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * Provide the callback closure for the async communication methods in the NDN class.
+ * This is a port of Closure.py from PyNDN, written by: 
+ * Derek Kulinski <takeda@takeda.tk>
+ * Jeff Burke <jburke@ucla.edu>
+ */
+
+/**
+ * You should create a subclass of Closure and pass an object to async calls.
+ * @constructor
+ */
+var Closure = function Closure() {
+	// I don't think storing NDN's closure is needed
+	// and it creates a reference loop, as of now both
+	// of those variables are never set -- Derek
+	//
+	// Use instance variables to return data to callback
+	this.ndn_data = null;  // this holds the ndn_closure
+    this.ndn_data_dirty = false;
+    
+};
+
+// Upcall result
+Closure.RESULT_ERR               = -1; // upcall detected an error
+Closure.RESULT_OK                =  0; // normal upcall return
+Closure.RESULT_REEXPRESS         =  1; // reexpress the same interest again
+Closure.RESULT_INTEREST_CONSUMED =  2; // upcall claims to consume interest
+Closure.RESULT_VERIFY            =  3; // force an unverified result to be verified
+Closure.RESULT_FETCHKEY          =  4; // get the key in the key locator and re-call the interest
+                                       //   with the key available in the local storage
+
+// Upcall kind
+Closure.UPCALL_FINAL              = 0; // handler is about to be deregistered
+Closure.UPCALL_INTEREST           = 1; // incoming interest
+Closure.UPCALL_CONSUMED_INTEREST  = 2; // incoming interest, someone has answered
+Closure.UPCALL_CONTENT            = 3; // incoming verified content
+Closure.UPCALL_INTEREST_TIMED_OUT = 4; // interest timed out
+Closure.UPCALL_CONTENT_UNVERIFIED = 5; // content that has not been verified
+Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
+
+/**
+ * Override this in your subclass.
+ * If you're getting strange errors in upcall()
+ * check your code whether you're returning a value.
+ */
+Closure.prototype.upcall = function(kind, upcallInfo) {
+	//dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
+	return Closure.RESULT_OK;
+};
+
+/**
+ * An UpcallInfo is passed to Closure.upcall.
+ * @constructor
+ */
+var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) {
+	this.ndn = ndn;  // NDN object (not used)
+	this.interest = interest;  // Interest object
+	this.matchedComps = matchedComps;  // int
+	this.contentObject = contentObject;  // Content object
+};
+
+UpcallInfo.prototype.toString = function() {
+	var ret = "ndn = " + this.ndn;
+	ret += "\nInterest = " + this.interest;
+	ret += "\nmatchedComps = " + this.matchedComps;
+	ret += "\nContentObject: " + this.contentObject;
+	return ret;
+}
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents PublisherPublicKeyDigest Objects
+ */
+
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var LOG = require('./Log.js').Log.LOG;
+
+/**
+ * @constructor
+ */
+var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){ 
+	
+ 	 //this.PUBLISHER_ID_LEN = 256/8;
+	 this.PUBLISHER_ID_LEN = 512/8;
+ 	 
+
+	 this.publisherPublicKeyDigest = pkd;
+ 	 //if( typeof _pkd == "object") this.publisherPublicKeyDigest = _pkd; // Byte Array
+ 	 //else if( typeof _pkd == "PublicKey") ;//TODO...
+    
+};
+
+exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
+
+PublisherPublicKeyDigest.prototype.from_ndnb = function( decoder) {		
+
+		this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
+		
+		if(LOG>4)console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
+
+		if (null == this.publisherPublicKeyDigest) {
+			throw new Error("Cannot parse publisher key digest.");
+		}
+		
+		//TODO check if the length of the PublisherPublicKeyDigest is correct ( Security reason)
+
+		if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
+			if (LOG > 0)
+                console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
+			
+			//this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;		
+		}
+	};
+
+PublisherPublicKeyDigest.prototype.to_ndnb= function( encoder) {
+		//TODO Check that the ByteArray for the key is present
+		if (!this.validate()) {
+			throw new Error("Cannot encode : field values missing.");
+		}
+		if(LOG>3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
+		encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
+};
+	
+PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };
+
+PublisherPublicKeyDigest.prototype.validate =function() {
+		return (null != this.publisherPublicKeyDigest);
+};
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents Publisher and PublisherType Objects
+ */
+
+/**
+ * @constructor
+ */
+var PublisherType = function PublisherType(tag){
+    	this.KEY =(NDNProtocolDTags.PublisherPublicKeyDigest);
+    	this.CERTIFICATE= (NDNProtocolDTags.PublisherCertificateDigest);
+    	this.ISSUER_KEY=	(NDNProtocolDTags.PublisherIssuerKeyDigest);
+    	this.ISSUER_CERTIFICATE	=(NDNProtocolDTags.PublisherIssuerCertificateDigest);
+
+    	this.Tag = tag;
+}; 
+
+var isTypeTagVal = function(tagVal) {
+		if ((tagVal == NDNProtocolDTags.PublisherPublicKeyDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherCertificateDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherIssuerKeyDigest) ||
+			(tagVal == NDNProtocolDTags.PublisherIssuerCertificateDigest)) {
+			return true;
+		}
+		return false;
+};
+
+/**
+ * @constructor
+ */
+var PublisherID = function PublisherID() {
+
+	this.PUBLISHER_ID_DIGEST_ALGORITHM = "SHA-256";
+	this.PUBLISHER_ID_LEN = 256/8;
+    
+	//TODO, implement publisherID creation and key creation
+
+    //TODO implement generatePublicKeyDigest
+    this.publisherID =null;//= generatePublicKeyDigest(key);//ByteArray
+    
+    //TODO implement generate key
+    //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
+    this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
+    
+};
+
+
+PublisherID.prototype.from_ndnb = function(decoder) {
+		
+		// We have a choice here of one of 4 binary element types.
+		var nextTag = decoder.peekStartElementAsLong();
+		
+		if (null == nextTag) {
+			throw new Error("Cannot parse publisher ID.");
+		} 
+		
+		this.publisherType = new PublisherType(nextTag); 
+		
+		if (!isTypeTagVal(nextTag)) {
+			throw new Error("Invalid publisher ID, got unexpected type: " + nextTag);
+		}
+		this.publisherID = decoder.readBinaryElement(nextTag);
+		if (null == this.publisherID) {
+			throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+		}
+};
+
+PublisherID.prototype.to_ndnb = function(encoder) {
+	if (!this.validate()) {
+		throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
+	}
+
+	encoder.writeElement(this.getElementLabel(), this.publisherID);
+};
+	
+PublisherID.peek = function(/* XMLDecoder */ decoder) {
+
+		//Long
+		var nextTag = decoder.peekStartElementAsLong();
+		
+		if (null == nextTag) {
+			// on end element
+			return false;
+		}
+		return (isTypeTagVal(nextTag));
+	};
+
+PublisherID.prototype.getElementLabel = function() { 
+	return this.publisherType.Tag;
+};
+
+PublisherID.prototype.validate = function(){
+	return ((null != id() && (null != type())));
+};
+
+
+
+/**
+ * @author: Meki Cheraoui, Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * This class represents a Name as an array of components where each is a byte array.
+ */
+ 
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var LOG = require('./Log.js').Log.LOG;
+
+/**
+ * Create a new Name from components.
+ * 
+ * @constructor
+ * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
+ * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Buffer or Name.
+ * Convert each and store as an array of Buffer.  If a component is a string, encode as utf8.
+ */
+var Name = function Name(components) {
+	if( typeof components == 'string') {		
+		if(LOG>3)console.log('Content Name String '+components);
+		this.components = Name.createNameArray(components);
+	}
+	else if(typeof components === 'object'){		
+		this.components = [];
+    if (components instanceof Name)
+      this.add(components);
+    else {
+      for (var i = 0; i < components.length; ++i)
+        this.add(components[i]);
+    }
+	}
+	else if(components==null)
+		this.components =[];
+	else
+		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
+};
+
+Name.prototype.getName = function() {
+    return this.to_uri();
+};
+
+exports.Name = Name;
+
+/** Parse uri as a URI and return an array of Buffer components.
+ */
+Name.createNameArray = function(uri) {
+    uri = uri.trim();
+    if (uri.length <= 0)
+        return [];
+
+    var iColon = uri.indexOf(':');
+    if (iColon >= 0) {
+        // Make sure the colon came before a '/'.
+        var iFirstSlash = uri.indexOf('/');
+        if (iFirstSlash < 0 || iColon < iFirstSlash)
+            // Omit the leading protocol such as ndn:
+            uri = uri.substr(iColon + 1, uri.length - iColon - 1).trim();
+    }
+    
+  	if (uri[0] == '/') {
+        if (uri.length >= 2 && uri[1] == '/') {
+            // Strip the authority following "//".
+            var iAfterAuthority = uri.indexOf('/', 2);
+            if (iAfterAuthority < 0)
+                // Unusual case: there was only an authority.
+                return [];
+            else
+                uri = uri.substr(iAfterAuthority + 1, uri.length - iAfterAuthority - 1).trim();
+        }
+        else
+            uri = uri.substr(1, uri.length - 1).trim();
+    }
+
+	var array = uri.split('/');
+    
+    // Unescape the components.
+    for (var i = 0; i < array.length; ++i) {
+        var component = Name.fromEscapedString(array[i]);
+        
+        if (component == null) {
+            // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
+            array.splice(i, 1);
+            --i;  
+            continue;
+        }
+        else
+            array[i] = component;
+    }
+
+	return array;
+}
+
+
+Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
+		decoder.readStartElement(this.getElementLabel());
+
+		
+		this.components = new Array(); //new ArrayList<byte []>();
+
+		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
+			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
+		}
+		
+		decoder.readEndElement();
+};
+
+Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+		
+		if( this.components ==null ) 
+			throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
+
+		encoder.writeStartElement(this.getElementLabel());
+		var count = this.components.length;
+		for (var i=0; i < count; i++) {
+			encoder.writeElement(NDNProtocolDTags.Component, this.components[i]);
+		}
+		encoder.writeEndElement();
+};
+
+Name.prototype.getElementLabel = function(){
+	return NDNProtocolDTags.Name;
+};
+
+/**
+ * Convert the component to a Buffer and add to this Name.
+ * Return this Name object to allow chaining calls to add.
+ * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
+ * @returns {Name}
+ */
+Name.prototype.add = function(component){
+  var result;
+  if (typeof component == 'string')
+    result = DataUtils.stringToUtf8Array(component);
+	else if (typeof component == 'object' && component instanceof Buffer)
+    result = new Buffer(component);
+  else if (typeof component == 'object' && typeof ArrayBuffer != 'undefined' &&  component instanceof ArrayBuffer) {
+    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
+    result = new Buffer(new ArrayBuffer(component.byteLength));
+    result.set(new Buffer(component));
+  }
+  else if (typeof component == 'object' && component instanceof Name) {
+    var components;
+    if (component == this)
+      // special case, when we need to create a copy
+      components = this.components.slice(0, this.components.length);
+    else
+      components = component.components;
+      
+    for (var i = 0; i < components.length; ++i)
+      this.components.push(new Buffer(components[i]));
+    return this;
+  }
+	else if(typeof component == 'object')
+        // Assume component is a byte array.  We can't check instanceof Array because
+        //   this doesn't work in JavaScript if the array comes from a different module.
+        result = new Buffer(component);
+	else 
+		throw new Error("Cannot add Name element at index " + this.components.length + 
+            ": Invalid type");
+    
+    this.components.push(result);
+	return this;
+};
+
+/**
+ * Return the escaped name string according to "NDNx URI Scheme".
+ * @returns {String}
+ */
+Name.prototype.to_uri = function() {	
+    if (this.components.length == 0)
+        return "/";
+    
+	var result = "";
+	
+	for(var i = 0; i < this.components.length; ++i)
+		result += "/"+ Name.toEscapedString(this.components[i]);
+	
+	return result;	
+};
+
+/**
+ * Add a component that represents a segment number
+ *
+ * This component has a special format handling:
+ * - if number is zero, then %00 is added
+ * - if number is between 1 and 255, %00%01 .. %00%FF is added
+ * - ...
+ * @param {number} number the segment number (integer is expected)
+ * @returns {Name}
+ */
+Name.prototype.addSegment = function(number) {
+    var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+    // Put a 0 byte in front.
+    var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+    segmentNumberComponent[0] = 0;
+    segmentNumberBigEndian.copy(segmentNumberComponent, 1);
+
+    this.components.push(segmentNumberComponent);
+    return this;
+};
+
+/**
+ * Return a new Name with the first nComponents components of this Name.
+ */
+Name.prototype.getPrefix = function(nComponents) {
+    return new Name(this.components.slice(0, nComponents));
+}
+
+/**
+ * @brief Get prefix of the name, containing less minusComponents right components
+ * @param minusComponents number of components to cut from the back
+ */
+Name.prototype.cut = function (minusComponents) {
+    return new Name(this.components.slice(0, this.components.length-1));
+}
+
+/**
+ * Return a new Buffer of the component at i.
+ */
+Name.prototype.getComponent = function(i) {
+    return new Buffer(this.components[i]);
+}
+
+/**
+ * The "file name" in a name is the last component that isn't blank and doesn't start with one of the
+ *   special marker octets (for version, etc.).  Return the index in this.components of
+ *   the file name, or -1 if not found.
+ */
+Name.prototype.indexOfFileName = function() {
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        var component = this.components[i];
+        if (component.length <= 0)
+            continue;
+        
+        if (component[0] == 0 || component[0] == 0xC0 || component[0] == 0xC1 || 
+            (component[0] >= 0xF5 && component[0] <= 0xFF))
+            continue;
+        
+        return i;
+    }
+    
+    return -1;
+}
+
+/**
+ * Return true if this Name has the same components as name.
+ */
+Name.prototype.equalsName = function(name) {
+    if (this.components.length != name.components.length)
+        return false;
+    
+    // Start from the last component because they are more likely to differ.
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        if (!DataUtils.arraysEqual(this.components[i], name.components[i]))
+            return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Find the last component in name that has a ContentDigest and return the digest value as Buffer, 
+ *   or null if not found.  See Name.getComponentContentDigestValue.
+ */
+Name.prototype.getContentDigestValue = function() {
+    for (var i = this.components.length - 1; i >= 0; --i) {
+        var digestValue = Name.getComponentContentDigestValue(this.components[i]);
+        if (digestValue != null)
+           return digestValue;
+    }
+    
+    return null;
+}
+
+/**
+ * If component is a ContentDigest, return the digest value as a Buffer slice (don't modify!).
+ * If not a ContentDigest, return null.
+ * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
+ */
+Name.getComponentContentDigestValue = function(component) {
+    var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
+    // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
+    if (component.length == digestComponentLength &&
+        DataUtils.arraysEqual(component.slice(0, Name.ContentDigestPrefix.length), 
+                              Name.ContentDigestPrefix) &&
+        DataUtils.arraysEqual(component.slice
+           (component.length - Name.ContentDigestSuffix.length, component.length),
+                              Name.ContentDigestSuffix))
+       return component.slice(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+   else
+       return null;
+}
+
+// Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
+Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Buffer([0x00]);
+
+/**
+ * Return component as an escaped string according to "NDNx URI Scheme".
+ * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ */
+Name.toEscapedString = function(component) {
+    var result = "";
+    var gotNonDot = false;
+    for (var i = 0; i < component.length; ++i) {
+        if (component[i] != 0x2e) {
+            gotNonDot = true;
+            break;
+        }
+    }
+    if (!gotNonDot) {
+        // Special case for component of zero or more periods.  Add 3 periods.
+        result = "...";
+        for (var i = 0; i < component.length; ++i)
+            result += ".";
+    }
+    else {
+        for (var i = 0; i < component.length; ++i) {
+            var x = component[i];
+            // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
+            if (x >= 0x30 && x <= 0x39 || x >= 0x41 && x <= 0x5a ||
+                x >= 0x61 && x <= 0x7a || x == 0x2b || x == 0x2d || 
+                x == 0x2e || x == 0x5f)
+                result += String.fromCharCode(x);
+            else
+                result += "%" + (x < 16 ? "0" : "") + x.toString(16).toUpperCase();
+        }
+    }
+    return result;
+};
+
+/**
+ * Return component as a Buffer by decoding the escapedString according to "NDNx URI Scheme".
+ * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ */
+Name.fromEscapedString = function(escapedString) {
+    var component = unescape(escapedString.trim());
+        
+    if (component.match(/[^.]/) == null) {
+        // Special case for component of only periods.  
+        if (component.length <= 2)
+            // Zero, one or two periods is illegal.  Ignore this componenent to be
+            //   consistent with the C implementation.
+            return null;
+        else
+            // Remove 3 periods.
+            return DataUtils.toNumbersFromString(component.substr(3, component.length - 3));
+    }
+    else
+        return DataUtils.toNumbersFromString(component);
+}
+
+/**
+ * Return true if the N components of this name are the same as the first N components of the given name.
+ * @param {Name} name The name to check.
+ * @returns {Boolean} true if this matches the given name.  This always returns true if this name is empty.
+ */
+Name.prototype.match = function(name) {
+	var i_name = this.components;
+	var o_name = name.components;
+
+	// This name is longer than the name we are checking it against.
+	if (i_name.length > o_name.length)
+    return false;
+
+	// Check if at least one of given components doesn't match.
+  for (var i = 0; i < i_name.length; ++i) {
+    if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+      return false;
+  }
+
+	return true;
+};
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents ContentObject Objects
+ */
+
+/**
+ * Create a new ContentObject with the optional values.
+ * 
+ * @constructor
+ * @param {Name} name
+ * @param {SignedInfo} signedInfo
+ * @param {Buffer} content
+ */
+var ContentObject = function ContentObject(name, signedInfo, content) {
+	if (typeof name == 'string')
+		this.name = new Name(name);
+	else
+		//TODO Check the class of name
+		this.name = name;
+	
+	this.signedInfo = signedInfo;
+	
+	if (typeof content == 'string') 
+		this.content = DataUtils.toNumbersFromString(content);
+	else 
+		this.content = content;
+	
+	this.signature = new Signature();
+	
+	this.startSIG = null;
+	this.endSIG = null;
+	
+	this.endContent = null;
+	
+	this.rawSignatureData = null;
+};
+
+ContentObject.prototype.sign = function(){
+    var n1 = this.encodeObject(this.name);
+    var n2 = this.encodeObject(this.signedInfo);
+    var n3 = this.encodeContent();
+	
+    var rsa = require("crypto").createSign('RSA-SHA256');
+    rsa.update(n1);
+    rsa.update(n2);
+    rsa.update(n3);
+    
+    var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
+
+    this.signature.signature = sig;
+};
+
+ContentObject.prototype.verify = function (/*Key*/ key) {
+    if (key == null || key.publicKeyPem == null) {
+	throw new Error('Cannot verify ContentObject without a public key.');
+    }
+
+    var verifier = require('crypto').createVerify('RSA-SHA256');
+    verifier.update(this.rawSignatureData);
+    return verifier.verify(key.publicKeyPem, this.signature.signature);
+};
+
+
+ContentObject.prototype.encodeObject = function encodeObject(obj){
+	var enc = new BinaryXMLEncoder();
+ 
+	obj.to_ndnb(enc);
+	
+	var num = enc.getReducedOstream();
+
+	return num;
+
+	
+};
+
+ContentObject.prototype.encodeContent = function encodeContent(obj){
+	var enc = new BinaryXMLEncoder();
+	 
+	enc.writeElement(NDNProtocolDTags.Content, this.content);
+
+	var num = enc.getReducedOstream();
+
+	return num;
+
+	
+};
+
+ContentObject.prototype.saveRawData = function(bytes){
+	
+	var sigBits = bytes.slice(this.startSIG, this.endSIG);
+
+    this.rawSignatureData = new Buffer(sigBits);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ */
+ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ */
+ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+};
+
+/**
+ * Encode this ContentObject for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+ContentObject.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeContentObject(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this ContentObject.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+ContentObject.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeContentObject(this, input);
+};
+
+ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
+
+/**
+ * Create a new Signature with the optional values.
+ * @constructor
+ */
+var Signature = function Signature(witness, signature, digestAlgorithm) {
+  this.Witness = witness;
+	this.signature = signature;
+	this.digestAlgorithm = digestAlgorithm
+};
+
+Signature.prototype.from_ndnb =function( decoder) {
+		decoder.readStartElement(this.getElementLabel());
+		
+		if(LOG>4)console.log('STARTED DECODING SIGNATURE');
+		
+		if (decoder.peekStartElement(NDNProtocolDTags.DigestAlgorithm)) {
+			if(LOG>4)console.log('DIGIEST ALGORITHM FOUND');
+			this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
+		}
+		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
+			if(LOG>4)console.log('WITNESS FOUND');
+			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+		}
+		
+		//FORCE TO READ A SIGNATURE
+
+			if(LOG>4)console.log('SIGNATURE FOUND');
+			this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
+
+		decoder.readEndElement();
+
+};
+
+
+Signature.prototype.to_ndnb= function( encoder){
+    	
+	if (!this.validate()) {
+		throw new Error("Cannot encode: field values missing.");
+	}
+	
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if ((null != this.digestAlgorithm) && (!this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))) {
+		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+	}
+	
+	if (null != this.Witness) {
+		// needs to handle null witness
+		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
+	}
+
+	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
+
+	encoder.writeEndElement();   		
+};
+
+Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+
+
+Signature.prototype.validate = function() {
+		return null != this.signature;
+};
+
+
+var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
+var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
+var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
+
+/**
+ * Create a new SignedInfo with the optional values.
+ * @constructor
+ */
+var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) {
+  this.publisher = publisher; //publisherPublicKeyDigest
+  this.timestamp=timestamp; // NDN Time
+  this.type=type; // ContentType
+  this.locator =locator;//KeyLocator
+  this.freshnessSeconds =freshnessSeconds; // Integer
+  this.finalBlockID=finalBlockID; //byte array
+    
+  this.setFields();
+};
+
+SignedInfo.prototype.setFields = function(){
+	//BASE64 -> RAW STRING
+	
+	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
+/*	
+	var publicKeyHex = globalKeyManager.publicKey;
+
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyHex);
+	
+	var publicKeyBytes = DataUtils.toNumbers(globalKeyManager.publicKey) ; 
+
+	
+
+	//var stringCertificate = DataUtils.base64toString(globalKeyManager.certificate);
+	
+	//if(LOG>3)console.log('string Certificate is '+stringCertificate);
+
+	//HEX -> BYTE ARRAY
+	//var publisherkey = DataUtils.toNumbers(hex_sha256(stringCertificate));
+	
+	//if(LOG>3)console.log('publisher key is ');
+	//if(LOG>3)console.log(publisherkey);
+	
+	var publisherKeyDigest = hex_sha256_from_bytes(publicKeyBytes);
+
+	this.publisher = new PublisherPublicKeyDigest(  DataUtils.toNumbers(  publisherKeyDigest )  );
+	
+	//this.publisher = new PublisherPublicKeyDigest(publisherkey);
+*/
+    var key = new Key();
+    key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
+    this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
+
+    var d = new Date();
+    
+    var time = d.getTime();	
+
+    this.timestamp = new NDNTime( time );
+    
+    if(LOG>4)console.log('TIME msec is');
+
+    if(LOG>4)console.log(this.timestamp.msec);
+
+    //DATA
+	this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
+	
+	//if(LOG>4)console.log('toNumbersFromString(stringCertificate) '+DataUtils.toNumbersFromString(stringCertificate));
+	
+	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+	if(LOG>4)console.log(publicKeyBytes);
+
+    this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY );
+
+	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
+
+};
+
+SignedInfo.prototype.from_ndnb = function( decoder){
+
+		decoder.readStartElement( this.getElementLabel() );
+		
+		if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+			if(LOG>4)console.log('DECODING PUBLISHER KEY');
+			this.publisher = new PublisherPublicKeyDigest();
+			this.publisher.from_ndnb(decoder);
+		}
+
+		if (decoder.peekStartElement(NDNProtocolDTags.Timestamp)) {
+			if(LOG>4)console.log('DECODING TIMESTAMP');
+			this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
+		}
+
+		if (decoder.peekStartElement(NDNProtocolDTags.Type)) {
+			var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
+		
+			
+			//TODO Implement type of Key Reading
+			
+			if(LOG>4)console.log('Binary Type of of Signed Info is '+binType);
+
+			this.type = binType;
+			
+			
+			//TODO Implement type of Key Reading
+			
+			
+			if (null == this.type) {
+				throw new Error("Cannot parse signedInfo type: bytes.");
+			}
+			
+		} else {
+			this.type = ContentType.DATA; // default
+		}
+		
+		if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+			this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
+			if(LOG>4)console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
+		}
+		
+		if (decoder.peekStartElement(NDNProtocolDTags.FinalBlockID)) {
+			if(LOG>4)console.log('DECODING FINAL BLOCKID');
+			this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
+		}
+		
+		if (decoder.peekStartElement(NDNProtocolDTags.KeyLocator)) {
+			if(LOG>4)console.log('DECODING KEY LOCATOR');
+			this.locator = new KeyLocator();
+			this.locator.from_ndnb(decoder);
+		}
+				
+		decoder.readEndElement();
+};
+
+SignedInfo.prototype.to_ndnb = function( encoder)  {
+		if (!this.validate()) {
+			throw new Error("Cannot encode : field values missing.");
+		}
+		encoder.writeStartElement(this.getElementLabel());
+		
+		if (null!=this.publisher) {
+			if(LOG>3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
+
+			this.publisher.to_ndnb(encoder);
+		}
+
+		if (null!=this.timestamp) {
+			encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp );
+		}
+		
+		if (null!=this.type && this.type !=0) {
+			
+			encoder.writeElement(NDNProtocolDTags.type, this.type);
+		}
+		
+		if (null!=this.freshnessSeconds) {
+			encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+		}
+
+		if (null!=this.finalBlockID) {
+			encoder.writeElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
+		}
+
+		if (null!=this.locator) {
+			this.locator.to_ndnb(encoder);
+		}
+
+		encoder.writeEndElement();   		
+};
+	
+SignedInfo.prototype.valueToType = function(){
+	//for (Entry<byte [], ContentType> entry : ContentValueTypes.entrySet()) {
+		//if (Arrays.equals(value, entry.getKey()))
+			//return entry.getValue();
+		//}
+	return null;
+	
+};
+
+SignedInfo.prototype.getElementLabel = function() { 
+	return NDNProtocolDTags.SignedInfo;
+};
+
+SignedInfo.prototype.validate = function() {
+		// We don't do partial matches any more, even though encoder/decoder
+		// is still pretty generous.
+		if (null ==this.publisher || null==this.timestamp ||null== this.locator)
+			return false;
+		return true;
+};
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
  */
+
+var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var LOG = require('./Log.js').Log.LOG;
+
+/**
+ * Create a new Interest with the optional values.
+ * 
+ * @constructor
+ * @param {Name} name
+ * @param {FaceInstance} faceInstance
+ * @param {number} minSuffixComponents
+ * @param {number} maxSuffixComponents
+ * @param {Buffer} publisherPublicKeyDigest
+ * @param {Exclude} exclude
+ * @param {number} childSelector
+ * @param {number} answerOriginKind
+ * @param {number} scope
+ * @param {number} interestLifetime in milliseconds
+ * @param {Buffer} nonce
+ */
+var Interest = function Interest
+   (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) {
+		
+	this.name = name;
+	this.faceInstance = faceInstance;
+	this.maxSuffixComponents = maxSuffixComponents;
+	this.minSuffixComponents = minSuffixComponents;
+	
+	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+	this.exclude = exclude;
+	this.childSelector = childSelector;
+	this.answerOriginKind = answerOriginKind;
+	this.scope = scope;
+	this.interestLifetime = interestLifetimeMilliseconds;
+	this.nonce = nonce;	
+};
+
+exports.Interest = Interest;
+
+Interest.RECURSIVE_POSTFIX = "*";
+
+Interest.CHILD_SELECTOR_LEFT = 0;
+Interest.CHILD_SELECTOR_RIGHT = 1;
+Interest.ANSWER_CONTENT_STORE = 1;
+Interest.ANSWER_GENERATED = 2;
+Interest.ANSWER_STALE = 4;		// Stale answer OK
+Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
+
+Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
+
+/**
+ * Return true if this.name.match(name) and the name conforms to the interest selectors.
+ */
+Interest.prototype.matches_name = function(/*Name*/ name) {
+    if (!this.name.match(name))
+        return false;
+    
+    if (this.minSuffixComponents != null &&
+        // Add 1 for the implicit digest.
+        !(name.components.length + 1 - this.name.components.length >= this.minSuffixComponents))
+        return false;
+    if (this.maxSuffixComponents != null &&
+        // Add 1 for the implicit digest.
+        !(name.components.length + 1 - this.name.components.length <= this.maxSuffixComponents))
+        return false;
+    if (this.exclude != null && name.components.length > this.name.components.length &&
+        this.exclude.matches(name.components[this.name.components.length]))
+        return false;
+    
+    return true;
+};
+
+/**
+ * Return a new Interest with the same fields as this Interest.  
+ * Note: This does NOT make a deep clone of the name, exclue or other objects.
+ */
+Interest.prototype.clone = function() {
+    return new Interest
+       (this.name, this.faceInstance, this.minSuffixComponents, this.maxSuffixComponents, 
+        this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
+        this.scope, this.interestLifetime, this.nonce);
+};
+
+/*
+ * Handle the interest Exclude element.
+ * values is 
+ */
+
+/**
+ * 
+ * @constructor
+ * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
+ */
+var Exclude = function Exclude(values) { 
+	this.values = (values || []);
+}
+
+exports.Exclude = Exclude;
+
+Exclude.ANY = "*";
+
+Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+	decoder.readStartElement(NDNProtocolDTags.Exclude);
+
+	while (true) {
+        if (decoder.peekStartElement(NDNProtocolDTags.Component))
+            this.values.push(decoder.readBinaryElement(NDNProtocolDTags.Component));
+        else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
+            decoder.readStartElement(NDNProtocolDTags.Any);
+            decoder.readEndElement();
+            this.values.push(Exclude.ANY);
+        }
+        else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
+            // Skip the Bloom and treat it as Any.
+            decoder.readBinaryElement(NDNProtocolDTags.Bloom);
+            this.values.push(Exclude.ANY);
+        }
+        else
+            break;
+	}
+    
+    decoder.readEndElement();
+};
+
+Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+	if (this.values == null || this.values.length == 0)
+		return;
+
+	encoder.writeStartElement(NDNProtocolDTags.Exclude);
+    
+    // TODO: Do we want to order the components (except for ANY)?
+    for (var i = 0; i < this.values.length; ++i) {
+        if (this.values[i] == Exclude.ANY) {
+            encoder.writeStartElement(NDNProtocolDTags.Any);
+            encoder.writeEndElement();
+        }
+        else
+            encoder.writeElement(NDNProtocolDTags.Component, this.values[i]);
+    }
+
+	encoder.writeEndElement();
+};
+
+/**
+ * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
+ */
+Exclude.prototype.to_uri = function() {
+	if (this.values == null || this.values.length == 0)
+		return "";
+
+    var result = "";
+    for (var i = 0; i < this.values.length; ++i) {
+        if (i > 0)
+            result += ",";
+        
+        if (this.values[i] == Exclude.ANY)
+            result += "*";
+        else
+            result += Name.toEscapedString(this.values[i]);
+    }
+    return result;
+};
+
+/**
+ * Return true if the component matches any of the exclude criteria.
+ */
+Exclude.prototype.matches = function(/*Buffer*/ component) {
+    for (var i = 0; i < this.values.length; ++i) {
+        if (this.values[i] == Exclude.ANY) {
+            var lowerBound = null;
+            if (i > 0)
+                lowerBound = this.values[i - 1];
+            
+            // Find the upper bound, possibly skipping over multiple ANY in a row.
+            var iUpperBound;
+            var upperBound = null;
+            for (iUpperBound = i + 1; iUpperBound < this.values.length; ++iUpperBound) {
+                if (this.values[iUpperBound] != Exclude.ANY) {
+                    upperBound = this.values[iUpperBound];
+                    break;
+                }
+            }
+            
+            // If lowerBound != null, we already checked component equals lowerBound on the last pass.
+            // If upperBound != null, we will check component equals upperBound on the next pass.
+            if (upperBound != null) {
+                if (lowerBound != null) {
+                    if (Exclude.compareComponents(component, lowerBound) > 0 &&
+                        Exclude.compareComponents(component, upperBound) < 0)
+                        return true;
+                }
+                else {
+                    if (Exclude.compareComponents(component, upperBound) < 0)
+                        return true;
+                }
+                
+                // Make i equal iUpperBound on the next pass.
+                i = iUpperBound - 1;
+            }
+            else {
+                if (lowerBound != null) {
+                    if (Exclude.compareComponents(component, lowerBound) > 0)
+                        return true;
+                }
+                else
+                    // this.values has only ANY.
+                    return true;
+            }
+        }
+        else {
+            if (DataUtils.arraysEqual(component, this.values[i]))
+                return true;
+        }
+    }
+    
+    return false;
+};
+
+/**
+ * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
+ * A component is less if it is shorter, otherwise if equal length do a byte comparison.
+ */
+Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) {
+    if (component1.length < component2.length)
+        return -1;
+    if (component1.length > component2.length)
+        return 1;
+    
+    for (var i = 0; i < component1.length; ++i) {
+        if (component1[i] < component2[i])
+            return -1;
+        if (component1[i] > component2[i])
+            return 1;
+    }
+
+    return 0;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeInterest.
+ */
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeInterest(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeInterest.
+ */
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
+  BinaryXmlWireFormat.encodeInterest(this, encoder);
+};
+
+/**
+ * Encode this Interest for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+Interest.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeInterest(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Interest.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+Interest.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeInterest(this, input);
+};
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents Key Objects
+ */
+
+/**
+ * @constructor
+ */
+/**
+ * Key
+ */
+var Key = function Key() {
+    this.publicKeyDer = null;     // Buffer
+    this.publicKeyDigest = null;  // Buffer
+    this.publicKeyPem = null;     // String
+    this.privateKeyPem = null;    // String
+};
+
+
+/**
+ * Helper functions to read Key fields
+ * TODO: generateRSA()
+ */
+
+Key.prototype.publicToDER = function () {
+    return this.publicKeyDer;  // Buffer
+};
+
+Key.prototype.privateToDER = function () {
+    // Remove the '-----XXX-----' from the beginning and the end of the key
+    // and also remove any \n in the key string
+    var lines = this.privateKeyPem.split('\n');
+    priKey = "";
+    for (var i = 1; i < lines.length - 1; i++)
+	priKey += lines[i];
+    return new Buffer(priKey, 'base64');    
+};
+
+Key.prototype.publicToPEM = function () {
+    return this.publicKeyPem;
+};
+
+Key.prototype.privateToPEM = function () {
+    return this.privateKeyPem;
+};
+
+Key.prototype.getKeyID = function () {
+    return this.publicKeyDigest;
+};
+
+exports.Key = Key;
+
+Key.prototype.readDerPublicKey = function (/*Buffer*/pub_der) {
+    if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
+
+    this.publicKeyDer = pub_der;
+
+    var hash = require("crypto").createHash('sha256');
+    hash.update(this.publicKeyDer);
+    this.publicKeyDigest = new Buffer(hash.digest());
+    
+    var keyStr = pub_der.toString('base64'); 
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyStr.length; i += 64)
+	keyPem += (keyStr.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+    this.publicKeyPem = keyPem;
+
+    if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);
+};
+
+/**
+ * Load RSA key pair from PEM-encoded strings.
+ * Will throw an Error if both 'pub' and 'pri' are null.
+ */
+Key.prototype.fromPemString = function (pub, pri) {
+    if (pub == null && pri == null)
+	throw new Error('Cannot create Key object if both public and private PEM string is empty.');
+
+    // Read public key
+    if (pub != null) {
+	this.publicKeyPem = pub;
+	if (LOG>4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
+	
+	// Remove the '-----XXX-----' from the beginning and the end of the public key
+	// and also remove any \n in the public key string
+	var lines = pub.split('\n');
+	pub = "";
+	for (var i = 1; i < lines.length - 1; i++)
+	    pub += lines[i];
+	this.publicKeyDer = new Buffer(pub, 'base64');
+	if (LOG>4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
+	
+	var hash = require("crypto").createHash('sha256');
+	hash.update(this.publicKeyDer);
+	this.publicKeyDigest = new Buffer(hash.digest());
+	if (LOG>4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
+    }
+    
+    // Read private key
+    if (pri != null) {
+	this.privateKeyPem = pri;
+	if (LOG>4) console.log("Key.privateKeyPem: \n" + this.privateKeyPem);
+    }
+};
+
+Key.prototype.fromPem = Key.prototype.fromPemString;
+
+/**
+ * Static method that create a Key object.
+ * Parameter 'obj' is a JSON object that has two properties:
+ *   pub: the PEM string for the public key
+ *   pri: the PEM string for the private key
+ * Will throw an Error if both obj.pub and obj.pri are null.
+ */
+Key.createFromPEM = function (obj) {
+    var key = new Key();
+    key.fromPemString(obj.pub, obj.pri);
+    return key;
+};
+
+/**
+ * KeyLocator
+ */
+var KeyLocatorType = {
+	KEY:1,
+	CERTIFICATE:2,
+	KEYNAME:3
+};
+
+/**
+ * @constructor
+ */
+var KeyLocator = function KeyLocator(input,type) { 
+  this.type = type;
+    
+  if (type == KeyLocatorType.KEYNAME){
+  	if (LOG>3) console.log('KeyLocator: SET KEYNAME');
+   	this.keyName = input;
+  }
+  else if (type == KeyLocatorType.KEY){
+   	if (LOG>3) console.log('KeyLocator: SET KEY');
+   	this.publicKey = input;
+  }
+  else if (type == KeyLocatorType.CERTIFICATE){
+   	if (LOG>3) console.log('KeyLocator: SET CERTIFICATE');
+   	this.certificate = input;
+  }
+};
+
+KeyLocator.prototype.from_ndnb = function(decoder) {
+
+	decoder.readStartElement(this.getElementLabel());
+
+	if (decoder.peekStartElement(NDNProtocolDTags.Key)) {
+		try {
+			var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
+			// This is a DER-encoded SubjectPublicKeyInfo.
+			
+			//TODO FIX THIS, This should create a Key Object instead of keeping bytes
+
+			this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
+			this.type = KeyLocatorType.KEY;
+			
+
+			if(LOG>4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
+			//this.publicKey = encodedKey;
+			
+			
+		} catch (e) {
+			throw new Error("Cannot parse key: ", e);
+		} 
+
+		if (null == this.publicKey) {
+			throw new Error("Cannot parse key: ");
+		}
+
+	} else if ( decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
+		try {
+			var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
+			
+			/*
+			 * Certificates not yet working
+			 */
+			
+			//CertificateFactory factory = CertificateFactory.getInstance("X.509");
+			//this.certificate = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(encodedCert));
+			
+
+			this.certificate = encodedCert;
+			this.type = KeyLocatorType.CERTIFICATE;
+
+			if(LOG>4) console.log('CERTIFICATE FOUND: '+ this.certificate);
+			
+		} catch ( e) {
+			throw new Error("Cannot decode certificate: " +  e);
+		}
+		if (null == this.certificate) {
+			throw new Error("Cannot parse certificate! ");
+		}
+	} else  {
+		this.type = KeyLocatorType.KEYNAME;
+		
+		this.keyName = new KeyName();
+		this.keyName.from_ndnb(decoder);
+	}
+	decoder.readEndElement();
+};
+	
+
+KeyLocator.prototype.to_ndnb = function( encoder) {
+	
+	if(LOG>4) console.log('type is is ' + this.type);
+	//TODO Check if Name is missing
+	if (!this.validate()) {
+		throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+	}
+
+	
+	//TODO FIX THIS TOO
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if (this.type == KeyLocatorType.KEY) {
+		if(LOG>5)console.log('About to encode a public key' +this.publicKey);
+		encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);
+		
+	} else if (this.type == KeyLocatorType.CERTIFICATE) {
+		
+		try {
+			encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
+		} catch ( e) {
+			throw new Error("CertificateEncodingException attempting to write key locator: " + e);
+		}
+		
+	} else if (this.type == KeyLocatorType.KEYNAME) {
+		
+		this.keyName.to_ndnb(encoder);
+	}
+	encoder.writeEndElement();
+	
+};
+
+KeyLocator.prototype.getElementLabel = function() {
+	return NDNProtocolDTags.KeyLocator; 
+};
+
+KeyLocator.prototype.validate = function() {
+	return (  (null != this.keyName) || (null != this.publicKey) || (null != this.certificate)   );
+};
+
+/**
+ * KeyName is only used by KeyLocator.
+ * @constructor
+ */
+var KeyName = function KeyName() {
+	this.contentName = this.contentName;  //contentName
+	this.publisherID = this.publisherID;  //publisherID
+
+};
+
+KeyName.prototype.from_ndnb=function( decoder){
+	
+
+	decoder.readStartElement(this.getElementLabel());
+
+	this.contentName = new Name();
+	this.contentName.from_ndnb(decoder);
+	
+	if(LOG>4) console.log('KEY NAME FOUND: ');
+	
+	if ( PublisherID.peek(decoder) ) {
+		this.publisherID = new PublisherID();
+		this.publisherID.from_ndnb(decoder);
+	}
+	
+	decoder.readEndElement();
+};
+
+KeyName.prototype.to_ndnb = function( encoder) {
+	if (!this.validate()) {
+		throw new Error("Cannot encode : field values missing.");
+	}
+	
+	encoder.writeStartElement(this.getElementLabel());
+	
+	this.contentName.to_ndnb(encoder);
+	if (null != this.publisherID)
+		this.publisherID.to_ndnb(encoder);
+
+	encoder.writeEndElement();   		
+};
+	
+KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
+
+KeyName.prototype.validate = function() {
+		// DKS -- do we do recursive validation?
+		// null signedInfo ok
+		return (null != this.contentName);
+};
+
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents Face Instances
+ */
+
+var NetworkProtocol = { TCP:6, UDP:17};
+
+/**
+ * @constructor
+ */
+var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
+		multicastTTL, freshnessSeconds) {
+	this.action = action;
+	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+	this.faceID = faceID;
+	this.ipProto = ipProto;
+	this.host = host;
+	this.Port = port;
+	this.multicastInterface =multicastInterface;
+	this.multicastTTL =multicastTTL;
+	this.freshnessSeconds = freshnessSeconds;
+};
+
+/**
+ * Used by NetworkObject to decode the object from a network stream.
+ */
+FaceInstance.prototype.from_ndnb = function(//XMLDecoder 
+	decoder) {
+
+	decoder.readStartElement(this.getElementLabel());
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
+		
+		this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
+		
+	}
+	if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+		
+		this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
+		this.publisherPublicKeyDigest.from_ndnb(decoder);
+		
+	}
+	if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
+		
+		this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID);
+		
+	}
+	if (decoder.peekStartElement(NDNProtocolDTags.IPProto)) {
+		
+		//int
+		var pI = decoder.readIntegerElement(NDNProtocolDTags.IPProto);
+		
+		this.ipProto = null;
+		
+		if (NetworkProtocol.TCP == pI) {
+			
+			this.ipProto = NetworkProtocol.TCP;
+			
+		} else if (NetworkProtocol.UDP == pI) {
+			
+			this.ipProto = NetworkProtocol.UDP;
+			
+		} else {
+			
+			throw new Error("FaceInstance.decoder.  Invalid " + 
+					NDNProtocolDTags.tagToString(NDNProtocolDTags.IPProto) + " field: " + pI);
+			
+		}
+	}
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.Host)) {
+		
+		this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
+		
+	}
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.Port)) {
+		this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
+	}
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.MulticastInterface)) {
+		this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
+	}
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.MulticastTTL)) {
+		this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
+	}
+	
+	if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+		this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
+	}
+	decoder.readEndElement();
+}
+
+/**
+ * Used by NetworkObject to encode the object to a network stream.
+ */
+FaceInstance.prototype.to_ndnb = function(//XMLEncoder
+	encoder){
+
+	//if (!this.validate()) {
+		//throw new Error("Cannot encode : field values missing.");
+		//throw new Error("")
+	//}
+	encoder.writeStartElement(this.getElementLabel());
+	
+	if (null != this.action && this.action.length != 0)
+		encoder.writeElement(NDNProtocolDTags.Action, this.action);	
+	
+	if (null != this.publisherPublicKeyDigest) {
+		this.publisherPublicKeyDigest.to_ndnb(encoder);
+	}
+	if (null != this.faceID) {
+		encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+	}
+	if (null != this.ipProto) {
+		//encoder.writeElement(NDNProtocolDTags.IPProto, this.IpProto.value());
+		encoder.writeElement(NDNProtocolDTags.IPProto, this.ipProto);
+	}
+	if (null != this.host && this.host.length != 0) {
+		encoder.writeElement(NDNProtocolDTags.Host, this.host);	
+	}
+	if (null != this.Port) {
+		encoder.writeElement(NDNProtocolDTags.Port, this.Port);
+	}
+	if (null != this.multicastInterface && this.multicastInterface.length != 0) {
+		encoder.writeElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
+	}
+	if (null !=  this.multicastTTL) {
+		encoder.writeElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
+	}
+	if (null != this.freshnessSeconds) {
+		encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+	}
+	encoder.writeEndElement();   			
+}
+
+
+FaceInstance.prototype.getElementLabel = function() {
+  return NDNProtocolDTags.FaceInstance;
+};
+
+/**
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ * This class represents Forwarding Entries
+ */
+
+/**
+ * Create a new ForwardingEntry with the optional arguments.
+ * @constructor
+ * @param {String} action
+ * @param {Name} prefixName
+ * @param {PublisherPublicKeyDigest} ndndId
+ * @param {number} faceID
+ * @param {number} flags
+ * @param {number} lifetime in seconds
+ */
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime) {
+	this.action = action;
+	this.prefixName = prefixName;
+	this.ndndID = ndndId;
+	this.faceID = faceID;
+	this.flags = flags;
+	this.lifetime = lifetime;
+};
+
+ForwardingEntry.prototype.from_ndnb =function(
+	//XMLDecoder 
+	decoder) 
+	//throws ContentDecodingException
+	{
+			decoder.readStartElement(this.getElementLabel());
+			if (decoder.peekStartElement(NDNProtocolDTags.Action)) {
+				this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
+			}
+			if (decoder.peekStartElement(NDNProtocolDTags.Name)) {
+				this.prefixName = new Name();
+				this.prefixName.from_ndnb(decoder) ;
+			}
+			if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+				this.NdndId = new PublisherPublicKeyDigest();
+				this.NdndId.from_ndnb(decoder);
+			}
+			if (decoder.peekStartElement(NDNProtocolDTags.FaceID)) {
+				this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
+			}
+			if (decoder.peekStartElement(NDNProtocolDTags.ForwardingFlags)) {
+				this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
+			}
+			if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+				this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
+			}
+			decoder.readEndElement();
+		};
+
+ForwardingEntry.prototype.to_ndnb =function(
+	//XMLEncoder 
+encoder) 
+{
+
+
+			//if (!validate()) {
+				//throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+			//}
+			encoder.writeStartElement(this.getElementLabel());
+			if (null != this.action && this.action.length != 0)
+				encoder.writeElement(NDNProtocolDTags.Action, this.action);	
+			if (null != this.prefixName) {
+				this.prefixName.to_ndnb(encoder);
+			}
+			if (null != this.NdndId) {
+				this.NdndId.to_ndnb(encoder);
+			}
+			if (null != this.faceID) {
+				encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+			}
+			if (null != this.flags) {
+				encoder.writeElement(NDNProtocolDTags.ForwardingFlags, this.flags);
+			}
+			if (null != this.lifetime) {
+				encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
+			}
+			encoder.writeEndElement();   			
+		};
+
+ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
+/**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ * This class represents Interest Objects
+ */
+
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var WireFormat = require('./WireFormat.js').WireFormat;
+var Name = require('../Name.js').Name;
+var Exclude = require('../Interest.js').Exclude;
+var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./DataUtils.js').DataUtils;
 
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
@@ -3870,6 +4307,9 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
+
+exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
+BinaryXmlWireFormat.Debug1 = Exclude.ANY;
 
 /**
  * Encode the interest and return a Buffer.
@@ -4086,560 +4526,6 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
 		
 	contentObject.saveRawData(decoder.input);
 };
-/**
- * This class contains utilities to help parse the data
- * author: Meki Cheraoui, Jeff Thompson
- * See COPYING for copyright and distribution information.
- */
- 
-/**
- * A DataUtils has static methods for converting data.
- * @constructor
- */
-var DataUtils = function DataUtils(){
-};
-
-
-/*
- * NOTE THIS IS CURRENTLY NOT BEING USED
- * 
- */
-
-DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
-               "QRSTUVWXYZabcdef" +
-               "ghijklmnopqrstuv" +
-               "wxyz0123456789+/" +
-               "=";
-
-               
-/**
- * Raw String to Base 64
- */
-DataUtils.stringtoBase64=function stringtoBase64(input) {
-     //input = escape(input);
-     var output = "";
-     var chr1, chr2, chr3 = "";
-     var enc1, enc2, enc3, enc4 = "";
-     var i = 0;
-
-     do {
-        chr1 = input.charCodeAt(i++);
-        chr2 = input.charCodeAt(i++);
-        chr3 = input.charCodeAt(i++);
-
-        enc1 = chr1 >> 2;
-        enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-        enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-        enc4 = chr3 & 63;
-
-        if (isNaN(chr2)) {
-           enc3 = enc4 = 64;
-        } else if (isNaN(chr3)) {
-           enc4 = 64;
-        }
-
-        output = output +
-           DataUtils.keyStr.charAt(enc1) +
-           DataUtils.keyStr.charAt(enc2) +
-           DataUtils.keyStr.charAt(enc3) +
-           DataUtils.keyStr.charAt(enc4);
-        chr1 = chr2 = chr3 = "";
-        enc1 = enc2 = enc3 = enc4 = "";
-     } while (i < input.length);
-
-     return output;
-  }
-
-/**
- * Base 64 to Raw String 
- */
-DataUtils.base64toString = function base64toString(input) {
-     var output = "";
-     var chr1, chr2, chr3 = "";
-     var enc1, enc2, enc3, enc4 = "";
-     var i = 0;
-
-     // remove all characters that are not A-Z, a-z, 0-9, +, /, or =
-     var base64test = /[^A-Za-z0-9\+\/\=]/g;
-     /* Test for invalid characters. */
-     if (base64test.exec(input)) {
-        alert("There were invalid base64 characters in the input text.\n" +
-              "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
-              "Expect errors in decoding.");
-     }
-     
-     input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
-     do {
-        enc1 = DataUtils.keyStr.indexOf(input.charAt(i++));
-        enc2 = DataUtils.keyStr.indexOf(input.charAt(i++));
-        enc3 = DataUtils.keyStr.indexOf(input.charAt(i++));
-        enc4 = DataUtils.keyStr.indexOf(input.charAt(i++));
-
-        chr1 = (enc1 << 2) | (enc2 >> 4);
-        chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-        chr3 = ((enc3 & 3) << 6) | enc4;
-
-        output = output + String.fromCharCode(chr1);
-
-        if (enc3 != 64) {
-           output = output + String.fromCharCode(chr2);
-        }
-        if (enc4 != 64) {
-           output = output + String.fromCharCode(chr3);
-        }
-
-        chr1 = chr2 = chr3 = "";
-        enc1 = enc2 = enc3 = enc4 = "";
-
-     } while (i < input.length);
-
-     return output;
-  };
-
-/**
- * Buffer to Hex String
- */
-DataUtils.toHex = function(buffer) {
-  return buffer.toString('hex');
-}
-
-/**
- * Raw string to hex string.
- */
-DataUtils.stringToHex = function(args){
-	var ret = "";
-	for (var i = 0; i < args.length; ++i) {
-		var value = args.charCodeAt(i);
-		ret += (value < 16 ? "0" : "") + value.toString(16);
-	}
-	return ret;
-}
-
-/**
- * Buffer to raw string.
- */
-DataUtils.toString = function(buffer) {
-  return buffer.toString();
-}
-
-/**
- * Hex String to Buffer.
- */
-DataUtils.toNumbers = function(str) {
-  return new Buffer(str, 'hex');
-}
-
-/**
- * Hex String to raw string.
- */
-DataUtils.hexToRawString = function(str) {
-    if(typeof str =='string') {
-		var ret = "";
-		str.replace(/(..)/g, function(s) {
-			ret += String.fromCharCode(parseInt(s, 16));
-		});
-		return ret;
-    }
-}
-
-/**
- * Raw String to Buffer.
- */
-DataUtils.toNumbersFromString = function(str) {
-  return new Buffer(str, 'binary');
-}
-
-/**
- * Encode str as utf8 and return as Buffer.
- */
-DataUtils.stringToUtf8Array = function(str) {
-  return new Buffer(str, 'utf8');
-}
-
-/**
- * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
- */
-DataUtils.concatArrays = function(arrays) {
-  var totalLength = 0;
-	for (var i = 0; i < arrays.length; ++i)
-    totalLength += arrays[i].length;
-    
-  var result = new Buffer(totalLength);
-  var offset = 0;
-	for (var i = 0; i < arrays.length; ++i) {
-     result.set(arrays[i], offset);
-     offset += arrays[i].length;
-  }
-  return result;  
-}
- 
-// TODO: Take Buffer and use TextDecoder when available.
-DataUtils.decodeUtf8 = function (utftext) {
-		var string = "";
-		var i = 0;
-		var c = 0;
-        var c1 = 0;
-        var c2 = 0;
- 
-		while ( i < utftext.length ) {
- 
-			c = utftext.charCodeAt(i);
- 
-			if (c < 128) {
-				string += String.fromCharCode(c);
-				i++;
-			}
-			else if((c > 191) && (c < 224)) {
-				c2 = utftext.charCodeAt(i+1);
-				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-				i += 2;
-			}
-			else {
-				c2 = utftext.charCodeAt(i+1);
-				var c3 = utftext.charCodeAt(i+2);
-				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
-				i += 3;
-			}
- 
-		}
- 
-		return string;
-	};
-
-/**
- * Return true if a1 and a2 are the same length with equal elements.
- */
-DataUtils.arraysEqual = function(a1, a2){
-    if (a1.length != a2.length)
-        return false;
-    
-    for (var i = 0; i < a1.length; ++i) {
-        if (a1[i] != a2[i])
-            return false;
-    }
-
-    return true;
-};
-
-/**
- * Convert the big endian Buffer to an unsigned int.
- * Don't check for overflow.
- */
-DataUtils.bigEndianToUnsignedInt = function(bytes) {
-    var result = 0;
-    for (var i = 0; i < bytes.length; ++i) {
-        result <<= 8;
-        result += bytes[i];
-    }
-    return result;
-};
-
-/**
- * Convert the int value to a new big endian Buffer and return.
- * If value is 0 or negative, return new Buffer(0). 
- */
-DataUtils.nonNegativeIntToBigEndian = function(value) {
-    value = Math.round(value);
-    if (value <= 0)
-        return new Buffer(0);
-    
-    // Assume value is not over 64 bits.
-    var size = 8;
-    var result = new Buffer(size);
-    var i = 0;
-    while (value != 0) {
-        ++i;
-        result[size - i] = value & 0xff;
-        value >>= 8;
-    }
-    return result.slice(size - i, size);
-};
-
-/**
- * Modify array to randomly shuffle the elements.
- */
-DataUtils.shuffle = function(array) {
-    for (var i = array.length - 1; i >= 1; --i) {
-        // j is from 0 to i.
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
-};
-/**
- * This file contains utilities to help encode and decode NDN objects.
- * author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
- */
-
-function encodeToHexInterest(interest){
-  return DataUtils.toHex(interest.encode());
-}
-
-/**
- * @deprecated Use interest.encode().
- */
-function encodeToBinaryInterest(interest) {
-  return interest.encode();
-}
-
-function encodeToHexContentObject(contentObject) {
-  return DataUtils.toHex(contentObject.encode());
-}
-
-/**
- * @deprecated Use contentObject.encode().
- */
-function encodeToBinaryContentObject(contentObject) {
-  return contentObject.encode();
-}
-
-function encodeForwardingEntry(co) {
-	var enc = new BinaryXMLEncoder();
- 
-	co.to_ndnb(enc);
-	
-	var bytes = enc.getReducedOstream();
-
-	return bytes;
-
-	
-}
-
-
-
-function decodeHexFaceInstance(result){
-	
-	var numbers = DataUtils.toNumbers(result);
-			
-	
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
-
-	var faceInstance = new FaceInstance();
-
-	faceInstance.from_ndnb(decoder);
-
-	return faceInstance;
-	
-}
-
-function decodeHexInterest(input){
-	var interest = new Interest();
-	interest.decode(DataUtils.toNumbers(input));
-	return interest;
-}
-
-function decodeHexContentObject(input){
-	var contentObject = new ContentObject();
-	contentObject.decode(DataUtils.toNumbers(input));
-	return contentObject;
-}
-
-function decodeHexForwardingEntry(result){
-	var numbers = DataUtils.toNumbers(result);
-
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
-	
-	var forwardingEntry = new ForwardingEntry();
-
-	forwardingEntry.from_ndnb(decoder);
-
-	return forwardingEntry;
-	
-}
-
-/**
- * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
- */
-function decodeSubjectPublicKeyInfo(array) {
-    var hex = DataUtils.toHex(array).toLowerCase();
-    var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
-    var rsaKey = new RSAKey();
-    rsaKey.setPublic(a[0], a[1]);
-    return rsaKey;
-}
-
-/**
- * Return a user friendly HTML string with the contents of co.
- * This also outputs to console.log.
- */
-function contentObjectToHtml(/* ContentObject */ co) {
-    var output ="";
-			
-    if(co==-1)
-	output+= "NO CONTENT FOUND"
-    else if (co==-2)
-	output+= "CONTENT NAME IS EMPTY"
-    else{
-	if(co.name!=null && co.name.components!=null){
-	    output+= "NAME: " + co.name.to_uri();
-        
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	
-	if(co.content !=null){
-	    output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.content !=null){
-	    output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.digestAlgorithm!=null){
-	    output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.witness!=null){
-	    output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.signature!=null){
-	    output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
-	    output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
-	    var d = new Date();
-	    d.setTime( co.signedInfo.timestamp.msec );
-	    
-	    var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-	    
-	    output += "TimeStamp: "+d;
-	    output+= "<br />";
-	    output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
-	    
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
-	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
-	    output+= "<br />";
-	}
-/*	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    output += "Hex Certificate: "+ certificateHex ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    var x509 = new X509();
-	    x509.readCertHex(certificateHex);
-	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
-	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
-	    output += "<br/>";
-	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
-	    if(LOG>2) console.log('result is '+result);
-	    
-	    var n = x509.subjectPublicKeyRSA.n;
-	    var e =  x509.subjectPublicKeyRSA.e;
-	    
-	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(e);
-	    
-	    if(result)
-            output += 'SIGNATURE VALID';
-	    else
-            output += 'SIGNATURE INVALID';
-	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
-	}*/
-	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
-	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    //var wit = null;
-	    var witHex = "";
-		if (co.signature.Witness != null) {
-			//wit = new Witness();
-			//wit.decode(co.signature.Witness);
-			witHex = DataUtils.toHex(co.signature.Witness);
-		}
-	    
-	    output += "Public key: " + publickeyHex;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
-	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
-	    
-	    if(LOG>2) console.log(" Signature "+signature );
-	    if(LOG>2) console.log(" Witness "+witHex );
-	    
-	    if(LOG>2) console.log(" Signature NOW IS" );
-	    
-	    if(LOG>2) console.log(co.signature.signature);
-	   
-	    var rsakey = new Key();
-	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
-
-/*	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
-	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
-	    output += "<br/>";
-*/	   	    
-	    var result = co.verify(rsakey);
-	    // var result = rsakey.verifyString(input, signature);
-	    
-/*	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(rsakey.n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(rsakey.e);
-*/	    
-	    if(result)
-			output += 'SIGNATURE VALID';
-	    else
-			output += 'SIGNATURE INVALID';
-	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
-	}
-    }
-
-    return output;
-}
-
-
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -4912,16 +4798,277 @@ Witness.prototype.decode = function(/* Buffer */ witness) {
 	}
 };
 /**
+ * This file contains utilities to help encode and decode NDN objects.
+ * author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * An EncodingUtils has static methods for encoding data.
+ * @constructor
+ */
+var EncodingUtils = function EncodingUtils(){
+};
+
+exports.EncodingUtils = EncodingUtils;
+
+EncodingUtils.encodeToHexInterest = function(interest){
+  return DataUtils.toHex(interest.encode());
+}
+
+EncodingUtils.encodeToHexContentObject = function(contentObject) {
+  return DataUtils.toHex(contentObject.encode());
+}
+
+EncodingUtils.encodeForwardingEntry = function(co) {
+	var enc = new BinaryXMLEncoder();
+ 
+	co.to_ndnb(enc);
+	
+	var bytes = enc.getReducedOstream();
+
+	return bytes;
+
+	
+}
+
+EncodingUtils.decodeHexFaceInstance = function(result){
+	
+	var numbers = DataUtils.toNumbers(result);
+			
+	
+	var decoder = new BinaryXMLDecoder(numbers);
+	
+	if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
+
+	var faceInstance = new FaceInstance();
+
+	faceInstance.from_ndnb(decoder);
+
+	return faceInstance;
+	
+}
+
+EncodingUtils.decodeHexInterest = function(input){
+	var interest = new Interest();
+	interest.decode(DataUtils.toNumbers(input));
+	return interest;
+}
+
+EncodingUtils.decodeHexContentObject = function(input){
+	var contentObject = new ContentObject();
+	contentObject.decode(DataUtils.toNumbers(input));
+	return contentObject;
+}
+
+EncodingUtils.decodeHexForwardingEntry = function(result){
+	var numbers = DataUtils.toNumbers(result);
+
+	var decoder = new BinaryXMLDecoder(numbers);
+	
+	if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
+	
+	var forwardingEntry = new ForwardingEntry();
+
+	forwardingEntry.from_ndnb(decoder);
+
+	return forwardingEntry;
+	
+}
+
+/**
+ * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
+ */
+EncodingUtils.decodeSubjectPublicKeyInfo = function(array) {
+    var hex = DataUtils.toHex(array).toLowerCase();
+    var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
+    var rsaKey = new RSAKey();
+    rsaKey.setPublic(a[0], a[1]);
+    return rsaKey;
+}
+
+/**
+ * Return a user friendly HTML string with the contents of co.
+ * This also outputs to console.log.
+ */
+EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
+    var output ="";
+			
+    if(co==-1)
+	output+= "NO CONTENT FOUND"
+    else if (co==-2)
+	output+= "CONTENT NAME IS EMPTY"
+    else{
+	if(co.name!=null && co.name.components!=null){
+	    output+= "NAME: " + co.name.to_uri();
+        
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	
+	if(co.content !=null){
+	    output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.content !=null){
+	    output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signature !=null && co.signature.digestAlgorithm!=null){
+	    output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signature !=null && co.signature.witness!=null){
+	    output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signature !=null && co.signature.signature!=null){
+	    output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
+	    output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	}
+	if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
+	    var d = new Date();
+	    d.setTime( co.signedInfo.timestamp.msec );
+	    
+	    var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
+	    
+	    output += "TimeStamp: "+d;
+	    output+= "<br />";
+	    output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
+	    
+	    output+= "<br />";
+	}
+	if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
+	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
+	    output+= "<br />";
+	}
+/*	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
+	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
+	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+	    var input = DataUtils.toString(co.rawSignatureData);
+	    
+	    output += "Hex Certificate: "+ certificateHex ;
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	    
+	    var x509 = new X509();
+	    x509.readCertHex(certificateHex);
+	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
+	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
+	    output += "<br/>";
+	    
+	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
+	    if(LOG>2) console.log('result is '+result);
+	    
+	    var n = x509.subjectPublicKeyRSA.n;
+	    var e =  x509.subjectPublicKeyRSA.e;
+	    
+	    if(LOG>2) console.log('PUBLIC KEY n after is ');
+	    if(LOG>2) console.log(n);
+
+	    if(LOG>2) console.log('EXPONENT e after is ');
+	    if(LOG>2) console.log(e);
+	    
+	    if(result)
+            output += 'SIGNATURE VALID';
+	    else
+            output += 'SIGNATURE INVALID';
+	    
+	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	    
+	    //if(LOG>4) console.log('str'[1]);
+	}*/
+	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
+	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
+	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+	    var input = DataUtils.toString(co.rawSignatureData);
+	    
+	    //var wit = null;
+	    var witHex = "";
+		if (co.signature.Witness != null) {
+			//wit = new Witness();
+			//wit.decode(co.signature.Witness);
+			witHex = DataUtils.toHex(co.signature.Witness);
+		}
+	    
+	    output += "Public key: " + publickeyHex;
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	    
+	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
+	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
+	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
+	    
+	    if(LOG>2) console.log(" Signature "+signature );
+	    if(LOG>2) console.log(" Witness "+witHex );
+	    
+	    if(LOG>2) console.log(" Signature NOW IS" );
+	    
+	    if(LOG>2) console.log(co.signature.signature);
+	   
+	    var rsakey = new Key();
+	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
+
+/*	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
+	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
+	    output += "<br/>";
+*/	   	    
+	    var result = co.verify(rsakey);
+	    // var result = rsakey.verifyString(input, signature);
+	    
+/*	    if(LOG>2) console.log('PUBLIC KEY n after is ');
+	    if(LOG>2) console.log(rsakey.n);
+
+	    if(LOG>2) console.log('EXPONENT e after is ');
+	    if(LOG>2) console.log(rsakey.e);
+*/	    
+	    if(result)
+			output += 'SIGNATURE VALID';
+	    else
+			output += 'SIGNATURE INVALID';
+	    
+	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
+	    
+	    output+= "<br />";
+	    output+= "<br />";
+	    
+	    //if(LOG>4) console.log('str'[1]);
+	}
+    }
+
+    return output;
+}
+
+//
+// Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
+//
+/**
  * @author: Meki Cherkaoui, Jeff Thompson, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.
  */
-
-/**
- * Set this to a higher number to dump more debugging log messages.
- * @type Number
- */
-var LOG = 0;
 
 /**
  * Create a new NDN with the given settings.
@@ -5501,54 +5648,6 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
     this.onConnected();
 
     return Closure.RESULT_OK;
-};
-
-/**
- * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
- * elementListener.onReceivedElement(element) with the element. 
- * This handles the case where a single call to onReceivedData may contain multiple elements.
- * @constructor
- * @param {{onReceivedElement:function}} elementListener
- */
-var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
-  this.elementListener = elementListener;
-	this.dataParts = [];
-  this.structureDecoder = new BinaryXMLStructureDecoder();
-};
-
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
-    // Process multiple objects in the data.
-    while(true) {
-        // Scan the input to check if a whole ndnb object has been read.
-        this.structureDecoder.seek(0);
-        if (this.structureDecoder.findElementEnd(data)) {
-            // Got the remainder of an object.  Report to the caller.
-            this.dataParts.push(data.slice(0, this.structureDecoder.offset));
-            var element = DataUtils.concatArrays(this.dataParts);
-            this.dataParts = [];
-            try {
-                this.elementListener.onReceivedElement(element);
-            } catch (ex) {
-                console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
-            }
-        
-            // Need to read a new object.
-            data = data.slice(this.structureDecoder.offset, data.length);
-            this.structureDecoder = new BinaryXMLStructureDecoder();
-            if (data.length == 0)
-                // No more data in the packet.
-                return;
-            
-            // else loop back to decode.
-        }
-        else {
-            // Save for a later call to concatArrays so that we only copy data once.
-            this.dataParts.push(data);
-            if (LOG>3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
-                return;
-        }
-    }    
 };
 /*
 CryptoJS v3.1.2
