@@ -2322,6 +2322,7 @@ WireFormat.prototype.decodeContentObject = function(contentObject, input) {
 
 var DataUtils = require('../encoding/DataUtils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
+var LOG = require('../Log.js').Log.LOG;
 
 /**
  * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
@@ -2372,6 +2373,144 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
         }
     }    
 };
+/**
+ * @author: Jeff Thompson
+ * See COPYING for copyright and distribution information.
+ */
+
+var DataUtils = require('../encoding/DataUtils.js').DataUtils;
+var BinaryXMLDecoder = require('../encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var Closure = require('../Closure.js').Closure;
+var NDNProtocolDTags = require('./NDNProtocolDTags.js').NDNProtocolDTags;
+var Name = require('../Name.js').Name;
+
+// Create a namespace.
+var NameEnumeration = new Object();
+
+exports.NameEnumeration = NameEnumeration;
+
+/**
+ * Use the name enumeration protocol to get the child components of the name prefix.
+ * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {Name} name The name prefix for finding the child components.
+ * @param {function} onComponents On getting the response, this calls onComponents(components) where
+ * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
+ */
+NameEnumeration.getComponents = function(ndn, prefix, onComponents)
+{
+  var command = new Name(prefix);
+  // Add %C1.E.be
+  command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
+  
+  ndn.expressInterest(command, new NameEnumeration.Closure(ndn, onComponents));
+};
+
+/**
+ * Create a closure for getting the response from the name enumeration command.
+ * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {function} onComponents The onComponents callback given to getComponents.
+ */
+NameEnumeration.Closure = function NameEnumerationClosure(ndn, onComponents) 
+{
+  // Inherit from Closure.
+  Closure.call(this);
+  
+  this.ndn = ndn;
+  this.onComponents = onComponents;
+  this.contentParts = [];
+};
+
+/**
+ * Parse the response from the name enumeration command and call this.onComponents.
+ * @param {number} kind
+ * @param {UpcallInfo} upcallInfo
+ * @returns {Closure.RESULT_OK}
+ */
+NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo) 
+{
+  try {
+    if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
+      var data = upcallInfo.contentObject;
+      
+      if (!NameEnumeration.endsWithSegmentNumber(data.name))
+        // We don't expect a name without a segment number.  Treat it as a bad packet.
+        this.onComponents(null);
+      else {
+        var segmentNumber = DataUtils.bigEndianToUnsignedInt
+            (data.name.getComponent(data.name.getComponentCount() - 1));
+        
+        // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
+        var expectedSegmentNumber = this.contentParts.length;
+        if (segmentNumber != expectedSegmentNumber)
+          // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
+          this.ndn.expressInterest
+            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber), this);
+        else {
+          // Save the content and check if we are finished.
+          this.contentParts.push(data.content);
+          
+          if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
+            var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+            if (segmentNumber == finalSegmentNumber) {
+              // We are finished.  Parse and return the result.
+              this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
+              return;
+            }
+          }
+          
+          // Fetch the next segment.
+          this.ndn.expressInterest
+            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber + 1), this);
+        }
+      }
+    }
+    else
+      // Treat anything else as a timeout.
+      this.onComponents(null);
+  } catch (ex) {
+    console.log("NameEnumeration: ignoring exception: " + ex);
+  }
+
+  return Closure.RESULT_OK;
+};
+
+/**
+ * Parse the content as a name enumeration response and return an array of components.  This makes a copy of the component.
+ * @param {Uint8Array} content The content to parse.
+ * @returns {Array<Buffer>} The array of components.
+ */
+NameEnumeration.parseComponents = function(content)
+{
+  var components = [];
+  var decoder = new BinaryXMLDecoder(content);
+  
+  decoder.readStartElement(NDNProtocolDTags.Collection);
+ 
+  while (decoder.peekStartElement(NDNProtocolDTags.Link)) {
+    decoder.readStartElement(NDNProtocolDTags.Link);    
+    decoder.readStartElement(NDNProtocolDTags.Name);
+    
+    components.push(new Buffer(decoder.readBinaryElement(NDNProtocolDTags.Component)));
+    
+    decoder.readEndElement();  
+    decoder.readEndElement();  
+  }
+
+  decoder.readEndElement();
+  return components;
+};
+
+/**
+ * Check if the last component in the name is a segment number.
+ * TODO: Move to Name class.
+ * @param {Name} name
+ * @returns {Boolean} True if the name ends with a segment number, otherwise false.
+ */
+NameEnumeration.endsWithSegmentNumber = function(name) {
+  return name.components != null && name.getComponentCount() >= 1 &&
+    name.getComponent(name.getComponentCount() - 1).length >= 1 &&
+    name.getComponent(name.getComponentCount() - 1)[0] == 0;
+}
 /** 
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
@@ -2756,10 +2895,10 @@ var Name = function Name(components) {
 	else if(typeof components === 'object'){		
 		this.components = [];
     if (components instanceof Name)
-      this.add(components);
+      this.append(components);
     else {
       for (var i = 0; i < components.length; ++i)
-        this.add(components[i]);
+        this.append(components[i]);
     }
 	}
 	else if(components==null)
@@ -2768,11 +2907,11 @@ var Name = function Name(components) {
 		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
 };
 
+exports.Name = Name;
+
 Name.prototype.getName = function() {
     return this.to_uri();
 };
-
-exports.Name = Name;
 
 /** Parse uri as a URI and return an array of Buffer components.
  */
@@ -2831,7 +2970,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
 		this.components = new Array(); //new ArrayList<byte []>();
 
 		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
-			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
+			this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
 		}
 		
 		decoder.readEndElement();
@@ -2855,12 +2994,12 @@ Name.prototype.getElementLabel = function(){
 };
 
 /**
- * Convert the component to a Buffer and add to this Name.
+ * Convert the component to a Buffer and append to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
  * @returns {Name}
  */
-Name.prototype.add = function(component){
+Name.prototype.append = function(component){
   var result;
   if (typeof component == 'string')
     result = DataUtils.stringToUtf8Array(component);
@@ -2896,6 +3035,14 @@ Name.prototype.add = function(component){
 };
 
 /**
+ * @deprecated Use append.
+ */
+Name.prototype.add = function(component)
+{
+  return this.append(component);
+}
+
+/**
  * Return the escaped name string according to "NDNx URI Scheme".
  * @returns {String}
  */
@@ -2912,7 +3059,7 @@ Name.prototype.to_uri = function() {
 };
 
 /**
- * Add a component that represents a segment number
+ * Append a component that represents a segment number
  *
  * This component has a special format handling:
  * - if number is zero, then %00 is added
@@ -2921,7 +3068,7 @@ Name.prototype.to_uri = function() {
  * @param {number} number the segment number (integer is expected)
  * @returns {Name}
  */
-Name.prototype.addSegment = function(number) {
+Name.prototype.appendSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
     var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
@@ -2932,6 +3079,13 @@ Name.prototype.addSegment = function(number) {
     return this;
 };
 
+/**
+ * @deprecated Use appendSegment.
+ */
+Name.prototype.addSegment = function(number) 
+{
+  return this.appendSegment(number);
+}
 /**
  * Return a new Name with the first nComponents components of this Name.
  */
@@ -2945,6 +3099,14 @@ Name.prototype.getPrefix = function(nComponents) {
  */
 Name.prototype.cut = function (minusComponents) {
     return new Name(this.components.slice(0, this.components.length-1));
+}
+
+/**
+ * Return the number of name components.
+ * @returns {number}
+ */
+Name.prototype.getComponentCount = function() {
+  return this.components.length;
 }
 
 /**
@@ -3374,6 +3536,8 @@ var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
 var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
 var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
 
+exports.ContentType = ContentType;
+
 /**
  * Create a new SignedInfo with the optional values.
  * @constructor
@@ -3652,6 +3816,8 @@ Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
+
+Interest.ANSWER_NO_CONTENT_STORE = 0;
 Interest.ANSWER_CONTENT_STORE = 1;
 Interest.ANSWER_GENERATED = 2;
 Interest.ANSWER_STALE = 4;		// Stale answer OK
@@ -5031,6 +5197,14 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 	}
     
 	return result;
+};
+
+NDN.prototype.close = function () {
+  if (this.readyStatus != NDN.OPENED)
+  	throw new Error('Cannot close because NDN connection is not opened.');
+
+  this.readyStatus = NDN.CLOSED;
+  this.transport.close();
 };
 
 // For fetching data

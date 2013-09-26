@@ -38,11 +38,11 @@ var Name = function Name(components) {
 		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
 };
 
+exports.Name = Name;
+
 Name.prototype.getName = function() {
     return this.to_uri();
 };
-
-exports.Name = Name;
 
 /** Parse uri as a URI and return an array of Buffer components.
  */
