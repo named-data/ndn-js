@@ -52,6 +52,8 @@ Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
+
+Interest.ANSWER_NO_CONTENT_STORE = 0;
 Interest.ANSWER_CONTENT_STORE = 1;
 Interest.ANSWER_GENERATED = 2;
 Interest.ANSWER_STALE = 4;		// Stale answer OK
