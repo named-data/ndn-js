@@ -114,6 +114,14 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 	return result;
 };
 
+NDN.prototype.close = function () {
+  if (this.readyStatus != NDN.OPENED)
+  	throw new Error('Cannot close because NDN connection is not opened.');
+
+  this.readyStatus = NDN.CLOSED;
+  this.transport.close();
+};
+
 // For fetching data
 NDN.PITTable = new Array();
 
