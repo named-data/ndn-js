@@ -1,0 +1,17 @@
+exports.NDN = require('./js/NDN.js').NDN;
+exports.Closure = require('./js/Closure.js').Closure;
+exports.Name = require('./js/Name.js').Name;
+exports.Interest = require('./js/Interest.js').Interest;
+exports.Exclude = require('./js/Interest.js').Exclude;
+exports.ContentObject = require('./js/ContentObject.js').ContentObject;
+exports.ContentType = require('./js/ContentObject.js').ContentType;
+exports.SignedInfo = require('./js/ContentObject.js').SignedInfo;
+exports.Key = require('./js/Key.js').Key;
+exports.KeyLocator = require('./js/Key.js').KeyLocator;
+exports.KeyLocatorType = require('./js/Key.js').KeyLocatorType;
+exports.BinaryXMLDecoder = require('./js/encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+exports.BinaryXMLEncoder = require('./js/encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+exports.NDNProtocolDTags = require('./js/util/NDNProtocolDTags.js').NDNProtocolDTags;
+exports.NDNProtocolDTagsStrings = require('./js/util/NDNProtocolDTags.js').NDNProtocolDTagsStrings;
+exports.DataUtils = require('./js/encoding/DataUtils.js').DataUtils;
+exports.EncodingUtils = require('./js/encoding/EncodingUtils.js').EncodingUtils;
