@@ -233,6 +233,14 @@ Name.prototype.cut = function (minusComponents) {
 }
 
 /**
+ * Return the number of name components.
+ * @returns {number}
+ */
+Name.prototype.getComponentCount = function() {
+  return this.components.length;
+}
+
+/**
  * Return a new Buffer of the component at i.
  */
 Name.prototype.getComponent = function(i) {
