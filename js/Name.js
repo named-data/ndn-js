@@ -26,10 +26,10 @@ var Name = function Name(components) {
 	else if(typeof components === 'object'){		
 		this.components = [];
     if (components instanceof Name)
-      this.add(components);
+      this.append(components);
     else {
       for (var i = 0; i < components.length; ++i)
-        this.add(components[i]);
+        this.append(components[i]);
     }
 	}
 	else if(components==null)
@@ -101,7 +101,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
 		this.components = new Array(); //new ArrayList<byte []>();
 
 		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
-			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
+			this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
 		}
 		
 		decoder.readEndElement();
@@ -125,12 +125,12 @@ Name.prototype.getElementLabel = function(){
 };
 
 /**
- * Convert the component to a Buffer and add to this Name.
+ * Convert the component to a Buffer and append to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
  * @returns {Name}
  */
-Name.prototype.add = function(component){
+Name.prototype.append = function(component){
   var result;
   if (typeof component == 'string')
     result = DataUtils.stringToUtf8Array(component);
@@ -166,6 +166,14 @@ Name.prototype.add = function(component){
 };
 
 /**
+ * @deprecated Use append.
+ */
+Name.prototype.add = function(component)
+{
+  return this.append(component);
+}
+
+/**
  * Return the escaped name string according to "NDNx URI Scheme".
  * @returns {String}
  */
@@ -182,7 +190,7 @@ Name.prototype.to_uri = function() {
 };
 
 /**
- * Add a component that represents a segment number
+ * Append a component that represents a segment number
  *
  * This component has a special format handling:
  * - if number is zero, then %00 is added
@@ -191,7 +199,7 @@ Name.prototype.to_uri = function() {
  * @param {number} number the segment number (integer is expected)
  * @returns {Name}
  */
-Name.prototype.addSegment = function(number) {
+Name.prototype.appendSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
     var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
@@ -202,6 +210,13 @@ Name.prototype.addSegment = function(number) {
     return this;
 };
 
+/**
+ * @deprecated Use appendSegment.
+ */
+Name.prototype.addSegment = function(number) 
+{
+  return this.appendSegment(number);
+}
 /**
  * Return a new Name with the first nComponents components of this Name.
  */
