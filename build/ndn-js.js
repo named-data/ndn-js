@@ -5318,6 +5318,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
     if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
         var thisNDN = this;
         this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
+        this.readyStatus = NDN.OPENED;
     }
     else
         this.expressInterestHelper(interest, closure);
