@@ -284,9 +284,10 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
  * Register name with the connected NDN hub and receive interests with closure.upcall.
  * @param {Name} name
  * @param {Closure} closure
- * @param {number} flag
+ * @param {number} flags
  */
-NDN.prototype.registerPrefix = function(name, closure, flag) {
+NDN.prototype.registerPrefix = function(name, closure, flags) {
+    flags = flags | 3;
     var thisNDN = this;
     var onConnected = function() {
     	if (thisNDN.ndndid == null) {
@@ -295,10 +296,10 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
     		interest.interestLifetime = 4000; // milliseconds
             if (LOG>3) console.log('Expressing interest for ndndid from ndnd.');
             thisNDN.reconnectAndExpressInterest
-               (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flag));
+               (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flags));
         }
         else	
-            thisNDN.registerPrefixHelper(name, closure, flag);
+            thisNDN.registerPrefixHelper(name, closure, flags);
     };
 
 	if (this.host == null || this.port == null) {
@@ -313,16 +314,16 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
 
 /**
  * This is a closure to receive the ContentObject for NDN.ndndIdFetcher and call
- *   registerPrefixHelper(name, callerClosure, flag).
+ *   registerPrefixHelper(name, callerClosure, flags).
  */
-NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flag) {
+NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) {
     // Inherit from Closure.
     Closure.call(this);
     
     this.ndn = ndn;
     this.name = name;
     this.callerClosure = callerClosure;
-    this.flag = flag;
+    this.flags = flags;
 };
 
 NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -347,7 +348,7 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 		if (LOG>3) console.log(this.ndn.ndndid);
         
-        this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flag);
+        this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
 	}
     
     return Closure.RESULT_OK;
@@ -356,8 +357,8 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
-	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
+NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
+	var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
   	
   var encoder = new BinaryXMLEncoder();
 	fe.to_ndnb(encoder);
