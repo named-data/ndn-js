@@ -271,7 +271,7 @@ Name.prototype.indexOfFileName = function() {
 /**
  * Return true if this Name has the same components as name.
  */
-Name.prototype.equalsName = function(name) {
+Name.prototype.equals = function(name) {
     if (this.components.length != name.components.length)
         return false;
     
@@ -282,6 +282,14 @@ Name.prototype.equalsName = function(name) {
     }
     
     return true;
+}
+
+/**
+ * @deprecated Use equals.
+ */
+Name.prototype.equalsName = function(name)
+{
+  return this.equals(name);
 }
 
 /**
