@@ -3,6 +3,9 @@
  * See COPYING for copyright and distribution information.
  */
 
+var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * @constructor
  */
@@ -19,6 +22,8 @@ var WebSocketTransport = function WebSocketTransport() {
           "E.ws.ndn.ucla.edu"],
          9696);
 };
+
+exports.WebSocketTransport = WebSocketTransport;
 
 /**
  * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
@@ -46,9 +51,9 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 		if(result == null || result == undefined || result == "" ) {
 			console.log('INVALID ANSWER');
 		} else if (result instanceof ArrayBuffer) {
-	        var bytearray = new Uint8Array(result);
+	        var bytearray = new Buffer(result);
 	        
-			if (LOG>3) console.log('BINARY RESPONSE IS ' + DataUtils.toHex(bytearray));
+			if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 			
 			try {
                 // Find the end of the binary XML element and call ndn.onReceivedElement.

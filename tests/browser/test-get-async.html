@@ -10,10 +10,10 @@
 <head>
 	<title>NDN Get via WebSocket</title>
 	
-	<script type="text/javascript" src="../build/ndn-js.js"></script>
+	<script type="text/javascript" src="../../build/ndn-js.js"></script>
 
 	<script type="text/javascript">
-		var ndn = new NDN({host: "A.ws.ndn.ucla.edu"});
+    	  var ndn1 = new NDN();
         
         var AsyncGetClosure = function AsyncGetClosure() {
         	// Inherit from Closure.
@@ -26,7 +26,7 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
 				console.log("Closure.upcall: content signature verification pass.");
-                console.log("Host: " + ndn.host + ":" + ndn.port);
+                console.log("Host: " + ndn1.host + ":" + ndn1.port);
 				var content = upcallInfo.contentObject;
 				//console.log(content.name);
 				nameStr = escape(content.name.getName());
@@ -35,18 +35,18 @@
 				//console.log("In callback, nameStr: " + nameStr);
 				//console.log("In callback, content: ");
 				//console.log(content);
-				document.getElementById('content').innerHTML += contentObjectToHtml(content);
+				document.getElementById('content').innerHTML += EncodingUtils.contentObjectToHtml(content);
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
 				var content = upcallInfo.contentObject;
 				console.log("Closure.upcall: content signature verification fail.");
-                console.log("Host: " + ndn.host + ":" + ndn.port);
+                console.log("Host: " + ndn1.host + ":" + ndn1.port);
 				if (content.signature.signature)
 					console.log("Signature: " + DataUtils.toHex(content.signature.signature).toLowerCase());
-				if (content.signature.Witness)
-					console.log("Witness: " + DataUtils.toHex(content.signature.Witness).toLowerCase());
+				if (content.signature.witness)
+					console.log("Witness: " + DataUtils.toHex(content.signature.witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out. Re-expressing the interest.");
-                console.log("Host: " + ndn.host + ":" + ndn.port);
+                console.log("Host: " + ndn1.host + ":" + ndn1.port);
                 return Closure.RESULT_REEXPRESS;
 			}
 			return Closure.RESULT_OK;
@@ -54,7 +54,7 @@
 		
 		
 		function run() {
-			ndn.expressInterest(new Name(document.getElementById('interest').value), new AsyncGetClosure());
+			ndn1.expressInterest(new Name(document.getElementById('interest').value), new AsyncGetClosure());
 		}
 		
 	</script>
@@ -64,7 +64,7 @@
 
 	<form>
 		Please Enter an Interest:<br />
-		<input id="interest" type="text" name="INTEREST" size="50" value="/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY" /> 
+		<input id="interest" type="text" name="INTEREST" size="50" value="/" /> 
 	</form>
 
 	<button id="testBtn" onclick="run()">Fetch Content</button>

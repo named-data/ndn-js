@@ -549,3 +549,5 @@ var MimeTypes = {
   "zip": "application/zip",
   "zmt": "chemical/x-mopac-input"
 };
+
+exports.MimeTypes = MimeTypes;

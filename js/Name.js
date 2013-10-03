@@ -4,13 +4,19 @@
  * This class represents a Name as an array of components where each is a byte array.
  */
  
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new Name from components.
  * 
  * @constructor
- * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Uint8Array|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
- * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Uint8Array or Name.
- * Convert each and store as an array of Uint8Array.  If a component is a string, encode as utf8.
+ * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
+ * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Buffer or Name.
+ * Convert each and store as an array of Buffer.  If a component is a string, encode as utf8.
  */
 var Name = function Name(components) {
 	if( typeof components == 'string') {		
@@ -20,10 +26,10 @@ var Name = function Name(components) {
 	else if(typeof components === 'object'){		
 		this.components = [];
     if (components instanceof Name)
-      this.add(components);
+      this.append(components);
     else {
       for (var i = 0; i < components.length; ++i)
-        this.add(components[i]);
+        this.append(components[i]);
     }
 	}
 	else if(components==null)
@@ -32,11 +38,13 @@ var Name = function Name(components) {
 		if(LOG>1)console.log("NO CONTENT NAME GIVEN");
 };
 
+exports.Name = Name;
+
 Name.prototype.getName = function() {
     return this.to_uri();
 };
 
-/** Parse uri as a URI and return an array of Uint8Array components.
+/** Parse uri as a URI and return an array of Buffer components.
  */
 Name.createNameArray = function(uri) {
     uri = uri.trim();
@@ -93,7 +101,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  {
 		this.components = new Array(); //new ArrayList<byte []>();
 
 		while (decoder.peekStartElement(NDNProtocolDTags.Component)) {
-			this.add(decoder.readBinaryElement(NDNProtocolDTags.Component));
+			this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
 		}
 		
 		decoder.readEndElement();
@@ -117,38 +125,38 @@ Name.prototype.getElementLabel = function(){
 };
 
 /**
- * Convert the component to a Uint8Array and add to this Name.
+ * Convert the component to a Buffer and append to this Name.
  * Return this Name object to allow chaining calls to add.
- * @param {String|Array<number>|ArrayBuffer|Uint8Array|Name} component If a component is a string, encode as utf8.
+ * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
  * @returns {Name}
  */
-Name.prototype.add = function(component){
-    var result;
-    if(typeof component == 'string')
-        result = DataUtils.stringToUtf8Array(component);
-	else if(typeof component == 'object' && component instanceof Uint8Array)
-        result = new Uint8Array(component);
-	else if(typeof component == 'object' && component instanceof ArrayBuffer) {
-        // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
-        result = new Uint8Array(new ArrayBuffer(component.byteLength));
-        result.set(new Uint8Array(component));
-    }
-    else if (typeof component == 'object' && component instanceof Name) {
-        var components;
-        if (component == this)
-            // special case, when we need to create a copy
-            components = this.components.slice(0, this.components.length);
-        else
-            components = component.components;
-        
-        for (var i = 0; i < components.length; ++i)
-            this.components.push(new Uint8Array(components[i]));
-        return this;
-    }
+Name.prototype.append = function(component){
+  var result;
+  if (typeof component == 'string')
+    result = DataUtils.stringToUtf8Array(component);
+	else if (typeof component == 'object' && component instanceof Buffer)
+    result = new Buffer(component);
+  else if (typeof component == 'object' && typeof ArrayBuffer != 'undefined' &&  component instanceof ArrayBuffer) {
+    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
+    result = new Buffer(new ArrayBuffer(component.byteLength));
+    result.set(new Buffer(component));
+  }
+  else if (typeof component == 'object' && component instanceof Name) {
+    var components;
+    if (component == this)
+      // special case, when we need to create a copy
+      components = this.components.slice(0, this.components.length);
+    else
+      components = component.components;
+      
+    for (var i = 0; i < components.length; ++i)
+      this.components.push(new Buffer(components[i]));
+    return this;
+  }
 	else if(typeof component == 'object')
         // Assume component is a byte array.  We can't check instanceof Array because
         //   this doesn't work in JavaScript if the array comes from a different module.
-        result = new Uint8Array(component);
+        result = new Buffer(component);
 	else 
 		throw new Error("Cannot add Name element at index " + this.components.length + 
             ": Invalid type");
@@ -156,6 +164,14 @@ Name.prototype.add = function(component){
     this.components.push(result);
 	return this;
 };
+
+/**
+ * @deprecated Use append.
+ */
+Name.prototype.add = function(component)
+{
+  return this.append(component);
+}
 
 /**
  * Return the escaped name string according to "NDNx URI Scheme".
@@ -174,7 +190,7 @@ Name.prototype.to_uri = function() {
 };
 
 /**
- * Add a component that represents a segment number
+ * Append a component that represents a segment number
  *
  * This component has a special format handling:
  * - if number is zero, then %00 is added
@@ -183,16 +199,24 @@ Name.prototype.to_uri = function() {
  * @param {number} number the segment number (integer is expected)
  * @returns {Name}
  */
-Name.prototype.addSegment = function(number) {
+Name.prototype.appendSegment = function(number) {
     var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
     // Put a 0 byte in front.
-    var segmentNumberComponent = new Uint8Array(segmentNumberBigEndian.length + 1);
-    segmentNumberComponent.set(segmentNumberBigEndian, 1);
+    var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+    segmentNumberComponent[0] = 0;
+    segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
     this.components.push(segmentNumberComponent);
     return this;
 };
 
+/**
+ * @deprecated Use appendSegment.
+ */
+Name.prototype.addSegment = function(number) 
+{
+  return this.appendSegment(number);
+}
 /**
  * Return a new Name with the first nComponents components of this Name.
  */
@@ -209,12 +233,18 @@ Name.prototype.cut = function (minusComponents) {
 }
 
 /**
- * Return a new ArrayBuffer of the component at i.
+ * Return the number of name components.
+ * @returns {number}
+ */
+Name.prototype.getComponentCount = function() {
+  return this.components.length;
+}
+
+/**
+ * Return a new Buffer of the component at i.
  */
 Name.prototype.getComponent = function(i) {
-    var result = new ArrayBuffer(this.components[i].length);
-    new Uint8Array(result).set(this.components[i]);
-    return result;
+    return new Buffer(this.components[i]);
 }
 
 /**
@@ -241,7 +271,7 @@ Name.prototype.indexOfFileName = function() {
 /**
  * Return true if this Name has the same components as name.
  */
-Name.prototype.equalsName = function(name) {
+Name.prototype.equals = function(name) {
     if (this.components.length != name.components.length)
         return false;
     
@@ -255,7 +285,15 @@ Name.prototype.equalsName = function(name) {
 }
 
 /**
- * Find the last component in name that has a ContentDigest and return the digest value as Uint8Array, 
+ * @deprecated Use equals.
+ */
+Name.prototype.equalsName = function(name)
+{
+  return this.equals(name);
+}
+
+/**
+ * Find the last component in name that has a ContentDigest and return the digest value as Buffer, 
  *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() {
@@ -269,7 +307,7 @@ Name.prototype.getContentDigestValue = function() {
 }
 
 /**
- * If component is a ContentDigest, return the digest value as a Uint8Array subarray (don't modify!).
+ * If component is a ContentDigest, return the digest value as a Buffer slice (don't modify!).
  * If not a ContentDigest, return null.
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
  */
@@ -277,19 +315,19 @@ Name.getComponentContentDigestValue = function(component) {
     var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
     // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
     if (component.length == digestComponentLength &&
-        DataUtils.arraysEqual(component.subarray(0, Name.ContentDigestPrefix.length), 
+        DataUtils.arraysEqual(component.slice(0, Name.ContentDigestPrefix.length), 
                               Name.ContentDigestPrefix) &&
-        DataUtils.arraysEqual(component.subarray
+        DataUtils.arraysEqual(component.slice
            (component.length - Name.ContentDigestSuffix.length, component.length),
                               Name.ContentDigestSuffix))
-       return component.subarray(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
+       return component.slice(Name.ContentDigestPrefix.length, Name.ContentDigestPrefix.length + 32);
    else
        return null;
 }
 
 // Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
-Name.ContentDigestPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
-Name.ContentDigestSuffix = new Uint8Array([0x00]);
+Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return component as an escaped string according to "NDNx URI Scheme".
@@ -326,7 +364,7 @@ Name.toEscapedString = function(component) {
 };
 
 /**
- * Return component as a Uint8Array by decoding the escapedString according to "NDNx URI Scheme".
+ * Return component as a Buffer by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  */
 Name.fromEscapedString = function(escapedString) {

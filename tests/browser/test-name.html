@@ -9,7 +9,7 @@
 <head>
 	<title>NDN Name</title>
 	
-	<script type="text/javascript" src="../build/ndn-js.js"></script>
+	<script type="text/javascript" src="../../build/ndn-js.js"></script>
 
 	<script type="text/javascript">
 	
@@ -17,28 +17,24 @@ function testName() {
     var result = document.getElementById('result');
     result.innerHTML = "";
     
-    var comp1 = new Uint8Array(1); 
-    comp1.set(['.'.charCodeAt(0)]);
-    
-    var ab2 = new ArrayBuffer(4); 
-    var comp2 = new Uint8Array(ab2); 
-    comp2.set([0x00, 0x01, 0x02, 0x03]);
+    var comp1 = new Buffer(['.'.charCodeAt(0)]);
+    var comp2 = new Buffer([0x00, 0x01, 0x02, 0x03]);
 
     // \u00E9 is e with accent.
     var entree = "entr\u00E9e";
 
-    // When Name constructor is passed an array, each item is a name component represented with ArrayBuffer, 
+    // When Name constructor is passed an array, each item is a name component represented with Buffer, 
     //   typed array, or string (parsed as UTF-8)
-    var name1 = new Name([entree, comp1, ab2]);
+    var name1 = new Name([entree, comp1, comp2]);
     var name1Uri = name1.to_uri();
     var name1UriExpected = "/entr%C3%A9e/..../%00%01%02%03";
-    result.innerHTML += "Name from '" + entree + "', Uint8Array of '.' and ArrayBuffer of 0,1,2,3:<br/>";
+    result.innerHTML += "Name from '" + entree + "', Buffer of '.' and Buffer of 0,1,2,3:<br/>";
     if (name1Uri == name1UriExpected)
         result.innerHTML += "SUCCESS: " + name1Uri + ".<br/>";
     else
         result.innerHTML += "ERROR: got " + name1Uri + ", expected " + name1UriExpected + " .<br/>";
 
-    result.innerHTML += "Compare with same Name from '" + entree + "', '.' and ArrayBuffer:<br/>";
+    result.innerHTML += "Compare with same Name from '" + entree + "', '.' and Buffer:<br/>";
     // Equivalent with name1
     var name2 = new Name([entree, ".", comp2]);
     if (name2.components.length != name1.components.length)
@@ -47,9 +43,9 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name2.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name2.getComponent(i))) {
                 allEqual = false;
-                result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
+                result.innerHTML += "ERROR: Compare with " + name2.to_uri() + ": Names differ at component at index " + i + ".<br/>";
             }
         }
         if (allEqual)
@@ -65,7 +61,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name3.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name3.getComponent(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -83,7 +79,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name4.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.components[i], name4.components[i])) {
+            if (!DataUtils.arraysEqual(name1.getComponent(i), name4.getComponent(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -94,7 +90,7 @@ function testName() {
     
     result.innerHTML += "Check with Name component at index 2:<br/>";
     // Returns ArrayBuffer of "%00%01%02%03"
-    var component2Out = new Uint8Array(name1.getComponent(2));
+    var component2Out = name1.getComponent(2);
     if (DataUtils.arraysEqual(component2Out, comp2))
         result.innerHTML += "SUCCESS: Components at index 2 are equal.<br/>";
     else
@@ -102,7 +98,7 @@ function testName() {
     
     var name5 = new Name("/localhost/user/folders/files/%00%0F");
     result.innerHTML += "Check chaining calls to add() to create Name: " + name5.to_uri() + "<br/>";
-    if (name5.equalsName(new Name(new Name("/localhost")).add(new Name("/user/folders")).add
+    if (name5.equals(new Name(new Name("/localhost")).add(new Name("/user/folders")).add
           ("files").addSegment(15)))
         result.innerHTML += "SUCCESS: Names are equal.<br/>";
     else

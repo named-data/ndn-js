@@ -4,11 +4,19 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-/**
- * Set this to a higher number to dump more debugging log messages.
- * @type Number
- */
-var LOG = 0;
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var Interest = require('./Interest.js').Interest;
+var ContentObject = require('./ContentObject.js').ContentObject;
+var ForwardingEntry = require('./ForwardingEntry.js').ForwardingEntry;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var Key = require('./Key.js').Key;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var Closure = require('./Closure.js').Closure;
+var UpcallInfo = require('./Closure.js').UpcallInfo;
+var TcpTransport = require('./TcpTransport.js').TcpTransport;
+var LOG = require('./Log.js').Log.LOG;
 
 /**
  * Create a new NDN with the given settings.
@@ -16,10 +24,12 @@ var LOG = 0;
  * @constructor
  * @param {Object} settings if not null, an associative array with the following defaults:
  * {
- *   getTransport: function() { return new WebSocketTransport(); },
+ *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
+ *              OR function() { return new TcpTransport(); },       // If in Node.js.
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
- *   port: 9696,
+ *   port: 9696, // If in the browser.
+ *      OR 9695, // If in Node.js.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -30,11 +40,12 @@ var NDN = function NDN(settings) {
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
-  var getTransport = (settings.getTransport || function() { return new WebSocketTransport(); });
+  // For the browser, browserifyTcpTransport.js replaces TcpTransport with WebSocketTransport.
+  var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || 9696);
+	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 9695));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
@@ -42,6 +53,8 @@ var NDN = function NDN(settings) {
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
 	this.ndndid = null;
 };
+
+exports.NDN = NDN;
 
 NDN.UNOPEN = 0;  // created but not opened yet
 NDN.OPENED = 1;  // connection to ndnd opened
@@ -52,9 +65,9 @@ NDN.CLOSED = 2;  // connection to ndnd closed
  */
 NDN.getSupported = function() {
     try {
-        var dummy = new Uint8Array(1).subarray(0, 1);
+        var dummy = new Buffer(1).slice(0, 1);
     } catch (ex) {
-        console.log("NDN not available: Uint8Array not supported. " + ex);
+        console.log("NDN not available: Buffer not supported. " + ex);
         return false;
     }
     
@@ -99,6 +112,14 @@ NDN.getKeyByName = function(/* KeyName */ name) {
 	}
     
 	return result;
+};
+
+NDN.prototype.close = function () {
+  if (this.readyStatus != NDN.OPENED)
+  	throw new Error('Cannot close because NDN connection is not opened.');
+
+  this.readyStatus = NDN.CLOSED;
+  this.transport.close();
 };
 
 // For fetching data
@@ -212,6 +233,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
     if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
         var thisNDN = this;
         this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
+        this.readyStatus = NDN.OPENED;
     }
     else
         this.expressInterestHelper(interest, closure);
@@ -222,7 +244,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
  *   this.transport.send to send the interest.
  */
 NDN.prototype.expressInterestHelper = function(interest, closure) {
-    var binaryInterest = encodeToBinaryInterest(interest);
+    var binaryInterest = interest.encode();
     var thisNDN = this;    
 	//TODO: check local content store first
 	if (closure != null) {
@@ -262,9 +284,10 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
  * Register name with the connected NDN hub and receive interests with closure.upcall.
  * @param {Name} name
  * @param {Closure} closure
- * @param {number} flag
+ * @param {number} flags
  */
-NDN.prototype.registerPrefix = function(name, closure, flag) {
+NDN.prototype.registerPrefix = function(name, closure, flags) {
+    flags = flags | 3;
     var thisNDN = this;
     var onConnected = function() {
     	if (thisNDN.ndndid == null) {
@@ -273,10 +296,10 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
     		interest.interestLifetime = 4000; // milliseconds
             if (LOG>3) console.log('Expressing interest for ndndid from ndnd.');
             thisNDN.reconnectAndExpressInterest
-               (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flag));
+               (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flags));
         }
         else	
-            thisNDN.registerPrefixHelper(name, closure, flag);
+            thisNDN.registerPrefixHelper(name, closure, flags);
     };
 
 	if (this.host == null || this.port == null) {
@@ -291,16 +314,16 @@ NDN.prototype.registerPrefix = function(name, closure, flag) {
 
 /**
  * This is a closure to receive the ContentObject for NDN.ndndIdFetcher and call
- *   registerPrefixHelper(name, callerClosure, flag).
+ *   registerPrefixHelper(name, callerClosure, flags).
  */
-NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flag) {
+NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) {
     // Inherit from Closure.
     Closure.call(this);
     
     this.ndn = ndn;
     this.name = name;
     this.callerClosure = callerClosure;
-    this.flag = flag;
+    this.flags = flags;
 };
 
 NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -325,7 +348,7 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
 		if (LOG>3) console.log(this.ndn.ndndid);
         
-        this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flag);
+        this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
 	}
     
     return Closure.RESULT_OK;
@@ -334,16 +357,19 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
-	var fe = new ForwardingEntry('selfreg', name, null, null, 3, 2147483647);
-	var bytes = encodeForwardingEntry(fe);
+NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
+	var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
+  	
+  var encoder = new BinaryXMLEncoder();
+	fe.to_ndnb(encoder);
+	var bytes = encoder.getReducedOstream();
 		
 	var si = new SignedInfo();
 	si.setFields();
 		
 	var co = new ContentObject(new Name(), si, bytes); 
 	co.sign();
-	var coBinary = encodeToBinaryContentObject(co);
+	var coBinary = co.encode();;
 		
 	//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
 	var nodename = this.ndndid;
@@ -356,7 +382,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flag) {
     var csEntry = new CSEntry(name.getName(), closure);
 	NDN.CSTable.push(csEntry);
     
-    this.transport.send(encodeToBinaryInterest(interest));
+    this.transport.send(interest.encode());
 };
 
 /**
@@ -382,7 +408,7 @@ NDN.prototype.onReceivedElement = function(element) {
 			var info = new UpcallInfo(this, interest, 0, null);
 			var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
 			if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-				this.transport.send(encodeToBinaryContentObject(info.contentObject));
+				this.transport.send(info.contentObject.encode());
 		}				
 	} else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
 		if (LOG > 3) console.log('ContentObject packet received.');
@@ -415,13 +441,13 @@ NDN.prototype.onReceivedElement = function(element) {
 				this.contentObject = content;  // unverified content object
 				this.closure = closure;  // closure corresponding to the contentObject
 				this.keyName = key;  // name of current key to be fetched
-				this.sigHex = sig;  // hex signature string to be verified
-				this.witness = wit;
+				//this.sigHex = sig;  // hex signature string to be verified
+				//this.witness = wit;
 						
 				Closure.call(this);
 			};
 						
-            var thisNDN = this;
+		    var thisNDN = this;
 			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 					console.log("In KeyFetchClosure.upcall: interest time out.");
@@ -429,8 +455,9 @@ NDN.prototype.onReceivedElement = function(element) {
 				} else if (kind == Closure.UPCALL_CONTENT) {
 					//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
-					var rsakey = decodeSubjectPublicKeyInfo(upcallInfo.contentObject.content);
-					var verified = rsakey.verifyByteArray(this.contentObject.rawSignatureData, this.witness, this.sigHex);
+				    var rsakey = new Key();
+				    rsakey.readDerPublicKey(upcallInfo.contentObject.content);
+				    var verified = co.verify(rsakey);
 								
 					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 					//console.log("raise encapsulated closure");
@@ -450,11 +477,11 @@ NDN.prototype.onReceivedElement = function(element) {
 				var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
 							
 				var wit = null;
-				if (co.signature.Witness != null) {
-					wit = new Witness();
-					wit.decode(co.signature.Witness);
+				if (co.signature.witness != null) {
+				    //SWT: deprecate support for Witness decoding and Merkle hash tree verification
+				    currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
 				}
-							
+			    
 				var keylocator = co.signedInfo.locator;
 				if (keylocator.type == KeyLocatorType.KEYNAME) {
 					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
@@ -465,11 +492,12 @@ NDN.prototype.onReceivedElement = function(element) {
 					if (keylocator.keyName.contentName.match(co.name)) {
 						if (LOG > 3) console.log("Content is key itself");
 									
-						var rsakey = decodeSubjectPublicKeyInfo(co.content);
-						var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
-						var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-						currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+					    var rsakey = new Key();
+					    rsakey.readDerPublicKey(co.content);
+					    var verified = co.verify(rsakey);
+					    var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+					    
+					    currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
 
 						// SWT: We don't need to store key here since the same key will be
 						//      stored again in the closure.
@@ -483,7 +511,7 @@ NDN.prototype.onReceivedElement = function(element) {
 							// Key found, verify now
 							if (LOG > 3) console.log("Local key cache hit");
 							var rsakey = keyEntry.rsaKey;
-							var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+						    var verified = co.verify(rsakey);
 							var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 
 							// Raise callback
@@ -498,8 +526,9 @@ NDN.prototype.onReceivedElement = function(element) {
 				} else if (keylocator.type == KeyLocatorType.KEY) {
 					if (LOG > 3) console.log("Keylocator contains KEY");
 								
-					var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
-					var verified = rsakey.verifyByteArray(co.rawSignatureData, wit, sigHex);
+				    var rsakey = new Key();
+				    rsakey.readDerPublicKey(keylocator.publicKey);
+				    var verified = co.verify(rsakey);
 							
 					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 					// Raise callback
@@ -557,6 +586,14 @@ NDN.prototype.connectAndExecute = function(onConnected) {
         (interest, new NDN.ConnectClosure(this, onConnected, timerID));
 };
 
+/**
+ * This is called by the Transport when the connection is closed by the remote host.
+ */
+NDN.prototype.closeByTransport = function () {
+    this.readyStatus = NDN.CLOSED;
+    this.onclose();
+};
+
 NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) {
     // Inherit from Closure.
     Closure.call(this);
@@ -583,52 +620,4 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) {
     this.onConnected();
 
     return Closure.RESULT_OK;
-};
-
-/**
- * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
- * elementListener.onReceivedElement(element) with the element. 
- * This handles the case where a single call to onReceivedData may contain multiple elements.
- * @constructor
- * @param {{onReceivedElement:function}} elementListener
- */
-var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
-  this.elementListener = elementListener;
-	this.dataParts = [];
-  this.structureDecoder = new BinaryXMLStructureDecoder();
-};
-
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Uint8Array */ data) {
-    // Process multiple objects in the data.
-    while(true) {
-        // Scan the input to check if a whole ndnb object has been read.
-        this.structureDecoder.seek(0);
-        if (this.structureDecoder.findElementEnd(data)) {
-            // Got the remainder of an object.  Report to the caller.
-            this.dataParts.push(data.subarray(0, this.structureDecoder.offset));
-            var element = DataUtils.concatArrays(this.dataParts);
-            this.dataParts = [];
-            try {
-                this.elementListener.onReceivedElement(element);
-            } catch (ex) {
-                console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
-            }
-        
-            // Need to read a new object.
-            data = data.subarray(this.structureDecoder.offset, data.length);
-            this.structureDecoder = new BinaryXMLStructureDecoder();
-            if (data.length == 0)
-                // No more data in the packet.
-                return;
-            
-            // else loop back to decode.
-        }
-        else {
-            // Save for a later call to concatArrays so that we only copy data once.
-            this.dataParts.push(data);
-            if (LOG>3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
-                return;
-        }
-    }    
 };

@@ -9,7 +9,7 @@
 <head>
 	<title>NDN Encode/Decode Interest</title>
 	
-	<script type="text/javascript" src="../build/ndn-js.js"></script>
+	<script type="text/javascript" src="../../build/ndn-js.js"></script>
 
 	<script type="text/javascript">
 	
@@ -22,14 +22,14 @@
             interest.answerOriginKind = 4;
             interest.scope = 2;
             interest.interestLifetime = 30000;
-            interest.nonce = new Uint8Array([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
+            interest.nonce = new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
             var pkd = [];
             for (i = 0; i < 32; ++i)
                 pkd.push(i);
-			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Uint8Array(pkd));
+			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Buffer(pkd));
             interest.exclude = new Exclude([Name.fromEscapedString("abc"), Exclude.ANY]);
                 
-			var output = encodeToHexInterest(interest);
+			var output = EncodingUtils.encodeToHexInterest(interest);
 			
 			document.getElementById('result').innerHTML = output;
 
@@ -38,7 +38,7 @@
 		function decode() {
 			var input = document.getElementById('result').innerHTML;
 			
-			var interest = decodeHexInterest(input);
+			var interest = EncodingUtils.decodeHexInterest(input);
 			
 			if (LOG>3)console.log('INTEREST DECODED');
 			if (LOG>3)console.log(interest);

@@ -5,6 +5,13 @@
  * See COPYING for copyright and distribution information.
  */
 
+var LOG = require('../Log.js').Log.LOG;
+
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
+
 var XML_EXT = 0x00; 
 	
 var XML_TAG = 0x01; 
@@ -43,10 +50,12 @@ var bits_32 = 0x0FFFFFFFF;
  * @constructor
  */
 var BinaryXMLEncoder = function BinaryXMLEncoder(){
-	this.ostream = new DynamicUint8Array(100);
+	this.ostream = new DynamicBuffer(100);
 	this.offset =0;
 	this.CODEC_NAME = "Binary";
 };
+
+exports.BinaryXMLEncoder = BinaryXMLEncoder;
 
 /**
  * Encode utf8Content as utf8.
@@ -57,7 +66,7 @@ BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) {
 
 
 BinaryXMLEncoder.prototype.writeBlob = function(
-		/*Uint8Array*/ binaryContent
+		/*Buffer*/ binaryContent
 		) {
 	
 	if(LOG >3) console.log(binaryContent);
@@ -271,7 +280,7 @@ BinaryXMLEncoder.prototype.encodeUString = function(
 
 
 BinaryXMLEncoder.prototype.encodeBlob = function(
-		//Uint8Array 
+		//Buffer 
 		blob, 
 		//int 
 		length) {
@@ -335,8 +344,7 @@ BinaryXMLEncoder.prototype.writeDateTime = function(
   if (binarydate.length % 2 == 1)
     binarydate = '0' + binarydate;
 
-  // Hack toNumbers by appending a 0 which is ignored.
-	var binarydate =  DataUtils.toNumbers( binarydate + '0') ;
+	var binarydate =  DataUtils.toNumbers( binarydate) ;
 
 	
 	if(LOG>4)console.log('ENCODING DATE with BINARY VALUE');
@@ -376,7 +384,7 @@ BinaryXMLEncoder.prototype.writeString = function(input) {
 
 
 BinaryXMLEncoder.prototype.writeBlobArray = function(
-		//Uint8Array 
+		//Buffer 
 		blob) {
 	
 	if(LOG>4) console.log('GOING TO WRITE A BLOB');
@@ -386,6 +394,6 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 
 
 BinaryXMLEncoder.prototype.getReducedOstream = function() {
-	return this.ostream.subarray(0, this.offset);
+	return this.ostream.slice(0, this.offset);
 };
 

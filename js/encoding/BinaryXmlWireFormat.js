@@ -4,6 +4,14 @@
  * This class represents Interest Objects
  */
 
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var WireFormat = require('./WireFormat.js').WireFormat;
+var Name = require('../Name.js').Name;
+var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./DataUtils.js').DataUtils;
+
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
  * @constructor
@@ -13,10 +21,15 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
   WireFormat.call(this);
 };
 
+exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
+
+// Default object.
+BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
+
 /**
- * Encode the interest and return a Uint8Array.
+ * Encode the interest and return a Buffer.
  * @param {Interest} interest
- * @returns {UInt8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 	var encoder = new BinaryXMLEncoder();
@@ -27,7 +40,7 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
 /**
  * Decode the input and put the result in interest.
  * @param {Interest} interest
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 	var decoder = new BinaryXMLDecoder(input);
@@ -35,9 +48,9 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
 };
 
 /**
- * Encode the contentObject and return a Uint8Array. 
+ * Encode the contentObject and return a Buffer. 
  * @param {ContentObject} contentObject
- * @returns {Uint8Array}
+ * @returns {Buffer}
  */
 BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 	var encoder = new BinaryXMLEncoder();
@@ -48,15 +61,12 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
 /**
  * Decode the input and put the result in contentObject.
  * @param {ContentObject} contentObject
- * @param {Uint8Array} input
+ * @param {Buffer} input
  */
 BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) {
 	var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
 };
-
-// Default object.
-BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
  * Encode the interest by calling the operations on the encoder.
@@ -98,6 +108,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 		
 	encoder.writeEndElement();
 };
+
+var Exclude = require('../Interest.js').Exclude;
 
 /**
  * Use the decoder to place the result in interest.
@@ -191,6 +203,9 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	
 	contentObject.saveRawData(encoder.ostream);	
 };
+
+var Signature = require('../ContentObject.js').Signature;
+var SignedInfo = require('../ContentObject.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in contentObject.

@@ -75,7 +75,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
 		onDataAvailable: function (request, context, _inputStream, offset, count) {
 			try {
 				// Use readInputStreamToString to handle binary data.
-                // TODO: Can we go directly from the stream to Uint8Array?
+                // TODO: Can we go directly from the stream to Buffer?
                 this.elementReader.onReceivedData(DataUtils.toNumbersFromString
                     (NetUtil.readInputStreamToString(inStream, count)));
 			} catch (ex) {
@@ -91,7 +91,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
 /**
  * Send the data over the connection created by connect.
  */
-XpcomTransport.prototype.send = function(/* Uint8Array */ data) {
+XpcomTransport.prototype.send = function(/* Buffer */ data) {
     if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
         console.log("XpcomTransport connection is not established.");
         return;

@@ -573,7 +573,7 @@ function getIndexOfMetaComponent(name) {
     for (var i = 0; i < name.components.length; ++i) {
         var component = name.components[i];
         if (component.length >= MetaComponentPrefix.length &&
-            DataUtils.arraysEqual(component.subarray(0, MetaComponentPrefix.length), 
+            DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), 
                                   MetaComponentPrefix))
             return i;
     }
@@ -581,4 +581,4 @@ function getIndexOfMetaComponent(name) {
     return -1;
 }
 
-var MetaComponentPrefix = new Uint8Array([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
+var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);

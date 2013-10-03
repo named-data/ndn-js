@@ -1,12 +1,12 @@
-/*! rsasign-1.2.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
+/*! rsasign-1.2.2.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
 // rsa-sign.js - adding signing functions to RSAKey class.
 //
 //
-// version: 1.2.1 (08 May 2012)
+// version: 1.2.2 (13 May 2013)
 //
-// Copyright (c) 2010-2012 Kenji Urushima (kenji.urushima@gmail.com)
+// Copyright (c) 2010-2013 Kenji Urushima (kenji.urushima@gmail.com)
 //
 // This software is licensed under the terms of the MIT License.
 // http://kjur.github.com/jsrsasign/license/
@@ -30,6 +30,14 @@
 // 4096 / 1024
 
 /**
+ * @fileOverview
+ * @name rsasign-1.2.js
+ * @author Kenji Urushima kenji.urushima@gmail.com
+ * @version 1.2.2
+ * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
+ */
+
+/**
  * @property {Dictionary} _RSASIGN_DIHEAD
  * @description Array of head part of hexadecimal DigestInfo value for hash algorithms.
  * You can add any DigestInfo hash algorith for signing.
@@ -50,15 +58,11 @@ _RSASIGN_DIHEAD['ripemd160'] = "3021300906052b2403020105000414";
  * You can add any hash algorithm implementations.
  */
 var _RSASIGN_HASHHEXFUNC = [];
-_RSASIGN_HASHHEXFUNC['sha1'] =      function(s){return hex_sha1(s);};  // http://pajhome.org.uk/crypt/md5/md5.html
-_RSASIGN_HASHHEXFUNC['sha256'] =    function(s){return hex_sha256(s);} // http://pajhome.org.uk/crypt/md5/md5.html
-_RSASIGN_HASHHEXFUNC['sha512'] =    function(s){return hex_sha512(s);} // http://pajhome.org.uk/crypt/md5/md5.html
-_RSASIGN_HASHHEXFUNC['md5'] =       function(s){return hex_md5(s);};   // http://pajhome.org.uk/crypt/md5/md5.html
-_RSASIGN_HASHHEXFUNC['ripemd160'] = function(s){return hex_rmd160(s);};   // http://pajhome.org.uk/crypt/md5/md5.html
-
-//@author axelcdv
-var _RSASIGN_HASHBYTEFUNC = [];
-_RSASIGN_HASHBYTEFUNC['sha256'] = 	function(byteArray){return hex_sha256_from_bytes(byteArray);};
+_RSASIGN_HASHHEXFUNC['sha1'] =      function(s){return KJUR.crypto.Util.sha1(s);};
+_RSASIGN_HASHHEXFUNC['sha256'] =    function(s){return KJUR.crypto.Util.sha256(s);}
+_RSASIGN_HASHHEXFUNC['sha512'] =    function(s){return KJUR.crypto.Util.sha512(s);}
+_RSASIGN_HASHHEXFUNC['md5'] =       function(s){return KJUR.crypto.Util.md5(s);};
+_RSASIGN_HASHHEXFUNC['ripemd160'] = function(s){return KJUR.crypto.Util.ripemd160(s);};
 
 //_RSASIGN_HASHHEXFUNC['sha1'] =   function(s){return sha1.hex(s);}   // http://user1.matsumoto.ne.jp/~goma/js/hash.html
 //_RSASIGN_HASHHEXFUNC['sha256'] = function(s){return sha256.hex;}    // http://user1.matsumoto.ne.jp/~goma/js/hash.html
@@ -71,69 +75,28 @@ _RE_HEXDECONLY.compile("[^0-9a-f]", "gi");
 // ========================================================================
 
 function _rsasign_getHexPaddedDigestInfoForString(s, keySize, hashAlg) {
-  var pmStrLen = keySize / 4;
-  var hashFunc = _RSASIGN_HASHHEXFUNC[hashAlg];
-  var sHashHex = hashFunc(s);
+    var pmStrLen = keySize / 4;
+    var hashFunc = _RSASIGN_HASHHEXFUNC[hashAlg];
+    var sHashHex = hashFunc(s);
 
-  var sHead = "0001";
-  var sTail = "00" + _RSASIGN_DIHEAD[hashAlg] + sHashHex;
-  var sMid = "";
-  var fLen = pmStrLen - sHead.length - sTail.length;
-  for (var i = 0; i < fLen; i += 2) {
-    sMid += "ff";
-  }
-  sPaddedMessageHex = sHead + sMid + sTail;
-  return sPaddedMessageHex;
-}
-
-
-//@author: Meki Cheraoui
-function _rsasign_getHexPaddedDigestInfoForStringHEX(s, keySize, hashAlg) {
-  var pmStrLen = keySize / 4;
-  var hashFunc = _RSASIGN_HASHHEXFUNC[hashAlg];
-  var sHashHex = hashFunc(s);
-
-  var sHead = "0001";
-  var sTail = "00" + _RSASIGN_DIHEAD[hashAlg] + sHashHex;
-  var sMid = "";
-  var fLen = pmStrLen - sHead.length - sTail.length;
-  for (var i = 0; i < fLen; i += 2) {
-    sMid += "ff";
-  }
-  sPaddedMessageHex = sHead + sMid + sTail;
-  return sPaddedMessageHex;
-}
-
-/**
- * Apply padding, then computes the hash of the given byte array, according to the key size and with the hash algorithm
- * @param byteArray (byte[])
- * @param keySize (int)
- * @param hashAlg the hash algorithm to apply (string)
- * @return the hash of byteArray
- */
-function _rsasign_getHexPaddedDigestInfoForByteArray(byteArray, keySize, hashAlg){
-	var pmStrLen = keySize / 4;
-	var hashFunc = _RSASIGN_HASHBYTEFUNC[hashAlg];
-	var sHashHex = hashFunc(byteArray); //returns hex hash
-	
-	var sHead = "0001";
-	  var sTail = "00" + _RSASIGN_DIHEAD[hashAlg] + sHashHex;
-	  var sMid = "";
-	  var fLen = pmStrLen - sHead.length - sTail.length;
-	  for (var i = 0; i < fLen; i += 2) {
-	    sMid += "ff";
-	  }
-	  sPaddedMessageHex = sHead + sMid + sTail;
-	  return sPaddedMessageHex;
+    var sHead = "0001";
+    var sTail = "00" + _RSASIGN_DIHEAD[hashAlg] + sHashHex;
+    var sMid = "";
+    var fLen = pmStrLen - sHead.length - sTail.length;
+    for (var i = 0; i < fLen; i += 2) {
+	sMid += "ff";
+    }
+    sPaddedMessageHex = sHead + sMid + sTail;
+    return sPaddedMessageHex;
 }
 
 function _zeroPaddingOfSignature(hex, bitLength) {
-  var s = "";
-  var nZero = bitLength / 4 - hex.length;
-  for (var i = 0; i < nZero; i++) {
-    s = s + "0";
-  }
-  return s + hex;
+    var s = "";
+    var nZero = bitLength / 4 - hex.length;
+    for (var i = 0; i < nZero; i++) {
+	s = s + "0";
+    }
+    return s + hex;
 }
 
 /**
@@ -146,59 +109,102 @@ function _zeroPaddingOfSignature(hex, bitLength) {
  * @return returns hexadecimal string of signature value.
  */
 function _rsasign_signString(s, hashAlg) {
-  //alert("this.n.bitLength() = " + this.n.bitLength());
-  var hPM = _rsasign_getHexPaddedDigestInfoForString(s, this.n.bitLength(), hashAlg);
-  var biPaddedMessage = parseBigInt(hPM, 16);
-  var biSign = this.doPrivate(biPaddedMessage);
-  var hexSign = biSign.toString(16);
-  return _zeroPaddingOfSignature(hexSign, this.n.bitLength());
+    //alert("this.n.bitLength() = " + this.n.bitLength());
+    var hPM = _rsasign_getHexPaddedDigestInfoForString(s, this.n.bitLength(), hashAlg);
+    var biPaddedMessage = parseBigInt(hPM, 16);
+    var biSign = this.doPrivate(biPaddedMessage);
+    var hexSign = biSign.toString(16);
+    return _zeroPaddingOfSignature(hexSign, this.n.bitLength());
 }
-
-//@author: ucla-cs
-function _rsasign_signStringHEX(s, hashAlg) {
-  //alert("this.n.bitLength() = " + this.n.bitLength());
-  var hPM = _rsasign_getHexPaddedDigestInfoForString(s, this.n.bitLength(), hashAlg);
-  var biPaddedMessage = parseBigInt(hPM, 16);
-  var biSign = this.doPrivate(biPaddedMessage);
-  var hexSign = biSign.toString(16);
-  return _zeroPaddingOfSignature(hexSign, this.n.bitLength());
-}
-
-
-/**
- * Sign a message byteArray with an RSA private key
- * @name signByteArray
- * @memberOf RSAKey#
- * @function
- * @param {byte[]} byteArray
- * @param {Sring} hashAlg the hash algorithm to apply
- * @param {RSAKey} rsa key to sign with: hack because the context is lost here
- * @return hexadecimal string of signature value
- */
-function _rsasign_signByteArray(byteArray, hashAlg, rsaKey) {
-	var hPM = _rsasign_getHexPaddedDigestInfoForByteArray(byteArray, rsaKey.n.bitLength(), hashAlg); ///hack because the context is lost here
-	var biPaddedMessage = parseBigInt(hPM, 16);
-	var biSign = rsaKey.doPrivate(biPaddedMessage); //hack because the context is lost here
-	var hexSign = biSign.toString(16);
-	return _zeroPaddingOfSignature(hexSign, rsaKey.n.bitLength()); //hack because the context is lost here
-}
-
-/**
- * Sign a byte array with the Sha-256 algorithm
- * @param {byte[]} byteArray
- * @return hexadecimal string of signature value
- */
-function _rsasign_signByteArrayWithSHA256(byteArray){
-	return _rsasign_signByteArray(byteArray, 'sha256', this); //Hack because the context is lost in the next function
-}
-
 
 function _rsasign_signStringWithSHA1(s) {
-  return _rsasign_signString(s, 'sha1');
+    return _rsasign_signString.call(this, s, 'sha1');
 }
 
 function _rsasign_signStringWithSHA256(s) {
-  return _rsasign_signString(s, 'sha256');
+    return _rsasign_signString.call(this, s, 'sha256');
+}
+
+// PKCS#1 (PSS) mask generation function
+function pss_mgf1_str(seed, len, hash) {
+    var mask = '', i = 0;
+
+    while (mask.length < len) {
+        mask += hash(seed + String.fromCharCode.apply(String, [
+                (i & 0xff000000) >> 24,
+                (i & 0x00ff0000) >> 16,
+                (i & 0x0000ff00) >> 8,
+                i & 0x000000ff]));
+        i += 1;
+    }
+
+    return mask;
+}
+
+/**
+ * sign for a message string with RSA private key by PKCS#1 PSS signing.<br/>
+ * @name signStringPSS
+ * @memberOf RSAKey#
+ * @function
+ * @param {String} s message string to be signed.
+ * @param {String} hashAlg hash algorithm name for signing.<br/>
+ * @return returns hexadecimal string of signature value.
+ */
+function _rsasign_signStringPSS(s, hashAlg, sLen) {
+    var hashFunc = _RSASIGN_HASHRAWFUNC[hashAlg];
+    var mHash = hashFunc(s);
+    var hLen = mHash.length;
+    var emBits = this.n.bitLength() - 1;
+    var emLen = Math.ceil(emBits / 8);
+    var i;
+
+    if (sLen === -1) {
+        sLen = hLen; // same has hash length
+    } else if ((sLen === -2) || (sLen === undefined)) {
+        sLen = emLen - hLen - 2; // maximum
+    } else if (sLen < -2) {
+        throw "invalid salt length";
+    }
+
+    if (emLen < (hLen + sLen + 2)) {
+        throw "data too long";
+    }
+
+    var salt = '';
+
+    if (sLen > 0) {
+        salt = new Array(sLen);
+        new SecureRandom().nextBytes(salt);
+        salt = String.fromCharCode.apply(String, salt);
+    }
+
+    var H = hashFunc('\x00\x00\x00\x00\x00\x00\x00\x00' + mHash + salt);
+    var PS = [];
+
+    for (i = 0; i < emLen - sLen - hLen - 2; i += 1) {
+        PS[i] = 0x00;
+    }
+
+    var DB = String.fromCharCode.apply(String, PS) + '\x01' + salt;
+    var dbMask = pss_mgf1_str(H, DB.length, hashFunc);
+    var maskedDB = [];
+
+    for (i = 0; i < DB.length; i += 1) {
+        maskedDB[i] = DB.charCodeAt(i) ^ dbMask.charCodeAt(i);
+    }
+
+    var mask = (0xff00 >> (8 * emLen - emBits)) & 0xff;
+    maskedDB[0] &= ~mask;
+
+    for (i = 0; i < hLen; i++) {
+        maskedDB.push(H.charCodeAt(i));
+    }
+
+    maskedDB.push(0xbc);
+
+    return _zeroPaddingOfSignature(
+            this.doPrivate(new BigInteger(maskedDB)).toString(16),
+            this.n.bitLength());
 }
 
 // ========================================================================
@@ -206,47 +212,47 @@ function _rsasign_signStringWithSHA256(s) {
 // ========================================================================
 
 function _rsasign_getDecryptSignatureBI(biSig, hN, hE) {
-  var rsa = new RSAKey();
-  rsa.setPublic(hN, hE);
-  var biDecryptedSig = rsa.doPublic(biSig);
-  return biDecryptedSig;
+    var rsa = new RSAKey();
+    rsa.setPublic(hN, hE);
+    var biDecryptedSig = rsa.doPublic(biSig);
+    return biDecryptedSig;
 }
 
 function _rsasign_getHexDigestInfoFromSig(biSig, hN, hE) {
-  var biDecryptedSig = _rsasign_getDecryptSignatureBI(biSig, hN, hE);
-  var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
-  return hDigestInfo;
+    var biDecryptedSig = _rsasign_getDecryptSignatureBI(biSig, hN, hE);
+    var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
+    return hDigestInfo;
 }
 
 function _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo) {
-  for (var algName in _RSASIGN_DIHEAD) {
-    var head = _RSASIGN_DIHEAD[algName];
-    var len = head.length;
-    if (hDigestInfo.substring(0, len) == head) {
-      var a = [algName, hDigestInfo.substring(len)];
-      return a;
+    for (var algName in _RSASIGN_DIHEAD) {
+	var head = _RSASIGN_DIHEAD[algName];
+	var len = head.length;
+	if (hDigestInfo.substring(0, len) == head) {
+	    var a = [algName, hDigestInfo.substring(len)];
+	    return a;
+	}
     }
-  }
-  return [];
+    return [];
 }
 
 function _rsasign_verifySignatureWithArgs(sMsg, biSig, hN, hE) {
-  var hDigestInfo = _rsasign_getHexDigestInfoFromSig(biSig, hN, hE);
-  var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
-  if (digestInfoAry.length == 0) return false;
-  var algName = digestInfoAry[0];
-  var diHashValue = digestInfoAry[1];
-  var ff = _RSASIGN_HASHHEXFUNC[algName];
-  var msgHashValue = ff(sMsg);
-  return (diHashValue == msgHashValue);
+    var hDigestInfo = _rsasign_getHexDigestInfoFromSig(biSig, hN, hE);
+    var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
+    if (digestInfoAry.length == 0) return false;
+    var algName = digestInfoAry[0];
+    var diHashValue = digestInfoAry[1];
+    var ff = _RSASIGN_HASHHEXFUNC[algName];
+    var msgHashValue = ff(sMsg);
+    return (diHashValue == msgHashValue);
 }
 
 function _rsasign_verifyHexSignatureForMessage(hSig, sMsg) {
-  var biSig = parseBigInt(hSig, 16);
-  var result = _rsasign_verifySignatureWithArgs(sMsg, biSig,
-						this.n.toString(16),
-						this.e.toString(16));
-  return result;
+    var biSig = parseBigInt(hSig, 16);
+    var result = _rsasign_verifySignatureWithArgs(sMsg, biSig,
+						  this.n.toString(16),
+						  this.e.toString(16));
+    return result;
 }
 
 /**
@@ -260,115 +266,127 @@ function _rsasign_verifyHexSignatureForMessage(hSig, sMsg) {
  * @return returns 1 if valid, otherwise 0
  */
 function _rsasign_verifyString(sMsg, hSig) {
-  hSig = hSig.replace(_RE_HEXDECONLY, '');
+    hSig = hSig.replace(_RE_HEXDECONLY, '');
+    if (hSig.length != this.n.bitLength() / 4) return 0;
+    hSig = hSig.replace(/[ \n]+/g, "");
+    var biSig = parseBigInt(hSig, 16);
+    var biDecryptedSig = this.doPublic(biSig);
+    var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
+    var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
   
-  if(LOG>3)console.log('n is '+this.n);
-  if(LOG>3)console.log('e is '+this.e);
-  
-  if (hSig.length != this.n.bitLength() / 4) return 0;
-  hSig = hSig.replace(/[ \n]+/g, "");
-  var biSig = parseBigInt(hSig, 16);
-  var biDecryptedSig = this.doPublic(biSig);
-  var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
-  var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
-  
-  if (digestInfoAry.length == 0) return false;
-  var algName = digestInfoAry[0];
-  var diHashValue = digestInfoAry[1];
-  var ff = _RSASIGN_HASHHEXFUNC[algName];
-  var msgHashValue = ff(sMsg);
-  return (diHashValue == msgHashValue);
+    if (digestInfoAry.length == 0) return false;
+    var algName = digestInfoAry[0];
+    var diHashValue = digestInfoAry[1];
+    var ff = _RSASIGN_HASHHEXFUNC[algName];
+    var msgHashValue = ff(sMsg);
+    return (diHashValue == msgHashValue);
 }
 
 /**
- * verifies a sigature for a message byte array with RSA public key.<br/>
- * @name verifyByteArray
+ * verifies a sigature for a message string with RSA public key by PKCS#1 PSS sign.<br/>
+ * @name verifyStringPSS
  * @memberOf RSAKey#
  * @function
- * @param {byte[]} byteArray message byte array to be verified.
- * @param {String} hSig hexadecimal string of signature.<br/>
+ * @param {String} sMsg message string to be verified.
+ * @param {String} hSig hexadecimal string of siganture.<br/>
  *                 non-hexadecimal charactors including new lines will be ignored.
- * @return returns 1 if valid, otherwise 0 
+ * @return returns 1 if valid, otherwise 0
  */
-function _rsasign_verifyByteArray(byteArray, witness, hSig) {
-	hSig = hSig.replace(_RE_HEXDECONLY, '');
-	  
-	  if(LOG>3)console.log('n is '+this.n);
-	  if(LOG>3)console.log('e is '+this.e);
-	  
-	  if (hSig.length != this.n.bitLength() / 4) return 0;
-	  hSig = hSig.replace(/[ \n]+/g, "");
-	  var biSig = parseBigInt(hSig, 16);
-	  var biDecryptedSig = this.doPublic(biSig);
-	  var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
-	  var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
-	  
-	  if (digestInfoAry.length == 0) return false;
-	  var algName = digestInfoAry[0];
-	  var diHashValue = digestInfoAry[1];
-	  var msgHashValue = null;
-	  
-	  if (witness == null) {
-	  	var ff = _RSASIGN_HASHBYTEFUNC[algName];
-	  	msgHashValue = ff(byteArray);
-	  } else {
-	  	// Compute merkle hash
-		  var h = hex_sha256_from_bytes(byteArray);
-		  var index = witness.path.index;
-		  for (var i = witness.path.digestList.length - 1; i >= 0; i--) {
-		  	var str = "";
-		  	if (index % 2 == 0) {
-		  		str = h + witness.path.digestList[i];
-		  	} else {
-		  		str = witness.path.digestList[i] + h;
-		  	}
-		  	h = hex_sha256_from_bytes(DataUtils.toNumbers(str));
-		  	index = Math.floor(index / 2);
-		  }
-		  msgHashValue = hex_sha256_from_bytes(DataUtils.toNumbers(h));
-	  }
-	  //console.log(diHashValue);
-	  //console.log(msgHashValue);
-	  return (diHashValue == msgHashValue);
+function _rsasign_verifyStringPSS(sMsg, hSig, hashAlg, sLen) {
+    if (hSig.length !== this.n.bitLength() / 4) {
+        return false;
+    }
+
+    var hashFunc = _RSASIGN_HASHRAWFUNC[hashAlg];
+    var mHash = hashFunc(sMsg);
+    var hLen = mHash.length;
+    var emBits = this.n.bitLength() - 1;
+    var emLen = Math.ceil(emBits / 8);
+    var i;
+
+    if (sLen === -1) {
+        sLen = hLen; // same has hash length
+    } else if ((sLen === -2) || (sLen === undefined)) {
+        sLen = emLen - hLen - 2; // maximum
+    } else if (sLen < -2) {
+        throw "invalid salt length";
+    }
+
+    if (emLen < (hLen + sLen + 2)) {
+        throw "data too long";
+    }
+
+    var em = this.doPublic(parseBigInt(hSig, 16)).toByteArray();
+
+    for (i = 0; i < em.length; i += 1) {
+        em[i] &= 0xff;
+    }
+
+    while (em.length < emLen) {
+        em.unshift(0);
+    }
+
+    if (em[emLen -1] !== 0xbc) {
+        throw "encoded message does not end in 0xbc";
+    }
+
+    em = String.fromCharCode.apply(String, em);
+
+    var maskedDB = em.substr(0, emLen - hLen - 1);
+    var H = em.substr(maskedDB.length, hLen);
+
+    var mask = (0xff00 >> (8 * emLen - emBits)) & 0xff;
+
+    if ((maskedDB.charCodeAt(0) & mask) !== 0) {
+        throw "bits beyond keysize not zero";
+    }
+
+    var dbMask = pss_mgf1_str(H, maskedDB.length, hashFunc);
+    var DB = [];
+
+    for (i = 0; i < maskedDB.length; i += 1) {
+        DB[i] = maskedDB.charCodeAt(i) ^ dbMask.charCodeAt(i);
+    }
+
+    DB[0] &= ~mask;
+
+    var checkLen = emLen - hLen - sLen - 2;
+
+    for (i = 0; i < checkLen; i += 1) {
+        if (DB[i] !== 0x00) {
+            throw "leftmost octets not zero";
+        }
+    }
+
+    if (DB[checkLen] !== 0x01) {
+        throw "0x01 marker not found";
+    }
+
+    return H === hashFunc('\x00\x00\x00\x00\x00\x00\x00\x00' + mHash +
+                          String.fromCharCode.apply(String, DB.slice(-sLen)));
 }
 
-
 RSAKey.prototype.signString = _rsasign_signString;
-
-RSAKey.prototype.signByteArray = _rsasign_signByteArray; //@author axelcdv
-RSAKey.prototype.signByteArrayWithSHA256 = _rsasign_signByteArrayWithSHA256; //@author axelcdv
-
 RSAKey.prototype.signStringWithSHA1 = _rsasign_signStringWithSHA1;
 RSAKey.prototype.signStringWithSHA256 = _rsasign_signStringWithSHA256;
 RSAKey.prototype.sign = _rsasign_signString;
 RSAKey.prototype.signWithSHA1 = _rsasign_signStringWithSHA1;
 RSAKey.prototype.signWithSHA256 = _rsasign_signStringWithSHA256;
+RSAKey.prototype.signStringPSS = _rsasign_signStringPSS;
+RSAKey.prototype.signPSS = _rsasign_signStringPSS;
+RSAKey.SALT_LEN_HLEN = -1;
+RSAKey.SALT_LEN_MAX = -2;
 
-
-/*RSAKey.prototype.signStringHEX = _rsasign_signStringHEX;
-RSAKey.prototype.signStringWithSHA1HEX = _rsasign_signStringWithSHA1HEX;
-RSAKey.prototype.signStringWithSHA256HEX = _rsasign_signStringWithSHA256HEX;
-RSAKey.prototype.signHEX = _rsasign_signStringHEX;
-RSAKey.prototype.signWithSHA1HEX = _rsasign_signStringWithSHA1HEX;
-RSAKey.prototype.signWithSHA256HEX = _rsasign_signStringWithSHA256HEX;
-*/
-
-RSAKey.prototype.verifyByteArray = _rsasign_verifyByteArray;
 RSAKey.prototype.verifyString = _rsasign_verifyString;
 RSAKey.prototype.verifyHexSignatureForMessage = _rsasign_verifyHexSignatureForMessage;
 RSAKey.prototype.verify = _rsasign_verifyString;
 RSAKey.prototype.verifyHexSignatureForByteArrayMessage = _rsasign_verifyHexSignatureForMessage;
+RSAKey.prototype.verifyStringPSS = _rsasign_verifyStringPSS;
+RSAKey.prototype.verifyPSS = _rsasign_verifyStringPSS;
+RSAKey.SALT_LEN_RECOVER = -2;
 
-/*
-RSAKey.prototype.verifyStringHEX = _rsasign_verifyStringHEX;
-RSAKey.prototype.verifyHexSignatureForMessageHEX = _rsasign_verifyHexSignatureForMessageHEX;
-RSAKey.prototype.verifyHEX = _rsasign_verifyStringHEX;
-RSAKey.prototype.verifyHexSignatureForByteArrayMessageHEX = _rsasign_verifyHexSignatureForMessageHEX;
-*/
-	
-	
 /**
  * @name RSAKey
- * @class
+ * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */

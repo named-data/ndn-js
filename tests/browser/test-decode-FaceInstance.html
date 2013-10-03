@@ -11,7 +11,7 @@
 <head>
 	<title>NDN Decode Face Instance</title>
 	
-	<script type="text/javascript" src="../build/ndn-js.js"></script>
+	<script type="text/javascript" src="../../build/ndn-js.js"></script>
 
 	<script type="text/javascript">
 
@@ -20,7 +20,7 @@
 			var input = document.getElementById('result').innerHTML;
 
 			
-			var faceInstance = decodeHexFaceInstance(input);
+			var faceInstance = EncodingUtils.decodeHexFaceInstance(input);
 			
 			if(LOG>3)console.log('FACE INSTANCE DECODED');
 			if(LOG>3)console.log(faceInstance);

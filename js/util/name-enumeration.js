@@ -3,15 +3,23 @@
  * See COPYING for copyright and distribution information.
  */
 
+var DataUtils = require('../encoding/DataUtils.js').DataUtils;
+var BinaryXMLDecoder = require('../encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var Closure = require('../Closure.js').Closure;
+var NDNProtocolDTags = require('./NDNProtocolDTags.js').NDNProtocolDTags;
+var Name = require('../Name.js').Name;
+
 // Create a namespace.
 var NameEnumeration = new Object();
+
+exports.NameEnumeration = NameEnumeration;
 
 /**
  * Use the name enumeration protocol to get the child components of the name prefix.
  * @param {NDN} ndn The NDN object for using expressInterest.
  * @param {Name} name The name prefix for finding the child components.
  * @param {function} onComponents On getting the response, this calls onComponents(components) where
- * components is an array of Uint8Array name components.  If there is no response, this calls onComponents(null). 
+ * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
  */
 NameEnumeration.getComponents = function(ndn, prefix, onComponents)
 {
@@ -54,14 +62,14 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         this.onComponents(null);
       else {
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.components[data.name.components.length - 1]);
+            (data.name.getComponent(data.name.getComponentCount() - 1));
         
         // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.components.length - 1).addSegment(expectedSegmentNumber), this);
+            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber), this);
         else {
           // Save the content and check if we are finished.
           this.contentParts.push(data.content);
@@ -70,14 +78,14 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
             var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
             if (segmentNumber == finalSegmentNumber) {
               // We are finished.  Parse and return the result.
-              this.onComponents(NameEnumeration.parseComponents(DataUtils.concatArrays(this.contentParts)));
+              this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
               return;
             }
           }
           
           // Fetch the next segment.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.components.length - 1).addSegment(expectedSegmentNumber + 1), this);
+            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
       }
     }
@@ -94,7 +102,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Parse the content as a name enumeration response and return an array of components.  This makes a copy of the component.
  * @param {Uint8Array} content The content to parse.
- * @returns {Array<Uint8Array>} The array of components.
+ * @returns {Array<Buffer>} The array of components.
  */
 NameEnumeration.parseComponents = function(content)
 {
@@ -107,7 +115,7 @@ NameEnumeration.parseComponents = function(content)
     decoder.readStartElement(NDNProtocolDTags.Link);    
     decoder.readStartElement(NDNProtocolDTags.Name);
     
-    components.push(new Uint8Array(decoder.readBinaryElement(NDNProtocolDTags.Component)));
+    components.push(new Buffer(decoder.readBinaryElement(NDNProtocolDTags.Component)));
     
     decoder.readEndElement();  
     decoder.readEndElement();  
@@ -124,7 +132,7 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.components.length >= 1 &&
-    name.components[name.components.length - 1].length >= 1 &&
-    name.components[name.components.length - 1][0] == 0;
+  return name.components != null && name.getComponentCount() >= 1 &&
+    name.getComponent(name.getComponentCount() - 1).length >= 1 &&
+    name.getComponent(name.getComponentCount() - 1)[0] == 0;
 }

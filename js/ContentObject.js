@@ -4,13 +4,26 @@
  * This class represents ContentObject Objects
  */
 
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var Name = require('./Name.js').Name;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('./util/NDNTime.js').NDNTime;
+var Key = require('./Key.js').Key;
+var KeyLocator = require('./Key.js').KeyLocator;
+var KeyLocatorType = require('./Key.js').KeyLocatorType;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var globalKeyManager = require('./security/KeyManager.js').globalKeyManager;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new ContentObject with the optional values.
  * 
  * @constructor
  * @param {Name} name
  * @param {SignedInfo} signedInfo
- * @param {Uint8Array} content
+ * @param {Buffer} content
  */
 var ContentObject = function ContentObject(name, signedInfo, content) {
 	if (typeof name == 'string')
@@ -36,55 +49,33 @@ var ContentObject = function ContentObject(name, signedInfo, content) {
 	this.rawSignatureData = null;
 };
 
+exports.ContentObject = ContentObject;
+
 ContentObject.prototype.sign = function(){
+    var n1 = this.encodeObject(this.name);
+    var n2 = this.encodeObject(this.signedInfo);
+    var n3 = this.encodeContent();
+	
+    var rsa = require("crypto").createSign('RSA-SHA256');
+    rsa.update(n1);
+    rsa.update(n2);
+    rsa.update(n3);
+    
+    var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
 
-	var n1 = this.encodeObject(this.name);
-	var n2 = this.encodeObject(this.signedInfo);
-	var n3 = this.encodeContent();
-	/*console.log('sign: ');
-	console.log(n1);
-	console.log(n2);
-	console.log(n3);*/
-	
-	//var n = n1.concat(n2,n3);
-	var tempBuf = new ArrayBuffer(n1.length + n2.length + n3.length);
-	var n = new Uint8Array(tempBuf);
-	//console.log(n);
-	n.set(n1, 0);
-	//console.log(n);
-	n.set(n2, n1.length);
-	//console.log(n);
-	n.set(n3, n1.length + n2.length);
-	//console.log(n);
-	
-	if(LOG>4)console.log('Signature Data is (binary) '+n);
-	
-	if(LOG>4)console.log('Signature Data is (RawString)');
-	
-	if(LOG>4)console.log( DataUtils.toString(n) );
-	
-	//var sig = DataUtils.toString(n);
-
-	
-	var rsa = new RSAKey();
-			
-	rsa.readPrivateKeyFromPEMString(globalKeyManager.privateKey);
-	
-	//var hSig = rsa.signString(sig, "sha256");
-
-	var hSig = rsa.signByteArrayWithSHA256(n);
-
-	
-	if(LOG>4)console.log('SIGNATURE SAVED IS');
-	
-	if(LOG>4)console.log(hSig);
-	
-	if(LOG>4)console.log(  DataUtils.toNumbers(hSig.trim()));
-
-	this.signature.signature = DataUtils.toNumbers(hSig.trim());
-	
-
+    this.signature.signature = sig;
 };
+
+ContentObject.prototype.verify = function (/*Key*/ key) {
+    if (key == null || key.publicKeyPem == null) {
+	throw new Error('Cannot verify ContentObject without a public key.');
+    }
+
+    var verifier = require('crypto').createVerify('RSA-SHA256');
+    verifier.update(this.rawSignatureData);
+    return verifier.verify(key.publicKeyPem, this.signature.signature);
+};
+
 
 ContentObject.prototype.encodeObject = function encodeObject(obj){
 	var enc = new BinaryXMLEncoder();
@@ -112,43 +103,9 @@ ContentObject.prototype.encodeContent = function encodeContent(obj){
 
 ContentObject.prototype.saveRawData = function(bytes){
 	
-	var sigBits = bytes.subarray(this.startSIG, this.endSIG);
+	var sigBits = bytes.slice(this.startSIG, this.endSIG);
 
-	this.rawSignatureData = sigBits;
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
- */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
- */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
-};
-
-/**
- * Encode this ContentObject for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
- */
-ContentObject.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this ContentObject.
- * @param {Uint8Array} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-ContentObject.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
+    this.rawSignatureData = new Buffer(sigBits);
 };
 
 ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.ContentObject;};
@@ -158,10 +115,12 @@ ContentObject.prototype.getElementLabel= function(){return NDNProtocolDTags.Cont
  * @constructor
  */
 var Signature = function Signature(witness, signature, digestAlgorithm) {
-  this.Witness = witness;
+  this.witness = witness;
 	this.signature = signature;
 	this.digestAlgorithm = digestAlgorithm
 };
+
+exports.Signature = Signature;
 
 Signature.prototype.from_ndnb =function( decoder) {
 		decoder.readStartElement(this.getElementLabel());
@@ -174,7 +133,7 @@ Signature.prototype.from_ndnb =function( decoder) {
 		}
 		if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
 			if(LOG>4)console.log('WITNESS FOUND');
-			this.Witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+			this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
 		}
 		
 		//FORCE TO READ A SIGNATURE
@@ -183,7 +142,7 @@ Signature.prototype.from_ndnb =function( decoder) {
 			this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
 
 		decoder.readEndElement();
-	
+
 };
 
 
@@ -199,9 +158,9 @@ Signature.prototype.to_ndnb= function( encoder){
 		encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
 	}
 	
-	if (null != this.Witness) {
+	if (null != this.witness) {
 		// needs to handle null witness
-		encoder.writeElement(NDNProtocolDTags.Witness, this.Witness);
+		encoder.writeElement(NDNProtocolDTags.Witness, this.witness);
 	}
 
 	encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
@@ -221,6 +180,8 @@ var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
 var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
 var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
 
+exports.ContentType = ContentType;
+
 /**
  * Create a new SignedInfo with the optional values.
  * @constructor
@@ -236,11 +197,13 @@ var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshn
   this.setFields();
 };
 
+exports.SignedInfo = SignedInfo;
+
 SignedInfo.prototype.setFields = function(){
 	//BASE64 -> RAW STRING
 	
 	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
-	
+/*	
 	var publicKeyHex = globalKeyManager.publicKey;
 
 	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
@@ -265,11 +228,14 @@ SignedInfo.prototype.setFields = function(){
 	this.publisher = new PublisherPublicKeyDigest(  DataUtils.toNumbers(  publisherKeyDigest )  );
 	
 	//this.publisher = new PublisherPublicKeyDigest(publisherkey);
+*/
+    var key = new Key();
+    key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
+    this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 
-	var d = new Date();
-	
-	var time = d.getTime();
-	
+    var d = new Date();
+    
+    var time = d.getTime();	
 
     this.timestamp = new NDNTime( time );
     
@@ -285,7 +251,7 @@ SignedInfo.prototype.setFields = function(){
 	if(LOG>4)console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
 	if(LOG>4)console.log(publicKeyBytes);
 
-	this.locator = new KeyLocator(  publicKeyBytes  ,KeyLocatorType.KEY );
+    this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY );
 
 	//this.locator = new KeyLocator(  DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE );
 
@@ -402,4 +368,41 @@ SignedInfo.prototype.validate = function() {
 		if (null ==this.publisher || null==this.timestamp ||null== this.locator)
 			return false;
 		return true;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ */
+ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ */
+ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
+  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+};
+
+/**
+ * Encode this ContentObject for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+ContentObject.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeContentObject(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this ContentObject.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+ContentObject.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeContentObject(this, input);
 };

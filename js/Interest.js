@@ -4,6 +4,14 @@
  * This class represents Interest Objects
  */
 
+var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
+var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./encoding/DataUtils.js').DataUtils;
+var LOG = require('./Log.js').Log.LOG;
+
 /**
  * Create a new Interest with the optional values.
  * 
@@ -12,13 +20,13 @@
  * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
- * @param {Uint8Array} publisherPublicKeyDigest
+ * @param {Buffer} publisherPublicKeyDigest
  * @param {Exclude} exclude
  * @param {number} childSelector
  * @param {number} answerOriginKind
  * @param {number} scope
  * @param {number} interestLifetime in milliseconds
- * @param {Uint8Array} nonce
+ * @param {Buffer} nonce
  */
 var Interest = function Interest
    (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
@@ -38,50 +46,20 @@ var Interest = function Interest
 	this.nonce = nonce;	
 };
 
+exports.Interest = Interest;
+
 Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
+
+Interest.ANSWER_NO_CONTENT_STORE = 0;
 Interest.ANSWER_CONTENT_STORE = 1;
 Interest.ANSWER_GENERATED = 2;
 Interest.ANSWER_STALE = 4;		// Stale answer OK
 Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
 
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeInterest.
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeInterest.
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Uint8Array}
- */
-Interest.prototype.encode = function(wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeInterest(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this Interest.
- * @param {Uint8Array} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-Interest.prototype.decode = function(input, wireFormat) {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeInterest(this, input);
-};
 
 /**
  * Return true if this.name.match(name) and the name conforms to the interest selectors.
@@ -124,11 +102,13 @@ Interest.prototype.clone = function() {
 /**
  * 
  * @constructor
- * @param {Array<Uint8Array|Exclude.ANY>} values an array where each element is either Uint8Array component or Exclude.ANY.
+ * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) { 
 	this.values = (values || []);
 }
+
+exports.Exclude = Exclude;
 
 Exclude.ANY = "*";
 
@@ -197,7 +177,7 @@ Exclude.prototype.to_uri = function() {
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Uint8Array*/ component) {
+Exclude.prototype.matches = function(/*Buffer*/ component) {
     for (var i = 0; i < this.values.length; ++i) {
         if (this.values[i] == Exclude.ANY) {
             var lowerBound = null;
@@ -253,7 +233,7 @@ Exclude.prototype.matches = function(/*Uint8Array*/ component) {
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */
-Exclude.compareComponents = function(/*Uint8Array*/ component1, /*Uint8Array*/ component2) {
+Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) {
     if (component1.length < component2.length)
         return -1;
     if (component1.length > component2.length)
@@ -267,4 +247,41 @@ Exclude.compareComponents = function(/*Uint8Array*/ component1, /*Uint8Array*/ c
     }
 
     return 0;
+};
+
+// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeInterest.
+ */
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
+  BinaryXmlWireFormat.decodeInterest(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeInterest.
+ */
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
+  BinaryXmlWireFormat.encodeInterest(this, encoder);
+};
+
+/**
+ * Encode this Interest for a particular wire format.
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @returns {Buffer}
+ */
+Interest.prototype.encode = function(wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  return wireFormat.encodeInterest(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Interest.
+ * @param {Buffer} input
+ * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ */
+Interest.prototype.decode = function(input, wireFormat) {
+  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat.decodeInterest(this, input);
 };

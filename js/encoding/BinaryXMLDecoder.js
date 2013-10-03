@@ -5,6 +5,11 @@
  * See COPYING for copyright and distribution information.
  */
 
+var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
+var NDNTime = require('../util/NDNTime.js').NDNTime;
+var DataUtils = require('./DataUtils.js').DataUtils;
+var LOG = require('../Log.js').Log.LOG;
+
 var XML_EXT = 0x00; 
 	
 var XML_TAG = 0x01; 
@@ -75,6 +80,8 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input){
 	this.input = input;
 	this.offset = 0;
 };
+
+exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
 BinaryXMLDecoder.prototype.initializeDecoding = function() {
 		//if (!this.input.markSupported()) {
@@ -341,7 +348,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function() {
 	};
 
 
-// Returns a Uint8Array.
+// Returns a Buffer.
 BinaryXMLDecoder.prototype.readBinaryElement = function(
 		//long 
 		startTag,
@@ -383,7 +390,7 @@ BinaryXMLDecoder.prototype.readUString = function(){
 	
 
 /**
- * Read a blob as well as the end element. Returns a Uint8Array (or null for missing blob).
+ * Read a blob as well as the end element. Returns a Buffer (or null for missing blob).
  * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
  *   just read the end element and return null.
  */
@@ -489,7 +496,7 @@ BinaryXMLDecoder.prototype.peekTypeAndVal = function() {
 	return tv;
 };
 
-//Uint8Array
+//Buffer
 BinaryXMLDecoder.prototype.decodeBlob = function(
 		//int 
 		blobLength) {
@@ -511,8 +518,8 @@ BinaryXMLDecoder.prototype.decodeBlob = function(
 	}
 	
 	//
-	//Uint8Array
-	var bytes = this.input.subarray(this.offset, this.offset+ blobLength);
+	//Buffer
+    var bytes = new Buffer(this.input.slice(this.offset, this.offset+ blobLength));
 	this.offset += blobLength;
 	
 	return bytes;
@@ -545,7 +552,7 @@ BinaryXMLDecoder.prototype.decodeUString = function(
 		return this.decodeUString(tv.val());
 	}
 	else{
-		//uint8array 
+		//Buffer 
 		var stringBytes = this.decodeBlob(byteLength);
 		
 		//return DataUtils.getUTF8StringFromBytes(stringBytes);

@@ -6,6 +6,28 @@
  * See COPYING for copyright and distribution information.
  */
 
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
+
+var XML_EXT = 0x00; 
+var XML_TAG = 0x01; 
+var XML_DTAG = 0x02; 
+var XML_ATTR = 0x03; 
+var XML_DATTR = 0x04; 
+var XML_BLOB = 0x05; 
+var XML_UDATA = 0x06; 	
+var XML_CLOSE = 0x0;
+
+var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16; 
+
+var XML_TT_BITS = 3;
+var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
+var XML_TT_VAL_BITS = XML_TT_BITS + 1;
+var XML_TT_VAL_MASK = ((1 << (XML_TT_VAL_BITS)) - 1);
+var XML_REG_VAL_BITS = 7;
+var XML_REG_VAL_MASK = ((1 << XML_REG_VAL_BITS) - 1);
+var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
+
 /**
  * @constructor
  */
@@ -16,9 +38,11 @@ var BinaryXMLStructureDecoder = function BinaryXMLDecoder() {
     this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
     this.headerLength = 0;
     this.useHeaderBuffer = false;
-    this.headerBuffer = new DynamicUint8Array(5);
+    this.headerBuffer = new DynamicBuffer(5);
     this.nBytesToRead = 0;
 };
+
+exports.BinaryXMLStructureDecoder = BinaryXMLStructureDecoder;
 
 BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
 BinaryXMLStructureDecoder.READ_BYTES = 1;
@@ -31,7 +55,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  * This throws an exception for badly formed ndnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-    // Uint8Array
+    // Buffer
     input)
 {
     if (this.gotElementEnd)
@@ -73,7 +97,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                         this.useHeaderBuffer = true;
                         var nNewBytes = this.headerLength - startingHeaderLength;
                         this.headerBuffer.set
-                            (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                            (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
                         
                         return false;
                     }
@@ -89,7 +113,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
                     // Copy the remaining bytes into headerBuffer.
                     nNewBytes = this.headerLength - startingHeaderLength;
                     this.headerBuffer.set
-                        (input.subarray(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+                        (input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
                     typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
                 }

@@ -4,29 +4,34 @@
  * See COPYING for copyright and distribution information.
  */
 
-function encodeToHexInterest(interest){
+var DataUtils = require('./DataUtils.js').DataUtils;
+var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
+var Key = require('../Key.js').Key;
+var Interest = require('../Interest.js').Interest;
+var ContentObject = require('../ContentObject.js').ContentObject;
+var FaceInstance = require('../FaceInstance.js').FaceInstance;
+var ForwardingEntry = require('../ForwardingEntry.js').ForwardingEntry;
+var LOG = require('../Log.js').Log.LOG;
+
+/**
+ * An EncodingUtils has static methods for encoding data.
+ * @constructor
+ */
+var EncodingUtils = function EncodingUtils(){
+};
+
+exports.EncodingUtils = EncodingUtils;
+
+EncodingUtils.encodeToHexInterest = function(interest){
   return DataUtils.toHex(interest.encode());
 }
 
-/**
- * @deprecated Use interest.encode().
- */
-function encodeToBinaryInterest(interest) {
-  return interest.encode();
-}
-
-function encodeToHexContentObject(contentObject) {
+EncodingUtils.encodeToHexContentObject = function(contentObject) {
   return DataUtils.toHex(contentObject.encode());
 }
 
-/**
- * @deprecated Use contentObject.encode().
- */
-function encodeToBinaryContentObject(contentObject) {
-  return contentObject.encode();
-}
-
-function encodeForwardingEntry(co) {
+EncodingUtils.encodeForwardingEntry = function(co) {
 	var enc = new BinaryXMLEncoder();
  
 	co.to_ndnb(enc);
@@ -38,9 +43,7 @@ function encodeForwardingEntry(co) {
 	
 }
 
-
-
-function decodeHexFaceInstance(result){
+EncodingUtils.decodeHexFaceInstance = function(result){
 	
 	var numbers = DataUtils.toNumbers(result);
 			
@@ -57,19 +60,19 @@ function decodeHexFaceInstance(result){
 	
 }
 
-function decodeHexInterest(input){
+EncodingUtils.decodeHexInterest = function(input){
 	var interest = new Interest();
 	interest.decode(DataUtils.toNumbers(input));
 	return interest;
 }
 
-function decodeHexContentObject(input){
+EncodingUtils.decodeHexContentObject = function(input){
 	var contentObject = new ContentObject();
 	contentObject.decode(DataUtils.toNumbers(input));
 	return contentObject;
 }
 
-function decodeHexForwardingEntry(result){
+EncodingUtils.decodeHexForwardingEntry = function(result){
 	var numbers = DataUtils.toNumbers(result);
 
 	var decoder = new BinaryXMLDecoder(numbers);
@@ -85,9 +88,9 @@ function decodeHexForwardingEntry(result){
 }
 
 /**
- * Decode the Uint8Array which holds SubjectPublicKeyInfo and return an RSAKey.
+ * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
-function decodeSubjectPublicKeyInfo(array) {
+EncodingUtils.decodeSubjectPublicKeyInfo = function(array) {
     var hex = DataUtils.toHex(array).toLowerCase();
     var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
     var rsaKey = new RSAKey();
@@ -99,7 +102,7 @@ function decodeSubjectPublicKeyInfo(array) {
  * Return a user friendly HTML string with the contents of co.
  * This also outputs to console.log.
  */
-function contentObjectToHtml(/* ContentObject */ co) {
+EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
     var output ="";
 			
     if(co==-1)
@@ -166,58 +169,15 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
 	    output+= "<br />";
 	}
-	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.certificate!=null){
-	    var certificateHex = DataUtils.toHex(co.signedInfo.locator.certificate).toLowerCase();
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    output += "Hex Certificate: "+ certificateHex ;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    var x509 = new X509();
-	    x509.readCertHex(certificateHex);
-	    output += "Public key (hex) modulus: " + x509.subjectPublicKeyRSA.n.toString(16) + "<br/>";
-	    output += "exponent: " + x509.subjectPublicKeyRSA.e.toString(16) + "<br/>";
-	    output += "<br/>";
-	    
-	    var result = x509.subjectPublicKeyRSA.verifyByteArray(co.rawSignatureData, null, signature);
-	    if(LOG>2) console.log('result is '+result);
-	    
-	    var n = x509.subjectPublicKeyRSA.n;
-	    var e =  x509.subjectPublicKeyRSA.e;
-	    
-	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(e);
-	    
-	    if(result)
-            output += 'SIGNATURE VALID';
-	    else
-            output += 'SIGNATURE INVALID';
-	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
-	}
 	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
 	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
 	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
 	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
 	    var input = DataUtils.toString(co.rawSignatureData);
 	    
-	    var wit = null;
 	    var witHex = "";
-		if (co.signature.Witness != null) {
-			wit = new Witness();
-			wit.decode(co.signature.Witness);
-			witHex = DataUtils.toHex(co.signature.Witness);
+		if (co.signature.witness != null) {
+			witHex = DataUtils.toHex(co.signature.witness);
 		}
 	    
 	    output += "Public key: " + publickeyHex;
@@ -236,36 +196,42 @@ function contentObjectToHtml(/* ContentObject */ co) {
 	    
 	    if(LOG>2) console.log(co.signature.signature);
 	   
-	    var rsakey = decodeSubjectPublicKeyInfo(co.signedInfo.locator.publicKey);
+	    var rsakey = new Key();
+	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
 
-	    output += "Public key (hex) modulus: " + rsakey.n.toString(16) + "<br/>";
-	    output += "exponent: " + rsakey.e.toString(16) + "<br/>";
-	    output += "<br/>";
-	   	    
-	    var result = rsakey.verifyByteArray(co.rawSignatureData, wit, signature);
-	    // var result = rsakey.verifyString(input, signature);
-	    
-	    if(LOG>2) console.log('PUBLIC KEY n after is ');
-	    if(LOG>2) console.log(rsakey.n);
-
-	    if(LOG>2) console.log('EXPONENT e after is ');
-	    if(LOG>2) console.log(rsakey.e);
-	    
+	    var result = co.verify(rsakey);
 	    if(result)
 			output += 'SIGNATURE VALID';
 	    else
 			output += 'SIGNATURE INVALID';
 	    
-	    //output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
-	    
 	    output+= "<br />";
 	    output+= "<br />";
-	    
-	    //if(LOG>4) console.log('str'[1]);
 	}
     }
 
     return output;
 }
 
+//
+// Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
+//
 
+var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
+var encodeToHexContentObject = function(co) { return EncodingUtils.encodeToHexContentObject(co); }
+var encodeForwardingEntry = function(co) { return EncodingUtils.encodeForwardingEntry(co); }
+var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
+var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
+var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexContentObject(input); }
+var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
+var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
+var contentObjectToHtml = function(co) { return EncodingUtils.contentObjectToHtml(co); }
+
+/**
+ * @deprecated Use interest.encode().
+ */
+function encodeToBinaryInterest(interest) { return interest.encode(); }
+/**
+ * @deprecated Use contentObject.encode().
+ */
+function encodeToBinaryContentObject(contentObject) { return contentObject.encode(); }
