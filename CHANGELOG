@@ -1,4 +1,33 @@
-ndn-js v0.1 (2013-08-06)
+Interim changes since NDN-JS v0.1 (2013-10-03)
+--------------------------------------
+
+Changes
+* http://redmine.named-data.net/issues/1048 Add support for Node.js to merge with NDN-On-Node.
+* Updated the main NDN object to use a TcpTransport by default for Node.js.
+* Change all code to use new Buffer instead of new Uint8Array.
+* Moved global LOG variable to file Log.js.  If you want to change the log level, change Log.LOG .
+* Moved files in tests/ to tests/browser/ .
+* Added test files from NDN-On-Node to tests/node/ . 
+* In EncodingUtils.js, made all functions static members of EncodingUtils.
+* http://redmine.named-data.net/issues/1038 Default to not verify data packets until crypto API is updated.
+* Added NameEnumeration support and a test in tests/browser/test-name-enumeration.html.
+* Updated security library to use 'RSA-Sign JavaScript Library' and 'crypto.js'.
+* Removed unsupported Witness.js (Merkle trees). Rename Signature.Witness to witness (lower case) and it is just a Buffer.
+* Removed unimplemented TextXML encoder, especially since we will move away from XML wire formats.
+* Internally changed "ccn" to "ndn" in function names and comments.
+
+Deprecated
+* Name: Deprecated add and addSegment.  Use append and appendSegment.
+* Name: Deprecated equalsName.  Use equals.
+* EncodingUtils.js: Deprecated using the global functions.  Use static members of EncodingUtils class.
+* EncodingUtils.js: Deprecated encodeToBinaryInterest. Use interest.encode().
+* EncodingUtils.js: Deprecated encodeToBinaryContentObject. Use contentObject.encode().
+
+Bug fixes
+* http://redmine.named-data.net/issues/1034 BinaryXMLDecoder.decodeTypeAndVal does not stop at end of stream.
+
+NDN-JS v0.1 (2013-08-06)
+------------------------
 
 This is the initial release, compatible with the API in use for about the past year.
 The API will change soon for v0.2 .
