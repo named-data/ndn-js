@@ -57,7 +57,7 @@ wss.on('connection', function(ws) {
 	// Send 'heartbeat' packet now
 	var heartbeat = new Buffer(1);
 	heartbeat[0] = 0x21;
-	udp.send(heartbeat, 0, 1, 9695, ndndhost, null);
+	udp.send(heartbeat, 0, 1, 6363, ndndhost, null);
 	
 	// Schedule a timer to send 'heartbeat' periodically
 	var timerID = setInterval(function() {
@@ -66,7 +66,7 @@ wss.on('connection', function(ws) {
 		
 		var hb = new Buffer(1);
 		hb[0] = 0x21;
-		udp.send(hb, 0, 1, 9695, ndndhost, null);
+		udp.send(hb, 0, 1, 6363, ndndhost, null);
 		if (LOG > 1) console.log('UDP heartbeat fired at ndnd.');
 	}, 
 	8000 // 8000 ms delay
@@ -87,7 +87,7 @@ wss.on('connection', function(ws) {
 				console.log(logMsg);
 			}
 			
-			udp.send(buffer, 0, buffer.length, 9695, ndndhost, null);
+			udp.send(buffer, 0, buffer.length, 6363, ndndhost, null);
 		}
 	});
 	

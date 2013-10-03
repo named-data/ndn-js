@@ -49,7 +49,7 @@ wss.on('connection', function(ws) {
 	var sock_ready = false;
 	var ws_ready = true;
 	var send_queue = [];
-	var sock = net.connect({port: 9695, host: ndndhost});
+	var sock = net.connect({port: 6363, host: ndndhost});
 	
 	ws.on('message', function(message) {
 		if (typeof message == 'string') {

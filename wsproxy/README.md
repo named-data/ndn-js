@@ -3,7 +3,7 @@ wsproxy
 
 WebSocket proxy server between NDN javascript stack and ndnd.
 
-This proxy runs on top of 'node.js'. 'ws' and 'node-getopt' packages are required. It listens for WebSocket connection request on port number 9696. Once it receives a incoming connection, it issues a TCP connection to the specified 'ndnd' router (port number 9695). It then translates packet frames from WebSocket to pure TCP byte streams and vice versa.
+This proxy runs on top of 'node.js'. 'ws' and 'node-getopt' packages are required. It listens for WebSocket connection request on port number 9696. Once it receives a incoming connection, it issues a TCP connection to the specified 'ndnd' router (port number 6363). It then translates packet frames from WebSocket to pure TCP byte streams and vice versa.
 
 Installation guide:
 

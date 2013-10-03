@@ -29,7 +29,7 @@ var LOG = require('./Log.js').Log.LOG;
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696, // If in the browser.
- *      OR 9695, // If in Node.js.
+ *      OR 6363, // If in Node.js.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -45,7 +45,7 @@ var NDN = function NDN(settings) {
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 9695));
+	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
