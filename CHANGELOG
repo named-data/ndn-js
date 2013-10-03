@@ -8,6 +8,7 @@ Changes
 * Moved global LOG variable to file Log.js.  If you want to change the log level, change Log.LOG .
 * Moved files in tests/ to tests/browser/ .
 * Added test files from NDN-On-Node to tests/node/ . 
+* http://redmine.named-data.net/issues/1051 If a host is specified, the NDN constructor defaults to port 6363 instead of port 9695.
 * In EncodingUtils.js, made all functions static members of EncodingUtils.
 * http://redmine.named-data.net/issues/1038 Default to not verify data packets until crypto API is updated.
 * Added NameEnumeration support and a test in tests/browser/test-name-enumeration.html.
