@@ -6,7 +6,7 @@ var EncodingUtils = require('../..').EncodingUtils;
 
 var onData = function (inst, co) {
     console.log("ContentObject received in callback.");
-    console.log('Name: ' + co.name.to_uri());
+    console.log('Name: ' + co.name.toUri());
     console.log('Content: ' + co.content.toString());
     console.log(EncodingUtils.contentObjectToHtml(co).replace(/<br \/>/g, "\n"));
     
@@ -16,7 +16,7 @@ var onData = function (inst, co) {
 
 var onTimeout = function (interest) {
     console.log("Interest time out.");
-    console.log('Interest name: ' + interest.name.to_uri());
+    console.log('Interest name: ' + interest.name.toUri());
     console.log('Quit script now.');
     ndn.close();
 };

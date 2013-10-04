@@ -56,7 +56,7 @@ NdnProtocol.prototype = {
             
             var prefixUri = "/";
             if (iFileName > 0)
-                prefixUri = new Name(baseName.components.slice(0, iFileName)).to_uri() + "/";
+                prefixUri = new Name(baseName.components.slice(0, iFileName)).toUri() + "/";
             uri.spec = "ndn:" + prefixUri + relativeName + uriParts.search + uriParts.hash;
         }
         
@@ -219,10 +219,10 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
             var nameWithoutSegmentNumber = new Name
                 (contentObject.name.components.slice(0, contentObject.name.components.length - 1));
-            contentUriSpec = "ndn:" + nameWithoutSegmentNumber.to_uri();
+            contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
         else
-            contentUriSpec = "ndn:" + contentObject.name.to_uri();
+            contentUriSpec = "ndn:" + contentObject.name.toUri();
     
         // Include the search and hash.
         contentUriSpec += this.uriSearchAndHash;
@@ -245,7 +245,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
                     !DataUtils.arraysEqual(nameContentDigest, 
                               DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                     // TODO: How to show the user an error for invalid digest?
-                    dump("Content does not match digest in name " + contentObject.name.to_uri() + "\n");
+                    dump("Content does not match digest in name " + contentObject.name.toUri() + "\n");
             }
             return Closure.RESULT_OK;
         }
@@ -286,7 +286,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo) {
                 !DataUtils.arraysEqual(nameContentDigest, 
                       DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                 // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + contentObject.name.to_uri() + "\n");
+                dump("Content does not match digest in name " + contentObject.name.toUri() + "\n");
 
             return Closure.RESULT_OK;
         }

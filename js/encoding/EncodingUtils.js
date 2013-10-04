@@ -111,7 +111,7 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	output+= "CONTENT NAME IS EMPTY"
     else{
 	if(co.name!=null && co.name.components!=null){
-	    output+= "NAME: " + co.name.to_uri();
+	    output+= "NAME: " + co.name.toUri();
         
 	    output+= "<br />";
 	    output+= "<br />";

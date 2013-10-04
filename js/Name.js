@@ -41,7 +41,7 @@ var Name = function Name(components) {
 exports.Name = Name;
 
 Name.prototype.getName = function() {
-    return this.to_uri();
+    return this.toUri();
 };
 
 /** Parse uri as a URI and return an array of Buffer components.

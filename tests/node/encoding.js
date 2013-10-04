@@ -22,7 +22,7 @@ var decoder = new Decoder(packet);
 var i2 = new Interest();
 i2.from_ndnb(decoder);
 
-console.log(i2.name.to_uri());
+console.log(i2.name.toUri());
 console.log(i2.interestLifetime);
 console.log(i2.childSelector);
 
@@ -40,7 +40,7 @@ var p2 = co1.encode();
 var co2 = new ContentObject();
 co2.decode(p2);
 
-console.log('Decoded name: ' + co2.name.to_uri());
+console.log('Decoded name: ' + co2.name.toUri());
 console.log('Decoded content: ' + co2.content.toString());
 var rsakey = new Key();
 rsakey.readDerPublicKey(co2.signedInfo.locator.publicKey);

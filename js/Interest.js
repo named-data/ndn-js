@@ -63,8 +63,10 @@ Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.A
 
 /**
  * Return true if this.name.match(name) and the name conforms to the interest selectors.
+ * @param {Name} name
+ * @returns {boolean}
  */
-Interest.prototype.matches_name = function(/*Name*/ name) {
+Interest.prototype.matchesName = function(/*Name*/ name) {
     if (!this.name.match(name))
         return false;
     
@@ -82,6 +84,14 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
     
     return true;
 };
+
+/**
+ * @deprecated Use matchesName.
+ */
+Interest.prototype.matches_name = function(/*Name*/ name) 
+{
+  return this.matchesName(name);
+}
 
 /**
  * Return a new Interest with the same fields as this Interest.  
@@ -157,7 +167,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 /**
  * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
  */
-Exclude.prototype.to_uri = function() {
+Exclude.prototype.toUri = function() {
 	if (this.values == null || this.values.length == 0)
 		return "";
 
@@ -285,3 +295,4 @@ Interest.prototype.decode = function(input, wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   wireFormat.decodeInterest(this, input);
 };
+

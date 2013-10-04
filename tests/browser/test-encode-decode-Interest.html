@@ -67,7 +67,7 @@
 			if (interest.nonce != null )
 				output += "Nonce: " + DataUtils.toHex(interest.nonce) + "<br/>";
 			if (interest.exclude != null )
-				output += "Exclude: " + interest.exclude.to_uri() + "<br/>";
+				output += "Exclude: " + interest.exclude.toUri() + "<br/>";
 			
 			document.getElementById('result').innerHTML = output;
 		}

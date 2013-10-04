@@ -12,7 +12,7 @@ function onComponents(components)
     console.log("");
   else {
     for (var i in components)
-      console.log(new Name([components[i]]).to_uri());
+      console.log(new Name([components[i]]).toUri());
   }
 
   ndn1.close();

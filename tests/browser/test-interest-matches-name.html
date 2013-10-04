@@ -19,7 +19,7 @@
                         
 			var nameToCheck = new Name(document.getElementById('nameToCheck').value);
 			
-			var output = (interest.matches_name(nameToCheck) ? "matches" : "doesn't match");
+			var output = (interest.matchesName(nameToCheck) ? "matches" : "doesn't match");
 			document.getElementById('result').innerHTML = output;
 		}
 

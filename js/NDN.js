@@ -142,7 +142,7 @@ NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
     var result = null;
     
 	for (var i = 0; i < NDN.PITTable.length; i++) {
-		if (NDN.PITTable[i].interest.matches_name(name)) {
+		if (NDN.PITTable[i].interest.matchesName(name)) {
             if (result == null || 
                 NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
                 result = NDN.PITTable[i];
@@ -256,7 +256,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
         // Set interest timer.
         var timeoutMilliseconds = (interest.interestLifetime || 4000);
         var timeoutCallback = function() {
-			if (LOG > 1) console.log("Interest time out: " + interest.name.to_uri());
+			if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
 				
 			// Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
             //   the interest because we don't want to match it in the mean time.
@@ -268,7 +268,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 			// Raise closure callback
 			if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
                   new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-			    if (LOG > 1) console.log("Re-express interest: " + interest.name.to_uri());
+			    if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
                 pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
                 NDN.PITTable.push(pitEntry);
                 thisNDN.transport.send(binaryInterest);
@@ -329,7 +329,7 @@ NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, f
 NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
-            this.name.to_uri() + " .");
+            this.name.toUri() + " .");
         return Closure.RESULT_OK;
     }
     if (!(kind == Closure.UPCALL_CONTENT ||
@@ -342,7 +342,7 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 		|| !co.signedInfo.publisher.publisherPublicKeyDigest)
         console.log
           ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
-           + this.name.to_uri() + " .");
+           + this.name.toUri() + " .");
     else {
 		if (LOG>3) console.log('Got ndndid from ndnd.');
 		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;

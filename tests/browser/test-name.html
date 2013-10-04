@@ -26,7 +26,7 @@ function testName() {
     // When Name constructor is passed an array, each item is a name component represented with Buffer, 
     //   typed array, or string (parsed as UTF-8)
     var name1 = new Name([entree, comp1, comp2]);
-    var name1Uri = name1.to_uri();
+    var name1Uri = name1.toUri();
     var name1UriExpected = "/entr%C3%A9e/..../%00%01%02%03";
     result.innerHTML += "Name from '" + entree + "', Buffer of '.' and Buffer of 0,1,2,3:<br/>";
     if (name1Uri == name1UriExpected)
@@ -45,7 +45,7 @@ function testName() {
         for (var i = 0; i < name1.components.length; ++i) {
             if (!DataUtils.arraysEqual(name1.getComponent(i), name2.getComponent(i))) {
                 allEqual = false;
-                result.innerHTML += "ERROR: Compare with " + name2.to_uri() + ": Names differ at component at index " + i + ".<br/>";
+                result.innerHTML += "ERROR: Compare with " + name2.toUri() + ": Names differ at component at index " + i + ".<br/>";
             }
         }
         if (allEqual)
@@ -85,7 +85,7 @@ function testName() {
             }
         }
         if (allEqual)
-            result.innerHTML += "SUCCESS: First 2 components are equal: " + name4.to_uri() + " .<br/>";
+            result.innerHTML += "SUCCESS: First 2 components are equal: " + name4.toUri() + " .<br/>";
     }    
     
     result.innerHTML += "Check with Name component at index 2:<br/>";
@@ -97,7 +97,7 @@ function testName() {
         result.innerHTML += "ERROR: Components at index 2 are different.<br/>";
     
     var name5 = new Name("/localhost/user/folders/files/%00%0F");
-    result.innerHTML += "Check chaining calls to add() to create Name: " + name5.to_uri() + "<br/>";
+    result.innerHTML += "Check chaining calls to add() to create Name: " + name5.toUri() + "<br/>";
     if (name5.equals(new Name(new Name("/localhost")).add(new Name("/user/folders")).add
           ("files").addSegment(15)))
         result.innerHTML += "SUCCESS: Names are equal.<br/>";
