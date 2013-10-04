@@ -177,7 +177,7 @@ Name.prototype.add = function(component)
  * Return the escaped name string according to "NDNx URI Scheme".
  * @returns {String}
  */
-Name.prototype.to_uri = function() {	
+Name.prototype.toUri = function() {	
     if (this.components.length == 0)
         return "/";
     
@@ -188,6 +188,14 @@ Name.prototype.to_uri = function() {
 	
 	return result;	
 };
+
+/**
+ * @deprecated Use toUri.
+ */
+Name.prototype.to_uri = function() 
+{
+  return this.toUri();
+}
 
 /**
  * Append a component that represents a segment number

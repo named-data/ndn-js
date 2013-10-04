@@ -18,6 +18,7 @@ Changes
 * Internally changed "ccn" to "ndn" in function names and comments.
 
 Deprecated
+* Name: Deprecated to_uri.  Use toUri.
 * Name: Deprecated add and addSegment.  Use append and appendSegment.
 * Name: Deprecated equalsName.  Use equals.
 * EncodingUtils.js: Deprecated using the global functions.  Use static members of EncodingUtils class.
