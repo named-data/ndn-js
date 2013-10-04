@@ -40,6 +40,9 @@ var Name = function Name(components) {
 
 exports.Name = Name;
 
+/**
+ * @deprecated Use toUri.
+ */
 Name.prototype.getName = function() {
     return this.toUri();
 };

@@ -48,7 +48,7 @@
 			var output ="";
 			
 			if (interest.name != null && interest.name.components != null)
-				output += "Name: " + interest.name.getName() + "<br/>";
+				output += "Name: " + interest.name.toUri() + "<br/>";
 			if (interest.minSuffixComponents != null )
 				output += "MinSuffixComponents : " + interest.minSuffixComponents + "<br/>";
 			if (interest.maxSuffixComponents != null )

@@ -29,7 +29,7 @@
                 console.log("Host: " + ndn1.host + ":" + ndn1.port);
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
-				var nameStr = interest.name.getName();
+				var nameStr = interest.name.toUri();
 
 				var si = new SignedInfo();
 

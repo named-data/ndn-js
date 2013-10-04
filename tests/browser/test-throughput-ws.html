@@ -40,7 +40,7 @@
 		    
 		    if (kind == Closure.UPCALL_CONTENT_BAD) {
 		    	console.log("NdnProtocol.ContentClosure: signature verification failed");
-		    	console.log(upcallInfo.contentObject.name.getName());
+		    	console.log(upcallInfo.contentObject.name.toUri());
 		    	console.log(DataUtils.toHex(upcallInfo.contentObject.signature.witness).toLowerCase());
 		    	return Closure.RESULT_OK;
 		    }
@@ -78,7 +78,7 @@
 		    
 		    // Process received data here...
 		    // Count content length
-		    //nameStr = escape(contentObject.name.getName());
+		    //nameStr = escape(contentObject.name.toUri());
 			//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
 			//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
 			this.totalBlocks++;
@@ -94,7 +94,7 @@
 		        
 		        // Process received data here...
 		    	// Count content length
-		    	//nameStr = escape(contentObject.name.getName());
+		    	//nameStr = escape(contentObject.name.toUri());
 				//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
 				//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
 				this.totalBlocks++;
@@ -179,7 +179,7 @@
 				var T1 = new Date();
 				
 				var content = upcallInfo.contentObject;
-				nameStr = escape(content.name.getName());
+				nameStr = escape(content.name.toUri());
 				document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
 				document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
 				document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.content.length + "</p>";

@@ -379,7 +379,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
 	interest.scope = 1;
 	if (LOG > 3) console.log('Send Interest registration packet.');
     	
-    var csEntry = new CSEntry(name.getName(), closure);
+    var csEntry = new CSEntry(name.toUri(), closure);
 	NDN.CSTable.push(csEntry);
     
     this.transport.send(interest.encode());
@@ -399,7 +399,7 @@ NDN.prototype.onReceivedElement = function(element) {
 		var interest = new Interest();
 		interest.from_ndnb(decoder);
 		if (LOG > 3) console.log(interest);
-		var nameStr = escape(interest.name.getName());
+		var nameStr = escape(interest.name.toUri());
 		if (LOG > 3) console.log(nameStr);
 				
 		var entry = getEntryForRegisteredPrefix(nameStr);
@@ -451,7 +451,7 @@ NDN.prototype.onReceivedElement = function(element) {
 			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 					console.log("In KeyFetchClosure.upcall: interest time out.");
-					console.log(this.keyName.contentName.getName());
+					console.log(this.keyName.contentName.toUri());
 				} else if (kind == Closure.UPCALL_CONTENT) {
 					//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
@@ -485,7 +485,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				var keylocator = co.signedInfo.locator;
 				if (keylocator.type == KeyLocatorType.KEYNAME) {
 					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-					//var keyname = keylocator.keyName.contentName.getName();
+					//var keyname = keylocator.keyName.contentName.toUri();
 					//console.log(nameStr);
 					//console.log(keyname);
 								

@@ -19,6 +19,7 @@ Changes
 
 Deprecated
 * Name: Deprecated to_uri.  Use toUri.
+* Name: Deprecated getName.  Use toUri.
 * Name: Deprecated add and addSegment.  Use append and appendSegment.
 * Name: Deprecated equalsName.  Use equals.
 * Name: Deprecated matches_name.  Use matchesName.
