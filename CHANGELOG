@@ -16,6 +16,7 @@ Changes
 * Removed unsupported Witness.js (Merkle trees). Rename Signature.Witness to witness (lower case) and it is just a Buffer.
 * Removed unimplemented TextXML encoder, especially since we will move away from XML wire formats.
 * Internally changed "ccn" to "ndn" in function names and comments.
+* Added Interest.toUri().
 
 Deprecated
 * Name: Deprecated to_uri.  Use toUri.

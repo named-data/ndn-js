@@ -296,3 +296,38 @@ Interest.prototype.decode = function(input, wireFormat) {
   wireFormat.decodeInterest(this, input);
 };
 
+/**
+ * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
+ * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
+ * @returns {string} The URI string.
+ */
+Interest.prototype.toUri = function() 
+{	
+  var selectors = "";
+  
+	if (this.minSuffixComponents != null )
+		selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
+	if (this.maxSuffixComponents != null )
+		selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
+	if (this.childSelector != null )
+		selectors += "&ndn.ChildSelector=" + this.childSelector;
+	if (this.answerOriginKind != null )
+		selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
+	if (this.scope != null )
+		selectors += "&ndn.Scope=" + this.scope;
+	if (this.interestLifetime != null )
+		selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
+	if (this.publisherPublicKeyDigest != null )
+		selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
+	if (this.nonce != null )
+		selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
+	if (this.exclude != null )
+		selectors += "&ndn.Exclude=" + this.exclude.toUri();
+
+  var result = this.name.toUri();
+  if (selectors != "")
+    // Replace the first & with ?.
+    result += "?" + selectors.substr(1);
+  
+  return result;
+}

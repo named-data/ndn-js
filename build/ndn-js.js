@@ -2909,8 +2909,11 @@ var Name = function Name(components) {
 
 exports.Name = Name;
 
+/**
+ * @deprecated Use toUri.
+ */
 Name.prototype.getName = function() {
-    return this.to_uri();
+    return this.toUri();
 };
 
 /** Parse uri as a URI and return an array of Buffer components.
@@ -3046,7 +3049,7 @@ Name.prototype.add = function(component)
  * Return the escaped name string according to "NDNx URI Scheme".
  * @returns {String}
  */
-Name.prototype.to_uri = function() {	
+Name.prototype.toUri = function() {	
     if (this.components.length == 0)
         return "/";
     
@@ -3057,6 +3060,14 @@ Name.prototype.to_uri = function() {
 	
 	return result;	
 };
+
+/**
+ * @deprecated Use toUri.
+ */
+Name.prototype.to_uri = function() 
+{
+  return this.toUri();
+}
 
 /**
  * Append a component that represents a segment number
@@ -3835,8 +3846,10 @@ Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.A
 
 /**
  * Return true if this.name.match(name) and the name conforms to the interest selectors.
+ * @param {Name} name
+ * @returns {boolean}
  */
-Interest.prototype.matches_name = function(/*Name*/ name) {
+Interest.prototype.matchesName = function(/*Name*/ name) {
     if (!this.name.match(name))
         return false;
     
@@ -3854,6 +3867,14 @@ Interest.prototype.matches_name = function(/*Name*/ name) {
     
     return true;
 };
+
+/**
+ * @deprecated Use matchesName.
+ */
+Interest.prototype.matches_name = function(/*Name*/ name) 
+{
+  return this.matchesName(name);
+}
 
 /**
  * Return a new Interest with the same fields as this Interest.  
@@ -3929,7 +3950,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
 /**
  * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
  */
-Exclude.prototype.to_uri = function() {
+Exclude.prototype.toUri = function() {
 	if (this.values == null || this.values.length == 0)
 		return "";
 
@@ -4057,6 +4078,42 @@ Interest.prototype.decode = function(input, wireFormat) {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
   wireFormat.decodeInterest(this, input);
 };
+
+/**
+ * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
+ * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
+ * @returns {string} The URI string.
+ */
+Interest.prototype.toUri = function() 
+{	
+  var selectors = "";
+  
+	if (this.minSuffixComponents != null )
+		selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
+	if (this.maxSuffixComponents != null )
+		selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
+	if (this.childSelector != null )
+		selectors += "&ndn.ChildSelector=" + this.childSelector;
+	if (this.answerOriginKind != null )
+		selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
+	if (this.scope != null )
+		selectors += "&ndn.Scope=" + this.scope;
+	if (this.interestLifetime != null )
+		selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
+	if (this.publisherPublicKeyDigest != null )
+		selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
+	if (this.nonce != null )
+		selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
+	if (this.exclude != null )
+		selectors += "&ndn.Exclude=" + this.exclude.toUri();
+
+  var result = this.name.toUri();
+  if (selectors != "")
+    // Replace the first & with ?.
+    result += "?" + selectors.substr(1);
+  
+  return result;
+}
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -4967,7 +5024,7 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
 	output+= "CONTENT NAME IS EMPTY"
     else{
 	if(co.name!=null && co.name.components!=null){
-	    output+= "NAME: " + co.name.to_uri();
+	    output+= "NAME: " + co.name.toUri();
         
 	    output+= "<br />";
 	    output+= "<br />";
@@ -5122,7 +5179,7 @@ var LOG = require('./Log.js').Log.LOG;
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696, // If in the browser.
- *      OR 9695, // If in Node.js.
+ *      OR 6363, // If in Node.js.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -5138,7 +5195,7 @@ var NDN = function NDN(settings) {
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
 	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 9695));
+	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
@@ -5235,7 +5292,7 @@ NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
     var result = null;
     
 	for (var i = 0; i < NDN.PITTable.length; i++) {
-		if (NDN.PITTable[i].interest.matches_name(name)) {
+		if (NDN.PITTable[i].interest.matchesName(name)) {
             if (result == null || 
                 NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
                 result = NDN.PITTable[i];
@@ -5349,7 +5406,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
         // Set interest timer.
         var timeoutMilliseconds = (interest.interestLifetime || 4000);
         var timeoutCallback = function() {
-			if (LOG > 1) console.log("Interest time out: " + interest.name.to_uri());
+			if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
 				
 			// Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
             //   the interest because we don't want to match it in the mean time.
@@ -5361,7 +5418,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure) {
 			// Raise closure callback
 			if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
                   new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-			    if (LOG > 1) console.log("Re-express interest: " + interest.name.to_uri());
+			    if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
                 pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
                 NDN.PITTable.push(pitEntry);
                 thisNDN.transport.send(binaryInterest);
@@ -5422,7 +5479,7 @@ NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, f
 NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
-            this.name.to_uri() + " .");
+            this.name.toUri() + " .");
         return Closure.RESULT_OK;
     }
     if (!(kind == Closure.UPCALL_CONTENT ||
@@ -5435,7 +5492,7 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
 		|| !co.signedInfo.publisher.publisherPublicKeyDigest)
         console.log
           ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
-           + this.name.to_uri() + " .");
+           + this.name.toUri() + " .");
     else {
 		if (LOG>3) console.log('Got ndndid from ndnd.');
 		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
@@ -5472,7 +5529,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
 	interest.scope = 1;
 	if (LOG > 3) console.log('Send Interest registration packet.');
     	
-    var csEntry = new CSEntry(name.getName(), closure);
+    var csEntry = new CSEntry(name.toUri(), closure);
 	NDN.CSTable.push(csEntry);
     
     this.transport.send(interest.encode());
@@ -5492,7 +5549,7 @@ NDN.prototype.onReceivedElement = function(element) {
 		var interest = new Interest();
 		interest.from_ndnb(decoder);
 		if (LOG > 3) console.log(interest);
-		var nameStr = escape(interest.name.getName());
+		var nameStr = escape(interest.name.toUri());
 		if (LOG > 3) console.log(nameStr);
 				
 		var entry = getEntryForRegisteredPrefix(nameStr);
@@ -5544,7 +5601,7 @@ NDN.prototype.onReceivedElement = function(element) {
 			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
 				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 					console.log("In KeyFetchClosure.upcall: interest time out.");
-					console.log(this.keyName.contentName.getName());
+					console.log(this.keyName.contentName.toUri());
 				} else if (kind == Closure.UPCALL_CONTENT) {
 					//console.log("In KeyFetchClosure.upcall: signature verification passed");
 								
@@ -5578,7 +5635,7 @@ NDN.prototype.onReceivedElement = function(element) {
 				var keylocator = co.signedInfo.locator;
 				if (keylocator.type == KeyLocatorType.KEYNAME) {
 					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-					//var keyname = keylocator.keyName.contentName.getName();
+					//var keyname = keylocator.keyName.contentName.toUri();
 					//console.log(nameStr);
 					//console.log(keyname);
 								
