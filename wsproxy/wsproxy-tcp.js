@@ -9,6 +9,7 @@ var net = require('net');
 
 var opt = require('node-getopt').create([
   ['c' , 'ndnd=ARG', 'host name or ip of ndnd router'],
+  ['n' , 'ndndport=ARG', 'port number of the ndnd router'],
   ['p' , 'port=ARG', 'port number on which the proxy will listen'],
   ['m' , 'maxclient=ARG', 'maximum number of concurrent client'],
   ['L' , 'LOG=ARG', 'level of log message display'],
@@ -21,6 +22,8 @@ var opt = require('node-getopt').create([
 
 var ndndhost = opt.options.ndnd || 'localhost';
 //console.log(ndndhost);
+
+var ndndport = opt.options.ndndport || 6363;
 
 var wsport = opt.options.port || 9696;
 //console.log(wsport);
@@ -49,7 +52,7 @@ wss.on('connection', function(ws) {
 	var sock_ready = false;
 	var ws_ready = true;
 	var send_queue = [];
-	var sock = net.connect({port: 6363, host: ndndhost});
+	var sock = net.connect({port: ndndport, host: ndndhost});
 	
 	ws.on('message', function(message) {
 		if (typeof message == 'string') {

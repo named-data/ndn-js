@@ -11,6 +11,7 @@ var dgram = require('dgram');
 
 var opt = require('node-getopt').create([
   ['c' , 'ndnd=ARG', 'host name or ip of ndnd router'],
+  ['n' , 'ndndport=ARG', 'port number of the ndnd router'],
   ['p' , 'port=ARG', 'port number on which the proxy will listen'],
   ['m' , 'maxclient=ARG', 'maximum number of concurrent client'],
   ['L' , 'LOG=ARG', 'level of log message display'],
@@ -20,6 +21,7 @@ var opt = require('node-getopt').create([
 .parseSystem(); // parse command line
 
 var ndndhost = opt.options.ndnd || 'localhost';
+var ndndport = opt.options.ndndport || 6363;
 var wsport = opt.options.port || 9696;
 
 var wss = new WebSocketServer({port:wsport, host:'0.0.0.0'});   // Set host to '0.0.0.0' so that we can accept connections from anywhere
@@ -57,7 +59,7 @@ wss.on('connection', function(ws) {
 	// Send 'heartbeat' packet now
 	var heartbeat = new Buffer(1);
 	heartbeat[0] = 0x21;
-	udp.send(heartbeat, 0, 1, 6363, ndndhost, null);
+	udp.send(heartbeat, 0, 1, ndndport, ndndhost, null);
 	
 	// Schedule a timer to send 'heartbeat' periodically
 	var timerID = setInterval(function() {
@@ -66,7 +68,7 @@ wss.on('connection', function(ws) {
 		
 		var hb = new Buffer(1);
 		hb[0] = 0x21;
-		udp.send(hb, 0, 1, 6363, ndndhost, null);
+		udp.send(hb, 0, 1, ndndport, ndndhost, null);
 		if (LOG > 1) console.log('UDP heartbeat fired at ndnd.');
 	}, 
 	8000 // 8000 ms delay
@@ -87,7 +89,7 @@ wss.on('connection', function(ws) {
 				console.log(logMsg);
 			}
 			
-			udp.send(buffer, 0, buffer.length, 6363, ndndhost, null);
+			udp.send(buffer, 0, buffer.length, ndndport, ndndhost, null);
 		}
 	});
 	
