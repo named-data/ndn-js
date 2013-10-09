@@ -96,7 +96,7 @@ def build (bld):
                  "js/encoding/BinaryXMLDecoder.js",
                  "js/encoding/BinaryXMLStructureDecoder.js",
                  "js/encoding/WireFormat.js",
-                 "js/util/BinaryXmlElementReader.js",
+                 "js/util/BinaryXMLElementReader.js",
                  "js/util/name-enumeration.js",
                  "js/WebSocketTransport.js",
                  "js/browserifyTcpTransport.js",
