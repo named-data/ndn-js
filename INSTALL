@@ -48,5 +48,5 @@ First build the compressed version of NDN.js
     ./waf configure
     ./waf
 
-Then go to the ndnProtocol directory and run ./make-ndnProtocol.sh which makes ndnProtocol.xpi in the top directory.
+Then go to the ndn-protocol directory and run ./make-ndn-protocol.sh which makes ndn-protocol.xpi in the top directory.
 

@@ -3,8 +3,8 @@
  * See COPYING for copyright and distribution information.
  */
 
-var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
-var LOG = require('./Log.js').Log.LOG;
+var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * @constructor

@@ -4,10 +4,10 @@
  * This class represents Key Objects
  */
 
-var Name = require('./Name.js').Name;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var PublisherID = require('./PublisherID.js').PublisherID;
-var LOG = require('./Log.js').Log.LOG;
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherID = require('./publisher-id.js').PublisherID;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * @constructor

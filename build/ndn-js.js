@@ -307,6 +307,8 @@ var Blob = function Blob(value)
     this.buffer = null;
 };
 
+exports.Blob = Blob;
+
 /**
  * Return the length of the immutable byte array.
  * @returns {number} The length of the array.  If the pointer to the array is null, return 0.
@@ -327,8 +329,79 @@ Blob.prototype.buf = function()
 {
   return this.buffer;
 };
+/**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
 
-exports.Blob = Blob;
+var Blob = require('./Blob.js').Blob;
+
+/**
+ * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the bytes of Data packet). 
+ * This inherits from Blob, including Blob.size and Blob.buf.
+ * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take another pointer to the Buffer without copying.
+ * If value is a Buffer or byte array, copy to create a new Buffer.  If omitted, buf() will return a null pointer.
+ * @param {number} signedPortionBeginOffset (optional) The offset in the encoding of the beginning of the signed portion.
+ * If omitted, set to 0.
+ * @param {number} signedPortionEndOffset (optional) The offset in the encoding of the end of the signed portion.
+ * If omitted, set to 0.
+ */
+var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset) 
+{
+  // Call the base constructor.
+  Blob.call(this, value);
+  
+  this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
+  this.signedPortionEndOffset = signedPortionEndOffset || 0;
+}
+
+SignedBlob.prototype = new Blob();
+SignedBlob.prototype.name = "SignedBlob";
+
+exports.SignedBlob = SignedBlob;
+
+/**
+ * Return the length of the signed portion of the immutable byte array.
+ * @returns {number} The length of the signed portion.  If the pointer to the array is null, return 0.
+ */
+SignedBlob.prototype.signedSize = function()
+{
+  if (this.buffer)
+    return this.signedPortionEndOffset - this.signedPortionBeginOffset;
+  else
+    return 0;
+}
+
+/**
+ * Return a the signed portion of the immutable byte array.
+ * @returns {Buffer} A slice into the Buffer which is the signed portion.  If the pointer to the array is null, return null.
+ */
+SignedBlob.prototype.signedBuf = function()
+{
+  if (this.buffer)
+    return this.buffer.slice(this.signedPortionBeginOffset, this.signedPortionEndOffset);
+  else
+    return null;
+}
+
+/**
+ * Return the offset in the array of the beginning of the signed portion.
+ * @returns {number} The offset in the array.
+ */
+SignedBlob.prototype.getSignedPortionBeginOffset = function()
+{
+  return this.signedPortionBeginOffset;
+}
+
+/**
+ * Return the offset in the array of the end of the signed portion.
+ * @returns {number} The offset in the array.
+ */
+SignedBlob.prototype.getSignedPortionEndOffset = function()
+{
+  return this.signedPortionEndOffset;
+}
 /**
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
@@ -490,7 +563,7 @@ exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
  * This class represents NDNTime Objects
  */
 
-var LOG = require('../Log.js').Log.LOG;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * @constructor
@@ -586,7 +659,7 @@ unsignedLongToByteArray= function( value) {
  * This is the closure class for use in expressInterest to re express with exponential falloff.
  */
 
-var Closure = require('../Closure.js').Closure;
+var Closure = require('../closure.js').Closure;
 
 /**
  * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
@@ -1106,12 +1179,12 @@ Date.prototype.format = function (mask, utc) {
  * See COPYING for copyright and distribution information.
  */
 
-var LOG = require('../Log.js').Log.LOG;
+var LOG = require('../log.js').Log.LOG;
 
-var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
-var DataUtils = require('./DataUtils.js').DataUtils;
-var LOG = require('../Log.js').Log.LOG;
+var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
+var DataUtils = require('./data-utils.js').DataUtils;
+var LOG = require('../log.js').Log.LOG;
 
 var XML_EXT = 0x00; 
 	
@@ -1505,10 +1578,10 @@ BinaryXMLEncoder.prototype.getReducedOstream = function() {
  * See COPYING for copyright and distribution information.
  */
 
-var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var NDNTime = require('../util/NDNTime.js').NDNTime;
-var DataUtils = require('./DataUtils.js').DataUtils;
-var LOG = require('../Log.js').Log.LOG;
+var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var NDNTime = require('../util/ndn-time.js').NDNTime;
+var DataUtils = require('./data-utils.js').DataUtils;
+var LOG = require('../log.js').Log.LOG;
 
 var XML_EXT = 0x00; 
 	
@@ -2130,8 +2203,8 @@ ContentDecodingException.prototype.name = "ContentDecodingException";
  * See COPYING for copyright and distribution information.
  */
 
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
 
 var XML_EXT = 0x00; 
 var XML_TAG = 0x01; 
@@ -2375,9 +2448,9 @@ WireFormat.prototype.decodeContentObject = function(contentObject, input) {
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('../encoding/DataUtils.js').DataUtils;
-var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
-var LOG = require('../Log.js').Log.LOG;
+var DataUtils = require('./data-utils.js').DataUtils;
+var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
@@ -2433,11 +2506,11 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) {
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('../encoding/DataUtils.js').DataUtils;
-var BinaryXMLDecoder = require('../encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var Closure = require('../Closure.js').Closure;
-var NDNProtocolDTags = require('./NDNProtocolDTags.js').NDNProtocolDTags;
-var Name = require('../Name.js').Name;
+var DataUtils = require('../encoding/data-utils.js').DataUtils;
+var BinaryXMLDecoder = require('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var Closure = require('../closure.js').Closure;
+var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Name = require('../name.js').Name;
 
 // Create a namespace.
 var NameEnumeration = new Object();
@@ -2571,8 +2644,8 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
  * See COPYING for copyright and distribution information.
  */
 
-var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
-var LOG = require('./Log.js').Log.LOG;
+var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * @constructor
@@ -2766,8 +2839,8 @@ exports.UpcallInfo = UpcallInfo;
  * This class represents PublisherPublicKeyDigest Objects
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var LOG = require('./Log.js').Log.LOG;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * @constructor
@@ -2826,8 +2899,8 @@ PublisherPublicKeyDigest.prototype.validate =function() {
  * This class represents Publisher and PublisherType Objects
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var NDNProtocolDTagsStrings = require('./util/NDNProtocolDTags.js').NDNProtocolDTagsStrings;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
 
 /**
  * @constructor
@@ -2928,11 +3001,11 @@ PublisherID.prototype.validate = function(){
  * This class represents a Name as an array of components where each is a byte array.
  */
  
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new Name from components.
@@ -3434,18 +3507,18 @@ exports.globalKeyManager = globalKeyManager;
  * This class represents ContentObject Objects
  */
 
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var Name = require('./Name.js').Name;
-var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var NDNTime = require('./util/NDNTime.js').NDNTime;
-var Key = require('./Key.js').Key;
-var KeyLocator = require('./Key.js').KeyLocator;
-var KeyLocatorType = require('./Key.js').KeyLocatorType;
-var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var globalKeyManager = require('./security/KeyManager.js').globalKeyManager;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var NDNTime = require('./util/ndn-time.js').NDNTime;
+var Key = require('./key.js').Key;
+var KeyLocator = require('./key.js').KeyLocator;
+var KeyLocatorType = require('./key.js').KeyLocatorType;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new ContentObject with the optional values.
@@ -3800,8 +3873,8 @@ SignedInfo.prototype.validate = function() {
 		return true;
 };
 
-// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
@@ -3842,13 +3915,13 @@ ContentObject.prototype.decode = function(input, wireFormat) {
  * This class represents Interest Objects
  */
 
-var Name = require('./Name.js').Name;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var LOG = require('./Log.js').Log.LOG;
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new Interest with the optional values.
@@ -4097,8 +4170,8 @@ Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component
     return 0;
 };
 
-// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeInterest.
@@ -4175,10 +4248,10 @@ Interest.prototype.toUri = function()
  * This class represents Key Objects
  */
 
-var Name = require('./Name.js').Name;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var PublisherID = require('./PublisherID.js').PublisherID;
-var LOG = require('./Log.js').Log.LOG;
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherID = require('./publisher-id.js').PublisherID;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * @constructor
@@ -4488,8 +4561,8 @@ KeyName.prototype.validate = function() {
  * This class represents Face Instances
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 
 /**
  * @constructor
@@ -4636,9 +4709,9 @@ FaceInstance.prototype.getElementLabel = function() {
  * This class represents Forwarding Entries
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var Name = require('./Name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var Name = require('./name.js').Name;
 
 /**
  * Create a new ForwardingEntry with the optional arguments.
@@ -4727,13 +4800,13 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
  * This class represents Interest Objects
  */
 
-var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var WireFormat = require('./WireFormat.js').WireFormat;
-var Name = require('../Name.js').Name;
-var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var DataUtils = require('./DataUtils.js').DataUtils;
+var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var WireFormat = require('./wire-format.js').WireFormat;
+var Name = require('../name.js').Name;
+var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./data-utils.js').DataUtils;
 
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
@@ -4832,7 +4905,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 	encoder.writeEndElement();
 };
 
-var Exclude = require('../Interest.js').Exclude;
+var Exclude = require('../interest.js').Exclude;
 
 /**
  * Use the decoder to place the result in interest.
@@ -4927,8 +5000,8 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	contentObject.saveRawData(encoder.ostream);	
 };
 
-var Signature = require('../ContentObject.js').Signature;
-var SignedInfo = require('../ContentObject.js').SignedInfo;
+var Signature = require('../content-object.js').Signature;
+var SignedInfo = require('../content-object.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in contentObject.
@@ -4972,15 +5045,15 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('./DataUtils.js').DataUtils;
-var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var Key = require('../Key.js').Key;
-var Interest = require('../Interest.js').Interest;
-var ContentObject = require('../ContentObject.js').ContentObject;
-var FaceInstance = require('../FaceInstance.js').FaceInstance;
-var ForwardingEntry = require('../ForwardingEntry.js').ForwardingEntry;
-var LOG = require('../Log.js').Log.LOG;
+var DataUtils = require('./data-utils.js').DataUtils;
+var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var Key = require('../key.js').Key;
+var Interest = require('../interest.js').Interest;
+var ContentObject = require('../content-object.js').ContentObject;
+var FaceInstance = require('../face-instance.js').FaceInstance;
+var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * An EncodingUtils has static methods for encoding data.
@@ -5209,19 +5282,19 @@ function encodeToBinaryContentObject(contentObject) { return contentObject.encod
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var Name = require('./Name.js').Name;
-var Interest = require('./Interest.js').Interest;
-var ContentObject = require('./ContentObject.js').ContentObject;
-var ForwardingEntry = require('./ForwardingEntry.js').ForwardingEntry;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var Key = require('./Key.js').Key;
-var KeyLocatorType = require('./Key.js').KeyLocatorType;
-var Closure = require('./Closure.js').Closure;
-var UpcallInfo = require('./Closure.js').UpcallInfo;
-var TcpTransport = require('./TcpTransport.js').TcpTransport;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var Interest = require('./interest.js').Interest;
+var ContentObject = require('./content-object.js').ContentObject;
+var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Key = require('./key.js').Key;
+var KeyLocatorType = require('./key.js').KeyLocatorType;
+var Closure = require('./closure.js').Closure;
+var UpcallInfo = require('./closure.js').UpcallInfo;
+var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new NDN with the given settings.
@@ -5245,7 +5318,7 @@ var NDN = function NDN(settings) {
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
-  // For the browser, browserifyTcpTransport.js replaces TcpTransport with WebSocketTransport.
+  // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
   var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);

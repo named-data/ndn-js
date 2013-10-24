@@ -4,13 +4,13 @@
  * This class represents Interest Objects
  */
 
-var Name = require('./Name.js').Name;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var PublisherPublicKeyDigest = require('./PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var LOG = require('./Log.js').Log.LOG;
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new Interest with the optional values.
@@ -259,8 +259,8 @@ Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component
     return 0;
 };
 
-// Since BinaryXmlWireFormat.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/BinaryXmlWireFormat.js').BinaryXmlWireFormat;
+// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeInterest.

@@ -4,8 +4,8 @@
  * This class represents Publisher and PublisherType Objects
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var NDNProtocolDTagsStrings = require('./util/NDNProtocolDTags.js').NDNProtocolDTagsStrings;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
 
 /**
  * @constructor

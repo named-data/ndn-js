@@ -3,9 +3,9 @@
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var BinaryXmlElementReader = require('./util/BinaryXMLElementReader.js').BinaryXmlElementReader;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('../encoding/data-utils.js').DataUtils;
+var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
+var LOG = require('../log.js').Log.LOG;
 
 var TcpTransport = function TcpTransport() {    
   this.socket = null;
@@ -14,7 +14,7 @@ var TcpTransport = function TcpTransport() {
   this.connectedHost = null; // Read by NDN.
   this.connectedPort = null; // Read by NDN.
 
-  this.defaultGetHostAndPort = require('./NDN.js').NDN.makeShuffledGetHostAndPort
+  this.defaultGetHostAndPort = require('../ndn.js').NDN.makeShuffledGetHostAndPort
     (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
       "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
      // Connect to port 9695 until the testbed hubs use NDNx.

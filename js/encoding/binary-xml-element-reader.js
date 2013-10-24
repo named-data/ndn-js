@@ -3,9 +3,9 @@
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('../encoding/DataUtils.js').DataUtils;
-var BinaryXMLStructureDecoder = require('../encoding/BinaryXMLStructureDecoder.js').BinaryXMLStructureDecoder;
-var LOG = require('../Log.js').Log.LOG;
+var DataUtils = require('./data-utils.js').DataUtils;
+var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a

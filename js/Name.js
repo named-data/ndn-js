@@ -4,11 +4,11 @@
  * This class represents a Name as an array of components where each is a byte array.
  */
  
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var BinaryXMLEncoder = require('./encoding/BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new Name from components.

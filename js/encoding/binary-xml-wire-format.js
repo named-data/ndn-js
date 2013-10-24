@@ -4,13 +4,13 @@
  * This class represents Interest Objects
  */
 
-var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var WireFormat = require('./WireFormat.js').WireFormat;
-var Name = require('../Name.js').Name;
-var PublisherPublicKeyDigest = require('../PublisherPublicKeyDigest.js').PublisherPublicKeyDigest;
-var DataUtils = require('./DataUtils.js').DataUtils;
+var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var WireFormat = require('./wire-format.js').WireFormat;
+var Name = require('../name.js').Name;
+var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var DataUtils = require('./data-utils.js').DataUtils;
 
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
@@ -109,7 +109,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
 	encoder.writeEndElement();
 };
 
-var Exclude = require('../Interest.js').Exclude;
+var Exclude = require('../interest.js').Exclude;
 
 /**
  * Use the decoder to place the result in interest.
@@ -204,8 +204,8 @@ BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
 	contentObject.saveRawData(encoder.ostream);	
 };
 
-var Signature = require('../ContentObject.js').Signature;
-var SignedInfo = require('../ContentObject.js').SignedInfo;
+var Signature = require('../content-object.js').Signature;
+var SignedInfo = require('../content-object.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in contentObject.

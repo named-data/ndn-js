@@ -4,8 +4,8 @@
  * This class represents PublisherPublicKeyDigest Objects
  */
 
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var LOG = require('./Log.js').Log.LOG;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * @constructor

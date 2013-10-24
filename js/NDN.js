@@ -4,19 +4,19 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var DataUtils = require('./encoding/DataUtils.js').DataUtils;
-var Name = require('./Name.js').Name;
-var Interest = require('./Interest.js').Interest;
-var ContentObject = require('./ContentObject.js').ContentObject;
-var ForwardingEntry = require('./ForwardingEntry.js').ForwardingEntry;
-var BinaryXMLDecoder = require('./encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/NDNProtocolDTags.js').NDNProtocolDTags;
-var Key = require('./Key.js').Key;
-var KeyLocatorType = require('./Key.js').KeyLocatorType;
-var Closure = require('./Closure.js').Closure;
-var UpcallInfo = require('./Closure.js').UpcallInfo;
-var TcpTransport = require('./TcpTransport.js').TcpTransport;
-var LOG = require('./Log.js').Log.LOG;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var Interest = require('./interest.js').Interest;
+var ContentObject = require('./content-object.js').ContentObject;
+var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Key = require('./key.js').Key;
+var KeyLocatorType = require('./key.js').KeyLocatorType;
+var Closure = require('./closure.js').Closure;
+var UpcallInfo = require('./closure.js').UpcallInfo;
+var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * Create a new NDN with the given settings.
@@ -40,7 +40,7 @@ var NDN = function NDN(settings) {
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
-  // For the browser, browserifyTcpTransport.js replaces TcpTransport with WebSocketTransport.
+  // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
   var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
