@@ -2,7 +2,7 @@
 <overlay id="NDN-Toolbar-Overlay"
 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<script type="application/x-javascript" src="chrome://toolbar/content/ndnToolbar.js" />
+<script type="application/x-javascript" src="chrome://toolbar/content/ndn-toolbar.js" />
 
 <toolbox id="navigator-toolbox">
   <toolbar id="NdnToolbar" toolbarname="ndnToolbar" >

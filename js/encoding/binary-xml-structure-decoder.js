@@ -6,8 +6,8 @@
  * See COPYING for copyright and distribution information.
  */
 
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var DynamicBuffer = require('../util/DynamicBuffer.js').DynamicBuffer;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
 
 var XML_EXT = 0x00; 
 var XML_TAG = 0x01; 

@@ -4,7 +4,7 @@
  * This class represents NDNTime Objects
  */
 
-var LOG = require('../Log.js').Log.LOG;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * @constructor

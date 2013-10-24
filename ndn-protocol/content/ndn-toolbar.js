@@ -5,7 +5,7 @@
  */
 
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
-Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
+Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
 function ndnToolbarGetVersion(selector) {
   NdnProtocolInfo.getVersion(selector, window, alert);

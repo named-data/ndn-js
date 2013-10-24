@@ -3,11 +3,11 @@
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('../encoding/DataUtils.js').DataUtils;
-var BinaryXMLDecoder = require('../encoding/BinaryXMLDecoder.js').BinaryXMLDecoder;
-var Closure = require('../Closure.js').Closure;
-var NDNProtocolDTags = require('./NDNProtocolDTags.js').NDNProtocolDTags;
-var Name = require('../Name.js').Name;
+var DataUtils = require('../encoding/data-utils.js').DataUtils;
+var BinaryXMLDecoder = require('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var Closure = require('../closure.js').Closure;
+var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Name = require('../name.js').Name;
 
 // Create a namespace.
 var NameEnumeration = new Object();

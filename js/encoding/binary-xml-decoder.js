@@ -5,10 +5,10 @@
  * See COPYING for copyright and distribution information.
  */
 
-var NDNProtocolDTags = require('../util/NDNProtocolDTags.js').NDNProtocolDTags;
-var NDNTime = require('../util/NDNTime.js').NDNTime;
-var DataUtils = require('./DataUtils.js').DataUtils;
-var LOG = require('../Log.js').Log.LOG;
+var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var NDNTime = require('../util/ndn-time.js').NDNTime;
+var DataUtils = require('./data-utils.js').DataUtils;
+var LOG = require('../log.js').Log.LOG;
 
 var XML_EXT = 0x00; 
 	

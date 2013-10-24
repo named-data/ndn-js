@@ -4,15 +4,15 @@
  * See COPYING for copyright and distribution information.
  */
 
-var DataUtils = require('./DataUtils.js').DataUtils;
-var BinaryXMLEncoder = require('./BinaryXMLEncoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./BinaryXMLDecoder.js').BinaryXMLDecoder;
-var Key = require('../Key.js').Key;
-var Interest = require('../Interest.js').Interest;
-var ContentObject = require('../ContentObject.js').ContentObject;
-var FaceInstance = require('../FaceInstance.js').FaceInstance;
-var ForwardingEntry = require('../ForwardingEntry.js').ForwardingEntry;
-var LOG = require('../Log.js').Log.LOG;
+var DataUtils = require('./data-utils.js').DataUtils;
+var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
+var Key = require('../key.js').Key;
+var Interest = require('../interest.js').Interest;
+var ContentObject = require('../content-object.js').ContentObject;
+var FaceInstance = require('../face-instance.js').FaceInstance;
+var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * An EncodingUtils has static methods for encoding data.

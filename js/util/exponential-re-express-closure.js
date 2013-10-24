@@ -4,7 +4,7 @@
  * This is the closure class for use in expressInterest to re express with exponential falloff.
  */
 
-var Closure = require('../Closure.js').Closure;
+var Closure = require('../closure.js').Closure;
 
 /**
  * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT

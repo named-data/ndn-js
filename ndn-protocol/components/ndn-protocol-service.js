@@ -13,8 +13,8 @@ const nsIProtocolHandler = Ci.nsIProtocolHandler;
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
-Components.utils.import("chrome://modules/content/ContentChannel.jsm");
-Components.utils.import("chrome://modules/content/NdnProtocolInfo.jsm");
+Components.utils.import("chrome://modules/content/content-channel.jsm");
+Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
 function NdnProtocol() {
 }
