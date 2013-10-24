@@ -31,6 +31,8 @@ var Blob = function Blob(value)
     this.buffer = null;
 };
 
+exports.Blob = Blob;
+
 /**
  * Return the length of the immutable byte array.
  * @returns {number} The length of the array.  If the pointer to the array is null, return 0.
@@ -51,5 +53,3 @@ Blob.prototype.buf = function()
 {
   return this.buffer;
 };
-
-exports.Blob = Blob;
