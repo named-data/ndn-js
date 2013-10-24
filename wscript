@@ -86,6 +86,7 @@ def build (bld):
 
         ndnjs = ["js/browserify.js",
                  "js/Log.js",
+                 "js/util/blob.js",
                  "js/util/NDNProtocolDTags.js",
                  "js/util/NDNTime.js",
                  "js/util/ExponentialReExpressClosure.js",
