@@ -1,4 +1,5 @@
 /** 
+ * Copyright (C) 2013 Regents of the University of California.
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  */

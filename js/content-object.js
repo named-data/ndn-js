@@ -1,4 +1,5 @@
 /**
+ * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents ContentObject Objects

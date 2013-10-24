@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  */

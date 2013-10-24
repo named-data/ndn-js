@@ -1,5 +1,6 @@
 /**
- * @author: Meki Cheraoui, Jeff Thompson
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Meki Cheraoui, Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
  */

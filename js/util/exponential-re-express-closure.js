@@ -1,5 +1,6 @@
 /**
- * @author: Jeff Thompson
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This is the closure class for use in expressInterest to re express with exponential falloff.
  */

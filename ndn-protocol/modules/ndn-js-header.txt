@@ -1,8 +1,10 @@
 /* This file is created by running make-ndn-js.jsm.sh in this directory.
  * It concatenates ndn-js-header.txt with all the ndn-js source files to
  *   make ndn-js.jsm .
- * The file ../../tools/build/ndn-js.js must already be built.
- * author: Jeff Thompson
+ * The file ../../build/ndn-js.js must already be built.
+ *
+ * Copyright (C) 2013 Regents of the University of California.
+ * author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
 

@@ -1,6 +1,9 @@
 /**
  * This class contains utilities to help parse the data
- * author: Meki Cheraoui, Jeff Thompson
+ *
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
  
