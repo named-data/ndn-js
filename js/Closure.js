@@ -13,12 +13,12 @@
  * @constructor
  */
 var Closure = function Closure() {
-	// I don't think storing NDN's closure is needed
-	// and it creates a reference loop, as of now both
-	// of those variables are never set -- Derek
-	//
-	// Use instance variables to return data to callback
-	this.ndn_data = null;  // this holds the ndn_closure
+  // I don't think storing NDN's closure is needed
+  // and it creates a reference loop, as of now both
+  // of those variables are never set -- Derek
+  //
+  // Use instance variables to return data to callback
+  this.ndn_data = null;  // this holds the ndn_closure
     this.ndn_data_dirty = false;
     
 };
@@ -49,8 +49,8 @@ Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
  * check your code whether you're returning a value.
  */
 Closure.prototype.upcall = function(kind, upcallInfo) {
-	//dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
-	return Closure.RESULT_OK;
+  //dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
+  return Closure.RESULT_OK;
 };
 
 /**
@@ -58,18 +58,18 @@ Closure.prototype.upcall = function(kind, upcallInfo) {
  * @constructor
  */
 var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) {
-	this.ndn = ndn;  // NDN object (not used)
-	this.interest = interest;  // Interest object
-	this.matchedComps = matchedComps;  // int
-	this.contentObject = contentObject;  // Content object
+  this.ndn = ndn;  // NDN object (not used)
+  this.interest = interest;  // Interest object
+  this.matchedComps = matchedComps;  // int
+  this.contentObject = contentObject;  // Content object
 };
 
 UpcallInfo.prototype.toString = function() {
-	var ret = "ndn = " + this.ndn;
-	ret += "\nInterest = " + this.interest;
-	ret += "\nmatchedComps = " + this.matchedComps;
-	ret += "\nContentObject: " + this.contentObject;
-	return ret;
+  var ret = "ndn = " + this.ndn;
+  ret += "\nInterest = " + this.interest;
+  ret += "\nmatchedComps = " + this.matchedComps;
+  ret += "\nContentObject: " + this.contentObject;
+  return ret;
 }
 
 exports.UpcallInfo = UpcallInfo;

@@ -11,7 +11,7 @@ var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtoc
 /**
  * @constructor
  */
-var PublisherType = function PublisherType(tag){
+var PublisherType = function PublisherType(tag) {
     	this.KEY =(NDNProtocolDTags.PublisherPublicKeyDigest);
     	this.CERTIFICATE= (NDNProtocolDTags.PublisherCertificateDigest);
     	this.ISSUER_KEY=	(NDNProtocolDTags.PublisherIssuerKeyDigest);
@@ -95,7 +95,7 @@ PublisherID.prototype.getElementLabel = function() {
 	return this.publisherType.Tag;
 };
 
-PublisherID.prototype.validate = function(){
+PublisherID.prototype.validate = function() {
 	return ((null != id() && (null != type())));
 };
 

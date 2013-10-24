@@ -20,17 +20,17 @@ var KeyManager = function KeyManager()
   "ZPQtD+2Yc3iCmSYNyxqu9PcufDRJlnvB7PG29+L3y9lR37tetzUV9eTscJ7rdp8" +
   "Wt6AzpW32IJ/54yKNfP7S6ZIoIG+LP6EIxq6s8K1MXRt8uBJKw==";
 
-	// Public Key
+  // Public Key
     this.publicKey = 
-	"-----BEGIN PUBLIC KEY-----\n" +
+  "-----BEGIN PUBLIC KEY-----\n" +
   "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDhfTCn2CirG4QLF1QtyvYgev0i\n" +
   "HghrKmDRbLf1REi6nz8IvNCZ2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum\n" +
   "9dxDYLhF7aSMvZzxJqcjRF8OGVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03u\n" +
   "WFwYKClbU5XrShd3nwIDAQAB\n" +
-	"-----END PUBLIC KEY-----";
-	// Private Key
+  "-----END PUBLIC KEY-----";
+  // Private Key
     this.privateKey = 
-	"-----BEGIN RSA PRIVATE KEY-----\n" +
+  "-----BEGIN RSA PRIVATE KEY-----\n" +
   "MIICXQIBAAKBgQDhfTCn2CirG4QLF1QtyvYgev0iHghrKmDRbLf1REi6nz8IvNCZ\n" +
   "2yHdFip3nmGqie7lVNOkfeIwvHrFkNUkBnw4mLum9dxDYLhF7aSMvZzxJqcjRF8O\n" +
   "GVLXMlp1+vVWFE+amK9xhrAnhoW44sCL6ocXG03uWFwYKClbU5XrShd3nwIDAQAB\n" +
@@ -44,38 +44,38 @@ var KeyManager = function KeyManager()
   "F2zGPITQk3r/VumemCvLWiRK/yG0noc9dtibqHOWbCtcXtOm/xDWjq+lis2i3ssO\n" +
   "vYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaM\n" +
   "hndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861\n" +
-	"-----END RSA PRIVATE KEY-----";
+  "-----END RSA PRIVATE KEY-----";
 };
 
 /*
-KeyManager.prototype.verify = function verify(message,signature){
-	
-	var input = message;
+KeyManager.prototype.verify = function verify(message,signature) {
+  
+  var input = message;
 
-	var  _PEM_X509CERT_STRING_ = this.certificate;
-	
-	var x509 = new X509();
-	
-	x509.readCertPEM(_PEM_X509CERT_STRING_);
-	
-	var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
-	
-	return result;
+  var  _PEM_X509CERT_STRING_ = this.certificate;
+  
+  var x509 = new X509();
+  
+  x509.readCertPEM(_PEM_X509CERT_STRING_);
+  
+  var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
+  
+  return result;
 };
 
-KeyManager.prototype.sign= function sign(message){
-	
-	var input = message;
-		
-	var  _PEM_PRIVATE_KEY_STRING_ = this.privateKey;
-	
-	var rsa = new RSAKey();
-	
-	rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
-	
-	var hSig = rsa.signString(input, "sha256");
-	
-	return hSig;
+KeyManager.prototype.sign= function sign(message) {
+  
+  var input = message;
+    
+  var  _PEM_PRIVATE_KEY_STRING_ = this.privateKey;
+  
+  var rsa = new RSAKey();
+  
+  rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
+  
+  var hSig = rsa.signString(input, "sha256");
+  
+  return hSig;
 
 };
 

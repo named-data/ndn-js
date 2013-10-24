@@ -51,42 +51,42 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
         try {
             this.socket.close(0);
         } catch (ex) {
-			console.log("XpcomTransport socket.close exception: " + ex);
-		}
+      console.log("XpcomTransport socket.close exception: " + ex);
+    }
         this.socket = null;
     }
 
-	var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
+  var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
         (Components.interfaces.nsISocketTransportService);
-	var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
+  var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
-	this.socket = transportService.createTransport(null, 0, host, port, null);
+  this.socket = transportService.createTransport(null, 0, host, port, null);
     if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
     this.connectedHost = host;
     this.connectedPort = port;
     this.outStream = this.socket.openOutputStream(1, 0, 0);
 
     var inStream = this.socket.openInputStream(0, 0, 0);
-	var dataListener = {
+  var dataListener = {
         elementReader: new BinaryXmlElementReader(elementListener),
-		
-		onStartRequest: function (request, context) {
-		},
-		onStopRequest: function (request, context, status) {
-		},
-		onDataAvailable: function (request, context, _inputStream, offset, count) {
-			try {
-				// Use readInputStreamToString to handle binary data.
+    
+    onStartRequest: function (request, context) {
+    },
+    onStopRequest: function (request, context, status) {
+    },
+    onDataAvailable: function (request, context, _inputStream, offset, count) {
+      try {
+        // Use readInputStreamToString to handle binary data.
                 // TODO: Can we go directly from the stream to Buffer?
                 this.elementReader.onReceivedData(DataUtils.toNumbersFromString
                     (NetUtil.readInputStreamToString(inStream, count)));
-			} catch (ex) {
-				console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
-			}
-		}
+      } catch (ex) {
+        console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
+      }
+    }
     };
-	
-	pump.init(inStream, -1, -1, 0, 0, true);
+  
+  pump.init(inStream, -1, -1, 0, 0, true);
     pump.asyncRead(dataListener, null);
 };
 

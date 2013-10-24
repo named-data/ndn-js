@@ -26,7 +26,7 @@ var ExponentialReExpressClosure = function ExponentialReExpressClosure
     
     this.callerClosure = callerClosure;
     settings = (settings || {});
-	this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
+  this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
 };
 
 exports.ExponentialReExpressClosure = ExponentialReExpressClosure;

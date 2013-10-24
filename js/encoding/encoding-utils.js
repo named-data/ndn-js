@@ -19,12 +19,12 @@ var LOG = require('../log.js').Log.LOG;
  * An EncodingUtils has static methods for encoding data.
  * @constructor
  */
-var EncodingUtils = function EncodingUtils(){
+var EncodingUtils = function EncodingUtils() {
 };
 
 exports.EncodingUtils = EncodingUtils;
 
-EncodingUtils.encodeToHexInterest = function(interest){
+EncodingUtils.encodeToHexInterest = function(interest) {
   return DataUtils.toHex(interest.encode());
 }
 
@@ -33,59 +33,59 @@ EncodingUtils.encodeToHexContentObject = function(contentObject) {
 }
 
 EncodingUtils.encodeForwardingEntry = function(co) {
-	var enc = new BinaryXMLEncoder();
+  var enc = new BinaryXMLEncoder();
  
-	co.to_ndnb(enc);
-	
-	var bytes = enc.getReducedOstream();
+  co.to_ndnb(enc);
+  
+  var bytes = enc.getReducedOstream();
 
-	return bytes;
+  return bytes;
 
-	
+  
 }
 
-EncodingUtils.decodeHexFaceInstance = function(result){
-	
-	var numbers = DataUtils.toNumbers(result);
-			
-	
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
+EncodingUtils.decodeHexFaceInstance = function(result) {
+  
+  var numbers = DataUtils.toNumbers(result);
+      
+  
+  var decoder = new BinaryXMLDecoder(numbers);
+  
+  if(LOG>3)console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
 
-	var faceInstance = new FaceInstance();
+  var faceInstance = new FaceInstance();
 
-	faceInstance.from_ndnb(decoder);
+  faceInstance.from_ndnb(decoder);
 
-	return faceInstance;
-	
+  return faceInstance;
+  
 }
 
-EncodingUtils.decodeHexInterest = function(input){
-	var interest = new Interest();
-	interest.decode(DataUtils.toNumbers(input));
-	return interest;
+EncodingUtils.decodeHexInterest = function(input) {
+  var interest = new Interest();
+  interest.decode(DataUtils.toNumbers(input));
+  return interest;
 }
 
-EncodingUtils.decodeHexContentObject = function(input){
-	var contentObject = new ContentObject();
-	contentObject.decode(DataUtils.toNumbers(input));
-	return contentObject;
+EncodingUtils.decodeHexContentObject = function(input) {
+  var contentObject = new ContentObject();
+  contentObject.decode(DataUtils.toNumbers(input));
+  return contentObject;
 }
 
-EncodingUtils.decodeHexForwardingEntry = function(result){
-	var numbers = DataUtils.toNumbers(result);
+EncodingUtils.decodeHexForwardingEntry = function(result) {
+  var numbers = DataUtils.toNumbers(result);
 
-	var decoder = new BinaryXMLDecoder(numbers);
-	
-	if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
-	
-	var forwardingEntry = new ForwardingEntry();
+  var decoder = new BinaryXMLDecoder(numbers);
+  
+  if(LOG>3)console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
+  
+  var forwardingEntry = new ForwardingEntry();
 
-	forwardingEntry.from_ndnb(decoder);
+  forwardingEntry.from_ndnb(decoder);
 
-	return forwardingEntry;
-	
+  return forwardingEntry;
+  
 }
 
 /**
@@ -105,110 +105,110 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array) {
  */
 EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) {
     var output ="";
-			
+      
     if(co==-1)
-	output+= "NO CONTENT FOUND"
+  output+= "NO CONTENT FOUND"
     else if (co==-2)
-	output+= "CONTENT NAME IS EMPTY"
+  output+= "CONTENT NAME IS EMPTY"
     else{
-	if(co.name!=null && co.name.components!=null){
-	    output+= "NAME: " + co.name.toUri();
+  if(co.name!=null && co.name.components!=null) {
+      output+= "NAME: " + co.name.toUri();
         
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	
-	if(co.content !=null){
-	    output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.content !=null){
-	    output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.digestAlgorithm!=null){
-	    output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.witness!=null){
-	    output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signature !=null && co.signature.signature!=null){
-	    output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
-	    output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
-	    var d = new Date();
-	    d.setTime( co.signedInfo.timestamp.msec );
-	    
-	    var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-	    
-	    output += "TimeStamp: "+d;
-	    output+= "<br />";
-	    output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
-	    
-	    output+= "<br />";
-	}
-	if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
-	    output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
-	    output+= "<br />";
-	}
-	if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
-	    var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-	    var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
-	    var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-	    var input = DataUtils.toString(co.rawSignatureData);
-	    
-	    var witHex = "";
-		if (co.signature.witness != null) {
-			witHex = DataUtils.toHex(co.signature.witness);
-		}
-	    
-	    output += "Public key: " + publickeyHex;
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	    
-	    if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
-	    if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
-	    if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
-	    
-	    if(LOG>2) console.log(" Signature "+signature );
-	    if(LOG>2) console.log(" Witness "+witHex );
-	    
-	    if(LOG>2) console.log(" Signature NOW IS" );
-	    
-	    if(LOG>2) console.log(co.signature.signature);
-	   
-	    var rsakey = new Key();
-	    rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
+      output+= "<br />";
+      output+= "<br />";
+  }
+  
+  if(co.content !=null) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.content !=null) {
+      output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.signature !=null && co.signature.digestAlgorithm!=null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.signature !=null && co.signature.witness!=null) {
+      output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.signature !=null && co.signature.signature!=null) {
+      output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null) {
+      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
+  if(co.signedInfo !=null && co.signedInfo.timestamp!=null) {
+      var d = new Date();
+      d.setTime( co.signedInfo.timestamp.msec );
+      
+      var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
+      
+      output += "TimeStamp: "+d;
+      output+= "<br />";
+      output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
+      
+      output+= "<br />";
+  }
+  if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null) {
+      output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
+      output+= "<br />";
+  }
+  if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null) {
+      var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
+      var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
+      var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+      var input = DataUtils.toString(co.rawSignatureData);
+      
+      var witHex = "";
+    if (co.signature.witness != null) {
+      witHex = DataUtils.toHex(co.signature.witness);
+    }
+      
+      output += "Public key: " + publickeyHex;
+      
+      output+= "<br />";
+      output+= "<br />";
+      
+      if(LOG>2) console.log(" ContentName + SignedInfo + Content = "+input);
+      if(LOG>2) console.log(" PublicKeyHex = "+publickeyHex );
+      if(LOG>2) console.log(" PublicKeyString = "+publickeyString );
+      
+      if(LOG>2) console.log(" Signature "+signature );
+      if(LOG>2) console.log(" Witness "+witHex );
+      
+      if(LOG>2) console.log(" Signature NOW IS" );
+      
+      if(LOG>2) console.log(co.signature.signature);
+     
+      var rsakey = new Key();
+      rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
 
-	    var result = co.verify(rsakey);
-	    if(result)
-			output += 'SIGNATURE VALID';
-	    else
-			output += 'SIGNATURE INVALID';
-	    
-	    output+= "<br />";
-	    output+= "<br />";
-	}
+      var result = co.verify(rsakey);
+      if(result)
+      output += 'SIGNATURE VALID';
+      else
+      output += 'SIGNATURE INVALID';
+      
+      output+= "<br />";
+      output+= "<br />";
+  }
     }
 
     return output;

@@ -32,19 +32,19 @@ var LOG = require('./log.js').Log.LOG;
 var Interest = function Interest
    (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
     childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) {
-		
-	this.name = name;
-	this.faceInstance = faceInstance;
-	this.maxSuffixComponents = maxSuffixComponents;
-	this.minSuffixComponents = minSuffixComponents;
-	
-	this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-	this.exclude = exclude;
-	this.childSelector = childSelector;
-	this.answerOriginKind = answerOriginKind;
-	this.scope = scope;
-	this.interestLifetime = interestLifetimeMilliseconds;
-	this.nonce = nonce;	
+    
+  this.name = name;
+  this.faceInstance = faceInstance;
+  this.maxSuffixComponents = maxSuffixComponents;
+  this.minSuffixComponents = minSuffixComponents;
+  
+  this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+  this.exclude = exclude;
+  this.childSelector = childSelector;
+  this.answerOriginKind = answerOriginKind;
+  this.scope = scope;
+  this.interestLifetime = interestLifetimeMilliseconds;
+  this.nonce = nonce;  
 };
 
 exports.Interest = Interest;
@@ -57,8 +57,8 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
 Interest.ANSWER_NO_CONTENT_STORE = 0;
 Interest.ANSWER_CONTENT_STORE = 1;
 Interest.ANSWER_GENERATED = 2;
-Interest.ANSWER_STALE = 4;		// Stale answer OK
-Interest.MARK_STALE = 16;		// Must have scope 0.  Michael calls this a "hack"
+Interest.ANSWER_STALE = 4;    // Stale answer OK
+Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
 
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
@@ -116,7 +116,7 @@ Interest.prototype.clone = function() {
  * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) { 
-	this.values = (values || []);
+  this.values = (values || []);
 }
 
 exports.Exclude = Exclude;
@@ -124,9 +124,9 @@ exports.Exclude = Exclude;
 Exclude.ANY = "*";
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
-	decoder.readStartElement(NDNProtocolDTags.Exclude);
+  decoder.readStartElement(NDNProtocolDTags.Exclude);
 
-	while (true) {
+  while (true) {
         if (decoder.peekStartElement(NDNProtocolDTags.Component))
             this.values.push(decoder.readBinaryElement(NDNProtocolDTags.Component));
         else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
@@ -141,16 +141,16 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
         }
         else
             break;
-	}
+  }
     
     decoder.readEndElement();
 };
 
 Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
-	if (this.values == null || this.values.length == 0)
-		return;
+  if (this.values == null || this.values.length == 0)
+    return;
 
-	encoder.writeStartElement(NDNProtocolDTags.Exclude);
+  encoder.writeStartElement(NDNProtocolDTags.Exclude);
     
     // TODO: Do we want to order the components (except for ANY)?
     for (var i = 0; i < this.values.length; ++i) {
@@ -162,15 +162,15 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  {
             encoder.writeElement(NDNProtocolDTags.Component, this.values[i]);
     }
 
-	encoder.writeEndElement();
+  encoder.writeEndElement();
 };
 
 /**
  * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
  */
 Exclude.prototype.toUri = function() {
-	if (this.values == null || this.values.length == 0)
-		return "";
+  if (this.values == null || this.values.length == 0)
+    return "";
 
     var result = "";
     for (var i = 0; i < this.values.length; ++i) {
@@ -273,7 +273,7 @@ Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) {
 /**
  * @deprecated Use BinaryXmlWireFormat.encodeInterest.
  */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder){
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder) {
   BinaryXmlWireFormat.encodeInterest(this, encoder);
 };
 
@@ -303,27 +303,27 @@ Interest.prototype.decode = function(input, wireFormat) {
  * @returns {string} The URI string.
  */
 Interest.prototype.toUri = function() 
-{	
+{  
   var selectors = "";
   
-	if (this.minSuffixComponents != null )
-		selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
-	if (this.maxSuffixComponents != null )
-		selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
-	if (this.childSelector != null )
-		selectors += "&ndn.ChildSelector=" + this.childSelector;
-	if (this.answerOriginKind != null )
-		selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
-	if (this.scope != null )
-		selectors += "&ndn.Scope=" + this.scope;
-	if (this.interestLifetime != null )
-		selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
-	if (this.publisherPublicKeyDigest != null )
-		selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
-	if (this.nonce != null )
-		selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
-	if (this.exclude != null )
-		selectors += "&ndn.Exclude=" + this.exclude.toUri();
+  if (this.minSuffixComponents != null )
+    selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
+  if (this.maxSuffixComponents != null )
+    selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
+  if (this.childSelector != null )
+    selectors += "&ndn.ChildSelector=" + this.childSelector;
+  if (this.answerOriginKind != null )
+    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
+  if (this.scope != null )
+    selectors += "&ndn.Scope=" + this.scope;
+  if (this.interestLifetime != null )
+    selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
+  if (this.publisherPublicKeyDigest != null )
+    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
+  if (this.nonce != null )
+    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
+  if (this.exclude != null )
+    selectors += "&ndn.Exclude=" + this.exclude.toUri();
 
   var result = this.name.toUri();
   if (selectors != "")

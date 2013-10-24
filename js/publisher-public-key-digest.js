@@ -11,7 +11,7 @@ var LOG = require('./log.js').Log.LOG;
 /**
  * @constructor
  */
-var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd){ 
+var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd) { 
 	
  	 //this.PUBLISHER_ID_LEN = 256/8;
 	 this.PUBLISHER_ID_LEN = 512/8;

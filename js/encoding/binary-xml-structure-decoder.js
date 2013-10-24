@@ -16,7 +16,7 @@ var XML_DTAG = 0x02;
 var XML_ATTR = 0x03; 
 var XML_DATTR = 0x04; 
 var XML_BLOB = 0x05; 
-var XML_UDATA = 0x06; 	
+var XML_UDATA = 0x06;   
 var XML_CLOSE = 0x0;
 
 var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16; 

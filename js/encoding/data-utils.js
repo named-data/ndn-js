@@ -11,7 +11,7 @@
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils(){
+var DataUtils = function DataUtils() {
 };
 
 exports.DataUtils = DataUtils;
@@ -123,13 +123,13 @@ DataUtils.toHex = function(buffer) {
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(args){
-	var ret = "";
-	for (var i = 0; i < args.length; ++i) {
-		var value = args.charCodeAt(i);
-		ret += (value < 16 ? "0" : "") + value.toString(16);
-	}
-	return ret;
+DataUtils.stringToHex = function(args) {
+  var ret = "";
+  for (var i = 0; i < args.length; ++i) {
+    var value = args.charCodeAt(i);
+    ret += (value < 16 ? "0" : "") + value.toString(16);
+  }
+  return ret;
 }
 
 /**
@@ -151,11 +151,11 @@ DataUtils.toNumbers = function(str) {
  */
 DataUtils.hexToRawString = function(str) {
     if(typeof str =='string') {
-		var ret = "";
-		str.replace(/(..)/g, function(s) {
-			ret += String.fromCharCode(parseInt(s, 16));
-		});
-		return ret;
+    var ret = "";
+    str.replace(/(..)/g, function(s) {
+      ret += String.fromCharCode(parseInt(s, 16));
+    });
+    return ret;
     }
 }
 
@@ -182,41 +182,41 @@ DataUtils.concatArrays = function(arrays) {
  
 // TODO: Take Buffer and use TextDecoder when available.
 DataUtils.decodeUtf8 = function (utftext) {
-		var string = "";
-		var i = 0;
-		var c = 0;
+    var string = "";
+    var i = 0;
+    var c = 0;
         var c1 = 0;
         var c2 = 0;
  
-		while ( i < utftext.length ) {
+    while ( i < utftext.length ) {
  
-			c = utftext.charCodeAt(i);
+      c = utftext.charCodeAt(i);
  
-			if (c < 128) {
-				string += String.fromCharCode(c);
-				i++;
-			}
-			else if((c > 191) && (c < 224)) {
-				c2 = utftext.charCodeAt(i+1);
-				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-				i += 2;
-			}
-			else {
-				c2 = utftext.charCodeAt(i+1);
-				var c3 = utftext.charCodeAt(i+2);
-				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
-				i += 3;
-			}
+      if (c < 128) {
+        string += String.fromCharCode(c);
+        i++;
+      }
+      else if((c > 191) && (c < 224)) {
+        c2 = utftext.charCodeAt(i+1);
+        string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+        i += 2;
+      }
+      else {
+        c2 = utftext.charCodeAt(i+1);
+        var c3 = utftext.charCodeAt(i+2);
+        string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+        i += 3;
+      }
  
-		}
+    }
  
-		return string;
-	};
+    return string;
+  };
 
 /**
  * Return true if a1 and a2 are the same length with equal elements.
  */
-DataUtils.arraysEqual = function(a1, a2){
+DataUtils.arraysEqual = function(a1, a2) {
     if (a1.length != a2.length)
         return false;
     

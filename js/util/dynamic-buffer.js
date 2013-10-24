@@ -13,7 +13,7 @@
  * @param {number} length the initial length of the array.  If null, use a default.
  */
 var DynamicBuffer = function DynamicBuffer(length) {
-	if (!length)
+  if (!length)
         length = 16;
     
     this.array = new Buffer(length);

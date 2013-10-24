@@ -18,7 +18,7 @@ var LOG = require('../log.js').Log.LOG;
  */
 var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) {
   this.elementListener = elementListener;
-	this.dataParts = [];
+  this.dataParts = [];
   this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 

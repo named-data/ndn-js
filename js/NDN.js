@@ -45,14 +45,14 @@ var NDN = function NDN(settings) {
   var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
-	this.host = (settings.host !== undefined ? settings.host : null);
-	this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
+  this.host = (settings.host !== undefined ? settings.host : null);
+  this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
   this.readyStatus = NDN.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
-	this.ndndid = null;
+  this.ndndid = null;
 };
 
 exports.NDN = NDN;
@@ -80,44 +80,44 @@ NDN.supported = NDN.getSupported();
 NDN.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
 
 NDN.prototype.createRoute = function(host, port) {
-	this.host=host;
-	this.port=port;
+  this.host=host;
+  this.port=port;
 };
 
 
 NDN.KeyStore = new Array();
 
 var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) {
-	this.keyName = name;  // KeyName
-	this.rsaKey = rsa;    // RSA key
-	this.timeStamp = time;  // Time Stamp
+  this.keyName = name;  // KeyName
+  this.rsaKey = rsa;    // RSA key
+  this.timeStamp = time;  // Time Stamp
 };
 
 NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) {
-	var result = NDN.getKeyByName(keyEntry.keyName);
-	if (result == null) 
-		NDN.KeyStore.push(keyEntry);
-	else
-		result = keyEntry;
+  var result = NDN.getKeyByName(keyEntry.keyName);
+  if (result == null) 
+    NDN.KeyStore.push(keyEntry);
+  else
+    result = keyEntry;
 };
 
 NDN.getKeyByName = function(/* KeyName */ name) {
-	var result = null;
-	
-	for (var i = 0; i < NDN.KeyStore.length; i++) {
-		if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
+  var result = null;
+  
+  for (var i = 0; i < NDN.KeyStore.length; i++) {
+    if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
             if (result == null || 
                 NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
                 result = NDN.KeyStore[i];
         }
-	}
+  }
     
-	return result;
+  return result;
 };
 
 NDN.prototype.close = function () {
   if (this.readyStatus != NDN.OPENED)
-  	throw new Error('Cannot close because NDN connection is not opened.');
+    throw new Error('Cannot close because NDN connection is not opened.');
 
   this.readyStatus = NDN.CLOSED;
   this.transport.close();
@@ -130,9 +130,9 @@ NDN.PITTable = new Array();
  * @constructor
  */
 var PITEntry = function PITEntry(interest, closure) {
-	this.interest = interest;  // Interest
-	this.closure = closure;    // Closure
-	this.timerID = -1;  // Timer ID
+  this.interest = interest;  // Interest
+  this.closure = closure;    // Closure
+  this.timerID = -1;  // Timer ID
 };
 
 /**
@@ -142,15 +142,15 @@ var PITEntry = function PITEntry(interest, closure) {
 NDN.getEntryForExpressedInterest = function(/*Name*/ name) {
     var result = null;
     
-	for (var i = 0; i < NDN.PITTable.length; i++) {
-		if (NDN.PITTable[i].interest.matchesName(name)) {
+  for (var i = 0; i < NDN.PITTable.length; i++) {
+    if (NDN.PITTable[i].interest.matchesName(name)) {
             if (result == null || 
                 NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
                 result = NDN.PITTable[i];
         }
-	}
+  }
     
-	return result;
+  return result;
 };
 
 // For publishing data
@@ -160,16 +160,16 @@ NDN.CSTable = new Array();
  * @constructor
  */
 var CSEntry = function CSEntry(name, closure) {
-	this.name = name;        // String
-	this.closure = closure;  // Closure
+  this.name = name;        // String
+  this.closure = closure;  // Closure
 };
 
 function getEntryForRegisteredPrefix(name) {
-	for (var i = 0; i < NDN.CSTable.length; i++) {
-		if (NDN.CSTable[i].name.match(name))
-			return NDN.CSTable[i];
-	}
-	return null;
+  for (var i = 0; i < NDN.CSTable.length; i++) {
+    if (NDN.CSTable[i].name.match(name))
+      return NDN.CSTable[i];
+  }
+  return null;
 }
 
 /**
@@ -198,21 +198,21 @@ NDN.makeShuffledGetHostAndPort = function(hostList, port) {
  * @param {Interest} template if not null, use its attributes
  */
 NDN.prototype.expressInterest = function (name, closure, template) {
-	var interest = new Interest(name);
+  var interest = new Interest(name);
   if (template != null) {
-		interest.minSuffixComponents = template.minSuffixComponents;
-		interest.maxSuffixComponents = template.maxSuffixComponents;
-		interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-		interest.exclude = template.exclude;
-		interest.childSelector = template.childSelector;
-		interest.answerOriginKind = template.answerOriginKind;
-		interest.scope = template.scope;
-		interest.interestLifetime = template.interestLifetime;
+    interest.minSuffixComponents = template.minSuffixComponents;
+    interest.maxSuffixComponents = template.maxSuffixComponents;
+    interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+    interest.exclude = template.exclude;
+    interest.childSelector = template.childSelector;
+    interest.answerOriginKind = template.answerOriginKind;
+    interest.scope = template.scope;
+    interest.interestLifetime = template.interestLifetime;
   }
   else
     interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
 
-	if (this.host == null || this.port == null) {
+  if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
             console.log('ERROR: host OR port NOT SET');
         else {
@@ -247,38 +247,38 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure) {
 NDN.prototype.expressInterestHelper = function(interest, closure) {
     var binaryInterest = interest.encode();
     var thisNDN = this;    
-	//TODO: check local content store first
-	if (closure != null) {
-		var pitEntry = new PITEntry(interest, closure);
+  //TODO: check local content store first
+  if (closure != null) {
+    var pitEntry = new PITEntry(interest, closure);
         // TODO: This needs to be a single thread-safe transaction on a global object.
-		NDN.PITTable.push(pitEntry);
-		closure.pitEntry = pitEntry;
+    NDN.PITTable.push(pitEntry);
+    closure.pitEntry = pitEntry;
 
         // Set interest timer.
         var timeoutMilliseconds = (interest.interestLifetime || 4000);
         var timeoutCallback = function() {
-			if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
-				
-			// Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
+      if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
+        
+      // Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
             //   the interest because we don't want to match it in the mean time.
             // TODO: Make this a thread-safe operation on the global PITTable.
-			var index = NDN.PITTable.indexOf(pitEntry);
-			if (index >= 0) 
-	            NDN.PITTable.splice(index, 1);
-				
-			// Raise closure callback
-			if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
+      var index = NDN.PITTable.indexOf(pitEntry);
+      if (index >= 0) 
+              NDN.PITTable.splice(index, 1);
+        
+      // Raise closure callback
+      if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, 
                   new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-			    if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
+          if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
                 pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
                 NDN.PITTable.push(pitEntry);
                 thisNDN.transport.send(binaryInterest);
             }
-		};
-		pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-	}
+    };
+    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+  }
 
-	this.transport.send(binaryInterest);
+  this.transport.send(binaryInterest);
 };
 
 /**
@@ -291,19 +291,19 @@ NDN.prototype.registerPrefix = function(name, closure, flags) {
     flags = flags | 3;
     var thisNDN = this;
     var onConnected = function() {
-    	if (thisNDN.ndndid == null) {
+      if (thisNDN.ndndid == null) {
             // Fetch ndndid first, then register.
             var interest = new Interest(NDN.ndndIdFetcher);
-    		interest.interestLifetime = 4000; // milliseconds
+        interest.interestLifetime = 4000; // milliseconds
             if (LOG>3) console.log('Expressing interest for ndndid from ndnd.');
             thisNDN.reconnectAndExpressInterest
                (interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flags));
         }
-        else	
+        else  
             thisNDN.registerPrefixHelper(name, closure, flags);
     };
 
-	if (this.host == null || this.port == null) {
+  if (this.host == null || this.port == null) {
         if (this.getHostAndPort == null)
             console.log('ERROR: host OR port NOT SET');
         else
@@ -340,17 +340,17 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
        
     var co = upcallInfo.contentObject;
     if (!co.signedInfo || !co.signedInfo.publisher 
-		|| !co.signedInfo.publisher.publisherPublicKeyDigest)
+    || !co.signedInfo.publisher.publisherPublicKeyDigest)
         console.log
           ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
            + this.name.toUri() + " .");
     else {
-		if (LOG>3) console.log('Got ndndid from ndnd.');
-		this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
-		if (LOG>3) console.log(this.ndn.ndndid);
+    if (LOG>3) console.log('Got ndndid from ndnd.');
+    this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
+    if (LOG>3) console.log(this.ndn.ndndid);
         
         this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
-	}
+  }
     
     return Closure.RESULT_OK;
 };
@@ -359,29 +359,29 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) {
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
 NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
-	var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
-  	
+  var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
+    
   var encoder = new BinaryXMLEncoder();
-	fe.to_ndnb(encoder);
-	var bytes = encoder.getReducedOstream();
-		
-	var si = new SignedInfo();
-	si.setFields();
-		
-	var co = new ContentObject(new Name(), si, bytes); 
-	co.sign();
-	var coBinary = co.encode();;
-		
-	//var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
-	var nodename = this.ndndid;
-	var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
+  fe.to_ndnb(encoder);
+  var bytes = encoder.getReducedOstream();
+    
+  var si = new SignedInfo();
+  si.setFields();
+    
+  var co = new ContentObject(new Name(), si, bytes); 
+  co.sign();
+  var coBinary = co.encode();;
+    
+  //var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
+  var nodename = this.ndndid;
+  var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
 
-	var interest = new Interest(interestName);
-	interest.scope = 1;
-	if (LOG > 3) console.log('Send Interest registration packet.');
-    	
+  var interest = new Interest(interestName);
+  interest.scope = 1;
+  if (LOG > 3) console.log('Send Interest registration packet.');
+      
     var csEntry = new CSEntry(name.toUri(), closure);
-	NDN.CSTable.push(csEntry);
+  NDN.CSTable.push(csEntry);
     
     this.transport.send(interest.encode());
 };
@@ -392,148 +392,148 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags) {
  */
 NDN.prototype.onReceivedElement = function(element) {
     if (LOG>3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
-	var decoder = new BinaryXMLDecoder(element);
-	// Dispatch according to packet type
-	if (decoder.peekStartElement(NDNProtocolDTags.Interest)) {  // Interest packet
-		if (LOG > 3) console.log('Interest packet received.');
-				
-		var interest = new Interest();
-		interest.from_ndnb(decoder);
-		if (LOG > 3) console.log(interest);
-		var nameStr = escape(interest.name.toUri());
-		if (LOG > 3) console.log(nameStr);
-				
-		var entry = getEntryForRegisteredPrefix(nameStr);
-		if (entry != null) {
-			//console.log(entry);
-			var info = new UpcallInfo(this, interest, 0, null);
-			var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-			if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-				this.transport.send(info.contentObject.encode());
-		}				
-	} else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
-		if (LOG > 3) console.log('ContentObject packet received.');
-				
-		var co = new ContentObject();
-		co.from_ndnb(decoder);
-				
-		var pitEntry = NDN.getEntryForExpressedInterest(co.name);
-		if (pitEntry != null) {
-			// Cancel interest timer
-			clearTimeout(pitEntry.timerID);
+  var decoder = new BinaryXMLDecoder(element);
+  // Dispatch according to packet type
+  if (decoder.peekStartElement(NDNProtocolDTags.Interest)) {  // Interest packet
+    if (LOG > 3) console.log('Interest packet received.');
+        
+    var interest = new Interest();
+    interest.from_ndnb(decoder);
+    if (LOG > 3) console.log(interest);
+    var nameStr = escape(interest.name.toUri());
+    if (LOG > 3) console.log(nameStr);
+        
+    var entry = getEntryForRegisteredPrefix(nameStr);
+    if (entry != null) {
+      //console.log(entry);
+      var info = new UpcallInfo(this, interest, 0, null);
+      var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
+      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
+        this.transport.send(info.contentObject.encode());
+    }        
+  } else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
+    if (LOG > 3) console.log('ContentObject packet received.');
+        
+    var co = new ContentObject();
+    co.from_ndnb(decoder);
+        
+    var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+    if (pitEntry != null) {
+      // Cancel interest timer
+      clearTimeout(pitEntry.timerID);
             
-			// Remove PIT entry from NDN.PITTable
-			var index = NDN.PITTable.indexOf(pitEntry);
-			if (index >= 0)
-				NDN.PITTable.splice(index, 1);
-						
-			var currentClosure = pitEntry.closure;
-										
-			if (this.verify == false) {
-				// Pass content up without verifying the signature
-				currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, co));
-				return;
-			}
-				
-			// Key verification
-						
-			// Recursive key fetching & verification closure
-			var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-				this.contentObject = content;  // unverified content object
-				this.closure = closure;  // closure corresponding to the contentObject
-				this.keyName = key;  // name of current key to be fetched
-				//this.sigHex = sig;  // hex signature string to be verified
-				//this.witness = wit;
-						
-				Closure.call(this);
-			};
-						
-		    var thisNDN = this;
-			KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
-				if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-					console.log("In KeyFetchClosure.upcall: interest time out.");
-					console.log(this.keyName.contentName.toUri());
-				} else if (kind == Closure.UPCALL_CONTENT) {
-					//console.log("In KeyFetchClosure.upcall: signature verification passed");
-								
-				    var rsakey = new Key();
-				    rsakey.readDerPublicKey(upcallInfo.contentObject.content);
-				    var verified = co.verify(rsakey);
-								
-					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-					//console.log("raise encapsulated closure");
-					this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.contentObject));
-								
-					// Store key in cache
-					var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-					NDN.addKeyEntry(keyEntry);
-					//console.log(NDN.KeyStore);
-				} else if (kind == Closure.UPCALL_CONTENT_BAD) {
-					console.log("In KeyFetchClosure.upcall: signature verification failed");
-				}
-			};
-						
-			if (co.signedInfo && co.signedInfo.locator && co.signature) {
-				if (LOG > 3) console.log("Key verification...");
-				var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
-							
-				var wit = null;
-				if (co.signature.witness != null) {
-				    //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-				    currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
-				}
-			    
-				var keylocator = co.signedInfo.locator;
-				if (keylocator.type == KeyLocatorType.KEYNAME) {
-					if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-					//var keyname = keylocator.keyName.contentName.toUri();
-					//console.log(nameStr);
-					//console.log(keyname);
-								
-					if (keylocator.keyName.contentName.match(co.name)) {
-						if (LOG > 3) console.log("Content is key itself");
-									
-					    var rsakey = new Key();
-					    rsakey.readDerPublicKey(co.content);
-					    var verified = co.verify(rsakey);
-					    var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-					    
-					    currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+      // Remove PIT entry from NDN.PITTable
+      var index = NDN.PITTable.indexOf(pitEntry);
+      if (index >= 0)
+        NDN.PITTable.splice(index, 1);
+            
+      var currentClosure = pitEntry.closure;
+                    
+      if (this.verify == false) {
+        // Pass content up without verifying the signature
+        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, co));
+        return;
+      }
+        
+      // Key verification
+            
+      // Recursive key fetching & verification closure
+      var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
+        this.contentObject = content;  // unverified content object
+        this.closure = closure;  // closure corresponding to the contentObject
+        this.keyName = key;  // name of current key to be fetched
+        //this.sigHex = sig;  // hex signature string to be verified
+        //this.witness = wit;
+            
+        Closure.call(this);
+      };
+            
+        var thisNDN = this;
+      KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
+        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+          console.log("In KeyFetchClosure.upcall: interest time out.");
+          console.log(this.keyName.contentName.toUri());
+        } else if (kind == Closure.UPCALL_CONTENT) {
+          //console.log("In KeyFetchClosure.upcall: signature verification passed");
+                
+            var rsakey = new Key();
+            rsakey.readDerPublicKey(upcallInfo.contentObject.content);
+            var verified = co.verify(rsakey);
+                
+          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+          //console.log("raise encapsulated closure");
+          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.contentObject));
+                
+          // Store key in cache
+          var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+          NDN.addKeyEntry(keyEntry);
+          //console.log(NDN.KeyStore);
+        } else if (kind == Closure.UPCALL_CONTENT_BAD) {
+          console.log("In KeyFetchClosure.upcall: signature verification failed");
+        }
+      };
+            
+      if (co.signedInfo && co.signedInfo.locator && co.signature) {
+        if (LOG > 3) console.log("Key verification...");
+        var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+              
+        var wit = null;
+        if (co.signature.witness != null) {
+            //SWT: deprecate support for Witness decoding and Merkle hash tree verification
+            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
+        }
+          
+        var keylocator = co.signedInfo.locator;
+        if (keylocator.type == KeyLocatorType.KEYNAME) {
+          if (LOG > 3) console.log("KeyLocator contains KEYNAME");
+          //var keyname = keylocator.keyName.contentName.toUri();
+          //console.log(nameStr);
+          //console.log(keyname);
+                
+          if (keylocator.keyName.contentName.match(co.name)) {
+            if (LOG > 3) console.log("Content is key itself");
+                  
+              var rsakey = new Key();
+              rsakey.readDerPublicKey(co.content);
+              var verified = co.verify(rsakey);
+              var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+              
+              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
 
-						// SWT: We don't need to store key here since the same key will be
-						//      stored again in the closure.
-						//var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-						//NDN.addKeyEntry(keyEntry);
-						//console.log(NDN.KeyStore);
-					} else {
-						// Check local key store
-						var keyEntry = NDN.getKeyByName(keylocator.keyName);
-						if (keyEntry) {
-							// Key found, verify now
-							if (LOG > 3) console.log("Local key cache hit");
-							var rsakey = keyEntry.rsaKey;
-						    var verified = co.verify(rsakey);
-							var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+            // SWT: We don't need to store key here since the same key will be
+            //      stored again in the closure.
+            //var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
+            //NDN.addKeyEntry(keyEntry);
+            //console.log(NDN.KeyStore);
+          } else {
+            // Check local key store
+            var keyEntry = NDN.getKeyByName(keylocator.keyName);
+            if (keyEntry) {
+              // Key found, verify now
+              if (LOG > 3) console.log("Local key cache hit");
+              var rsakey = keyEntry.rsaKey;
+                var verified = co.verify(rsakey);
+              var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 
-							// Raise callback
-							currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
-						} else {
-							// Not found, fetch now
-							if (LOG > 3) console.log("Fetch key according to keylocator");
-							var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
-							this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
-						}
-					}
-				} else if (keylocator.type == KeyLocatorType.KEY) {
-					if (LOG > 3) console.log("Keylocator contains KEY");
-								
-				    var rsakey = new Key();
-				    rsakey.readDerPublicKey(keylocator.publicKey);
-				    var verified = co.verify(rsakey);
-							
-					var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-					// Raise callback
-					currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, co));
+              // Raise callback
+              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+            } else {
+              // Not found, fetch now
+              if (LOG > 3) console.log("Fetch key according to keylocator");
+              var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+              this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
+            }
+          }
+        } else if (keylocator.type == KeyLocatorType.KEY) {
+          if (LOG > 3) console.log("Keylocator contains KEY");
+                
+            var rsakey = new Key();
+            rsakey.readDerPublicKey(keylocator.publicKey);
+            var verified = co.verify(rsakey);
+              
+          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
+          // Raise callback
+          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, co));
 
 					// Since KeyLocator does not contain key name for this key,
 					// we have no way to store it as a key entry in KeyStore.
