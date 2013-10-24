@@ -25,7 +25,7 @@ var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPort
   this.signedPortionEndOffset = signedPortionEndOffset || 0;
 }
 
-SignedBlob.prototype = Blob.prototype;
+SignedBlob.prototype = new Blob();
 SignedBlob.prototype.name = "SignedBlob";
 
 exports.SignedBlob = SignedBlob;
