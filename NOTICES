@@ -3,3 +3,4 @@ See the following licenses for third-party software included in this distributio
 contrib/securityLib/CryptoJS-LICENSE.txt
 contrib/securityLib/jsrsasig-THIRDPARTY_LICENSE.txt
 contrib/securityLib/jsrsasign-LICENSE.txt
+js/encoding/ASN1/asn.1-decoder-LICENSE
