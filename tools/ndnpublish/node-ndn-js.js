@@ -1,6 +1,6 @@
 /* This file is created by running make-node-ndn-js.js.sh in this directory.
- * It concatenates node-ndn-js-header.txt ../build/ndn-js.js and node-ndn-js-footer.txt to make node-ndn-js.js .
- * ../build/ndn-js.js must already be built.
+ * It concatenates node-ndn-js-header.txt ../build/ndn.js and node-ndn-js-footer.txt to make node-ndn.js .
+ * ../build/ndn.js must already be built.
  * author: Jeff Thompson
  * See COPYING for copyright and distribution information.
  */
