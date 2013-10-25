@@ -2,6 +2,7 @@ Interim changes since NDN-JS v0.1 (2013-10-03)
 --------------------------------------
 
 Changes
+* http://redmine.named-data.net/issues/1060 Rename the combined files ndn-js.js and ndn-js.min.js to ndn.js and ndn.min.js.
 * http://redmine.named-data.net/issues/1048 Add support for Node.js to merge with NDN-On-Node.
 * Updated the main NDN object to use a TcpTransport by default for Node.js.
 * Change all code to use new Buffer instead of new Uint8Array.
@@ -21,6 +22,8 @@ Changes
 * http://redmine.named-data.net/issues/1059 Changed file names to lower case. Does not affect the main include filename ndn-js.js.
 
 Deprecated
+* build/ndn-js.js and build/ndn-js.min.js.  You should use build/ndn.js and build/ndn.min.js.
+* ndnProtocol.xpi. Use ndn-protocol.xpi which is the new name of the Firefox add-on file.
 * Name: Deprecated to_uri.  Use toUri.
 * Name: Deprecated getName.  Use toUri.
 * Name: Deprecated add and addSegment.  Use append and appendSegment.

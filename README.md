@@ -71,17 +71,13 @@ the same host.
 ** Including the scripts in a web page **
 To use NDN-JS in a web page, one of two scripts must be included using a script tag:
 
-ndn-js.js is a combined library (and ndn-js.min.js is a compressed version of the combined library),
-designed for efficient distribution.  Bother can be either build in ./build/ndn-js.min.js using 
-the following commands:
+ndn.js is a combined library (and ndn-js.min.js is a compressed version of the combined library).
+See INSTALL for instructions on how to build these files.
 
-    ./waf configure
-    ./waf
+Or they can be downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
 
-Or downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
-
-- http://raw.github.com/named-data/ndn-js/downloads/ndn-js.js
-- http://raw.github.com/named-data/ndn-js/downloads/ndn-js.min.js
+- http://raw.github.com/named-data/ndn-js/downloads/ndn.js
+- http://raw.github.com/named-data/ndn-js/downloads/ndn.min.js
 
 ** Examples **
 
