@@ -15,7 +15,8 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 /* Create an nsIChannel for returning content to the caller of asyncOpen. 
  * For requestContent detail, see asyncOpen.
  */
-function ContentChannel(uri, requestContent) {
+function ContentChannel(uri, requestContent) 
+{
 	this.requestContent = requestContent;
 
 	this.done = false;
@@ -90,7 +91,8 @@ ContentChannel.prototype = {
  *  onStop() 
  *    Call aListener.onStopRequest.
  */
-ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
+ContentChannel.prototype.asyncOpen = function(aListener, aContext) 
+{
     try {
         var thisContentChannel = this;
             
@@ -154,4 +156,3 @@ ContentChannel.prototype.asyncOpen = function(aListener, aContext) {
         dump("ContentChannel.asyncOpen exception: " + ex + "\n" + ex.stack);
     }
 };
-

@@ -126,7 +126,8 @@ else
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  */                                                
 var ContentClosure = function ContentClosure
-      (ndn, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) {
+      (ndn, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) 
+{
     // Inherit from Closure.
     Closure.call(this);
     
@@ -149,7 +150,8 @@ var ContentClosure = function ContentClosure
     this.iMetaComponent = null;
 };
 
-ContentClosure.prototype.upcall = function(kind, upcallInfo) {
+ContentClosure.prototype.upcall = function(kind, upcallInfo) 
+{
   try {
     if (this.contentListener.isDone())
         // We are getting unexpected extra results.
@@ -330,7 +332,8 @@ ContentClosure.closureForWindowList = [];
  * If there is already another closure for window, callits contentListener.onStop(); so
  *   that further calls to upcall will do nothing.
  */
-ContentClosure.setClosureForWindow = function(window, closure) {
+ContentClosure.setClosureForWindow = function(window, closure) 
+{
     for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
         var entry = ContentClosure.closureForWindowList[i];
         if (entry.window == window) {
@@ -350,24 +353,27 @@ ContentClosure.setClosureForWindow = function(window, closure) {
 /*
  * Remove any entry in closureForWindowList for closure.  This is called when the closure is done.
  */
-ContentClosure.removeClosureForWindow = function(closure) {
+ContentClosure.removeClosureForWindow = function(closure) 
+{
     for (var i = ContentClosure.closureForWindowList.length - 1; i >= 0; --i) {
         if (ContentClosure.closureForWindowList[i].closure == closure)
             ContentClosure.closureForWindowList.splice(i, 1);
     }
-}
+};
 
 /*
  * A SegmentStore stores segments until they are retrieved in order starting with segment 0.
  */
-var SegmentStore = function SegmentStore() {
+var SegmentStore = function SegmentStore() 
+{
     // Each entry is an object where the key is the segment number and value is null if
     //   the segment number is requested or the contentObject if received.
     this.store = new SortedArray();
     this.maxRetrievedSegmentNumber = -1;
 };
 
-SegmentStore.prototype.storeContent = function(segmentNumber, contentObject) {
+SegmentStore.prototype.storeContent = function(segmentNumber, contentObject) 
+{
     // We don't expect to try to store a segment that has already been retrieved, but check anyway.
     if (segmentNumber > this.maxRetrievedSegmentNumber)
         this.store.set(segmentNumber, contentObject);
@@ -378,7 +384,8 @@ SegmentStore.prototype.storeContent = function(segmentNumber, contentObject) {
  *   then delete from the store, return the entry with key and value, and update maxRetrievedSegmentNumber.  
  * Otherwise return null.
  */
-SegmentStore.prototype.maybeRetrieveNextEntry = function() {
+SegmentStore.prototype.maybeRetrieveNextEntry = function() 
+{
     if (this.store.entries.length > 0 && this.store.entries[0].value != null &&
         this.store.entries[0].key == this.maxRetrievedSegmentNumber + 1) {
         var entry = this.store.entries[0];
@@ -396,7 +403,8 @@ SegmentStore.prototype.maybeRetrieveNextEntry = function() {
  *   already requested and is not returned.  If a segment number is returned, create a
  *   entry in the segment store with a null value.
  */
-SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments) {
+SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments) 
+{
     // First, count how many are already requested.
     var nRequestedSegments = 0;
     for (var i = 0; i < this.store.entries.length; ++i) {
@@ -437,29 +445,33 @@ SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments) 
     for (var i = 0; i < toRequest.length; ++i)
         this.store.set(toRequest[i], null);
     return toRequest;
-}
+};
 
 /*
  * A SortedArray is an array of objects with key and value, where the key is an integer.
  */
-var SortedArray = function SortedArray() {
+var SortedArray = function SortedArray() 
+{
     this.entries = [];
-}
+};
 
-SortedArray.prototype.sortEntries = function() {
+SortedArray.prototype.sortEntries = function() 
+{
     this.entries.sort(function(a, b) { return a.key - b.key; });
 };
 
-SortedArray.prototype.indexOfKey = function(key) {
+SortedArray.prototype.indexOfKey = function(key) 
+{
     for (var i = 0; i < this.entries.length; ++i) {
         if (this.entries[i].key == key)
             return i;
     }
 
     return -1;
-}
+};
 
-SortedArray.prototype.set = function(key, value) {
+SortedArray.prototype.set = function(key, value) 
+{
     var i = this.indexOfKey(key);
     if (i >= 0) {
         this.entries[i].value = value;
@@ -468,17 +480,19 @@ SortedArray.prototype.set = function(key, value) {
     
     this.entries.push({ key: key, value: value});
     this.sortEntries();
-}
+};
 
-SortedArray.prototype.removeAt = function(index) {
+SortedArray.prototype.removeAt = function(index) 
+{
     this.entries.splice(index, 1);
-}
+};
 
 /*
  * Scan the name from the last component to the first (skipping special name components)
  *   for a recognized file name extension, and return an object with properties contentType and charset.
  */
-function getNameContentTypeAndCharset(name) {
+function getNameContentTypeAndCharset(name) 
+{
     var iFileName = name.indexOfFileName();
     if (iFileName < 0)
         // Get the default mime type.
@@ -491,7 +505,8 @@ function getNameContentTypeAndCharset(name) {
 /*
  * Return true if the last component in the name is a segment number..
  */
-function endsWithSegmentNumber(name) {
+function endsWithSegmentNumber(name) 
+{
     return name.components != null && name.components.length >= 1 &&
         name.components[name.components.length - 1].length >= 1 &&
         name.components[name.components.length - 1][0] == 0;
@@ -502,7 +517,8 @@ function endsWithSegmentNumber(name) {
  * Return the search string including the starting "?" but with the "ndn." keys removed,
  *   or return "" if there are no search terms left.
  */
-function extractNdnSearch(search, template) {
+function extractNdnSearch(search, template) 
+{
     if (!(search.length >= 1 && search[0] == '?'))
         return search;
     
@@ -552,7 +568,8 @@ function extractNdnSearch(search, template) {
 /*
  * Parse the comma-separated list of exclude components and return an Exclude. 
  */
-function parseExclude(value) {
+function parseExclude(value) 
+{
     var excludeValues = [];
     
     var splitValue = value.split(',');
@@ -570,7 +587,8 @@ function parseExclude(value) {
 /*
  * Return the index of the first compoment that starts with %C1.META, or -1 if not found.
  */
-function getIndexOfMetaComponent(name) {
+function getIndexOfMetaComponent(name) 
+{
     for (var i = 0; i < name.components.length; ++i) {
         var component = name.components[i];
         if (component.length >= MetaComponentPrefix.length &&

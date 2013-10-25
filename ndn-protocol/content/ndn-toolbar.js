@@ -8,14 +8,16 @@
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
-function ndnToolbarGetVersion(selector) {
+function ndnToolbarGetVersion(selector) 
+{
   NdnProtocolInfo.getVersion(selector, window, alert);
 }
 
 /*
  * This is called when the connected NDN hub changes.
  */
-function onNdnHubChanged(host, port) {
+function onNdnHubChanged(host, port) 
+{
   document.getElementById("ndnHubLabel").setAttribute("value", "Hub: " + host + ":" + port);
 }
 
@@ -23,7 +25,8 @@ if (window)
   window.addEventListener("load", function() { NdnProtocolInfo.addNdnHubChangedListener(onNdnHubChanged); }, 
                           false);
 
-function ndnToolbarSetHub() {
+function ndnToolbarSetHub() 
+{
   var message = NdnProtocolInfo.setHub(window);
   if (message != null)
     document.getElementById("ndnHubLabel").setAttribute("value", message);
