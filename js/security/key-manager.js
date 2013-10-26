@@ -47,43 +47,5 @@ var KeyManager = function KeyManager()
   "-----END RSA PRIVATE KEY-----";
 };
 
-/*
-KeyManager.prototype.verify = function verify(message,signature) {
-  
-  var input = message;
-
-  var  _PEM_X509CERT_STRING_ = this.certificate;
-  
-  var x509 = new X509();
-  
-  x509.readCertPEM(_PEM_X509CERT_STRING_);
-  
-  var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
-  
-  return result;
-};
-
-KeyManager.prototype.sign= function sign(message) {
-  
-  var input = message;
-    
-  var  _PEM_PRIVATE_KEY_STRING_ = this.privateKey;
-  
-  var rsa = new RSAKey();
-  
-  rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
-  
-  var hSig = rsa.signString(input, "sha256");
-  
-  return hSig;
-
-};
-
-*/
-
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
-
-//var KeyPair = { "public" : "PUBLIC KEY" , "private" : "PRIVATE KEY" };
-
-

@@ -16,7 +16,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
  * @constructor
  */
-var BinaryXmlWireFormat = function BinaryXmlWireFormat() {
+var BinaryXmlWireFormat = function BinaryXmlWireFormat() 
+{
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
@@ -31,7 +32,8 @@ BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
  * @param {Interest} interest
  * @returns {Buffer}
  */
-BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
+BinaryXmlWireFormat.prototype.encodeInterest = function(interest) 
+{
   var encoder = new BinaryXMLEncoder();
   BinaryXmlWireFormat.encodeInterest(interest, encoder);  
   return encoder.getReducedOstream();  
@@ -42,7 +44,8 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest) {
  * @param {Interest} interest
  * @param {Buffer} input
  */
-BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
+BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) 
+{
   var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeInterest(interest, decoder);
 };
@@ -52,7 +55,8 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) {
  * @param {ContentObject} contentObject
  * @returns {Buffer}
  */
-BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
+BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) 
+{
   var encoder = new BinaryXMLEncoder();
   BinaryXmlWireFormat.encodeContentObject(contentObject, encoder);  
   return encoder.getReducedOstream();  
@@ -63,7 +67,8 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) {
  * @param {ContentObject} contentObject
  * @param {Buffer} input
  */
-BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) {
+BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) 
+{
   var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
 };
@@ -73,7 +78,8 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, inpu
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXmlWireFormat.encodeInterest = function(interest, encoder) {
+BinaryXmlWireFormat.encodeInterest = function(interest, encoder) 
+{
   encoder.writeStartElement(NDNProtocolDTags.Interest);
     
   interest.name.to_ndnb(encoder);
@@ -116,7 +122,8 @@ var Exclude = require('../interest.js').Exclude;
  * @param {Interest} interest
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXmlWireFormat.decodeInterest = function(interest, decoder) {
+BinaryXmlWireFormat.decodeInterest = function(interest, decoder) 
+{
   decoder.readStartElement(NDNProtocolDTags.Interest);
 
   interest.name = new Name();
@@ -180,7 +187,8 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder) {
  * @param {ContentObject} contentObject
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  {
+BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  
+{
   //TODO verify name, SignedInfo and Signature is present
   encoder.writeStartElement(contentObject.getElementLabel());
 
@@ -212,11 +220,12 @@ var SignedInfo = require('../content-object.js').SignedInfo;
  * @param {ContentObject} contentObject
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
+BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) 
+{
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
   decoder.readStartElement(contentObject.getElementLabel());
 
-  if( decoder.peekStartElement(NDNProtocolDTags.Signature) ) {
+  if (decoder.peekStartElement(NDNProtocolDTags.Signature)) {
     contentObject.signature = new Signature();
     contentObject.signature.from_ndnb(decoder);
   }
@@ -228,7 +237,7 @@ BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) {
   contentObject.name = new Name();
   contentObject.name.from_ndnb(decoder);
     
-  if( decoder.peekStartElement(NDNProtocolDTags.SignedInfo) ) {
+  if (decoder.peekStartElement(NDNProtocolDTags.SignedInfo)) {
     contentObject.signedInfo = new SignedInfo();
     contentObject.signedInfo.from_ndnb(decoder);
   }

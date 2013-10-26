@@ -12,7 +12,8 @@ var exports = ndn;
 var require = function(ignore) { return ndn; };
 
 // Factory method to create node.js compatible buffer objects
-var Buffer = function Buffer(data, format) {
+var Buffer = function Buffer(data, format) 
+{
   var obj;
 
   if (typeof data == 'number')
@@ -69,7 +70,7 @@ var Buffer = function Buffer(data, format) {
   obj.__proto__.toString = function(encoding) {
     if (encoding == null) {
       var ret = "";
-      for (var i = 0; i < this.length; i++ )
+      for (var i = 0; i < this.length; i++)
         ret += String.fromCharCode(this[i]);
       return ret;
     }
@@ -105,7 +106,8 @@ var Buffer = function Buffer(data, format) {
 
 Buffer.prototype = Uint8Array.prototype;
 
-Buffer.concat = function(arrays) {
+Buffer.concat = function(arrays) 
+{
   var totalLength = 0;
   for (var i = 0; i < arrays.length; ++i)
     totalLength += arrays[i].length;
@@ -125,28 +127,28 @@ Buffer.str2rstr_utf8 = function(input)
   var i = -1;
   var x, y;
 
-  while(++i < input.length)
+  while (++i < input.length)
   {
     /* Decode utf-16 surrogate pairs */
     x = input.charCodeAt(i);
     y = i + 1 < input.length ? input.charCodeAt(i + 1) : 0;
-    if(0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
+    if (0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
     {
       x = 0x10000 + ((x & 0x03FF) << 10) + (y & 0x03FF);
       i++;
     }
 
     /* Encode output as utf-8 */
-    if(x <= 0x7F)
+    if (x <= 0x7F)
       output += String.fromCharCode(x);
-    else if(x <= 0x7FF)
+    else if (x <= 0x7FF)
       output += String.fromCharCode(0xC0 | ((x >>> 6 ) & 0x1F),
                                     0x80 | ( x         & 0x3F));
-    else if(x <= 0xFFFF)
+    else if (x <= 0xFFFF)
       output += String.fromCharCode(0xE0 | ((x >>> 12) & 0x0F),
                                     0x80 | ((x >>> 6 ) & 0x3F),
                                     0x80 | ( x         & 0x3F));
-    else if(x <= 0x1FFFFF)
+    else if (x <= 0x1FFFFF)
       output += String.fromCharCode(0xF0 | ((x >>> 18) & 0x07),
                                     0x80 | ((x >>> 12) & 0x3F),
                                     0x80 | ((x >>> 6 ) & 0x3F),
@@ -156,7 +158,8 @@ Buffer.str2rstr_utf8 = function(input)
 };
 
 // Factory method to create hasher objects
-exports.createHash = function(alg) {
+exports.createHash = function(alg) 
+{
   if (alg != 'sha256')
     throw new Error('createHash: unsupported algorithm.');
 
@@ -176,7 +179,8 @@ exports.createHash = function(alg) {
 };
 
 // Factory method to create RSA signer objects
-exports.createSign = function(alg) {
+exports.createSign = function(alg) 
+{
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
@@ -203,7 +207,8 @@ exports.createSign = function(alg) {
 };
 
 // Factory method to create RSA verifier objects
-exports.createVerify = function(alg) {
+exports.createVerify = function(alg) 
+{
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
