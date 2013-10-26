@@ -8,7 +8,8 @@ var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
 var LOG = require('../log.js').Log.LOG;
 
-var TcpTransport = function TcpTransport() {    
+var TcpTransport = function TcpTransport() 
+{    
   this.socket = null;
   this.sock_ready = false;
   this.elementReader = null;
@@ -24,7 +25,8 @@ var TcpTransport = function TcpTransport() {
 
 exports.TcpTransport = TcpTransport;
 
-TcpTransport.prototype.connect = function(ndn, onopenCallback) {
+TcpTransport.prototype.connect = function(ndn, onopenCallback) 
+{
   if (this.socket != null)
     delete this.socket;
 
@@ -79,7 +81,8 @@ TcpTransport.prototype.connect = function(ndn, onopenCallback) {
 /**
  * Send data.
  */
-TcpTransport.prototype.send = function(/*Buffer*/ data) {
+TcpTransport.prototype.send = function(/*Buffer*/ data) 
+{
   if (this.sock_ready)
     this.socket.write(data);
   else
@@ -89,7 +92,8 @@ TcpTransport.prototype.send = function(/*Buffer*/ data) {
 /**
  * Close transport
  */
-TcpTransport.prototype.close = function () {
+TcpTransport.prototype.close = function() 
+{
   this.socket.end();
   if (LOG > 3) console.log('TCP connection closed.');
 };

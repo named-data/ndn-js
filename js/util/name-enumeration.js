@@ -134,6 +134,6 @@ NameEnumeration.parseComponents = function(content)
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
   return name.components != null && name.getComponentCount() >= 1 &&
-    name.getComponent(name.getComponentCount() - 1).length >= 1 &&
-    name.getComponent(name.getComponentCount() - 1)[0] == 0;
+         name.getComponent(name.getComponentCount() - 1).length >= 1 &&
+         name.getComponent(name.getComponentCount() - 1)[0] == 0;
 }

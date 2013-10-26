@@ -148,7 +148,7 @@ Name.prototype.from_ndnb=function(a){a.readStartElement(this.getElementLabel());
 Name.prototype.getElementLabel=function(){return NDNProtocolDTags.Name};
 Name.prototype.append=function(a){var b;if("string"==typeof a)b=DataUtils.stringToUtf8Array(a);else if("object"==typeof a&&a instanceof Buffer)b=new Buffer(a);else if("object"==typeof a&&"undefined"!=typeof ArrayBuffer&&a instanceof ArrayBuffer)b=new Buffer(new ArrayBuffer(a.byteLength)),b.set(new Buffer(a));else{if("object"==typeof a&&a instanceof Name){a=a==this?this.components.slice(0,this.components.length):a.components;for(b=0;b<a.length;++b)this.components.push(new Buffer(a[b]));return this}if("object"==
 typeof a)b=new Buffer(a);else throw Error("Cannot add Name element at index "+this.components.length+": Invalid type");}this.components.push(b);return this};Name.prototype.add=function(a){return this.append(a)};Name.prototype.toUri=function(){if(0==this.components.length)return"/";for(var a="",b=0;b<this.components.length;++b)a+="/"+Name.toEscapedString(this.components[b]);return a};Name.prototype.to_uri=function(){return this.toUri()};
-Name.prototype.appendSegment=function(a){a=DataUtils.nonNegativeIntToBigEndian(a);var b=new Buffer(a.length+1);b[0]=0;a.copy(b,1);this.components.push(b);return this};Name.prototype.addSegment=function(a){return this.appendSegment(a)};Name.prototype.getPrefix=function(a){return new Name(this.components.slice(0,a))};Name.prototype.cut=function(){return new Name(this.components.slice(0,this.components.length-1))};Name.prototype.getComponentCount=function(){return this.components.length};
+Name.prototype.appendSegment=function(a){a=DataUtils.nonNegativeIntToBigEndian(a);var b=new Buffer(a.length+1);b[0]=0;a.copy(b,1);this.components.push(b);return this};Name.prototype.addSegment=function(a){return this.appendSegment(a)};Name.prototype.getPrefix=function(a){return new Name(this.components.slice(0,a))};Name.prototype.cut=function(a){return new Name(this.components.slice(0,this.components.length-a))};Name.prototype.getComponentCount=function(){return this.components.length};
 Name.prototype.getComponent=function(a){return new Buffer(this.components[a])};Name.prototype.indexOfFileName=function(){for(var a=this.components.length-1;0<=a;--a){var b=this.components[a];if(!(0>=b.length)&&!(0==b[0]||192==b[0]||193==b[0]||245<=b[0]&&255>=b[0]))return a}return-1};Name.prototype.equals=function(a){if(this.components.length!=a.components.length)return!1;for(var b=this.components.length-1;0<=b;--b)if(!DataUtils.arraysEqual(this.components[b],a.components[b]))return!1;return!0};
 Name.prototype.equalsName=function(a){return this.equals(a)};Name.prototype.getContentDigestValue=function(){for(var a=this.components.length-1;0<=a;--a){var b=Name.getComponentContentDigestValue(this.components[a]);if(null!=b)return b}return null};
 Name.getComponentContentDigestValue=function(a){return a.length==Name.ContentDigestPrefix.length+32+Name.ContentDigestSuffix.length&&DataUtils.arraysEqual(a.slice(0,Name.ContentDigestPrefix.length),Name.ContentDigestPrefix)&&DataUtils.arraysEqual(a.slice(a.length-Name.ContentDigestSuffix.length,a.length),Name.ContentDigestSuffix)?a.slice(Name.ContentDigestPrefix.length,Name.ContentDigestPrefix.length+32):null};Name.ContentDigestPrefix=new Buffer([193,46,77,46,71,193,1,170,2,133]);
@@ -394,7 +394,8 @@ BigInteger.prototype.multiply=bnMultiply;BigInteger.prototype.divide=bnDivide;Bi
 /**
  * @constructor
  */
-var XpcomTransport = function XpcomTransport() {
+var XpcomTransport = function XpcomTransport() 
+{
     this.elementListener = null;
     this.socket = null; // nsISocketTransport
     this.outStream = null;
@@ -414,7 +415,8 @@ var XpcomTransport = function XpcomTransport() {
  * Listen on the port to read an entire binary XML encoded element and call
  *    ndn.onReceivedElement(element).
  */
-XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
+XpcomTransport.prototype.connect = function(ndn, onopenCallback) 
+{
     this.elementListener = ndn;
     this.connectHelper(ndn.host, ndn.port, ndn);
     
@@ -427,7 +429,8 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
  * Listen on the port to read an entire binary XML encoded element and call
  *    elementListener.onReceivedElement(element).
  */
-XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
+XpcomTransport.prototype.connectHelper = function(host, port, elementListener) 
+{
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -451,11 +454,11 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
   var dataListener = {
         elementReader: new BinaryXmlElementReader(elementListener),
     
-    onStartRequest: function (request, context) {
+    onStartRequest: function(request, context) {
     },
-    onStopRequest: function (request, context, status) {
+    onStopRequest: function(request, context, status) {
     },
-    onDataAvailable: function (request, context, _inputStream, offset, count) {
+    onDataAvailable: function(request, context, _inputStream, offset, count) {
       try {
         // Use readInputStreamToString to handle binary data.
                 // TODO: Can we go directly from the stream to Buffer?
@@ -474,7 +477,8 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
 /**
  * Send the data over the connection created by connect.
  */
-XpcomTransport.prototype.send = function(/* Buffer */ data) {
+XpcomTransport.prototype.send = function(/* Buffer */ data) 
+{
     if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
         console.log("XpcomTransport connection is not established.");
         return;

@@ -10,7 +10,8 @@ var LOG = require('../log.js').Log.LOG;
 /**
  * @constructor
  */
-var WebSocketTransport = function WebSocketTransport() {    
+var WebSocketTransport = function WebSocketTransport() 
+{    
     if (!WebSocket)
         throw new Error("WebSocket support is not available on this platform.");
     
@@ -32,7 +33,8 @@ exports.WebSocketTransport = WebSocketTransport;
  * Listen on the port to read an entire binary XML encoded element and call
  *    ndn.onReceivedElement(element).
  */
-WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
+WebSocketTransport.prototype.connect = function(ndn, onopenCallback) 
+{
   if (this.ws != null)
     delete this.ws;
   
@@ -49,12 +51,12 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
     var result = ev.data;
     //console.log('RecvHandle called.');
       
-    if(result == null || result == undefined || result == "" ) {
+    if (result == null || result == undefined || result == "") {
       console.log('INVALID ANSWER');
     } else if (result instanceof ArrayBuffer) {
           var bytearray = new Buffer(result);
           
-      if (LOG>3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
+      if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
       
       try {
                 // Find the end of the binary XML element and call ndn.onReceivedElement.
@@ -95,7 +97,8 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback) {
 /**
  * Send the Uint8Array data.
  */
-WebSocketTransport.prototype.send = function(data) {
+WebSocketTransport.prototype.send = function(data) 
+{
   if (this.ws != null) {
         // If we directly use data.buffer to feed ws.send(), 
         // WebSocket may end up sending a packet with 10000 bytes of data.
@@ -111,4 +114,4 @@ WebSocketTransport.prototype.send = function(data) {
   }
   else
     console.log('WebSocket connection is not established.');
-}
+};

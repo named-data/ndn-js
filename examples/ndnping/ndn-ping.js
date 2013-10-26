@@ -48,7 +48,7 @@
 		
 		function ping(name) {
 			pingname = name + "/ping/" + Math.floor(Math.random()*100000);
-			ndn1.expressInterest(new Name(pingname), new AsyncGetClosure( new Date() ));
+			ndn1.expressInterest(new Name(pingname), new AsyncGetClosure(new Date()));
 		};
 	
 	 	function dopings() {

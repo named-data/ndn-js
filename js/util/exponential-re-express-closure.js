@@ -19,13 +19,13 @@ var Closure = require('../closure.js').Closure;
  *   maxInterestLifetime: 16000 // milliseconds
  * }
  */
-var ExponentialReExpressClosure = function ExponentialReExpressClosure
-        (callerClosure, settings) {
-    // Inherit from Closure.
-    Closure.call(this);
+var ExponentialReExpressClosure = function ExponentialReExpressClosure(callerClosure, settings) 
+{
+  // Inherit from Closure.
+  Closure.call(this);
     
-    this.callerClosure = callerClosure;
-    settings = (settings || {});
+  this.callerClosure = callerClosure;
+  settings = (settings || {});
   this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
 };
 
@@ -35,26 +35,27 @@ exports.ExponentialReExpressClosure = ExponentialReExpressClosure;
  * Wrap this.callerClosure to responds to UPCALL_INTEREST_TIMED_OUT
  *   by expressing the interest again as described in the constructor.
  */
-ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) {
-    try {
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-            var interestLifetime = upcallInfo.interest.interestLifetime;
-            if (interestLifetime == null)
-                return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
+ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo) 
+{
+  try {
+    if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+      var interestLifetime = upcallInfo.interest.interestLifetime;
+      if (interestLifetime == null)
+        return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
-            var nextInterestLifetime = interestLifetime * 2;
-            if (nextInterestLifetime > this.maxInterestLifetime)
-                return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
+      var nextInterestLifetime = interestLifetime * 2;
+      if (nextInterestLifetime > this.maxInterestLifetime)
+        return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
-            var nextInterest = upcallInfo.interest.clone();
-            nextInterest.interestLifetime = nextInterestLifetime;
-            upcallInfo.ndn.expressInterest(nextInterest.name, this, nextInterest);
-            return Closure.RESULT_OK;
-        }  
-        else
-            return this.callerClosure.upcall(kind, upcallInfo);
-    } catch (ex) {
-        console.log("ExponentialReExpressClosure.upcall exception: " + ex);
-        return Closure.RESULT_ERR;
-    }
+      var nextInterest = upcallInfo.interest.clone();
+      nextInterest.interestLifetime = nextInterestLifetime;
+      upcallInfo.ndn.expressInterest(nextInterest.name, this, nextInterest);
+      return Closure.RESULT_OK;
+    }  
+    else
+      return this.callerClosure.upcall(kind, upcallInfo);
+  } catch (ex) {
+    console.log("ExponentialReExpressClosure.upcall exception: " + ex);
+    return Closure.RESULT_ERR;
+  }
 };

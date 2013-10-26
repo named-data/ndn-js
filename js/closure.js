@@ -12,15 +12,15 @@
  * You should create a subclass of Closure and pass an object to async calls.
  * @constructor
  */
-var Closure = function Closure() {
+var Closure = function Closure() 
+{
   // I don't think storing NDN's closure is needed
   // and it creates a reference loop, as of now both
   // of those variables are never set -- Derek
   //
   // Use instance variables to return data to callback
   this.ndn_data = null;  // this holds the ndn_closure
-    this.ndn_data_dirty = false;
-    
+  this.ndn_data_dirty = false; 
 };
 
 exports.Closure = Closure;
@@ -48,7 +48,8 @@ Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
  * If you're getting strange errors in upcall()
  * check your code whether you're returning a value.
  */
-Closure.prototype.upcall = function(kind, upcallInfo) {
+Closure.prototype.upcall = function(kind, upcallInfo) 
+{
   //dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
   return Closure.RESULT_OK;
 };
@@ -57,19 +58,21 @@ Closure.prototype.upcall = function(kind, upcallInfo) {
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) {
+var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) 
+{
   this.ndn = ndn;  // NDN object (not used)
   this.interest = interest;  // Interest object
   this.matchedComps = matchedComps;  // int
   this.contentObject = contentObject;  // Content object
 };
 
-UpcallInfo.prototype.toString = function() {
+UpcallInfo.prototype.toString = function() 
+{
   var ret = "ndn = " + this.ndn;
   ret += "\nInterest = " + this.interest;
   ret += "\nmatchedComps = " + this.matchedComps;
   ret += "\nContentObject: " + this.contentObject;
   return ret;
-}
+};
 
 exports.UpcallInfo = UpcallInfo;

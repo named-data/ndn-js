@@ -13,7 +13,8 @@
 /**
  * @constructor
  */
-var XpcomTransport = function XpcomTransport() {
+var XpcomTransport = function XpcomTransport() 
+{
     this.elementListener = null;
     this.socket = null; // nsISocketTransport
     this.outStream = null;
@@ -33,7 +34,8 @@ var XpcomTransport = function XpcomTransport() {
  * Listen on the port to read an entire binary XML encoded element and call
  *    ndn.onReceivedElement(element).
  */
-XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
+XpcomTransport.prototype.connect = function(ndn, onopenCallback) 
+{
     this.elementListener = ndn;
     this.connectHelper(ndn.host, ndn.port, ndn);
     
@@ -46,7 +48,8 @@ XpcomTransport.prototype.connect = function(ndn, onopenCallback) {
  * Listen on the port to read an entire binary XML encoded element and call
  *    elementListener.onReceivedElement(element).
  */
-XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
+XpcomTransport.prototype.connectHelper = function(host, port, elementListener) 
+{
     if (this.socket != null) {
         try {
             this.socket.close(0);
@@ -70,11 +73,11 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
   var dataListener = {
         elementReader: new BinaryXmlElementReader(elementListener),
     
-    onStartRequest: function (request, context) {
+    onStartRequest: function(request, context) {
     },
-    onStopRequest: function (request, context, status) {
+    onStopRequest: function(request, context, status) {
     },
-    onDataAvailable: function (request, context, _inputStream, offset, count) {
+    onDataAvailable: function(request, context, _inputStream, offset, count) {
       try {
         // Use readInputStreamToString to handle binary data.
                 // TODO: Can we go directly from the stream to Buffer?
@@ -93,7 +96,8 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener) {
 /**
  * Send the data over the connection created by connect.
  */
-XpcomTransport.prototype.send = function(/* Buffer */ data) {
+XpcomTransport.prototype.send = function(/* Buffer */ data) 
+{
     if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
         console.log("XpcomTransport connection is not established.");
         return;
