@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
-var Blob = require('./Blob.js').Blob;
+var Blob = require('./blob.js').Blob;
 
 /**
  * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the bytes of Data packet). 
@@ -23,7 +23,7 @@ var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPort
   
   this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
   this.signedPortionEndOffset = signedPortionEndOffset || 0;
-}
+};
 
 SignedBlob.prototype = new Blob();
 SignedBlob.prototype.name = "SignedBlob";
@@ -40,7 +40,7 @@ SignedBlob.prototype.signedSize = function()
     return this.signedPortionEndOffset - this.signedPortionBeginOffset;
   else
     return 0;
-}
+};
 
 /**
  * Return a the signed portion of the immutable byte array.
@@ -52,7 +52,7 @@ SignedBlob.prototype.signedBuf = function()
     return this.buffer.slice(this.signedPortionBeginOffset, this.signedPortionEndOffset);
   else
     return null;
-}
+};
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
@@ -61,7 +61,7 @@ SignedBlob.prototype.signedBuf = function()
 SignedBlob.prototype.getSignedPortionBeginOffset = function()
 {
   return this.signedPortionBeginOffset;
-}
+};
 
 /**
  * Return the offset in the array of the end of the signed portion.
@@ -70,4 +70,4 @@ SignedBlob.prototype.getSignedPortionBeginOffset = function()
 SignedBlob.prototype.getSignedPortionEndOffset = function()
 {
   return this.signedPortionEndOffset;
-}
+};
