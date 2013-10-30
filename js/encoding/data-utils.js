@@ -224,6 +224,12 @@ DataUtils.decodeUtf8 = function(utftext)
  */
 DataUtils.arraysEqual = function(a1, a2) 
 {
+  // A simple sanity check that it is an array.
+  if (!a1.slice)
+    throw new Error("DataUtils.arraysEqual: a1 is not an array");
+  if (!a2.slice)
+    throw new Error("DataUtils.arraysEqual: a2 is not an array");
+    
   if (a1.length != a2.length)
     return false;
   
