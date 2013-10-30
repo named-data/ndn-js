@@ -13,7 +13,8 @@ const Cr = Components.results;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 
-var NdnProtocolInfo = function NdnProtocolInfo(){
+var NdnProtocolInfo = function NdnProtocolInfo()
+{
 };
 
 NdnProtocolInfo.ndn = new NDN({ getTransport: function() { return new XpcomTransport(); },
@@ -28,38 +29,40 @@ NdnProtocolInfo.ndnHubChangedListenerList = [];
  * When the NDN hub host or port is changed, the system calls listener(host, port).
  * If the current host and port are not null, call listener with the values to initialize.
  */
-NdnProtocolInfo.addNdnHubChangedListener = function(listener) {
-    NdnProtocolInfo.ndnHubChangedListenerList.push(listener);
+NdnProtocolInfo.addNdnHubChangedListener = function(listener) 
+{
+  NdnProtocolInfo.ndnHubChangedListenerList.push(listener);
     
-    if (NdnProtocolInfo.connectedNdnHubHost != null && NdnProtocolInfo.connectedNdnHubPort != null) {
-        try {
-            listener(NdnProtocolInfo.connectedNdnHubHost, NdnProtocolInfo.connectedNdnHubPort);
-        }
-        catch (ex) {
-            // Ignore error from the listener.
-        }
+  if (NdnProtocolInfo.connectedNdnHubHost != null && NdnProtocolInfo.connectedNdnHubPort != null) {
+    try {
+      listener(NdnProtocolInfo.connectedNdnHubHost, NdnProtocolInfo.connectedNdnHubPort);
     }
+    catch (ex) {
+      // Ignore error from the listener.
+    }
+  }
 };
 
 /*
  * If host and port are different than ndnHubHost or ndnHubPort, set them and call each
  * listener in ndnHubChangedListenerList.
  */
-NdnProtocolInfo.setConnectedNdnHub = function(host, port) {
-    if (host == NdnProtocolInfo.connectedNdnHubHost && port == NdnProtocolInfo.connectedNdnHubPort)
-        // No change.
-        return;
-    
-    NdnProtocolInfo.connectedNdnHubHost = host;
-    NdnProtocolInfo.connectedNdnHubPort = port;
-    for (var i = 0; i < NdnProtocolInfo.ndnHubChangedListenerList.length; ++i) {
-        try {
-            NdnProtocolInfo.ndnHubChangedListenerList[i](host, port);
-        }
-        catch (ex) {
-            // Ignore error from the listener.
-        }
+NdnProtocolInfo.setConnectedNdnHub = function(host, port) 
+{
+  if (host == NdnProtocolInfo.connectedNdnHubHost && port == NdnProtocolInfo.connectedNdnHubPort)
+    // No change.
+    return;
+  
+  NdnProtocolInfo.connectedNdnHubHost = host;
+  NdnProtocolInfo.connectedNdnHubPort = port;
+  for (var i = 0; i < NdnProtocolInfo.ndnHubChangedListenerList.length; ++i) {
+    try {
+      NdnProtocolInfo.ndnHubChangedListenerList[i](host, port);
     }
+    catch (ex) {
+      // Ignore error from the listener.
+    }
+  }
 };
 
 /*
@@ -68,26 +71,27 @@ NdnProtocolInfo.setConnectedNdnHub = function(host, port) {
  * All result strings are trimmed.  This does not unescape the name.
  * The name may include a host and port.  
  */
-NdnProtocolInfo.splitUri = function(spec) {
-    spec = spec.trim();
-    var result = {};
-    var preHash = spec.split('#', 1)[0];
-    result.hash = spec.substr(preHash.length).trim();
-    var preSearch = preHash.split('?', 1)[0];
-    result.search = preHash.substr(preSearch.length).trim();
+NdnProtocolInfo.splitUri = function(spec) 
+{
+  spec = spec.trim();
+  var result = {};
+  var preHash = spec.split('#', 1)[0];
+  result.hash = spec.substr(preHash.length).trim();
+  var preSearch = preHash.split('?', 1)[0];
+  result.search = preHash.substr(preSearch.length).trim();
     
-    preSearch = preSearch.trim();
-    var colonIndex = preSearch.indexOf(':');
-    if (colonIndex >= 0) {
-        result.protocol = preSearch.substr(0, colonIndex + 1).trim();
-        result.name = preSearch.substr(colonIndex + 1).trim();    
-    }
-    else {
-        result.protocol = "";
-        result.name = preSearch;
-    }
+  preSearch = preSearch.trim();
+  var colonIndex = preSearch.indexOf(':');
+  if (colonIndex >= 0) {
+    result.protocol = preSearch.substr(0, colonIndex + 1).trim();
+    result.name = preSearch.substr(colonIndex + 1).trim();    
+  }
+  else {
+    result.protocol = "";
+    result.name = preSearch;
+  }
     
-    return result;
+  return result;
 };
 
 /*
@@ -96,51 +100,54 @@ NdnProtocolInfo.splitUri = function(spec) {
  * currentWindow is the window with the address.
  * alertFunction(message) shows an alert.
  */
-NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction) {
- try {
-  if (currentWindow._content.document.location.protocol != "ndn:") {
-    alertFunction("The address must start with ndn:");
-    return;
-  }
+NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction) 
+{
+  try {
+    if (currentWindow._content.document.location.protocol != "ndn:") {
+      alertFunction("The address must start with ndn:");
+      return;
+    }
 
-  // Parse the same as in ndnProtocolService newChannel.
-  var uriParts = NdnProtocolInfo.splitUri(currentWindow._content.document.location.href);
-  var name = new Name(uriParts.name);
-  var indexOfVersion = getIndexOfVersion(name);
-  if (indexOfVersion < 0) {
-    alertFunction("The ndn address does not have a version");
-    return;
-  }
+    // Parse the same as in ndnProtocolService newChannel.
+    var uriParts = NdnProtocolInfo.splitUri(currentWindow._content.document.location.href);
+    var name = new Name(uriParts.name);
+    var indexOfVersion = getIndexOfVersion(name);
+    if (indexOfVersion < 0) {
+      alertFunction("The ndn address does not have a version");
+      return;
+    }
   
-  var escapedVersion = Name.toEscapedString(name.components[indexOfVersion]);
+    var escapedVersion = Name.toEscapedString(name.components[indexOfVersion]);
 
-  var childSelector;
-  if (selector == "earliest")
+    var childSelector;
+    if (selector == "earliest")
       childSelector = "ndn.ChildSelector=0";
-  else if (selector == "latest")
+    else if (selector == "latest")
       childSelector = "ndn.ChildSelector=1";
-  else if (selector == "previous")
+    else if (selector == "previous")
       childSelector = "ndn.ChildSelector=1&ndn.Exclude=" + escapedVersion + ",*";
-  else if (selector == "next")
+    else if (selector == "next")
       childSelector = "ndn.ChildSelector=0&ndn.Exclude=*," + escapedVersion;
-  else
+    else
       // Don't expect this to happen.
       return;
 
-  var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
-  var searchWithChildSelector = (uriParts.search == "" ? "?" : uriParts.search + "&") + childSelector;
+    var nameWithoutVersion = new Name(name.components.slice(0, indexOfVersion));
+    var searchWithChildSelector = (uriParts.search == "" ? "?" : uriParts.search + "&") + childSelector;
     
-  var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + uriParts.hash;
-  currentWindow._content.document.location = uri;
- } catch (ex) {
-       dump("ndnToolbarGetVersion exception: " + ex + "\n" + ex.stack);
- }
+    var uri = "ndn:" + nameWithoutVersion.to_uri() + searchWithChildSelector + uriParts.hash;
+    currentWindow._content.document.location = uri;
+  } 
+  catch (ex) {
+    dump("ndnToolbarGetVersion exception: " + ex + "\n" + ex.stack);
+  }
 };
 
 /*
  * Return the index of the last component that starts with 0xfd, or -1 if not found.
  */
-function getIndexOfVersion(name) {
+function getIndexOfVersion(name) 
+{
   for (var i = name.size() - 1; i >= 0; --i) {
     if (name.get(i).getValue().length >= 1 && name.get(i).getValue()[0] == 0xfd)
       return i;
@@ -155,32 +162,34 @@ function getIndexOfVersion(name) {
  *   otherwise null for no message.
  * currentWindow is the window with the address.
  */
-NdnProtocolInfo.setHub = function(currentWindow) {
-    var host = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
-    if (!host)
-        return null;
+NdnProtocolInfo.setHub = function(currentWindow)  
+{
+  var host = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
+  if (!host)
+    return null;
     
-    host = host.trim();
-    if (host == "")
-        return null;
-    if (host == NdnProtocolInfo.ndn.host)
-        // No change.
-        return null;
+  host = host.trim();
+  if (host == "")
+    return null;
+  if (host == NdnProtocolInfo.ndn.host)
+    // No change.
+    return null;
     
-    var port = 9695;
-    NdnProtocolInfo.ndn.createRoute(host, port);    
-    if (currentWindow._content.document.location.protocol == "ndn:")
-        // Reload with the new hub.
-        currentWindow._content.document.location = currentWindow._content.document.location.href;
+  var port = 9695;
+  NdnProtocolInfo.ndn.createRoute(host, port);    
+  if (currentWindow._content.document.location.protocol == "ndn:")
+    // Reload with the new hub.
+    currentWindow._content.document.location = currentWindow._content.document.location.href;
     
-    return "Hub: trying " + host + ":" + port;
-}
+  return "Hub: trying " + host + ":" + port;
+};
 
 /// The following is only used by Firefox for Android to set up the menus.
 /// It really doesn't belong in this file, but it needs to be in a module that we know is
 ///   run on startup. If it can be put somewhere else without circular references, then it should be.
 
-function loadIntoWindow(window) {
+function loadIntoWindow(window) 
+{
   if (!window)
     return;
 
@@ -193,7 +202,8 @@ function loadIntoWindow(window) {
   });
 }
  
-function ndnGetVersionClick(window) {
+function ndnGetVersionClick(window) 
+{
   var alertFunction = function(message) { window.NativeWindow.toast.show(message, "short"); };
   
   var buttons = [
@@ -227,7 +237,8 @@ function ndnGetVersionClick(window) {
      window.BrowserApp.selectedTab.id, { persistence: 1 });
 }
  
-function ndnHubClick(window) {
+function ndnHubClick(window) 
+{
   var alertFunction = function(message) { window.NativeWindow.toast.show(message, "short"); };
   
   var buttons = [
@@ -259,7 +270,8 @@ var windowListener = {
   onWindowTitleChange: function(aWindow, aTitle) {}
 };
  
-function androidStartup(aData, aReason) {
+function androidStartup(aData, aReason) 
+{
   let wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
  
   // Load into any existing windows
@@ -275,7 +287,8 @@ function androidStartup(aData, aReason) {
 
 var androidHubMessage = "Hub: not connected";
 
-function androidOnNdnHubChanged(host, port) {
+function androidOnNdnHubChanged(host, port) 
+{
   androidHubMessage = "Hub: " + host + ":" + port;
 }
 
