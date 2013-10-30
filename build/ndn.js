@@ -283,134 +283,6 @@ exports.Log = Log;
 Log.LOG = 0;
 /**
  * Copyright (C) 2013 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * See COPYING for copyright and distribution information.
- */
-
-/**
- * A Blob holds an immutable byte array implemented as a Buffer.  This should be treated like a string which is a pointer to an immutable string.  
- * (It is OK to pass a pointer to the string because the new owner can’t change the bytes of the string.)  Blob does not inherit from Buffer.
- * Instead you must call buf() to get the byte array which reminds you that you should not change the contents.  Also remember that buf() can return null.
- * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take another pointer to the Buffer without copying.
- * If value is a Buffer or byte array, copy to create a new Buffer.  If omitted, buf() will return a null pointer.
- */
-var Blob = function Blob(value) 
-{
-  if (value) {
-    if (typeof value == 'object' && value instanceof Blob)
-      // Just take another pointer.
-      this.buffer = value.buffer;
-    else if (typeof value == 'object' && value instanceof Buffer)
-      // Copy.
-      this.buffer = new Buffer(value);
-    else if (typeof value == 'object')
-      // Assume component is a byte array.  We can't check instanceof Array because
-      //   this doesn't work in JavaScript if the array comes from a different module.
-      this.buffer = new Buffer(value);
-    else
-      throw new Error('Blob constructor: unknown value type.');
-  }
-  else
-    this.buffer = null;
-};
-
-exports.Blob = Blob;
-
-/**
- * Return the length of the immutable byte array.
- * @returns {number} The length of the array.  If the pointer to the array is null, return 0.
- */
-Blob.prototype.size = function()
-{
-  if (this.buffer)
-    return this.buffer.length;
-  else
-    return 0;
-};
-
-/**
- * Return the immutable byte array.  DO NOT change the contents of the Buffer.  If you need to change it, make a copy.
- * @returns {Buffer} The Buffer holding the immutable byte array, or null.
- */
-Blob.prototype.buf = function()
-{
-  return this.buffer;
-};
-/**
- * Copyright (C) 2013 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * See COPYING for copyright and distribution information.
- */
-
-var Blob = require('./Blob.js').Blob;
-
-/**
- * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the bytes of Data packet). 
- * This inherits from Blob, including Blob.size and Blob.buf.
- * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take another pointer to the Buffer without copying.
- * If value is a Buffer or byte array, copy to create a new Buffer.  If omitted, buf() will return a null pointer.
- * @param {number} signedPortionBeginOffset (optional) The offset in the encoding of the beginning of the signed portion.
- * If omitted, set to 0.
- * @param {number} signedPortionEndOffset (optional) The offset in the encoding of the end of the signed portion.
- * If omitted, set to 0.
- */
-var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset) 
-{
-  // Call the base constructor.
-  Blob.call(this, value);
-  
-  this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
-  this.signedPortionEndOffset = signedPortionEndOffset || 0;
-}
-
-SignedBlob.prototype = new Blob();
-SignedBlob.prototype.name = "SignedBlob";
-
-exports.SignedBlob = SignedBlob;
-
-/**
- * Return the length of the signed portion of the immutable byte array.
- * @returns {number} The length of the signed portion.  If the pointer to the array is null, return 0.
- */
-SignedBlob.prototype.signedSize = function()
-{
-  if (this.buffer)
-    return this.signedPortionEndOffset - this.signedPortionBeginOffset;
-  else
-    return 0;
-}
-
-/**
- * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.  If the pointer to the array is null, return null.
- */
-SignedBlob.prototype.signedBuf = function()
-{
-  if (this.buffer)
-    return this.buffer.slice(this.signedPortionBeginOffset, this.signedPortionEndOffset);
-  else
-    return null;
-}
-
-/**
- * Return the offset in the array of the beginning of the signed portion.
- * @returns {number} The offset in the array.
- */
-SignedBlob.prototype.getSignedPortionBeginOffset = function()
-{
-  return this.signedPortionBeginOffset;
-}
-
-/**
- * Return the offset in the array of the end of the signed portion.
- * @returns {number} The offset in the array.
- */
-SignedBlob.prototype.getSignedPortionEndOffset = function()
-{
-  return this.signedPortionEndOffset;
-}
-/**
- * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class contains all NDNx tags
@@ -950,6 +822,12 @@ DataUtils.decodeUtf8 = function(utftext)
  */
 DataUtils.arraysEqual = function(a1, a2) 
 {
+  // A simple sanity check that it is an array.
+  if (!a1.slice)
+    throw new Error("DataUtils.arraysEqual: a1 is not an array");
+  if (!a2.slice)
+    throw new Error("DataUtils.arraysEqual: a2 is not an array");
+    
   if (a1.length != a2.length)
     return false;
   
@@ -2457,14 +2335,14 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         this.onComponents(null);
       else {
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.getComponent(data.name.getComponentCount() - 1));
+            (data.name.get(data.name.size() - 1).getValue());
         
         // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber), this);
+            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
           // Save the content and check if we are finished.
           this.contentParts.push(data.content);
@@ -2480,7 +2358,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           
           // Fetch the next segment.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber + 1), this);
+            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
       }
     }
@@ -2527,9 +2405,9 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.getComponentCount() >= 1 &&
-         name.getComponent(name.getComponentCount() - 1).length >= 1 &&
-         name.getComponent(name.getComponentCount() - 1)[0] == 0;
+  return name.components != null && name.size() >= 1 &&
+         name.get(name.size() - 1).getValue().length >= 1 &&
+         name.get(name.size() - 1).getValue()[0] == 0;
 }
 /** 
  * Copyright (C) 2013 Regents of the University of California.
@@ -2908,14 +2786,14 @@ var LOG = require('./log.js').Log.LOG;
  * Create a new Name from components.
  * 
  * @constructor
- * @param {String|Name|Array<String|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
- * Otherwise it is an array of components where each is a string, byte array, ArrayBuffer, Buffer or Name.
- * Convert each and store as an array of Buffer.  If a component is a string, encode as utf8.
+ * @param {string|Name|Array<string|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
+ * Otherwise it is an array of components which are appended according to Name.append, so
+ * convert each and store it as an array of Buffer.  If a component is a string, encode as utf8.
  */
 var Name = function Name(components) 
 {
   if (typeof components == 'string') {    
-    if (LOG > 3) console.log('Content Name String '+components);
+    if (LOG > 3) console.log('Content Name String ' + components);
     this.components = Name.createNameArray(components);
   }
   else if (typeof components === 'object') {    
@@ -2934,6 +2812,52 @@ var Name = function Name(components)
 };
 
 exports.Name = Name;
+
+/**
+ * 
+ * @constructor
+ * Create a new Name.Component with a copy of the given value.
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
+ */
+Name.Component = function NameComponent(value) 
+{
+  if (typeof value == 'string')
+    this.value = DataUtils.stringToUtf8Array(value);
+  else if (typeof value == 'object' && value instanceof Name.Component)
+    this.value = new Buffer(value.value);
+  else if (typeof value == 'object' && value instanceof Buffer)
+    this.value = new Buffer(value);
+  else if (typeof value == 'object' && typeof ArrayBuffer != 'undefined' &&  value instanceof ArrayBuffer) {
+    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
+    this.value = new Buffer(new ArrayBuffer(value.byteLength));
+    this.value.set(new Buffer(value));
+  }
+  else if (typeof value == 'object')
+    // Assume value is a byte array.  We can't check instanceof Array because
+    //   this doesn't work in JavaScript if the array comes from a different module.
+    this.value = new Buffer(value);
+  else 
+    throw new Error("Name.Component constructor: Invalid type");
+}
+
+/**
+ * Get the component value.
+ * @returns {Buffer} The component value.
+ */
+Name.Component.prototype.getValue = function() 
+{
+  return this.value;
+}
+
+/**
+ * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
+ * This also adds "..." to a value with zero or more ".".
+ * @returns {string} The escaped string.
+ */
+Name.Component.prototype.toEscapedString = function() 
+{
+  return Name.toEscapedString(this.value);
+}
 
 /**
  * @deprecated Use toUri.
@@ -2978,16 +2902,16 @@ Name.createNameArray = function(uri)
     
   // Unescape the components.
   for (var i = 0; i < array.length; ++i) {
-    var component = Name.fromEscapedString(array[i]);
+    var value = Name.fromEscapedString(array[i]);
         
-    if (component == null) {
+    if (value == null) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;  
       continue;
     }
     else
-      array[i] = component;
+      array[i] = new Name.Component(value);
   }
 
   return array;
@@ -2997,7 +2921,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readStartElement(this.getElementLabel());
     
-  this.components = new Array(); //new ArrayList<byte []>();
+  this.components = [];
 
   while (decoder.peekStartElement(NDNProtocolDTags.Component))
     this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
@@ -3011,9 +2935,9 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
   encoder.writeStartElement(this.getElementLabel());
-  var count = this.components.length;
+  var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeElement(NDNProtocolDTags.Component, this.components[i]);
+    encoder.writeElement(NDNProtocolDTags.Component, this.components[i].getValue());
   
   encoder.writeEndElement();
 };
@@ -3026,22 +2950,12 @@ Name.prototype.getElementLabel = function()
 /**
  * Convert the component to a Buffer and append to this Name.
  * Return this Name object to allow chaining calls to add.
- * @param {String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8.
+ * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
  * @returns {Name}
  */
 Name.prototype.append = function(component) 
 {
-  var result;
-  if (typeof component == 'string')
-    result = DataUtils.stringToUtf8Array(component);
-  else if (typeof component == 'object' && component instanceof Buffer)
-    result = new Buffer(component);
-  else if (typeof component == 'object' && typeof ArrayBuffer != 'undefined' &&  component instanceof ArrayBuffer) {
-    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
-    result = new Buffer(new ArrayBuffer(component.byteLength));
-    result.set(new Buffer(component));
-  }
-  else if (typeof component == 'object' && component instanceof Name) {
+  if (typeof component == 'object' && component instanceof Name) {
     var components;
     if (component == this)
       // special case, when we need to create a copy
@@ -3050,17 +2964,12 @@ Name.prototype.append = function(component)
       components = component.components;
       
     for (var i = 0; i < components.length; ++i)
-      this.components.push(new Buffer(components[i]));
-    return this;
+      this.components.push(new Name.Component(components[i]));
   }
-  else if (typeof component == 'object')
-    // Assume component is a byte array.  We can't check instanceof Array because
-    //   this doesn't work in JavaScript if the array comes from a different module.
-    result = new Buffer(component);
-  else 
-    throw new Error("Cannot add Name element at index " + this.components.length + ": Invalid type");
-    
-  this.components.push(result);
+  else
+    // Just use the Name.Component constructor.
+    this.components.push(new Name.Component(component));
+
   return this;
 };
 
@@ -3078,13 +2987,13 @@ Name.prototype.add = function(component)
  */
 Name.prototype.toUri = function() 
 {  
-  if (this.components.length == 0)
+  if (this.size() == 0)
     return "/";
     
   var result = "";
   
-  for (var i = 0; i < this.components.length; ++i)
-    result += "/"+ Name.toEscapedString(this.components[i]);
+  for (var i = 0; i < this.size(); ++i)
+    result += "/"+ Name.toEscapedString(this.components[i].getValue());
   
   return result;  
 };
@@ -3115,7 +3024,7 @@ Name.prototype.appendSegment = function(number)
   segmentNumberComponent[0] = 0;
   segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
-  this.components.push(segmentNumberComponent);
+  this.components.push(new Name.Component(segmentNumberComponent));
   return this;
 };
 
@@ -3147,17 +3056,33 @@ Name.prototype.cut = function(minusComponents)
  * Return the number of name components.
  * @returns {number}
  */
+Name.prototype.size = function() 
+{
+  return this.components.length;
+};
+
+/**
+ * Return a new Name.Component of the component at i.  To get just the component value, use get(i).getValue().
+ */
+Name.prototype.get = function(i) 
+{
+  return new Name.Component(this.components[i]);
+};
+
+/**
+ * @deprecated Use size().
+ */
 Name.prototype.getComponentCount = function() 
 {
   return this.components.length;
 };
 
 /**
- * Return a new Buffer of the component at i.
+ * @deprecated To get just the component value, use get(i).getValue().
  */
 Name.prototype.getComponent = function(i) 
 {
-    return new Buffer(this.components[i]);
+  return new Buffer(this.components[i].getValue());
 };
 
 /**
@@ -3167,8 +3092,8 @@ Name.prototype.getComponent = function(i)
  */
 Name.prototype.indexOfFileName = function() 
 {
-  for (var i = this.components.length - 1; i >= 0; --i) {
-    var component = this.components[i];
+  for (var i = this.size() - 1; i >= 0; --i) {
+    var component = this.components[i].getValue();
     if (component.length <= 0)
       continue;
         
@@ -3192,7 +3117,7 @@ Name.prototype.equals = function(name)
     
   // Start from the last component because they are more likely to differ.
   for (var i = this.components.length - 1; i >= 0; --i) {
-    if (!DataUtils.arraysEqual(this.components[i], name.components[i]))
+    if (!DataUtils.arraysEqual(this.components[i].getValue(), name.components[i].getValue()))
       return false;
   }
     
@@ -3213,7 +3138,7 @@ Name.prototype.equalsName = function(name)
  */
 Name.prototype.getContentDigestValue = function() 
 {
-  for (var i = this.components.length - 1; i >= 0; --i) {
+  for (var i = this.size() - 1; i >= 0; --i) {
     var digestValue = Name.getComponentContentDigestValue(this.components[i]);
     if (digestValue != null)
       return digestValue;
@@ -3229,6 +3154,9 @@ Name.prototype.getContentDigestValue = function()
  */
 Name.getComponentContentDigestValue = function(component) 
 {
+  if (typeof component == 'object' && component instanceof Name.Component)
+    component = component.getValue();
+
   var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
   // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
   if (component.length == digestComponentLength &&
@@ -3246,16 +3174,22 @@ Name.getComponentContentDigestValue = function(component)
 Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
 Name.ContentDigestSuffix = new Buffer([0x00]);
 
+
 /**
- * Return component as an escaped string according to "NDNx URI Scheme".
+ * Return value as an escaped string according to "NDNx URI Scheme".
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ * @param {Buffer|Name.Component} component The value or Name.Component to escape.
+ * @returns {string} The escaped string.
  */
-Name.toEscapedString = function(component) 
+Name.toEscapedString = function(value) 
 {
+  if (typeof value == 'object' && value instanceof Name.Component)
+    value = value.getValue();
+  
   var result = "";
   var gotNonDot = false;
-  for (var i = 0; i < component.length; ++i) {
-    if (component[i] != 0x2e) {
+  for (var i = 0; i < value.length; ++i) {
+    if (value[i] != 0x2e) {
       gotNonDot = true;
       break;
     }
@@ -3263,12 +3197,12 @@ Name.toEscapedString = function(component)
   if (!gotNonDot) {
     // Special case for component of zero or more periods.  Add 3 periods.
     result = "...";
-    for (var i = 0; i < component.length; ++i)
+    for (var i = 0; i < value.length; ++i)
       result += ".";
   }
   else {
-    for (var i = 0; i < component.length; ++i) {
-      var x = component[i];
+    for (var i = 0; i < value.length; ++i) {
+      var x = value[i];
       // Check for 0-9, A-Z, a-z, (+), (-), (.), (_)
       if (x >= 0x30 && x <= 0x39 || x >= 0x41 && x <= 0x5a ||
           x >= 0x61 && x <= 0x7a || x == 0x2b || x == 0x2d || 
@@ -3282,25 +3216,27 @@ Name.toEscapedString = function(component)
 };
 
 /**
- * Return component as a Buffer by decoding the escapedString according to "NDNx URI Scheme".
+ * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * @param {string} escapedString The escaped string to decode.
+ * @returns {Buffer} The byte array, or null which means to skip the component in the name.
  */
 Name.fromEscapedString = function(escapedString) 
 {
-  var component = unescape(escapedString.trim());
+  var value = unescape(escapedString.trim());
         
-  if (component.match(/[^.]/) == null) {
-    // Special case for component of only periods.  
-    if (component.length <= 2)
+  if (value.match(/[^.]/) == null) {
+    // Special case for value of only periods.  
+    if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
       return null;
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(component.substr(3, component.length - 3));
+      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
   }
   else
-    return DataUtils.toNumbersFromString(component);
+    return DataUtils.toNumbersFromString(value);
 };
 
 /**
@@ -3319,7 +3255,7 @@ Name.prototype.match = function(name)
 
   // Check if at least one of given components doesn't match.
   for (var i = 0; i < i_name.length; ++i) {
-    if (!DataUtils.arraysEqual(i_name[i], o_name[i]))
+    if (!DataUtils.arraysEqual(i_name[i].getValue(), o_name[i].getValue()))
       return false;
   }
 
@@ -3807,14 +3743,14 @@ Interest.prototype.matchesName = function(/*Name*/ name)
     
   if (this.minSuffixComponents != null &&
       // Add 1 for the implicit digest.
-      !(name.components.length + 1 - this.name.components.length >= this.minSuffixComponents))
+      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
     return false;
   if (this.maxSuffixComponents != null &&
       // Add 1 for the implicit digest.
-      !(name.components.length + 1 - this.name.components.length <= this.maxSuffixComponents))
+      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
     return false;
-  if (this.exclude != null && name.components.length > this.name.components.length &&
-      this.exclude.matches(name.components[this.name.components.length]))
+  if (this.exclude != null && name.size() > this.name.size() &&
+      this.exclude.matches(name.components[this.name.size()]))
     return false;
     
   return true;
@@ -3923,6 +3859,9 @@ Exclude.prototype.toUri = function()
  */
 Exclude.prototype.matches = function(/*Buffer*/ component) 
 {
+  if (typeof component == 'object' && component instanceof Name.Component)
+    component = component.getValue();
+
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
       var lowerBound = null;
