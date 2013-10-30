@@ -161,21 +161,32 @@ function getIndexOfVersion(name)
  * If changing the hub, then return a message to display such as "Hub: trying host:port", 
  *   otherwise null for no message.
  * currentWindow is the window with the address.
+ * alertFunction(message) shows an alert.
  */
-NdnProtocolInfo.setHub = function(currentWindow)  
+NdnProtocolInfo.setHub = function(currentWindow, alertFunction)  
 {
-  var host = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
-  if (!host)
+  var hostAndPort = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.ndn.host);
+  if (!hostAndPort)
     return null;
     
-  host = host.trim();
+  var splitHostAndPort = hostAndPort.split(':', 2);
+  host = splitHostAndPort[0].trim();
   if (host == "")
     return null;
-  if (host == NdnProtocolInfo.ndn.host)
+
+  var port = 9695;
+  if (splitHostAndPort.length >= 2) {
+    port = parseInt(splitHostAndPort[1].trim());
+    if (isNaN(port)) {
+      alertFunction("Port must be a number: " + splitHostAndPort[1].trim());
+      return null;
+    }
+  }
+
+  if (host == NdnProtocolInfo.ndn.host && port == NdnProtocolInfo.ndn.port)
     // No change.
     return null;
     
-  var port = 9695;
   NdnProtocolInfo.ndn.createRoute(host, port);    
   if (currentWindow._content.document.location.protocol == "ndn:")
     // Reload with the new hub.

@@ -27,7 +27,7 @@ if (window)
 
 function ndnToolbarSetHub() 
 {
-  var message = NdnProtocolInfo.setHub(window);
+  var message = NdnProtocolInfo.setHub(window, alert);
   if (message != null)
     document.getElementById("ndnHubLabel").setAttribute("value", message);
 }
