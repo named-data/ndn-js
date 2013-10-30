@@ -57,10 +57,8 @@
 		    }
 		
 		    // Use the segmentNumber to load multiple segments.
-		    //var segmentNumber = ArrayToNum(contentObject.name.components[contentObject.name.components.length - 1]);
 		    var segmentNumber = DataUtils.bigEndianToUnsignedInt
-		    						(contentObject.name.components[contentObject.name.components.length - 1]);
-		    //console.log(segmentNumber);
+		    						(contentObject.name.get(contentObject.name.size() - 1).getValue());
 		    
 	        if (this.firstReceivedSegmentNumber == null) {
 	            // This is the first call.
@@ -69,7 +67,7 @@
 	                // Special case: Save this content object for later and request segment zero.
 	                this.firstReceivedContentObject = contentObject;
 	                var componentsForZero = contentObject.name.components.slice
-	                    (0, contentObject.name.components.length - 1);
+	                    (0, contentObject.name.size() - 1);
 	                componentsForZero.push([0]);
 	                this.ndn.expressInterest(new Name(componentsForZero), this);
 	                return Closure.RESULT_OK;
@@ -115,7 +113,7 @@
 		        nextSegmentNumber.set(segmentNumberPlus1, 1);
         		
 		        var components = contentObject.name.components.slice
-		            (0, contentObject.name.components.length - 1);
+		            (0, contentObject.name.size() - 1);
 		        components.push(nextSegmentNumber);
 		        //components.push(segmentNumberPlus1);
 		        this.ndn.expressInterest(new Name(components), this);

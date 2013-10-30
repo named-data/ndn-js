@@ -104,7 +104,7 @@
 		
 		    // Use the segmentNumber to load multiple segments.
 		    var segmentNumber = DataUtils.bigEndianToUnsignedInt
-		    						(contentObject.name.components[contentObject.name.components.length - 1]);
+		    						(contentObject.name.get(contentObject.name.size() - 1).getValue());
 		    //console.log("Seg # " + segmentNumber + " received");
 		    //console.log("Seg name " + contentObject.name.toUri());
 		    
@@ -118,7 +118,7 @@
 	                //      ndnd should always return the first segment if no seg# is specified
 	                this.firstReceivedContentObject = contentObject;
 	                var componentsForZero = contentObject.name.components.slice
-	                    (0, contentObject.name.components.length - 1);
+	                    (0, contentObject.name.size() - 1);
 	                componentsForZero.push([0]);
 	                this.ndn.expressInterest(new Name(componentsForZero), this);
 	                return Closure.RESULT_OK;
@@ -223,7 +223,7 @@
 			}
 			
 			// Send the next interest if allowed by snd_wnd
-			var nextNameComponents = contentObject.name.components.slice(0, contentObject.name.components.length - 1);
+			var nextNameComponents = contentObject.name.components.slice(0, contentObject.name.size() - 1);
 			//console.log("SND_UNA: " + this.snd_una);
 			//console.log("SND_NXT: " + this.snd_nxt);
 			while (this.snd_nxt - this.snd_una < this.snd_wnd) {

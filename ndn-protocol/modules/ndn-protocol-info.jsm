@@ -141,8 +141,8 @@ NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction) {
  * Return the index of the last component that starts with 0xfd, or -1 if not found.
  */
 function getIndexOfVersion(name) {
-  for (var i = name.components.length - 1; i >= 0; --i) {
-    if (name.components[i].length >= 1 && name.components[i][0] == 0xfd)
+  for (var i = name.size() - 1; i >= 0; --i) {
+    if (name.get(i).getValue().length >= 1 && name.get(i).getValue()[0] == 0xfd)
       return i;
   }
 

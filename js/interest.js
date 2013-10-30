@@ -75,14 +75,14 @@ Interest.prototype.matchesName = function(/*Name*/ name)
     
   if (this.minSuffixComponents != null &&
       // Add 1 for the implicit digest.
-      !(name.components.length + 1 - this.name.components.length >= this.minSuffixComponents))
+      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
     return false;
   if (this.maxSuffixComponents != null &&
       // Add 1 for the implicit digest.
-      !(name.components.length + 1 - this.name.components.length <= this.maxSuffixComponents))
+      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
     return false;
-  if (this.exclude != null && name.components.length > this.name.components.length &&
-      this.exclude.matches(name.components[this.name.components.length]))
+  if (this.exclude != null && name.size() > this.name.size() &&
+      this.exclude.matches(name.components[this.name.size()]))
     return false;
     
   return true;
@@ -191,6 +191,9 @@ Exclude.prototype.toUri = function()
  */
 Exclude.prototype.matches = function(/*Buffer*/ component) 
 {
+  if (typeof component == 'object' && component instanceof Name.Component)
+    component = component.getValue();
+
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
       var lowerBound = null;

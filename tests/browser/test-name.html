@@ -37,13 +37,13 @@ function testName() {
     result.innerHTML += "Compare with same Name from '" + entree + "', '.' and Buffer:<br/>";
     // Equivalent with name1
     var name2 = new Name([entree, ".", comp2]);
-    if (name2.components.length != name1.components.length)
-        result.innerHTML += "ERROR: Got name with " + name2.components.length + 
-            " components, expected " + name1.components.length + ".<br/>";
+    if (name2.size() != name1.size())
+        result.innerHTML += "ERROR: Got name with " + name2.size() + 
+            " components, expected " + name1.size() + ".<br/>";
     else {
         var allEqual = true;
-        for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.getComponent(i), name2.getComponent(i))) {
+        for (var i = 0; i < name1.size(); ++i) {
+            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name2.get(i).getValue())) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Compare with " + name2.toUri() + ": Names differ at component at index " + i + ".<br/>";
             }
@@ -55,13 +55,13 @@ function testName() {
     result.innerHTML += "Compare with same Name from URI:<br/>";
     // Equivalent with name1; when Name constructor is passed a string, it is treated as a URI
     var name3 = new Name("/entr%C3%A9e/..../%00%01%02%03");
-    if (name3.components.length != name1.components.length)
-        result.innerHTML += "ERROR: Got name with " + name3.components.length + 
-            " components, expected " + name1.components.length + ".<br/>";
+    if (name3.size() != name1.size())
+        result.innerHTML += "ERROR: Got name with " + name3.size() + 
+            " components, expected " + name1.size() + ".<br/>";
     else {
         var allEqual = true;
-        for (var i = 0; i < name1.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.getComponent(i), name3.getComponent(i))) {
+        for (var i = 0; i < name1.size(); ++i) {
+            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name3.get(i).getValue())) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -73,13 +73,13 @@ function testName() {
     result.innerHTML += "Compare with Name prefix of first 2 components:<br/>";
     // Returns new Name([entree, "."])
     var name4 = name2.getPrefix(2);
-    if (name4.components.length != 2)
-        result.innerHTML += "ERROR: Got name with " + name4.components.length + 
+    if (name4.size() != 2)
+        result.innerHTML += "ERROR: Got name with " + name4.size() + 
             " components, expected 2.<br/>";
     else {
         var allEqual = true;
-        for (var i = 0; i < name4.components.length; ++i) {
-            if (!DataUtils.arraysEqual(name1.getComponent(i), name4.getComponent(i))) {
+        for (var i = 0; i < name4.size(); ++i) {
+            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name4.get(i).getValue())) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -90,7 +90,7 @@ function testName() {
     
     result.innerHTML += "Check with Name component at index 2:<br/>";
     // Returns ArrayBuffer of "%00%01%02%03"
-    var component2Out = name1.getComponent(2);
+    var component2Out = name1.get(2).getValue();
     if (DataUtils.arraysEqual(component2Out, comp2))
         result.innerHTML += "SUCCESS: Components at index 2 are equal.<br/>";
     else

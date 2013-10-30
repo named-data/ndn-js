@@ -63,14 +63,14 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         this.onComponents(null);
       else {
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.getComponent(data.name.getComponentCount() - 1));
+            (data.name.get(data.name.size() - 1).getValue());
         
         // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber), this);
+            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
           // Save the content and check if we are finished.
           this.contentParts.push(data.content);
@@ -86,7 +86,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           
           // Fetch the next segment.
           this.ndn.expressInterest
-            (data.name.getPrefix(data.name.getComponentCount() - 1).addSegment(expectedSegmentNumber + 1), this);
+            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
       }
     }
@@ -133,7 +133,7 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.getComponentCount() >= 1 &&
-         name.getComponent(name.getComponentCount() - 1).length >= 1 &&
-         name.getComponent(name.getComponentCount() - 1)[0] == 0;
+  return name.components != null && name.size() >= 1 &&
+         name.get(name.size() - 1).getValue().length >= 1 &&
+         name.get(name.size() - 1).getValue()[0] == 0;
 }

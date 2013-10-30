@@ -190,7 +190,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (contentObject.name.components[contentObject.name.components.length - 1]);
+            (contentObject.name.get(contentObject.name.size() - 1).getValue());
     
     if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
         // This is the first or only segment.
@@ -204,7 +204,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
                 // We are excluding META components at a new position in the name, so start over.
                 this.excludedMetaComponents = [];
             this.iMetaComponent = iMetaComponent;
-            this.excludedMetaComponents.push(contentObject.name.components[iMetaComponent]);
+            this.excludedMetaComponents.push(contentObject.name.getComponent(iMetaComponent));
             // Exclude components are required to be sorted.
             this.excludedMetaComponents.sort(Exclude.compareComponents);
             
@@ -221,7 +221,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         var contentUriSpec;
         if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
             var nameWithoutSegmentNumber = new Name
-                (contentObject.name.components.slice(0, contentObject.name.components.length - 1));
+                (contentObject.name.components.slice(0, contentObject.name.size() - 1));
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
         else
@@ -255,14 +255,14 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         else
             // We are doing segments.  Make sure we always request the same base name.
             this.nameWithoutSegment = new Name(contentObject.name.components.slice
-                (0, contentObject.name.components.length - 1));
+                (0, contentObject.name.size() - 1));
     }
     
     if (segmentNumber == null)
         // We should be doing segments at this point.
         return Closure.RESULT_ERR;
     
-    if (!(contentObject.name.components.length == this.nameWithoutSegment.components.length + 1 &&
+    if (!(contentObject.name.size() == this.nameWithoutSegment.size() + 1 &&
           this.nameWithoutSegment.match(contentObject.name)))
         // The content object name is not part of our sequence of segments.
         return Closure.RESULT_ERR;
@@ -499,7 +499,7 @@ function getNameContentTypeAndCharset(name)
         return MimeTypes.getContentTypeAndCharset("");
     
     return MimeTypes.getContentTypeAndCharset
-        (DataUtils.toString(name.components[iFileName]).toLowerCase());
+        (DataUtils.toString(name.get(iFileName).getValue()).toLowerCase());
 }
 
 /*
@@ -507,9 +507,9 @@ function getNameContentTypeAndCharset(name)
  */
 function endsWithSegmentNumber(name) 
 {
-    return name.components != null && name.components.length >= 1 &&
-        name.components[name.components.length - 1].length >= 1 &&
-        name.components[name.components.length - 1][0] == 0;
+    return name.components != null && name.size() >= 1 &&
+        name.get(name.size() - 1).getValue().length >= 1 &&
+        name.get(name.size() - 1).getValue()[0] == 0;
 }
 
 /*
@@ -589,8 +589,8 @@ function parseExclude(value)
  */
 function getIndexOfMetaComponent(name) 
 {
-    for (var i = 0; i < name.components.length; ++i) {
-        var component = name.components[i];
+    for (var i = 0; i < name.size(); ++i) {
+        var component = name.get(i).getValue();
         if (component.length >= MetaComponentPrefix.length &&
             DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), 
                                   MetaComponentPrefix))

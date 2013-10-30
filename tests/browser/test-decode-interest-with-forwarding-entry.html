@@ -33,9 +33,9 @@
 			if(interest.name!=null && interest.name.components!=null){
 				output+= "NAME: ";
 				
-				for(var i=0;i<interest.name.components.length;i++){
-					output+= "/"+ DataUtils.toString(interest.name.components[i]);
-				}
+				for(var i=0;i<interest.name.size();i++)
+					output+= "/"+ DataUtils.toString(interest.name.get(i).getValue());
+				
 				output+= "<br />";
 				output+= "<br />";
 			}
@@ -131,10 +131,10 @@
 				output+= "<br />";
 			}
 			
-			if(interest.name.components[3] !=null){
+			if(interest.name.get(3) !=null){
 				
 				
-				var input = DataUtils.toHex(interest.name.components[3]) ;
+				var input = DataUtils.toHex(interest.name.get(3).getValue()) ;
 
 				var contentObject = EncodingUtils.decodeHexContentObject(input);
 				
@@ -159,9 +159,9 @@
 				if(co.name!=null && co.name.components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.name.components.length;i++){
-						output+= "/"+ DataUtils.toString(co.name.components[i]);
-					}
+					for(var i=0;i<co.name.size();i++)
+						output+= "/"+ DataUtils.toString(co.name.get(i).getValue());
+					
 					output+= "<br />";
 					output+= "<br />";
 				}
