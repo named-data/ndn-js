@@ -23,6 +23,7 @@ Changes
 * Added Name.Component class and changed Name to use it. Name.getComponent still returns the component value but is deprecated.
 * Added Name.get which returns a Name.Component (not the component byte array).
 * Added Name.size. Deprecated Name.getComponentCount.
+* Change Exclude to hold Name.Component instead of Buffer. The Exclude constructor accepts an array of Name.Component or Buffer.
 
 Deprecated
 * build/ndn-js.js and build/ndn-js.min.js.  You should use build/ndn.js and build/ndn.min.js.

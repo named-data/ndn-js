@@ -3778,16 +3778,46 @@ Interest.prototype.clone = function()
 
 /**
  * @constructor
- * @param {Array<Buffer|Exclude.ANY>} values an array where each element is either Buffer component or Exclude.ANY.
+ * @param {Array<Name.Component|Buffer|Exclude.ANY>} values an array where each element is either a Name.Component, Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) 
 { 
-  this.values = (values || []);
+  this.values = [];
+  
+  if (values) {
+    for (var i = 0; i < values.length; ++i) {
+      if (values[i] == Exclude.ANY)
+        this.appendAny();
+      else
+        this.appendComponent(values[i]);
+    }
+  }
 };
 
 exports.Exclude = Exclude;
 
 Exclude.ANY = "*";
+
+/**
+ * 
+ * @returns {Exclude.prototype}
+ */
+Exclude.prototype.appendAny = function() 
+{
+  this.values.push(Exclude.ANY);
+  return this;
+}
+
+/**
+ * Append a component entry, copying from component.
+ * @param {Name.Component|Buffer} component
+ * @returns This Exclude so that you can chain calls to append.
+ */
+Exclude.prototype.appendComponent = function(component) 
+{
+  this.values.push(new Name.Component(component));
+  return this;
+}
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
@@ -3795,16 +3825,16 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 
   while (true) {
     if (decoder.peekStartElement(NDNProtocolDTags.Component))
-      this.values.push(decoder.readBinaryElement(NDNProtocolDTags.Component));
+      this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
     else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
       decoder.readStartElement(NDNProtocolDTags.Any);
       decoder.readEndElement();
-      this.values.push(Exclude.ANY);
+      this.appendAny();
     }
     else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
       // Skip the Bloom and treat it as Any.
       decoder.readBinaryElement(NDNProtocolDTags.Bloom);
-      this.values.push(Exclude.ANY);
+      this.appendAny();
     }
     else
       break;
@@ -3827,7 +3857,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
       encoder.writeEndElement();
     }
     else
-      encoder.writeElement(NDNProtocolDTags.Component, this.values[i]);
+      encoder.writeElement(NDNProtocolDTags.Component, this.values[i].getValue());
   }
 
   encoder.writeEndElement();
@@ -3849,7 +3879,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i]);
+      result += Name.toEscapedString(this.values[i].getValue());
   }
   return result;
 };
@@ -3905,7 +3935,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i]))
+      if (DataUtils.arraysEqual(component, this.values[i].getValue()))
         return true;
     }
   }
@@ -3917,8 +3947,13 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */
-Exclude.compareComponents = function(/*Buffer*/ component1, /*Buffer*/ component2) 
+Exclude.compareComponents = function(component1, component2) 
 {
+  if (typeof component1 == 'object' && component1 instanceof Name.Component)
+    component1 = component1.getValue();
+  if (typeof component2 == 'object' && component2 instanceof Name.Component)
+    component2 = component2.getValue();
+
   if (component1.length < component2.length)
     return -1;
   if (component1.length > component2.length)
