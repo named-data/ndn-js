@@ -2,7 +2,7 @@
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
- * This class represents ContentObject Objects
+ * This class represents Data Objects
  */
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -19,14 +19,14 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new ContentObject with the optional values.
+ * Create a new Data with the optional values.
  * 
  * @constructor
  * @param {Name} name
  * @param {SignedInfo} signedInfo
  * @param {Buffer} content
  */
-var ContentObject = function ContentObject(name, signedInfo, content) 
+var Data = function Data(name, signedInfo, content) 
 {
   if (typeof name == 'string')
     this.name = new Name(name);
@@ -51,9 +51,9 @@ var ContentObject = function ContentObject(name, signedInfo, content)
   this.rawSignatureData = null;
 };
 
-exports.ContentObject = ContentObject;
+exports.Data = Data;
 
-ContentObject.prototype.sign = function() 
+Data.prototype.sign = function() 
 {
   var n1 = this.encodeObject(this.name);
   var n2 = this.encodeObject(this.signedInfo);
@@ -69,17 +69,17 @@ ContentObject.prototype.sign = function()
   this.signature.signature = sig;
 };
 
-ContentObject.prototype.verify = function(/*Key*/ key) 
+Data.prototype.verify = function(/*Key*/ key) 
 {
   if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify ContentObject without a public key.');
+    throw new Error('Cannot verify Data without a public key.');
 
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.rawSignatureData);
   return verifier.verify(key.publicKeyPem, this.signature.signature);
 };
 
-ContentObject.prototype.encodeObject = function encodeObject(obj) 
+Data.prototype.encodeObject = function encodeObject(obj) 
 {
   var enc = new BinaryXMLEncoder(); 
   obj.to_ndnb(enc);
@@ -88,7 +88,7 @@ ContentObject.prototype.encodeObject = function encodeObject(obj)
   return num;
 };
 
-ContentObject.prototype.encodeContent = function encodeContent() 
+Data.prototype.encodeContent = function encodeContent() 
 {
   var enc = new BinaryXMLEncoder();   
   enc.writeElement(NDNProtocolDTags.Content, this.content);
@@ -97,13 +97,13 @@ ContentObject.prototype.encodeContent = function encodeContent()
   return num;
 };
 
-ContentObject.prototype.saveRawData = function(bytes) 
+Data.prototype.saveRawData = function(bytes) 
 {  
   var sigBits = bytes.slice(this.startSIG, this.endSIG);
   this.rawSignatureData = new Buffer(sigBits);
 };
 
-ContentObject.prototype.getElementLabel = function() { return NDNProtocolDTags.ContentObject; };
+Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Create a new Signature with the optional values.
@@ -210,7 +210,7 @@ SignedInfo.prototype.setFields = function()
   //DATA
   this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
   
-  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
   if (LOG > 4) console.log(publicKeyBytes);
 
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
@@ -316,39 +316,52 @@ SignedInfo.prototype.validate = function()
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.decodeData.
  */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+  BinaryXmlWireFormat.decodeData(this, decoder);
 };
 
 /**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.encodeData.
  */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+  BinaryXmlWireFormat.encodeData(this, encoder);
 };
 
 /**
- * Encode this ContentObject for a particular wire format.
+ * Encode this Data for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  * @returns {Buffer}
  */
-ContentObject.prototype.encode = function(wireFormat) 
+Data.prototype.encode = function(wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
+  return wireFormat.encodeData(this);
 };
 
 /**
- * Decode the input using a particular wire format and update this ContentObject.
+ * Decode the input using a particular wire format and update this Data.
  * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
-ContentObject.prototype.decode = function(input, wireFormat) 
+Data.prototype.decode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
+  wireFormat.decodeData(this, input);
 };
+
+/**
+ * @deprecated Use new Data.
+ */
+var ContentObject = function ContentObject(name, signedInfo, content) 
+{
+  // Call the base constructor.
+  Data.call(this, name, signedInfo, content); 
+}
+
+ContentObject.prototype = new Data();
+
+exports.ContentObject = ContentObject;

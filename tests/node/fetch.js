@@ -4,11 +4,11 @@ var Interest = require('../..').Interest;
 var Closure = require('../..').Closure;
 var EncodingUtils = require('../..').EncodingUtils;
 
-var onData = function (inst, co) {
-    console.log("ContentObject received in callback.");
-    console.log('Name: ' + co.name.toUri());
-    console.log('Content: ' + co.content.toString());
-    console.log(EncodingUtils.contentObjectToHtml(co).replace(/<br \/>/g, "\n"));
+var onData = function (inst, data) {
+    console.log("Data received in callback.");
+    console.log('Name: ' + data.name.toUri());
+    console.log('Content: ' + data.content.toString());
+    console.log(EncodingUtils.dataToHtml(data).replace(/<br \/>/g, "\n"));
     
     console.log('Quit script now.');
     ndn.close();  // This will cause the script to quit
@@ -35,7 +35,7 @@ var WrapperClosure = function WrapperClosure(onData, onTimeout) {
     
 WrapperClosure.prototype.upcall = function(kind, upcallInfo) {
   if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED)
-    this.onData(upcallInfo.interest, upcallInfo.contentObject);
+    this.onData(upcallInfo.interest, upcallInfo.data);
   else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
     this.onTimeout(upcallInfo.interest);
 

@@ -26,7 +26,7 @@
 			this.totalBlocks = 0;
 		    
 		    this.firstReceivedSegmentNumber = null;
-		    this.firstReceivedContentObject = null;
+		    this.firstReceivedData = null;
 		}
 		
 		ContentClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -40,8 +40,8 @@
 		    
 		    if (kind == Closure.UPCALL_CONTENT_BAD) {
 		    	console.log("NdnProtocol.ContentClosure: signature verification failed");
-		    	console.log(upcallInfo.contentObject.name.toUri());
-		    	console.log(DataUtils.toHex(upcallInfo.contentObject.signature.witness).toLowerCase());
+		    	console.log(upcallInfo.data.name.toUri());
+		    	console.log(DataUtils.toHex(upcallInfo.data.signature.witness).toLowerCase());
 		    	return Closure.RESULT_OK;
 		    }
 		    
@@ -50,24 +50,24 @@
 		        // The upcall is not for us.
 		        return Closure.RESULT_ERR;
 		    
-		    var contentObject = upcallInfo.contentObject;
-		    if (contentObject.content == null) {
-		        console.log("NdnProtocol.ContentClosure: contentObject.content is null");
+		    var data = upcallInfo.data;
+		    if (data.content == null) {
+		        console.log("NdnProtocol.ContentClosure: data.content is null");
 		        return Closure.RESULT_ERR;
 		    }
 		
 		    // Use the segmentNumber to load multiple segments.
 		    var segmentNumber = DataUtils.bigEndianToUnsignedInt
-		    						(contentObject.name.get(contentObject.name.size() - 1).getValue());
+		    						(data.name.get(data.name.size() - 1).getValue());
 		    
 	        if (this.firstReceivedSegmentNumber == null) {
 	            // This is the first call.
 	            this.firstReceivedSegmentNumber = segmentNumber;
 	            if (segmentNumber != 0) {
-	                // Special case: Save this content object for later and request segment zero.
-	                this.firstReceivedContentObject = contentObject;
-	                var componentsForZero = contentObject.name.components.slice
-	                    (0, contentObject.name.size() - 1);
+	                // Special case: Save this data packet object for later and request segment zero.
+	                this.firstReceivedData = data;
+	                var componentsForZero = data.name.components.slice
+	                    (0, data.name.size() - 1);
 	                componentsForZero.push([0]);
 	                this.ndn.expressInterest(new Name(componentsForZero), this);
 	                return Closure.RESULT_OK;
@@ -76,32 +76,32 @@
 		    
 		    // Process received data here...
 		    // Count content length
-		    //nameStr = escape(contentObject.name.toUri());
+		    //nameStr = escape(data.name.toUri());
 			//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-			//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
+			//document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
 			this.totalBlocks++;
 		    
 		    // Check for the special case if the saved content is for the next segment that we need.
-		    if (this.firstReceivedContentObject != null && 
+		    if (this.firstReceivedData != null && 
 		        this.firstReceivedSegmentNumber == segmentNumber + 1) {
-		        // Substitute the saved contentObject send its content and keep going.
-		        contentObject = this.firstReceivedContentObject;
+		        // Substitute the saved data send its content and keep going.
+		        data = this.firstReceivedData;
 		        segmentNumber = segmentNumber + 1;
-		        // Clear firstReceivedContentObject to save memory.
-		        this.firstReceivedContentObject = null;
+		        // Clear firstReceivedData to save memory.
+		        this.firstReceivedData = null;
 		        
 		        // Process received data here...
 		    	// Count content length
-		    	//nameStr = escape(contentObject.name.toUri());
+		    	//nameStr = escape(data.name.toUri());
 				//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-				//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
+				//document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
 				this.totalBlocks++;
 		    }
 		
 		    var finalSegmentNumber = null;
-		    if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
-		        //finalSegmentNumber = ArrayToNum(contentObject.signedInfo.finalBlockID);
-		        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
+		    if (data.signedInfo != null && data.signedInfo.finalBlockID != null)
+		        //finalSegmentNumber = ArrayToNum(data.signedInfo.finalBlockID);
+		        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
 		    
 		    if (finalSegmentNumber == null || segmentNumber != finalSegmentNumber) {
 		        // Make a name for the next segment and get it.
@@ -112,8 +112,8 @@
 		        var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
 		        nextSegmentNumber.set(segmentNumberPlus1, 1);
         		
-		        var components = contentObject.name.components.slice
-		            (0, contentObject.name.size() - 1);
+		        var components = data.name.components.slice
+		            (0, data.name.size() - 1);
 		        components.push(nextSegmentNumber);
 		        //components.push(segmentNumberPlus1);
 		        this.ndn.expressInterest(new Name(components), this);
@@ -176,7 +176,7 @@
 			} else if (kind == Closure.UPCALL_CONTENT) {
 				var T1 = new Date();
 				
-				var content = upcallInfo.contentObject;
+				var content = upcallInfo.data;
 				nameStr = escape(content.name.toUri());
 				document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
 				document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
@@ -184,7 +184,7 @@
 				//console.log("In callback, nameStr: " + nameStr);
 				//console.log("In callback, content: ");
 				//console.log(content.content.length);
-				//document.getElementById('content').innerHTML += contentObjectToHtml(content);
+				//document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out.");
 			}

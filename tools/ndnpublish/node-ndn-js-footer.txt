@@ -6,6 +6,6 @@ exports.NDN = NDN;
 exports.Closure = Closure;
 exports.Name = Name;
 exports.Interest = Interest;
-exports.ContentObject = ContentObject;
+exports.Data = Data;
 exports.DataUtils = DataUtils;
 

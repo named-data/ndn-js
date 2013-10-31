@@ -10,7 +10,7 @@ var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var Key = require('../key.js').Key;
 var Interest = require('../interest.js').Interest;
-var ContentObject = require('../content-object.js').ContentObject;
+var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
 var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
 var LOG = require('../log.js').Log.LOG;
@@ -30,15 +30,23 @@ EncodingUtils.encodeToHexInterest = function(interest)
   return DataUtils.toHex(interest.encode());
 };
 
-EncodingUtils.encodeToHexContentObject = function(contentObject) 
+EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(contentObject.encode());
+  return DataUtils.toHex(data.encode());
 };
 
-EncodingUtils.encodeForwardingEntry = function(co) 
+/**
+ * @deprecated Use EncodingUtils.encodeToHexData(data).
+ */
+EncodingUtils.encodeToHexContentObject = function(data) 
+{
+  return EncodingUtils.encodeToHexData(data);
+}
+
+EncodingUtils.encodeForwardingEntry = function(data) 
 {
   var enc = new BinaryXMLEncoder();
-  co.to_ndnb(enc);
+  data.to_ndnb(enc);
   var bytes = enc.getReducedOstream();
 
   return bytes;
@@ -64,12 +72,20 @@ EncodingUtils.decodeHexInterest = function(input)
   return interest;
 };
 
+EncodingUtils.decodeHexData = function(input) 
+{
+  var data = new Data();
+  data.decode(DataUtils.toNumbers(input));
+  return data;
+};
+
+/**
+ * @deprecated Use EncodingUtils.decodeHexData(input).
+ */
 EncodingUtils.decodeHexContentObject = function(input) 
 {
-  var contentObject = new ContentObject();
-  contentObject.decode(DataUtils.toNumbers(input));
-  return contentObject;
-};
+  return EncodingUtils.decodeHexData(input);
+}
 
 EncodingUtils.decodeHexForwardingEntry = function(result) 
 {
@@ -96,85 +112,85 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 }
 
 /**
- * Return a user friendly HTML string with the contents of co.
+ * Return a user friendly HTML string with the contents of data.
  * This also outputs to console.log.
  */
-EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) 
+EncodingUtils.dataToHtml = function(/* Data */ data) 
 {
   var output ="";
       
-  if (co == -1)
+  if (data == -1)
     output+= "NO CONTENT FOUND"
-  else if (co == -2)
+  else if (data == -2)
     output+= "CONTENT NAME IS EMPTY"
   else {
-    if (co.name != null && co.name.components != null) {
-      output+= "NAME: " + co.name.toUri();
+    if (data.name != null && data.name.components != null) {
+      output+= "NAME: " + data.name.toUri();
         
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.content != null) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
+    if (data.content != null) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.content != null) {
-      output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
+    if (data.content != null) {
+      output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
+    if (data.signature != null && data.signature.digestAlgorithm != null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.signature.digestAlgorithm);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
+    if (data.signature != null && data.signature.witness != null) {
+      output += "Witness (hex): "+ DataUtils.toHex(data.signature.witness);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.signature != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
+    if (data.signature != null && data.signature.signature != null) {
+      output += "Signature(hex): "+ DataUtils.toHex(data.signature.signature);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.publisher != null && co.signedInfo.publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+    if (data.signedInfo != null && data.signedInfo.publisher != null && data.signedInfo.publisher.publisherPublicKeyDigest != null) {
+      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.timestamp != null) {
+    if (data.signedInfo != null && data.signedInfo.timestamp != null) {
       var d = new Date();
-      d.setTime(co.signedInfo.timestamp.msec);
+      d.setTime(data.signedInfo.timestamp.msec);
       
       var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
       
       output += "TimeStamp: "+d;
       output+= "<br />";
-      output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
+      output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
       
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.finalBlockID != null) {
-      output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
+    if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
+      output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
       output+= "<br />";
     }
-    if (co.signedInfo!= null && co.signedInfo.locator!= null && co.signedInfo.locator.publicKey!= null) {
-      var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-      var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
-      var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-      var input = DataUtils.toString(co.rawSignatureData);
+    if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
+      var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
+      var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
+      var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
+      var input = DataUtils.toString(data.rawSignatureData);
       
       var witHex = "";
-      if (co.signature.witness != null)
-        witHex = DataUtils.toHex(co.signature.witness);
+      if (data.signature.witness != null)
+        witHex = DataUtils.toHex(data.signature.witness);
       
       output += "Public key: " + publickeyHex;
       
@@ -190,12 +206,12 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co)
       
       if (LOG > 2) console.log(" Signature NOW IS");
       
-      if (LOG > 2) console.log(co.signature.signature);
+      if (LOG > 2) console.log(data.signature.signature);
      
       var rsakey = new Key();
-      rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
+      rsakey.readDerPublicKey(data.signedInfo.locator.publicKey);
 
-      var result = co.verify(rsakey);
+      var result = data.verify(rsakey);
       if (result)
       output += 'SIGNATURE VALID';
       else
@@ -209,25 +225,33 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co)
   return output;
 };
 
+/**
+ * @deprecated Use return EncodingUtils.dataToHtml(data).
+ */
+EncodingUtils.contentObjectToHtml = function(data) 
+{
+  return EncodingUtils.dataToHtml(data);
+}
+
 //
 // Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
 //
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
-var encodeToHexContentObject = function(co) { return EncodingUtils.encodeToHexContentObject(co); }
-var encodeForwardingEntry = function(co) { return EncodingUtils.encodeForwardingEntry(co); }
+var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
+var encodeForwardingEntry = function(data) { return EncodingUtils.encodeForwardingEntry(data); }
 var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
-var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexContentObject(input); }
+var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
 var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
-var contentObjectToHtml = function(co) { return EncodingUtils.contentObjectToHtml(co); }
+var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
  * @deprecated Use interest.encode().
  */
 function encodeToBinaryInterest(interest) { return interest.encode(); }
 /**
- * @deprecated Use contentObject.encode().
+ * @deprecated Use data.encode().
  */
-function encodeToBinaryContentObject(contentObject) { return contentObject.encode(); }
+function encodeToBinaryContentObject(data) { return data.encode(); }

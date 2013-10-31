@@ -28,14 +28,14 @@
 			                       // TODO: in this test script we simply discard the content after it is received
 			                       //  should consider some way to buffer the whole data in future refactor  --- SWT
 		    
-		    // We should always start with the first element so the first content object cannot be ooo data
+		    // We should always start with the first element so the first data packet object cannot be ooo data
 		    //this.firstReceivedSegmentNumber = null;
-		    //this.firstReceivedContentObject = null;
+		    //this.firstReceivedData = null;
 		    
 		    // statistic counters
-		    this.ooo_count = 0;  // out-of-order content object counter; 
+		    this.ooo_count = 0;  // out-of-order data packet object counter; 
 		                         // when this counter reaches 3, apply fast retransmission alg.
-		    this.pkt_recved = 0;  // total # of content object received
+		    this.pkt_recved = 0;  // total # of data packet object received
 		    this.timed_out = 0;   // totle # of timed out interest
 		    this.interest_sent = 1;  // there is an initial interest before calling the closure upcall
 		    this.dups = 0;  // total # of dup content segments
@@ -86,8 +86,8 @@
 		    
 		    if (kind == Closure.UPCALL_CONTENT_BAD) {
 		    	console.log("NdnProtocol.ContentClosure: signature verification failed");
-		    	console.log(upcallInfo.contentObject.name.toUri());
-		    	console.log(DataUtils.toHex(upcallInfo.contentObject.signature.witness).toLowerCase());
+		    	console.log(upcallInfo.data.name.toUri());
+		    	console.log(DataUtils.toHex(upcallInfo.data.signature.witness).toLowerCase());
 		    	return Closure.RESULT_OK;
 		    }
 		    
@@ -96,29 +96,29 @@
 		        // The upcall is not for us.
 		        return Closure.RESULT_ERR;
 		    
-		    var contentObject = upcallInfo.contentObject;
-		    if (contentObject.content == null) {
-		        console.log("NdnProtocol.ContentClosure: contentObject.content is null");
+		    var data = upcallInfo.data;
+		    if (data.content == null) {
+		        console.log("NdnProtocol.ContentClosure: data.content is null");
 		        return Closure.RESULT_ERR;
 		    }
 		
 		    // Use the segmentNumber to load multiple segments.
 		    var segmentNumber = DataUtils.bigEndianToUnsignedInt
-		    						(contentObject.name.get(contentObject.name.size() - 1).getValue());
+		    						(data.name.get(data.name.size() - 1).getValue());
 		    //console.log("Seg # " + segmentNumber + " received");
-		    //console.log("Seg name " + contentObject.name.toUri());
+		    //console.log("Seg name " + data.name.toUri());
 		    
 		    /*
 	        if (this.firstReceivedSegmentNumber == null) {
 	            // This is the first call.
 	            this.firstReceivedSegmentNumber = segmentNumber;
 	            if (segmentNumber != 0) {
-	                // Special case: Save this content object for later and request segment zero.
+	                // Special case: Save this data packet object for later and request segment zero.
 	                // SWT: this should not happen in normal case; 
 	                //      ndnd should always return the first segment if no seg# is specified
-	                this.firstReceivedContentObject = contentObject;
-	                var componentsForZero = contentObject.name.components.slice
-	                    (0, contentObject.name.size() - 1);
+	                this.firstReceivedData = data;
+	                var componentsForZero = data.name.components.slice
+	                    (0, data.name.size() - 1);
 	                componentsForZero.push([0]);
 	                this.ndn.expressInterest(new Name(componentsForZero), this);
 	                return Closure.RESULT_OK;
@@ -128,33 +128,33 @@
 			
 			// Process received data here...
 			// Count content length
-			//nameStr = escape(contentObject.name.toUri());
+			//nameStr = escape(data.name.toUri());
 			//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-			//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
+			//document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
 		    
 		    /*
 		    // Check for the special case if the saved content is for the next segment that we need.
-		    if (this.firstReceivedContentObject != null && 
+		    if (this.firstReceivedData != null && 
 		        this.firstReceivedSegmentNumber == segmentNumber + 1) {
-		        // Substitute the saved contentObject send its content and keep going.
-		        contentObject = this.firstReceivedContentObject;
+		        // Substitute the saved data send its content and keep going.
+		        data = this.firstReceivedData;
 		        segmentNumber = segmentNumber + 1;
-		        // Clear firstReceivedContentObject to save memory.
-		        this.firstReceivedContentObject = null;
+		        // Clear firstReceivedData to save memory.
+		        this.firstReceivedData = null;
 		        
 		        // Process received data here...
 		    	// Count content length
-		    	//nameStr = escape(contentObject.name.toUri());
+		    	//nameStr = escape(data.name.toUri());
 				//document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-				//document.getElementById('content').innerHTML += "<p>Content buffer length: " + contentObject.content.length + "</p>";
+				//document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
 				this.totalBlocks++;
 		    }
 		    */
 			
 			// Record final seg# if present
 			var finalSegmentNumber = null;
-			if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
-				finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
+			if (data.signedInfo != null && data.signedInfo.finalBlockID != null)
+				finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
 			
 			// Check for out-of-order segment
 			if (segmentNumber != this.snd_una) {
@@ -223,7 +223,7 @@
 			}
 			
 			// Send the next interest if allowed by snd_wnd
-			var nextNameComponents = contentObject.name.components.slice(0, contentObject.name.size() - 1);
+			var nextNameComponents = data.name.components.slice(0, data.name.size() - 1);
 			//console.log("SND_UNA: " + this.snd_una);
 			//console.log("SND_NXT: " + this.snd_nxt);
 			while (this.snd_nxt - this.snd_una < this.snd_wnd) {
@@ -293,7 +293,7 @@
 			} else if (kind == Closure.UPCALL_CONTENT) {
 				var T1 = new Date();
 				
-				var content = upcallInfo.contentObject;
+				var content = upcallInfo.data;
 				nameStr = escape(content.name.toUri());
 				document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
 				document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
@@ -301,7 +301,7 @@
 				//console.log("In callback, nameStr: " + nameStr);
 				//console.log("In callback, content: ");
 				//console.log(content.content.length);
-				//document.getElementById('content').innerHTML += contentObjectToHtml(content);
+				//document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out.");
 			}

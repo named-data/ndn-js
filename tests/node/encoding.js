@@ -2,7 +2,7 @@ var Encoder = require('../..').BinaryXMLEncoder;
 var Decoder = require('../..').BinaryXMLDecoder;
 var Name = require('../..').Name;
 var Interest = require('../..').Interest;
-var ContentObject = require('../..').ContentObject;
+var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
 var Key = require('../..').Key;
 var EncodingUtils = require('../..').EncodingUtils;
@@ -26,18 +26,18 @@ console.log(i2.name.toUri());
 console.log(i2.interestLifetime);
 console.log(i2.childSelector);
 
-console.log("Encoding/Decoding content objects...");
+console.log("Encoding/Decoding data packet objects...");
 
 var content = "NDN on Node";
 
-var co1 = new ContentObject(new Name(n), new SignedInfo(), content);
+var co1 = new Data(new Name(n), new SignedInfo(), content);
 co1.signedInfo.setFields();
 co1.sign();
 console.log("Signature is \n" + co1.signature.signature.toString('hex'));
 
 var p2 = co1.encode();
 
-var co2 = new ContentObject();
+var co2 = new Data();
 co2.decode(p2);
 
 console.log('Decoded name: ' + co2.name.toUri());
@@ -46,5 +46,5 @@ var rsakey = new Key();
 rsakey.readDerPublicKey(co2.signedInfo.locator.publicKey);
 console.log('Content verification passed: ' + co2.verify(rsakey));
 
-console.log('ContentObject in XML representation:');
-console.log(EncodingUtils.contentObjectToHtml(co2).replace(/<br \/>/g, "\n"));
+console.log('Data in XML representation:');
+console.log(EncodingUtils.dataToHtml(co2).replace(/<br \/>/g, "\n"));

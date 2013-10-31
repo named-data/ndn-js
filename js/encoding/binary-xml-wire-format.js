@@ -51,27 +51,43 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * Encode the contentObject and return a Buffer. 
- * @param {ContentObject} contentObject
+ * Encode the data and return a Buffer. 
+ * @param {Data} data
  * @returns {Buffer}
  */
-BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) 
+BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeContentObject(contentObject, encoder);  
+  BinaryXmlWireFormat.encodeData(data, encoder);  
   return encoder.getReducedOstream();  
 };
 
 /**
- * Decode the input and put the result in contentObject.
- * @param {ContentObject} contentObject
+ * @deprecated Use encodeData(data).
+ */
+BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
+{
+  return this.encodeData(data);
+}
+
+/**
+ * Decode the input and put the result in data.
+ * @param {Data} data
  * @param {Buffer} input
  */
-BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) 
+BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
 {
   var decoder = new BinaryXMLDecoder(input);
-  BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
+  BinaryXmlWireFormat.decodeData(data, decoder);
 };
+
+/**
+ * @deprecated Use decodeData(data, input).
+ */
+BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input) 
+{
+  this.decodeData(data, input);
+}
 
 /**
  * Encode the interest by calling the operations on the encoder.
@@ -183,72 +199,72 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 };
 
 /**
- * Encode the contentObject by calling the operations on the encoder.
- * @param {ContentObject} contentObject
+ * Encode the data by calling the operations on the encoder.
+ * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  
+BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
   //TODO verify name, SignedInfo and Signature is present
-  encoder.writeStartElement(contentObject.getElementLabel());
+  encoder.writeStartElement(data.getElementLabel());
 
-  if (null != contentObject.signature) 
-    contentObject.signature.to_ndnb(encoder);
+  if (null != data.signature) 
+    data.signature.to_ndnb(encoder);
     
-  contentObject.startSIG = encoder.offset;
+  data.startSIG = encoder.offset;
 
-  if (null != contentObject.name) 
-    contentObject.name.to_ndnb(encoder);
+  if (null != data.name) 
+    data.name.to_ndnb(encoder);
   
-  if (null != contentObject.signedInfo) 
-    contentObject.signedInfo.to_ndnb(encoder);
+  if (null != data.signedInfo) 
+    data.signedInfo.to_ndnb(encoder);
 
-  encoder.writeElement(NDNProtocolDTags.Content, contentObject.content);
+  encoder.writeElement(NDNProtocolDTags.Content, data.content);
   
-  contentObject.endSIG = encoder.offset;
+  data.endSIG = encoder.offset;
   
   encoder.writeEndElement();
   
-  contentObject.saveRawData(encoder.ostream);  
+  data.saveRawData(encoder.ostream);  
 };
 
-var Signature = require('../content-object.js').Signature;
-var SignedInfo = require('../content-object.js').SignedInfo;
+var Signature = require('../data.js').Signature;
+var SignedInfo = require('../data.js').SignedInfo;
 
 /**
- * Use the decoder to place the result in contentObject.
- * @param {ContentObject} contentObject
+ * Use the decoder to place the result in data.
+ * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) 
+BinaryXmlWireFormat.decodeData = function(data, decoder) 
 {
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readStartElement(contentObject.getElementLabel());
+  decoder.readStartElement(data.getElementLabel());
 
   if (decoder.peekStartElement(NDNProtocolDTags.Signature)) {
-    contentObject.signature = new Signature();
-    contentObject.signature.from_ndnb(decoder);
+    data.signature = new Signature();
+    data.signature.from_ndnb(decoder);
   }
   else
-    contentObject.signature = null;
+    data.signature = null;
     
-  contentObject.startSIG = decoder.offset;
+  data.startSIG = decoder.offset;
 
-  contentObject.name = new Name();
-  contentObject.name.from_ndnb(decoder);
+  data.name = new Name();
+  data.name.from_ndnb(decoder);
     
   if (decoder.peekStartElement(NDNProtocolDTags.SignedInfo)) {
-    contentObject.signedInfo = new SignedInfo();
-    contentObject.signedInfo.from_ndnb(decoder);
+    data.signedInfo = new SignedInfo();
+    data.signedInfo.from_ndnb(decoder);
   }
   else
-    contentObject.signedInfo = null;
+    data.signedInfo = null;
 
-  contentObject.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
+  data.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
     
-  contentObject.endSIG = decoder.offset;
+  data.endSIG = decoder.offset;
     
   decoder.readEndElement();
     
-  contentObject.saveRawData(decoder.input);
+  data.saveRawData(decoder.input);
 };

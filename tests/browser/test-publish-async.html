@@ -33,10 +33,10 @@
 
 				var si = new SignedInfo();
 
-				var co = new ContentObject(new Name(nameStr), si, content);
-				co.sign();
+				var data = new Data(new Name(nameStr), si, content);
+				data.sign();
 
-				upcallInfo.contentObject = co;
+				upcallInfo.data = data;
 				return Closure.RESULT_INTEREST_CONSUMED;
 			}
 			return Closure.RESULT_OK;

@@ -105,7 +105,7 @@ def build (bld):
                  "js/publisher-id.js",
                  "js/name.js",
                  "js/security/key-manager.js",
-                 "js/content-object.js",
+                 "js/data.js",
                  "js/interest.js",
                  "js/key.js",
                  "js/face-instance.js",

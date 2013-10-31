@@ -153,7 +153,7 @@ xml2object.prototype.start = function() {
 //var xml2object = require('xml2object');
 
 // Create a new xml parser with an array of xml elements to look for
-/*var parser = new xml2object('./src/encoding/ContentObject1.xml', [ 'ContentObject' ]);
+/*var parser = new xml2object('./src/encoding/ContentObject1.xml', [ 'Data' ]);
 
 // Bind to the object event to work with the objects found in the XML file
 parser.on('object', function(name, obj) {

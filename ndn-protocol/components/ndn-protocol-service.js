@@ -176,9 +176,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // The upcall is not for us.
         return Closure.RESULT_ERR;
         
-    var contentObject = upcallInfo.contentObject;
-    if (contentObject.content == null) {
-        dump("NdnProtocol.ContentClosure: contentObject.content is null\n");
+    var data = upcallInfo.data;
+    if (data.content == null) {
+        dump("NdnProtocol.ContentClosure: data.content is null\n");
         return Closure.RESULT_ERR;
     }
     
@@ -188,23 +188,23 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
-    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name))
+    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.name))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (contentObject.name.get(contentObject.name.size() - 1).getValue());
+            (data.name.get(data.name.size() - 1).getValue());
     
     if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
         // This is the first or only segment.
-        var iMetaComponent = getIndexOfMetaComponent(contentObject.name);
+        var iMetaComponent = getIndexOfMetaComponent(data.name);
         if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 &&
             getIndexOfMetaComponent(this.uriName) < 0) {
             // The matched content name has a META component that wasn't requested in the original
             //   URI.  Add this to the excluded META components to try to get the "real" content.
-            var nameWithoutMeta = new Name(contentObject.name.components.slice(0, iMetaComponent));
+            var nameWithoutMeta = new Name(data.name.components.slice(0, iMetaComponent));
             if (this.excludedMetaComponents.length > 0 && iMetaComponent != this.iMetaComponent)
                 // We are excluding META components at a new position in the name, so start over.
                 this.excludedMetaComponents = [];
             this.iMetaComponent = iMetaComponent;
-            this.excludedMetaComponents.push(contentObject.name.getComponent(iMetaComponent));
+            this.excludedMetaComponents.push(data.name.getComponent(iMetaComponent));
             // Exclude components are required to be sorted.
             this.excludedMetaComponents.sort(Exclude.compareComponents);
             
@@ -217,79 +217,79 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         
         this.didOnStart = true;
         
-        // Get the URI from the ContentObject including the version.
+        // Get the URI from the Data including the version.
         var contentUriSpec;
-        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(contentObject.name)) {
+        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.name)) {
             var nameWithoutSegmentNumber = new Name
-                (contentObject.name.components.slice(0, contentObject.name.size() - 1));
+                (data.name.components.slice(0, data.name.size() - 1));
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
         else
-            contentUriSpec = "ndn:" + contentObject.name.toUri();
+            contentUriSpec = "ndn:" + data.name.toUri();
     
         // Include the search and hash.
         contentUriSpec += this.uriSearchAndHash;
     
-        var contentTypeEtc = getNameContentTypeAndCharset(contentObject.name);
+        var contentTypeEtc = getNameContentTypeAndCharset(data.name);
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
 
         if (segmentNumber == null) {
             // We are not doing segments, so just finish.
-            this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-            this.contentSha256.update(contentObject.content, contentObject.content.length);
+            this.contentListener.onReceivedContent(DataUtils.toString(data.content));
+            this.contentSha256.update(data.content, data.content.length);
             this.contentListener.onStop();
             ContentClosure.removeClosureForWindow(this);
 
             if (!this.uriEndsWithSegmentNumber) {
-                var nameContentDigest = contentObject.name.getContentDigestValue();
+                var nameContentDigest = data.name.getContentDigestValue();
                 if (nameContentDigest != null && this.contentSha256 != null &&
                     !DataUtils.arraysEqual(nameContentDigest, 
                               DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                     // TODO: How to show the user an error for invalid digest?
-                    dump("Content does not match digest in name " + contentObject.name.toUri() + "\n");
+                    dump("Content does not match digest in name " + data.name.toUri() + "\n");
             }
             return Closure.RESULT_OK;
         }
         else
             // We are doing segments.  Make sure we always request the same base name.
-            this.nameWithoutSegment = new Name(contentObject.name.components.slice
-                (0, contentObject.name.size() - 1));
+            this.nameWithoutSegment = new Name(data.name.components.slice
+                (0, data.name.size() - 1));
     }
     
     if (segmentNumber == null)
         // We should be doing segments at this point.
         return Closure.RESULT_ERR;
     
-    if (!(contentObject.name.size() == this.nameWithoutSegment.size() + 1 &&
-          this.nameWithoutSegment.match(contentObject.name)))
-        // The content object name is not part of our sequence of segments.
+    if (!(data.name.size() == this.nameWithoutSegment.size() + 1 &&
+          this.nameWithoutSegment.match(data.name)))
+        // The data packet object name is not part of our sequence of segments.
         return Closure.RESULT_ERR;
     
-    this.segmentStore.storeContent(segmentNumber, contentObject);
+    this.segmentStore.storeContent(segmentNumber, data);
 
-    if (contentObject.signedInfo != null && contentObject.signedInfo.finalBlockID != null)
-        this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(contentObject.signedInfo.finalBlockID);
+    if (data.signedInfo != null && data.signedInfo.finalBlockID != null)
+        this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
 
     // The content was already put in the store.  Retrieve as much as possible.
     var entry;
     while ((entry = this.segmentStore.maybeRetrieveNextEntry()) != null) {
         segmentNumber = entry.key;
-        contentObject = entry.value;
-        this.contentListener.onReceivedContent(DataUtils.toString(contentObject.content));
-        this.contentSha256.update(contentObject.content, contentObject.content.length);
+        data = entry.value;
+        this.contentListener.onReceivedContent(DataUtils.toString(data.content));
+        this.contentSha256.update(data.content, data.content.length);
         
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
             ContentClosure.removeClosureForWindow(this);
-            var nameContentDigest = contentObject.name.getContentDigestValue();
+            var nameContentDigest = data.name.getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
                 !DataUtils.arraysEqual(nameContentDigest, 
                       DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                 // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + contentObject.name.toUri() + "\n");
+                dump("Content does not match digest in name " + data.name.toUri() + "\n");
 
             return Closure.RESULT_OK;
         }
@@ -367,16 +367,16 @@ ContentClosure.removeClosureForWindow = function(closure)
 var SegmentStore = function SegmentStore() 
 {
     // Each entry is an object where the key is the segment number and value is null if
-    //   the segment number is requested or the contentObject if received.
+    //   the segment number is requested or the data if received.
     this.store = new SortedArray();
     this.maxRetrievedSegmentNumber = -1;
 };
 
-SegmentStore.prototype.storeContent = function(segmentNumber, contentObject) 
+SegmentStore.prototype.storeContent = function(segmentNumber, data) 
 {
     // We don't expect to try to store a segment that has already been retrieved, but check anyway.
     if (segmentNumber > this.maxRetrievedSegmentNumber)
-        this.store.set(segmentNumber, contentObject);
+        this.store.set(segmentNumber, data);
 };
 
 /*

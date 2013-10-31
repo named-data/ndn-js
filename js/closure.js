@@ -58,12 +58,13 @@ Closure.prototype.upcall = function(kind, upcallInfo)
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) 
+var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data) 
 {
   this.ndn = ndn;  // NDN object (not used)
   this.interest = interest;  // Interest object
   this.matchedComps = matchedComps;  // int
-  this.contentObject = contentObject;  // Content object
+  this.data = data;  // Data
+  this.contentObject = data; // deprecated.  Include for backward compatibility.
 };
 
 UpcallInfo.prototype.toString = function() 
@@ -71,7 +72,7 @@ UpcallInfo.prototype.toString = function()
   var ret = "ndn = " + this.ndn;
   ret += "\nInterest = " + this.interest;
   ret += "\nmatchedComps = " + this.matchedComps;
-  ret += "\nContentObject: " + this.contentObject;
+  ret += "\nData: " + this.data;
   return ret;
 };
 
