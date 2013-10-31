@@ -24,10 +24,13 @@ Changes
 * Added Name.get which returns a Name.Component (not the component byte array).
 * Added Name.size. Deprecated Name.getComponentCount.
 * Change Exclude to hold Name.Component instead of Buffer. The Exclude constructor accepts an array of Name.Component or Buffer.
+* Renamed ContentObject class to Data.  In the UpcallInfo object, renamed contentObject to data.
+* EncodingUtils: Added encodeToHexData, decodeHexData and dataToHtml.
 
 Deprecated
 * build/ndn-js.js and build/ndn-js.min.js.  You should use build/ndn.js and build/ndn.min.js.
 * ndnProtocol.xpi. Use ndn-protocol.xpi which is the new name of the Firefox add-on file.
+* ContentObject: This class is deprecated. Use Data.
 * Name: Deprecated getComponent.  Use get(i).getValue().
 * Name: Deprecated getComponentCount.  Use size().
 * Name: Deprecated to_uri.  Use toUri.
@@ -37,7 +40,10 @@ Deprecated
 * Name: Deprecated matches_name.  Use matchesName.
 * EncodingUtils.js: Deprecated using the global functions.  Use static members of EncodingUtils class.
 * EncodingUtils.js: Deprecated encodeToBinaryInterest. Use interest.encode().
-* EncodingUtils.js: Deprecated encodeToBinaryContentObject. Use contentObject.encode().
+* EncodingUtils.js: Deprecated encodeToBinaryContentObject. Use data.encode().
+* EncodingUtils.js: Deprecated encodeToHexContentObject. Use EncodingUtils.encodeToHexData.
+* EncodingUtils.js: Deprecated decodeHexContentObject. Use EncodingUtils.decodeHexData.
+* EncodingUtils.js: Deprecated contentObjectToHtml. Use EncodingUtils.dataToHtml.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1034 BinaryXMLDecoder.decodeTypeAndVal does not stop at end of stream.
