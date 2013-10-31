@@ -56,7 +56,7 @@ var NDNProtocolDTags = {
    PublisherCertificateDigest : 61,
    PublisherIssuerKeyDigest : 62,
    PublisherIssuerCertificateDigest : 63,
-   ContentObject : 64,  /* 20090915 */
+   Data : 64,  /* 20090915 */
    WrappedKey : 65,
    WrappingKeyIdentifier : 66,
    WrapAlgorithm : 67,
@@ -139,7 +139,7 @@ var NDNProtocolDTagsStrings = [
   "Nonce", "Scope", "Exclude", "Bloom", "BloomSeed", null, "AnswerOriginKind",
   "InterestLifetime", null, null, null, null, "Witness", "SignatureBits", "DigestAlgorithm", "BlockSize",
   null, "FreshnessSeconds", "FinalBlockID", "PublisherPublicKeyDigest", "PublisherCertificateDigest",
-  "PublisherIssuerKeyDigest", "PublisherIssuerCertificateDigest", "ContentObject",
+  "PublisherIssuerKeyDigest", "PublisherIssuerCertificateDigest", "Data",
   "WrappedKey", "WrappingKeyIdentifier", "WrapAlgorithm", "KeyAlgorithm", "Label",
   "EncryptedKey", "EncryptedNonceKey", "WrappingKeyName", "Action", "FaceID", "IPProto",
   "Host", "Port", "MulticastInterface", "ForwardingFlags", "FaceInstance",

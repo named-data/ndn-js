@@ -7,7 +7,7 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Encode/Decode Content Object</title>
+	<title>NDN Encode/Decode Data Packet</title>
 	
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
@@ -22,12 +22,12 @@
 			
 			signedInfo.setFields();
 			
-			var co = new ContentObject(contentname, signedInfo, content); 
+			var data = new Data(contentname, signedInfo, content); 
 			
-			co.sign();
+			data.sign();
 			
 			
-			var output = EncodingUtils.encodeToHexContentObject(co);
+			var output = EncodingUtils.encodeToHexData(data);
 			
 			document.getElementById('result').innerHTML = output;
 
@@ -38,12 +38,12 @@
 
 			input = input.toUpperCase();
 			
-			var co = EncodingUtils.decodeHexContentObject(input);
+			var data = EncodingUtils.decodeHexData(input);
 			
-			if(LOG>3)console.log('CONTENT OBJECT DECODED');
-			if(LOG>3)console.log(co);
+			if(LOG>3)console.log('DATA PACKET DECODED');
+			if(LOG>3)console.log(data);
 			
-			document.getElementById('result').innerHTML = EncodingUtils.contentObjectToHtml(co);
+			document.getElementById('result').innerHTML = EncodingUtils.dataToHtml(data);
 		}
 
 	</script>

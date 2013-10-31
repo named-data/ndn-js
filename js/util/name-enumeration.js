@@ -56,7 +56,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
 {
   try {
     if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
-      var data = upcallInfo.contentObject;
+      var data = upcallInfo.data;
       
       if (!NameEnumeration.endsWithSegmentNumber(data.name))
         // We don't expect a name without a segment number.  Treat it as a bad packet.

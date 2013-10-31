@@ -136,110 +136,110 @@
 				
 				var input = DataUtils.toHex(interest.name.get(3).getValue()) ;
 
-				var contentObject = EncodingUtils.decodeHexContentObject(input);
+				var data = EncodingUtils.decodeHexData(input);
 				
-				if(contentObject.content!=null ){
-					output+= "Content of content Object: ";
+				if(data.content!=null ){
+					output+= "Content of data packet: ";
 					
-						output+=  DataUtils.toHex(contentObject.content);
+						output+=  DataUtils.toHex(data.content);
 						
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
 				
-				var content = DataUtils.toHex(contentObject.content);
+				var content = DataUtils.toHex(data.content);
 				
-				var co = contentObject;
+				var data = data;
 				
 				
 				////////////////////////////////////////
 				
 
-				if(co.name!=null && co.name.components!=null){
+				if(data.name!=null && data.name.components!=null){
 					output+= "NAME: ";
 					
-					for(var i=0;i<co.name.size();i++)
-						output+= "/"+ DataUtils.toString(co.name.get(i).getValue());
+					for(var i=0;i<data.name.size();i++)
+						output+= "/"+ DataUtils.toString(data.name.get(i).getValue());
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
 	
-				if(co.content !=null){
-					output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
+				if(data.content !=null){
+					output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.content !=null){
-					output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
+				if(data.content !=null){
+					output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.signature !=null && co.signature.signature!=null){
+				if(data.signature !=null && data.signature.signature!=null){
 					
-					output += "SIGNATURE(hex): "+ DataUtils.toHex(co.signature.signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(co.signedInfo !=null && co.signedInfo.publisher!=null && co.signedInfo.publisher.publisherPublicKeyDigest!=null){
-					
-					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+					output += "SIGNATURE(hex): "+ DataUtils.toHex(data.signature.signature);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(co.signedInfo !=null && co.signedInfo.timestamp!=null){
+				if(data.signedInfo !=null && data.signedInfo.publisher!=null && data.signedInfo.publisher.publisherPublicKeyDigest!=null){
+					
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(data.signedInfo !=null && data.signedInfo.timestamp!=null){
 					var d = new Date();
-					d.setTime( co.signedInfo.timestamp.msec );
+					d.setTime( data.signedInfo.timestamp.msec );
 					
 					var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
 					
 					output += "TimeStamp: "+d;
 					output+= "<br />";
-					output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
+					output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
 					
 					
 					output+= "<br />";
 				}
-			    if(co.signedInfo !=null && co.signedInfo.type!=null){
+			    if(data.signedInfo !=null && data.signedInfo.type!=null){
 
-					output += "Type: "+co.signedInfo.type;
+					output += "Type: "+data.signedInfo.type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.signedInfo !=null && co.signedInfo.locator!=null){
+			    if(data.signedInfo !=null && data.signedInfo.locator!=null){
 
-					output += "Locator: "+co.signedInfo.locator.type;
+					output += "Locator: "+data.signedInfo.locator.type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.signedInfo !=null && co.signedInfo.freshnessSeconds!=null){
+			    if(data.signedInfo !=null && data.signedInfo.freshnessSeconds!=null){
 
-					output += "FreshnessSeconds: "+co.signedInfo.freshnessSeconds;
+					output += "FreshnessSeconds: "+data.signedInfo.freshnessSeconds;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(co.signedInfo !=null && co.signedInfo.finalBlockID!=null){
+			    if(data.signedInfo !=null && data.signedInfo.finalBlockID!=null){
 
-					output += "FinalBlockID: "+co.signedInfo.finalBlockID;
+					output += "FinalBlockID: "+data.signedInfo.finalBlockID;
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
-				if(co.signedInfo!=null && co.signedInfo.locator!=null && co.signedInfo.locator.publicKey!=null){
+				if(data.signedInfo!=null && data.signedInfo.locator!=null && data.signedInfo.locator.publicKey!=null){
 					
-					var publickey = rstr2b64(DataUtils.toString(co.signedInfo.locator.publicKey));
-					var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-					var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
+					var publickey = rstr2b64(DataUtils.toString(data.signedInfo.locator.publicKey));
+					var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
+					var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
 					
-					var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
+					var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
 					
 					
-					var input = DataUtils.toString(co.rawSignatureData);
+					var input = DataUtils.toString(data.rawSignatureData);
 					 
 					
 					output += "DER Certificate: "+publickey ;
@@ -258,7 +258,7 @@
 					
 					if(LOG>2) console.log(" Signature NOW IS" );
 					
-					if(LOG>2) console.log(co.signature.signature);
+					if(LOG>2) console.log(data.signature.signature);
 					
 					
 					/*var x509 = new X509();
@@ -326,7 +326,7 @@
 					else
 						output += 'SIGNATURE INVALID';
 
-					//output += "VALID: "+ toHex(co.signedInfo.locator.publicKey);
+					//output += "VALID: "+ toHex(data.signedInfo.locator.publicKey);
 					
 					output+= "<br />";
 					output+= "<br />";

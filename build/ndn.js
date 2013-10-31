@@ -339,7 +339,7 @@ var NDNProtocolDTags = {
    PublisherCertificateDigest : 61,
    PublisherIssuerKeyDigest : 62,
    PublisherIssuerCertificateDigest : 63,
-   ContentObject : 64,  /* 20090915 */
+   Data : 64,  /* 20090915 */
    WrappedKey : 65,
    WrappingKeyIdentifier : 66,
    WrapAlgorithm : 67,
@@ -422,7 +422,7 @@ var NDNProtocolDTagsStrings = [
   "Nonce", "Scope", "Exclude", "Bloom", "BloomSeed", null, "AnswerOriginKind",
   "InterestLifetime", null, null, null, null, "Witness", "SignatureBits", "DigestAlgorithm", "BlockSize",
   null, "FreshnessSeconds", "FinalBlockID", "PublisherPublicKeyDigest", "PublisherCertificateDigest",
-  "PublisherIssuerKeyDigest", "PublisherIssuerCertificateDigest", "ContentObject",
+  "PublisherIssuerKeyDigest", "PublisherIssuerCertificateDigest", "Data",
   "WrappedKey", "WrappingKeyIdentifier", "WrapAlgorithm", "KeyAlgorithm", "Label",
   "EncryptedKey", "EncryptedNonceKey", "WrappingKeyName", "Action", "FaceID", "IPProto",
   "Host", "Port", "MulticastInterface", "ForwardingFlags", "FaceInstance",
@@ -2187,25 +2187,25 @@ WireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * The override method in the derived class should encode the contentObject and return a Buffer. 
- * @param {ContentObject} contentObject
+ * The override method in the derived class should encode the data and return a Buffer. 
+ * @param {Data} data
  * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.encodeContentObject = function(contentObject) 
+WireFormat.prototype.encodeData = function(data) 
 {
-  throw new Error("encodeContentObject is unimplemented in the base WireFormat class.  You should use a derived class.");
+  throw new Error("encodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in contentObject.
- * @param {ContentObject} contentObject
+ * The override method in the derived class should decode the input and put the result in data.
+ * @param {Data} data
  * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeContentObject = function(contentObject, input) 
+WireFormat.prototype.decodeData = function(data, input) 
 {
-  throw new Error("decodeContentObject is unimplemented in the base WireFormat class.  You should use a derived class.");
+  throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 
@@ -2328,7 +2328,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
 {
   try {
     if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
-      var data = upcallInfo.contentObject;
+      var data = upcallInfo.data;
       
       if (!NameEnumeration.endsWithSegmentNumber(data.name))
         // We don't expect a name without a segment number.  Treat it as a bad packet.
@@ -2594,12 +2594,13 @@ Closure.prototype.upcall = function(kind, upcallInfo)
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, contentObject) 
+var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data) 
 {
   this.ndn = ndn;  // NDN object (not used)
   this.interest = interest;  // Interest object
   this.matchedComps = matchedComps;  // int
-  this.contentObject = contentObject;  // Content object
+  this.data = data;  // Data
+  this.contentObject = data; // deprecated.  Include for backward compatibility.
 };
 
 UpcallInfo.prototype.toString = function() 
@@ -2607,7 +2608,7 @@ UpcallInfo.prototype.toString = function()
   var ret = "ndn = " + this.ndn;
   ret += "\nInterest = " + this.interest;
   ret += "\nmatchedComps = " + this.matchedComps;
-  ret += "\nContentObject: " + this.contentObject;
+  ret += "\nData: " + this.data;
   return ret;
 };
 
@@ -3316,7 +3317,7 @@ exports.globalKeyManager = globalKeyManager;
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
- * This class represents ContentObject Objects
+ * This class represents Data Objects
  */
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -3333,14 +3334,14 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new ContentObject with the optional values.
+ * Create a new Data with the optional values.
  * 
  * @constructor
  * @param {Name} name
  * @param {SignedInfo} signedInfo
  * @param {Buffer} content
  */
-var ContentObject = function ContentObject(name, signedInfo, content) 
+var Data = function Data(name, signedInfo, content) 
 {
   if (typeof name == 'string')
     this.name = new Name(name);
@@ -3365,9 +3366,9 @@ var ContentObject = function ContentObject(name, signedInfo, content)
   this.rawSignatureData = null;
 };
 
-exports.ContentObject = ContentObject;
+exports.Data = Data;
 
-ContentObject.prototype.sign = function() 
+Data.prototype.sign = function() 
 {
   var n1 = this.encodeObject(this.name);
   var n2 = this.encodeObject(this.signedInfo);
@@ -3383,17 +3384,17 @@ ContentObject.prototype.sign = function()
   this.signature.signature = sig;
 };
 
-ContentObject.prototype.verify = function(/*Key*/ key) 
+Data.prototype.verify = function(/*Key*/ key) 
 {
   if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify ContentObject without a public key.');
+    throw new Error('Cannot verify Data without a public key.');
 
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.rawSignatureData);
   return verifier.verify(key.publicKeyPem, this.signature.signature);
 };
 
-ContentObject.prototype.encodeObject = function encodeObject(obj) 
+Data.prototype.encodeObject = function encodeObject(obj) 
 {
   var enc = new BinaryXMLEncoder(); 
   obj.to_ndnb(enc);
@@ -3402,7 +3403,7 @@ ContentObject.prototype.encodeObject = function encodeObject(obj)
   return num;
 };
 
-ContentObject.prototype.encodeContent = function encodeContent() 
+Data.prototype.encodeContent = function encodeContent() 
 {
   var enc = new BinaryXMLEncoder();   
   enc.writeElement(NDNProtocolDTags.Content, this.content);
@@ -3411,13 +3412,13 @@ ContentObject.prototype.encodeContent = function encodeContent()
   return num;
 };
 
-ContentObject.prototype.saveRawData = function(bytes) 
+Data.prototype.saveRawData = function(bytes) 
 {  
   var sigBits = bytes.slice(this.startSIG, this.endSIG);
   this.rawSignatureData = new Buffer(sigBits);
 };
 
-ContentObject.prototype.getElementLabel = function() { return NDNProtocolDTags.ContentObject; };
+Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Create a new Signature with the optional values.
@@ -3524,7 +3525,7 @@ SignedInfo.prototype.setFields = function()
   //DATA
   this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
   
-  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO CONTENT OBJECT IS ');
+  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
   if (LOG > 4) console.log(publicKeyBytes);
 
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
@@ -3630,42 +3631,55 @@ SignedInfo.prototype.validate = function()
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
- * @deprecated Use BinaryXmlWireFormat.decodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.decodeData.
  */
-ContentObject.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
-  BinaryXmlWireFormat.decodeContentObject(this, decoder);
+  BinaryXmlWireFormat.decodeData(this, decoder);
 };
 
 /**
- * @deprecated Use BinaryXmlWireFormat.encodeContentObject.
+ * @deprecated Use BinaryXmlWireFormat.encodeData.
  */
-ContentObject.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 {
-  BinaryXmlWireFormat.encodeContentObject(this, encoder);
+  BinaryXmlWireFormat.encodeData(this, encoder);
 };
 
 /**
- * Encode this ContentObject for a particular wire format.
+ * Encode this Data for a particular wire format.
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  * @returns {Buffer}
  */
-ContentObject.prototype.encode = function(wireFormat) 
+Data.prototype.encode = function(wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeContentObject(this);
+  return wireFormat.encodeData(this);
 };
 
 /**
- * Decode the input using a particular wire format and update this ContentObject.
+ * Decode the input using a particular wire format and update this Data.
  * @param {Buffer} input
  * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
  */
-ContentObject.prototype.decode = function(input, wireFormat) 
+Data.prototype.decode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeContentObject(this, input);
+  wireFormat.decodeData(this, input);
 };
+
+/**
+ * @deprecated Use new Data.
+ */
+var ContentObject = function ContentObject(name, signedInfo, content) 
+{
+  // Call the base constructor.
+  Data.call(this, name, signedInfo, content); 
+}
+
+ContentObject.prototype = new Data();
+
+exports.ContentObject = ContentObject;
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -3777,8 +3791,9 @@ Interest.prototype.clone = function()
 };
 
 /**
+ * Create a new Exclude.
  * @constructor
- * @param {Array<Name.Component|Buffer|Exclude.ANY>} values an array where each element is either a Name.Component, Buffer component or Exclude.ANY.
+ * @param {Array<Name.Component|Buffer|Exclude.ANY>} values (optional) An array where each element is either a Name.Component, Buffer component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) 
 { 
@@ -3799,8 +3814,8 @@ exports.Exclude = Exclude;
 Exclude.ANY = "*";
 
 /**
- * 
- * @returns {Exclude.prototype}
+ * Append an Exclude.ANY element.
+ * @returns This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendAny = function() 
 {
@@ -4604,27 +4619,43 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * Encode the contentObject and return a Buffer. 
- * @param {ContentObject} contentObject
+ * Encode the data and return a Buffer. 
+ * @param {Data} data
  * @returns {Buffer}
  */
-BinaryXmlWireFormat.prototype.encodeContentObject = function(contentObject) 
+BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeContentObject(contentObject, encoder);  
+  BinaryXmlWireFormat.encodeData(data, encoder);  
   return encoder.getReducedOstream();  
 };
 
 /**
- * Decode the input and put the result in contentObject.
- * @param {ContentObject} contentObject
+ * @deprecated Use encodeData(data).
+ */
+BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
+{
+  return this.encodeData(data);
+}
+
+/**
+ * Decode the input and put the result in data.
+ * @param {Data} data
  * @param {Buffer} input
  */
-BinaryXmlWireFormat.prototype.decodeContentObject = function(contentObject, input) 
+BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
 {
   var decoder = new BinaryXMLDecoder(input);
-  BinaryXmlWireFormat.decodeContentObject(contentObject, decoder);
+  BinaryXmlWireFormat.decodeData(data, decoder);
 };
+
+/**
+ * @deprecated Use decodeData(data, input).
+ */
+BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input) 
+{
+  this.decodeData(data, input);
+}
 
 /**
  * Encode the interest by calling the operations on the encoder.
@@ -4736,74 +4767,74 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 };
 
 /**
- * Encode the contentObject by calling the operations on the encoder.
- * @param {ContentObject} contentObject
+ * Encode the data by calling the operations on the encoder.
+ * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXmlWireFormat.encodeContentObject = function(contentObject, encoder)  
+BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
   //TODO verify name, SignedInfo and Signature is present
-  encoder.writeStartElement(contentObject.getElementLabel());
+  encoder.writeStartElement(data.getElementLabel());
 
-  if (null != contentObject.signature) 
-    contentObject.signature.to_ndnb(encoder);
+  if (null != data.signature) 
+    data.signature.to_ndnb(encoder);
     
-  contentObject.startSIG = encoder.offset;
+  data.startSIG = encoder.offset;
 
-  if (null != contentObject.name) 
-    contentObject.name.to_ndnb(encoder);
+  if (null != data.name) 
+    data.name.to_ndnb(encoder);
   
-  if (null != contentObject.signedInfo) 
-    contentObject.signedInfo.to_ndnb(encoder);
+  if (null != data.signedInfo) 
+    data.signedInfo.to_ndnb(encoder);
 
-  encoder.writeElement(NDNProtocolDTags.Content, contentObject.content);
+  encoder.writeElement(NDNProtocolDTags.Content, data.content);
   
-  contentObject.endSIG = encoder.offset;
+  data.endSIG = encoder.offset;
   
   encoder.writeEndElement();
   
-  contentObject.saveRawData(encoder.ostream);  
+  data.saveRawData(encoder.ostream);  
 };
 
-var Signature = require('../content-object.js').Signature;
-var SignedInfo = require('../content-object.js').SignedInfo;
+var Signature = require('../data.js').Signature;
+var SignedInfo = require('../data.js').SignedInfo;
 
 /**
- * Use the decoder to place the result in contentObject.
- * @param {ContentObject} contentObject
+ * Use the decoder to place the result in data.
+ * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXmlWireFormat.decodeContentObject = function(contentObject, decoder) 
+BinaryXmlWireFormat.decodeData = function(data, decoder) 
 {
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readStartElement(contentObject.getElementLabel());
+  decoder.readStartElement(data.getElementLabel());
 
   if (decoder.peekStartElement(NDNProtocolDTags.Signature)) {
-    contentObject.signature = new Signature();
-    contentObject.signature.from_ndnb(decoder);
+    data.signature = new Signature();
+    data.signature.from_ndnb(decoder);
   }
   else
-    contentObject.signature = null;
+    data.signature = null;
     
-  contentObject.startSIG = decoder.offset;
+  data.startSIG = decoder.offset;
 
-  contentObject.name = new Name();
-  contentObject.name.from_ndnb(decoder);
+  data.name = new Name();
+  data.name.from_ndnb(decoder);
     
   if (decoder.peekStartElement(NDNProtocolDTags.SignedInfo)) {
-    contentObject.signedInfo = new SignedInfo();
-    contentObject.signedInfo.from_ndnb(decoder);
+    data.signedInfo = new SignedInfo();
+    data.signedInfo.from_ndnb(decoder);
   }
   else
-    contentObject.signedInfo = null;
+    data.signedInfo = null;
 
-  contentObject.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
+  data.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
     
-  contentObject.endSIG = decoder.offset;
+  data.endSIG = decoder.offset;
     
   decoder.readEndElement();
     
-  contentObject.saveRawData(decoder.input);
+  data.saveRawData(decoder.input);
 };
 /**
  * This file contains utilities to help encode and decode NDN objects.
@@ -4817,7 +4848,7 @@ var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var Key = require('../key.js').Key;
 var Interest = require('../interest.js').Interest;
-var ContentObject = require('../content-object.js').ContentObject;
+var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
 var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
 var LOG = require('../log.js').Log.LOG;
@@ -4837,15 +4868,23 @@ EncodingUtils.encodeToHexInterest = function(interest)
   return DataUtils.toHex(interest.encode());
 };
 
-EncodingUtils.encodeToHexContentObject = function(contentObject) 
+EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(contentObject.encode());
+  return DataUtils.toHex(data.encode());
 };
 
-EncodingUtils.encodeForwardingEntry = function(co) 
+/**
+ * @deprecated Use EncodingUtils.encodeToHexData(data).
+ */
+EncodingUtils.encodeToHexContentObject = function(data) 
+{
+  return EncodingUtils.encodeToHexData(data);
+}
+
+EncodingUtils.encodeForwardingEntry = function(data) 
 {
   var enc = new BinaryXMLEncoder();
-  co.to_ndnb(enc);
+  data.to_ndnb(enc);
   var bytes = enc.getReducedOstream();
 
   return bytes;
@@ -4871,12 +4910,20 @@ EncodingUtils.decodeHexInterest = function(input)
   return interest;
 };
 
+EncodingUtils.decodeHexData = function(input) 
+{
+  var data = new Data();
+  data.decode(DataUtils.toNumbers(input));
+  return data;
+};
+
+/**
+ * @deprecated Use EncodingUtils.decodeHexData(input).
+ */
 EncodingUtils.decodeHexContentObject = function(input) 
 {
-  var contentObject = new ContentObject();
-  contentObject.decode(DataUtils.toNumbers(input));
-  return contentObject;
-};
+  return EncodingUtils.decodeHexData(input);
+}
 
 EncodingUtils.decodeHexForwardingEntry = function(result) 
 {
@@ -4903,85 +4950,85 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 }
 
 /**
- * Return a user friendly HTML string with the contents of co.
+ * Return a user friendly HTML string with the contents of data.
  * This also outputs to console.log.
  */
-EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co) 
+EncodingUtils.dataToHtml = function(/* Data */ data) 
 {
   var output ="";
       
-  if (co == -1)
+  if (data == -1)
     output+= "NO CONTENT FOUND"
-  else if (co == -2)
+  else if (data == -2)
     output+= "CONTENT NAME IS EMPTY"
   else {
-    if (co.name != null && co.name.components != null) {
-      output+= "NAME: " + co.name.toUri();
+    if (data.name != null && data.name.components != null) {
+      output+= "NAME: " + data.name.toUri();
         
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.content != null) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(co.content);
+    if (data.content != null) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.content != null) {
-      output += "CONTENT(hex): "+ DataUtils.toHex(co.content);
+    if (data.content != null) {
+      output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(co.signature.digestAlgorithm);
+    if (data.signature != null && data.signature.digestAlgorithm != null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.signature.digestAlgorithm);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(co.signature.witness);
+    if (data.signature != null && data.signature.witness != null) {
+      output += "Witness (hex): "+ DataUtils.toHex(data.signature.witness);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signature != null && co.signature.signature != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(co.signature.signature);
+    if (data.signature != null && data.signature.signature != null) {
+      output += "Signature(hex): "+ DataUtils.toHex(data.signature.signature);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.publisher != null && co.signedInfo.publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(co.signedInfo.publisher.publisherPublicKeyDigest);
+    if (data.signedInfo != null && data.signedInfo.publisher != null && data.signedInfo.publisher.publisherPublicKeyDigest != null) {
+      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.timestamp != null) {
+    if (data.signedInfo != null && data.signedInfo.timestamp != null) {
       var d = new Date();
-      d.setTime(co.signedInfo.timestamp.msec);
+      d.setTime(data.signedInfo.timestamp.msec);
       
       var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
       
       output += "TimeStamp: "+d;
       output+= "<br />";
-      output += "TimeStamp(number): "+ co.signedInfo.timestamp.msec;
+      output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
       
       output+= "<br />";
     }
-    if (co.signedInfo != null && co.signedInfo.finalBlockID != null) {
-      output += "FinalBlockID: "+ DataUtils.toHex(co.signedInfo.finalBlockID);
+    if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
+      output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
       output+= "<br />";
     }
-    if (co.signedInfo!= null && co.signedInfo.locator!= null && co.signedInfo.locator.publicKey!= null) {
-      var publickeyHex = DataUtils.toHex(co.signedInfo.locator.publicKey).toLowerCase();
-      var publickeyString = DataUtils.toString(co.signedInfo.locator.publicKey);
-      var signature = DataUtils.toHex(co.signature.signature).toLowerCase();
-      var input = DataUtils.toString(co.rawSignatureData);
+    if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
+      var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
+      var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
+      var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
+      var input = DataUtils.toString(data.rawSignatureData);
       
       var witHex = "";
-      if (co.signature.witness != null)
-        witHex = DataUtils.toHex(co.signature.witness);
+      if (data.signature.witness != null)
+        witHex = DataUtils.toHex(data.signature.witness);
       
       output += "Public key: " + publickeyHex;
       
@@ -4997,12 +5044,12 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co)
       
       if (LOG > 2) console.log(" Signature NOW IS");
       
-      if (LOG > 2) console.log(co.signature.signature);
+      if (LOG > 2) console.log(data.signature.signature);
      
       var rsakey = new Key();
-      rsakey.readDerPublicKey(co.signedInfo.locator.publicKey);
+      rsakey.readDerPublicKey(data.signedInfo.locator.publicKey);
 
-      var result = co.verify(rsakey);
+      var result = data.verify(rsakey);
       if (result)
       output += 'SIGNATURE VALID';
       else
@@ -5016,28 +5063,36 @@ EncodingUtils.contentObjectToHtml = function(/* ContentObject */ co)
   return output;
 };
 
+/**
+ * @deprecated Use return EncodingUtils.dataToHtml(data).
+ */
+EncodingUtils.contentObjectToHtml = function(data) 
+{
+  return EncodingUtils.dataToHtml(data);
+}
+
 //
 // Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
 //
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
-var encodeToHexContentObject = function(co) { return EncodingUtils.encodeToHexContentObject(co); }
-var encodeForwardingEntry = function(co) { return EncodingUtils.encodeForwardingEntry(co); }
+var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
+var encodeForwardingEntry = function(data) { return EncodingUtils.encodeForwardingEntry(data); }
 var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
-var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexContentObject(input); }
+var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
 var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
-var contentObjectToHtml = function(co) { return EncodingUtils.contentObjectToHtml(co); }
+var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
  * @deprecated Use interest.encode().
  */
 function encodeToBinaryInterest(interest) { return interest.encode(); }
 /**
- * @deprecated Use contentObject.encode().
+ * @deprecated Use data.encode().
  */
-function encodeToBinaryContentObject(contentObject) { return contentObject.encode(); }
+function encodeToBinaryContentObject(data) { return data.encode(); }
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -5048,7 +5103,7 @@ function encodeToBinaryContentObject(contentObject) { return contentObject.encod
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
-var ContentObject = require('./content-object.js').ContentObject;
+var Data = require('./data.js').Data;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -5242,7 +5297,7 @@ NDN.makeShuffledGetHostAndPort = function(hostList, port)
 /**
  * Encode name as an Interest and send the it to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)). 
+ *                 new UpcallInfo(this, interest, 0, data)). 
  * @param {Name} name
  * @param {Closure} closure
  * @param {Interest} template if not null, use its attributes
@@ -5366,7 +5421,7 @@ NDN.prototype.registerPrefix = function(name, closure, flags)
 };
 
 /**
- * This is a closure to receive the ContentObject for NDN.ndndIdFetcher and call
+ * This is a closure to receive the Data for NDN.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flags).
  */
 NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) 
@@ -5391,14 +5446,14 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.
     return Closure.RESULT_ERR;
        
-  var co = upcallInfo.contentObject;
-  if (!co.signedInfo || !co.signedInfo.publisher || !co.signedInfo.publisher.publisherPublicKeyDigest)
+  var data = upcallInfo.data;
+  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest)
     console.log
-      ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
+      ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
        + this.name.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
+    this.ndn.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
     if (LOG > 3) console.log(this.ndn.ndndid);
     this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
   }
@@ -5420,9 +5475,9 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
   var si = new SignedInfo();
   si.setFields();
     
-  var co = new ContentObject(new Name(), si, bytes); 
-  co.sign();
-  var coBinary = co.encode();;
+  var data = new Data(new Name(), si, bytes); 
+  data.sign();
+  var coBinary = data.encode();;
     
   //var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
   var nodename = this.ndndid;
@@ -5439,7 +5494,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
 };
 
 /**
- * This is called when an entire binary XML element is received, such as a ContentObject or Interest.
+ * This is called when an entire binary XML element is received, such as a Data or Interest.
  * Look up in the PITTable and call the closure callback.
  */
 NDN.prototype.onReceivedElement = function(element) 
@@ -5461,17 +5516,17 @@ NDN.prototype.onReceivedElement = function(element)
       //console.log(entry);
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-        this.transport.send(info.contentObject.encode());
+      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
+        this.transport.send(info.data.encode());
     }        
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
-    if (LOG > 3) console.log('ContentObject packet received.');
+  else if (decoder.peekStartElement(NDNProtocolDTags.Data)) {  // Content packet
+    if (LOG > 3) console.log('Data packet received.');
         
-    var co = new ContentObject();
-    co.from_ndnb(decoder);
+    var data = new Data();
+    data.from_ndnb(decoder);
         
-    var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+    var pitEntry = NDN.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {
       // Cancel interest timer
       clearTimeout(pitEntry.timerID);
@@ -5485,7 +5540,7 @@ NDN.prototype.onReceivedElement = function(element)
                     
       if (this.verify == false) {
         // Pass content up without verifying the signature
-        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, co));
+        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
         return;
       }
         
@@ -5493,8 +5548,8 @@ NDN.prototype.onReceivedElement = function(element)
             
       // Recursive key fetching & verification closure
       var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-        this.contentObject = content;  // unverified content object
-        this.closure = closure;  // closure corresponding to the contentObject
+        this.data = content;  // unverified data packet object
+        this.closure = closure;  // closure corresponding to the data
         this.keyName = key;  // name of current key to be fetched
         //this.sigHex = sig;  // hex signature string to be verified
         //this.witness = wit;
@@ -5510,12 +5565,12 @@ NDN.prototype.onReceivedElement = function(element)
         } 
         else if (kind == Closure.UPCALL_CONTENT) {
           var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.contentObject.content);
-          var verified = co.verify(rsakey);
+          rsakey.readDerPublicKey(upcallInfo.data.content);
+          var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
           //console.log("raise encapsulated closure");
-          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.contentObject));
+          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.data));
                 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
@@ -5526,31 +5581,31 @@ NDN.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (co.signedInfo && co.signedInfo.locator && co.signature) {
+      if (data.signedInfo && data.signedInfo.locator && data.signature) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+        var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
               
         var wit = null;
-        if (co.signature.witness != null)
+        if (data.signature.witness != null)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
+            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
-        var keylocator = co.signedInfo.locator;
+        var keylocator = data.signedInfo.locator;
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
           //var keyname = keylocator.keyName.contentName.toUri();
           //console.log(nameStr);
           //console.log(keyname);
                 
-          if (keylocator.keyName.contentName.match(co.name)) {
+          if (keylocator.keyName.contentName.match(data.name)) {
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();
-            rsakey.readDerPublicKey(co.content);
-            var verified = co.verify(rsakey);
+            rsakey.readDerPublicKey(data.content);
+            var verified = data.verify(rsakey);
             var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
               
-            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
 
             // SWT: We don't need to store key here since the same key will be
             //      stored again in the closure.
@@ -5565,16 +5620,16 @@ NDN.prototype.onReceivedElement = function(element)
               // Key found, verify now
               if (LOG > 3) console.log("Local key cache hit");
               var rsakey = keyEntry.rsaKey;
-              var verified = co.verify(rsakey);
+              var verified = data.verify(rsakey);
               var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 
               // Raise callback
-              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
             } 
             else {
               // Not found, fetch now
               if (LOG > 3) console.log("Fetch key according to keylocator");
-              var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+              var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
               this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
             }
           }
@@ -5584,11 +5639,11 @@ NDN.prototype.onReceivedElement = function(element)
                 
           var rsakey = new Key();
           rsakey.readDerPublicKey(keylocator.publicKey);
-          var verified = co.verify(rsakey);
+          var verified = data.verify(rsakey);
               
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
           // Raise callback
-          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, co));
+          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
 
 					// Since KeyLocator does not contain key name for this key,
 					// we have no way to store it as a key entry in KeyStore.
@@ -5603,7 +5658,7 @@ NDN.prototype.onReceivedElement = function(element)
 		}
 	} 
   else
-		console.log('Incoming packet is not Interest or ContentObject. Discard now.');
+		console.log('Incoming packet is not Interest or Data. Discard now.');
 };
 
 /**

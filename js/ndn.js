@@ -8,7 +8,7 @@
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
-var ContentObject = require('./content-object.js').ContentObject;
+var Data = require('./data.js').Data;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -202,7 +202,7 @@ NDN.makeShuffledGetHostAndPort = function(hostList, port)
 /**
  * Encode name as an Interest and send the it to host:port, read the entire response and call
  *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, contentObject)). 
+ *                 new UpcallInfo(this, interest, 0, data)). 
  * @param {Name} name
  * @param {Closure} closure
  * @param {Interest} template if not null, use its attributes
@@ -326,7 +326,7 @@ NDN.prototype.registerPrefix = function(name, closure, flags)
 };
 
 /**
- * This is a closure to receive the ContentObject for NDN.ndndIdFetcher and call
+ * This is a closure to receive the Data for NDN.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flags).
  */
 NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) 
@@ -351,14 +351,14 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.
     return Closure.RESULT_ERR;
        
-  var co = upcallInfo.contentObject;
-  if (!co.signedInfo || !co.signedInfo.publisher || !co.signedInfo.publisher.publisherPublicKeyDigest)
+  var data = upcallInfo.data;
+  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest)
     console.log
-      ("ContentObject doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
+      ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
        + this.name.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.ndn.ndndid = co.signedInfo.publisher.publisherPublicKeyDigest;
+    this.ndn.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
     if (LOG > 3) console.log(this.ndn.ndndid);
     this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
   }
@@ -380,9 +380,9 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
   var si = new SignedInfo();
   si.setFields();
     
-  var co = new ContentObject(new Name(), si, bytes); 
-  co.sign();
-  var coBinary = co.encode();;
+  var data = new Data(new Name(), si, bytes); 
+  data.sign();
+  var coBinary = data.encode();;
     
   //var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
   var nodename = this.ndndid;
@@ -399,7 +399,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
 };
 
 /**
- * This is called when an entire binary XML element is received, such as a ContentObject or Interest.
+ * This is called when an entire binary XML element is received, such as a Data or Interest.
  * Look up in the PITTable and call the closure callback.
  */
 NDN.prototype.onReceivedElement = function(element) 
@@ -421,17 +421,17 @@ NDN.prototype.onReceivedElement = function(element)
       //console.log(entry);
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.contentObject != null) 
-        this.transport.send(info.contentObject.encode());
+      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
+        this.transport.send(info.data.encode());
     }        
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.ContentObject)) {  // Content packet
-    if (LOG > 3) console.log('ContentObject packet received.');
+  else if (decoder.peekStartElement(NDNProtocolDTags.Data)) {  // Content packet
+    if (LOG > 3) console.log('Data packet received.');
         
-    var co = new ContentObject();
-    co.from_ndnb(decoder);
+    var data = new Data();
+    data.from_ndnb(decoder);
         
-    var pitEntry = NDN.getEntryForExpressedInterest(co.name);
+    var pitEntry = NDN.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {
       // Cancel interest timer
       clearTimeout(pitEntry.timerID);
@@ -445,7 +445,7 @@ NDN.prototype.onReceivedElement = function(element)
                     
       if (this.verify == false) {
         // Pass content up without verifying the signature
-        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, co));
+        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
         return;
       }
         
@@ -453,8 +453,8 @@ NDN.prototype.onReceivedElement = function(element)
             
       // Recursive key fetching & verification closure
       var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-        this.contentObject = content;  // unverified content object
-        this.closure = closure;  // closure corresponding to the contentObject
+        this.data = content;  // unverified data packet object
+        this.closure = closure;  // closure corresponding to the data
         this.keyName = key;  // name of current key to be fetched
         //this.sigHex = sig;  // hex signature string to be verified
         //this.witness = wit;
@@ -470,12 +470,12 @@ NDN.prototype.onReceivedElement = function(element)
         } 
         else if (kind == Closure.UPCALL_CONTENT) {
           var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.contentObject.content);
-          var verified = co.verify(rsakey);
+          rsakey.readDerPublicKey(upcallInfo.data.content);
+          var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
           //console.log("raise encapsulated closure");
-          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.contentObject));
+          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.data));
                 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
@@ -486,31 +486,31 @@ NDN.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (co.signedInfo && co.signedInfo.locator && co.signature) {
+      if (data.signedInfo && data.signedInfo.locator && data.signature) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(co.signature.signature).toLowerCase();
+        var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
               
         var wit = null;
-        if (co.signature.witness != null)
+        if (data.signature.witness != null)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, co));
+            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
-        var keylocator = co.signedInfo.locator;
+        var keylocator = data.signedInfo.locator;
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
           //var keyname = keylocator.keyName.contentName.toUri();
           //console.log(nameStr);
           //console.log(keyname);
                 
-          if (keylocator.keyName.contentName.match(co.name)) {
+          if (keylocator.keyName.contentName.match(data.name)) {
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();
-            rsakey.readDerPublicKey(co.content);
-            var verified = co.verify(rsakey);
+            rsakey.readDerPublicKey(data.content);
+            var verified = data.verify(rsakey);
             var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
               
-            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
 
             // SWT: We don't need to store key here since the same key will be
             //      stored again in the closure.
@@ -525,16 +525,16 @@ NDN.prototype.onReceivedElement = function(element)
               // Key found, verify now
               if (LOG > 3) console.log("Local key cache hit");
               var rsakey = keyEntry.rsaKey;
-              var verified = co.verify(rsakey);
+              var verified = data.verify(rsakey);
               var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
 
               // Raise callback
-              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, co));
+              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
             } 
             else {
               // Not found, fetch now
               if (LOG > 3) console.log("Fetch key according to keylocator");
-              var nextClosure = new KeyFetchClosure(co, currentClosure, keylocator.keyName, sigHex, wit);
+              var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
               this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
             }
           }
@@ -544,11 +544,11 @@ NDN.prototype.onReceivedElement = function(element)
                 
           var rsakey = new Key();
           rsakey.readDerPublicKey(keylocator.publicKey);
-          var verified = co.verify(rsakey);
+          var verified = data.verify(rsakey);
               
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
           // Raise callback
-          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, co));
+          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
 
 					// Since KeyLocator does not contain key name for this key,
 					// we have no way to store it as a key entry in KeyStore.
@@ -563,7 +563,7 @@ NDN.prototype.onReceivedElement = function(element)
 		}
 	} 
   else
-		console.log('Incoming packet is not Interest or ContentObject. Discard now.');
+		console.log('Incoming packet is not Interest or Data. Discard now.');
 };
 
 /**

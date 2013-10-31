@@ -27,7 +27,7 @@
 			} else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
 				console.log("Closure.upcall: content signature verification pass.");
                 console.log("Host: " + ndn1.host + ":" + ndn1.port);
-				var content = upcallInfo.contentObject;
+				var content = upcallInfo.data;
 				//console.log(content.name);
 				nameStr = escape(content.name.toUri());
 				document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
@@ -35,9 +35,9 @@
 				//console.log("In callback, nameStr: " + nameStr);
 				//console.log("In callback, content: ");
 				//console.log(content);
-				document.getElementById('content').innerHTML += EncodingUtils.contentObjectToHtml(content);
+				document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
-				var content = upcallInfo.contentObject;
+				var content = upcallInfo.data;
 				console.log("Closure.upcall: content signature verification fail.");
                 console.log("Host: " + ndn1.host + ":" + ndn1.port);
 				if (content.signature.signature)

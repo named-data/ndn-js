@@ -37,25 +37,25 @@ WireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * The override method in the derived class should encode the contentObject and return a Buffer. 
- * @param {ContentObject} contentObject
+ * The override method in the derived class should encode the data and return a Buffer. 
+ * @param {Data} data
  * @returns {Buffer}
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.encodeContentObject = function(contentObject) 
+WireFormat.prototype.encodeData = function(data) 
 {
-  throw new Error("encodeContentObject is unimplemented in the base WireFormat class.  You should use a derived class.");
+  throw new Error("encodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in contentObject.
- * @param {ContentObject} contentObject
+ * The override method in the derived class should decode the input and put the result in data.
+ * @param {Data} data
  * @param {Buffer} input
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeContentObject = function(contentObject, input) 
+WireFormat.prototype.decodeData = function(data, input) 
 {
-  throw new Error("decodeContentObject is unimplemented in the base WireFormat class.  You should use a derived class.");
+  throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 

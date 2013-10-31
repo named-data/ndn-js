@@ -34,7 +34,7 @@
 				document.getElementById('pingreport').innerHTML += '<tr><td width="65%">' + nameStr + ' </td><td align="right">timeout</td></tr>' ;
 			} else if (kind == Closure.UPCALL_CONTENT) {
 				var T1 = new Date();
-				var content = upcallInfo.contentObject;
+				var content = upcallInfo.data;
 				nameStr = content.name.toUri().split("/").slice(0,-2).join("/");
 				strContent = DataUtils.toString(content.content);
 				if (strContent=="ping ack") {
