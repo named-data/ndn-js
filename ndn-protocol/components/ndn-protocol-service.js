@@ -222,7 +222,6 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
              // Make a name /<prefix>/<version>/%00.
              var nameWithoutMeta = data.name.getPrefix(iNdnfsFileComponent).append
                (data.name.get(iNdnfsFileComponent + 1)).appendSegment(0);    
-             dump("Debug: got " + data.name.toUri() + ", re-express " + nameWithoutMeta.toUri() + "\n");
              this.ndn.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
            }
            return Closure.RESULT_OK;
