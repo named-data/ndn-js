@@ -7,9 +7,15 @@ Changes
 * Updated the main NDN object to use a TcpTransport by default for Node.js.
 * Change all code to use new Buffer instead of new Uint8Array.
 * Moved global LOG variable to file Log.js.  If you want to change the log level, change Log.LOG .
+* http://redmine.named-data.net/issues/1051 If a host is specified, the NDN constructor defaults to port 6363 instead of port 9695.
+* Added Name.Component class and changed Name to use it. Name.getComponent still returns the component value but is deprecated.
+* Added Name.get which returns a Name.Component (not the component byte array).
+* Added Name.size. Deprecated Name.getComponentCount.
+* Change Exclude to hold Name.Component instead of Buffer. The Exclude constructor accepts an array of Name.Component or Buffer.
+* Renamed ContentObject class to Data.  In the UpcallInfo object, renamed contentObject to data.
+* EncodingUtils: Added encodeToHexData, decodeHexData and dataToHtml.
 * Moved files in tests/ to tests/browser/ .
 * Added test files from NDN-On-Node to tests/node/ . 
-* http://redmine.named-data.net/issues/1051 If a host is specified, the NDN constructor defaults to port 6363 instead of port 9695.
 * http://redmine.named-data.net/issues/1052 wsproxy: Added -n command line option to set the ndnd port.
 * In EncodingUtils.js, made all functions static members of EncodingUtils.
 * http://redmine.named-data.net/issues/1038 Default to not verify data packets until crypto API is updated.
@@ -20,12 +26,7 @@ Changes
 * Internally changed "ccn" to "ndn" in function names and comments.
 * Added Interest.toUri().
 * http://redmine.named-data.net/issues/1059 Changed file names to lower case. Applications include build/ndn.js, so are unaffected.
-* Added Name.Component class and changed Name to use it. Name.getComponent still returns the component value but is deprecated.
-* Added Name.get which returns a Name.Component (not the component byte array).
-* Added Name.size. Deprecated Name.getComponentCount.
-* Change Exclude to hold Name.Component instead of Buffer. The Exclude constructor accepts an array of Name.Component or Buffer.
-* Renamed ContentObject class to Data.  In the UpcallInfo object, renamed contentObject to data.
-* EncodingUtils: Added encodeToHexData, decodeHexData and dataToHtml.
+* Firefox add-on: Support NDNFS: If the returned data name has %C1.FS.file, remove it and request the actual file.
 
 Deprecated
 * build/ndn-js.js and build/ndn-js.min.js.  You should use build/ndn.js and build/ndn.min.js.

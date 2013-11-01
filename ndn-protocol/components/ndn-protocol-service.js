@@ -192,14 +192,13 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         segmentNumber = DataUtils.bigEndianToUnsignedInt
             (data.name.get(data.name.size() - 1).getValue());
     
-    if ((segmentNumber == null || segmentNumber == 0) && !this.didOnStart) {
+    if (!this.didOnStart) {
         // This is the first or only segment.
         var iMetaComponent = getIndexOfMetaComponent(data.name);
-        if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 &&
-            getIndexOfMetaComponent(this.uriName) < 0) {
+        if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 && getIndexOfMetaComponent(this.uriName) < 0) {
             // The matched content name has a META component that wasn't requested in the original
             //   URI.  Add this to the excluded META components to try to get the "real" content.
-            var nameWithoutMeta = new Name(data.name.components.slice(0, iMetaComponent));
+            var nameWithoutMeta = data.name.getPrefix(iMetaComponent);
             if (this.excludedMetaComponents.length > 0 && iMetaComponent != this.iMetaComponent)
                 // We are excluding META components at a new position in the name, so start over.
                 this.excludedMetaComponents = [];
@@ -210,11 +209,25 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.exclude = new Exclude(this.excludedMetaComponents);
-            this.ndn.expressInterest
-                (nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
+            this.ndn.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
         
+        iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.name);
+        if (!this.uriEndsWithSegmentNumber && iNdnfsFileComponent >= 0 && getIndexOfNdnfsFileComponent(this.uriName) < 0) {
+           // The matched content name has an NDNFS file meta component that wasn't requested in the original
+           //   URI.  Expect the data.name to be /<prefix>/<file component>/<version>.
+           // (We expect there to be a component after iNdnfsFileComponent but check anyway.)
+           if (data.name.size() >= iNdnfsFileComponent + 2) {
+             // Make a name /<prefix>/<version>/%00.
+             var nameWithoutMeta = data.name.getPrefix(iNdnfsFileComponent).append
+               (data.name.get(iNdnfsFileComponent + 1)).appendSegment(0);    
+             dump("Debug: got " + data.name.toUri() + ", re-express " + nameWithoutMeta.toUri() + "\n");
+             this.ndn.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
+           }
+           return Closure.RESULT_OK;
+        }
+            
         this.didOnStart = true;
         
         // Get the URI from the Data including the version.
@@ -503,11 +516,12 @@ function getNameContentTypeAndCharset(name)
 }
 
 /*
- * Return true if the last component in the name is a segment number..
+ * Return true if the last component in the name is a segment number.  Require at least one name component
+ * before the segment number.
  */
 function endsWithSegmentNumber(name) 
 {
-    return name.components != null && name.size() >= 1 &&
+    return name.components != null && name.size() >= 2 &&
         name.get(name.size() - 1).getValue().length >= 1 &&
         name.get(name.size() - 1).getValue()[0] == 0;
 }
@@ -576,7 +590,7 @@ function parseExclude(value)
     for (var i = 0; i < splitValue.length; ++i) {
         var element = splitValue[i].trim();
         if (element == "*")
-            excludeValues.push(Exclude.ANY)
+            excludeValues.push(Exclude.ANY);
         else
             excludeValues.push(Name.fromEscapedString(element));
     }
@@ -584,20 +598,39 @@ function parseExclude(value)
     return new Exclude(excludeValues);
 }
 
-/*
- * Return the index of the first compoment that starts with %C1.META, or -1 if not found.
+/**
+ * Get the index of the first component that starts with %C1.META.
+ * @param {Name} name The Name to search.
+ * @returns {number} The index or -1 if not found.
  */
 function getIndexOfMetaComponent(name) 
 {
-    for (var i = 0; i < name.size(); ++i) {
-        var component = name.get(i).getValue();
-        if (component.length >= MetaComponentPrefix.length &&
-            DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), 
-                                  MetaComponentPrefix))
-            return i;
-    }
+  for (var i = 0; i < name.size(); ++i) {
+    var component = name.get(i).getValue();
+    if (component.length >= MetaComponentPrefix.length &&
+      DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), MetaComponentPrefix))
+        return i;
+  }
     
-    return -1;
+  return -1;
 }
 
 var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
+
+/**
+ * Get the index of the first component that is the NDNFS file meta data marker.
+ * @param {type} name The Name to search.
+ * @returns {number} The index or -1 if not found.
+ */
+function getIndexOfNdnfsFileComponent(name) 
+{
+  for (var i = 0; i < name.size(); ++i) {
+    if (DataUtils.arraysEqual(name.get(i).getValue(), NdnfsFileComponent))
+      return i;
+  }
+    
+  return -1;
+}
+
+var NdnfsFileComponent = Name.fromEscapedString("%C1.FS.file");
+
