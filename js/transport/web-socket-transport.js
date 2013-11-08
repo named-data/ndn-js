@@ -19,7 +19,7 @@ var WebSocketTransport = function WebSocketTransport()
     this.connectedHost = null; // Read by NDN.
     this.connectedPort = null; // Read by NDN.
     this.elementReader = null;
-    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+    this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
           "E.ws.ndn.ucla.edu"],
          9696);

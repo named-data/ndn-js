@@ -21,7 +21,7 @@ var XpcomTransport = function XpcomTransport()
     this.connectedHost = null; // Read by NDN.
     this.connectedPort = null; // Read by NDN.
     
-    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+    this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
         (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
           "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
          // Connect to port 9695 until the testbed hubs use NDNx.
