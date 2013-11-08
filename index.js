@@ -1,4 +1,4 @@
-exports.NDN = require('./js/ndn.js').NDN;
+exports.NDN = require('./js/face.js').NDN;
 exports.Closure = require('./js/closure.js').Closure;
 exports.Name = require('./js/name.js').Name;
 exports.Interest = require('./js/interest.js').Interest;
