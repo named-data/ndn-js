@@ -1,14 +1,14 @@
-Interim changes since NDN-JS v0.1 (2013-10-03)
+NDN-JS v0.2 (2013-11-08)
 --------------------------------------
 
 Changes
 * http://redmine.named-data.net/issues/1060 Rename the combined files ndn-js.js and ndn-js.min.js to ndn.js and ndn.min.js.
 * http://redmine.named-data.net/issues/1048 Add support for Node.js to merge with NDN-On-Node.
 * http://redmine.named-data.net/issues/1071 Renamed the main NDN class to Face.
-* Updated the main NDN object to use a TcpTransport by default for Node.js.
+* Updated the main Face object to use a TcpTransport by default for Node.js.
 * Change all code to use new Buffer instead of new Uint8Array.
 * Moved global LOG variable to file Log.js.  If you want to change the log level, change Log.LOG .
-* http://redmine.named-data.net/issues/1051 If a host is specified, the NDN constructor defaults to port 6363 instead of port 9695.
+* http://redmine.named-data.net/issues/1051 If a host is specified, the Face constructor defaults to port 6363 instead of port 9695.
 * Added Name.Component class and changed Name to use it. Name.getComponent still returns the component value but is deprecated.
 * Added Name.get which returns a Name.Component (not the component byte array).
 * Added Name.size. Deprecated Name.getComponentCount.
