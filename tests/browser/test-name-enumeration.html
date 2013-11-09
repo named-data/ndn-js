@@ -13,7 +13,7 @@
   <script type="text/javascript" src="../../build/ndn.js"></script>
 
   <script type="text/javascript">
-    var ndn1 = new NDN({host: "localhost"});    
+    var face = new Face({host: "localhost"});    
     
     function onComponents(components)
     {
@@ -30,7 +30,7 @@
     function run() 
     {
       result.innerHTML = "Components:<br/>";
-      NameEnumeration.getComponents(ndn1, new Name(document.getElementById('prefix').value), onComponents);
+      NameEnumeration.getComponents(face, new Name(document.getElementById('prefix').value), onComponents);
     }
     
   </script>

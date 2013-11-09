@@ -13,7 +13,7 @@
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-    	  var ndn1 = new NDN();
+    	  var face = new Face();
         
         var AsyncGetClosure = function AsyncGetClosure() {
         	// Inherit from Closure.
@@ -26,7 +26,7 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
 				console.log("Closure.upcall: content signature verification pass.");
-                console.log("Host: " + ndn1.host + ":" + ndn1.port);
+                console.log("Host: " + face.host + ":" + face.port);
 				var content = upcallInfo.data;
 				//console.log(content.name);
 				nameStr = escape(content.name.toUri());
@@ -39,14 +39,14 @@
 			} else if (kind == Closure.UPCALL_CONTENT_BAD) {
 				var content = upcallInfo.data;
 				console.log("Closure.upcall: content signature verification fail.");
-                console.log("Host: " + ndn1.host + ":" + ndn1.port);
+                console.log("Host: " + face.host + ":" + face.port);
 				if (content.signature.signature)
 					console.log("Signature: " + DataUtils.toHex(content.signature.signature).toLowerCase());
 				if (content.signature.witness)
 					console.log("Witness: " + DataUtils.toHex(content.signature.witness).toLowerCase());
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 				console.log("Closure.upcall called with interest time out. Re-expressing the interest.");
-                console.log("Host: " + ndn1.host + ":" + ndn1.port);
+                console.log("Host: " + face.host + ":" + face.port);
                 return Closure.RESULT_REEXPRESS;
 			}
 			return Closure.RESULT_OK;
@@ -54,7 +54,7 @@
 		
 		
 		function run() {
-			ndn1.expressInterest(new Name(document.getElementById('interest').value), new AsyncGetClosure());
+			face.expressInterest(new Name(document.getElementById('interest').value), new AsyncGetClosure());
 		}
 		
 	</script>

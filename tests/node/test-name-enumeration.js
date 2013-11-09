@@ -1,8 +1,8 @@
 var Name = require("../..").Name;
 var NameEnumeration = require('../..').NameEnumeration;
-var NDN = require('../..').NDN;
+var Face = require('../..').Face;
 
-var ndn1 = new NDN({host: "localhost"});    
+var face = new Face({host: "localhost"});    
     
 function onComponents(components)
 {
@@ -15,9 +15,9 @@ function onComponents(components)
       console.log(new Name([components[i]]).toUri());
   }
 
-  ndn1.close();
+  face.close();
 }
 
 var prefix = "/";    
 console.log("Components:");
-NameEnumeration.getComponents(ndn1, new Name(prefix), onComponents);
+NameEnumeration.getComponents(face, new Name(prefix), onComponents);

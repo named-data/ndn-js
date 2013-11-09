@@ -4,6 +4,7 @@ Interim changes since NDN-JS v0.1 (2013-10-03)
 Changes
 * http://redmine.named-data.net/issues/1060 Rename the combined files ndn-js.js and ndn-js.min.js to ndn.js and ndn.min.js.
 * http://redmine.named-data.net/issues/1048 Add support for Node.js to merge with NDN-On-Node.
+* http://redmine.named-data.net/issues/1071 Renamed the main NDN class to Face.
 * Updated the main NDN object to use a TcpTransport by default for Node.js.
 * Change all code to use new Buffer instead of new Uint8Array.
 * Moved global LOG variable to file Log.js.  If you want to change the log level, change Log.LOG .
@@ -31,6 +32,7 @@ Changes
 Deprecated
 * build/ndn-js.js and build/ndn-js.min.js.  You should use build/ndn.js and build/ndn.min.js.
 * ndnProtocol.xpi. Use ndn-protocol.xpi which is the new name of the Firefox add-on file.
+* NDN: This class is deprecated. Use Face.
 * ContentObject: This class is deprecated. Use Data.
 * Name: Deprecated getComponent.  Use get(i).getValue().
 * Name: Deprecated getComponentCount.  Use size().

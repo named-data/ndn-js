@@ -13,10 +13,10 @@ var TcpTransport = function TcpTransport()
   this.socket = null;
   this.sock_ready = false;
   this.elementReader = null;
-  this.connectedHost = null; // Read by NDN.
-  this.connectedPort = null; // Read by NDN.
+  this.connectedHost = null; // Read by Face.
+  this.connectedPort = null; // Read by Face.
 
-  this.defaultGetHostAndPort = require('../ndn.js').NDN.makeShuffledGetHostAndPort
+  this.defaultGetHostAndPort = require('../face.js').Face.makeShuffledGetHostAndPort
     (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
       "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
      // Connect to port 9695 until the testbed hubs use NDNx.
@@ -25,12 +25,12 @@ var TcpTransport = function TcpTransport()
 
 exports.TcpTransport = TcpTransport;
 
-TcpTransport.prototype.connect = function(ndn, onopenCallback) 
+TcpTransport.prototype.connect = function(face, onopenCallback) 
 {
   if (this.socket != null)
     delete this.socket;
 
-  this.elementReader = new BinaryXmlElementReader(ndn);
+  this.elementReader = new BinaryXmlElementReader(face);
 
   // Connect to local ndnd via TCP
   var net = require('net');
@@ -43,7 +43,7 @@ TcpTransport.prototype.connect = function(ndn, onopenCallback)
       // Make a copy of data (maybe a Buffer or a String)
       var buf = new Buffer(data);
       try {
-        // Find the end of the binary XML element and call ndn.onReceivedElement.
+        // Find the end of the binary XML element and call face.onReceivedElement.
         self.elementReader.onReceivedData(buf);
       } catch (ex) {
         console.log("NDN.TcpTransport.ondata exception: " + ex);
@@ -69,13 +69,13 @@ TcpTransport.prototype.connect = function(ndn, onopenCallback)
 
     self.socket = null;
       
-    // Close NDN when TCP Socket is closed
-    ndn.closeByTransport();
+    // Close Face when TCP Socket is closed
+    face.closeByTransport();
   });
 
-  this.socket.connect({host: ndn.host, port: ndn.port});
-  this.connectedHost = ndn.host;
-  this.connectedPort = ndn.port;
+  this.socket.connect({host: face.host, port: face.port});
+  this.connectedHost = face.host;
+  this.connectedPort = face.port;
 };
 
 /**

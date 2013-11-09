@@ -17,31 +17,31 @@ exports.NameEnumeration = NameEnumeration;
 
 /**
  * Use the name enumeration protocol to get the child components of the name prefix.
- * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {Face} face The Face object for using expressInterest.
  * @param {Name} name The name prefix for finding the child components.
  * @param {function} onComponents On getting the response, this calls onComponents(components) where
  * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
  */
-NameEnumeration.getComponents = function(ndn, prefix, onComponents)
+NameEnumeration.getComponents = function(face, prefix, onComponents)
 {
   var command = new Name(prefix);
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
-  ndn.expressInterest(command, new NameEnumeration.Closure(ndn, onComponents));
+  face.expressInterest(command, new NameEnumeration.Closure(face, onComponents));
 };
 
 /**
  * Create a closure for getting the response from the name enumeration command.
- * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {Face} face The Face object for using expressInterest.
  * @param {function} onComponents The onComponents callback given to getComponents.
  */
-NameEnumeration.Closure = function NameEnumerationClosure(ndn, onComponents) 
+NameEnumeration.Closure = function NameEnumerationClosure(face, onComponents) 
 {
   // Inherit from Closure.
   Closure.call(this);
   
-  this.ndn = ndn;
+  this.face = face;
   this.onComponents = onComponents;
   this.contentParts = [];
 };
@@ -69,7 +69,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
-          this.ndn.expressInterest
+          this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
           // Save the content and check if we are finished.
@@ -85,7 +85,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           }
           
           // Fetch the next segment.
-          this.ndn.expressInterest
+          this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
       }

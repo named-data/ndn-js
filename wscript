@@ -112,7 +112,7 @@ def build (bld):
                  "js/forwarding-entry.js",
                  "js/encoding/binary-xml-wire-format.js",
                  "js/encoding/encoding-utils.js",
-                 "js/ndn.js"] + securityLib
+                 "js/face.js"] + securityLib
 
         ndnjs = bld (features="combine",
                      target="ndn",

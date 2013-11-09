@@ -2,7 +2,7 @@
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * Implement getAsync and putAsync used by NDN using nsISocketTransportService.
+ * Implement getAsync and putAsync used by Face using nsISocketTransportService.
  * This is used inside Firefox XPCOM modules.
  */
 
@@ -18,10 +18,10 @@ var XpcomTransport = function XpcomTransport()
     this.elementListener = null;
     this.socket = null; // nsISocketTransport
     this.outStream = null;
-    this.connectedHost = null; // Read by NDN.
-    this.connectedPort = null; // Read by NDN.
+    this.connectedHost = null; // Read by Face.
+    this.connectedPort = null; // Read by Face.
     
-    this.defaultGetHostAndPort = NDN.makeShuffledGetHostAndPort
+    this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
         (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
           "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
          // Connect to port 9695 until the testbed hubs use NDNx.
@@ -29,15 +29,15 @@ var XpcomTransport = function XpcomTransport()
 };
 
 /**
- * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
- *    ndn.onReceivedElement(element).
+ *    face.onReceivedElement(element).
  */
-XpcomTransport.prototype.connect = function(ndn, onopenCallback) 
+XpcomTransport.prototype.connect = function(face, onopenCallback) 
 {
-    this.elementListener = ndn;
-    this.connectHelper(ndn.host, ndn.port, ndn);
+    this.elementListener = face;
+    this.connectHelper(face.host, face.port, face);
     
     onopenCallback();
 };

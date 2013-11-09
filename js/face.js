@@ -20,8 +20,8 @@ var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new NDN with the given settings.
- * This throws an exception if NDN.supported is false.
+ * Create a new Face with the given settings.
+ * This throws an exception if Face.supported is false.
  * @constructor
  * @param {Object} settings if not null, an associative array with the following defaults:
  * {
@@ -36,9 +36,9 @@ var LOG = require('./log.js').Log.LOG;
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
-var NDN = function NDN(settings) 
+var Face = function Face(settings) 
 {
-  if (!NDN.supported)
+  if (!Face.supported)
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
   settings = (settings || {});
@@ -48,24 +48,24 @@ var NDN = function NDN(settings)
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
   this.host = (settings.host !== undefined ? settings.host : null);
   this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
-  this.readyStatus = NDN.UNOPEN;
+  this.readyStatus = Face.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
-  this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("NDN connection established."); });
-  this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("NDN connection closed."); });
+  this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
+  this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
   this.ndndid = null;
 };
 
-exports.NDN = NDN;
+exports.Face = Face;
 
-NDN.UNOPEN = 0;  // created but not opened yet
-NDN.OPENED = 1;  // connection to ndnd opened
-NDN.CLOSED = 2;  // connection to ndnd closed
+Face.UNOPEN = 0;  // created but not opened yet
+Face.OPENED = 1;  // connection to ndnd opened
+Face.CLOSED = 2;  // connection to ndnd closed
 
 /**
  * Return true if necessary JavaScript support is available, else log an error and return false.
  */
-NDN.getSupported = function() 
+Face.getSupported = function() 
 {
   try {
     var dummy = new Buffer(1).slice(0, 1);
@@ -78,17 +78,17 @@ NDN.getSupported = function()
   return true;
 };
 
-NDN.supported = NDN.getSupported();
+Face.supported = Face.getSupported();
 
-NDN.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
+Face.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
 
-NDN.prototype.createRoute = function(host, port) 
+Face.prototype.createRoute = function(host, port) 
 {
   this.host=host;
   this.port=port;
 };
 
-NDN.KeyStore = new Array();
+Face.KeyStore = new Array();
 
 var KeyStoreEntry = function KeyStoreEntry(name, rsa, time) 
 {
@@ -97,40 +97,40 @@ var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
   this.timeStamp = time;  // Time Stamp
 };
 
-NDN.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) 
+Face.addKeyEntry = function(/* KeyStoreEntry */ keyEntry) 
 {
-  var result = NDN.getKeyByName(keyEntry.keyName);
+  var result = Face.getKeyByName(keyEntry.keyName);
   if (result == null) 
-    NDN.KeyStore.push(keyEntry);
+    Face.KeyStore.push(keyEntry);
   else
     result = keyEntry;
 };
 
-NDN.getKeyByName = function(/* KeyName */ name) 
+Face.getKeyByName = function(/* KeyName */ name) 
 {
   var result = null;
   
-  for (var i = 0; i < NDN.KeyStore.length; i++) {
-    if (NDN.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || NDN.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
-        result = NDN.KeyStore[i];
+  for (var i = 0; i < Face.KeyStore.length; i++) {
+    if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
+      if (result == null || Face.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+        result = Face.KeyStore[i];
     }
   }
     
   return result;
 };
 
-NDN.prototype.close = function() 
+Face.prototype.close = function() 
 {
-  if (this.readyStatus != NDN.OPENED)
-    throw new Error('Cannot close because NDN connection is not opened.');
+  if (this.readyStatus != Face.OPENED)
+    throw new Error('Cannot close because Face connection is not opened.');
 
-  this.readyStatus = NDN.CLOSED;
+  this.readyStatus = Face.CLOSED;
   this.transport.close();
 };
 
 // For fetching data
-NDN.PITTable = new Array();
+Face.PITTable = new Array();
 
 /**
  * @constructor
@@ -143,17 +143,17 @@ var PITEntry = function PITEntry(interest, closure)
 };
 
 /**
- * Return the entry from NDN.PITTable where the name conforms to the interest selectors, and
+ * Return the entry from Face.PITTable where the name conforms to the interest selectors, and
  * the interest name is the longest that matches name.
  */
-NDN.getEntryForExpressedInterest = function(/*Name*/ name) 
+Face.getEntryForExpressedInterest = function(/*Name*/ name) 
 {
   var result = null;
     
-  for (var i = 0; i < NDN.PITTable.length; i++) {
-    if (NDN.PITTable[i].interest.matchesName(name)) {
-      if (result == null || NDN.PITTable[i].interest.name.components.length > result.interest.name.components.length)
-        result = NDN.PITTable[i];
+  for (var i = 0; i < Face.PITTable.length; i++) {
+    if (Face.PITTable[i].interest.matchesName(name)) {
+      if (result == null || Face.PITTable[i].interest.name.components.length > result.interest.name.components.length)
+        result = Face.PITTable[i];
     }
   }
     
@@ -161,7 +161,7 @@ NDN.getEntryForExpressedInterest = function(/*Name*/ name)
 };
 
 // For publishing data
-NDN.CSTable = new Array();
+Face.CSTable = new Array();
 
 /**
  * @constructor
@@ -174,9 +174,9 @@ var CSEntry = function CSEntry(name, closure)
 
 function getEntryForRegisteredPrefix(name) 
 {
-  for (var i = 0; i < NDN.CSTable.length; i++) {
-    if (NDN.CSTable[i].name.match(name))
-      return NDN.CSTable[i];
+  for (var i = 0; i < Face.CSTable.length; i++) {
+    if (Face.CSTable[i].name.match(name))
+      return Face.CSTable[i];
   }
   return null;
 }
@@ -185,7 +185,7 @@ function getEntryForRegisteredPrefix(name)
  * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
  * If no more hosts remain, return null.
  */
-NDN.makeShuffledGetHostAndPort = function(hostList, port) 
+Face.makeShuffledGetHostAndPort = function(hostList, port) 
 {
   // Make a copy.
   hostList = hostList.slice(0, hostList.length);
@@ -207,7 +207,7 @@ NDN.makeShuffledGetHostAndPort = function(hostList, port)
  * @param {Closure} closure
  * @param {Interest} template if not null, use its attributes
  */
-NDN.prototype.expressInterest = function(name, closure, template) 
+Face.prototype.expressInterest = function(name, closure, template) 
 {
   var interest = new Interest(name);
   if (template != null) {
@@ -240,12 +240,12 @@ NDN.prototype.expressInterest = function(name, closure, template)
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
  */
-NDN.prototype.reconnectAndExpressInterest = function(interest, closure) 
+Face.prototype.reconnectAndExpressInterest = function(interest, closure) 
 {
   if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
     var thisNDN = this;
     this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
-    this.readyStatus = NDN.OPENED;
+    this.readyStatus = Face.OPENED;
   }
   else
     this.expressInterestHelper(interest, closure);
@@ -255,7 +255,7 @@ NDN.prototype.reconnectAndExpressInterest = function(interest, closure)
  * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
-NDN.prototype.expressInterestHelper = function(interest, closure) 
+Face.prototype.expressInterestHelper = function(interest, closure) 
 {
   var binaryInterest = interest.encode();
   var thisNDN = this;    
@@ -263,7 +263,7 @@ NDN.prototype.expressInterestHelper = function(interest, closure)
   if (closure != null) {
     var pitEntry = new PITEntry(interest, closure);
     // TODO: This needs to be a single thread-safe transaction on a global object.
-    NDN.PITTable.push(pitEntry);
+    Face.PITTable.push(pitEntry);
     closure.pitEntry = pitEntry;
 
     // Set interest timer.
@@ -271,18 +271,18 @@ NDN.prototype.expressInterestHelper = function(interest, closure)
     var timeoutCallback = function() {
       if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
         
-      // Remove PIT entry from NDN.PITTable, even if we add it again later to re-express
+      // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
       //   the interest because we don't want to match it in the mean time.
       // TODO: Make this a thread-safe operation on the global PITTable.
-      var index = NDN.PITTable.indexOf(pitEntry);
+      var index = Face.PITTable.indexOf(pitEntry);
       if (index >= 0) 
-        NDN.PITTable.splice(index, 1);
+        Face.PITTable.splice(index, 1);
         
       // Raise closure callback
       if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
         if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-        NDN.PITTable.push(pitEntry);
+        Face.PITTable.push(pitEntry);
         thisNDN.transport.send(binaryInterest);
       }
     };
@@ -299,17 +299,17 @@ NDN.prototype.expressInterestHelper = function(interest, closure)
  * @param {Closure} closure
  * @param {number} flags
  */
-NDN.prototype.registerPrefix = function(name, closure, flags) 
+Face.prototype.registerPrefix = function(name, closure, flags) 
 {
   flags = flags | 3;
   var thisNDN = this;
   var onConnected = function() {
     if (thisNDN.ndndid == null) {
       // Fetch ndndid first, then register.
-      var interest = new Interest(NDN.ndndIdFetcher);
+      var interest = new Interest(Face.ndndIdFetcher);
       interest.interestLifetime = 4000; // milliseconds
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisNDN.reconnectAndExpressInterest(interest, new NDN.FetchNdndidClosure(thisNDN, name, closure, flags));
+      thisNDN.reconnectAndExpressInterest(interest, new Face.FetchNdndidClosure(thisNDN, name, closure, flags));
     }
     else  
       thisNDN.registerPrefixHelper(name, closure, flags);
@@ -326,21 +326,21 @@ NDN.prototype.registerPrefix = function(name, closure, flags)
 };
 
 /**
- * This is a closure to receive the Data for NDN.ndndIdFetcher and call
+ * This is a closure to receive the Data for Face.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flags).
  */
-NDN.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure, flags) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.name = name;
   this.callerClosure = callerClosure;
   this.flags = flags;
 };
 
-NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) 
+Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) 
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
     console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.name.toUri() + " .");
@@ -358,9 +358,9 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
        + this.name.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.ndn.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
-    if (LOG > 3) console.log(this.ndn.ndndid);
-    this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
+    this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
+    if (LOG > 3) console.log(this.face.ndndid);
+    this.face.registerPrefixHelper(this.name, this.callerClosure, this.flags);
   }
     
   return Closure.RESULT_OK;
@@ -369,7 +369,7 @@ NDN.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-NDN.prototype.registerPrefixHelper = function(name, closure, flags) 
+Face.prototype.registerPrefixHelper = function(name, closure, flags) 
 {
   var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
     
@@ -384,7 +384,6 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
   data.sign();
   var coBinary = data.encode();;
     
-  //var nodename = unescape('%00%88%E2%F4%9C%91%16%16%D6%21%8E%A0c%95%A5%A6r%11%E0%A0%82%89%A6%A9%85%AB%D6%E2%065%DB%AF');
   var nodename = this.ndndid;
   var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
 
@@ -393,7 +392,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
   if (LOG > 3) console.log('Send Interest registration packet.');
       
   var csEntry = new CSEntry(name.toUri(), closure);
-  NDN.CSTable.push(csEntry);
+  Face.CSTable.push(csEntry);
     
   this.transport.send(interest.encode());
 };
@@ -402,7 +401,7 @@ NDN.prototype.registerPrefixHelper = function(name, closure, flags)
  * This is called when an entire binary XML element is received, such as a Data or Interest.
  * Look up in the PITTable and call the closure callback.
  */
-NDN.prototype.onReceivedElement = function(element) 
+Face.prototype.onReceivedElement = function(element) 
 {
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
   var decoder = new BinaryXMLDecoder(element);
@@ -431,15 +430,15 @@ NDN.prototype.onReceivedElement = function(element)
     var data = new Data();
     data.from_ndnb(decoder);
         
-    var pitEntry = NDN.getEntryForExpressedInterest(data.name);
+    var pitEntry = Face.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {
       // Cancel interest timer
       clearTimeout(pitEntry.timerID);
             
-      // Remove PIT entry from NDN.PITTable
-      var index = NDN.PITTable.indexOf(pitEntry);
+      // Remove PIT entry from Face.PITTable
+      var index = Face.PITTable.indexOf(pitEntry);
       if (index >= 0)
-        NDN.PITTable.splice(index, 1);
+        Face.PITTable.splice(index, 1);
             
       var currentClosure = pitEntry.closure;
                     
@@ -456,8 +455,6 @@ NDN.prototype.onReceivedElement = function(element)
         this.data = content;  // unverified data packet object
         this.closure = closure;  // closure corresponding to the data
         this.keyName = key;  // name of current key to be fetched
-        //this.sigHex = sig;  // hex signature string to be verified
-        //this.witness = wit;
             
         Closure.call(this);
       };
@@ -474,13 +471,11 @@ NDN.prototype.onReceivedElement = function(element)
           var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          //console.log("raise encapsulated closure");
           this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.data));
                 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          NDN.addKeyEntry(keyEntry);
-          //console.log(NDN.KeyStore);
+          Face.addKeyEntry(keyEntry);
         } 
         else if (kind == Closure.UPCALL_CONTENT_BAD)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
@@ -498,9 +493,6 @@ NDN.prototype.onReceivedElement = function(element)
         var keylocator = data.signedInfo.locator;
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-          //var keyname = keylocator.keyName.contentName.toUri();
-          //console.log(nameStr);
-          //console.log(keyname);
                 
           if (keylocator.keyName.contentName.match(data.name)) {
             if (LOG > 3) console.log("Content is key itself");
@@ -512,15 +504,11 @@ NDN.prototype.onReceivedElement = function(element)
               
             currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
 
-            // SWT: We don't need to store key here since the same key will be
-            //      stored again in the closure.
-            //var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-            //NDN.addKeyEntry(keyEntry);
-            //console.log(NDN.KeyStore);
+            // SWT: We don't need to store key here since the same key will be stored again in the closure.
           } 
           else {
             // Check local key store
-            var keyEntry = NDN.getKeyByName(keylocator.keyName);
+            var keyEntry = Face.getKeyByName(keylocator.keyName);
             if (keyEntry) {
               // Key found, verify now
               if (LOG > 3) console.log("Local key cache hit");
@@ -570,7 +558,7 @@ NDN.prototype.onReceivedElement = function(element)
  * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
  *   is not alive.  Get a host and port, connect, then execute onConnected().
  */
-NDN.prototype.connectAndExecute = function(onConnected) 
+Face.prototype.connectAndExecute = function(onConnected) 
 {
   var hostAndPort = this.getHostAndPort();
   if (hostAndPort == null) {
@@ -599,29 +587,29 @@ NDN.prototype.connectAndExecute = function(onConnected)
       thisNDN.connectAndExecute(onConnected);
 	}, 3000);
   
-  this.reconnectAndExpressInterest(interest, new NDN.ConnectClosure(this, onConnected, timerID));
+  this.reconnectAndExpressInterest(interest, new Face.ConnectClosure(this, onConnected, timerID));
 };
 
 /**
  * This is called by the Transport when the connection is closed by the remote host.
  */
-NDN.prototype.closeByTransport = function() 
+Face.prototype.closeByTransport = function() 
 {
-  this.readyStatus = NDN.CLOSED;
+  this.readyStatus = Face.CLOSED;
   this.onclose();
 };
 
-NDN.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) 
+Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.onConnected = onConnected;
   this.timerID = timerID;
 };
 
-NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo) 
+Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo) 
 {
   if (!(kind == Closure.UPCALL_CONTENT ||
         kind == Closure.UPCALL_CONTENT_UNVERIFIED))
@@ -631,12 +619,31 @@ NDN.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   // The host is alive, so cancel the timeout and continue with onConnected().
   clearTimeout(this.timerID);
 
-    // Call NDN.onopen after success
-	this.ndn.readyStatus = NDN.OPENED;
-	this.ndn.onopen();
+    // Call Face.onopen after success
+	this.face.readyStatus = Face.OPENED;
+	this.face.onopen();
 
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.ndn.host);
+  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();
 
   return Closure.RESULT_OK;
 };
+
+/**
+ * @deprecated Use new Face.
+ */
+var NDN = function NDN(settings) 
+{
+  // Call the base constructor.
+  Face.call(this, settings); 
+}
+
+// Use dummy functions so that the Face constructor will not try to set its own defaults.                                      
+NDN.prototype = new Face({ getTransport: function(){}, getHostAndPort: function(){} });
+
+exports.NDN = NDN;
+
+NDN.supported = Face.supported;
+NDN.UNOPEN = Face.UNOPEN;
+NDN.OPENED = Face.OPENED;
+NDN.CLOSED = Face.CLOSED;

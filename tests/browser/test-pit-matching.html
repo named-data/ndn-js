@@ -13,7 +13,7 @@
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-		var ndn1 = new NDN({verify:false});
+		var face = new Face({verify:false});
         
                 var AsyncGetClosure = function AsyncGetClosure(target) {
         	// Inherit from Closure.
@@ -53,20 +53,20 @@
         interestSelector4.exclude = new Exclude([DataUtils.toNumbersFromString("zzzzzz"), Exclude.ANY]);
 
 		function run() {
-            ndn1.onopen = function() {
+            face.onopen = function() {
               for (var i = 0; i < 10; ++i) {
                 // "col1Content0" is already fetched.
                 if (i != 0)
-                    ndn1.expressInterest(name, new AsyncGetClosure("col1Content" + i), interestSelector1);
-                ndn1.expressInterest(name, new AsyncGetClosure("col2Content" + i), interestSelector2);
-                ndn1.expressInterest(name, new AsyncGetClosure("col3Content" + i), interestSelector3);
-                ndn1.expressInterest(name, new AsyncGetClosure("col4Content" + i), interestSelector4);
+                    face.expressInterest(name, new AsyncGetClosure("col1Content" + i), interestSelector1);
+                face.expressInterest(name, new AsyncGetClosure("col2Content" + i), interestSelector2);
+                face.expressInterest(name, new AsyncGetClosure("col3Content" + i), interestSelector3);
+                face.expressInterest(name, new AsyncGetClosure("col4Content" + i), interestSelector4);
               }
               // For testing, make sure we don't just process in the order returned.
-              DataUtils.shuffle(NDN.PITTable);
+              DataUtils.shuffle(Face.PITTable);
             };
             
-			ndn1.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
+			face.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
 		}
 	</script>	
 </head>

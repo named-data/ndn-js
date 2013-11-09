@@ -2,7 +2,7 @@
  *    all the source files.  Declare the exports.
  */
 
-exports.NDN = NDN;
+exports.Face = Face;
 exports.Closure = Closure;
 exports.Name = Name;
 exports.Interest = Interest;

@@ -1,12 +1,12 @@
-var NDN = require('../..').NDN;
+var Face = require('../..').Face;
 
-var ndn = new NDN();
+var face = new Face();
 
-ndn.onopen = function () {
+face.onopen = function () {
     console.log('NDN connection established.');
-    // Set this here because normally NDN sets it upon expressInterest or registerPrefix.
-    ndn.readyStatus = NDN.OPENED;
-    ndn.close();
+    // Set this here because normally Face sets it upon expressInterest or registerPrefix.
+    face.readyStatus = Face.OPENED;
+    face.close();
 };
 
-ndn.transport.connect(ndn, ndn.onopen);
+face.transport.connect(face, face.onopen);
