@@ -48,7 +48,7 @@
 		
 		function ping(name) {
 			pingname = name + "/ping/" + Math.floor(Math.random()*100000);
-			ndn1.expressInterest(new Name(pingname), new AsyncGetClosure(new Date()));
+			face.expressInterest(new Name(pingname), new AsyncGetClosure(new Date()));
 		};
 	
 	 	function dopings() {
@@ -65,7 +65,7 @@
      		ping("/ndn/wustl.edu");
 		};
 		
-		var ndn1 = new NDN({host:hostip});
+		var face = new Face({host:hostip});
 		var T0 = 0;
     // Do the first ping to get started.  The remaining pings are requested on the first upcall.
     ping("/ndn/arizona.edu");

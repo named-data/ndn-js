@@ -9,7 +9,7 @@
  */
 
 var EXPORTED_SYMBOLS = ["Closure", "Data", "DataUtils", "Exclude", "ExponentialReExpressClosure",
-    "Interest", "MimeTypes", "NDN", "Name", "Sha256", "XpcomTransport", "Buffer"];
+    "Interest", "MimeTypes", "Face", "Name", "Sha256", "XpcomTransport", "Buffer"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
@@ -27,7 +27,7 @@ var console = {
     }
 };
 
-// The NDN class uses setTimeout and clearTimeout, so define them using XPCOM.
+// The Face class uses setTimeout and clearTimeout, so define them using XPCOM.
 function setTimeout(callback, delay) {
     var timer = Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
     timer.initWithCallback({notify: callback}, delay, Components.interfaces.nsITimer.TYPE_ONE_SHOT);

@@ -14,7 +14,7 @@
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-		var ndn1 = new NDN();
+		var face = new Face();
 
         var AsyncPutClosure = function AsyncPutClosure() {
         	// Inherit from Closure.
@@ -26,7 +26,7 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_INTEREST) {
 				console.log('AsyncPutClosure.upcall() called.');
-                console.log("Host: " + ndn1.host + ":" + ndn1.port);
+                console.log("Host: " + face.host + ":" + face.port);
 				var content = document.getElementById('content').value;
 				var interest = upcallInfo.interest;
 				var nameStr = interest.name.toUri();
@@ -46,7 +46,7 @@
 		function run() {
 			var contentName = document.getElementById('contentname').value;
 
-			ndn1.registerPrefix(new Name(contentName), new AsyncPutClosure());
+			face.registerPrefix(new Name(contentName), new AsyncPutClosure());
 
 			document.getElementById('result').innerHTML = 'Content name \'' + contentName
 					+'\' published.';

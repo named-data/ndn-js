@@ -70,7 +70,7 @@ NdnProtocol.prototype = {
             var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
     
             var template = new Interest(new Name([]));
-            // Use the same default as NDN.expressInterest.
+            // Use the same default as Face.expressInterest.
             template.interestLifetime = 4000; // milliseconds
             var searchWithoutNdn = extractNdnSearch(uriParts.search, template);
             
@@ -82,8 +82,8 @@ NdnProtocol.prototype = {
     
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
-                // Use the same NDN object each time.
-                var closure = new ContentClosure(NdnProtocolInfo.ndn, contentListener, name, 
+                // Use the same Face object each time.
+                var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name, 
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
                      
                 /* Disable until bug is fixed for opening multiple tabs.
@@ -92,7 +92,7 @@ NdnProtocol.prototype = {
                     ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
                  */
                 
-                NdnProtocolInfo.ndn.expressInterest
+                NdnProtocolInfo.face.expressInterest
                     (name, new ExponentialReExpressClosure(closure), template);
             };
 
@@ -126,12 +126,12 @@ else
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  */                                                
 var ContentClosure = function ContentClosure
-      (ndn, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) 
+      (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) 
 {
     // Inherit from Closure.
     Closure.call(this);
     
-    this.ndn = ndn;
+    this.face = face;
     this.contentListener = contentListener;
     this.uriName = uriName;
     this.aURI = aURI;
@@ -183,7 +183,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     }
     
     // Assume this is only called once we're connected, report the host and port.
-    NdnProtocolInfo.setConnectedNdnHub(this.ndn.host, this.ndn.port);
+    NdnProtocolInfo.setConnectedNdnHub(this.face.host, this.face.port);
     
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
@@ -209,7 +209,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.exclude = new Exclude(this.excludedMetaComponents);
-            this.ndn.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
+            this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
         
@@ -222,7 +222,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
              // Make a name /<prefix>/<version>/%00.
              var nameWithoutMeta = data.name.getPrefix(iNdnfsFileComponent).append
                (data.name.get(iNdnfsFileComponent + 1)).appendSegment(0);    
-             this.ndn.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
+             this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
            }
            return Closure.RESULT_OK;
         }
@@ -313,7 +313,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Clone the template to set the childSelector.
         var childSelectorTemplate = this.segmentTemplate.clone();
         childSelectorTemplate.childSelector = 1;
-        this.ndn.expressInterest
+        this.face.expressInterest
             (this.nameWithoutSegment, new ExponentialReExpressClosure(this), childSelectorTemplate);
     }
 
@@ -323,7 +323,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
         
-        this.ndn.expressInterest
+        this.face.expressInterest
             (new Name(this.nameWithoutSegment).addSegment(toRequest[i]), 
              new ExponentialReExpressClosure(this), this.segmentTemplate);
     }

@@ -329,12 +329,12 @@ Face.prototype.registerPrefix = function(name, closure, flags)
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure, flags) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.name = name;
   this.callerClosure = callerClosure;
   this.flags = flags;
@@ -358,9 +358,9 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
        + this.name.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.ndn.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
-    if (LOG > 3) console.log(this.ndn.ndndid);
-    this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
+    this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
+    if (LOG > 3) console.log(this.face.ndndid);
+    this.face.registerPrefixHelper(this.name, this.callerClosure, this.flags);
   }
     
   return Closure.RESULT_OK;
@@ -599,12 +599,12 @@ Face.prototype.closeByTransport = function()
   this.onclose();
 };
 
-Face.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) 
+Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.onConnected = onConnected;
   this.timerID = timerID;
 };
@@ -620,10 +620,10 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   clearTimeout(this.timerID);
 
     // Call Face.onopen after success
-	this.ndn.readyStatus = Face.OPENED;
-	this.ndn.onopen();
+	this.face.readyStatus = Face.OPENED;
+	this.face.onopen();
 
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.ndn.host);
+  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();
 
   return Closure.RESULT_OK;

@@ -519,7 +519,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
             
       var nextInterest = upcallInfo.interest.clone();
       nextInterest.interestLifetime = nextInterestLifetime;
-      upcallInfo.ndn.expressInterest(nextInterest.name, this, nextInterest);
+      upcallInfo.face.expressInterest(nextInterest.name, this, nextInterest);
       return Closure.RESULT_OK;
     }  
     else
@@ -2289,31 +2289,31 @@ exports.NameEnumeration = NameEnumeration;
 
 /**
  * Use the name enumeration protocol to get the child components of the name prefix.
- * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {Face} face The Face object for using expressInterest.
  * @param {Name} name The name prefix for finding the child components.
  * @param {function} onComponents On getting the response, this calls onComponents(components) where
  * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
  */
-NameEnumeration.getComponents = function(ndn, prefix, onComponents)
+NameEnumeration.getComponents = function(face, prefix, onComponents)
 {
   var command = new Name(prefix);
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
-  ndn.expressInterest(command, new NameEnumeration.Closure(ndn, onComponents));
+  face.expressInterest(command, new NameEnumeration.Closure(face, onComponents));
 };
 
 /**
  * Create a closure for getting the response from the name enumeration command.
- * @param {NDN} ndn The NDN object for using expressInterest.
+ * @param {Face} face The Face object for using expressInterest.
  * @param {function} onComponents The onComponents callback given to getComponents.
  */
-NameEnumeration.Closure = function NameEnumerationClosure(ndn, onComponents) 
+NameEnumeration.Closure = function NameEnumerationClosure(face, onComponents) 
 {
   // Inherit from Closure.
   Closure.call(this);
   
-  this.ndn = ndn;
+  this.face = face;
   this.onComponents = onComponents;
   this.contentParts = [];
 };
@@ -2341,7 +2341,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
-          this.ndn.expressInterest
+          this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
           // Save the content and check if we are finished.
@@ -2357,7 +2357,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           }
           
           // Fetch the next segment.
-          this.ndn.expressInterest
+          this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
       }
@@ -2427,8 +2427,8 @@ var WebSocketTransport = function WebSocketTransport()
         throw new Error("WebSocket support is not available on this platform.");
     
   this.ws = null;
-    this.connectedHost = null; // Read by NDN.
-    this.connectedPort = null; // Read by NDN.
+    this.connectedHost = null; // Read by Face.
+    this.connectedPort = null; // Read by Face.
     this.elementReader = null;
     this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -2439,24 +2439,24 @@ var WebSocketTransport = function WebSocketTransport()
 exports.WebSocketTransport = WebSocketTransport;
 
 /**
- * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
- *    ndn.onReceivedElement(element).
+ *    face.onReceivedElement(element).
  */
-WebSocketTransport.prototype.connect = function(ndn, onopenCallback) 
+WebSocketTransport.prototype.connect = function(face, onopenCallback) 
 {
   if (this.ws != null)
     delete this.ws;
   
-  this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
+  this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
   if (LOG > 0) console.log('ws connection created.');
-    this.connectedHost = ndn.host;
-    this.connectedPort = ndn.port;
+    this.connectedHost = face.host;
+    this.connectedPort = face.port;
   
   this.ws.binaryType = "arraybuffer";
   
-    this.elementReader = new BinaryXmlElementReader(ndn);
+    this.elementReader = new BinaryXmlElementReader(face);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
@@ -2470,7 +2470,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
       
       try {
-                // Find the end of the binary XML element and call ndn.onReceivedElement.
+                // Find the end of the binary XML element and call face.onReceivedElement.
                 self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);
@@ -2483,7 +2483,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
     if (LOG > 3) console.log(ev);
     if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
     if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-        // NDN.registerPrefix will fetch the ndndid when needed.
+        // Face.registerPrefix will fetch the ndndid when needed.
         
         onopenCallback();
   }
@@ -2498,9 +2498,9 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
     
-    // Close NDN when WebSocket is closed
-    ndn.readyStatus = NDN.CLOSED;
-    ndn.onclose();
+    // Close Face when WebSocket is closed
+    face.readyStatus = Face.CLOSED;
+    face.onclose();
     //console.log("NDN.onclose event fired.");
   }
 };
@@ -2532,13 +2532,13 @@ WebSocketTransport.prototype.send = function(data)
  * See COPYING for copyright and distribution information.
  */
 
-// The NDN constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
+// The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
 exports.TcpTransport = ndn.WebSocketTransport;
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * Provide the callback closure for the async communication methods in the NDN class.
+ * Provide the callback closure for the async communication methods in the Face class.
  * This is a port of Closure.py from PyNDN, written by: 
  * Derek Kulinski <takeda@takeda.tk>
  * Jeff Burke <jburke@ucla.edu>
@@ -2550,7 +2550,7 @@ exports.TcpTransport = ndn.WebSocketTransport;
  */
 var Closure = function Closure() 
 {
-  // I don't think storing NDN's closure is needed
+  // I don't think storing Face's closure is needed
   // and it creates a reference loop, as of now both
   // of those variables are never set -- Derek
   //
@@ -2594,9 +2594,10 @@ Closure.prototype.upcall = function(kind, upcallInfo)
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data) 
+var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data) 
 {
-  this.ndn = ndn;  // NDN object (not used)
+  this.face = face;  // Face object (not used)
+  this.ndn = face;   // deprecated
   this.interest = interest;  // Interest object
   this.matchedComps = matchedComps;  // int
   this.data = data;  // Data
@@ -2605,7 +2606,7 @@ var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data)
 
 UpcallInfo.prototype.toString = function() 
 {
-  var ret = "ndn = " + this.ndn;
+  var ret = "face = " + this.face;
   ret += "\nInterest = " + this.interest;
   ret += "\nmatchedComps = " + this.matchedComps;
   ret += "\nData: " + this.data;
@@ -5424,12 +5425,12 @@ Face.prototype.registerPrefix = function(name, closure, flags)
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
  *   registerPrefixHelper(name, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(ndn, name, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure, flags) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.name = name;
   this.callerClosure = callerClosure;
   this.flags = flags;
@@ -5453,9 +5454,9 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
        + this.name.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.ndn.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
-    if (LOG > 3) console.log(this.ndn.ndndid);
-    this.ndn.registerPrefixHelper(this.name, this.callerClosure, this.flags);
+    this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
+    if (LOG > 3) console.log(this.face.ndndid);
+    this.face.registerPrefixHelper(this.name, this.callerClosure, this.flags);
   }
     
   return Closure.RESULT_OK;
@@ -5694,12 +5695,12 @@ Face.prototype.closeByTransport = function()
   this.onclose();
 };
 
-Face.ConnectClosure = function ConnectClosure(ndn, onConnected, timerID) 
+Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
-  this.ndn = ndn;
+  this.face = face;
   this.onConnected = onConnected;
   this.timerID = timerID;
 };
@@ -5715,10 +5716,10 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   clearTimeout(this.timerID);
 
     // Call Face.onopen after success
-	this.ndn.readyStatus = Face.OPENED;
-	this.ndn.onopen();
+	this.face.readyStatus = Face.OPENED;
+	this.face.onopen();
 
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.ndn.host);
+  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();
 
   return Closure.RESULT_OK;

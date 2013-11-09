@@ -16,8 +16,8 @@ var WebSocketTransport = function WebSocketTransport()
         throw new Error("WebSocket support is not available on this platform.");
     
   this.ws = null;
-    this.connectedHost = null; // Read by NDN.
-    this.connectedPort = null; // Read by NDN.
+    this.connectedHost = null; // Read by Face.
+    this.connectedPort = null; // Read by Face.
     this.elementReader = null;
     this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
         (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
@@ -28,24 +28,24 @@ var WebSocketTransport = function WebSocketTransport()
 exports.WebSocketTransport = WebSocketTransport;
 
 /**
- * Connect to the host and port in ndn.  This replaces a previous connection and sets connectedHost
+ * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.  Once connected, call onopenCallback().
  * Listen on the port to read an entire binary XML encoded element and call
- *    ndn.onReceivedElement(element).
+ *    face.onReceivedElement(element).
  */
-WebSocketTransport.prototype.connect = function(ndn, onopenCallback) 
+WebSocketTransport.prototype.connect = function(face, onopenCallback) 
 {
   if (this.ws != null)
     delete this.ws;
   
-  this.ws = new WebSocket('ws://' + ndn.host + ':' + ndn.port);
+  this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
   if (LOG > 0) console.log('ws connection created.');
-    this.connectedHost = ndn.host;
-    this.connectedPort = ndn.port;
+    this.connectedHost = face.host;
+    this.connectedPort = face.port;
   
   this.ws.binaryType = "arraybuffer";
   
-    this.elementReader = new BinaryXmlElementReader(ndn);
+    this.elementReader = new BinaryXmlElementReader(face);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
@@ -59,7 +59,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
       
       try {
-                // Find the end of the binary XML element and call ndn.onReceivedElement.
+                // Find the end of the binary XML element and call face.onReceivedElement.
                 self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);
@@ -72,7 +72,7 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
     if (LOG > 3) console.log(ev);
     if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
     if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-        // NDN.registerPrefix will fetch the ndndid when needed.
+        // Face.registerPrefix will fetch the ndndid when needed.
         
         onopenCallback();
   }
@@ -87,9 +87,9 @@ WebSocketTransport.prototype.connect = function(ndn, onopenCallback)
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
     
-    // Close NDN when WebSocket is closed
-    ndn.readyStatus = NDN.CLOSED;
-    ndn.onclose();
+    // Close Face when WebSocket is closed
+    face.readyStatus = Face.CLOSED;
+    face.onclose();
     //console.log("NDN.onclose event fired.");
   }
 };

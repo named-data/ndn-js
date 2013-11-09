@@ -1,4 +1,4 @@
-var NDN = require('../..').NDN;
+var Face = require('../..').Face;
 var Name = require('../..').Name;
 var Interest = require('../..').Interest;
 var Closure = require('../..').Closure;
@@ -11,14 +11,14 @@ var onData = function (inst, data) {
     console.log(EncodingUtils.dataToHtml(data).replace(/<br \/>/g, "\n"));
     
     console.log('Quit script now.');
-    ndn.close();  // This will cause the script to quit
+    face.close();  // This will cause the script to quit
 };
 
 var onTimeout = function (interest) {
     console.log("Interest time out.");
     console.log('Interest name: ' + interest.name.toUri());
     console.log('Quit script now.');
-    ndn.close();
+    face.close();
 };
 
 /**
@@ -42,10 +42,10 @@ WrapperClosure.prototype.upcall = function(kind, upcallInfo) {
   return Closure.RESULT_OK;
 };
 
-var ndn = new NDN();
+var face = new Face();
 var name = new Name('/');
 var template = new Interest();
 template.answerOriginKind = Interest.ANSWER_NO_CONTENT_STORE;  // bypass cache in ccnd
 template.interestLifetime = 4000;
-ndn.expressInterest(name, new WrapperClosure(onData, onTimeout), template);
+face.expressInterest(name, new WrapperClosure(onData, onTimeout), template);
 console.log('Interest expressed.');
