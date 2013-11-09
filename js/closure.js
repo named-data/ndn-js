@@ -2,7 +2,7 @@
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * Provide the callback closure for the async communication methods in the NDN class.
+ * Provide the callback closure for the async communication methods in the Face class.
  * This is a port of Closure.py from PyNDN, written by: 
  * Derek Kulinski <takeda@takeda.tk>
  * Jeff Burke <jburke@ucla.edu>
@@ -14,7 +14,7 @@
  */
 var Closure = function Closure() 
 {
-  // I don't think storing NDN's closure is needed
+  // I don't think storing Face's closure is needed
   // and it creates a reference loop, as of now both
   // of those variables are never set -- Derek
   //
@@ -58,9 +58,10 @@ Closure.prototype.upcall = function(kind, upcallInfo)
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data) 
+var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data) 
 {
-  this.ndn = ndn;  // NDN object (not used)
+  this.face = face;  // Face object (not used)
+  this.ndn = face;   // deprecated
   this.interest = interest;  // Interest object
   this.matchedComps = matchedComps;  // int
   this.data = data;  // Data
@@ -69,7 +70,7 @@ var UpcallInfo = function UpcallInfo(ndn, interest, matchedComps, data)
 
 UpcallInfo.prototype.toString = function() 
 {
-  var ret = "ndn = " + this.ndn;
+  var ret = "face = " + this.face;
   ret += "\nInterest = " + this.interest;
   ret += "\nmatchedComps = " + this.matchedComps;
   ret += "\nData: " + this.data;
