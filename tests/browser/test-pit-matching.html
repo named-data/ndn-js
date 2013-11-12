@@ -2,36 +2,36 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
 <!-- 
-	See COPYING for copyright and distribution information.
+  See COPYING for copyright and distribution information.
 -->
 <html xmlns = "http://www.w3.org/1999/xhtml">
 <meta charset="UTF-8"/>
 
 <head>
-	<title>NDN PIT Matching</title>
-	
-	<script type="text/javascript" src="../../build/ndn.js"></script>
+  <title>NDN PIT Matching</title>
+  
+  <script type="text/javascript" src="../../build/ndn.js"></script>
 
-	<script type="text/javascript">
-		var face = new Face({verify:false});
+  <script type="text/javascript">
+    var face = new Face({verify:false});
         
                 var AsyncGetClosure = function AsyncGetClosure(target) {
-        	// Inherit from Closure.
-			Closure.call(this);
+          // Inherit from Closure.
+      Closure.call(this);
             
             this.target = target;
-		};
-		
-		AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
-			if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
-				document.getElementById(this.target).innerHTML = 
+    };
+    
+    AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
+      if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
+        document.getElementById(this.target).innerHTML = 
                     DataUtils.toString(upcallInfo.data.content);
                 return Closure.RESULT_OK;
             }
             else
                 return Closure.RESULT_ERR;
-		};
-		
+    };
+    
         var name = new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt");
         
         var interestSelector1 = new Interest();
@@ -52,10 +52,11 @@
         interestSelector4.interestLifetime = 10000;
         interestSelector4.exclude = new Exclude([DataUtils.toNumbersFromString("zzzzzz"), Exclude.ANY]);
 
-		function run() {
+    function run() {
             face.onopen = function() {
               for (var i = 0; i < 10; ++i) {
                 // "col1Content0" is already fetched.
+                // TODO: Use expressInterest with callbacks, not Closure.
                 if (i != 0)
                     face.expressInterest(name, new AsyncGetClosure("col1Content" + i), interestSelector1);
                 face.expressInterest(name, new AsyncGetClosure("col2Content" + i), interestSelector2);
@@ -66,9 +67,10 @@
               DataUtils.shuffle(Face.PITTable);
             };
             
-			face.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
-		}
-	</script>	
+      // TODO: Use expressInterest with callbacks, not Closure.
+      face.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
+    }
+  </script>  
 </head>
 <body >
   <button id="runBtn" onclick="run()">Run</button>
@@ -143,6 +145,6 @@
       <td style="vertical-align: top;"><div id="col4Content9"/></td>
     </tr>
   </tbody>
-  </table>	
+  </table>  
 </body>
 </html>

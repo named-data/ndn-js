@@ -91,7 +91,7 @@ NdnProtocol.prototype = {
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
                     ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
                  */
-                
+                // TODO: Use expressInterest with callbacks, not Closure.
                 NdnProtocolInfo.face.expressInterest
                     (name, new ExponentialReExpressClosure(closure), template);
             };
@@ -124,6 +124,7 @@ else
  *    and/or '#' but without the interest selector fields.
  * segmentTemplate is the template used in expressInterest to fetch further segments.
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
+ * TODO: Use expressInterest with callbacks, not Closure.
  */                                                
 var ContentClosure = function ContentClosure
       (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) 
@@ -209,6 +210,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.exclude = new Exclude(this.excludedMetaComponents);
+            // TODO: Use expressInterest with callbacks, not Closure.
             this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
@@ -222,6 +224,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
              // Make a name /<prefix>/<version>/%00.
              var nameWithoutMeta = data.name.getPrefix(iNdnfsFileComponent).append
                (data.name.get(iNdnfsFileComponent + 1)).appendSegment(0);    
+             // TODO: Use expressInterest with callbacks, not Closure.
              this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
            }
            return Closure.RESULT_OK;
@@ -313,6 +316,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Clone the template to set the childSelector.
         var childSelectorTemplate = this.segmentTemplate.clone();
         childSelectorTemplate.childSelector = 1;
+        // TODO: Use expressInterest with callbacks, not Closure.
         this.face.expressInterest
             (this.nameWithoutSegment, new ExponentialReExpressClosure(this), childSelectorTemplate);
     }
@@ -323,6 +327,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
         
+        // TODO: Use expressInterest with callbacks, not Closure.
         this.face.expressInterest
             (new Name(this.nameWithoutSegment).addSegment(toRequest[i]), 
              new ExponentialReExpressClosure(this), this.segmentTemplate);

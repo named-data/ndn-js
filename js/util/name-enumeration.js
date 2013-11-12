@@ -28,6 +28,7 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
+  // TODO: Use expressInterest with callbacks, not Closure.
   face.expressInterest(command, new NameEnumeration.Closure(face, onComponents));
 };
 
@@ -69,6 +70,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
+          // TODO: Use expressInterest with callbacks, not Closure.
           this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
@@ -85,6 +87,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           }
           
           // Fetch the next segment.
+          // TODO: Use expressInterest with callbacks, not Closure.
           this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
