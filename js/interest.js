@@ -17,7 +17,8 @@ var LOG = require('./log.js').Log.LOG;
  * Create a new Interest with the optional values.
  * 
  * @constructor
- * @param {Name} name
+ * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
+ * other arguments.  Otherwise this is the optional name for the new Interest.
  * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
@@ -30,22 +31,41 @@ var LOG = require('./log.js').Log.LOG;
  * @param {Buffer} nonce
  */
 var Interest = function Interest
-   (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+   (nameOrInterest, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
     childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
 {
-    
-  this.name = name;
-  this.faceInstance = faceInstance;
-  this.maxSuffixComponents = maxSuffixComponents;
-  this.minSuffixComponents = minSuffixComponents;
-  
-  this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-  this.exclude = exclude;
-  this.childSelector = childSelector;
-  this.answerOriginKind = answerOriginKind;
-  this.scope = scope;
-  this.interestLifetime = interestLifetimeMilliseconds;
-  this.nonce = nonce;  
+  if (typeof nameOrInterest == 'object' && nameOrInterest instanceof Interest) {
+    // Special case: this is a copy constructor.  Ignore all but the first argument.
+    var interest = nameOrInterest;
+    if (interest.name)
+      // Copy the name.
+      this.name = new Name(interest.name);
+    this.faceInstance = interest.faceInstance;
+    this.maxSuffixComponents = interest.maxSuffixComponents;
+    this.minSuffixComponents = interest.minSuffixComponents;
+
+    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
+    this.exclude = interest.exclude;
+    this.childSelector = interest.childSelector;
+    this.answerOriginKind = interest.answerOriginKind;
+    this.scope = interest.scope;
+    this.interestLifetime = interest.interestLifetime;
+    this.nonce = interest.nonce;    
+  }  
+  else {
+    this.name = nameOrInterest;
+    this.faceInstance = faceInstance;
+    this.maxSuffixComponents = maxSuffixComponents;
+    this.minSuffixComponents = minSuffixComponents;
+
+    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+    this.exclude = exclude;
+    this.childSelector = childSelector;
+    this.answerOriginKind = answerOriginKind;
+    this.scope = scope;
+    this.interestLifetime = interestLifetimeMilliseconds;
+    this.nonce = nonce;
+  }
 };
 
 exports.Interest = Interest;
