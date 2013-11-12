@@ -519,6 +519,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
             
       var nextInterest = upcallInfo.interest.clone();
       nextInterest.interestLifetime = nextInterestLifetime;
+      // TODO: Use expressInterest with callbacks, not Closure.
       upcallInfo.face.expressInterest(nextInterest.name, this, nextInterest);
       return Closure.RESULT_OK;
     }  
@@ -2300,6 +2301,7 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
+  // TODO: Use expressInterest with callbacks, not Closure.
   face.expressInterest(command, new NameEnumeration.Closure(face, onComponents));
 };
 
@@ -2341,6 +2343,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
         var expectedSegmentNumber = this.contentParts.length;
         if (segmentNumber != expectedSegmentNumber)
           // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
+          // TODO: Use expressInterest with callbacks, not Closure.
           this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
         else {
@@ -2357,6 +2360,7 @@ NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo)
           }
           
           // Fetch the next segment.
+          // TODO: Use expressInterest with callbacks, not Closure.
           this.face.expressInterest
             (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
@@ -2545,7 +2549,8 @@ exports.TcpTransport = ndn.WebSocketTransport;
  */
 
 /**
- * You should create a subclass of Closure and pass an object to async calls.
+ * A subclass of Closure is passed to expressInterest and registerPrefix.
+ * @deprecated You should use the forms of expressInterest and registerPrefix which use callbacks instead of Closure.
  * @constructor
  */
 var Closure = function Closure() 
@@ -3700,7 +3705,8 @@ var LOG = require('./log.js').Log.LOG;
  * Create a new Interest with the optional values.
  * 
  * @constructor
- * @param {Name} name
+ * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
+ * other arguments.  Otherwise this is the optional name for the new Interest.
  * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
@@ -3713,22 +3719,41 @@ var LOG = require('./log.js').Log.LOG;
  * @param {Buffer} nonce
  */
 var Interest = function Interest
-   (name, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+   (nameOrInterest, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
     childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
 {
-    
-  this.name = name;
-  this.faceInstance = faceInstance;
-  this.maxSuffixComponents = maxSuffixComponents;
-  this.minSuffixComponents = minSuffixComponents;
-  
-  this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-  this.exclude = exclude;
-  this.childSelector = childSelector;
-  this.answerOriginKind = answerOriginKind;
-  this.scope = scope;
-  this.interestLifetime = interestLifetimeMilliseconds;
-  this.nonce = nonce;  
+  if (typeof nameOrInterest == 'object' && nameOrInterest instanceof Interest) {
+    // Special case: this is a copy constructor.  Ignore all but the first argument.
+    var interest = nameOrInterest;
+    if (interest.name)
+      // Copy the name.
+      this.name = new Name(interest.name);
+    this.faceInstance = interest.faceInstance;
+    this.maxSuffixComponents = interest.maxSuffixComponents;
+    this.minSuffixComponents = interest.minSuffixComponents;
+
+    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
+    this.exclude = interest.exclude;
+    this.childSelector = interest.childSelector;
+    this.answerOriginKind = interest.answerOriginKind;
+    this.scope = interest.scope;
+    this.interestLifetime = interest.interestLifetime;
+    this.nonce = interest.nonce;    
+  }  
+  else {
+    this.name = nameOrInterest;
+    this.faceInstance = faceInstance;
+    this.maxSuffixComponents = maxSuffixComponents;
+    this.minSuffixComponents = minSuffixComponents;
+
+    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+    this.exclude = exclude;
+    this.childSelector = childSelector;
+    this.answerOriginKind = answerOriginKind;
+    this.scope = scope;
+    this.interestLifetime = interestLifetimeMilliseconds;
+    this.nonce = nonce;
+  }
 };
 
 exports.Interest = Interest;
@@ -5296,14 +5321,110 @@ Face.makeShuffledGetHostAndPort = function(hostList, port)
 };
 
 /**
- * Encode name as an Interest and send the it to host:port, read the entire response and call
- *  closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, data)). 
- * @param {Name} name
- * @param {Closure} closure
- * @param {Interest} template if not null, use its attributes
+ * Send the interest through the transport, read the entire response and call onData. 
+ * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
+ * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
+ * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
+ * a name and optional interest template:
+ * expressInterest(name [, template], onData [, onTimeout]).
+ * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
+ * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
+ * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where:
+ *   interest is the interest given to expressInterest,
+ *   data is the received Data object.
+ * @param {function} onTimeout (optional) If the interest times out according to the interest lifetime, 
+ *   this calls onTimeout(interest) where:
+ *   interest is the interest given to expressInterest.
+ * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
+ * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest. 
+ * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  */
-Face.prototype.expressInterest = function(name, closure, template) 
+Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4) 
+{
+  // There are several overloaded versions of expressInterest, each shown inline below.
+
+  // expressInterest(Name name, Closure closure);                      // deprecated
+  // expressInterest(Name name, Closure closure,   Interest template); // deprecated
+  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
+    // Assume arg2 is the deprecated use with Closure.
+    if (arg3)
+      this.expressInterestWithClosure(interestOrName, arg2, arg3);
+    else
+      this.expressInterestWithClosure(interestOrName, arg2);
+    return;
+  }
+  
+  var interest;
+  var onData;
+  var onTimeout;
+  // expressInterest(Interest interest, function onData);
+  // expressInterest(Interest interest, function onData, function onTimeout);
+  if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
+    // Just use a copy of the interest.
+    interest = new Interest(interestOrName);
+    onData = arg2;
+    onTimeout = (arg3 ? arg3 : function() {});
+  }
+  else {
+    // The first argument is a name. Make the interest from the name and possible template.
+    interest = new Interest(interestOrName);
+    // expressInterest(Name name, Interest template, function onData); 
+    // expressInterest(Name name, Interest template, function onData, function onTimeout); 
+    if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
+      var template = arg2;
+      interest.minSuffixComponents = template.minSuffixComponents;
+      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+      interest.exclude = template.exclude;
+      interest.childSelector = template.childSelector;
+      interest.answerOriginKind = template.answerOriginKind;
+      interest.scope = template.scope;
+      interest.interestLifetime = template.interestLifetime;
+
+      onData = arg3;
+      onTimeout = (arg4 ? arg4 : function() {});
+    }
+    // expressInterest(Name name, function onData); 
+    // expressInterest(Name name, function onData,   function onTimeout); 
+    else {
+      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      onData = arg2;
+      onTimeout = (arg3 ? arg3 : function() {});
+    }
+  }
+  
+  // Make a Closure from the callbacks so we can use expressInterestWithClosure.
+  // TODO: Convert the PIT to use callbacks, not a closure.
+  this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
+}
+
+Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout) {
+  // Inherit from Closure.
+  Closure.call(this);
+  
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+};
+
+Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
+  if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED)
+    this.onData(upcallInfo.interest, upcallInfo.data);
+  else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
+    this.onTimeout(upcallInfo.interest);
+  
+  return Closure.RESULT_OK;
+};
+
+/**
+ * A private method to encode name as an Interest and send the it to host:port, read the entire response and call
+ * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
+ *                 new UpcallInfo(this, interest, 0, data)). 
+ * @deprecated Use expressInterest with callback functions, not Closure.
+ * @param {Name} name Encode name as an Interest using the template (if supplied).
+ * @param {Closure} closure
+ * @param {Interest} template If not null, use its attributes.
+ */
+Face.prototype.expressInterestWithClosure = function(name, closure, template) 
 {
   var interest = new Interest(name);
   if (template != null) {
@@ -5318,7 +5439,7 @@ Face.prototype.expressInterest = function(name, closure, template)
   }
   else
     interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
-
+  
   if (this.host == null || this.port == null) {
     if (this.getHostAndPort == null)
       console.log('ERROR: host OR port NOT SET');
@@ -5619,6 +5740,7 @@ Face.prototype.onReceivedElement = function(element)
               // Not found, fetch now
               if (LOG > 3) console.log("Fetch key according to keylocator");
               var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
+              // TODO: Use expressInterest with callbacks, not Closure.
               this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
             }
           }

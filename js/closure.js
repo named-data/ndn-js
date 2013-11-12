@@ -9,7 +9,8 @@
  */
 
 /**
- * You should create a subclass of Closure and pass an object to async calls.
+ * A subclass of Closure is passed to expressInterest and registerPrefix.
+ * @deprecated You should use the forms of expressInterest and registerPrefix which use callbacks instead of Closure.
  * @constructor
  */
 var Closure = function Closure() 
