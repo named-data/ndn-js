@@ -3736,7 +3736,9 @@ var Interest = function Interest
     this.answerOriginKind = interest.answerOriginKind;
     this.scope = interest.scope;
     this.interestLifetime = interest.interestLifetime;
-    this.nonce = interest.nonce;    
+    if (interest.nonce)
+      // Copy.
+      this.nonce = new Buffer(interest.nonce);    
   }  
   else {
     this.name = nameOrInterest;
@@ -3749,7 +3751,9 @@ var Interest = function Interest
     this.answerOriginKind = answerOriginKind;
     this.scope = scope;
     this.interestLifetime = interestLifetimeMilliseconds;
-    this.nonce = nonce;
+    if (nonce)
+      // Copy and make sure it is a Buffer.
+      this.nonce = new Buffer(nonce);
   }
 };
 
@@ -3845,7 +3849,11 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(value)
 
 Interest.prototype.setNonce = function(value)
 {
-  this.nonce = new Buffer(value);
+  if (value)
+    // Copy and make sure it is a Buffer.
+    this.nonce = new Buffer(value);
+  else
+    this.nonce = null;
 }
 
 /**
