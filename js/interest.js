@@ -19,7 +19,6 @@ var LOG = require('./log.js').Log.LOG;
  * @constructor
  * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
  * other arguments.  Otherwise this is the optional name for the new Interest.
- * @param {FaceInstance} faceInstance
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
  * @param {Buffer} publisherPublicKeyDigest
@@ -31,7 +30,7 @@ var LOG = require('./log.js').Log.LOG;
  * @param {Buffer} nonce
  */
 var Interest = function Interest
-   (nameOrInterest, faceInstance, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
     childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
 {
   if (typeof nameOrInterest == 'object' && nameOrInterest instanceof Interest) {
@@ -40,7 +39,6 @@ var Interest = function Interest
     if (interest.name)
       // Copy the name.
       this.name = new Name(interest.name);
-    this.faceInstance = interest.faceInstance;
     this.maxSuffixComponents = interest.maxSuffixComponents;
     this.minSuffixComponents = interest.minSuffixComponents;
 
@@ -54,7 +52,6 @@ var Interest = function Interest
   }  
   else {
     this.name = nameOrInterest;
-    this.faceInstance = faceInstance;
     this.maxSuffixComponents = maxSuffixComponents;
     this.minSuffixComponents = minSuffixComponents;
 
@@ -123,10 +120,45 @@ Interest.prototype.matches_name = function(/*Name*/ name)
 Interest.prototype.clone = function() 
 {
   return new Interest
-     (this.name, this.faceInstance, this.minSuffixComponents, this.maxSuffixComponents, 
+     (this.name, this.minSuffixComponents, this.maxSuffixComponents, 
       this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
       this.scope, this.interestLifetime, this.nonce);
 };
+
+Interest.prototype.setMinSuffixComponents = function(value)
+{
+  this.minSuffixComponents = value;
+}
+
+Interest.prototype.setMaxSuffixComponents = function(value)
+{
+  this.maxSuffixComponents = value;
+}
+
+Interest.prototype.setChildSelector = function(value)
+{
+  this.childSelector = value;
+}
+
+Interest.prototype.setAnswerOriginKind = function(value)
+{
+  this.answerOriginKind = value;
+}
+
+Interest.prototype.setScope = function(value)
+{
+  this.scope = value;
+}
+
+Interest.prototype.setInterestLifetimeMilliseconds = function(value)
+{
+  this.interestLifetime = value;
+}
+
+Interest.prototype.setNonce = function(value)
+{
+  this.nonce = new Buffer(value);
+}
 
 /**
  * Create a new Exclude.
