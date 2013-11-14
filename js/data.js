@@ -211,7 +211,7 @@ SignedInfo.prototype.setFields = function()
   this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
   
   if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
-  if (LOG > 4) console.log(publicKeyBytes);
+  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
   //this.locator = new KeyLocator(DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE);
