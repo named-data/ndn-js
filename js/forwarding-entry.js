@@ -31,6 +31,15 @@ var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceI
 
 exports.ForwardingEntry = ForwardingEntry;
 
+ForwardingEntry.ACTIVE         = 1;
+ForwardingEntry.CHILD_INHERIT  = 2;
+ForwardingEntry.ADVERTISE      = 4;
+ForwardingEntry.LAST           = 8;
+ForwardingEntry.CAPTURE       = 16;
+ForwardingEntry.LOCAL         = 32;
+ForwardingEntry.TAP           = 64;
+ForwardingEntry.CAPTURE_OK   = 128;
+
 ForwardingEntry.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 

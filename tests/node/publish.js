@@ -29,19 +29,7 @@ function onRegisterFailed(prefix)
   face.close();  // This will cause the script to quit.
 }
 
-var AsyncPutClosure = function AsyncPutClosure() {
-  // Inherit from Closure.
-  Closure.call(this);
-};
-
-AsyncPutClosure.prototype.upcall = function(kind, upcallInfo) {
-  if (kind == Closure.UPCALL_INTEREST)
-    onInterest(null, upcallInfo.interest, face.transport);
-
-  return Closure.RESULT_OK;
-};
-
 var face = new Face({host: "localhost"});
 
-face.registerPrefix(new Name("/testecho"), new AsyncPutClosure());
+face.registerPrefix(new Name("/testecho"), onInterest, onRegisterFailed);
 console.log("Started...");

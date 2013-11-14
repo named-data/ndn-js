@@ -110,6 +110,7 @@ def build (bld):
                  "js/key.js",
                  "js/face-instance.js",
                  "js/forwarding-entry.js",
+                 "js/forwarding-flags.js",
                  "js/encoding/binary-xml-wire-format.js",
                  "js/encoding/encoding-utils.js",
                  "js/face.js"] + securityLib
