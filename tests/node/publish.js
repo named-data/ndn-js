@@ -5,7 +5,8 @@ var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
 var Closure = require('../..').Closure;
 
-function onInterest(prefix, interest, transport) {
+function onInterest(prefix, interest, transport) 
+{
   console.log("Interest received : " + interest.name.toUri());
 
   // Make and sign a Data packet.
