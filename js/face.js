@@ -9,8 +9,10 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
+var SignedInfo = require('./data.js').SignedInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key.js').KeyLocatorType;
@@ -161,22 +163,23 @@ Face.getEntryForExpressedInterest = function(/*Name*/ name)
 };
 
 // For publishing data
-Face.CSTable = new Array();
+Face.registeredPrefixTable = new Array();
 
 /**
  * @constructor
  */
-var CSEntry = function CSEntry(name, closure) 
+var RegisteredPrefix = function RegisteredPrefix(prefix, closure) 
 {
-  this.name = name;        // String
+  this.prefix = prefix;        // String
   this.closure = closure;  // Closure
 };
 
 function getEntryForRegisteredPrefix(name) 
 {
-  for (var i = 0; i < Face.CSTable.length; i++) {
-    if (Face.CSTable[i].name.match(name))
-      return Face.CSTable[i];
+  for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
+    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
+    if (Face.registeredPrefixTable[i].prefix.match(name))
+      return Face.registeredPrefixTable[i];
   }
   return null;
 }
@@ -390,12 +393,12 @@ Face.prototype.expressInterestHelper = function(interest, closure)
 };
 
 /**
- * Register name with the connected NDN hub and receive interests with closure.upcall.
- * @param {Name} name
+ * Register prefix with the connected NDN hub and receive interests with closure.upcall.
+ * @param {Name} prefix
  * @param {Closure} closure
  * @param {number} flags
  */
-Face.prototype.registerPrefix = function(name, closure, flags) 
+Face.prototype.registerPrefix = function(prefix, closure, flags) 
 {
   flags = flags | 3;
   var thisNDN = this;
@@ -405,10 +408,10 @@ Face.prototype.registerPrefix = function(name, closure, flags)
       var interest = new Interest(Face.ndndIdFetcher);
       interest.interestLifetime = 4000; // milliseconds
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisNDN.reconnectAndExpressInterest(interest, new Face.FetchNdndidClosure(thisNDN, name, closure, flags));
+      thisNDN.reconnectAndExpressInterest(interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, flags));
     }
     else  
-      thisNDN.registerPrefixHelper(name, closure, flags);
+      thisNDN.registerPrefixHelper(prefix, closure, flags);
   };
 
   if (this.host == null || this.port == null) {
@@ -423,15 +426,15 @@ Face.prototype.registerPrefix = function(name, closure, flags)
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(name, callerClosure, flags).
+ *   registerPrefixHelper(prefix, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
   this.face = face;
-  this.name = name;
+  this.prefix = prefix;
   this.callerClosure = callerClosure;
   this.flags = flags;
 };
@@ -439,7 +442,7 @@ Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure,
 Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) 
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.name.toUri() + " .");
+    console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.prefix.toUri() + " .");
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -451,12 +454,12 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest)
     console.log
       ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
-       + this.name.toUri() + " .");
+       + this.prefix.toUri() + " .");
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
     this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
     if (LOG > 3) console.log(this.face.ndndid);
-    this.face.registerPrefixHelper(this.name, this.callerClosure, this.flags);
+    this.face.registerPrefixHelper(this.prefix, this.callerClosure, this.flags);
   }
     
   return Closure.RESULT_OK;
@@ -465,9 +468,9 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-Face.prototype.registerPrefixHelper = function(name, closure, flags) 
+Face.prototype.registerPrefixHelper = function(prefix, closure, flags) 
 {
-  var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
+  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, 2147483647);
     
   var encoder = new BinaryXMLEncoder();
   fe.to_ndnb(encoder);
@@ -487,8 +490,7 @@ Face.prototype.registerPrefixHelper = function(name, closure, flags)
   interest.scope = 1;
   if (LOG > 3) console.log('Send Interest registration packet.');
       
-  var csEntry = new CSEntry(name.toUri(), closure);
-  Face.CSTable.push(csEntry);
+  Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
   this.transport.send(interest.encode());
 };
@@ -508,12 +510,11 @@ Face.prototype.onReceivedElement = function(element)
     var interest = new Interest();
     interest.from_ndnb(decoder);
     if (LOG > 3) console.log(interest);
-    var nameStr = escape(interest.name.toUri());
-    if (LOG > 3) console.log(nameStr);
+    if (LOG > 3) console.log(interest.name.toUri());
         
-    var entry = getEntryForRegisteredPrefix(nameStr);
+    var entry = getEntryForRegisteredPrefix(interest.name);
     if (entry != null) {
-      //console.log(entry);
+      if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
