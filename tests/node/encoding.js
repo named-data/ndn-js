@@ -30,21 +30,21 @@ console.log("Encoding/Decoding data packet objects...");
 
 var content = "NDN on Node";
 
-var co1 = new Data(new Name(n), new SignedInfo(), content);
-co1.signedInfo.setFields();
-co1.sign();
-console.log("Signature is \n" + co1.signature.signature.toString('hex'));
+var data1 = new Data(new Name(n), new SignedInfo(), content);
+data1.signedInfo.setFields();
+data1.sign();
+console.log("Signature is \n" + data1.signature.signature.toString('hex'));
 
-var p2 = co1.encode();
+var p2 = data1.encode();
 
-var co2 = new Data();
-co2.decode(p2);
+var data2 = new Data();
+data2.decode(p2);
 
-console.log('Decoded name: ' + co2.name.toUri());
-console.log('Decoded content: ' + co2.content.toString());
+console.log('Decoded name: ' + data2.name.toUri());
+console.log('Decoded content: ' + data2.content.toString());
 var rsakey = new Key();
-rsakey.readDerPublicKey(co2.signedInfo.locator.publicKey);
-console.log('Content verification passed: ' + co2.verify(rsakey));
+rsakey.readDerPublicKey(data2.signedInfo.locator.publicKey);
+console.log('Content verification passed: ' + data2.verify(rsakey));
 
 console.log('Data in XML representation:');
-console.log(EncodingUtils.dataToHtml(co2).replace(/<br \/>/g, "\n"));
+console.log(EncodingUtils.dataToHtml(data2).replace(/<br \/>/g, "\n"));
