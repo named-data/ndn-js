@@ -2,78 +2,71 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
 <!--
-	See COPYING for copyright and distribution information.
+  See COPYING for copyright and distribution information.
 -->
 <html xmlns = "http://www.w3.org/1999/xhtml">
 <meta charset="UTF-8">
 
 
 <head>
-	<title>NDN Put via WebSocket</title>
+  <title>NDN Put via WebSocket</title>
 
-	<script type="text/javascript" src="../../build/ndn.js"></script>
+  <script type="text/javascript" src="../../build/ndn.js"></script>
 
-	<script type="text/javascript">
-		var face = new Face();
+  <script type="text/javascript">
+    var face = new Face({host: "localhost"});
 
-        var AsyncPutClosure = function AsyncPutClosure() {
-        	// Inherit from Closure.
-			Closure.call(this);
-		};
+    function onInterest(prefix, interest, transport)
+    {
+      console.log("onInterest called.");
+      var contentString = document.getElementById('content').value;
 
-		AsyncPutClosure.prototype.upcall = function(kind, upcallInfo) {
-			if (kind == Closure.UPCALL_FINAL) {
-				// Do nothing.
-			} else if (kind == Closure.UPCALL_INTEREST) {
-				console.log('AsyncPutClosure.upcall() called.');
-                console.log("Host: " + face.host + ":" + face.port);
-				var content = document.getElementById('content').value;
-				var interest = upcallInfo.interest;
-				var nameStr = interest.name.toUri();
+      var data = new Data(interest.name, new SignedInfo(), new Buffer(contentString));
+      data.signedInfo.setFields();
+      data.sign();
+      var encodedData = data.encode();
+      
+      try {
+        console.log("Send content " + contentString);
+        transport.send(encodedData);
+      } catch (e) {
+        console.log(e.toString());
+      }
+    }
 
-				var si = new SignedInfo();
+    function onRegisterFailed(prefix) 
+    {
+      console.log("Register failed for prefix " + prefix.toUri());
+    }
 
-				var data = new Data(new Name(nameStr), si, content);
-				data.sign();
+    function run() {
+      var contentName = document.getElementById('contentname').value;
 
-				upcallInfo.data = data;
-				return Closure.RESULT_INTEREST_CONSUMED;
-			}
-			return Closure.RESULT_OK;
-		};
+      face.registerPrefix(new Name(contentName), onInterest, onRegisterFailed);
 
+      document.getElementById('result').innerHTML = 'Content name \'' + contentName +'\' published.';
+    }
 
-		function run() {
-			var contentName = document.getElementById('contentname').value;
-
-			face.registerPrefix(new Name(contentName), new AsyncPutClosure());
-
-			document.getElementById('result').innerHTML = 'Content name \'' + contentName
-					+'\' published.';
-		}
-
-		</script>
+    </script>
 
 </head>
 <body >
-	<form>
-	<div>
-		<p>Please Enter a Content Name:</p>
+  <form>
+  <div>
+    <p>Please Enter a Content Name:</p>
 
-		<input id="contentname" type="text" name="CONTENTNAME" value="/wentao.shang/regtest001" />
+    <input id="contentname" type="text" size="50" name="CONTENTNAME" value="/regtest001" />
+    <p>Please Enter the Content:</p>
+    <textarea id="content" cols="40" rows="5" name="CONTENT" >This works!</textarea>
 
-                <p>Please Enter the Content:</p>
+    <br />
+    </div>
+  </form>
+  <div>
+    <button id="testBtn" onclick="run()">Publish Content</button>
+  </div>
 
-		<textarea id="content" cols="40" rows="5" name="CONTENT" >This works!</textarea>
-
-		<br />
-		</div>
-	</form>
-	<div>
-		<button id="testBtn" onclick="run()">Publish Content</button>
-	</div>
-
-	<p id="result"></p>
+  <p id="result"></p>
 
 </body>
 </html>

@@ -16,6 +16,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key.js').KeyLocatorType;
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
@@ -280,12 +281,15 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
 }
 
-Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout) {
+Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
   // Inherit from Closure.
   Closure.call(this);
   
   this.onData = onData;
   this.onTimeout = onTimeout;
+  this.onInterest = onInterest;
+  this.prefix = prefix;
+  this.transport = transport;
 };
 
 Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -293,6 +297,9 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
     this.onData(upcallInfo.interest, upcallInfo.data);
   else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
     this.onTimeout(upcallInfo.interest);
+  else if (kind == Closure.UPCALL_INTEREST)
+    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the transport.
+    this.onInterest(this.prefix, upcallInfo.interest, this.transport)
   
   return Closure.RESULT_OK;
 };
@@ -393,14 +400,59 @@ Face.prototype.expressInterestHelper = function(interest, closure)
 };
 
 /**
- * Register prefix with the connected NDN hub and receive interests with closure.upcall.
+ * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
+ * This uses the form:
+ * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
+ * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
+ * @param {Name} prefix The Name prefix.
+ * @param {function} onInterest When an interest is received which matches the name prefix, this calls 
+ * onInterest(prefix, interest, transport) where:
+ *   prefix is the prefix given to registerPrefix.
+ *   interest is the received interest.
+ *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
+ * @param {function} onRegisterFailed If failed to retrieve the connected hub's ID or failed to register the prefix, 
+ * this calls onRegisterFailed(prefix) where:
+ *   prefix is the prefix given to registerPrefix.
+ * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.  
+ * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ */
+Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4) 
+{
+  // There are several overloaded versions of registerPrefix, each shown inline below.
+
+  // registerPrefix(Name prefix, Closure closure);            // deprecated
+  // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
+  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
+    // Assume arg2 is the deprecated use with Closure.
+    if (arg3)
+      this.registerPrefixWithClosure(prefix, arg2, arg3);
+    else
+      this.registerPrefixWithClosure(prefix, arg2);
+    return;
+  }
+
+  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
+  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
+  var onInterest = arg2;
+  var onRegisterFailed = (arg3 ? arg3 : function() {});
+  var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
+  this.registerPrefixWithClosure(prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport), 
+                                 intFlags, onRegisterFailed);
+}
+
+/**
+ * A private method to register the prefix with the host, receive the data and call
+ * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)). 
+ * @deprecated Use registerPrefix with callback functions, not Closure.
  * @param {Name} prefix
  * @param {Closure} closure
- * @param {number} flags
+ * @param {number} intFlags
+ * @param {function} (optional) If called from the non-deprecated registerPrefix, call onRegisterFailed(prefix) 
+ * if registration fails.
  */
-Face.prototype.registerPrefix = function(prefix, closure, flags) 
+Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, onRegisterFailed) 
 {
-  flags = flags | 3;
+  intFlags = intFlags | 3;
   var thisNDN = this;
   var onConnected = function() {
     if (thisNDN.ndndid == null) {
@@ -408,7 +460,8 @@ Face.prototype.registerPrefix = function(prefix, closure, flags)
       var interest = new Interest(Face.ndndIdFetcher);
       interest.interestLifetime = 4000; // milliseconds
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisNDN.reconnectAndExpressInterest(interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, flags));
+      thisNDN.reconnectAndExpressInterest
+        (interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, intFlags, onRegisterFailed));
     }
     else  
       thisNDN.registerPrefixHelper(prefix, closure, flags);
@@ -428,7 +481,7 @@ Face.prototype.registerPrefix = function(prefix, closure, flags)
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
  *   registerPrefixHelper(prefix, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags, onRegisterFailed) 
 {
   // Inherit from Closure.
   Closure.call(this);
@@ -437,24 +490,30 @@ Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosur
   this.prefix = prefix;
   this.callerClosure = callerClosure;
   this.flags = flags;
+  this.onRegisterFailed = onRegisterFailed;
 };
 
 Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) 
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
     console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.prefix.toUri() + " .");
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
         kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.
+    // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
        
   var data = upcallInfo.data;
-  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest)
+  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest) {
     console.log
       ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
        + this.prefix.toUri() + " .");
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+  }
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
     this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;

@@ -3532,7 +3532,7 @@ SignedInfo.prototype.setFields = function()
   this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
   
   if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
-  if (LOG > 4) console.log(publicKeyBytes);
+  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
   //this.locator = new KeyLocator(DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE);
@@ -3714,7 +3714,7 @@ var LOG = require('./log.js').Log.LOG;
  * @param {number} childSelector
  * @param {number} answerOriginKind
  * @param {number} scope
- * @param {number} interestLifetime in milliseconds
+ * @param {number} interestLifetimeMilliseconds in milliseconds
  * @param {Buffer} nonce
  */
 var Interest = function Interest
@@ -4584,6 +4584,15 @@ var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceI
 
 exports.ForwardingEntry = ForwardingEntry;
 
+ForwardingEntry.ACTIVE         = 1;
+ForwardingEntry.CHILD_INHERIT  = 2;
+ForwardingEntry.ADVERTISE      = 4;
+ForwardingEntry.LAST           = 8;
+ForwardingEntry.CAPTURE       = 16;
+ForwardingEntry.LOCAL         = 32;
+ForwardingEntry.TAP           = 64;
+ForwardingEntry.CAPTURE_OK   = 128;
+
 ForwardingEntry.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 
@@ -4632,6 +4641,173 @@ ForwardingEntry.prototype.to_ndnb = function(
 };
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
+/**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+
+/**
+ * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
+ * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
+ * bits are changed, amended or deprecated.
+ * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
+ */
+var ForwardingFlags = function ForwardingFlags() 
+{
+  this.active = true;
+  this.childInherit = true;
+  this.advertise = false;
+  this.last = false;
+  this.capture = false;
+  this.local = false;
+  this.tap = false;
+  this.captureOk = false;
+}
+
+exports.ForwardingFlags = ForwardingFlags;
+
+/**
+ * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
+ * @returns {number} An integer with the bits set.
+ */
+ForwardingFlags.prototype.getForwardingEntryFlags = function()
+{
+  var result = 0;
+  
+  if (this.active)
+    result |= ForwardingEntry.ACTIVE;
+  if (this.childInherit)
+    result |= ForwardingEntry.CHILD_INHERIT;
+  if (this.advertise)
+    result |= ForwardingEntry.ADVERTISE;
+  if (this.last)
+    result |= ForwardingEntry.LAST;
+  if (this.capture)
+    result |= ForwardingEntry.CAPTURE;
+  if (this.local)
+    result |= ForwardingEntry.LOCAL;
+  if (this.tap)
+    result |= ForwardingEntry.TAP;
+  if (this.captureOk)
+    result |= ForwardingEntry.CAPTURE_OK;
+  
+  return result;
+};
+
+/**
+ * Set the flags according to the bits in forwardingEntryFlags as used by the ForwardingEntry message.
+ * @param {number} forwardingEntryFlags An integer with the bits set.
+ */
+ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
+{
+  this.active = ((forwardingEntryFlags & ForwardingEntry.ACTIVE) != 0);
+  this.childInherit = ((forwardingEntryFlags & ForwardingEntry.CHILD_INHERIT) != 0);
+  this.advertise = ((forwardingEntryFlags & ForwardingEntry.ADVERTISE) != 0);
+  this.last = ((forwardingEntryFlags & ForwardingEntry.LAST) != 0);
+  this.capture = ((forwardingEntryFlags & ForwardingEntry.CAPTURE) != 0);
+  this.local = ((forwardingEntryFlags & ForwardingEntry.LOCAL) != 0);
+  this.tap = ((forwardingEntryFlags & ForwardingEntry.TAP) != 0);
+  this.captureOk = ((forwardingEntryFlags & ForwardingEntry.CAPTURE_OK) != 0);
+};
+
+/**
+ * Get the value of the "active" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getActive = function() { return this.active; };
+
+/**
+ * Get the value of the "childInherit" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
+
+/**
+ * Get the value of the "advertise" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getAdvertise = function() { return this.advertise; };
+
+/**
+ * Get the value of the "last" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getLast = function() { return this.last; };
+
+/**
+ * Get the value of the "capture" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getCapture = function() { return this.capture; };
+
+/**
+ * Get the value of the "local" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getLocal = function() { return this.local; };
+
+/**
+ * Get the value of the "tap" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getTap = function() { return this.tap; };
+
+/**
+ * Get the value of the "captureOk" flag.
+ * @returns {Boolean} true if the flag is set, false if it is cleared.
+ */
+ForwardingFlags.prototype.getCaptureOk = function() { return this.captureOk; };
+
+/**
+ * Set the value of the "active" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setActive = function(value) { this.active = value; };
+
+/**
+ * Set the value of the "childInherit" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
+
+/**
+ * Set the value of the "advertise" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setAdvertise = function(value) { this.advertise = value; };
+
+/**
+ * Set the value of the "last" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setLast = function(value) { this.last = value; };
+
+/**
+ * Set the value of the "capture" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
+
+/**
+ * Set the value of the "local" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setLocal = function(value) { this.local = value; };
+
+/**
+ * Set the value of the "tap" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
+
+/**
+ * Set the value of the "captureOk" flag
+ * @param {number} value true to set the flag, false to clear it.
+ */  
+ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -5170,11 +5346,14 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
+var SignedInfo = require('./data.js').SignedInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key.js').KeyLocatorType;
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
@@ -5322,22 +5501,23 @@ Face.getEntryForExpressedInterest = function(/*Name*/ name)
 };
 
 // For publishing data
-Face.CSTable = new Array();
+Face.registeredPrefixTable = new Array();
 
 /**
  * @constructor
  */
-var CSEntry = function CSEntry(name, closure) 
+var RegisteredPrefix = function RegisteredPrefix(prefix, closure) 
 {
-  this.name = name;        // String
+  this.prefix = prefix;        // String
   this.closure = closure;  // Closure
 };
 
 function getEntryForRegisteredPrefix(name) 
 {
-  for (var i = 0; i < Face.CSTable.length; i++) {
-    if (Face.CSTable[i].name.match(name))
-      return Face.CSTable[i];
+  for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
+    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
+    if (Face.registeredPrefixTable[i].prefix.match(name))
+      return Face.registeredPrefixTable[i];
   }
   return null;
 }
@@ -5438,12 +5618,15 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
 }
 
-Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout) {
+Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
   // Inherit from Closure.
   Closure.call(this);
   
   this.onData = onData;
   this.onTimeout = onTimeout;
+  this.onInterest = onInterest;
+  this.prefix = prefix;
+  this.transport = transport;
 };
 
 Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -5451,6 +5634,9 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
     this.onData(upcallInfo.interest, upcallInfo.data);
   else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
     this.onTimeout(upcallInfo.interest);
+  else if (kind == Closure.UPCALL_INTEREST)
+    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the transport.
+    this.onInterest(this.prefix, upcallInfo.interest, this.transport)
   
   return Closure.RESULT_OK;
 };
@@ -5551,14 +5737,59 @@ Face.prototype.expressInterestHelper = function(interest, closure)
 };
 
 /**
- * Register name with the connected NDN hub and receive interests with closure.upcall.
- * @param {Name} name
- * @param {Closure} closure
- * @param {number} flags
+ * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
+ * This uses the form:
+ * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
+ * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
+ * @param {Name} prefix The Name prefix.
+ * @param {function} onInterest When an interest is received which matches the name prefix, this calls 
+ * onInterest(prefix, interest, transport) where:
+ *   prefix is the prefix given to registerPrefix.
+ *   interest is the received interest.
+ *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
+ * @param {function} onRegisterFailed If failed to retrieve the connected hub's ID or failed to register the prefix, 
+ * this calls onRegisterFailed(prefix) where:
+ *   prefix is the prefix given to registerPrefix.
+ * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.  
+ * If omitted, use the default flags defined by the default ForwardingFlags constructor.
  */
-Face.prototype.registerPrefix = function(name, closure, flags) 
+Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4) 
 {
-  flags = flags | 3;
+  // There are several overloaded versions of registerPrefix, each shown inline below.
+
+  // registerPrefix(Name prefix, Closure closure);            // deprecated
+  // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
+  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
+    // Assume arg2 is the deprecated use with Closure.
+    if (arg3)
+      this.registerPrefixWithClosure(prefix, arg2, arg3);
+    else
+      this.registerPrefixWithClosure(prefix, arg2);
+    return;
+  }
+
+  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
+  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
+  var onInterest = arg2;
+  var onRegisterFailed = (arg3 ? arg3 : function() {});
+  var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
+  this.registerPrefixWithClosure(prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport), 
+                                 intFlags, onRegisterFailed);
+}
+
+/**
+ * A private method to register the prefix with the host, receive the data and call
+ * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)). 
+ * @deprecated Use registerPrefix with callback functions, not Closure.
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {number} intFlags
+ * @param {function} (optional) If called from the non-deprecated registerPrefix, call onRegisterFailed(prefix) 
+ * if registration fails.
+ */
+Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, onRegisterFailed) 
+{
+  intFlags = intFlags | 3;
   var thisNDN = this;
   var onConnected = function() {
     if (thisNDN.ndndid == null) {
@@ -5566,10 +5797,11 @@ Face.prototype.registerPrefix = function(name, closure, flags)
       var interest = new Interest(Face.ndndIdFetcher);
       interest.interestLifetime = 4000; // milliseconds
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisNDN.reconnectAndExpressInterest(interest, new Face.FetchNdndidClosure(thisNDN, name, closure, flags));
+      thisNDN.reconnectAndExpressInterest
+        (interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, intFlags, onRegisterFailed));
     }
     else  
-      thisNDN.registerPrefixHelper(name, closure, flags);
+      thisNDN.registerPrefixHelper(prefix, closure, flags);
   };
 
   if (this.host == null || this.port == null) {
@@ -5584,40 +5816,46 @@ Face.prototype.registerPrefix = function(name, closure, flags)
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(name, callerClosure, flags).
+ *   registerPrefixHelper(prefix, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(face, name, callerClosure, flags) 
+Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags, onRegisterFailed) 
 {
   // Inherit from Closure.
   Closure.call(this);
     
   this.face = face;
-  this.name = name;
+  this.prefix = prefix;
   this.callerClosure = callerClosure;
   this.flags = flags;
+  this.onRegisterFailed = onRegisterFailed;
 };
 
 Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo) 
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.name.toUri() + " .");
+    console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.prefix.toUri() + " .");
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
         kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.
+    // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
        
   var data = upcallInfo.data;
-  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest)
+  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest) {
     console.log
       ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
-       + this.name.toUri() + " .");
+       + this.prefix.toUri() + " .");
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+  }
   else {
     if (LOG > 3) console.log('Got ndndid from ndnd.');
     this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
     if (LOG > 3) console.log(this.face.ndndid);
-    this.face.registerPrefixHelper(this.name, this.callerClosure, this.flags);
+    this.face.registerPrefixHelper(this.prefix, this.callerClosure, this.flags);
   }
     
   return Closure.RESULT_OK;
@@ -5626,9 +5864,9 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-Face.prototype.registerPrefixHelper = function(name, closure, flags) 
+Face.prototype.registerPrefixHelper = function(prefix, closure, flags) 
 {
-  var fe = new ForwardingEntry('selfreg', name, null, null, flags, 2147483647);
+  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, 2147483647);
     
   var encoder = new BinaryXMLEncoder();
   fe.to_ndnb(encoder);
@@ -5648,8 +5886,7 @@ Face.prototype.registerPrefixHelper = function(name, closure, flags)
   interest.scope = 1;
   if (LOG > 3) console.log('Send Interest registration packet.');
       
-  var csEntry = new CSEntry(name.toUri(), closure);
-  Face.CSTable.push(csEntry);
+  Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
   this.transport.send(interest.encode());
 };
@@ -5669,12 +5906,11 @@ Face.prototype.onReceivedElement = function(element)
     var interest = new Interest();
     interest.from_ndnb(decoder);
     if (LOG > 3) console.log(interest);
-    var nameStr = escape(interest.name.toUri());
-    if (LOG > 3) console.log(nameStr);
+    if (LOG > 3) console.log(interest.name.toUri());
         
-    var entry = getEntryForRegisteredPrefix(nameStr);
+    var entry = getEntryForRegisteredPrefix(interest.name);
     if (entry != null) {
-      //console.log(entry);
+      if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
