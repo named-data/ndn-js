@@ -26,7 +26,7 @@ var LOG = require('./log.js').Log.LOG;
  * @param {number} childSelector
  * @param {number} answerOriginKind
  * @param {number} scope
- * @param {number} interestLifetime in milliseconds
+ * @param {number} interestLifetimeMilliseconds in milliseconds
  * @param {Buffer} nonce
  */
 var Interest = function Interest
