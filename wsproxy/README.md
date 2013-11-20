@@ -18,6 +18,8 @@ To run the proxy, simply use the command 'node wsproxy-tcp.js' or 'node wsproxy-
 
 To specify remote ndnd router's hostname or ip address, use option '-c x.x.x.x'. Default is 'localhost'.
 
+To specify the port number of the remote ndnd, use option '-n xxxx'. Default is 6363.
+
 To specify the port number on which the proxy will listen, use option '-p xxxx'. Default is 9696.
 
 To specify maximum number of concurrent clients, use option '-m N'. Default is 40.
