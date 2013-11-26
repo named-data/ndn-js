@@ -1,5 +1,19 @@
-NDN-JS v0.2 (2013-11-08)
+Interim changes since NDN-JS v0.2 (2013-11-25)
 --------------------------------------
+
+Changes
+* http://redmine.named-data.net/issues/1073 In Face.expressInterest, support onData and onTimeout callbacks.
+* In Face.registerPrefix, add support for onInterest and onRegisterFailed callbacks and ForwardingFlags.
+
+Deprecated
+* Face/NDN: expressInterest(name, closure [, template]). You should use expressInterest which uses callbacks, not Closure.
+* Face/NDN: registerPrefix(name, closure [, intFlags]). You should use registerPrefix which uses callbacks, not Closure.
+
+Documentation
+* wsproxy: In the README, document option -n for the remote ndnd port.
+
+NDN-JS v0.2 (2013-11-08)
+------------------------
 
 Changes
 * http://redmine.named-data.net/issues/1060 Rename the combined files ndn-js.js and ndn-js.min.js to ndn.js and ndn.min.js.
