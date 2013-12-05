@@ -221,7 +221,7 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
       this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
     else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
       decoder.readElementStartDTag(NDNProtocolDTags.Any);
-      decoder.readEndElement();
+      decoder.readElementClose();
       this.appendAny();
     }
     else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
@@ -233,7 +233,7 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
       break;
   }
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  

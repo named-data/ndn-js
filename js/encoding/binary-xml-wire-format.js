@@ -195,7 +195,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   else
     interest.nonce = null;
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 /**
@@ -264,7 +264,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     
   data.endSIG = decoder.offset;
     
-  decoder.readEndElement();
+  decoder.readElementClose();
     
   data.saveRawData(decoder.input);
 };

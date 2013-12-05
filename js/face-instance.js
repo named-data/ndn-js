@@ -71,7 +71,7 @@ FaceInstance.prototype.from_ndnb = function(
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
     this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 /**

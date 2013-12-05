@@ -219,7 +219,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     this.keyName = new KeyName();
     this.keyName.from_ndnb(decoder);
   }
-  decoder.readEndElement();
+  decoder.readElementClose();
 };  
 
 KeyLocator.prototype.to_ndnb = function(encoder) 
@@ -286,7 +286,7 @@ KeyName.prototype.from_ndnb = function(decoder)
     this.publisherID.from_ndnb(decoder);
   }
   
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 KeyName.prototype.to_ndnb = function(encoder)

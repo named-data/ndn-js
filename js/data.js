@@ -138,7 +138,7 @@ Signature.prototype.from_ndnb = function(decoder)
   if (LOG > 4) console.log('SIGNATURE FOUND');
   this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Signature.prototype.to_ndnb = function(encoder) 
@@ -262,7 +262,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
     this.locator.from_ndnb(decoder);
   }
       
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 SignedInfo.prototype.to_ndnb = function(encoder)  {

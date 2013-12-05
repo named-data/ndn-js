@@ -386,6 +386,20 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
   return this.readBlob(allowNull);  
 };
 
+/**
+ * Read one byte from the input starting at its offset, expecting it to be the element close.
+ * Update the input's offset.
+ */
+BinaryXMLDecoder.prototype.readElementClose = function() 
+{
+  var next = this.input[this.offset++];     
+  if (next != XML_CLOSE)
+    throw new ContentDecodingException(new Error("Expected end element, got: " + next));
+};
+
+/**
+ * @@description Use readElementClose.
+ */
 BinaryXMLDecoder.prototype.readEndElement = function() 
 {
   if (LOG > 4) console.log('this.offset is '+this.offset);
@@ -408,7 +422,7 @@ BinaryXMLDecoder.prototype.readUString = function()
 {
   //String 
   var ustring = this.decodeUString();  
-  this.readEndElement();
+  this.readElementClose();
   return ustring;
 };
   
@@ -420,12 +434,12 @@ BinaryXMLDecoder.prototype.readUString = function()
 BinaryXMLDecoder.prototype.readBlob = function(allowNull) 
 {
   if (this.input[this.offset] == XML_CLOSE && allowNull) {
-    this.readEndElement();
+    this.readElementClose();
     return null;
   }
     
   var blob = this.decodeBlob();  
-  this.readEndElement();
+  this.readElementClose();
   return blob;
 };
 

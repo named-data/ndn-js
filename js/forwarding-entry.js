@@ -63,7 +63,7 @@ ForwardingEntry.prototype.from_ndnb = function(
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
     this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 ForwardingEntry.prototype.to_ndnb = function(

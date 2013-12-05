@@ -121,11 +121,11 @@ NameEnumeration.parseComponents = function(content)
     
     components.push(new Buffer(decoder.readBinaryElement(NDNProtocolDTags.Component)));
     
-    decoder.readEndElement();  
-    decoder.readEndElement();  
+    decoder.readElementClose();  
+    decoder.readElementClose();  
   }
 
-  decoder.readEndElement();
+  decoder.readElementClose();
   return components;
 };
 
