@@ -145,52 +145,52 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   interest.name = new Name();
   interest.name.from_ndnb(decoder);
 
-  if (decoder.peekStartElement(NDNProtocolDTags.MinSuffixComponents))
+  if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
     interest.minSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MinSuffixComponents);
   else
     interest.minSuffixComponents = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.MaxSuffixComponents)) 
+  if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
     interest.maxSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MaxSuffixComponents);
   else
     interest.maxSuffixComponents = null;
       
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     interest.publisherPublicKeyDigest.from_ndnb(decoder);
   }
   else
     interest.publisherPublicKeyDigest = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Exclude)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
     interest.exclude = new Exclude();
     interest.exclude.from_ndnb(decoder);
   }
   else
     interest.exclude = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.ChildSelector))
+  if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
     interest.childSelector = decoder.readIntegerElement(NDNProtocolDTags.ChildSelector);
   else
     interest.childSelector = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.AnswerOriginKind))
+  if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
     interest.answerOriginKind = decoder.readIntegerElement(NDNProtocolDTags.AnswerOriginKind);
   else
     interest.answerOriginKind = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.Scope))
+  if (decoder.peekDTag(NDNProtocolDTags.Scope))
     interest.scope = decoder.readIntegerElement(NDNProtocolDTags.Scope);
   else
     interest.scope = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.InterestLifetime))
+  if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
     interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
                (decoder.readBinaryElement(NDNProtocolDTags.InterestLifetime)) / 4096;
   else
     interest.interestLifetime = null;              
     
-  if (decoder.peekStartElement(NDNProtocolDTags.Nonce))
+  if (decoder.peekDTag(NDNProtocolDTags.Nonce))
     interest.nonce = decoder.readBinaryElement(NDNProtocolDTags.Nonce);
   else
     interest.nonce = null;
@@ -241,7 +241,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
   decoder.readStartElement(data.getElementLabel());
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Signature)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
     data.signature = new Signature();
     data.signature.from_ndnb(decoder);
   }
@@ -253,7 +253,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.name = new Name();
   data.name.from_ndnb(decoder);
     
-  if (decoder.peekStartElement(NDNProtocolDTags.SignedInfo)) {
+  if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.signedInfo = new SignedInfo();
     data.signedInfo.from_ndnb(decoder);
   }

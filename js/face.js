@@ -563,7 +563,7 @@ Face.prototype.onReceivedElement = function(element)
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
   var decoder = new BinaryXMLDecoder(element);
   // Dispatch according to packet type
-  if (decoder.peekStartElement(NDNProtocolDTags.Interest)) {  // Interest packet
+  if (decoder.peekDTag(NDNProtocolDTags.Interest)) {  // Interest packet
     if (LOG > 3) console.log('Interest packet received.');
         
     var interest = new Interest();
@@ -580,7 +580,7 @@ Face.prototype.onReceivedElement = function(element)
         this.transport.send(info.data.encode());
     }        
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.Data)) {  // Content packet
+  else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet
     if (LOG > 3) console.log('Data packet received.');
         
     var data = new Data();

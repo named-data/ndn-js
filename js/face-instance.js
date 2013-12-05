@@ -38,15 +38,15 @@ FaceInstance.prototype.from_ndnb = function(
 {
   decoder.readStartElement(this.getElementLabel());
   
-  if (decoder.peekStartElement(NDNProtocolDTags.Action))   
+  if (decoder.peekDTag(NDNProtocolDTags.Action))   
     this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     this.publisherPublicKeyDigest.from_ndnb(decoder);
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.FaceID))
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
     this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekStartElement(NDNProtocolDTags.IPProto)) {
+  if (decoder.peekDTag(NDNProtocolDTags.IPProto)) {
     //int
     var pI = decoder.readIntegerElement(NDNProtocolDTags.IPProto);
     
@@ -60,15 +60,15 @@ FaceInstance.prototype.from_ndnb = function(
       throw new Error("FaceInstance.decoder.  Invalid NDNProtocolDTags.IPProto field: " + pI);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.Host))
+  if (decoder.peekDTag(NDNProtocolDTags.Host))
     this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
-  if (decoder.peekStartElement(NDNProtocolDTags.Port))
+  if (decoder.peekDTag(NDNProtocolDTags.Port))
     this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
-  if (decoder.peekStartElement(NDNProtocolDTags.MulticastInterface))
+  if (decoder.peekDTag(NDNProtocolDTags.MulticastInterface))
     this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
-  if (decoder.peekStartElement(NDNProtocolDTags.MulticastTTL))
+  if (decoder.peekDTag(NDNProtocolDTags.MulticastTTL))
     this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds))
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
     this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 
   decoder.readEndElement();

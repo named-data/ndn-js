@@ -46,21 +46,21 @@ ForwardingEntry.prototype.from_ndnb = function(
   //throws ContentDecodingException
 {
   decoder.readStartElement(this.getElementLabel());
-  if (decoder.peekStartElement(NDNProtocolDTags.Action))
+  if (decoder.peekDTag(NDNProtocolDTags.Action))
     this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
-  if (decoder.peekStartElement(NDNProtocolDTags.Name)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
     this.prefixName = new Name();
     this.prefixName.from_ndnb(decoder) ;
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.NdndId = new PublisherPublicKeyDigest();
     this.NdndId.from_ndnb(decoder);
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.FaceID))
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
     this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
-  if (decoder.peekStartElement(NDNProtocolDTags.ForwardingFlags))
+  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
     this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds))
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
     this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
 
   decoder.readEndElement();

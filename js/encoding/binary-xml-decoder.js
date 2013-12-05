@@ -85,6 +85,8 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input)
   
   this.input = input;
   this.offset = 0;
+  // peekDTag sets and checks this, and readElementStartDTag uses it to avoid reading again.
+  this.previouslyPeekedDTagStartOffset = -1;
 };
 
 exports.BinaryXMLDecoder = BinaryXMLDecoder;
@@ -238,6 +240,44 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function()
   return decodedTag;
 };
 
+/**
+ * Decode the header from the input starting at its position, and if it is a DTAG where the value is the expectedTag,
+ * then set return true.  Do not update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {boolean} True if the tag is the expected tag, otherwise false.
+ */
+BinaryXMLDecoder.prototype.peekDTag = function(expectedTag)
+{
+  if (this.offset == this.previouslyPeekedDTagStartOffset)
+    // We already decoded this DTag.
+    return this.previouslyPeekedDTag == expectedTag;
+  else {
+    // First check if it is an element close (which cannot be the expected tag).  
+    if (this.input[this.offset] == XML_CLOSE)
+      return false;
+
+    var saveOffset = this.offset;
+    var typeAndValue = this.decodeTypeAndVal();
+    // readElementStartDTag will use this to fast forward.
+    this.previouslyPeekedDTagEndOffset = this.offset;
+    // Restore the position.
+    this.offset = saveOffset;
+
+    if (typeAndValue != null && typeAndValue.type() == XML_DTAG) {
+      this.previouslyPeekedDTagStartOffset = saveOffset;
+      this.previouslyPeekedDTag = typeAndValue.val();
+
+      return typeAndValue.val() == expectedTag;
+    }
+    else
+      return false;
+  }  
+};
+
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElement = function(
     //String 
     startTag) 
@@ -262,7 +302,10 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
     throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 };
 
-//returns Long
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsLong = function() 
 {
   //Long

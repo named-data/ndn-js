@@ -175,7 +175,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
 
   decoder.readStartElement(this.getElementLabel());
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Key)) 
+  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
   {
     try {
       var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
@@ -195,7 +195,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     if (null == this.publicKey)
       throw new Error("Cannot parse key: ");
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
+  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
     try {
       var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
       

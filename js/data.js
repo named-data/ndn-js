@@ -124,11 +124,11 @@ Signature.prototype.from_ndnb = function(decoder)
     
   if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
     
-  if (decoder.peekStartElement(NDNProtocolDTags.DigestAlgorithm)) {
+  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
     if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
     this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
     if (LOG > 4) console.log('WITNESS FOUND');
     this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
   }
@@ -221,18 +221,18 @@ SignedInfo.prototype.from_ndnb = function(decoder)
 {
   decoder.readStartElement(this.getElementLabel());
   
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     if (LOG > 4) console.log('DECODING PUBLISHER KEY');
     this.publisher = new PublisherPublicKeyDigest();
     this.publisher.from_ndnb(decoder);
   }
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Timestamp)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
     if (LOG > 4) console.log('DECODING TIMESTAMP');
     this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
   }
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Type)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
     var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
     
     if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
@@ -246,17 +246,17 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   else
     this.type = ContentType.DATA; // default
   
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
     this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
     if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.FinalBlockID)) {
+  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
     if (LOG > 4) console.log('DECODING FINAL BLOCKID');
     this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.KeyLocator)) {
+  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
     if (LOG > 4) console.log('DECODING KEY LOCATOR');
     this.locator = new KeyLocator();
     this.locator.from_ndnb(decoder);

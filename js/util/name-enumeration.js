@@ -115,7 +115,7 @@ NameEnumeration.parseComponents = function(content)
   
   decoder.readStartElement(NDNProtocolDTags.Collection);
  
-  while (decoder.peekStartElement(NDNProtocolDTags.Link)) {
+  while (decoder.peekDTag(NDNProtocolDTags.Link)) {
     decoder.readStartElement(NDNProtocolDTags.Link);    
     decoder.readStartElement(NDNProtocolDTags.Name);
     

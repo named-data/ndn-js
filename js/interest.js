@@ -217,14 +217,14 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
   decoder.readStartElement(NDNProtocolDTags.Exclude);
 
   while (true) {
-    if (decoder.peekStartElement(NDNProtocolDTags.Component))
+    if (decoder.peekDTag(NDNProtocolDTags.Component))
       this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
-    else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
+    else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
       decoder.readStartElement(NDNProtocolDTags.Any);
       decoder.readEndElement();
       this.appendAny();
     }
-    else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
+    else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
       // Skip the Bloom and treat it as Any.
       decoder.readBinaryElement(NDNProtocolDTags.Bloom);
       this.appendAny();
