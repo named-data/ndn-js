@@ -83,7 +83,7 @@ BinaryXMLEncoder.prototype.writeBlob = function(
 BinaryXMLEncoder.prototype.writeElementStartDTag = function(tag)
 {
   this.encodeTypeAndVal(XML_DTAG, tag);
-}
+};
 
 /**
  * @deprecated Use writeElementStartDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
@@ -120,7 +120,7 @@ BinaryXMLEncoder.prototype.writeElementClose = function()
 BinaryXMLEncoder.prototype.writeEndElement = function() 
 {
   this.writeElementClose();
-}
+};
 
 /**
  * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
@@ -180,8 +180,8 @@ tagToString =  function(/*String*/ tagName)
 /**
  * Write an element start header using DTAG with the tag to the output buffer, then the content as explained below, 
  * then an element close.
- * @param {type} tag The DTAG tag.
- * @param {type} content If contentis a number, convert it to a string and call writeUString.  If content is a string,
+ * @param {number} tag The DTAG tag.
+ * @param {number|string|Buffer} content If contentis a number, convert it to a string and call writeUString.  If content is a string,
  * call writeUString.  Otherwise, call writeBlob.
  */
 BinaryXMLEncoder.prototype.writeDTagElement = function(tag, content)
@@ -359,28 +359,38 @@ BinaryXMLEncoder.prototype.numEncodingBytes = function(
   return (numbytes);
 };
 
+/**
+ * Write an element start header using DTAG with the tag to the output buffer, then the dateTime
+   * as a big endian BLOB converted to 4096 ticks per second, then an element close.
+ * @param {number} tag The DTAG tag.
+ * @param {NDNTime} dateTime
+ */
+BinaryXMLEncoder.prototype.writeDateTimeDTagElement = function(tag, dateTime)
+{  
+  //parse to hex
+  var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
+  if (binarydate.length % 2 == 1)
+    binarydate = '0' + binarydate;
+
+  this.writeDTagElement(tag, DataUtils.toNumbers(binarydate));
+};
+
+/**
+ * @deprecated Use writeDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeDateTime = function(
     //String 
     tag, 
     //NDNTime 
     dateTime) 
 {  
-  if (LOG > 4) console.log('ENCODING DATE with LONG VALUE');
-  if (LOG > 4) console.log(dateTime.msec);
-  
   //parse to hex
   var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
   if (binarydate.length % 2 == 1)
     binarydate = '0' + binarydate;
 
-  var binarydate =  DataUtils.toNumbers(binarydate) ;
-  
-  if (LOG > 4) console.log('ENCODING DATE with BINARY VALUE');
-  if (LOG > 4) console.log(binarydate);
-  if (LOG > 4) console.log('ENCODING DATE with BINARY VALUE(HEX)');
-  if (LOG > 4) console.log(DataUtils.toHex(binarydate));
-  
-  this.writeElement(tag, binarydate);
+  this.writeElement(tag, DataUtils.toNumbers(binarydate));
 };
 
 // This does not update this.offset.

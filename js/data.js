@@ -277,7 +277,7 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   }
 
   if (null != this.timestamp)
-    encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp);
+    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
   
   if (null != this.type && this.type != 0)
     encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
