@@ -229,7 +229,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
 
   if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
     if (LOG > 4) console.log('DECODING TIMESTAMP');
-    this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
+    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
   }
 
   if (decoder.peekDTag(NDNProtocolDTags.Type)) {

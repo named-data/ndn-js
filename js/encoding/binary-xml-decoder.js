@@ -392,7 +392,6 @@ BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNu
 /**
  * @deprecated Use readBinaryDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
  * support is not maintained in the code base.
- * 
  */
 BinaryXMLDecoder.prototype.readBinaryElement = function(
     //long 
@@ -418,7 +417,7 @@ BinaryXMLDecoder.prototype.readElementClose = function()
 };
 
 /**
- * @description Use readElementClose.
+ * @deprecated Use readElementClose.
  */
 BinaryXMLDecoder.prototype.readEndElement = function() 
 {
@@ -463,7 +462,33 @@ BinaryXMLDecoder.prototype.readBlob = function(allowNull)
   return blob;
 };
 
-//NDNTime
+/**
+ * Decode the header from the input starting at its offset, expecting the type to be 
+ * DTAG and the value to be expectedTag.  Then read one item, parse it as an unsigned 
+ * big endian integer in 4096 ticks per second, and convert it to and NDNTime object.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {NDNTime} The dateTime value.
+ */
+BinaryXMLDecoder.prototype.readDateTimeDTagElement = function(expectedTag)  
+{
+  var byteTimestamp = this.readBinaryDTagElement(expectedTag);
+  byteTimestamp = DataUtils.toHex(byteTimestamp);
+  byteTimestamp = parseInt(byteTimestamp, 16);
+  
+  var lontimestamp = (byteTimestamp/ 4096) * 1000;
+
+  var timestamp = new NDNTime(lontimestamp);  
+  if (null == timestamp)
+    throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
+
+  return timestamp;
+};
+
+/**
+ * @deprecated Use readDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readDateTime = function(
   //long 
   startTag)  
