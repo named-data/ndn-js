@@ -57,11 +57,11 @@ ForwardingEntry.prototype.from_ndnb = function(
     this.NdndId.from_ndnb(decoder);
   }
   if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID); 
   if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
+    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags); 
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
+    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds); 
 
   decoder.readElementClose();
 };

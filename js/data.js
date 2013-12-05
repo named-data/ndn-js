@@ -247,7 +247,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
     this.type = ContentType.DATA; // default
   
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
-    this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
+    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
     if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
   }
   

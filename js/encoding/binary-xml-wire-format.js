@@ -146,12 +146,12 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   interest.name.from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
-    interest.minSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MinSuffixComponents);
+    interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
   else
     interest.minSuffixComponents = null;
 
   if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
-    interest.maxSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MaxSuffixComponents);
+    interest.maxSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents);
   else
     interest.maxSuffixComponents = null;
       
@@ -170,17 +170,17 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
     interest.exclude = null;
     
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
-    interest.childSelector = decoder.readIntegerElement(NDNProtocolDTags.ChildSelector);
+    interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);
   else
     interest.childSelector = null;
     
   if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
-    interest.answerOriginKind = decoder.readIntegerElement(NDNProtocolDTags.AnswerOriginKind);
+    interest.answerOriginKind = decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind);
   else
     interest.answerOriginKind = null;
     
   if (decoder.peekDTag(NDNProtocolDTags.Scope))
-    interest.scope = decoder.readIntegerElement(NDNProtocolDTags.Scope);
+    interest.scope = decoder.readIntegerDTagElement(NDNProtocolDTags.Scope);
   else
     interest.scope = null;
 

@@ -641,6 +641,21 @@ TypeAndVal.prototype.val = function()
   return this.v;
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item, parse it as a decimal integer and return the integer. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {number} The parsed integer.
+ */
+BinaryXMLDecoder.prototype.readIntegerDTagElement = function(expectedTag)
+{
+  return parseInt(this.readUTF8DTagElement(expectedTag));
+};
+
+/**
+ * @deprecated Use readIntegerDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readIntegerElement = function(
   //String 
   startTag) 
