@@ -65,7 +65,11 @@ var Buffer = function Buffer(data, format)
   else
     throw new Error('Buffer: unknown data type.');
 
-  obj.__proto__ = Buffer.prototype;
+  try {
+    obj.__proto__ = Buffer.prototype;
+  } catch(ex) {
+    throw new Error("Buffer: Set obj.__proto__ exception: " + ex);
+  }
 
   obj.__proto__.toString = function(encoding) {
     if (encoding == null) {
