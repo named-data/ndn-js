@@ -1077,9 +1077,10 @@ var BinaryXMLEncoder = function BinaryXMLEncoder()
 exports.BinaryXMLEncoder = BinaryXMLEncoder;
 
 /**
- * Encode utf8Content as utf8.
+ * Encode utf8Content as utf8 and write to the output buffer as a UDATA.
+ * @param {string} utf8Content The string to convert to utf8.
  */
-BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) 
+BinaryXMLEncoder.prototype.writeUString = function(utf8Content) 
 {
   this.encodeUString(utf8Content, XML_UDATA);
 };
@@ -1092,6 +1093,19 @@ BinaryXMLEncoder.prototype.writeBlob = function(
   this.encodeBlob(binaryContent, binaryContent.length);
 };
 
+/**
+ * Write an element start header using DTAG with the tag to the output buffer.
+ * @param {number} tag The DTAG tag.
+ */
+BinaryXMLEncoder.prototype.writeElementStartDTag = function(tag)
+{
+  this.encodeTypeAndVal(XML_DTAG, tag);
+};
+
+/**
+ * @deprecated Use writeElementStartDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeStartElement = function(
   /*String*/ tag, 
   /*TreeMap<String,String>*/ attributes) 
@@ -1107,13 +1121,27 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
     this.writeAttributes(attributes); 
 };
 
-BinaryXMLEncoder.prototype.writeEndElement = function() 
+/**
+ * Write an element close to the output buffer.
+ */
+BinaryXMLEncoder.prototype.writeElementClose = function() 
 {
   this.ostream.ensureLength(this.offset + 1);
   this.ostream.array[this.offset] = XML_CLOSE;
   this.offset += 1;
 };
 
+/**
+ * @deprecated Use writeElementClose.
+ */
+BinaryXMLEncoder.prototype.writeEndElement = function() 
+{
+  this.writeElementClose();
+};
+
+/**
+ * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/ attributes) 
 {
   if (null == attributes)
@@ -1167,6 +1195,29 @@ tagToString =  function(/*String*/ tagName)
 };
 
 /**
+ * Write an element start header using DTAG with the tag to the output buffer, then the content as explained below, 
+ * then an element close.
+ * @param {number} tag The DTAG tag.
+ * @param {number|string|Buffer} content If contentis a number, convert it to a string and call writeUString.  If content is a string,
+ * call writeUString.  Otherwise, call writeBlob.
+ */
+BinaryXMLEncoder.prototype.writeDTagElement = function(tag, content)
+{
+  this.writeElementStartDTag(tag);
+  
+  if (typeof content === 'number')
+    this.writeUString(content.toString());
+  else if (typeof content === 'string')
+    this.writeUString(content);
+  else
+    this.writeBlob(content);
+  
+  this.writeElementClose();
+};
+
+/**
+ * @deprecated Use writeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
  * If Content is a string, then encode as utf8 and write UDATA.
  */
 BinaryXMLEncoder.prototype.writeElement = function(
@@ -1199,7 +1250,7 @@ BinaryXMLEncoder.prototype.writeElement = function(
     this.writeBlob(Content);
   }
   
-  this.writeEndElement();
+  this.writeElementClose();
 };
 
 var TypeAndVal = function TypeAndVal(_type,_val) 
@@ -1325,28 +1376,38 @@ BinaryXMLEncoder.prototype.numEncodingBytes = function(
   return (numbytes);
 };
 
+/**
+ * Write an element start header using DTAG with the tag to the output buffer, then the dateTime
+   * as a big endian BLOB converted to 4096 ticks per second, then an element close.
+ * @param {number} tag The DTAG tag.
+ * @param {NDNTime} dateTime
+ */
+BinaryXMLEncoder.prototype.writeDateTimeDTagElement = function(tag, dateTime)
+{  
+  //parse to hex
+  var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
+  if (binarydate.length % 2 == 1)
+    binarydate = '0' + binarydate;
+
+  this.writeDTagElement(tag, DataUtils.toNumbers(binarydate));
+};
+
+/**
+ * @deprecated Use writeDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeDateTime = function(
     //String 
     tag, 
     //NDNTime 
     dateTime) 
 {  
-  if (LOG > 4) console.log('ENCODING DATE with LONG VALUE');
-  if (LOG > 4) console.log(dateTime.msec);
-  
   //parse to hex
   var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
   if (binarydate.length % 2 == 1)
     binarydate = '0' + binarydate;
 
-  var binarydate =  DataUtils.toNumbers(binarydate) ;
-  
-  if (LOG > 4) console.log('ENCODING DATE with BINARY VALUE');
-  if (LOG > 4) console.log(binarydate);
-  if (LOG > 4) console.log('ENCODING DATE with BINARY VALUE(HEX)');
-  if (LOG > 4) console.log(DataUtils.toHex(binarydate));
-  
-  this.writeElement(tag, binarydate);
+  this.writeElement(tag, DataUtils.toNumbers(binarydate));
 };
 
 // This does not update this.offset.
@@ -1471,27 +1532,41 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input)
   
   this.input = input;
   this.offset = 0;
+  // peekDTag sets and checks this, and readElementStartDTag uses it to avoid reading again.
+  this.previouslyPeekedDTagStartOffset = -1;
 };
 
 exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
-BinaryXMLDecoder.prototype.initializeDecoding = function() 
+/**
+ * Decode the header from the input starting at its position, expecting the type to be DTAG and the value to be expectedTag.
+   * Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ */
+BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
 {
-    //if (!this.input.markSupported()) {
-      //throw new IllegalArgumentException(this.getClass().getName() + ": input stream must support marking!");
-    //}
+  if (this.offset == this.previouslyPeekedDTagStartOffset) {
+    // peekDTag already decoded this DTag.
+    if (this.previouslyPeekedDTag != expectedTag)
+      throw new EncodingException("Did not get the expected DTAG " + expectedTag + ", got " + previouslyPeekedDTag_);
+
+    // Fast forward past the header.
+    this.offset = this.previouslyPeekedDTagEndOffset;
+  }
+  else {
+    var typeAndValue = this.decodeTypeAndVal();
+    if (typeAndValue == null || typeAndValue.type() != XML_DTAG)
+      throw new ContentDecodingException(new Error("Header type is not a DTAG"));
+
+    if (typeAndValue.val() != expectedTag)
+      throw new ContentDecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
+  }  
 };
 
-BinaryXMLDecoder.prototype.readStartDocument = function() 
-{
-    // Currently no start document in binary encoding.  
-};
-
-BinaryXMLDecoder.prototype.readEndDocument = function() 
-{
-    // Currently no end document in binary encoding.
-};
-
+/**
+ * @deprecated Use readElementStartDTag. Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readStartElement = function(
     //String 
     startTag,
@@ -1533,6 +1608,9 @@ BinaryXMLDecoder.prototype.readStartElement = function(
     readAttributes(attributes); 
 };
   
+/**
+ * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readAttributes = function(
   // array of [attributeName, attributeValue] 
   attributes) 
@@ -1582,7 +1660,10 @@ BinaryXMLDecoder.prototype.readAttributes = function(
   }
 };
 
-//returns a string
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsString = function() 
 {
   //String 
@@ -1624,6 +1705,44 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function()
   return decodedTag;
 };
 
+/**
+ * Decode the header from the input starting at its position, and if it is a DTAG where the value is the expectedTag,
+ * then set return true.  Do not update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {boolean} True if the tag is the expected tag, otherwise false.
+ */
+BinaryXMLDecoder.prototype.peekDTag = function(expectedTag)
+{
+  if (this.offset == this.previouslyPeekedDTagStartOffset)
+    // We already decoded this DTag.
+    return this.previouslyPeekedDTag == expectedTag;
+  else {
+    // First check if it is an element close (which cannot be the expected tag).  
+    if (this.input[this.offset] == XML_CLOSE)
+      return false;
+
+    var saveOffset = this.offset;
+    var typeAndValue = this.decodeTypeAndVal();
+    // readElementStartDTag will use this to fast forward.
+    this.previouslyPeekedDTagEndOffset = this.offset;
+    // Restore the position.
+    this.offset = saveOffset;
+
+    if (typeAndValue != null && typeAndValue.type() == XML_DTAG) {
+      this.previouslyPeekedDTagStartOffset = saveOffset;
+      this.previouslyPeekedDTag = typeAndValue.val();
+
+      return typeAndValue.val() == expectedTag;
+    }
+    else
+      return false;
+  }  
+};
+
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElement = function(
     //String 
     startTag) 
@@ -1648,7 +1767,10 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
     throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 };
 
-//returns Long
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsLong = function() 
 {
   //Long
@@ -1698,7 +1820,26 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
   return decodedTag;
 };
 
-// Returns a Buffer.
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one item of any type (presumably BLOB, UDATA, TAG or ATTR) and return a 
+ * Buffer. However, if allowNull is true, then the item may be absent.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @param {boolean} allowNull True if the binary item may be missing.
+ * @returns {Buffer} A Buffer which is a slice on the data inside the input buffer. However, 
+ * if allowNull is true and the binary data item is absent, then return null.
+ */
+BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNull)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readBlob(allowNull);  
+};
+
+/**
+ * @deprecated Use readBinaryDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readBinaryElement = function(
     //long 
     startTag,
@@ -1711,6 +1852,20 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
   return this.readBlob(allowNull);  
 };
 
+/**
+ * Read one byte from the input starting at its offset, expecting it to be the element close.
+ * Update the input's offset.
+ */
+BinaryXMLDecoder.prototype.readElementClose = function() 
+{
+  var next = this.input[this.offset++];     
+  if (next != XML_CLOSE)
+    throw new ContentDecodingException(new Error("Expected end element, got: " + next));
+};
+
+/**
+ * @deprecated Use readElementClose.
+ */
 BinaryXMLDecoder.prototype.readEndElement = function() 
 {
   if (LOG > 4) console.log('this.offset is '+this.offset);
@@ -1733,7 +1888,7 @@ BinaryXMLDecoder.prototype.readUString = function()
 {
   //String 
   var ustring = this.decodeUString();  
-  this.readEndElement();
+  this.readElementClose();
   return ustring;
 };
   
@@ -1745,16 +1900,42 @@ BinaryXMLDecoder.prototype.readUString = function()
 BinaryXMLDecoder.prototype.readBlob = function(allowNull) 
 {
   if (this.input[this.offset] == XML_CLOSE && allowNull) {
-    this.readEndElement();
+    this.readElementClose();
     return null;
   }
     
   var blob = this.decodeBlob();  
-  this.readEndElement();
+  this.readElementClose();
   return blob;
 };
 
-//NDNTime
+/**
+ * Decode the header from the input starting at its offset, expecting the type to be 
+ * DTAG and the value to be expectedTag.  Then read one item, parse it as an unsigned 
+ * big endian integer in 4096 ticks per second, and convert it to and NDNTime object.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {NDNTime} The dateTime value.
+ */
+BinaryXMLDecoder.prototype.readDateTimeDTagElement = function(expectedTag)  
+{
+  var byteTimestamp = this.readBinaryDTagElement(expectedTag);
+  byteTimestamp = DataUtils.toHex(byteTimestamp);
+  byteTimestamp = parseInt(byteTimestamp, 16);
+  
+  var lontimestamp = (byteTimestamp/ 4096) * 1000;
+
+  var timestamp = new NDNTime(lontimestamp);  
+  if (null == timestamp)
+    throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
+
+  return timestamp;
+};
+
+/**
+ * @deprecated Use readDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readDateTime = function(
   //long 
   startTag)  
@@ -1885,7 +2066,8 @@ BinaryXMLDecoder.prototype.decodeUString = function(
     //Buffer 
     var stringBytes = this.decodeBlob(byteLength);
     
-    return  DataUtils.toString(stringBytes);    
+    // TODO: Should this parse as UTF8?
+    return DataUtils.toString(stringBytes);    
   }
 };
 
@@ -1906,6 +2088,21 @@ TypeAndVal.prototype.val = function()
   return this.v;
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item, parse it as a decimal integer and return the integer. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {number} The parsed integer.
+ */
+BinaryXMLDecoder.prototype.readIntegerDTagElement = function(expectedTag)
+{
+  return parseInt(this.readUTF8DTagElement(expectedTag));
+};
+
+/**
+ * @deprecated Use readIntegerDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readIntegerElement = function(
   //String 
   startTag) 
@@ -1919,6 +2116,22 @@ BinaryXMLDecoder.prototype.readIntegerElement = function(
   return parseInt(strVal);
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item and return a string. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {string} The UDATA string.
+ */
+BinaryXMLDecoder.prototype.readUTF8DTagElement = function(expectedTag)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readUString();;
+};
+
+/**
+ * @deprecated Use readUTF8DTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readUTF8Element = function(
     //String 
     startTag,
@@ -1936,10 +2149,9 @@ BinaryXMLDecoder.prototype.readUTF8Element = function(
 
 /**
  * Set the offset into the input, used for the next read.
+ * @param {number} offset The new offset.
  */
-BinaryXMLDecoder.prototype.seek = function(
-      //int
-      offset) 
+BinaryXMLDecoder.prototype.seek = function(offset) 
 {
   this.offset = offset;
 };
@@ -2386,19 +2598,19 @@ NameEnumeration.parseComponents = function(content)
   var components = [];
   var decoder = new BinaryXMLDecoder(content);
   
-  decoder.readStartElement(NDNProtocolDTags.Collection);
+  decoder.readElementStartDTag(NDNProtocolDTags.Collection);
  
-  while (decoder.peekStartElement(NDNProtocolDTags.Link)) {
-    decoder.readStartElement(NDNProtocolDTags.Link);    
-    decoder.readStartElement(NDNProtocolDTags.Name);
+  while (decoder.peekDTag(NDNProtocolDTags.Link)) {
+    decoder.readElementStartDTag(NDNProtocolDTags.Link);    
+    decoder.readElementStartDTag(NDNProtocolDTags.Name);
     
-    components.push(new Buffer(decoder.readBinaryElement(NDNProtocolDTags.Component)));
+    components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
     
-    decoder.readEndElement();  
-    decoder.readEndElement();  
+    decoder.readElementClose();  
+    decoder.readElementClose();  
   }
 
-  decoder.readEndElement();
+  decoder.readElementClose();
   return components;
 };
 
@@ -2642,7 +2854,7 @@ exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
 
 PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder) 
 {
-  this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
+  this.publisherPublicKeyDigest = decoder.readBinaryDTagElement(this.getElementLabel());
     
   if (LOG > 4) console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
 
@@ -2666,7 +2878,7 @@ PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
     throw new Error("Cannot encode : field values missing.");
 
   if (LOG > 3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
-  encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
+  encoder.writeDTagElement(this.getElementLabel(), this.publisherPublicKeyDigest);
 };
   
 PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };
@@ -2698,17 +2910,6 @@ var PublisherType = function PublisherType(tag)
   this.Tag = tag;
 }; 
 
-var isTypeTagVal = function(tagVal) 
-{
-  if (tagVal == NDNProtocolDTags.PublisherPublicKeyDigest ||
-      tagVal == NDNProtocolDTags.PublisherCertificateDigest ||
-      tagVal == NDNProtocolDTags.PublisherIssuerKeyDigest ||
-      tagVal == NDNProtocolDTags.PublisherIssuerCertificateDigest)
-    return true;
-
-  return false;
-};
-
 /**
  * @constructor
  */
@@ -2732,17 +2933,14 @@ exports.PublisherID = PublisherID;
 PublisherID.prototype.from_ndnb = function(decoder) 
 {    
   // We have a choice here of one of 4 binary element types.
-  var nextTag = decoder.peekStartElementAsLong();
-    
-  if (null == nextTag)
-    throw new Error("Cannot parse publisher ID.");
+  var nextTag = PublisherID.peekAndGetNextDTag(decoder);
     
   this.publisherType = new PublisherType(nextTag); 
     
-  if (!isTypeTagVal(nextTag))
-    throw new Error("Invalid publisher ID, got unexpected type: " + nextTag);
+  if (nextTag < 0)
+    throw new Error("Invalid publisher ID, got unexpected type");
 
-  this.publisherID = decoder.readBinaryElement(nextTag);
+  this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
     throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 };
@@ -2752,19 +2950,31 @@ PublisherID.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
-  encoder.writeElement(this.getElementLabel(), this.publisherID);
+  encoder.writeDTagElement(this.getElementLabel(), this.publisherID);
+};
+
+/**
+ * Peek the next DTag in the decoder and return it if it is a PublisherID DTag.
+ * @param {BinaryXMLDecoder} decoder The BinaryXMLDecoder with the input to decode.
+ * @returns {number} The PublisherID DTag or -1 if it is not one of them.
+ */
+PublisherID.peekAndGetNextDTag = function(decoder) 
+{
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest))
+    return             NDNProtocolDTags.PublisherPublicKeyDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherCertificateDigest))
+    return             NDNProtocolDTags.PublisherCertificateDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerKeyDigest))
+    return             NDNProtocolDTags.PublisherIssuerKeyDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerCertificateDigest))
+    return             NDNProtocolDTags.PublisherIssuerCertificateDigest;
+  
+  return -1;
 };
   
 PublisherID.peek = function(/* XMLDecoder */ decoder) 
 {
-  //Long
-  var nextTag = decoder.peekStartElementAsLong();
-    
-  if (null == nextTag)
-    // on end element
-    return false;
-
-  return isTypeTagVal(nextTag);
+  return PublisherID.peekAndGetNextDTag(decoder) >= 0;
 };
 
 PublisherID.prototype.getElementLabel = function()
@@ -2926,14 +3136,14 @@ Name.createNameArray = function(uri)
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
     
   this.components = [];
 
-  while (decoder.peekStartElement(NDNProtocolDTags.Component))
-    this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
+  while (decoder.peekDTag(NDNProtocolDTags.Component))
+    this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  
@@ -2941,12 +3151,12 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   if (this.components == null) 
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeElement(NDNProtocolDTags.Component, this.components[i].getValue());
+    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue());
   
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 Name.prototype.getElementLabel = function() 
@@ -3412,7 +3622,7 @@ Data.prototype.encodeObject = function encodeObject(obj)
 Data.prototype.encodeContent = function encodeContent() 
 {
   var enc = new BinaryXMLEncoder();   
-  enc.writeElement(NDNProtocolDTags.Content, this.content);
+  enc.writeDTagElement(NDNProtocolDTags.Content, this.content);
   var num = enc.getReducedOstream();
 
   return num;
@@ -3441,25 +3651,25 @@ exports.Signature = Signature;
 
 Signature.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
     
   if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
     
-  if (decoder.peekStartElement(NDNProtocolDTags.DigestAlgorithm)) {
+  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
     if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
+    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm); 
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.Witness)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
     if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness); 
   }
     
   //FORCE TO READ A SIGNATURE
 
   if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
+  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Signature.prototype.to_ndnb = function(encoder) 
@@ -3467,18 +3677,18 @@ Signature.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
   
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
   
   if (null != this.witness)
     // needs to handle null witness
-    encoder.writeElement(NDNProtocolDTags.Witness, this.witness);
+    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
 
-  encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
+  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
 
 Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
@@ -3540,21 +3750,21 @@ SignedInfo.prototype.setFields = function()
 
 SignedInfo.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
   
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     if (LOG > 4) console.log('DECODING PUBLISHER KEY');
     this.publisher = new PublisherPublicKeyDigest();
     this.publisher.from_ndnb(decoder);
   }
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Timestamp)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
     if (LOG > 4) console.log('DECODING TIMESTAMP');
-    this.timestamp = decoder.readDateTime(NDNProtocolDTags.Timestamp);
+    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
   }
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Type)) {
-    var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
+  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
+    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
     
     if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
 
@@ -3567,30 +3777,30 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   else
     this.type = ContentType.DATA; // default
   
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds)) {
-    this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds);
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
+    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
     if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.FinalBlockID)) {
+  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
     if (LOG > 4) console.log('DECODING FINAL BLOCKID');
-    this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
+    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.KeyLocator)) {
+  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
     if (LOG > 4) console.log('DECODING KEY LOCATOR');
     this.locator = new KeyLocator();
     this.locator.from_ndnb(decoder);
   }
       
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 SignedInfo.prototype.to_ndnb = function(encoder)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.publisher) {
     if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
@@ -3598,21 +3808,21 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   }
 
   if (null != this.timestamp)
-    encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp);
+    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
   
   if (null != this.type && this.type != 0)
-    encoder.writeElement(NDNProtocolDTags.type, this.type);
+    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
   
   if (null != this.freshnessSeconds)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
   if (null != this.finalBlockID)
-    encoder.writeElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
+    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
 
   if (null != this.locator)
     this.locator.to_ndnb(encoder);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
   
 SignedInfo.prototype.valueToType = function() 
@@ -3902,26 +4112,26 @@ Exclude.prototype.appendComponent = function(component)
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
-  decoder.readStartElement(NDNProtocolDTags.Exclude);
+  decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
 
   while (true) {
-    if (decoder.peekStartElement(NDNProtocolDTags.Component))
-      this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
-    else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
-      decoder.readStartElement(NDNProtocolDTags.Any);
-      decoder.readEndElement();
+    if (decoder.peekDTag(NDNProtocolDTags.Component))
+      this.appendComponent(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
+    else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
+      decoder.readElementStartDTag(NDNProtocolDTags.Any);
+      decoder.readElementClose();
       this.appendAny();
     }
-    else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
+    else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
       // Skip the Bloom and treat it as Any.
-      decoder.readBinaryElement(NDNProtocolDTags.Bloom);
+      decoder.readBinaryDTagElement(NDNProtocolDTags.Bloom);
       this.appendAny();
     }
     else
       break;
   }
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  
@@ -3929,19 +4139,19 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   if (this.values == null || this.values.length == 0)
     return;
 
-  encoder.writeStartElement(NDNProtocolDTags.Exclude);
+  encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
     
   // TODO: Do we want to order the components (except for ANY)?
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
-      encoder.writeStartElement(NDNProtocolDTags.Any);
-      encoder.writeEndElement();
+      encoder.writeElementStartDTag(NDNProtocolDTags.Any);
+      encoder.writeElementClose();
     }
     else
-      encoder.writeElement(NDNProtocolDTags.Component, this.values[i].getValue());
+      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue());
   }
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 /**
@@ -4301,12 +4511,12 @@ exports.KeyLocator = KeyLocator;
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Key)) 
+  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
   {
     try {
-      var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
+      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
       // This is a DER-encoded SubjectPublicKeyInfo.
       
       //TODO FIX THIS, This should create a Key Object instead of keeping bytes
@@ -4323,9 +4533,9 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     if (null == this.publicKey)
       throw new Error("Cannot parse key: ");
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
+  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
     try {
-      var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
+      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
       
       /*
        * Certificates not yet working
@@ -4347,7 +4557,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     this.keyName = new KeyName();
     this.keyName.from_ndnb(decoder);
   }
-  decoder.readEndElement();
+  decoder.readElementClose();
 };  
 
 KeyLocator.prototype.to_ndnb = function(encoder) 
@@ -4358,15 +4568,15 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
   //TODO FIX THIS TOO
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (this.type == KeyLocatorType.KEY) {
     if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);  
+    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
   } 
   else if (this.type == KeyLocatorType.CERTIFICATE) {  
     try {
-      encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
+      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
     } 
     catch (e) {
       throw new Error("CertificateEncodingException attempting to write key locator: " + e);
@@ -4375,7 +4585,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   else if (this.type == KeyLocatorType.KEYNAME)
     this.keyName.to_ndnb(encoder);
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 KeyLocator.prototype.getElementLabel = function() 
@@ -4402,7 +4612,7 @@ exports.KeyName = KeyName;
 
 KeyName.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
   this.contentName = new Name();
   this.contentName.from_ndnb(decoder);
@@ -4414,7 +4624,7 @@ KeyName.prototype.from_ndnb = function(decoder)
     this.publisherID.from_ndnb(decoder);
   }
   
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 KeyName.prototype.to_ndnb = function(encoder)
@@ -4422,13 +4632,13 @@ KeyName.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
   
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   this.contentName.to_ndnb(encoder);
   if (null != this.publisherID)
     this.publisherID.to_ndnb(encoder);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
@@ -4477,19 +4687,19 @@ FaceInstance.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
   
-  if (decoder.peekStartElement(NDNProtocolDTags.Action))   
-    this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Action))   
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     this.publisherPublicKeyDigest.from_ndnb(decoder);
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekStartElement(NDNProtocolDTags.IPProto)) {
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
+  if (decoder.peekDTag(NDNProtocolDTags.IPProto)) {
     //int
-    var pI = decoder.readIntegerElement(NDNProtocolDTags.IPProto);
+    var pI = decoder.readIntegerDTagElement(NDNProtocolDTags.IPProto);
     
     this.ipProto = null;
     
@@ -4498,21 +4708,21 @@ FaceInstance.prototype.from_ndnb = function(
     else if (FaceInstance.NetworkProtocol.UDP == pI)
       this.ipProto = FaceInstance.NetworkProtocol.UDP;
     else
-      throw new Error("FaceInstance.decoder.  Invalid " + NDNProtocolDTags.tagToString(NDNProtocolDTags.IPProto) + " field: " + pI);
+      throw new Error("FaceInstance.decoder.  Invalid NDNProtocolDTags.IPProto field: " + pI);
   }
   
-  if (decoder.peekStartElement(NDNProtocolDTags.Host))
-    this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
-  if (decoder.peekStartElement(NDNProtocolDTags.Port))
-    this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
-  if (decoder.peekStartElement(NDNProtocolDTags.MulticastInterface))
-    this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
-  if (decoder.peekStartElement(NDNProtocolDTags.MulticastTTL))
-    this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds))
-    this.freshnessSeconds = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
+  if (decoder.peekDTag(NDNProtocolDTags.Host))
+    this.host = decoder.readUTF8DTagElement(NDNProtocolDTags.Host);
+  if (decoder.peekDTag(NDNProtocolDTags.Port))
+    this.Port = decoder.readIntegerDTagElement(NDNProtocolDTags.Port); 
+  if (decoder.peekDTag(NDNProtocolDTags.MulticastInterface))
+    this.multicastInterface = decoder.readUTF8DTagElement(NDNProtocolDTags.MulticastInterface); 
+  if (decoder.peekDTag(NDNProtocolDTags.MulticastTTL))
+    this.multicastTTL = decoder.readIntegerDTagElement(NDNProtocolDTags.MulticastTTL); 
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
+    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds); 
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 /**
@@ -4522,28 +4732,28 @@ FaceInstance.prototype.to_ndnb = function(
   //XMLEncoder
   encoder) 
 {
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.action && this.action.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
   if (null != this.publisherPublicKeyDigest)
     this.publisherPublicKeyDigest.to_ndnb(encoder);
   if (null != this.faceID)
-    encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
   if (null != this.ipProto)
-    encoder.writeElement(NDNProtocolDTags.IPProto, this.ipProto);
+    encoder.writeDTagElement(NDNProtocolDTags.IPProto, this.ipProto);
   if (null != this.host && this.host.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Host, this.host);  
+    encoder.writeDTagElement(NDNProtocolDTags.Host, this.host);  
   if (null != this.Port)
-    encoder.writeElement(NDNProtocolDTags.Port, this.Port);
+    encoder.writeDTagElement(NDNProtocolDTags.Port, this.Port);
   if (null != this.multicastInterface && this.multicastInterface.length != 0)
-    encoder.writeElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
+    encoder.writeDTagElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
   if (null !=  this.multicastTTL)
-    encoder.writeElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
+    encoder.writeDTagElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
   if (null != this.freshnessSeconds)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
-  encoder.writeEndElement();         
+  encoder.writeElementClose();         
 };
 
 FaceInstance.prototype.getElementLabel = function() 
@@ -4598,46 +4808,46 @@ ForwardingEntry.prototype.from_ndnb = function(
   decoder) 
   //throws ContentDecodingException
 {
-  decoder.readStartElement(this.getElementLabel());
-  if (decoder.peekStartElement(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
-  if (decoder.peekStartElement(NDNProtocolDTags.Name)) {
+  decoder.readElementStartDTag(this.getElementLabel());
+  if (decoder.peekDTag(NDNProtocolDTags.Action))
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action); 
+  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
     this.prefixName = new Name();
     this.prefixName.from_ndnb(decoder) ;
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.NdndId = new PublisherPublicKeyDigest();
     this.NdndId.from_ndnb(decoder);
   }
-  if (decoder.peekStartElement(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerElement(NDNProtocolDTags.FaceID); 
-  if (decoder.peekStartElement(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerElement(NDNProtocolDTags.ForwardingFlags); 
-  if (decoder.peekStartElement(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerElement(NDNProtocolDTags.FreshnessSeconds); 
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID); 
+  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
+    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags); 
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
+    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds); 
 
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 ForwardingEntry.prototype.to_ndnb = function(
   //XMLEncoder 
   encoder) 
 {
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   if (null != this.action && this.action.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
   if (null != this.prefixName)
     this.prefixName.to_ndnb(encoder);
   if (null != this.NdndId)
     this.NdndId.to_ndnb(encoder);
   if (null != this.faceID)
-    encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
   if (null != this.flags)
-    encoder.writeElement(NDNProtocolDTags.ForwardingFlags, this.flags);
+    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
   if (null != this.lifetime)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
 
-  encoder.writeEndElement();         
+  encoder.writeElementClose();         
 };
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
@@ -4906,15 +5116,15 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder) 
 {
-  encoder.writeStartElement(NDNProtocolDTags.Interest);
+  encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
     
   interest.name.to_ndnb(encoder);
   
   if (null != interest.minSuffixComponents) 
-    encoder.writeElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
 
   if (null != interest.maxSuffixComponents) 
-    encoder.writeElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
   if (null != interest.publisherPublicKeyDigest)
     interest.publisherPublicKeyDigest.to_ndnb(encoder);
@@ -4923,22 +5133,22 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     interest.exclude.to_ndnb(encoder);
     
   if (null != interest.childSelector) 
-    encoder.writeElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
+    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
 
   if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-    encoder.writeElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
     
   if (null != interest.scope) 
-    encoder.writeElement(NDNProtocolDTags.Scope, interest.scope);
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.scope);
     
   if (null != interest.interestLifetime) 
-    encoder.writeElement(NDNProtocolDTags.InterestLifetime, 
+    encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
                 DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
     
   if (null != interest.nonce)
-    encoder.writeElement(NDNProtocolDTags.Nonce, interest.nonce);
+    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.nonce);
     
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 var Exclude = require('../interest.js').Exclude;
@@ -4950,62 +5160,62 @@ var Exclude = require('../interest.js').Exclude;
  */
 BinaryXmlWireFormat.decodeInterest = function(interest, decoder) 
 {
-  decoder.readStartElement(NDNProtocolDTags.Interest);
+  decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
   interest.name = new Name();
   interest.name.from_ndnb(decoder);
 
-  if (decoder.peekStartElement(NDNProtocolDTags.MinSuffixComponents))
-    interest.minSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MinSuffixComponents);
+  if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
+    interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
   else
     interest.minSuffixComponents = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.MaxSuffixComponents)) 
-    interest.maxSuffixComponents = decoder.readIntegerElement(NDNProtocolDTags.MaxSuffixComponents);
+  if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
+    interest.maxSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents);
   else
     interest.maxSuffixComponents = null;
       
-  if (decoder.peekStartElement(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     interest.publisherPublicKeyDigest.from_ndnb(decoder);
   }
   else
     interest.publisherPublicKeyDigest = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Exclude)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
     interest.exclude = new Exclude();
     interest.exclude.from_ndnb(decoder);
   }
   else
     interest.exclude = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.ChildSelector))
-    interest.childSelector = decoder.readIntegerElement(NDNProtocolDTags.ChildSelector);
+  if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
+    interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);
   else
     interest.childSelector = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.AnswerOriginKind))
-    interest.answerOriginKind = decoder.readIntegerElement(NDNProtocolDTags.AnswerOriginKind);
+  if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
+    interest.answerOriginKind = decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind);
   else
     interest.answerOriginKind = null;
     
-  if (decoder.peekStartElement(NDNProtocolDTags.Scope))
-    interest.scope = decoder.readIntegerElement(NDNProtocolDTags.Scope);
+  if (decoder.peekDTag(NDNProtocolDTags.Scope))
+    interest.scope = decoder.readIntegerDTagElement(NDNProtocolDTags.Scope);
   else
     interest.scope = null;
 
-  if (decoder.peekStartElement(NDNProtocolDTags.InterestLifetime))
+  if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
     interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryElement(NDNProtocolDTags.InterestLifetime)) / 4096;
+               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096;
   else
     interest.interestLifetime = null;              
     
-  if (decoder.peekStartElement(NDNProtocolDTags.Nonce))
-    interest.nonce = decoder.readBinaryElement(NDNProtocolDTags.Nonce);
+  if (decoder.peekDTag(NDNProtocolDTags.Nonce))
+    interest.nonce = decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce);
   else
     interest.nonce = null;
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 /**
@@ -5016,7 +5226,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
   //TODO verify name, SignedInfo and Signature is present
-  encoder.writeStartElement(data.getElementLabel());
+  encoder.writeElementStartDTag(data.getElementLabel());
 
   if (null != data.signature) 
     data.signature.to_ndnb(encoder);
@@ -5029,11 +5239,11 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   if (null != data.signedInfo) 
     data.signedInfo.to_ndnb(encoder);
 
-  encoder.writeElement(NDNProtocolDTags.Content, data.content);
+  encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
   
   data.endSIG = encoder.offset;
   
-  encoder.writeEndElement();
+  encoder.writeElementClose();
   
   data.saveRawData(encoder.ostream);  
 };
@@ -5049,9 +5259,9 @@ var SignedInfo = require('../data.js').SignedInfo;
 BinaryXmlWireFormat.decodeData = function(data, decoder) 
 {
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readStartElement(data.getElementLabel());
+  decoder.readElementStartDTag(data.getElementLabel());
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Signature)) {
+  if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
     data.signature = new Signature();
     data.signature.from_ndnb(decoder);
   }
@@ -5063,18 +5273,18 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.name = new Name();
   data.name.from_ndnb(decoder);
     
-  if (decoder.peekStartElement(NDNProtocolDTags.SignedInfo)) {
+  if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.signedInfo = new SignedInfo();
     data.signedInfo.from_ndnb(decoder);
   }
   else
     data.signedInfo = null;
 
-  data.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
+  data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
     
   data.endSIG = decoder.offset;
     
-  decoder.readEndElement();
+  decoder.readElementClose();
     
   data.saveRawData(decoder.input);
 };
@@ -5900,7 +6110,7 @@ Face.prototype.onReceivedElement = function(element)
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
   var decoder = new BinaryXMLDecoder(element);
   // Dispatch according to packet type
-  if (decoder.peekStartElement(NDNProtocolDTags.Interest)) {  // Interest packet
+  if (decoder.peekDTag(NDNProtocolDTags.Interest)) {  // Interest packet
     if (LOG > 3) console.log('Interest packet received.');
         
     var interest = new Interest();
@@ -5917,7 +6127,7 @@ Face.prototype.onReceivedElement = function(element)
         this.transport.send(info.data.encode());
     }        
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.Data)) {  // Content packet
+  else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet
     if (LOG > 3) console.log('Data packet received.');
         
     var data = new Data();
