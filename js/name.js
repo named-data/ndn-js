@@ -148,14 +148,14 @@ Name.createNameArray = function(uri)
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
     
   this.components = [];
 
-  while (decoder.peekStartElement(NDNProtocolDTags.Component))
-    this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
+  while (decoder.peekDTag(NDNProtocolDTags.Component))
+    this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  
@@ -163,12 +163,12 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   if (this.components == null) 
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeElement(NDNProtocolDTags.Component, this.components[i].getValue());
+    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue());
   
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 Name.prototype.getElementLabel = function() 

@@ -214,26 +214,26 @@ Exclude.prototype.appendComponent = function(component)
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
-  decoder.readStartElement(NDNProtocolDTags.Exclude);
+  decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
 
   while (true) {
-    if (decoder.peekStartElement(NDNProtocolDTags.Component))
-      this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
-    else if (decoder.peekStartElement(NDNProtocolDTags.Any)) {
-      decoder.readStartElement(NDNProtocolDTags.Any);
-      decoder.readEndElement();
+    if (decoder.peekDTag(NDNProtocolDTags.Component))
+      this.appendComponent(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
+    else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
+      decoder.readElementStartDTag(NDNProtocolDTags.Any);
+      decoder.readElementClose();
       this.appendAny();
     }
-    else if (decoder.peekStartElement(NDNProtocolDTags.Bloom)) {
+    else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
       // Skip the Bloom and treat it as Any.
-      decoder.readBinaryElement(NDNProtocolDTags.Bloom);
+      decoder.readBinaryDTagElement(NDNProtocolDTags.Bloom);
       this.appendAny();
     }
     else
       break;
   }
     
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  
@@ -241,19 +241,19 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   if (this.values == null || this.values.length == 0)
     return;
 
-  encoder.writeStartElement(NDNProtocolDTags.Exclude);
+  encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
     
   // TODO: Do we want to order the components (except for ANY)?
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
-      encoder.writeStartElement(NDNProtocolDTags.Any);
-      encoder.writeEndElement();
+      encoder.writeElementStartDTag(NDNProtocolDTags.Any);
+      encoder.writeElementClose();
     }
     else
-      encoder.writeElement(NDNProtocolDTags.Component, this.values[i].getValue());
+      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue());
   }
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 /**

@@ -113,19 +113,19 @@ NameEnumeration.parseComponents = function(content)
   var components = [];
   var decoder = new BinaryXMLDecoder(content);
   
-  decoder.readStartElement(NDNProtocolDTags.Collection);
+  decoder.readElementStartDTag(NDNProtocolDTags.Collection);
  
-  while (decoder.peekStartElement(NDNProtocolDTags.Link)) {
-    decoder.readStartElement(NDNProtocolDTags.Link);    
-    decoder.readStartElement(NDNProtocolDTags.Name);
+  while (decoder.peekDTag(NDNProtocolDTags.Link)) {
+    decoder.readElementStartDTag(NDNProtocolDTags.Link);    
+    decoder.readElementStartDTag(NDNProtocolDTags.Name);
     
-    components.push(new Buffer(decoder.readBinaryElement(NDNProtocolDTags.Component)));
+    components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
     
-    decoder.readEndElement();  
-    decoder.readEndElement();  
+    decoder.readElementClose();  
+    decoder.readElementClose();  
   }
 
-  decoder.readEndElement();
+  decoder.readElementClose();
   return components;
 };
 

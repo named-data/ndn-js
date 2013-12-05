@@ -21,7 +21,7 @@ exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
 
 PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder) 
 {
-  this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
+  this.publisherPublicKeyDigest = decoder.readBinaryDTagElement(this.getElementLabel());
     
   if (LOG > 4) console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
 
@@ -45,7 +45,7 @@ PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
     throw new Error("Cannot encode : field values missing.");
 
   if (LOG > 3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
-  encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
+  encoder.writeDTagElement(this.getElementLabel(), this.publisherPublicKeyDigest);
 };
   
 PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };

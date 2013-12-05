@@ -173,12 +173,12 @@ exports.KeyLocator = KeyLocator;
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
-  if (decoder.peekStartElement(NDNProtocolDTags.Key)) 
+  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
   {
     try {
-      var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
+      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
       // This is a DER-encoded SubjectPublicKeyInfo.
       
       //TODO FIX THIS, This should create a Key Object instead of keeping bytes
@@ -195,9 +195,9 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     if (null == this.publicKey)
       throw new Error("Cannot parse key: ");
   } 
-  else if (decoder.peekStartElement(NDNProtocolDTags.Certificate)) {
+  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
     try {
-      var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
+      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
       
       /*
        * Certificates not yet working
@@ -219,7 +219,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
     this.keyName = new KeyName();
     this.keyName.from_ndnb(decoder);
   }
-  decoder.readEndElement();
+  decoder.readElementClose();
 };  
 
 KeyLocator.prototype.to_ndnb = function(encoder) 
@@ -230,15 +230,15 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
   //TODO FIX THIS TOO
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (this.type == KeyLocatorType.KEY) {
     if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);  
+    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
   } 
   else if (this.type == KeyLocatorType.CERTIFICATE) {  
     try {
-      encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
+      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
     } 
     catch (e) {
       throw new Error("CertificateEncodingException attempting to write key locator: " + e);
@@ -247,7 +247,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   else if (this.type == KeyLocatorType.KEYNAME)
     this.keyName.to_ndnb(encoder);
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 KeyLocator.prototype.getElementLabel = function() 
@@ -274,7 +274,7 @@ exports.KeyName = KeyName;
 
 KeyName.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
   this.contentName = new Name();
   this.contentName.from_ndnb(decoder);
@@ -286,7 +286,7 @@ KeyName.prototype.from_ndnb = function(decoder)
     this.publisherID.from_ndnb(decoder);
   }
   
-  decoder.readEndElement();
+  decoder.readElementClose();
 };
 
 KeyName.prototype.to_ndnb = function(encoder)
@@ -294,13 +294,13 @@ KeyName.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
   
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   this.contentName.to_ndnb(encoder);
   if (null != this.publisherID)
     this.publisherID.to_ndnb(encoder);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };

@@ -85,27 +85,41 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input)
   
   this.input = input;
   this.offset = 0;
+  // peekDTag sets and checks this, and readElementStartDTag uses it to avoid reading again.
+  this.previouslyPeekedDTagStartOffset = -1;
 };
 
 exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
-BinaryXMLDecoder.prototype.initializeDecoding = function() 
+/**
+ * Decode the header from the input starting at its position, expecting the type to be DTAG and the value to be expectedTag.
+   * Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ */
+BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
 {
-    //if (!this.input.markSupported()) {
-      //throw new IllegalArgumentException(this.getClass().getName() + ": input stream must support marking!");
-    //}
+  if (this.offset == this.previouslyPeekedDTagStartOffset) {
+    // peekDTag already decoded this DTag.
+    if (this.previouslyPeekedDTag != expectedTag)
+      throw new EncodingException("Did not get the expected DTAG " + expectedTag + ", got " + previouslyPeekedDTag_);
+
+    // Fast forward past the header.
+    this.offset = this.previouslyPeekedDTagEndOffset;
+  }
+  else {
+    var typeAndValue = this.decodeTypeAndVal();
+    if (typeAndValue == null || typeAndValue.type() != XML_DTAG)
+      throw new ContentDecodingException(new Error("Header type is not a DTAG"));
+
+    if (typeAndValue.val() != expectedTag)
+      throw new ContentDecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
+  }  
 };
 
-BinaryXMLDecoder.prototype.readStartDocument = function() 
-{
-    // Currently no start document in binary encoding.  
-};
-
-BinaryXMLDecoder.prototype.readEndDocument = function() 
-{
-    // Currently no end document in binary encoding.
-};
-
+/**
+ * @deprecated Use readElementStartDTag. Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readStartElement = function(
     //String 
     startTag,
@@ -147,6 +161,9 @@ BinaryXMLDecoder.prototype.readStartElement = function(
     readAttributes(attributes); 
 };
   
+/**
+ * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readAttributes = function(
   // array of [attributeName, attributeValue] 
   attributes) 
@@ -196,7 +213,10 @@ BinaryXMLDecoder.prototype.readAttributes = function(
   }
 };
 
-//returns a string
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsString = function() 
 {
   //String 
@@ -238,6 +258,44 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function()
   return decodedTag;
 };
 
+/**
+ * Decode the header from the input starting at its position, and if it is a DTAG where the value is the expectedTag,
+ * then set return true.  Do not update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {boolean} True if the tag is the expected tag, otherwise false.
+ */
+BinaryXMLDecoder.prototype.peekDTag = function(expectedTag)
+{
+  if (this.offset == this.previouslyPeekedDTagStartOffset)
+    // We already decoded this DTag.
+    return this.previouslyPeekedDTag == expectedTag;
+  else {
+    // First check if it is an element close (which cannot be the expected tag).  
+    if (this.input[this.offset] == XML_CLOSE)
+      return false;
+
+    var saveOffset = this.offset;
+    var typeAndValue = this.decodeTypeAndVal();
+    // readElementStartDTag will use this to fast forward.
+    this.previouslyPeekedDTagEndOffset = this.offset;
+    // Restore the position.
+    this.offset = saveOffset;
+
+    if (typeAndValue != null && typeAndValue.type() == XML_DTAG) {
+      this.previouslyPeekedDTagStartOffset = saveOffset;
+      this.previouslyPeekedDTag = typeAndValue.val();
+
+      return typeAndValue.val() == expectedTag;
+    }
+    else
+      return false;
+  }  
+};
+
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElement = function(
     //String 
     startTag) 
@@ -262,7 +320,10 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
     throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 };
 
-//returns Long
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsLong = function() 
 {
   //Long
@@ -312,7 +373,26 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
   return decodedTag;
 };
 
-// Returns a Buffer.
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one item of any type (presumably BLOB, UDATA, TAG or ATTR) and return a 
+ * Buffer. However, if allowNull is true, then the item may be absent.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @param {boolean} allowNull True if the binary item may be missing.
+ * @returns {Buffer} A Buffer which is a slice on the data inside the input buffer. However, 
+ * if allowNull is true and the binary data item is absent, then return null.
+ */
+BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNull)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readBlob(allowNull);  
+};
+
+/**
+ * @deprecated Use readBinaryDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readBinaryElement = function(
     //long 
     startTag,
@@ -325,6 +405,20 @@ BinaryXMLDecoder.prototype.readBinaryElement = function(
   return this.readBlob(allowNull);  
 };
 
+/**
+ * Read one byte from the input starting at its offset, expecting it to be the element close.
+ * Update the input's offset.
+ */
+BinaryXMLDecoder.prototype.readElementClose = function() 
+{
+  var next = this.input[this.offset++];     
+  if (next != XML_CLOSE)
+    throw new ContentDecodingException(new Error("Expected end element, got: " + next));
+};
+
+/**
+ * @deprecated Use readElementClose.
+ */
 BinaryXMLDecoder.prototype.readEndElement = function() 
 {
   if (LOG > 4) console.log('this.offset is '+this.offset);
@@ -347,7 +441,7 @@ BinaryXMLDecoder.prototype.readUString = function()
 {
   //String 
   var ustring = this.decodeUString();  
-  this.readEndElement();
+  this.readElementClose();
   return ustring;
 };
   
@@ -359,16 +453,42 @@ BinaryXMLDecoder.prototype.readUString = function()
 BinaryXMLDecoder.prototype.readBlob = function(allowNull) 
 {
   if (this.input[this.offset] == XML_CLOSE && allowNull) {
-    this.readEndElement();
+    this.readElementClose();
     return null;
   }
     
   var blob = this.decodeBlob();  
-  this.readEndElement();
+  this.readElementClose();
   return blob;
 };
 
-//NDNTime
+/**
+ * Decode the header from the input starting at its offset, expecting the type to be 
+ * DTAG and the value to be expectedTag.  Then read one item, parse it as an unsigned 
+ * big endian integer in 4096 ticks per second, and convert it to and NDNTime object.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {NDNTime} The dateTime value.
+ */
+BinaryXMLDecoder.prototype.readDateTimeDTagElement = function(expectedTag)  
+{
+  var byteTimestamp = this.readBinaryDTagElement(expectedTag);
+  byteTimestamp = DataUtils.toHex(byteTimestamp);
+  byteTimestamp = parseInt(byteTimestamp, 16);
+  
+  var lontimestamp = (byteTimestamp/ 4096) * 1000;
+
+  var timestamp = new NDNTime(lontimestamp);  
+  if (null == timestamp)
+    throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
+
+  return timestamp;
+};
+
+/**
+ * @deprecated Use readDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readDateTime = function(
   //long 
   startTag)  
@@ -499,7 +619,8 @@ BinaryXMLDecoder.prototype.decodeUString = function(
     //Buffer 
     var stringBytes = this.decodeBlob(byteLength);
     
-    return  DataUtils.toString(stringBytes);    
+    // TODO: Should this parse as UTF8?
+    return DataUtils.toString(stringBytes);    
   }
 };
 
@@ -520,6 +641,21 @@ TypeAndVal.prototype.val = function()
   return this.v;
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item, parse it as a decimal integer and return the integer. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {number} The parsed integer.
+ */
+BinaryXMLDecoder.prototype.readIntegerDTagElement = function(expectedTag)
+{
+  return parseInt(this.readUTF8DTagElement(expectedTag));
+};
+
+/**
+ * @deprecated Use readIntegerDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readIntegerElement = function(
   //String 
   startTag) 
@@ -533,6 +669,22 @@ BinaryXMLDecoder.prototype.readIntegerElement = function(
   return parseInt(strVal);
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item and return a string. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {string} The UDATA string.
+ */
+BinaryXMLDecoder.prototype.readUTF8DTagElement = function(expectedTag)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readUString();;
+};
+
+/**
+ * @deprecated Use readUTF8DTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readUTF8Element = function(
     //String 
     startTag,
@@ -550,10 +702,9 @@ BinaryXMLDecoder.prototype.readUTF8Element = function(
 
 /**
  * Set the offset into the input, used for the next read.
+ * @param {number} offset The new offset.
  */
-BinaryXMLDecoder.prototype.seek = function(
-      //int
-      offset) 
+BinaryXMLDecoder.prototype.seek = function(offset) 
 {
   this.offset = offset;
 };
