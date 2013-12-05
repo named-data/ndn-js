@@ -75,7 +75,7 @@ PublisherID.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
-  encoder.writeElement(this.getElementLabel(), this.publisherID);
+  encoder.writeDTagElement(this.getElementLabel(), this.publisherID);
 };
   
 PublisherID.peek = function(/* XMLDecoder */ decoder) 

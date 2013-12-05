@@ -72,17 +72,17 @@ ForwardingEntry.prototype.to_ndnb = function(
 {
   encoder.writeElementStartDTag(this.getElementLabel());
   if (null != this.action && this.action.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
   if (null != this.prefixName)
     this.prefixName.to_ndnb(encoder);
   if (null != this.NdndId)
     this.NdndId.to_ndnb(encoder);
   if (null != this.faceID)
-    encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
   if (null != this.flags)
-    encoder.writeElement(NDNProtocolDTags.ForwardingFlags, this.flags);
+    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
   if (null != this.lifetime)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
 
   encoder.writeElementClose();         
 };

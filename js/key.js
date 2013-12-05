@@ -234,11 +234,11 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   
   if (this.type == KeyLocatorType.KEY) {
     if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeElement(NDNProtocolDTags.Key, this.publicKey);  
+    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
   } 
   else if (this.type == KeyLocatorType.CERTIFICATE) {  
     try {
-      encoder.writeElement(NDNProtocolDTags.Certificate, this.certificate);
+      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
     } 
     catch (e) {
       throw new Error("CertificateEncodingException attempting to write key locator: " + e);

@@ -84,23 +84,23 @@ FaceInstance.prototype.to_ndnb = function(
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.action && this.action.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
   if (null != this.publisherPublicKeyDigest)
     this.publisherPublicKeyDigest.to_ndnb(encoder);
   if (null != this.faceID)
-    encoder.writeElement(NDNProtocolDTags.FaceID, this.faceID);
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
   if (null != this.ipProto)
-    encoder.writeElement(NDNProtocolDTags.IPProto, this.ipProto);
+    encoder.writeDTagElement(NDNProtocolDTags.IPProto, this.ipProto);
   if (null != this.host && this.host.length != 0)
-    encoder.writeElement(NDNProtocolDTags.Host, this.host);  
+    encoder.writeDTagElement(NDNProtocolDTags.Host, this.host);  
   if (null != this.Port)
-    encoder.writeElement(NDNProtocolDTags.Port, this.Port);
+    encoder.writeDTagElement(NDNProtocolDTags.Port, this.Port);
   if (null != this.multicastInterface && this.multicastInterface.length != 0)
-    encoder.writeElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
+    encoder.writeDTagElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
   if (null !=  this.multicastTTL)
-    encoder.writeElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
+    encoder.writeDTagElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
   if (null != this.freshnessSeconds)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
   encoder.writeElementClose();         
 };

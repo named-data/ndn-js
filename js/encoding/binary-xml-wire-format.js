@@ -101,10 +101,10 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   interest.name.to_ndnb(encoder);
   
   if (null != interest.minSuffixComponents) 
-    encoder.writeElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
 
   if (null != interest.maxSuffixComponents) 
-    encoder.writeElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
   if (null != interest.publisherPublicKeyDigest)
     interest.publisherPublicKeyDigest.to_ndnb(encoder);
@@ -113,20 +113,20 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     interest.exclude.to_ndnb(encoder);
     
   if (null != interest.childSelector) 
-    encoder.writeElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
+    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
 
   if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-    encoder.writeElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
     
   if (null != interest.scope) 
-    encoder.writeElement(NDNProtocolDTags.Scope, interest.scope);
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.scope);
     
   if (null != interest.interestLifetime) 
-    encoder.writeElement(NDNProtocolDTags.InterestLifetime, 
+    encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
                 DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
     
   if (null != interest.nonce)
-    encoder.writeElement(NDNProtocolDTags.Nonce, interest.nonce);
+    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.nonce);
     
   encoder.writeElementClose();
 };
@@ -219,7 +219,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   if (null != data.signedInfo) 
     data.signedInfo.to_ndnb(encoder);
 
-  encoder.writeElement(NDNProtocolDTags.Content, data.content);
+  encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
   
   data.endSIG = encoder.offset;
   

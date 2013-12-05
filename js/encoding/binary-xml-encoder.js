@@ -60,9 +60,10 @@ var BinaryXMLEncoder = function BinaryXMLEncoder()
 exports.BinaryXMLEncoder = BinaryXMLEncoder;
 
 /**
- * Encode utf8Content as utf8.
+ * Encode utf8Content as utf8 and write to the output buffer as a UDATA.
+ * @param {string} utf8Content The string to convert to utf8.
  */
-BinaryXMLEncoder.prototype.writeUString = function(/*String*/ utf8Content) 
+BinaryXMLEncoder.prototype.writeUString = function(utf8Content) 
 {
   this.encodeUString(utf8Content, XML_UDATA);
 };
@@ -122,7 +123,7 @@ BinaryXMLEncoder.prototype.writeEndElement = function()
 }
 
 /**
- * @deprecated Binary XML attributes are not used by any NDN encodings and support is not maintained in the code base.
+ * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
  */
 BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/ attributes) 
 {
@@ -177,6 +178,29 @@ tagToString =  function(/*String*/ tagName)
 };
 
 /**
+ * Write an element start header using DTAG with the tag to the output buffer, then the content as explained below, 
+ * then an element close.
+ * @param {type} tag The DTAG tag.
+ * @param {type} content If contentis a number, convert it to a string and call writeUString.  If content is a string,
+ * call writeUString.  Otherwise, call writeBlob.
+ */
+BinaryXMLEncoder.prototype.writeDTagElement = function(tag, content)
+{
+  this.writeElementStartDTag(tag);
+  
+  if (typeof content === 'number')
+    this.writeUString(content.toString());
+  else if (typeof content === 'string')
+    this.writeUString(content);
+  else
+    this.writeBlob(content);
+  
+  this.writeElementClose();
+};
+
+/**
+ * @deprecated Use writeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
  * If Content is a string, then encode as utf8 and write UDATA.
  */
 BinaryXMLEncoder.prototype.writeElement = function(

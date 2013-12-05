@@ -250,7 +250,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
       encoder.writeElementClose();
     }
     else
-      encoder.writeElement(NDNProtocolDTags.Component, this.values[i].getValue());
+      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue());
   }
 
   encoder.writeElementClose();

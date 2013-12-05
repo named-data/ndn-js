@@ -45,7 +45,7 @@ PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
     throw new Error("Cannot encode : field values missing.");
 
   if (LOG > 3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
-  encoder.writeElement(this.getElementLabel(), this.publisherPublicKeyDigest);
+  encoder.writeDTagElement(this.getElementLabel(), this.publisherPublicKeyDigest);
 };
   
 PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };

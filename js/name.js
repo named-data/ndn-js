@@ -166,7 +166,7 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   encoder.writeElementStartDTag(this.getElementLabel());
   var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeElement(NDNProtocolDTags.Component, this.components[i].getValue());
+    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue());
   
   encoder.writeElementClose();
 };

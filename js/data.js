@@ -91,7 +91,7 @@ Data.prototype.encodeObject = function encodeObject(obj)
 Data.prototype.encodeContent = function encodeContent() 
 {
   var enc = new BinaryXMLEncoder();   
-  enc.writeElement(NDNProtocolDTags.Content, this.content);
+  enc.writeDTagElement(NDNProtocolDTags.Content, this.content);
   var num = enc.getReducedOstream();
 
   return num;
@@ -149,13 +149,13 @@ Signature.prototype.to_ndnb = function(encoder)
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
   
   if (null != this.witness)
     // needs to handle null witness
-    encoder.writeElement(NDNProtocolDTags.Witness, this.witness);
+    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
 
-  encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
+  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
 
   encoder.writeElementClose();       
 };
@@ -280,13 +280,13 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
     encoder.writeDateTime(NDNProtocolDTags.Timestamp, this.timestamp);
   
   if (null != this.type && this.type != 0)
-    encoder.writeElement(NDNProtocolDTags.type, this.type);
+    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
   
   if (null != this.freshnessSeconds)
-    encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
   if (null != this.finalBlockID)
-    encoder.writeElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
+    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
 
   if (null != this.locator)
     this.locator.to_ndnb(encoder);
