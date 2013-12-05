@@ -75,6 +75,19 @@ BinaryXMLEncoder.prototype.writeBlob = function(
   this.encodeBlob(binaryContent, binaryContent.length);
 };
 
+/**
+ * Write an element start header using DTAG with the tag to the output buffer.
+ * @param {number} tag The DTAG tag.
+ */
+BinaryXMLEncoder.prototype.writeElementStartDTag = function(tag)
+{
+  this.encodeTypeAndVal(XML_DTAG, tag);
+}
+
+/**
+ * @deprecated Use writeElementStartDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeStartElement = function(
   /*String*/ tag, 
   /*TreeMap<String,String>*/ attributes) 
@@ -90,13 +103,27 @@ BinaryXMLEncoder.prototype.writeStartElement = function(
     this.writeAttributes(attributes); 
 };
 
-BinaryXMLEncoder.prototype.writeEndElement = function() 
+/**
+ * Write an element close to the output buffer.
+ */
+BinaryXMLEncoder.prototype.writeElementClose = function() 
 {
   this.ostream.ensureLength(this.offset + 1);
   this.ostream.array[this.offset] = XML_CLOSE;
   this.offset += 1;
 };
 
+/**
+ * @deprecated Use writeElementClose.
+ */
+BinaryXMLEncoder.prototype.writeEndElement = function() 
+{
+  this.writeElementClose();
+}
+
+/**
+ * @deprecated Binary XML attributes are not used by any NDN encodings and support is not maintained in the code base.
+ */
 BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/ attributes) 
 {
   if (null == attributes)
@@ -182,7 +209,7 @@ BinaryXMLEncoder.prototype.writeElement = function(
     this.writeBlob(Content);
   }
   
-  this.writeEndElement();
+  this.writeElementClose();
 };
 
 var TypeAndVal = function TypeAndVal(_type,_val) 

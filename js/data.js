@@ -146,7 +146,7 @@ Signature.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
   
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
     encoder.writeElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
@@ -157,7 +157,7 @@ Signature.prototype.to_ndnb = function(encoder)
 
   encoder.writeElement(NDNProtocolDTags.SignatureBits, this.signature);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
 
 Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
@@ -269,7 +269,7 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.publisher) {
     if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
@@ -291,7 +291,7 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   if (null != this.locator)
     this.locator.to_ndnb(encoder);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
   
 SignedInfo.prototype.valueToType = function() 

@@ -96,7 +96,7 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder) 
 {
-  encoder.writeStartElement(NDNProtocolDTags.Interest);
+  encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
     
   interest.name.to_ndnb(encoder);
   
@@ -128,7 +128,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   if (null != interest.nonce)
     encoder.writeElement(NDNProtocolDTags.Nonce, interest.nonce);
     
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 var Exclude = require('../interest.js').Exclude;
@@ -206,7 +206,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
   //TODO verify name, SignedInfo and Signature is present
-  encoder.writeStartElement(data.getElementLabel());
+  encoder.writeElementStartDTag(data.getElementLabel());
 
   if (null != data.signature) 
     data.signature.to_ndnb(encoder);
@@ -223,7 +223,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   
   data.endSIG = encoder.offset;
   
-  encoder.writeEndElement();
+  encoder.writeElementClose();
   
   data.saveRawData(encoder.ostream);  
 };

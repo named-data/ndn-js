@@ -230,7 +230,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
   //TODO FIX THIS TOO
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (this.type == KeyLocatorType.KEY) {
     if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
@@ -247,7 +247,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   else if (this.type == KeyLocatorType.KEYNAME)
     this.keyName.to_ndnb(encoder);
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 KeyLocator.prototype.getElementLabel = function() 
@@ -294,13 +294,13 @@ KeyName.prototype.to_ndnb = function(encoder)
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
   
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   this.contentName.to_ndnb(encoder);
   if (null != this.publisherID)
     this.publisherID.to_ndnb(encoder);
 
-  encoder.writeEndElement();       
+  encoder.writeElementClose();       
 };
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };

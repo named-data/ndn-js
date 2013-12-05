@@ -241,19 +241,19 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   if (this.values == null || this.values.length == 0)
     return;
 
-  encoder.writeStartElement(NDNProtocolDTags.Exclude);
+  encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
     
   // TODO: Do we want to order the components (except for ANY)?
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
-      encoder.writeStartElement(NDNProtocolDTags.Any);
-      encoder.writeEndElement();
+      encoder.writeElementStartDTag(NDNProtocolDTags.Any);
+      encoder.writeElementClose();
     }
     else
       encoder.writeElement(NDNProtocolDTags.Component, this.values[i].getValue());
   }
 
-  encoder.writeEndElement();
+  encoder.writeElementClose();
 };
 
 /**

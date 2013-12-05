@@ -81,7 +81,7 @@ FaceInstance.prototype.to_ndnb = function(
   //XMLEncoder
   encoder) 
 {
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.action && this.action.length != 0)
     encoder.writeElement(NDNProtocolDTags.Action, this.action);  
@@ -102,7 +102,7 @@ FaceInstance.prototype.to_ndnb = function(
   if (null != this.freshnessSeconds)
     encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
-  encoder.writeEndElement();         
+  encoder.writeElementClose();         
 };
 
 FaceInstance.prototype.getElementLabel = function() 

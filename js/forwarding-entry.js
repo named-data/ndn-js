@@ -70,7 +70,7 @@ ForwardingEntry.prototype.to_ndnb = function(
   //XMLEncoder 
   encoder) 
 {
-  encoder.writeStartElement(this.getElementLabel());
+  encoder.writeElementStartDTag(this.getElementLabel());
   if (null != this.action && this.action.length != 0)
     encoder.writeElement(NDNProtocolDTags.Action, this.action);  
   if (null != this.prefixName)
@@ -84,7 +84,7 @@ ForwardingEntry.prototype.to_ndnb = function(
   if (null != this.lifetime)
     encoder.writeElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
 
-  encoder.writeEndElement();         
+  encoder.writeElementClose();         
 };
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
