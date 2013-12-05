@@ -126,7 +126,7 @@ Signature.prototype.from_ndnb = function(decoder)
     
   if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
     if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8Element(NDNProtocolDTags.DigestAlgorithm); 
+    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm); 
   }
   if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
     if (LOG > 4) console.log('WITNESS FOUND');

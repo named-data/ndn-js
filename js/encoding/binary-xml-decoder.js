@@ -619,7 +619,8 @@ BinaryXMLDecoder.prototype.decodeUString = function(
     //Buffer 
     var stringBytes = this.decodeBlob(byteLength);
     
-    return  DataUtils.toString(stringBytes);    
+    // TODO: Should this parse as UTF8?
+    return DataUtils.toString(stringBytes);    
   }
 };
 
@@ -653,6 +654,22 @@ BinaryXMLDecoder.prototype.readIntegerElement = function(
   return parseInt(strVal);
 };
 
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one UDATA item and return a string. Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @returns {string} The UDATA string.
+ */
+BinaryXMLDecoder.prototype.readUTF8DTagElement = function(expectedTag)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readUString();;
+};
+
+/**
+ * @deprecated Use readUTF8DTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readUTF8Element = function(
     //String 
     startTag,
@@ -670,10 +687,9 @@ BinaryXMLDecoder.prototype.readUTF8Element = function(
 
 /**
  * Set the offset into the input, used for the next read.
+ * @param {number} offset The new offset.
  */
-BinaryXMLDecoder.prototype.seek = function(
-      //int
-      offset) 
+BinaryXMLDecoder.prototype.seek = function(offset) 
 {
   this.offset = offset;
 };

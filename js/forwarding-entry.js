@@ -47,7 +47,7 @@ ForwardingEntry.prototype.from_ndnb = function(
 {
   decoder.readElementStartDTag(this.getElementLabel());
   if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action); 
   if (decoder.peekDTag(NDNProtocolDTags.Name)) {
     this.prefixName = new Name();
     this.prefixName.from_ndnb(decoder) ;

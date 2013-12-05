@@ -39,7 +39,7 @@ FaceInstance.prototype.from_ndnb = function(
   decoder.readElementStartDTag(this.getElementLabel());
   
   if (decoder.peekDTag(NDNProtocolDTags.Action))   
-    this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     this.publisherPublicKeyDigest.from_ndnb(decoder);
@@ -61,11 +61,11 @@ FaceInstance.prototype.from_ndnb = function(
   }
   
   if (decoder.peekDTag(NDNProtocolDTags.Host))
-    this.host = decoder.readUTF8Element(NDNProtocolDTags.Host);
+    this.host = decoder.readUTF8DTagElement(NDNProtocolDTags.Host);
   if (decoder.peekDTag(NDNProtocolDTags.Port))
     this.Port = decoder.readIntegerElement(NDNProtocolDTags.Port); 
   if (decoder.peekDTag(NDNProtocolDTags.MulticastInterface))
-    this.multicastInterface = decoder.readUTF8Element(NDNProtocolDTags.MulticastInterface); 
+    this.multicastInterface = decoder.readUTF8DTagElement(NDNProtocolDTags.MulticastInterface); 
   if (decoder.peekDTag(NDNProtocolDTags.MulticastTTL))
     this.multicastTTL = decoder.readIntegerElement(NDNProtocolDTags.MulticastTTL); 
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
