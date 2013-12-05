@@ -57,7 +57,7 @@ FaceInstance.prototype.from_ndnb = function(
     else if (FaceInstance.NetworkProtocol.UDP == pI)
       this.ipProto = FaceInstance.NetworkProtocol.UDP;
     else
-      throw new Error("FaceInstance.decoder.  Invalid " + NDNProtocolDTags.tagToString(NDNProtocolDTags.IPProto) + " field: " + pI);
+      throw new Error("FaceInstance.decoder.  Invalid NDNProtocolDTags.IPProto field: " + pI);
   }
   
   if (decoder.peekStartElement(NDNProtocolDTags.Host))
