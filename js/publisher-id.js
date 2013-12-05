@@ -51,7 +51,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
   if (nextTag < 0)
     throw new Error("Invalid publisher ID, got unexpected type");
 
-  this.publisherID = decoder.readBinaryElement(nextTag);
+  this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
     throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 };

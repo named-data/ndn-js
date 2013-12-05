@@ -178,7 +178,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
   if (decoder.peekDTag(NDNProtocolDTags.Key)) 
   {
     try {
-      var encodedKey = decoder.readBinaryElement(NDNProtocolDTags.Key);
+      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
       // This is a DER-encoded SubjectPublicKeyInfo.
       
       //TODO FIX THIS, This should create a Key Object instead of keeping bytes
@@ -197,7 +197,7 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
   } 
   else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
     try {
-      var encodedCert = decoder.readBinaryElement(NDNProtocolDTags.Certificate);
+      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
       
       /*
        * Certificates not yet working

@@ -130,13 +130,13 @@ Signature.prototype.from_ndnb = function(decoder)
   }
   if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
     if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryElement(NDNProtocolDTags.Witness); 
+    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness); 
   }
     
   //FORCE TO READ A SIGNATURE
 
   if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryElement(NDNProtocolDTags.SignatureBits);
+  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
 
   decoder.readElementClose();
 };
@@ -233,7 +233,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   }
 
   if (decoder.peekDTag(NDNProtocolDTags.Type)) {
-    var binType = decoder.readBinaryElement(NDNProtocolDTags.Type);//byte [] 
+    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
     
     if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
 
@@ -253,7 +253,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   
   if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
     if (LOG > 4) console.log('DECODING FINAL BLOCKID');
-    this.finalBlockID = decoder.readBinaryElement(NDNProtocolDTags.FinalBlockID);
+    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
   }
   
   if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {

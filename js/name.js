@@ -153,7 +153,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
   this.components = [];
 
   while (decoder.peekDTag(NDNProtocolDTags.Component))
-    this.append(decoder.readBinaryElement(NDNProtocolDTags.Component));
+    this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
     
   decoder.readElementClose();
 };

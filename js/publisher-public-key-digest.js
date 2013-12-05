@@ -21,7 +21,7 @@ exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
 
 PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder) 
 {
-  this.publisherPublicKeyDigest = decoder.readBinaryElement(this.getElementLabel());
+  this.publisherPublicKeyDigest = decoder.readBinaryDTagElement(this.getElementLabel());
     
   if (LOG > 4) console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
 

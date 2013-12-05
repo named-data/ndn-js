@@ -373,7 +373,27 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
   return decodedTag;
 };
 
-// Returns a Buffer.
+/**
+ * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
+ * Then read one item of any type (presumably BLOB, UDATA, TAG or ATTR) and return a 
+ * Buffer. However, if allowNull is true, then the item may be absent.
+ * Finally, read the element close.  Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ * @param {boolean} allowNull True if the binary item may be missing.
+ * @returns {Buffer} A Buffer which is a slice on the data inside the input buffer. However, 
+ * if allowNull is true and the binary data item is absent, then return null.
+ */
+BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNull)
+{
+  this.readElementStartDTag(expectedTag);
+  return this.readBlob(allowNull);  
+};
+
+/**
+ * @deprecated Use readBinaryDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ * 
+ */
 BinaryXMLDecoder.prototype.readBinaryElement = function(
     //long 
     startTag,
@@ -398,7 +418,7 @@ BinaryXMLDecoder.prototype.readElementClose = function()
 };
 
 /**
- * @@description Use readElementClose.
+ * @description Use readElementClose.
  */
 BinaryXMLDecoder.prototype.readEndElement = function() 
 {

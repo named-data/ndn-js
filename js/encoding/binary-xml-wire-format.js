@@ -186,12 +186,12 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 
   if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
     interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryElement(NDNProtocolDTags.InterestLifetime)) / 4096;
+               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096;
   else
     interest.interestLifetime = null;              
     
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
-    interest.nonce = decoder.readBinaryElement(NDNProtocolDTags.Nonce);
+    interest.nonce = decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce);
   else
     interest.nonce = null;
     
@@ -260,7 +260,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   else
     data.signedInfo = null;
 
-  data.content = decoder.readBinaryElement(NDNProtocolDTags.Content, null, true);
+  data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
     
   data.endSIG = decoder.offset;
     
