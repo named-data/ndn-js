@@ -198,7 +198,10 @@ BinaryXMLDecoder.prototype.readAttributes = function(
   }
 };
 
-//returns a string
+/**
+ * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.peekStartElementAsString = function() 
 {
   //String 

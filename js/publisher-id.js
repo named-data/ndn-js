@@ -21,17 +21,6 @@ var PublisherType = function PublisherType(tag)
   this.Tag = tag;
 }; 
 
-var isTypeTagVal = function(tagVal) 
-{
-  if (tagVal == NDNProtocolDTags.PublisherPublicKeyDigest ||
-      tagVal == NDNProtocolDTags.PublisherCertificateDigest ||
-      tagVal == NDNProtocolDTags.PublisherIssuerKeyDigest ||
-      tagVal == NDNProtocolDTags.PublisherIssuerCertificateDigest)
-    return true;
-
-  return false;
-};
-
 /**
  * @constructor
  */
@@ -55,15 +44,12 @@ exports.PublisherID = PublisherID;
 PublisherID.prototype.from_ndnb = function(decoder) 
 {    
   // We have a choice here of one of 4 binary element types.
-  var nextTag = decoder.peekStartElementAsLong();
-    
-  if (null == nextTag)
-    throw new Error("Cannot parse publisher ID.");
+  var nextTag = PublisherID.peekAndGetNextDTag(decoder);
     
   this.publisherType = new PublisherType(nextTag); 
     
-  if (!isTypeTagVal(nextTag))
-    throw new Error("Invalid publisher ID, got unexpected type: " + nextTag);
+  if (nextTag < 0)
+    throw new Error("Invalid publisher ID, got unexpected type");
 
   this.publisherID = decoder.readBinaryElement(nextTag);
   if (null == this.publisherID)
@@ -77,17 +63,29 @@ PublisherID.prototype.to_ndnb = function(encoder)
 
   encoder.writeDTagElement(this.getElementLabel(), this.publisherID);
 };
+
+/**
+ * Peek the next DTag in the decoder and return it if it is a PublisherID DTag.
+ * @param {BinaryXMLDecoder} decoder The BinaryXMLDecoder with the input to decode.
+ * @returns {number} The PublisherID DTag or -1 if it is not one of them.
+ */
+PublisherID.peekAndGetNextDTag = function(decoder) 
+{
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest))
+    return             NDNProtocolDTags.PublisherPublicKeyDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherCertificateDigest))
+    return             NDNProtocolDTags.PublisherCertificateDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerKeyDigest))
+    return             NDNProtocolDTags.PublisherIssuerKeyDigest;
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerCertificateDigest))
+    return             NDNProtocolDTags.PublisherIssuerCertificateDigest;
+  
+  return -1;
+};
   
 PublisherID.peek = function(/* XMLDecoder */ decoder) 
 {
-  //Long
-  var nextTag = decoder.peekStartElementAsLong();
-    
-  if (null == nextTag)
-    // on end element
-    return false;
-
-  return isTypeTagVal(nextTag);
+  return PublisherID.peekAndGetNextDTag(decoder) >= 0;
 };
 
 PublisherID.prototype.getElementLabel = function()
