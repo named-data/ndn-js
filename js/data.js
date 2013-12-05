@@ -120,7 +120,7 @@ exports.Signature = Signature;
 
 Signature.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
     
   if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
     
@@ -219,7 +219,7 @@ SignedInfo.prototype.setFields = function()
 
 SignedInfo.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
   
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     if (LOG > 4) console.log('DECODING PUBLISHER KEY');

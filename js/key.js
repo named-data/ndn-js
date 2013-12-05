@@ -173,7 +173,7 @@ exports.KeyLocator = KeyLocator;
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Key)) 
   {
@@ -274,7 +274,7 @@ exports.KeyName = KeyName;
 
 KeyName.prototype.from_ndnb = function(decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
 
   this.contentName = new Name();
   this.contentName.from_ndnb(decoder);

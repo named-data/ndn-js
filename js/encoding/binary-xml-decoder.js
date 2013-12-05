@@ -91,23 +91,35 @@ var BinaryXMLDecoder = function BinaryXMLDecoder(input)
 
 exports.BinaryXMLDecoder = BinaryXMLDecoder;
 
-BinaryXMLDecoder.prototype.initializeDecoding = function() 
+/**
+ * Decode the header from the input starting at its position, expecting the type to be DTAG and the value to be expectedTag.
+   * Update the input's offset.
+ * @param {number} expectedTag The expected value for DTAG.
+ */
+BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
 {
-    //if (!this.input.markSupported()) {
-      //throw new IllegalArgumentException(this.getClass().getName() + ": input stream must support marking!");
-    //}
+  if (this.offset == this.previouslyPeekedDTagStartOffset) {
+    // peekDTag already decoded this DTag.
+    if (this.previouslyPeekedDTag != expectedTag)
+      throw new EncodingException("Did not get the expected DTAG " + expectedTag + ", got " + previouslyPeekedDTag_);
+
+    // Fast forward past the header.
+    this.offset = this.previouslyPeekedDTagEndOffset;
+  }
+  else {
+    var typeAndValue = this.decodeTypeAndVal();
+    if (typeAndValue == null || typeAndValue.type() != XML_DTAG)
+      throw new ContentDecodingException(new Error("Header type is not a DTAG"));
+
+    if (typeAndValue.val() != expectedTag)
+      throw new ContentDecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
+  }  
 };
 
-BinaryXMLDecoder.prototype.readStartDocument = function() 
-{
-    // Currently no start document in binary encoding.  
-};
-
-BinaryXMLDecoder.prototype.readEndDocument = function() 
-{
-    // Currently no end document in binary encoding.
-};
-
+/**
+ * @deprecated Use readElementStartDTag. Binary XML string tags and attributes are not used by any NDN encodings and 
+ * support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readStartElement = function(
     //String 
     startTag,
@@ -149,6 +161,9 @@ BinaryXMLDecoder.prototype.readStartElement = function(
     readAttributes(attributes); 
 };
   
+/**
+ * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
+ */
 BinaryXMLDecoder.prototype.readAttributes = function(
   // array of [attributeName, attributeValue] 
   attributes) 

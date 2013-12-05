@@ -45,7 +45,7 @@ ForwardingEntry.prototype.from_ndnb = function(
   decoder) 
   //throws ContentDecodingException
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
   if (decoder.peekDTag(NDNProtocolDTags.Action))
     this.action = decoder.readUTF8Element(NDNProtocolDTags.Action); 
   if (decoder.peekDTag(NDNProtocolDTags.Name)) {

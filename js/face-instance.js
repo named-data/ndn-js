@@ -36,7 +36,7 @@ FaceInstance.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
   
   if (decoder.peekDTag(NDNProtocolDTags.Action))   
     this.action = decoder.readUTF8Element(NDNProtocolDTags.Action);

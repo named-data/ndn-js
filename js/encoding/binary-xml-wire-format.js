@@ -140,7 +140,7 @@ var Exclude = require('../interest.js').Exclude;
  */
 BinaryXmlWireFormat.decodeInterest = function(interest, decoder) 
 {
-  decoder.readStartElement(NDNProtocolDTags.Interest);
+  decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
   interest.name = new Name();
   interest.name.from_ndnb(decoder);
@@ -239,7 +239,7 @@ var SignedInfo = require('../data.js').SignedInfo;
 BinaryXmlWireFormat.decodeData = function(data, decoder) 
 {
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readStartElement(data.getElementLabel());
+  decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
     data.signature = new Signature();

@@ -214,13 +214,13 @@ Exclude.prototype.appendComponent = function(component)
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
-  decoder.readStartElement(NDNProtocolDTags.Exclude);
+  decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
 
   while (true) {
     if (decoder.peekDTag(NDNProtocolDTags.Component))
       this.appendComponent(decoder.readBinaryElement(NDNProtocolDTags.Component));
     else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
-      decoder.readStartElement(NDNProtocolDTags.Any);
+      decoder.readElementStartDTag(NDNProtocolDTags.Any);
       decoder.readEndElement();
       this.appendAny();
     }

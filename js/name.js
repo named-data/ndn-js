@@ -148,7 +148,7 @@ Name.createNameArray = function(uri)
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  
 {
-  decoder.readStartElement(this.getElementLabel());
+  decoder.readElementStartDTag(this.getElementLabel());
     
   this.components = [];
 
