@@ -193,8 +193,7 @@ exports.SignedInfo = SignedInfo;
 
 SignedInfo.prototype.setFields = function() 
 {
-  var key = new Key();
-  key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
+  var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 
   var d = new Date();

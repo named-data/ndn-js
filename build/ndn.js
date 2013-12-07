@@ -133,7 +133,7 @@ Buffer.str2rstr_utf8 = function(input)
 
   while (++i < input.length)
   {
-    /* Decode utf-16 surrogate pairs */
+    // Decode utf-16 surrogate pairs
     x = input.charCodeAt(i);
     y = i + 1 < input.length ? input.charCodeAt(i + 1) : 0;
     if (0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
@@ -142,7 +142,7 @@ Buffer.str2rstr_utf8 = function(input)
       i++;
     }
 
-    /* Encode output as utf-8 */
+    // Encode output as utf-8
     if (x <= 0x7F)
       output += String.fromCharCode(x);
     else if (x <= 0x7FF)
@@ -3488,6 +3488,8 @@ Name.prototype.match = function(name)
  * See COPYING for copyright and distribution information.
  */
 
+var Key = require('../key.js').Key;
+
 /**
  * @constructor
  */
@@ -3529,7 +3531,24 @@ var KeyManager = function KeyManager()
   "vYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaM\n" +
   "hndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861\n" +
   "-----END RSA PRIVATE KEY-----";
+  
+  this.key = null;
 };
+
+/**
+ * Return a Key object for the keys in this KeyManager.  This creates the Key on the first
+ * call and returns a cached copy after that.
+ * @returns {Key}
+ */
+KeyManager.prototype.getKey = function()
+{
+  if (this.key === null) {
+    this.key = new Key();
+    this.key.fromPemString(this.publicKey, this.privateKey);
+  }
+  
+  return this.key;
+}
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
@@ -3728,8 +3747,7 @@ exports.SignedInfo = SignedInfo;
 
 SignedInfo.prototype.setFields = function() 
 {
-  var key = new Key();
-  key.fromPemString(globalKeyManager.publicKey, globalKeyManager.privateKey);
+  var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 
   var d = new Date();

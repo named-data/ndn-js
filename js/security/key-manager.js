@@ -4,6 +4,8 @@
  * See COPYING for copyright and distribution information.
  */
 
+var Key = require('../key.js').Key;
+
 /**
  * @constructor
  */
@@ -45,7 +47,24 @@ var KeyManager = function KeyManager()
   "vYrvrv0/HcDY+Dv1An0CQQCLJtMsfSg4kvG/FRY5UMhtMuwo8ovYcMXt4Xv/LWaM\n" +
   "hndD67b2UGawQCRqr5ghRTABWdDD/HuuMBjrkPsX0861\n" +
   "-----END RSA PRIVATE KEY-----";
+  
+  this.key = null;
 };
+
+/**
+ * Return a Key object for the keys in this KeyManager.  This creates the Key on the first
+ * call and returns a cached copy after that.
+ * @returns {Key}
+ */
+KeyManager.prototype.getKey = function()
+{
+  if (this.key === null) {
+    this.key = new Key();
+    this.key.fromPemString(this.publicKey, this.privateKey);
+  }
+  
+  return this.key;
+}
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
