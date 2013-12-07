@@ -133,7 +133,7 @@ Buffer.str2rstr_utf8 = function(input)
 
   while (++i < input.length)
   {
-    /* Decode utf-16 surrogate pairs */
+    // Decode utf-16 surrogate pairs
     x = input.charCodeAt(i);
     y = i + 1 < input.length ? input.charCodeAt(i + 1) : 0;
     if (0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
@@ -142,7 +142,7 @@ Buffer.str2rstr_utf8 = function(input)
       i++;
     }
 
-    /* Encode output as utf-8 */
+    // Encode output as utf-8
     if (x <= 0x7F)
       output += String.fromCharCode(x);
     else if (x <= 0x7FF)
