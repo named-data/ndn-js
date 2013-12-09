@@ -16,8 +16,11 @@
 
 		function test(){
       document.getElementById('result').innerHTML = "Results:<br/>";
+      
+      var nIterations = 50000;
+      var duration = TestEncodeDecodeBenchmark.benchmarkDataDecodeSeconds(nIterations);
 			document.getElementById('result').innerHTML += 
-        "Data decode usec: " + TestEncodeDecodeBenchmark.benchmarkDataDecodeMicroseconds() + "<br/>";
+        "Data decode: Duration sec: " + duration + ", Hz: " + (nIterations / duration) + "<br/>";
 		}
 
 	</script>

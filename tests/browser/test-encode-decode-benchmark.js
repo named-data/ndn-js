@@ -6,9 +6,9 @@ var TestEncodeDecodeBenchmark = function TestEncodeDecodeBenchmark()
 
 exports.TestEncodeDecodeBenchmark = TestEncodeDecodeBenchmark;
 
-function getNowMicroseconds()
+function getNowSeconds()
 {
-  return new Date().getTime() * 1000.0;
+  return new Date().getTime() / 1000.0;
 }
 
 var Data1 = new Buffer([
@@ -58,24 +58,24 @@ var Data1 = new Buffer([
 ]);
 
 /**
- * Return the number of microseconds to decode a sample data packet.
+ * Return the seconds to decode a sample data packet.
+ * @param {number} nIterations The number of times to decode
+ * @returns {number} The number of seconds for the benchmark
  */
-TestEncodeDecodeBenchmark.benchmarkDataDecodeMicroseconds = function()
+TestEncodeDecodeBenchmark.benchmarkDataDecodeSeconds = function(nIterations)
 {
-  var nIterations = 8000;
-
   var nameSize = 0;
-  var start = getNowMicroseconds();
+  var start = getNowSeconds();
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data();
     data.decode(Data1);
     nameSize = data.name.size();
   }
-  var finish = getNowMicroseconds();
+  var finish = getNowSeconds();
 
   // Sanity check that we are actually decoding.
   if (nameSize != 2)
     throw new Error("Unexpected data packet name size");
   
-  return (finish - start) / nIterations;  
+  return finish - start;  
 }
