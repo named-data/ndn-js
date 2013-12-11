@@ -57,7 +57,7 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
  */
 BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
-  var encoder = new BinaryXMLEncoder();
+  var encoder = new BinaryXMLEncoder(1500);
   BinaryXmlWireFormat.encodeData(data, encoder);  
   return encoder.getReducedOstream();  
 };
