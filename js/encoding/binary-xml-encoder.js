@@ -50,10 +50,13 @@ var bits_32 = 0x0FFFFFFFF;
 /**
  * @constructor
  */
-var BinaryXMLEncoder = function BinaryXMLEncoder() 
+var BinaryXMLEncoder = function BinaryXMLEncoder(initiaLength) 
 {
-  this.ostream = new DynamicBuffer(100);
-  this.offset =0;
+  if (!initiaLength)
+    initiaLength = 16;
+  
+  this.ostream = new DynamicBuffer(initiaLength);
+  this.offset = 0;
   this.CODEC_NAME = "Binary";
 };
 
