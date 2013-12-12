@@ -227,7 +227,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   if (LOG > 4) console.log('type is is ' + this.type);
   //TODO Check if Name is missing
   if (!this.validate())
-    throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
   //TODO FIX THIS TOO
   encoder.writeElementStartDTag(this.getElementLabel());
