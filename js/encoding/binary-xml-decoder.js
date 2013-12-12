@@ -101,7 +101,7 @@ BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
   if (this.offset == this.previouslyPeekedDTagStartOffset) {
     // peekDTag already decoded this DTag.
     if (this.previouslyPeekedDTag != expectedTag)
-      throw new ContentDecodingException("Did not get the expected DTAG " + expectedTag + ", got " + previouslyPeekedDTag);
+      throw new ContentDecodingException(new Error("Did not get the expected DTAG " + expectedTag + ", got " + this.previouslyPeekedDTag));
 
     // Fast forward past the header.
     this.offset = this.previouslyPeekedDTagEndOffset;
