@@ -21,3 +21,4 @@ exports.NDNProtocolDTagsStrings = require('./js/util/ndn-protoco-id-tags.js').ND
 exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;
 exports.EncodingUtils = require('./js/encoding/encoding-utils.js').EncodingUtils;
 exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumeration;
+exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
