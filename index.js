@@ -12,6 +12,7 @@ exports.SignedInfo = require('./js/data.js').SignedInfo;
 exports.Key = require('./js/key.js').Key;
 exports.KeyLocator = require('./js/key.js').KeyLocator;
 exports.KeyLocatorType = require('./js/key.js').KeyLocatorType;
+exports.PublisherPublicKeyDigest = require('./js/publisher-public-key-digest.js').PublisherPublicKeyDigest;
 exports.BinaryXMLDecoder = require('./js/encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 exports.BinaryXMLEncoder = require('./js/encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
