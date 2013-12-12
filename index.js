@@ -11,6 +11,7 @@ exports.ContentType = require('./js/data.js').ContentType;
 exports.SignedInfo = require('./js/data.js').SignedInfo;
 exports.Key = require('./js/key.js').Key;
 exports.KeyLocator = require('./js/key.js').KeyLocator;
+exports.KeyName = require('./js/key.js').KeyName;
 exports.KeyLocatorType = require('./js/key.js').KeyLocatorType;
 exports.PublisherPublicKeyDigest = require('./js/publisher-public-key-digest.js').PublisherPublicKeyDigest;
 exports.BinaryXMLDecoder = require('./js/encoding/binary-xml-decoder.js').BinaryXMLDecoder;
