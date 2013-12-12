@@ -5527,7 +5527,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.signedInfo.locator.keyName.to_uri() + "<br />";
+        output += "KeyName: " + data.signedInfo.locator.keyName.contentName.to_uri() + "<br />";
       else
         output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
     }
