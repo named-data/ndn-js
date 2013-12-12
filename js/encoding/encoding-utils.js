@@ -9,6 +9,7 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var Key = require('../key.js').Key;
+var KeyLocatorType = require('../key.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
@@ -182,6 +183,17 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
       output+= "<br />";
     }
+    if (data.signedInfo != null && data.signedInfo.locator != null && data.signedInfo.locator.type) {
+      output += "keyLocator: ";
+      if (data.signedInfo.locator.type == KeyLocatorType.KEY)
+        output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
+        output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
+        output += "KeyName: " + data.signedInfo.locator.keyName.to_uri() + "<br />";
+      else
+        output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
+    }
     if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
       var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
       var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
@@ -191,10 +203,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       var witHex = "";
       if (data.signature.witness != null)
         witHex = DataUtils.toHex(data.signature.witness);
-      
-      output += "Public key: " + publickeyHex;
-      
-      output+= "<br />";
+
+      // Already showed data.signedInfo.locator.publicKey above.
       output+= "<br />";
       
       if (LOG > 2) console.log(" ContentName + SignedInfo + Content = "+input);
