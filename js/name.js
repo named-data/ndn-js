@@ -264,6 +264,28 @@ Name.prototype.addSegment = function(number)
 {
   return this.appendSegment(number);
 };
+
+/**
+ * Get a new name, constructed as a subset of components.
+ * @param {number} iStartComponent The index if the first component to get.
+ * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
+ * return components starting at iStartComponent until the end of the name.
+ * @returns {Name} A new name.
+ */
+Name.prototype.getSubName = function(iStartComponent, nComponents)
+{
+  if (nComponents == undefined)
+    nComponents = this.components.length - iStartComponent;
+  
+  var result = new Name();
+
+  var iEnd = iStartComponent + nComponents;
+  for (var i = iStartComponent; i < iEnd && i < this.components.length; ++i)
+    result.components.push(this.components[i]);
+
+  return result;  
+}
+
 /**
  * Return a new Name with the first nComponents components of this Name.
  */

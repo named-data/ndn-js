@@ -1,10 +1,11 @@
-Interim changes since NDN-JS v0.2 (2013-15-05)
+Interim changes since NDN-JS v0.2 (2013-12-12)
 --------------------------------------
 
 Changes
 * http://redmine.named-data.net/issues/1073 In Face.expressInterest, support onData and onTimeout callbacks.
 * In Face.registerPrefix, add support for onInterest and onRegisterFailed callbacks and ForwardingFlags.
 * http://redmine.named-data.net/issues/1084 Internal: Binary XML decoding speed up to only support DTags.
+* In Name, added method getSubName.
 
 Deprecated
 * Face/NDN: expressInterest(name, closure [, template]). You should use expressInterest which uses callbacks, not Closure.

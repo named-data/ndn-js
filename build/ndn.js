@@ -1071,10 +1071,13 @@ var bits_32 = 0x0FFFFFFFF;
 /**
  * @constructor
  */
-var BinaryXMLEncoder = function BinaryXMLEncoder() 
+var BinaryXMLEncoder = function BinaryXMLEncoder(initiaLength) 
 {
-  this.ostream = new DynamicBuffer(100);
-  this.offset =0;
+  if (!initiaLength)
+    initiaLength = 16;
+  
+  this.ostream = new DynamicBuffer(initiaLength);
+  this.offset = 0;
   this.CODEC_NAME = "Binary";
 };
 
@@ -1552,7 +1555,7 @@ BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
   if (this.offset == this.previouslyPeekedDTagStartOffset) {
     // peekDTag already decoded this DTag.
     if (this.previouslyPeekedDTag != expectedTag)
-      throw new EncodingException("Did not get the expected DTAG " + expectedTag + ", got " + previouslyPeekedDTag_);
+      throw new ContentDecodingException(new Error("Did not get the expected DTAG " + expectedTag + ", got " + this.previouslyPeekedDTag));
 
     // Fast forward past the header.
     this.offset = this.previouslyPeekedDTagEndOffset;
@@ -3256,6 +3259,28 @@ Name.prototype.addSegment = function(number)
 {
   return this.appendSegment(number);
 };
+
+/**
+ * Get a new name, constructed as a subset of components.
+ * @param {number} iStartComponent The index if the first component to get.
+ * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
+ * return components starting at iStartComponent until the end of the name.
+ * @returns {Name} A new name.
+ */
+Name.prototype.getSubName = function(iStartComponent, nComponents)
+{
+  if (nComponents == undefined)
+    nComponents = this.components.length - iStartComponent;
+  
+  var result = new Name();
+
+  var iEnd = iStartComponent + nComponents;
+  for (var i = iStartComponent; i < iEnd && i < this.components.length; ++i)
+    result.components.push(this.components[i]);
+
+  return result;  
+}
+
 /**
  * Return a new Name with the first nComponents components of this Name.
  */
@@ -4587,7 +4612,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
   if (LOG > 4) console.log('type is is ' + this.type);
   //TODO Check if Name is missing
   if (!this.validate())
-    throw new ContentEncodingException("Cannot encode " + this.getClass().getName() + ": field values missing.");
+    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
   //TODO FIX THIS TOO
   encoder.writeElementStartDTag(this.getElementLabel());
@@ -5099,7 +5124,7 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
  */
 BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
-  var encoder = new BinaryXMLEncoder();
+  var encoder = new BinaryXMLEncoder(1500);
   BinaryXmlWireFormat.encodeData(data, encoder);  
   return encoder.getReducedOstream();  
 };
@@ -5321,6 +5346,7 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var Key = require('../key.js').Key;
+var KeyLocatorType = require('../key.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
@@ -5494,6 +5520,17 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
       output+= "<br />";
     }
+    if (data.signedInfo != null && data.signedInfo.locator != null && data.signedInfo.locator.type) {
+      output += "keyLocator: ";
+      if (data.signedInfo.locator.type == KeyLocatorType.KEY)
+        output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
+        output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
+        output += "KeyName: " + data.signedInfo.locator.keyName.to_uri() + "<br />";
+      else
+        output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
+    }
     if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
       var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
       var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
@@ -5503,10 +5540,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       var witHex = "";
       if (data.signature.witness != null)
         witHex = DataUtils.toHex(data.signature.witness);
-      
-      output += "Public key: " + publickeyHex;
-      
-      output+= "<br />";
+
+      // Already showed data.signedInfo.locator.publicKey above.
       output+= "<br />";
       
       if (LOG > 2) console.log(" ContentName + SignedInfo + Content = "+input);
