@@ -13,14 +13,45 @@
 	<script type="text/javascript" src="test-encode-decode-benchmark.js"></script>
 
 	<script type="text/javascript">
+    /**
+     * Call benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds with appropriate nInterations.  Print the 
+     * results to console.log.
+     * @param {boolean} useComplex See benchmarkEncodeDataSeconds.
+     * @param {boolean} useCrypto See benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds.
+     * @paran {function} continuation (optional) If not null, when finished call setTimeout(continuation, 100) so that
+     * the output is shown in the browser before continuing.
+     */
+    function benchmarkEncodeDecodeData(useComplex, useCrypto, continuation)
+    {
+      // Use setTimeout so that the browser will update the display before continuing.
+      var encoding = [];
+      {
+        var nIterations = useCrypto ? 1 : 30000;
+        var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
+        document.getElementById('result').innerHTML +=
+          "Encode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
+      }
+      setTimeout(function() {
+        var nIterations = useCrypto ? 1 : 10000;
+        var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
+        document.getElementById('result').innerHTML +=
+          "Decode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
+  
+        if (continuation)
+          setTimeout(continuation, 100);
+      }, 100);
+    }
 
 		function test(){
       document.getElementById('result').innerHTML = "Results:<br/>";
       
-      var nIterations = 50000;
-      var duration = TestEncodeDecodeBenchmark.benchmarkDataDecodeSeconds(nIterations);
-			document.getElementById('result').innerHTML += 
-        "Data decode: Duration sec: " + duration + ", Hz: " + (nIterations / duration) + "<br/>";
+      benchmarkEncodeDecodeData(false, false, function() {
+      benchmarkEncodeDecodeData(true, false, function() {
+      document.getElementById('result').innerHTML += "Finished.<br/>";
+      });
+      });
 		}
 
 	</script>

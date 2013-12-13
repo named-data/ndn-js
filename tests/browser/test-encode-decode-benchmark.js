@@ -1,4 +1,11 @@
+var Name = require('../..').Name;
 var Data = require('../..').Data;
+var SignedInfo = require('../..').SignedInfo;
+var KeyLocator = require('../..').KeyLocator;
+var KeyLocatorType = require('../..').KeyLocatorType;
+var KeyName = require('../..').KeyName;
+var PublisherPublicKeyDigest = require('../..').PublisherPublicKeyDigest;
+var NDNTime = require('../..').NDNTime;
 
 var TestEncodeDecodeBenchmark = function TestEncodeDecodeBenchmark() 
 {
@@ -11,71 +18,111 @@ function getNowSeconds()
   return new Date().getTime() / 1000.0;
 }
 
-var Data1 = new Buffer([
-  0x04, 0x82, // NDN Data
-    0x02, 0xaa, // Signature
-      0x03, 0xb2, // SignatureBits
-        0x08, 0x85, 0x20, 0xea, 0xb5, 0xb0, 0x63, 0xda, 0x94, 0xe9, 0x68, 0x7a,
-        0x8e, 0x65, 0x60, 0xe0, 0xc6, 0x43, 0x96, 0xd9, 0x69, 0xb4, 0x40, 0x72, 0x52, 0x00, 0x2c, 0x8e, 0x2a, 0xf5,
-        0x47, 0x12, 0x59, 0x93, 0xda, 0xed, 0x82, 0xd0, 0xf8, 0xe6, 0x65, 0x09, 0x87, 0x84, 0x54, 0xc7, 0xce, 0x9a,
-        0x93, 0x0d, 0x47, 0xf1, 0xf9, 0x3b, 0x98, 0x78, 0x2c, 0x22, 0x21, 0xd9, 0x2b, 0xda, 0x03, 0x30, 0x84, 0xf3,
-        0xc5, 0x52, 0x64, 0x2b, 0x1d, 0xde, 0x50, 0xe0, 0xee, 0xca, 0xa2, 0x73, 0x7a, 0x93, 0x30, 0xa8, 0x47, 0x7f,
-        0x6f, 0x41, 0xb0, 0xc8, 0x6e, 0x89, 0x1c, 0xcc, 0xf9, 0x01, 0x44, 0xc3, 0x08, 0xcf, 0x77, 0x47, 0xfc, 0xed,
-        0x48, 0xf0, 0x4c, 0xe9, 0xc2, 0x3b, 0x7d, 0xef, 0x6e, 0xa4, 0x80, 0x40, 0x9e, 0x43, 0xb6, 0x77, 0x7a, 0x1d,
-        0x51, 0xed, 0x98, 0x33, 0x93, 0xdd, 0x88, 0x01, 0x0e, 0xd3, 
-      0x00, 
-    0x00, 
-    0xf2, 0xfa, 0x9d, 0x6e, 0x64, 0x6e, 0x00, 0xfa, 0x9d, 0x61, 0x62, 0x63, 0x00, 0x00,  // Name
-    0x01, 0xa2, // SignedInfo
-      0x03, 0xe2, // PublisherPublicKeyDigest
-        0x02, 0x85, 0xb5, 0x50, 0x6b, 0x1a,
-        0xba, 0x3d, 0xa7, 0x76, 0x1b, 0x0f, 0x8d, 0x61, 0xa4, 0xaa, 0x7e, 0x3b, 0x6d, 0x15, 0xb4, 0x26, 0xfe, 0xb5,
-        0xbd, 0xa8, 0x23, 0x89, 0xac, 0xa7, 0x65, 0xa3, 0xb8, 0x1c, 
-      0x00, 
-      0x02, 0xba, // Timestamp
-        0xb5, 0x05, 0x1d, 0xde, 0xe9, 0x5b, 0xdb, 
-      0x00, 
-      0x01, 0xe2, // KeyLocator
-        0x01, 0xda, // Key
-          0x0a, 0x95, 0x30, 0x81, 0x9f, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86,
-          0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03, 0x81, 0x8d, 0x00, 0x30, 0x81, 0x89, 0x02, 0x81,
-          0x81, 0x00, 0xe1, 0x7d, 0x30, 0xa7, 0xd8, 0x28, 0xab, 0x1b, 0x84, 0x0b, 0x17, 0x54, 0x2d, 0xca, 0xf6, 0x20,
-          0x7a, 0xfd, 0x22, 0x1e, 0x08, 0x6b, 0x2a, 0x60, 0xd1, 0x6c, 0xb7, 0xf5, 0x44, 0x48, 0xba, 0x9f, 0x3f, 0x08,
-          0xbc, 0xd0, 0x99, 0xdb, 0x21, 0xdd, 0x16, 0x2a, 0x77, 0x9e, 0x61, 0xaa, 0x89, 0xee, 0xe5, 0x54, 0xd3, 0xa4,
-          0x7d, 0xe2, 0x30, 0xbc, 0x7a, 0xc5, 0x90, 0xd5, 0x24, 0x06, 0x7c, 0x38, 0x98, 0xbb, 0xa6, 0xf5, 0xdc, 0x43,
-          0x60, 0xb8, 0x45, 0xed, 0xa4, 0x8c, 0xbd, 0x9c, 0xf1, 0x26, 0xa7, 0x23, 0x44, 0x5f, 0x0e, 0x19, 0x52, 0xd7,
-          0x32, 0x5a, 0x75, 0xfa, 0xf5, 0x56, 0x14, 0x4f, 0x9a, 0x98, 0xaf, 0x71, 0x86, 0xb0, 0x27, 0x86, 0x85, 0xb8,
-          0xe2, 0xc0, 0x8b, 0xea, 0x87, 0x17, 0x1b, 0x4d, 0xee, 0x58, 0x5c, 0x18, 0x28, 0x29, 0x5b, 0x53, 0x95, 0xeb,
-          0x4a, 0x17, 0x77, 0x9f, 0x02, 0x03, 0x01, 0x00, 0x01, 
-        0x00, 
-      0x00, 
-    0x00, 
-    0x01, 0x9a, // Content
-      0xc5, 0x53, 0x55, 0x43, 0x43, 0x45, 0x53, 0x53, 0x21, 
-    0x00, 
-  0x00,
-  1
-]);
-
 /**
- * Return the seconds to decode a sample data packet.
- * @param {number} nIterations The number of times to decode
- * @returns {number} The number of seconds for the benchmark
+ * Loop to encode a data packet nIterations times.
+ * @param {number} nIterations The number of iterations.
+ * @param {boolean} useComplex If true, use a large name, large content and all fields.  If false, use a small name, small content
+ * and only required fields.
+ * @param {boolean} useCrypto If true, sign the data packet.  If false, use a blank signature.
+ * @param {Array<Buffer>} encoding Set encoding[0] to the wire encoding.
+ * @return {number} The number of seconds for all iterations.
  */
-TestEncodeDecodeBenchmark.benchmarkDataDecodeSeconds = function(nIterations)
+TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, useComplex, useCrypto, encoding)
 {
-  var nameSize = 0;
+  var name;
+  var content;
+  if (useComplex) {
+    // Use a large name and content.
+    name = new Name("/ndn/ucla.edu/apps/lwndn-test/numbers.txt/%FD%05%05%E8%0C%CE%1D/%00"); 
+
+    var contentString = "";
+    var count = 1;
+    contentString += "" + (count++);
+    while (contentString.length < 1170)
+      contentString += " " + (count++);
+    content = new Buffer(contentString);
+  }
+  else {
+    // Use a small name and content.
+    name = new Name("/test");
+    content = new Buffer("abc");
+  }
+  var finalBlockId = new Buffer("\0");
+
+  /*
+  // Initialize the KeyChain storage in case useCrypto is true.
+  shared_ptr<MemoryIdentityStorage> identityStorage(new MemoryIdentityStorage());
+  shared_ptr<MemoryPrivateKeyStorage> privateKeyStorage(new MemoryPrivateKeyStorage());
+  KeyChain keyChain
+    (make_shared<IdentityManager>(identityStorage, privateKeyStorage), 
+     make_shared<SelfVerifyPolicyManager>(identityStorage.get()));
+  */
+  var keyName = new Name("/testname/DSK-123");
+  var certificateName = keyName.getSubName(0, keyName.size() - 1).append("KEY").append
+    (keyName.get(keyName.size() - 1)).append("ID-CERT").append("0");
+  /*
+  privateKeyStorage->setKeyPairForKeyName
+    (keyName, DEFAULT_PUBLIC_KEY_DER, sizeof(DEFAULT_PUBLIC_KEY_DER), DEFAULT_PRIVATE_KEY_DER, sizeof(DEFAULT_PRIVATE_KEY_DER));
+  */
+
+  // Set up publisherPublicKeyDigest and signatureBits in case useCrypto is false.
+  var publisherPublicKeyDigest = new Buffer(32);
+  for (var i = 0; i < publisherPublicKeyDigest.length; ++i)
+    publisherPublicKeyDigest[i] = 0;
+  var signatureBits = new Buffer(128);
+  for (var i = 0; i < signatureBits.length; ++i)
+    signatureBits[i] = 0;
+
   var start = getNowSeconds();
   for (var i = 0; i < nIterations; ++i) {
-    var data = new Data();
-    data.decode(Data1);
-    nameSize = data.name.size();
+    var data = new Data(name);
+    data.content = content;
+    data.signedInfo = new SignedInfo();
+    if (useComplex) {
+      data.signedInfo.timestamp = new NDNTime(1.3e+12);
+      data.signedInfo.freshnessSeconds = 1000;
+      data.signedInfo.finalBlockID = finalBlockId;
+    }
+
+    if (useCrypto)
+      throw new Error("signing not implemented yet");
+    else {
+      // Set up the signature fields, but don't sign.
+      var keyLocator = new KeyLocator();    
+      keyLocator.type = KeyLocatorType.KEYNAME;
+      keyLocator.keyName = new KeyName();
+      keyLocator.keyName.contentName = certificateName;
+      data.signedInfo.locator = keyLocator;
+      data.signedInfo.publisher = new PublisherPublicKeyDigest(publisherPublicKeyDigest);
+      var sha256Signature = data.signature;
+      sha256Signature.signature = signatureBits;
+    }
+
+    encoding[0] = data.encode();
   }
   var finish = getNowSeconds();
 
-  // Sanity check that we are actually decoding.
-  if (nameSize != 2)
-    throw new Error("Unexpected data packet name size");
-  
-  return finish - start;  
+  return finish - start;    
 }
+
+/**
+ * Loop to decode a data packet nIterations times.
+ * @param {number} nIterations The number of times to decode.
+ * @param {boolean} useCrypto If true, verify the signature.  If false, don't verify.
+ * @param {Buffer} encoding The encoded data packet to decode.
+ * @returns {number} The number of seconds for the benchmark.
+ */
+TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, useCrypto, encoding)
+{
+  var start = getNowSeconds();
+  for (var i = 0; i < nIterations; ++i) {
+    var data = new Data();
+    data.decode(encoding);
+    
+    if (useCrypto)
+      throw new Error("verify not implemented yet.");
+  }
+  var finish = getNowSeconds();
+
+  return finish - start;  
+};
