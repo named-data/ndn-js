@@ -26,14 +26,14 @@
       // Use setTimeout so that the browser will update the display before continuing.
       var encoding = [];
       {
-        var nIterations = useCrypto ? 1 : 30000;
+        var nIterations = useCrypto ? 1000 : 150000;
         var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
         document.getElementById('result').innerHTML +=
           "Encode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
       }
       setTimeout(function() {
-        var nIterations = useCrypto ? 1 : 10000;
+        var nIterations = useCrypto ? 8000 : 50000;
         var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
         document.getElementById('result').innerHTML +=
           "Decode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
@@ -49,7 +49,11 @@
       
       benchmarkEncodeDecodeData(false, false, function() {
       benchmarkEncodeDecodeData(true, false, function() {
+      benchmarkEncodeDecodeData(false, true, function() {
+      benchmarkEncodeDecodeData(true, true, function() {
       document.getElementById('result').innerHTML += "Finished.<br/>";
+      });
+      });
       });
       });
 		}

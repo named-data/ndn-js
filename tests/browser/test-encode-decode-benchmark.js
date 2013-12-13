@@ -6,6 +6,7 @@ var KeyLocatorType = require('../..').KeyLocatorType;
 var KeyName = require('../..').KeyName;
 var PublisherPublicKeyDigest = require('../..').PublisherPublicKeyDigest;
 var NDNTime = require('../..').NDNTime;
+var globalKeyManager = require('../..').globalKeyManager;
 
 var TestEncodeDecodeBenchmark = function TestEncodeDecodeBenchmark() 
 {
@@ -84,19 +85,17 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       data.signedInfo.finalBlockID = finalBlockId;
     }
 
+    var keyLocator = new KeyLocator();    
+    keyLocator.type = KeyLocatorType.KEYNAME;
+    keyLocator.keyName = new KeyName();
+    keyLocator.keyName.contentName = certificateName;
+    data.signedInfo.locator = keyLocator;
+    data.signedInfo.publisher = new PublisherPublicKeyDigest(publisherPublicKeyDigest);
     if (useCrypto)
-      throw new Error("signing not implemented yet");
-    else {
-      // Set up the signature fields, but don't sign.
-      var keyLocator = new KeyLocator();    
-      keyLocator.type = KeyLocatorType.KEYNAME;
-      keyLocator.keyName = new KeyName();
-      keyLocator.keyName.contentName = certificateName;
-      data.signedInfo.locator = keyLocator;
-      data.signedInfo.publisher = new PublisherPublicKeyDigest(publisherPublicKeyDigest);
-      var sha256Signature = data.signature;
-      sha256Signature.signature = signatureBits;
-    }
+      data.sign();
+    else
+      // Set the signature, but don't sign.
+      data.signature.signature = signatureBits;
 
     encoding[0] = data.encode();
   }
@@ -119,8 +118,10 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
     var data = new Data();
     data.decode(encoding);
     
-    if (useCrypto)
-      throw new Error("verify not implemented yet.");
+    if (useCrypto) {
+      if (!data.verify(globalKeyManager.key))
+        throw new Error("Signature verification: FAILED");
+    }
   }
   var finish = getNowSeconds();
 

@@ -10,13 +10,13 @@ function benchmarkEncodeDecodeData(useComplex, useCrypto)
 {
   var encoding = [];
   {
-    var nIterations = useCrypto ? 1 : 500000;
+    var nIterations = useCrypto ? 8000 : 500000;
     var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
     console.log("Encode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
       + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));  
   }
   {
-    var nIterations = useCrypto ? 1 : 300000;
+    var nIterations = useCrypto ? 50000 : 300000;
     var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
     console.log("Decode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
       + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));  
@@ -24,3 +24,6 @@ function benchmarkEncodeDecodeData(useComplex, useCrypto)
 }
 
 benchmarkEncodeDecodeData(false, false);
+benchmarkEncodeDecodeData(true, false);
+benchmarkEncodeDecodeData(false, true);
+benchmarkEncodeDecodeData(true, true);
