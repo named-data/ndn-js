@@ -284,14 +284,20 @@ Name.prototype.getSubName = function(iStartComponent, nComponents)
     result.components.push(this.components[i]);
 
   return result;  
-}
+};
 
 /**
  * Return a new Name with the first nComponents components of this Name.
+ * @param {number} nComponents The number of prefix components.  If nComponents is -N then return the prefix up
+ * to name.size() - N. For example getPrefix(-1) returns the name without the final component.
+ * @returns {Name} A new name.
  */
 Name.prototype.getPrefix = function(nComponents) 
 {
-    return new Name(this.components.slice(0, nComponents));
+  if (nComponents < 0)
+    return this.getSubName(0, this.components.length + nComponents);
+  else
+    return this.getSubName(0, nComponents);
 };
 
 /**
