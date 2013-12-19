@@ -1,0 +1,39 @@
+/* This file is created by running make-ndn-js.jsm.sh in this directory.
+ * It concatenates ndn-js-header.txt with all the ndn-js source files to
+ *   make ndn-js.jsm .
+ * The file ../../build/ndn.min.js must already be built.
+ *
+ * Copyright (C) 2013 Regents of the University of California.
+ * author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var EXPORTED_SYMBOLS = ["Closure", "Data", "DataUtils", "Exclude", "ExponentialReExpressClosure",
+    "Interest", "MimeTypes", "Face", "Name", "Sha256", "XpcomTransport", "Buffer"];
+
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/NetUtil.jsm");
+
+// jsbn.js needs the navigator object which isn't defined in XPCOM, so make a local hack.
+var navigator = {
+    appName: "Netscape"
+};
+
+// Some code calls console.log without checking LOG>0.  Until this is cleaned up, make a local hack console.
+var console = {
+    log: function(message) {
+        dump(message);
+        dump("\n");
+    }
+};
+
+// The Face class uses setTimeout and clearTimeout, so define them using XPCOM.
+function setTimeout(callback, delay) {
+    var timer = Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
+    timer.initWithCallback({notify: callback}, delay, Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+    return timer;
+}
+
+function clearTimeout(timer) {
+    timer.cancel();
+}

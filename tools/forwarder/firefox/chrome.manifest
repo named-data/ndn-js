@@ -1,0 +1,3 @@
+content modules modules/
+content toolbar content/
+overlay chrome://browser/content/browser.xul chrome://toolbar/content/toolbar.xul
