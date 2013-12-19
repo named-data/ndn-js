@@ -6,6 +6,8 @@
 /build/*.zip
 /build/*.log
 ndnProtocol/modules/ndn-js.jsm
+tools/forwarder/firefox/modules/ndn-js.jsm
+tools/forwarder/ndn-forwarder.xpi
 
 # JSDoc output
 /doc
