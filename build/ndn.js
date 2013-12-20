@@ -6305,20 +6305,20 @@ Face.prototype.onReceivedElement = function(element)
           // Raise callback
           currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
 
-					// Since KeyLocator does not contain key name for this key,
-					// we have no way to store it as a key entry in KeyStore.
-				} 
+          // Since KeyLocator does not contain key name for this key,
+          // we have no way to store it as a key entry in KeyStore.
+        } 
         else {
-					var cert = keylocator.certificate;
-					console.log("KeyLocator contains CERT");
-					console.log(cert);								
-					// TODO: verify certificate
-				}
-			}
-		}
-	} 
+          var cert = keylocator.certificate;
+          console.log("KeyLocator contains CERT");
+          console.log(cert);                
+          // TODO: verify certificate
+        }
+      }
+    }
+  } 
   else
-		console.log('Incoming packet is not Interest or Data. Discard now.');
+    console.log('Incoming packet is not Interest or Data. Discard now.');
 };
 
 /**
@@ -6345,14 +6345,14 @@ Face.prototype.connectAndExecute = function(onConnected)
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
-	interest.interestLifetime = 4000; // milliseconds    
+  interest.interestLifetime = 4000; // milliseconds    
 
   var thisNDN = this;
-	var timerID = setTimeout(function() {
+  var timerID = setTimeout(function() {
     if (LOG>0) console.log("connectAndExecute: timeout waiting for host " + thisNDN.host);
       // Try again.
       thisNDN.connectAndExecute(onConnected);
-	}, 3000);
+  }, 3000);
   
   this.reconnectAndExpressInterest(interest, new Face.ConnectClosure(this, onConnected, timerID));
 };
@@ -6387,8 +6387,8 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   clearTimeout(this.timerID);
 
     // Call Face.onopen after success
-	this.face.readyStatus = Face.OPENED;
-	this.face.onopen();
+  this.face.readyStatus = Face.OPENED;
+  this.face.onopen();
 
   if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();

@@ -43,9 +43,13 @@ XpcomTransport.prototype.connect = function(face, onopenCallback)
 };
 
 /**
- * Do the work to connect to host and port.  This replaces a previous connection and sets connectedHost
+ * Do the work to connect to the socket.  This replaces a previous connection and sets connectedHost
  *   and connectedPort.
- * Listen on the port to read an entire binary XML encoded element and call
+ * @param {string|object} host The host to connect to. However, if host is not a string, assume it is an
+ * nsISocketTransport which is already configured for a host and port, in which case ignore port and set 
+ * connectedHost and connectedPort to host.host and host.port .
+ * @param {number} port The port number to connect to.  If host is an nsISocketTransport then this is ignored.
+ * @param {object} elementListener Listen on the port to read an entire binary XML encoded element and call
  *    elementListener.onReceivedElement(element).
  */
 XpcomTransport.prototype.connectHelper = function(host, port, elementListener) 
@@ -59,14 +63,22 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
     this.socket = null;
   }
 
-  var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
-        (Components.interfaces.nsISocketTransportService);
   var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
-  this.socket = transportService.createTransport(null, 0, host, port, null);
-  if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
-  this.connectedHost = host;
-  this.connectedPort = port;
+  if (typeof host == 'string') {
+    var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
+          (Components.interfaces.nsISocketTransportService);
+    this.socket = transportService.createTransport(null, 0, host, port, null);
+    if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
+    this.connectedHost = host;
+    this.connectedPort = port;
+  }
+  else if (typeof host == 'object') {
+    // Assume host is an nsISocketTransport which is already configured for a host and port.
+    this.socket = host;
+    this.connectedHost = this.socket.host;
+    this.connectedPort = this.socket.port;
+  }
   this.outStream = this.socket.openOutputStream(1, 0, 0);
 
   var inStream = this.socket.openInputStream(0, 0, 0);
