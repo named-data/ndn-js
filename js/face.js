@@ -175,14 +175,29 @@ var RegisteredPrefix = function RegisteredPrefix(prefix, closure)
   this.closure = closure;  // Closure
 };
 
+/**
+ * Find the first entry from Face.registeredPrefixTable where the entry prefix is the longest that matches name.
+ * @param {Name} name The name to find the PrefixEntry for (from the incoming interest packet).
+ * @returns {object} The entry from Face.registeredPrefixTable, or 0 if not found.
+ */
 function getEntryForRegisteredPrefix(name) 
 {
+  var iResult = -1;
+  
   for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
     if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
-    if (Face.registeredPrefixTable[i].prefix.match(name))
-      return Face.registeredPrefixTable[i];
+    if (Face.registeredPrefixTable[i].prefix.match(name)) {
+      if (iResult < 0 || 
+          Face.registeredPrefixTable[i].prefix.size() > Face.registeredPrefixTable[iResult].prefix.size())
+        // Update to the longer match.
+        iResult = i;
+    }
   }
-  return null;
+  
+  if (iResult >= 0)
+    return Face.registeredPrefixTable[iResult];
+  else
+    return null;
 }
 
 /**
