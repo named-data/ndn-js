@@ -15,17 +15,17 @@
  */
 var XpcomTransport = function XpcomTransport() 
 {
-    this.elementListener = null;
-    this.socket = null; // nsISocketTransport
-    this.outStream = null;
-    this.connectedHost = null; // Read by Face.
-    this.connectedPort = null; // Read by Face.
-    
-    this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
-        (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
-          "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
-         // Connect to port 9695 until the testbed hubs use NDNx.
-         9695);
+  this.elementListener = null;
+  this.socket = null; // nsISocketTransport
+  this.outStream = null;
+  this.connectedHost = null; // Read by Face.
+  this.connectedPort = null; // Read by Face.
+
+  this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
+      (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
+        "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
+       // Connect to port 9695 until the testbed hubs use NDNx.
+       9695);
 };
 
 /**
@@ -36,10 +36,10 @@ var XpcomTransport = function XpcomTransport()
  */
 XpcomTransport.prototype.connect = function(face, onopenCallback) 
 {
-    this.elementListener = face;
-    this.connectHelper(face.host, face.port, face);
-    
-    onopenCallback();
+  this.elementListener = face;
+  this.connectHelper(face.host, face.port, face);
+
+  onopenCallback();
 };
 
 /**
@@ -50,28 +50,28 @@ XpcomTransport.prototype.connect = function(face, onopenCallback)
  */
 XpcomTransport.prototype.connectHelper = function(host, port, elementListener) 
 {
-    if (this.socket != null) {
-        try {
-            this.socket.close(0);
-        } catch (ex) {
+  if (this.socket != null) {
+    try {
+        this.socket.close(0);
+    } catch (ex) {
       console.log("XpcomTransport socket.close exception: " + ex);
     }
-        this.socket = null;
-    }
+    this.socket = null;
+  }
 
   var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
         (Components.interfaces.nsISocketTransportService);
   var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
   this.socket = transportService.createTransport(null, 0, host, port, null);
-    if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
-    this.connectedHost = host;
-    this.connectedPort = port;
-    this.outStream = this.socket.openOutputStream(1, 0, 0);
+  if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
+  this.connectedHost = host;
+  this.connectedPort = port;
+  this.outStream = this.socket.openOutputStream(1, 0, 0);
 
-    var inStream = this.socket.openInputStream(0, 0, 0);
+  var inStream = this.socket.openInputStream(0, 0, 0);
   var dataListener = {
-        elementReader: new BinaryXmlElementReader(elementListener),
+    elementReader: new BinaryXmlElementReader(elementListener),
     
     onStartRequest: function(request, context) {
     },
@@ -80,17 +80,17 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
     onDataAvailable: function(request, context, _inputStream, offset, count) {
       try {
         // Use readInputStreamToString to handle binary data.
-                // TODO: Can we go directly from the stream to Buffer?
-                this.elementReader.onReceivedData(DataUtils.toNumbersFromString
-                    (NetUtil.readInputStreamToString(inStream, count)));
+        // TODO: Can we go directly from the stream to Buffer?
+        this.elementReader.onReceivedData(DataUtils.toNumbersFromString
+          (NetUtil.readInputStreamToString(inStream, count)));
       } catch (ex) {
         console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
       }
     }
-    };
+  };
   
   pump.init(inStream, -1, -1, 0, 0, true);
-    pump.asyncRead(dataListener, null);
+  pump.asyncRead(dataListener, null);
 };
 
 /**
@@ -98,26 +98,26 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
  */
 XpcomTransport.prototype.send = function(/* Buffer */ data) 
 {
-    if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
-        console.log("XpcomTransport connection is not established.");
-        return;
-    }
-    
-    var rawDataString = DataUtils.toString(data);
-    try {
-        this.outStream.write(rawDataString, rawDataString.length);
-        this.outStream.flush();
-    } catch (ex) {
-        if (this.socket.isAlive())
-            // The socket is still alive. Assume there could still be incoming data. Just throw the exception.
-            throw ex;
-        
-        if (LOG > 0) 
-            console.log("XpcomTransport.send: Trying to reconnect to " + this.connectedHost + ":" + 
-                this.connectedPort + " and resend after exception: " + ex);
-        
-        this.connectHelper(this.connectedHost, this.connectedPort, this.elementListener);
-        this.outStream.write(rawDataString, rawDataString.length);
-        this.outStream.flush();
-    }
+  if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
+    console.log("XpcomTransport connection is not established.");
+    return;
+  }
+
+  var rawDataString = DataUtils.toString(data);
+  try {
+    this.outStream.write(rawDataString, rawDataString.length);
+    this.outStream.flush();
+  } catch (ex) {
+    if (this.socket.isAlive())
+      // The socket is still alive. Assume there could still be incoming data. Just throw the exception.
+      throw ex;
+
+    if (LOG > 0) 
+      console.log("XpcomTransport.send: Trying to reconnect to " + this.connectedHost + ":" + 
+                  this.connectedPort + " and resend after exception: " + ex);
+
+    this.connectHelper(this.connectedHost, this.connectedPort, this.elementListener);
+    this.outStream.write(rawDataString, rawDataString.length);
+    this.outStream.flush();
+  }
 };
