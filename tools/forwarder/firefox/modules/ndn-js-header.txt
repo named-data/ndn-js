@@ -8,32 +8,32 @@
  * See COPYING for copyright and distribution information.
  */
 
-var EXPORTED_SYMBOLS = ["Closure", "Data", "DataUtils", "Exclude", "ExponentialReExpressClosure",
-    "Interest", "MimeTypes", "Face", "Name", "Sha256", "XpcomTransport", "Buffer"];
+var EXPORTED_SYMBOLS = ["BinaryXMLDecoder", "Data", "DataUtils", "Interest", "Face", "LOG", "Name", "NDNProtocolDTags",
+  "XpcomTransport", "Buffer"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
 
 // jsbn.js needs the navigator object which isn't defined in XPCOM, so make a local hack.
 var navigator = {
-    appName: "Netscape"
+  appName: "Netscape"
 };
 
 // Some code calls console.log without checking LOG>0.  Until this is cleaned up, make a local hack console.
 var console = {
-    log: function(message) {
-        dump(message);
-        dump("\n");
-    }
+  log: function(message) {
+    dump(message);
+    dump("\n");
+  }
 };
 
 // The Face class uses setTimeout and clearTimeout, so define them using XPCOM.
 function setTimeout(callback, delay) {
-    var timer = Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
-    timer.initWithCallback({notify: callback}, delay, Components.interfaces.nsITimer.TYPE_ONE_SHOT);
-    return timer;
+  var timer = Components.classes["@mozilla.org/timer;1"].createInstance(Components.interfaces.nsITimer);
+  timer.initWithCallback({notify: callback}, delay, Components.interfaces.nsITimer.TYPE_ONE_SHOT);
+  return timer;
 }
 
 function clearTimeout(timer) {
-    timer.cancel();
+  timer.cancel();
 }
