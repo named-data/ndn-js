@@ -20,6 +20,7 @@ var XpcomTransport = function XpcomTransport()
   this.outStream = null;
   this.connectedHost = null; // Read by Face.
   this.connectedPort = null; // Read by Face.
+  this.httpListener = null;
 
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
     // Connect directly to borges until the DNS is updated with new testbed hubs.
@@ -83,9 +84,11 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
   }
   this.outStream = this.socket.openOutputStream(1, 0, 0);
 
+  var thisXpcomTransport = this;
   var inStream = this.socket.openInputStream(0, 0, 0);
   var dataListener = {
     elementReader: new BinaryXmlElementReader(elementListener),
+    gotFirstData: false,
     
     onStartRequest: function(request, context) {
     },
@@ -95,8 +98,23 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
       try {
         // Use readInputStreamToString to handle binary data.
         // TODO: Can we go directly from the stream to Buffer?
-        this.elementReader.onReceivedData(DataUtils.toNumbersFromString
-          (NetUtil.readInputStreamToString(inStream, count)));
+        var inputString = NetUtil.readInputStreamToString(inStream, count);
+        if (!this.gotFirstData) {
+          // Check if the connection is from a non-NDN source.
+          this.gotFirstData = true;
+          if (inputString.substring(0, 4) == "GET ") {
+            // Assume this is the start of an HTTP header.
+            // Set elementReader null so we ignore further input.
+            if (LOG > 0) console.log("XpcomTransport: Got HTTP header. Ignoring the NDN element reader.");
+            this.elementReader = null;
+            
+            if (thisXpcomTransport.httpListener != null)
+              thisXpcomTransport.httpListener.onHttpRequest(thisXpcomTransport, inputString);
+          }
+        }
+        
+        if (this.elementReader != null)
+          this.elementReader.onReceivedData(DataUtils.toNumbersFromString(inputString));
       } catch (ex) {
         console.log("XpcomTransport.onDataAvailable exception: " + ex + "\n" + ex.stack);
       }
@@ -134,4 +152,14 @@ XpcomTransport.prototype.send = function(/* Buffer */ data)
     this.outStream.write(rawDataString, rawDataString.length);
     this.outStream.flush();
   }
+};
+
+/**
+ * If the first data received on the connection is an HTTP request, call listener.onHttpRequest(transport, request)
+ * where transport is this transport object and request is a string with the request.
+ * @param {object} listener An object with onHttpRequest, or null to not respond to HTTP messages.
+ */
+XpcomTransport.prototype.setHttpListener = function(listener)
+{
+  this.httpListener = listener;
 };

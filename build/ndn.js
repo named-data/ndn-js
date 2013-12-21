@@ -2646,17 +2646,17 @@ var LOG = require('../log.js').Log.LOG;
  */
 var WebSocketTransport = function WebSocketTransport() 
 {    
-    if (!WebSocket)
-        throw new Error("WebSocket support is not available on this platform.");
+  if (!WebSocket)
+    throw new Error("WebSocket support is not available on this platform.");
     
   this.ws = null;
-    this.connectedHost = null; // Read by Face.
-    this.connectedPort = null; // Read by Face.
-    this.elementReader = null;
-    this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
-        (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
-          "E.ws.ndn.ucla.edu"],
-         9696);
+  this.connectedHost = null; // Read by Face.
+  this.connectedPort = null; // Read by Face.
+  this.elementReader = null;
+  this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
+    (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
+      "E.ws.ndn.ucla.edu"],
+     9696);
 };
 
 exports.WebSocketTransport = WebSocketTransport;
@@ -2679,7 +2679,7 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
   
   this.ws.binaryType = "arraybuffer";
   
-    this.elementReader = new BinaryXmlElementReader(face);
+  this.elementReader = new BinaryXmlElementReader(face);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
@@ -2687,14 +2687,15 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
       
     if (result == null || result == undefined || result == "") {
       console.log('INVALID ANSWER');
-    } else if (result instanceof ArrayBuffer) {
-          var bytearray = new Buffer(result);
+    } 
+    else if (result instanceof ArrayBuffer) {
+      var bytearray = new Buffer(result);
           
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
       
       try {
-                // Find the end of the binary XML element and call face.onReceivedElement.
-                self.elementReader.onReceivedData(bytearray);
+        // Find the end of the binary XML element and call face.onReceivedElement.
+        self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);
         return;
@@ -2706,9 +2707,9 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
     if (LOG > 3) console.log(ev);
     if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
     if (LOG > 3) console.log('ws.onopen: ReadyState: ' + this.readyState);
-        // Face.registerPrefix will fetch the ndndid when needed.
-        
-        onopenCallback();
+    // Face.registerPrefix will fetch the ndndid when needed.
+
+    onopenCallback();
   }
   
   this.ws.onerror = function(ev) {
@@ -2734,16 +2735,16 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
 WebSocketTransport.prototype.send = function(data) 
 {
   if (this.ws != null) {
-        // If we directly use data.buffer to feed ws.send(), 
-        // WebSocket may end up sending a packet with 10000 bytes of data.
-        // That is, WebSocket will flush the entire buffer
-        // regardless of the offset of the Uint8Array. So we have to create
-        // a new Uint8Array buffer with just the right size and copy the 
-        // content from binaryInterest to the new buffer.
-        //    ---Wentao
-        var bytearray = new Uint8Array(data.length);
-        bytearray.set(data);
-        this.ws.send(bytearray.buffer);
+    // If we directly use data.buffer to feed ws.send(), 
+    // WebSocket may end up sending a packet with 10000 bytes of data.
+    // That is, WebSocket will flush the entire buffer
+    // regardless of the offset of the Uint8Array. So we have to create
+    // a new Uint8Array buffer with just the right size and copy the 
+    // content from binaryInterest to the new buffer.
+    //    ---Wentao
+    var bytearray = new Uint8Array(data.length);
+    bytearray.set(data);
+    this.ws.send(bytearray.buffer);
     if (LOG > 3) console.log('ws.send() returned.');
   }
   else
