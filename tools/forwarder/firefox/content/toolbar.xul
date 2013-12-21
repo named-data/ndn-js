@@ -8,7 +8,8 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <toolbar id="ForwarderToolbar" toolbarname="forwarderToolbar" >
       <label value="Forwarder"/>
       <toolbarseparator/>
-      <label id="forwaderLabel" value="not connected"/>
+      <toolbarbutton id="forwarderToolbarStatsButton"
+        label="Stats" oncommand="gBrowser.contentDocument.location.href='http://localhost:6363'"/>
   </toolbar>
 </toolbox>
 

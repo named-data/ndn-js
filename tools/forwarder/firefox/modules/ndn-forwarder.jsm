@@ -27,6 +27,9 @@ var ForwarderFace = function ForwarderFace(host, port, registeredPrefix)
 {
   this.transport = new XpcomTransport();
   this.transport.connectHelper(host, port, this);
+  // An HTTP request will be redirected to this.onHttpRequest.
+  this.transport.setHttpListener(this);
+  
   this.registeredPrefix = registeredPrefix;
 };
 
@@ -72,6 +75,29 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   }    
 };
 
+ForwarderFace.prototype.onHttpRequest = function(transport, request)
+{
+  // Remove the FIB entry with this transport since it is not NDN.
+  for (var i = FIB.length - 1; i >= 0; --i) {
+    if (FIB[i].transport == transport)
+      FIB.splice(i, 1);
+  }
+  
+  var response = "<html><title>NDN Forwarder</title><body>\r\n";
+  
+  response += "<h4>Faces</h4><ul>\r\n";
+  for (var i = 0; i < FIB.length; ++i)
+    response += "<li>" + FIB[i].transport.connectedHost + ":" + FIB[i].transport.connectedPort + 
+      (FIB[i].registeredPrefix == null ? "" : " " + FIB[i].registeredPrefix.toUri()) + "</li>\r\n";
+  response += "</ul>\r\n";        
+          
+  response += "\r\n</body></html>\r\n";
+  
+  transport.send(DataUtils.toNumbersFromString
+    ("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nContent-Length: " +
+     response.length + "\r\n\r\n" + response));
+};
+
 var socketListener = {
   onSocketAccepted: function(aServer, socket) {
     if (LOG > 3) dump("Accepted connection from " + socket.host + ":" + socket.port + "\n");
@@ -84,4 +110,5 @@ var serverSocket = Cc["@mozilla.org/network/server-socket;1"].createInstance(Ci.
 serverSocket.init(6363, true, -1);
 serverSocket.asyncListen(socketListener);
 
-FIB.push(new ForwarderFace("borges.metwi.ucla.edu", 9695, new Name("/")));
+// For now, hard code an initial forwarding connection.
+FIB.push(new ForwarderFace("borges.metwi.ucla.edu", 9695, new Name("/ndn")));
