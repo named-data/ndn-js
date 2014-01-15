@@ -6,12 +6,21 @@
 
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var BinaryXMLDecoder = require('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var Closure = require('../closure.js').Closure;
 var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Name = require('../name.js').Name;
 
-// Create a namespace.
-var NameEnumeration = new Object();
+/**
+ * Create a context for getting the response from the name enumeration command, as neede by getComponents.
+ * (To do name enumeration, call the static method NameEnumeration.getComponents.)
+ * @param {Face} face The Face object for using expressInterest.
+ * @param {function} onComponents The onComponents callback given to getComponents.
+ */
+var NameEnumeration = function NameEnumeration(face, onComponents) 
+{
+  this.face = face;
+  this.onComponents = onComponents;
+  this.contentParts = [];
+};
 
 exports.NameEnumeration = NameEnumeration;
 
@@ -28,79 +37,71 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
-  // TODO: Use expressInterest with callbacks, not Closure.
-  face.expressInterest(command, new NameEnumeration.Closure(face, onComponents));
-};
-
-/**
- * Create a closure for getting the response from the name enumeration command.
- * @param {Face} face The Face object for using expressInterest.
- * @param {function} onComponents The onComponents callback given to getComponents.
- */
-NameEnumeration.Closure = function NameEnumerationClosure(face, onComponents) 
-{
-  // Inherit from Closure.
-  Closure.call(this);
-  
-  this.face = face;
-  this.onComponents = onComponents;
-  this.contentParts = [];
+  var enumeration = new NameEnumeration(face, onComponents);
+  face.expressInterest
+    (command, function(interest, data) { enumeration.onData(interest, data); },
+     function(interest) { enumeration.onTimeout(interest); });
 };
 
 /**
  * Parse the response from the name enumeration command and call this.onComponents.
  * @param {number} kind
  * @param {UpcallInfo} upcallInfo
- * @returns {Closure.RESULT_OK}
  */
-NameEnumeration.Closure.prototype.upcall = function(kind, upcallInfo) 
+NameEnumeration.prototype.onData = function(interest, data) 
 {
   try {
-    if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
-      var data = upcallInfo.data;
-      
-      if (!NameEnumeration.endsWithSegmentNumber(data.name))
-        // We don't expect a name without a segment number.  Treat it as a bad packet.
-        this.onComponents(null);
+    if (!NameEnumeration.endsWithSegmentNumber(data.name))
+      // We don't expect a name without a segment number.  Treat it as a bad packet.
+      this.onComponents(null);
+    else {
+      var segmentNumber = DataUtils.bigEndianToUnsignedInt
+          (data.name.get(data.name.size() - 1).getValue());
+
+      // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
+      var expectedSegmentNumber = this.contentParts.length;
+      if (segmentNumber != expectedSegmentNumber)
+        // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
+        this.face.expressInterest
+          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber), 
+           function(interest, data) { this.onData(interest, data); },
+           function(interest) { this.onTimeout(interest); });
       else {
-        var segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.get(data.name.size() - 1).getValue());
-        
-        // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
-        var expectedSegmentNumber = this.contentParts.length;
-        if (segmentNumber != expectedSegmentNumber)
-          // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
-          // TODO: Use expressInterest with callbacks, not Closure.
-          this.face.expressInterest
-            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber), this);
-        else {
-          // Save the content and check if we are finished.
-          this.contentParts.push(data.content);
-          
-          if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
-            var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
-            if (segmentNumber == finalSegmentNumber) {
-              // We are finished.  Parse and return the result.
-              this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
-              return;
-            }
+        // Save the content and check if we are finished.
+        this.contentParts.push(data.content);
+
+        if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
+          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+          if (segmentNumber == finalSegmentNumber) {
+            // We are finished.  Parse and return the result.
+            this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
+            return;
           }
-          
-          // Fetch the next segment.
-          // TODO: Use expressInterest with callbacks, not Closure.
-          this.face.expressInterest
-            (data.name.getPrefix(data.name.size() - 1).addSegment(expectedSegmentNumber + 1), this);
         }
+
+        // Fetch the next segment.
+        this.face.expressInterest
+          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber + 1), 
+           function(interest, data) { this.onData(interest, data); },
+           function(interest) { this.onTimeout(interest); });
       }
     }
-    else
-      // Treat anything else as a timeout.
-      this.onComponents(null);
   } catch (ex) {
     console.log("NameEnumeration: ignoring exception: " + ex);
   }
+};
 
-  return Closure.RESULT_OK;
+/**
+ * Just call onComponents(null).
+ * @param {type} interest
+ */
+NameEnumeration.prototype.onTimeout = function(interest)
+{
+  try {
+    this.onComponents(null);
+  } catch (ex) {
+    console.log("NameEnumeration: ignoring exception: " + ex);
+  }
 };
 
 /**
@@ -139,4 +140,4 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
   return name.components != null && name.size() >= 1 &&
          name.get(name.size() - 1).getValue().length >= 1 &&
          name.get(name.size() - 1).getValue()[0] == 0;
-}
+};
