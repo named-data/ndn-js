@@ -2512,6 +2512,10 @@ var NameEnumeration = function NameEnumeration(face, onComponents)
   this.face = face;
   this.onComponents = onComponents;
   this.contentParts = [];
+  
+  var self = this;
+  this.onData = function(interest, data) { self.processData(data); };
+  this.onTimeout = function(interest) { self.processTimeout(); };
 };
 
 exports.NameEnumeration = NameEnumeration;
@@ -2530,17 +2534,14 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
   
   var enumeration = new NameEnumeration(face, onComponents);
-  face.expressInterest
-    (command, function(interest, data) { enumeration.onData(interest, data); },
-     function(interest) { enumeration.onTimeout(interest); });
+  face.expressInterest(command, enumeration.onData, enumeration.onTimeout);
 };
 
 /**
  * Parse the response from the name enumeration command and call this.onComponents.
- * @param {number} kind
- * @param {UpcallInfo} upcallInfo
+ * @param {Data} data
  */
-NameEnumeration.prototype.onData = function(interest, data) 
+NameEnumeration.prototype.processData = function(data) 
 {
   try {
     if (!NameEnumeration.endsWithSegmentNumber(data.name))
@@ -2555,9 +2556,7 @@ NameEnumeration.prototype.onData = function(interest, data)
       if (segmentNumber != expectedSegmentNumber)
         // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber), 
-           function(interest, data) { this.onData(interest, data); },
-           function(interest) { this.onTimeout(interest); });
+          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
         this.contentParts.push(data.content);
@@ -2573,9 +2572,7 @@ NameEnumeration.prototype.onData = function(interest, data)
 
         // Fetch the next segment.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber + 1), 
-           function(interest, data) { this.onData(interest, data); },
-           function(interest) { this.onTimeout(interest); });
+          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
       }
     }
   } catch (ex) {
@@ -2585,9 +2582,8 @@ NameEnumeration.prototype.onData = function(interest, data)
 
 /**
  * Just call onComponents(null).
- * @param {type} interest
  */
-NameEnumeration.prototype.onTimeout = function(interest)
+NameEnumeration.prototype.processTimeout = function()
 {
   try {
     this.onComponents(null);
