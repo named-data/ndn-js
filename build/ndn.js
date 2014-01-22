@@ -3312,11 +3312,26 @@ Name.prototype.size = function()
 };
 
 /**
- * Return a new Name.Component of the component at i.  To get just the component value, use get(i).getValue().
+ * Return a new Name.Component of the component at the given index.  To get just the component value, use get(i).getValue().
+ * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
+ * at size() - (-i).
+ * @returns {Name.Component}
  */
 Name.prototype.get = function(i) 
 {
-  return new Name.Component(this.components[i]);
+  if (i >= 0) {
+    if (i >= this.components.length)
+      throw new Error("Name.get: Index is out of bounds");
+
+    return new Name.Component(this.components[i]);
+  }
+  else {
+    // Negative index.
+    if (i < -this.components.length)
+      throw new Error("Name.get: Index is out of bounds");
+
+    return new Name.Component(this.components[this.components.length - (-i)]);
+  }
 };
 
 /**
