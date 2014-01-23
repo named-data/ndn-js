@@ -3,6 +3,14 @@ wsproxy
 
 WebSocket proxy server between NDN javascript stack and ndnd.
 
+
+NOTE - this is legacy; there is a cpp-based wsproxy that has no nodejs dependency. 
+https://github.com/named-data/wsproxy-cpp
+for new installs, use that instead ! 
+meanwhile, instructions below for node-js version. 
+
+
+
 This proxy runs on top of 'node.js'. 'ws' and 'node-getopt' packages are required. It listens for WebSocket connection request on port number 9696. Once it receives a incoming connection, it issues a TCP connection to the specified 'ndnd' router (port number 6363). It then translates packet frames from WebSocket to pure TCP byte streams and vice versa.
 
 Installation guide:
