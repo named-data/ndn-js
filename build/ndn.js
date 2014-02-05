@@ -543,7 +543,6 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
 
 /**
  * Create a DynamicBuffer where this.array is a Buffer of size length.
- * The methods will update this.length.
  * To access the array, use this.array or call slice.
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
@@ -554,14 +553,13 @@ var DynamicBuffer = function DynamicBuffer(length)
     length = 16;
     
   this.array = new Buffer(length);
-  this.length = length;
 };
 
 exports.DynamicBuffer = DynamicBuffer;
 
 /**
  * Ensure that this.array has the length, reallocate and copy if necessary.
- * Update this.length which may be greater than length.
+ * Update the length of this.array which may be greater than length.
  */
 DynamicBuffer.prototype.ensureLength = function(length) 
 {
@@ -577,7 +575,6 @@ DynamicBuffer.prototype.ensureLength = function(length)
   var newArray = new Buffer(newLength);
   this.array.copy(newArray);
   this.array = newArray;
-  this.length = newLength;
 };
 
 /**
