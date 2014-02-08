@@ -1,7 +1,7 @@
 /**
  * This class is used to decode ndnb binary elements (blob, type/value pairs).
  * 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */

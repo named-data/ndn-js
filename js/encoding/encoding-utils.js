@@ -1,6 +1,6 @@
 /**
  * This file contains utilities to help encode and decode NDN objects.
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
