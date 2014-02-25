@@ -7,6 +7,7 @@
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * @constructor
@@ -53,7 +54,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
 
   this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
-    throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+    throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 };
 
 PublisherID.prototype.to_ndnb = function(encoder) 

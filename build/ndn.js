@@ -1065,6 +1065,29 @@ Date.prototype.format = function(mask, utc) {
   return dateFormat(this, mask, utc);
 };
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * Create a new DecodingException wrapping the given error object.
+ * Call with: throw new DecodingException(new Error("message")).
+ * @constructor
+ * @param {string} error The exception created with new Error.
+ */
+function DecodingException(error) 
+{
+  this.message = error.message;
+  // Copy lineNumber, etc. from where new Error was called.
+  for (var prop in error)
+      this[prop] = error[prop];
+}
+DecodingException.prototype = new Error();
+DecodingException.prototype.name = "DecodingException";
+
+exports.DecodingException = DecodingException;
+/**
  * This class is used to encode ndnb binary elements (blob, type/value pairs).
  * 
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -1508,6 +1531,7 @@ BinaryXMLEncoder.prototype.getReducedOstream = function()
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var NDNTime = require('../util/ndn-time.js').NDNTime;
 var DataUtils = require('./data-utils.js').DataUtils;
+var DecodingException = require('./decoding-exception.js').DecodingException;
 var LOG = require('../log.js').Log.LOG;
 
 var XML_EXT = 0x00; 
@@ -1600,7 +1624,7 @@ BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
   if (this.offset == this.previouslyPeekedDTagStartOffset) {
     // peekDTag already decoded this DTag.
     if (this.previouslyPeekedDTag != expectedTag)
-      throw new ContentDecodingException(new Error("Did not get the expected DTAG " + expectedTag + ", got " + this.previouslyPeekedDTag));
+      throw new DecodingException(new Error("Did not get the expected DTAG " + expectedTag + ", got " + this.previouslyPeekedDTag));
 
     // Fast forward past the header.
     this.offset = this.previouslyPeekedDTagEndOffset;
@@ -1608,10 +1632,10 @@ BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
   else {
     var typeAndValue = this.decodeTypeAndVal();
     if (typeAndValue == null || typeAndValue.type() != XML_DTAG)
-      throw new ContentDecodingException(new Error("Header type is not a DTAG"));
+      throw new DecodingException(new Error("Header type is not a DTAG"));
 
     if (typeAndValue.val() != expectedTag)
-      throw new ContentDecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
+      throw new DecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
   }  
 };
 
@@ -1629,7 +1653,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
   var tv = this.decodeTypeAndVal();
       
   if (null == tv)
-    throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
+    throw new DecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
       
   //String 
   var decodedTag = null;
@@ -1650,7 +1674,7 @@ BinaryXMLDecoder.prototype.readStartElement = function(
       
   if (null ==  decodedTag || decodedTag != startTag) {
     console.log('expecting '+ startTag + ' but got '+ decodedTag);
-    throw new ContentDecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
+    throw new DecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
   }
       
   // DKS: does not read attributes out of stream if caller doesn't
@@ -1696,7 +1720,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
         // DKS TODO are attributes same or different dictionary?
         attributeName = tagToString(thisTV.val());
         if (null == attributeName)
-          throw new ContentDecodingException(new Error("Unknown DATTR value" + thisTV.val()));
+          throw new DecodingException(new Error("Unknown DATTR value" + thisTV.val()));
       }
       
       // Attribute values are always UDATA
@@ -1708,7 +1732,7 @@ BinaryXMLDecoder.prototype.readAttributes = function(
     }
   } 
   catch (e) {
-    throw new ContentDecodingException(new Error("readStartElement", e));
+    throw new DecodingException(new Error("readStartElement", e));
   }
 };
 
@@ -1750,7 +1774,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsString = function()
     } 
     catch (e) {
       Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-      throw new ContentDecodingException(new Error("Cannot reset stream! " + e.getMessage(), e));
+      throw new DecodingException(new Error("Cannot reset stream! " + e.getMessage(), e));
     }
   }
   
@@ -1816,7 +1840,7 @@ BinaryXMLDecoder.prototype.peekStartElement = function(
     return false;
   }
   else
-    throw new ContentDecodingException(new Error("SHOULD BE STRING OR NUMBER"));
+    throw new DecodingException(new Error("SHOULD BE STRING OR NUMBER"));
 };
 
 /**
@@ -1838,7 +1862,7 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
     if (null != tv) {
       if (tv.type() == XML_TAG) {
         if (tv.val() + 1 > DEBUG_MAX_LEN)
-          throw new ContentDecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!"));
+          throw new DecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!"));
 
         var valval;
         if (typeof tv.val() == 'string')
@@ -1912,7 +1936,7 @@ BinaryXMLDecoder.prototype.readElementClose = function()
 {
   var next = this.input[this.offset++];     
   if (next != XML_CLOSE)
-    throw new ContentDecodingException(new Error("Expected end element, got: " + next));
+    throw new DecodingException(new Error("Expected end element, got: " + next));
 };
 
 /**
@@ -1931,7 +1955,7 @@ BinaryXMLDecoder.prototype.readEndElement = function()
   
   if (next != XML_CLOSE) {
     console.log("Expected end element, got: " + next);
-    throw new ContentDecodingException(new Error("Expected end element, got: " + next));
+    throw new DecodingException(new Error("Expected end element, got: " + next));
   }
 };
 
@@ -1979,7 +2003,7 @@ BinaryXMLDecoder.prototype.readDateTimeDTagElement = function(expectedTag)
 
   var timestamp = new NDNTime(lontimestamp);  
   if (null == timestamp)
-    throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
+    throw new DecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
 
   return timestamp;
 };
@@ -2004,7 +2028,7 @@ BinaryXMLDecoder.prototype.readDateTime = function(
   //NDNTime 
   var timestamp = new NDNTime(lontimestamp);  
   if (null == timestamp)
-    throw new ContentDecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
+    throw new DecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
 
   return timestamp;
 };
@@ -2190,7 +2214,7 @@ BinaryXMLDecoder.prototype.readUTF8Element = function(
     //TreeMap<String, String> 
     attributes) 
 {
-  //throws Error where name == "ContentDecodingException" 
+  //throws Error where name == "DecodingException" 
 
   // can't use getElementText, can't get attributes
   this.readStartElement(startTag, attributes);
@@ -2207,19 +2231,6 @@ BinaryXMLDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
 };
-
-/*
- * Call with: throw new ContentDecodingException(new Error("message")).
- */
-function ContentDecodingException(error) 
-{
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
-      this[prop] = error[prop];
-}
-ContentDecodingException.prototype = new Error();
-ContentDecodingException.prototype.name = "ContentDecodingException";
 /**
  * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to 
  * determine its end.
@@ -2946,6 +2957,7 @@ PublisherPublicKeyDigest.prototype.validate = function()
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * @constructor
@@ -2992,7 +3004,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
 
   this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
-    throw new ContentDecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+    throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 };
 
 PublisherID.prototype.to_ndnb = function(encoder) 
@@ -4917,7 +4929,7 @@ ForwardingEntry.CAPTURE_OK   = 128;
 ForwardingEntry.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 
-  //throws ContentDecodingException
+  //throws DecodingException
 {
   decoder.readElementStartDTag(this.getElementLabel());
   if (decoder.peekDTag(NDNProtocolDTags.Action))

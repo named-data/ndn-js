@@ -43,7 +43,7 @@ ForwardingEntry.CAPTURE_OK   = 128;
 ForwardingEntry.prototype.from_ndnb = function(
   //XMLDecoder 
   decoder) 
-  //throws ContentDecodingException
+  //throws DecodingException
 {
   decoder.readElementStartDTag(this.getElementLabel());
   if (decoder.peekDTag(NDNProtocolDTags.Action))
