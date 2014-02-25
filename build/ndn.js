@@ -1,5 +1,5 @@
 /** 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  */
@@ -266,7 +266,7 @@ exports.createVerify = function(alg)
   return obj;
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -286,7 +286,7 @@ exports.Log = Log;
  */
 Log.LOG = 0;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class contains all NDNx tags
@@ -442,7 +442,7 @@ var NDNProtocolDTagsStrings = [
 
 exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents NDNTime Objects
@@ -473,7 +473,7 @@ NDNTime.prototype.getJavascriptDate = function()
   return d
 };  
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This is the closure class for use in expressInterest to re express with exponential falloff.
@@ -535,7 +535,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
   }
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * Encapsulate a Buffer and support dynamic reallocation.
@@ -560,6 +560,7 @@ exports.DynamicBuffer = DynamicBuffer;
 /**
  * Ensure that this.array has the length, reallocate and copy if necessary.
  * Update the length of this.array which may be greater than length.
+ * @param {number} length The minimum length for the array.
  */
 DynamicBuffer.prototype.ensureLength = function(length) 
 {
@@ -579,8 +580,10 @@ DynamicBuffer.prototype.ensureLength = function(length)
 
 /**
  * Copy the value to this.array at offset, reallocating if necessary. 
+ * @param {Buffer} value The buffer to copy.
+ * @param {number} offset The offset in the buffer to start copying into.
  */
-DynamicBuffer.prototype.set = function(value, offset) 
+DynamicBuffer.prototype.copy = function(value, offset) 
 {
   this.ensureLength(value.length + offset);
     
@@ -592,7 +595,52 @@ DynamicBuffer.prototype.set = function(value, offset)
 };
 
 /**
+ * Ensure that this.array has the length. If necessary, reallocate the array
+ *   and shift existing data to the back of the new array.
+ * Update the length of this.array which may be greater than length.
+ * @param {number} length The minimum length for the array.
+ */
+DynamicBuffer.prototype.ensureLengthFromBack = function(length) 
+{
+  if (this.array.length >= length)
+    return;
+    
+  // See if double is enough.
+  var newLength = this.array.length * 2;
+  if (length > newLength)
+    // The needed length is much greater, so use it.
+    newLength = length;
+    
+  var newArray = new Buffer(newLength);
+  // Copy to the back of newArray.
+  this.array.copy(newArray, newArray.length - this.array.length);
+  this.array = newArray;
+};
+
+/**
+ * First call ensureLengthFromBack to make sure the bytearray has
+ * offsetFromBack bytes, then copy value into the array starting
+ * offsetFromBack bytes from the back of the array.
+ * @param {Buffer} value The buffer to copy.
+ * @param {offsetFromBack} offset The offset from the back of the array to start
+ * copying.
+ */
+DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack) 
+{
+  this.ensureLengthFromBack(offsetFromBack);
+
+  if (typeof value == 'object' && value instanceof Buffer)
+    value.copy(this.array, this.array.length - offsetFromBack);
+  else
+    // Need to make value a Buffer to copy.
+    new Buffer(value).copy(this.array, this.array.length - offsetFromBack);
+};
+
+/**
  * Return this.array.slice(begin, end);
+ * @param {number} begin The begin index for the slice.
+ * @param {number} end The end index for the slice.
+ * @returns {Buffer} The buffer slice.
  */
 DynamicBuffer.prototype.slice = function(begin, end) 
 {
@@ -601,7 +649,7 @@ DynamicBuffer.prototype.slice = function(begin, end)
 /**
  * This class contains utilities to help parse the data
  *
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
@@ -1019,7 +1067,7 @@ Date.prototype.format = function(mask, utc) {
 /**
  * This class is used to encode ndnb binary elements (blob, type/value pairs).
  * 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
@@ -1442,7 +1490,7 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 {  
   if (LOG > 4) console.log('GOING TO WRITE A BLOB');
     
-  this.ostream.set(blob, this.offset);
+  this.ostream.copy(blob, this.offset);
 };
 
 BinaryXMLEncoder.prototype.getReducedOstream = function() 
@@ -1452,7 +1500,7 @@ BinaryXMLEncoder.prototype.getReducedOstream = function()
 /**
  * This class is used to decode ndnb binary elements (blob, type/value pairs).
  * 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
@@ -2176,7 +2224,7 @@ ContentDecodingException.prototype.name = "ContentDecodingException";
  * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to 
  * determine its end.
  * 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -2271,7 +2319,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
             // We can't get all of the header bytes from this input. Save in headerBuffer.
             this.useHeaderBuffer = true;
             var nNewBytes = this.headerLength - startingHeaderLength;
-            this.headerBuffer.set(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+            this.headerBuffer.copy(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
               
             return false;
           }
@@ -2286,7 +2334,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         if (this.useHeaderBuffer) {
           // Copy the remaining bytes into headerBuffer.
           nNewBytes = this.headerLength - startingHeaderLength;
-          this.headerBuffer.set(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
+          this.headerBuffer.copy(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
 
           typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
         }
@@ -2366,7 +2414,7 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset)
   this.offset = offset;
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
@@ -2427,7 +2475,7 @@ WireFormat.prototype.decodeData = function(data, input)
 
 
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -2488,7 +2536,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data)
   }    
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -2627,7 +2675,7 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
          name.get(name.size() - 1).getValue()[0] == 0;
 };
 /** 
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  */
@@ -2745,7 +2793,7 @@ WebSocketTransport.prototype.send = function(data)
     console.log('WebSocket connection is not established.');
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -2753,7 +2801,7 @@ WebSocketTransport.prototype.send = function(data)
 // The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
 exports.TcpTransport = ndn.WebSocketTransport;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * Provide the callback closure for the async communication methods in the Face class.
@@ -2834,7 +2882,7 @@ UpcallInfo.prototype.toString = function()
 
 exports.UpcallInfo = UpcallInfo;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents PublisherPublicKeyDigest Objects
@@ -2890,7 +2938,7 @@ PublisherPublicKeyDigest.prototype.validate = function()
     return null != this.publisherPublicKeyDigest;
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Publisher and PublisherType Objects
@@ -2989,7 +3037,7 @@ PublisherID.prototype.validate = function()
   return null != id() && null != type();
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui, Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This class represents a Name as an array of components where each is a byte array.
@@ -3524,7 +3572,7 @@ Name.prototype.match = function(name)
   return true;
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
@@ -3594,7 +3642,7 @@ KeyManager.prototype.getKey = function()
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Data Objects
@@ -3960,7 +4008,7 @@ ContentObject.prototype = new Data();
 
 exports.ContentObject = ContentObject;
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
@@ -4400,7 +4448,7 @@ Interest.prototype.toUri = function()
   return result;
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Key Objects
@@ -4713,7 +4761,7 @@ KeyName.prototype.validate = function()
     return (null != this.contentName);
 };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Face Instances
@@ -4825,7 +4873,7 @@ FaceInstance.prototype.getElementLabel = function()
 };
 
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  * This class represents Forwarding Entries
@@ -4915,7 +4963,7 @@ ForwardingEntry.prototype.to_ndnb = function(
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -5082,7 +5130,7 @@ ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
  */  
 ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
@@ -5353,7 +5401,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
 };
 /**
  * This file contains utilities to help encode and decode NDN objects.
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
@@ -5619,7 +5667,7 @@ function encodeToBinaryInterest(interest) { return interest.encode(); }
  */
 function encodeToBinaryContentObject(data) { return data.encode(); }
 /**
- * Copyright (C) 2013 Regents of the University of California.
+ * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
  * See COPYING for copyright and distribution information.
  * This class represents the top-level object for communicating with an NDN host.

@@ -424,7 +424,7 @@ BinaryXMLEncoder.prototype.writeBlobArray = function(
 {  
   if (LOG > 4) console.log('GOING TO WRITE A BLOB');
     
-  this.ostream.set(blob, this.offset);
+  this.ostream.copy(blob, this.offset);
 };
 
 BinaryXMLEncoder.prototype.getReducedOstream = function() 
