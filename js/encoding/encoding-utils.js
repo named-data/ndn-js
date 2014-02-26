@@ -207,7 +207,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       // Already showed data.signedInfo.locator.publicKey above.
       output+= "<br />";
       
-      if (LOG > 2) console.log(" ContentName + SignedInfo + Content = "+input);
+      if (LOG > 2) console.log(" ContentName + MetaInfo + Content = "+input);
       if (LOG > 2) console.log(" PublicKeyHex = "+publickeyHex);
       if (LOG > 2) console.log(" PublicKeyString = "+publickeyString);
       

@@ -3619,6 +3619,319 @@ Name.prototype.match = function(name)
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
+ * This class represents Key Objects
+ */
+
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherID = require('./publisher-id.js').PublisherID;
+var LOG = require('./log.js').Log.LOG;
+
+/**
+ * @constructor
+ */
+/**
+ * Key
+ */
+var Key = function Key() 
+{
+  this.publicKeyDer = null;     // Buffer
+  this.publicKeyDigest = null;  // Buffer
+  this.publicKeyPem = null;     // String
+  this.privateKeyPem = null;    // String
+};
+
+exports.Key = Key;
+
+/**
+ * Helper functions to read Key fields
+ * TODO: generateRSA()
+ */
+
+Key.prototype.publicToDER = function() 
+{
+  return this.publicKeyDer;  // Buffer
+};
+
+Key.prototype.privateToDER = function() 
+{
+  // Remove the '-----XXX-----' from the beginning and the end of the key
+  // and also remove any \n in the key string
+  var lines = this.privateKeyPem.split('\n');
+  priKey = "";
+  for (var i = 1; i < lines.length - 1; i++)
+    priKey += lines[i];
+  
+  return new Buffer(priKey, 'base64');    
+};
+
+Key.prototype.publicToPEM = function() 
+{
+  return this.publicKeyPem;
+};
+
+Key.prototype.privateToPEM = function() 
+{
+  return this.privateKeyPem;
+};
+
+Key.prototype.getKeyID = function() 
+{
+  return this.publicKeyDigest;
+};
+
+exports.Key = Key;
+
+Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der) 
+{
+  if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
+
+  this.publicKeyDer = pub_der;
+
+  var hash = require("crypto").createHash('sha256');
+  hash.update(this.publicKeyDer);
+  this.publicKeyDigest = new Buffer(hash.digest());
+    
+  var keyStr = pub_der.toString('base64'); 
+  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+  for (var i = 0; i < keyStr.length; i += 64)
+  keyPem += (keyStr.substr(i, 64) + "\n");
+  keyPem += "-----END PUBLIC KEY-----";
+  this.publicKeyPem = keyPem;
+
+  if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);
+};
+
+/**
+ * Load RSA key pair from PEM-encoded strings.
+ * Will throw an Error if both 'pub' and 'pri' are null.
+ */
+Key.prototype.fromPemString = function(pub, pri) 
+{
+  if (pub == null && pri == null)
+    throw new Error('Cannot create Key object if both public and private PEM string is empty.');
+
+  // Read public key
+  if (pub != null) {
+    this.publicKeyPem = pub;
+    if (LOG > 4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
+  
+    // Remove the '-----XXX-----' from the beginning and the end of the public key
+    // and also remove any \n in the public key string
+    var lines = pub.split('\n');
+    pub = "";
+    for (var i = 1; i < lines.length - 1; i++)
+      pub += lines[i];
+    this.publicKeyDer = new Buffer(pub, 'base64');
+    if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
+  
+    var hash = require("crypto").createHash('sha256');
+    hash.update(this.publicKeyDer);
+    this.publicKeyDigest = new Buffer(hash.digest());
+    if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
+  }
+    
+  // Read private key
+  if (pri != null) {
+    this.privateKeyPem = pri;
+    if (LOG > 4) console.log("Key.privateKeyPem: \n" + this.privateKeyPem);
+  }
+};
+
+Key.prototype.fromPem = Key.prototype.fromPemString;
+
+/**
+ * Static method that create a Key object.
+ * Parameter 'obj' is a JSON object that has two properties:
+ *   pub: the PEM string for the public key
+ *   pri: the PEM string for the private key
+ * Will throw an Error if both obj.pub and obj.pri are null.
+ */
+Key.createFromPEM = function(obj) 
+{
+    var key = new Key();
+    key.fromPemString(obj.pub, obj.pri);
+    return key;
+};
+
+/**
+ * KeyLocator
+ */
+var KeyLocatorType = {
+  KEY:1,
+  CERTIFICATE:2,
+  KEYNAME:3
+};
+
+exports.KeyLocatorType = KeyLocatorType;
+
+/**
+ * @constructor
+ */
+var KeyLocator = function KeyLocator(input,type) 
+{ 
+  this.type = type;
+    
+  if (type == KeyLocatorType.KEYNAME) {
+    if (LOG > 3) console.log('KeyLocator: SET KEYNAME');
+    this.keyName = input;
+  }
+  else if (type == KeyLocatorType.KEY) {
+    if (LOG > 3) console.log('KeyLocator: SET KEY');
+    this.publicKey = input;
+  }
+  else if (type == KeyLocatorType.CERTIFICATE) {
+    if (LOG > 3) console.log('KeyLocator: SET CERTIFICATE');
+    this.certificate = input;
+  }
+};
+
+exports.KeyLocator = KeyLocator;
+
+KeyLocator.prototype.from_ndnb = function(decoder) {
+
+  decoder.readElementStartDTag(this.getElementLabel());
+
+  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
+  {
+    try {
+      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
+      // This is a DER-encoded SubjectPublicKeyInfo.
+      
+      //TODO FIX THIS, This should create a Key Object instead of keeping bytes
+
+      this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
+      this.type = KeyLocatorType.KEY;    
+
+      if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
+    } 
+    catch (e) {
+      throw new Error("Cannot parse key: ", e);
+    } 
+
+    if (null == this.publicKey)
+      throw new Error("Cannot parse key: ");
+  } 
+  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
+    try {
+      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
+      
+      /*
+       * Certificates not yet working
+       */
+      
+      this.certificate = encodedCert;
+      this.type = KeyLocatorType.CERTIFICATE;
+
+      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);      
+    } 
+    catch (e) {
+      throw new Error("Cannot decode certificate: " +  e);
+    }
+    if (null == this.certificate)
+      throw new Error("Cannot parse certificate! ");
+  } else  {
+    this.type = KeyLocatorType.KEYNAME;
+    
+    this.keyName = new KeyName();
+    this.keyName.from_ndnb(decoder);
+  }
+  decoder.readElementClose();
+};  
+
+KeyLocator.prototype.to_ndnb = function(encoder) 
+{
+  if (LOG > 4) console.log('type is is ' + this.type);
+  //TODO Check if Name is missing
+  if (!this.validate())
+    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
+
+  //TODO FIX THIS TOO
+  encoder.writeElementStartDTag(this.getElementLabel());
+  
+  if (this.type == KeyLocatorType.KEY) {
+    if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
+    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
+  } 
+  else if (this.type == KeyLocatorType.CERTIFICATE) {  
+    try {
+      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
+    } 
+    catch (e) {
+      throw new Error("CertificateEncodingException attempting to write key locator: " + e);
+    }    
+  } 
+  else if (this.type == KeyLocatorType.KEYNAME)
+    this.keyName.to_ndnb(encoder);
+
+  encoder.writeElementClose();
+};
+
+KeyLocator.prototype.getElementLabel = function() 
+{
+  return NDNProtocolDTags.KeyLocator; 
+};
+
+KeyLocator.prototype.validate = function() 
+{
+  return null != this.keyName || null != this.publicKey || null != this.certificate;
+};
+
+/**
+ * KeyName is only used by KeyLocator.
+ * @constructor
+ */
+var KeyName = function KeyName() 
+{
+  this.contentName = this.contentName;  //contentName
+  this.publisherID = this.publisherID;  //publisherID
+};
+
+exports.KeyName = KeyName;
+
+KeyName.prototype.from_ndnb = function(decoder) 
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+
+  this.contentName = new Name();
+  this.contentName.from_ndnb(decoder);
+  
+  if (LOG > 4) console.log('KEY NAME FOUND: ');
+  
+  if (PublisherID.peek(decoder)) {
+    this.publisherID = new PublisherID();
+    this.publisherID.from_ndnb(decoder);
+  }
+  
+  decoder.readElementClose();
+};
+
+KeyName.prototype.to_ndnb = function(encoder)
+{
+  if (!this.validate())
+    throw new Error("Cannot encode : field values missing.");
+  
+  encoder.writeElementStartDTag(this.getElementLabel());
+  
+  this.contentName.to_ndnb(encoder);
+  if (null != this.publisherID)
+    this.publisherID.to_ndnb(encoder);
+
+  encoder.writeElementClose();       
+};
+  
+KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
+
+KeyName.prototype.validate = function() 
+{
+    // DKS -- do we do recursive validation?
+    // null signedInfo ok
+    return (null != this.contentName);
+};
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * See COPYING for copyright and distribution information.
  */
 
 var Key = require('../key.js').Key;
@@ -3710,10 +4023,10 @@ var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C
 exports.ContentType = ContentType;
 
 /**
- * Create a new SignedInfo with the optional values.
+ * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) 
+var MetaInfo = function MetaInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields) 
 {
   this.publisher = publisher; //publisherPublicKeyDigest
   this.timestamp=timestamp; // NDN Time
@@ -3722,12 +4035,13 @@ var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshn
   this.freshnessSeconds =freshnessSeconds; // Integer
   this.finalBlockID=finalBlockID; //byte array
     
-  this.setFields();
+  if (!skipSetFields)
+    this.setFields();
 };
 
-exports.SignedInfo = SignedInfo;
+exports.MetaInfo = MetaInfo;
 
-SignedInfo.prototype.setFields = function() 
+MetaInfo.prototype.setFields = function() 
 {
   var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
@@ -3751,7 +4065,7 @@ SignedInfo.prototype.setFields = function()
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
 };
 
-SignedInfo.prototype.from_ndnb = function(decoder) 
+MetaInfo.prototype.from_ndnb = function(decoder) 
 {
   decoder.readElementStartDTag(this.getElementLabel());
   
@@ -3799,7 +4113,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-SignedInfo.prototype.to_ndnb = function(encoder)  {
+MetaInfo.prototype.to_ndnb = function(encoder)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
@@ -3828,16 +4142,16 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   encoder.writeElementClose();       
 };
   
-SignedInfo.prototype.valueToType = function() 
+MetaInfo.prototype.valueToType = function() 
 {
   return null;  
 };
 
-SignedInfo.prototype.getElementLabel = function() { 
+MetaInfo.prototype.getElementLabel = function() { 
   return NDNProtocolDTags.SignedInfo;
 };
 
-SignedInfo.prototype.validate = function() 
+MetaInfo.prototype.validate = function() 
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
@@ -3845,6 +4159,20 @@ SignedInfo.prototype.validate = function()
     return false;
   return true;
 };
+
+/**
+ * @deprecated Use new MetaInfo.
+ */
+var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) 
+{
+  // Call the base constructor.
+  MetaInfo.call(this, publisher, timestamp, type, locator, freshnessSeconds, finalBlockID); 
+}
+
+// Set skipSetFields true since we only need the prototype functions.
+SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
+
+exports.SignedInfo = SignedInfo;
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -3932,7 +4260,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Signature = require('./signature.js').Signature;
-var SignedInfo = require('./meta-info.js').SignedInfo;
+var MetaInfo = require('./meta-info.js').MetaInfo;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -3941,10 +4269,10 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * 
  * @constructor
  * @param {Name} name
- * @param {SignedInfo} signedInfo
+ * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, signedInfo, content) 
+var Data = function Data(name, metaInfo, content) 
 {
   if (typeof name == 'string')
     this.name = new Name(name);
@@ -3952,7 +4280,7 @@ var Data = function Data(name, signedInfo, content)
     //TODO Check the class of name
     this.name = name;
   
-  this.signedInfo = signedInfo;
+  this.signedInfo = metaInfo;
   
   if (typeof content == 'string') 
     this.content = DataUtils.toNumbersFromString(content);
@@ -4685,319 +5013,6 @@ Interest.prototype.decode = function(input, wireFormat)
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
- * This class represents Key Objects
- */
-
-var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherID = require('./publisher-id.js').PublisherID;
-var LOG = require('./log.js').Log.LOG;
-
-/**
- * @constructor
- */
-/**
- * Key
- */
-var Key = function Key() 
-{
-  this.publicKeyDer = null;     // Buffer
-  this.publicKeyDigest = null;  // Buffer
-  this.publicKeyPem = null;     // String
-  this.privateKeyPem = null;    // String
-};
-
-exports.Key = Key;
-
-/**
- * Helper functions to read Key fields
- * TODO: generateRSA()
- */
-
-Key.prototype.publicToDER = function() 
-{
-  return this.publicKeyDer;  // Buffer
-};
-
-Key.prototype.privateToDER = function() 
-{
-  // Remove the '-----XXX-----' from the beginning and the end of the key
-  // and also remove any \n in the key string
-  var lines = this.privateKeyPem.split('\n');
-  priKey = "";
-  for (var i = 1; i < lines.length - 1; i++)
-    priKey += lines[i];
-  
-  return new Buffer(priKey, 'base64');    
-};
-
-Key.prototype.publicToPEM = function() 
-{
-  return this.publicKeyPem;
-};
-
-Key.prototype.privateToPEM = function() 
-{
-  return this.privateKeyPem;
-};
-
-Key.prototype.getKeyID = function() 
-{
-  return this.publicKeyDigest;
-};
-
-exports.Key = Key;
-
-Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der) 
-{
-  if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
-
-  this.publicKeyDer = pub_der;
-
-  var hash = require("crypto").createHash('sha256');
-  hash.update(this.publicKeyDer);
-  this.publicKeyDigest = new Buffer(hash.digest());
-    
-  var keyStr = pub_der.toString('base64'); 
-  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-  for (var i = 0; i < keyStr.length; i += 64)
-  keyPem += (keyStr.substr(i, 64) + "\n");
-  keyPem += "-----END PUBLIC KEY-----";
-  this.publicKeyPem = keyPem;
-
-  if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);
-};
-
-/**
- * Load RSA key pair from PEM-encoded strings.
- * Will throw an Error if both 'pub' and 'pri' are null.
- */
-Key.prototype.fromPemString = function(pub, pri) 
-{
-  if (pub == null && pri == null)
-    throw new Error('Cannot create Key object if both public and private PEM string is empty.');
-
-  // Read public key
-  if (pub != null) {
-    this.publicKeyPem = pub;
-    if (LOG > 4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
-  
-    // Remove the '-----XXX-----' from the beginning and the end of the public key
-    // and also remove any \n in the public key string
-    var lines = pub.split('\n');
-    pub = "";
-    for (var i = 1; i < lines.length - 1; i++)
-      pub += lines[i];
-    this.publicKeyDer = new Buffer(pub, 'base64');
-    if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
-  
-    var hash = require("crypto").createHash('sha256');
-    hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(hash.digest());
-    if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
-  }
-    
-  // Read private key
-  if (pri != null) {
-    this.privateKeyPem = pri;
-    if (LOG > 4) console.log("Key.privateKeyPem: \n" + this.privateKeyPem);
-  }
-};
-
-Key.prototype.fromPem = Key.prototype.fromPemString;
-
-/**
- * Static method that create a Key object.
- * Parameter 'obj' is a JSON object that has two properties:
- *   pub: the PEM string for the public key
- *   pri: the PEM string for the private key
- * Will throw an Error if both obj.pub and obj.pri are null.
- */
-Key.createFromPEM = function(obj) 
-{
-    var key = new Key();
-    key.fromPemString(obj.pub, obj.pri);
-    return key;
-};
-
-/**
- * KeyLocator
- */
-var KeyLocatorType = {
-  KEY:1,
-  CERTIFICATE:2,
-  KEYNAME:3
-};
-
-exports.KeyLocatorType = KeyLocatorType;
-
-/**
- * @constructor
- */
-var KeyLocator = function KeyLocator(input,type) 
-{ 
-  this.type = type;
-    
-  if (type == KeyLocatorType.KEYNAME) {
-    if (LOG > 3) console.log('KeyLocator: SET KEYNAME');
-    this.keyName = input;
-  }
-  else if (type == KeyLocatorType.KEY) {
-    if (LOG > 3) console.log('KeyLocator: SET KEY');
-    this.publicKey = input;
-  }
-  else if (type == KeyLocatorType.CERTIFICATE) {
-    if (LOG > 3) console.log('KeyLocator: SET CERTIFICATE');
-    this.certificate = input;
-  }
-};
-
-exports.KeyLocator = KeyLocator;
-
-KeyLocator.prototype.from_ndnb = function(decoder) {
-
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
-  {
-    try {
-      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
-      // This is a DER-encoded SubjectPublicKeyInfo.
-      
-      //TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-      this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-      this.type = KeyLocatorType.KEY;    
-
-      if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-    } 
-    catch (e) {
-      throw new Error("Cannot parse key: ", e);
-    } 
-
-    if (null == this.publicKey)
-      throw new Error("Cannot parse key: ");
-  } 
-  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
-    try {
-      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
-      
-      /*
-       * Certificates not yet working
-       */
-      
-      this.certificate = encodedCert;
-      this.type = KeyLocatorType.CERTIFICATE;
-
-      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);      
-    } 
-    catch (e) {
-      throw new Error("Cannot decode certificate: " +  e);
-    }
-    if (null == this.certificate)
-      throw new Error("Cannot parse certificate! ");
-  } else  {
-    this.type = KeyLocatorType.KEYNAME;
-    
-    this.keyName = new KeyName();
-    this.keyName.from_ndnb(decoder);
-  }
-  decoder.readElementClose();
-};  
-
-KeyLocator.prototype.to_ndnb = function(encoder) 
-{
-  if (LOG > 4) console.log('type is is ' + this.type);
-  //TODO Check if Name is missing
-  if (!this.validate())
-    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
-
-  //TODO FIX THIS TOO
-  encoder.writeElementStartDTag(this.getElementLabel());
-  
-  if (this.type == KeyLocatorType.KEY) {
-    if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
-  } 
-  else if (this.type == KeyLocatorType.CERTIFICATE) {  
-    try {
-      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
-    } 
-    catch (e) {
-      throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-    }    
-  } 
-  else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyLocator.prototype.getElementLabel = function() 
-{
-  return NDNProtocolDTags.KeyLocator; 
-};
-
-KeyLocator.prototype.validate = function() 
-{
-  return null != this.keyName || null != this.publicKey || null != this.certificate;
-};
-
-/**
- * KeyName is only used by KeyLocator.
- * @constructor
- */
-var KeyName = function KeyName() 
-{
-  this.contentName = this.contentName;  //contentName
-  this.publisherID = this.publisherID;  //publisherID
-};
-
-exports.KeyName = KeyName;
-
-KeyName.prototype.from_ndnb = function(decoder) 
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  this.contentName = new Name();
-  this.contentName.from_ndnb(decoder);
-  
-  if (LOG > 4) console.log('KEY NAME FOUND: ');
-  
-  if (PublisherID.peek(decoder)) {
-    this.publisherID = new PublisherID();
-    this.publisherID.from_ndnb(decoder);
-  }
-  
-  decoder.readElementClose();
-};
-
-KeyName.prototype.to_ndnb = function(encoder)
-{
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-  
-  encoder.writeElementStartDTag(this.getElementLabel());
-  
-  this.contentName.to_ndnb(encoder);
-  if (null != this.publisherID)
-    this.publisherID.to_ndnb(encoder);
-
-  encoder.writeElementClose();       
-};
-  
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
-
-KeyName.prototype.validate = function() 
-{
-    // DKS -- do we do recursive validation?
-    // null signedInfo ok
-    return (null != this.contentName);
-};
-/**
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Meki Cheraoui
- * See COPYING for copyright and distribution information.
  * This class represents Face Instances
  */
 
@@ -5376,7 +5391,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
 var Signature = require('../signature.js').Signature;
-var SignedInfo = require('../meta-info.js').SignedInfo;
+var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
 
@@ -5588,7 +5603,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  */
 BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
-  //TODO verify name, SignedInfo and Signature is present
+  //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
   if (null != data.signature) 
@@ -5634,7 +5649,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.name.from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.signedInfo = new SignedInfo();
+    data.signedInfo = new MetaInfo();
     data.signedInfo.from_ndnb(decoder);
   }
   else
@@ -5861,7 +5876,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       // Already showed data.signedInfo.locator.publicKey above.
       output+= "<br />";
       
-      if (LOG > 2) console.log(" ContentName + SignedInfo + Content = "+input);
+      if (LOG > 2) console.log(" ContentName + MetaInfo + Content = "+input);
       if (LOG > 2) console.log(" PublicKeyHex = "+publickeyHex);
       if (LOG > 2) console.log(" PublicKeyString = "+publickeyString);
       
@@ -5930,7 +5945,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
-var SignedInfo = require('./data.js').SignedInfo;
+var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -6471,7 +6486,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
   fe.to_ndnb(encoder);
   var bytes = encoder.getReducedOstream();
     
-  var si = new SignedInfo();
+  var si = new MetaInfo();
   si.setFields();
     
   var data = new Data(new Name(), si, bytes); 

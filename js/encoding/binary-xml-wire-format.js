@@ -11,7 +11,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
 var Signature = require('../signature.js').Signature;
-var SignedInfo = require('../meta-info.js').SignedInfo;
+var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
 
@@ -223,7 +223,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  */
 BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
-  //TODO verify name, SignedInfo and Signature is present
+  //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
   if (null != data.signature) 
@@ -269,7 +269,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.name.from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.signedInfo = new SignedInfo();
+    data.signedInfo = new MetaInfo();
     data.signedInfo.from_ndnb(decoder);
   }
   else

@@ -11,7 +11,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Signature = require('./signature.js').Signature;
-var SignedInfo = require('./meta-info.js').SignedInfo;
+var MetaInfo = require('./meta-info.js').MetaInfo;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -20,10 +20,10 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * 
  * @constructor
  * @param {Name} name
- * @param {SignedInfo} signedInfo
+ * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, signedInfo, content) 
+var Data = function Data(name, metaInfo, content) 
 {
   if (typeof name == 'string')
     this.name = new Name(name);
@@ -31,7 +31,7 @@ var Data = function Data(name, signedInfo, content)
     //TODO Check the class of name
     this.name = name;
   
-  this.signedInfo = signedInfo;
+  this.signedInfo = metaInfo;
   
   if (typeof content == 'string') 
     this.content = DataUtils.toNumbersFromString(content);

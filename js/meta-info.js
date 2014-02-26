@@ -23,10 +23,10 @@ var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C
 exports.ContentType = ContentType;
 
 /**
- * Create a new SignedInfo with the optional values.
+ * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) 
+var MetaInfo = function MetaInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields) 
 {
   this.publisher = publisher; //publisherPublicKeyDigest
   this.timestamp=timestamp; // NDN Time
@@ -35,12 +35,13 @@ var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshn
   this.freshnessSeconds =freshnessSeconds; // Integer
   this.finalBlockID=finalBlockID; //byte array
     
-  this.setFields();
+  if (!skipSetFields)
+    this.setFields();
 };
 
-exports.SignedInfo = SignedInfo;
+exports.MetaInfo = MetaInfo;
 
-SignedInfo.prototype.setFields = function() 
+MetaInfo.prototype.setFields = function() 
 {
   var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
@@ -64,7 +65,7 @@ SignedInfo.prototype.setFields = function()
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
 };
 
-SignedInfo.prototype.from_ndnb = function(decoder) 
+MetaInfo.prototype.from_ndnb = function(decoder) 
 {
   decoder.readElementStartDTag(this.getElementLabel());
   
@@ -112,7 +113,7 @@ SignedInfo.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-SignedInfo.prototype.to_ndnb = function(encoder)  {
+MetaInfo.prototype.to_ndnb = function(encoder)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
@@ -141,16 +142,16 @@ SignedInfo.prototype.to_ndnb = function(encoder)  {
   encoder.writeElementClose();       
 };
   
-SignedInfo.prototype.valueToType = function() 
+MetaInfo.prototype.valueToType = function() 
 {
   return null;  
 };
 
-SignedInfo.prototype.getElementLabel = function() { 
+MetaInfo.prototype.getElementLabel = function() { 
   return NDNProtocolDTags.SignedInfo;
 };
 
-SignedInfo.prototype.validate = function() 
+MetaInfo.prototype.validate = function() 
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
@@ -158,3 +159,17 @@ SignedInfo.prototype.validate = function()
     return false;
   return true;
 };
+
+/**
+ * @deprecated Use new MetaInfo.
+ */
+var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) 
+{
+  // Call the base constructor.
+  MetaInfo.call(this, publisher, timestamp, type, locator, freshnessSeconds, finalBlockID); 
+}
+
+// Set skipSetFields true since we only need the prototype functions.
+SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
+
+exports.SignedInfo = SignedInfo;

@@ -9,7 +9,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
-var SignedInfo = require('./data.js').SignedInfo;
+var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -550,7 +550,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
   fe.to_ndnb(encoder);
   var bytes = encoder.getReducedOstream();
     
-  var si = new SignedInfo();
+  var si = new MetaInfo();
   si.setFields();
     
   var data = new Data(new Name(), si, bytes); 

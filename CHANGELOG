@@ -9,9 +9,11 @@ Changes
 * http://redmine.named-data.net/issues/1121 In Name.get, allow a negative index.
 * In Name, added method getSubName.
 * In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
-* Moved classes Exclude, Signature and SignedInfo into their own source files.
+# Added class MetaInfo and deprecated SignedInfo.
+* Moved classes Exclude, Signature and MetaInfo into their own source files.
 
 Deprecated
+* SignedInfo: Deprecated class SignedInfo. Use MetaInfo.
 * Face/NDN: Deprecated expressInterest(name, closure [, template]). You should use 
   expressInterest which uses callbacks, not Closure.
 * Face/NDN: Deprecated registerPrefix(name, closure [, intFlags]). You should use 
