@@ -3686,175 +3686,22 @@ KeyManager.prototype.getKey = function()
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
 /**
- * Copyright (C) 2013-2014 Regents of the University of California.
+ * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * This class represents Data Objects
+ * This class represents an NDN Data MetaInfo object.
  */
 
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNTime = require('./util/ndn-time.js').NDNTime;
-var Key = require('./key.js').Key;
 var KeyLocator = require('./key.js').KeyLocator;
 var KeyLocatorType = require('./key.js').KeyLocatorType;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var NDNTime = require('./util/ndn-time.js').NDNTime;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
-
-/**
- * Create a new Data with the optional values.
- * 
- * @constructor
- * @param {Name} name
- * @param {SignedInfo} signedInfo
- * @param {Buffer} content
- */
-var Data = function Data(name, signedInfo, content) 
-{
-  if (typeof name == 'string')
-    this.name = new Name(name);
-  else
-    //TODO Check the class of name
-    this.name = name;
-  
-  this.signedInfo = signedInfo;
-  
-  if (typeof content == 'string') 
-    this.content = DataUtils.toNumbersFromString(content);
-  else 
-    this.content = content;
-  
-  this.signature = new Signature();
-  
-  this.startSIG = null;
-  this.endSIG = null;
-  
-  this.endContent = null;
-  
-  this.rawSignatureData = null;
-};
-
-exports.Data = Data;
-
-Data.prototype.sign = function() 
-{
-  var n1 = this.encodeObject(this.name);
-  var n2 = this.encodeObject(this.signedInfo);
-  var n3 = this.encodeContent();
-  
-  var rsa = require("crypto").createSign('RSA-SHA256');
-  rsa.update(n1);
-  rsa.update(n2);
-  rsa.update(n3);
-    
-  var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
-
-  this.signature.signature = sig;
-};
-
-Data.prototype.verify = function(/*Key*/ key) 
-{
-  if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify Data without a public key.');
-
-  var verifier = require('crypto').createVerify('RSA-SHA256');
-  verifier.update(this.rawSignatureData);
-  return verifier.verify(key.publicKeyPem, this.signature.signature);
-};
-
-Data.prototype.encodeObject = function encodeObject(obj) 
-{
-  var enc = new BinaryXMLEncoder(); 
-  obj.to_ndnb(enc);
-  var num = enc.getReducedOstream();
-
-  return num;
-};
-
-Data.prototype.encodeContent = function encodeContent() 
-{
-  var enc = new BinaryXMLEncoder();   
-  enc.writeDTagElement(NDNProtocolDTags.Content, this.content);
-  var num = enc.getReducedOstream();
-
-  return num;
-};
-
-Data.prototype.saveRawData = function(bytes) 
-{  
-  var sigBits = bytes.slice(this.startSIG, this.endSIG);
-  this.rawSignatureData = new Buffer(sigBits);
-};
-
-Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
-
-/**
- * Create a new Signature with the optional values.
- * @constructor
- */
-var Signature = function Signature(witness, signature, digestAlgorithm) 
-{
-  this.witness = witness;
-  this.signature = signature;
-  this.digestAlgorithm = digestAlgorithm
-};
-
-exports.Signature = Signature;
-
-Signature.prototype.from_ndnb = function(decoder) 
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-    
-  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
-    
-  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
-    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm); 
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
-    if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness); 
-  }
-    
-  //FORCE TO READ A SIGNATURE
-
-  if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
-
-  decoder.readElementClose();
-};
-
-Signature.prototype.to_ndnb = function(encoder) 
-{      
-  if (!this.validate())
-    throw new Error("Cannot encode: field values missing.");
-  
-  encoder.writeElementStartDTag(this.getElementLabel());
-  
-  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-  
-  if (null != this.witness)
-    // needs to handle null witness
-    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
-
-  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
-
-  encoder.writeElementClose();       
-};
-
-Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
-Signature.prototype.validate = function() 
-{
-  return null != this.signature;
-};
 
 var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
 var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
@@ -3902,7 +3749,6 @@ SignedInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
-  //this.locator = new KeyLocator(DataUtils.toNumbersFromString(stringCertificate)  ,KeyLocatorType.CERTIFICATE);
 };
 
 SignedInfo.prototype.from_ndnb = function(decoder) 
@@ -3999,6 +3845,184 @@ SignedInfo.prototype.validate = function()
     return false;
   return true;
 };
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ * This class represents an NDN Data Signature object.
+ */
+
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var LOG = require('./log.js').Log.LOG;
+
+/**
+ * Create a new Signature with the optional values.
+ * @constructor
+ */
+var Signature = function Signature(witness, signature, digestAlgorithm) 
+{
+  this.witness = witness;
+  this.signature = signature;
+  this.digestAlgorithm = digestAlgorithm
+};
+
+exports.Signature = Signature;
+
+Signature.prototype.from_ndnb = function(decoder) 
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+    
+  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
+    
+  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
+    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
+    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm); 
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
+    if (LOG > 4) console.log('WITNESS FOUND');
+    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness); 
+  }
+    
+  //FORCE TO READ A SIGNATURE
+
+  if (LOG > 4) console.log('SIGNATURE FOUND');
+  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
+
+  decoder.readElementClose();
+};
+
+Signature.prototype.to_ndnb = function(encoder) 
+{      
+  if (!this.validate())
+    throw new Error("Cannot encode: field values missing.");
+  
+  encoder.writeElementStartDTag(this.getElementLabel());
+  
+  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
+    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+  
+  if (null != this.witness)
+    // needs to handle null witness
+    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
+
+  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+
+  encoder.writeElementClose();       
+};
+
+Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+
+Signature.prototype.validate = function() 
+{
+  return null != this.signature;
+};
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ * This class represents an NDN Data object.
+ */
+
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var Signature = require('./signature.js').Signature;
+var SignedInfo = require('./meta-info.js').SignedInfo;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * Create a new Data with the optional values.
+ * 
+ * @constructor
+ * @param {Name} name
+ * @param {SignedInfo} signedInfo
+ * @param {Buffer} content
+ */
+var Data = function Data(name, signedInfo, content) 
+{
+  if (typeof name == 'string')
+    this.name = new Name(name);
+  else
+    //TODO Check the class of name
+    this.name = name;
+  
+  this.signedInfo = signedInfo;
+  
+  if (typeof content == 'string') 
+    this.content = DataUtils.toNumbersFromString(content);
+  else 
+    this.content = content;
+  
+  this.signature = new Signature();
+  
+  this.startSIG = null;
+  this.endSIG = null;
+  
+  this.endContent = null;
+  
+  this.rawSignatureData = null;
+};
+
+exports.Data = Data;
+
+Data.prototype.sign = function() 
+{
+  // TODO: Use SignedBlob.
+  var n1 = this.encodeObject(this.name);
+  var n2 = this.encodeObject(this.signedInfo);
+  var n3 = this.encodeContent();
+  
+  var rsa = require("crypto").createSign('RSA-SHA256');
+  rsa.update(n1);
+  rsa.update(n2);
+  rsa.update(n3);
+    
+  var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
+
+  this.signature.signature = sig;
+};
+
+Data.prototype.verify = function(/*Key*/ key) 
+{
+  if (key == null || key.publicKeyPem == null)
+    throw new Error('Cannot verify Data without a public key.');
+
+  var verifier = require('crypto').createVerify('RSA-SHA256');
+  verifier.update(this.rawSignatureData);
+  return verifier.verify(key.publicKeyPem, this.signature.signature);
+};
+
+Data.prototype.encodeObject = function encodeObject(obj) 
+{
+  var enc = new BinaryXMLEncoder(); 
+  obj.to_ndnb(enc);
+  var num = enc.getReducedOstream();
+
+  return num;
+};
+
+Data.prototype.encodeContent = function encodeContent() 
+{
+  var enc = new BinaryXMLEncoder();   
+  enc.writeDTagElement(NDNProtocolDTags.Content, this.content);
+  var num = enc.getReducedOstream();
+
+  return num;
+};
+
+Data.prototype.saveRawData = function(bytes) 
+{  
+  var sigBits = bytes.slice(this.startSIG, this.endSIG);
+  this.rawSignatureData = new Buffer(sigBits);
+};
+
+Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Encode this Data for a particular wire format.
@@ -5350,6 +5374,9 @@ var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
+var Exclude = require('../exclude.js').Exclude;
+var Signature = require('../signature.js').Signature;
+var SignedInfo = require('../meta-info.js').SignedInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
 
@@ -5583,9 +5610,6 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   
   data.saveRawData(encoder.ostream);  
 };
-
-var Signature = require('../data.js').Signature;
-var SignedInfo = require('../data.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in data.

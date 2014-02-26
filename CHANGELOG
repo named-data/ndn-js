@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.2 (2013-12-17)
+Interim changes since NDN-JS v0.2 (2013-12-26)
 --------------------------------------
 
 Changes
@@ -9,6 +9,7 @@ Changes
 * http://redmine.named-data.net/issues/1121 In Name.get, allow a negative index.
 * In Name, added method getSubName.
 * In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
+* Moved classes Exclude, Signature and SignedInfo into their own source files.
 
 Deprecated
 * Face/NDN: Deprecated expressInterest(name, closure [, template]). You should use 

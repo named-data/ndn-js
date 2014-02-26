@@ -9,6 +9,9 @@ var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
+var Exclude = require('../exclude.js').Exclude;
+var Signature = require('../signature.js').Signature;
+var SignedInfo = require('../meta-info.js').SignedInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
 
@@ -242,9 +245,6 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   
   data.saveRawData(encoder.ostream);  
 };
-
-var Signature = require('../data.js').Signature;
-var SignedInfo = require('../data.js').SignedInfo;
 
 /**
  * Use the decoder to place the result in data.
