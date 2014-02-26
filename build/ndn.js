@@ -3622,9 +3622,6 @@ Name.prototype.match = function(name)
  * This class represents Key Objects
  */
 
-var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherID = require('./publisher-id.js').PublisherID;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -3753,6 +3750,18 @@ Key.createFromPEM = function(obj)
     key.fromPemString(obj.pub, obj.pri);
     return key;
 };
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ * This class represents an NDN KeyLocator object.
+ */
+
+var Name = require('./name.js').Name;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherID = require('./publisher-id.js').PublisherID;
+var LOG = require('./log.js').Log.LOG;
 
 /**
  * KeyLocator
@@ -4009,8 +4018,8 @@ exports.globalKeyManager = globalKeyManager;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var KeyLocator = require('./key.js').KeyLocator;
-var KeyLocatorType = require('./key.js').KeyLocatorType;
+var KeyLocator = require('./key-locator.js').KeyLocator;
+var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
@@ -5678,7 +5687,7 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var Key = require('../key.js').Key;
-var KeyLocatorType = require('../key.js').KeyLocatorType;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
@@ -5951,7 +5960,7 @@ var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDeco
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Key = require('./key.js').Key;
-var KeyLocatorType = require('./key.js').KeyLocatorType;
+var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;

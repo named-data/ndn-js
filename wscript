@@ -106,6 +106,7 @@ def build (bld):
                  "js/publisher-id.js",
                  "js/name.js",
                  "js/key.js",
+                 "js/key-locator.js",
                  "js/security/key-manager.js",
                  "js/meta-info.js",
                  "js/signature.js",

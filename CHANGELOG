@@ -10,7 +10,7 @@ Changes
 * In Name, added method getSubName.
 * In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
 # Added class MetaInfo and deprecated SignedInfo.
-* Moved classes Exclude, Signature and MetaInfo into their own source files.
+* Moved classes Exclude, Signature, MetaInfo and KeyLocator into their own source files.
 
 Deprecated
 * SignedInfo: Deprecated class SignedInfo. Use MetaInfo.
