@@ -38,7 +38,7 @@ BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 BinaryXmlWireFormat.get = function()
 {
   return BinaryXmlWireFormat.instance;
-}
+};
 
 /**
  * Encode the interest and return a Buffer.
