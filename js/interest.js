@@ -34,7 +34,7 @@ var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
     childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
 {
-  if (typeof nameOrInterest == 'object' && nameOrInterest instanceof Interest) {
+  if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
     if (interest.name)
@@ -44,7 +44,7 @@ var Interest = function Interest
     this.minSuffixComponents = interest.minSuffixComponents;
 
     this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.exclude = interest.exclude;
+    this.exclude = Exclude(interest.exclude);
     this.childSelector = interest.childSelector;
     this.answerOriginKind = interest.answerOriginKind;
     this.scope = interest.scope;
@@ -54,12 +54,14 @@ var Interest = function Interest
       this.nonce = new Buffer(interest.nonce);    
   }  
   else {
-    this.name = nameOrInterest;
+    this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
+                new Name(nameOrInterest) : new Name();
     this.maxSuffixComponents = maxSuffixComponents;
     this.minSuffixComponents = minSuffixComponents;
 
     this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-    this.exclude = exclude;
+    this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
+                   new Exclude(exclude) : new Exclude();
     this.childSelector = childSelector;
     this.answerOriginKind = answerOriginKind;
     this.scope = scope;
@@ -120,7 +122,6 @@ Interest.prototype.matches_name = function(/*Name*/ name)
 
 /**
  * Return a new Interest with the same fields as this Interest.  
- * Note: This does NOT make a deep clone of the name, exclue or other objects.
  */
 Interest.prototype.clone = function() 
 {
@@ -130,44 +131,129 @@ Interest.prototype.clone = function()
       this.scope, this.interestLifetime, this.nonce);
 };
 
-Interest.prototype.setMinSuffixComponents = function(value)
-{
-  this.minSuffixComponents = value;
-}
+/**
+ * Get the interest Name.
+ * @returns {Name} The name.  The name size() may be 0 if not specified.
+ */
+Interest.prototype.getName = function() { return this.name; };
 
-Interest.prototype.setMaxSuffixComponents = function(value)
-{
-  this.maxSuffixComponents = value;
-}
+/**
+ * Get the min suffix components.
+ * @returns number} The min suffix components, or null if not specified.
+ */
+Interest.prototype.getMinSuffixComponents = function() 
+{ 
+  return this.minSuffixComponents; 
+};
 
-Interest.prototype.setChildSelector = function(value)
-{
-  this.childSelector = value;
-}
+/**
+ * Get the max suffix components.
+ * @returns {number} The max suffix components, or null if not specified.
+ */
+Interest.prototype.getMaxSuffixComponents = function() 
+{ 
+  return this.maxSuffixComponents; 
+};
 
-Interest.prototype.setAnswerOriginKind = function(value)
-{
-  this.answerOriginKind = value;
-}
+/**
+ * Get the exclude object.
+ * @returns {Exclude} The exclude object. If the exclude size() is zero, then
+ * the exclude is not specified.
+ */
+Interest.prototype.getExclude = function() { return this.exclude; };
 
-Interest.prototype.setScope = function(value)
-{
-  this.scope = value;
-}
+/**
+ * Get the child selector.
+ * @returns {number} The child selector, or null if not specified.
+ */
+Interest.prototype.getChildSelector = function() 
+{ 
+  return this.childSelector; 
+};
 
-Interest.prototype.setInterestLifetimeMilliseconds = function(value)
-{
-  this.interestLifetime = value;
-}
+Interest.prototype.getAnswerOriginKind = function() 
+{ 
+  return this.answerOriginKind; 
+};
 
-Interest.prototype.setNonce = function(value)
+/**
+ * 
+ * @returns {Buffer} 
+ */
+Interest.prototype.getNonce = function() { return this.nonce; };
+
+/**
+ * Get the interest scope.
+ * @returns {number} The scope, or null if not specified.
+ */
+Interest.prototype.getScope = function() { return this.scope; };
+
+/**
+ * Get the interest lifetime.
+ * @returns {number} The interest lifetime in milliseconds, or null if not 
+ * specified.
+ */
+Interest.prototype.getInterestLifetimeMilliseconds = function() 
+{ 
+  return this.interestLifetime; 
+};
+
+Interest.prototype.setName = function(name)
 {
-  if (value)
+  this.name = typeof name === 'object' && name instanceof Interest ?
+              new Name(name) : new Name();
+};
+                
+Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
+{
+  this.minSuffixComponents = minSuffixComponents;
+};
+
+Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
+{
+  this.maxSuffixComponents = maxSuffixComponents;
+};
+
+/**
+ * Set this interest to use a copy of the given exclude object. Note: You can 
+ * also change this interest's exclude object modifying the object from 
+ * getExclude().
+ * @param {Exclude} exclude The exlcude object that is copied.
+ */
+Interest.prototype.setExclude = function(exclude)
+{
+  this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
+                 new Exclude(exclude) : new Exclude();
+};
+
+Interest.prototype.setChildSelector = function(childSelector)
+{
+  this.childSelector = childSelector;
+};
+
+Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
+{
+  this.answerOriginKind = answerOriginKind;
+};
+
+Interest.prototype.setScope = function(scope)
+{
+  this.scope = scope;
+};
+
+Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
+{
+  this.interestLifetime = interestLifetimeMilliseconds;
+};
+
+Interest.prototype.setNonce = function(nonce)
+{
+  if (nonce)
     // Copy and make sure it is a Buffer.
-    this.nonce = new Buffer(value);
+    this.nonce = new Buffer(nonce);
   else
     this.nonce = null;
-}
+};
 
 /**
  * Create a new Exclude.
@@ -178,7 +264,10 @@ var Exclude = function Exclude(values)
 { 
   this.values = [];
   
-  if (values) {
+  if (typeof values === 'object' && values instanceof Exclude)
+    // Copy the exclude.
+    this.values = values.values.slice(0);
+  else if (values) {
     for (var i = 0; i < values.length; ++i) {
       if (values[i] == Exclude.ANY)
         this.appendAny();
@@ -193,6 +282,19 @@ exports.Exclude = Exclude;
 Exclude.ANY = "*";
 
 /**
+ * Get the number of entries.
+ * @returns {number} The number of entries.
+ */
+Exclude.prototype.size = function() { return this.values.length; };
+
+/**
+ * Get the entry at the given index.
+ * @param {number} i The index of the entry, starting from 0.
+ * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ */
+Exclude.prototype.get = function(i) { return this.values[i]; };
+
+/**
  * Append an Exclude.ANY element.
  * @returns This Exclude so that you can chain calls to append.
  */
@@ -200,7 +302,7 @@ Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
   return this;
-}
+};
 
 /**
  * Append a component entry, copying from component.
@@ -211,7 +313,15 @@ Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
   return this;
-}
+};
+
+/**
+ * Clear all the entries.
+ */
+Exclude.prototype.clear = function() 
+{
+  this.values = [];
+};
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
