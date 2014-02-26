@@ -35,7 +35,7 @@ var Name = function Name(components)
     }
   }
   else if (components== null)
-    this.components =[];
+    this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
 };
@@ -208,6 +208,14 @@ Name.prototype.append = function(component)
 Name.prototype.add = function(component)
 {
   return this.append(component);
+};
+
+/**
+ * Clear all the components.
+ */
+Name.prototype.clear = function()
+{
+  this.components = [];  
 };
 
 /**
