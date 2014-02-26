@@ -58,4 +58,28 @@ WireFormat.prototype.decodeData = function(data, input)
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
+/**
+ * Set the static default WireFormat used by default encoding and decoding 
+ * methods.
+ * @param wireFormat {a subclass of WireFormat} An object of a subclass of 
+ * WireFormat.
+ */
+WireFormat.setDefaultWireFormat = function(wireFormat)
+{
+  WireFormat.defaultWireFormat = wireFormat;
+};
 
+/**
+ * Return the default WireFormat used by default encoding and decoding methods 
+ * which was set with setDefaultWireFormat.
+ * @returns {a subclass of WireFormat} The WireFormat object.
+ */
+WireFormat.getDefaultWireFormat = function()
+{
+  return WireFormat.defaultWireFormat;
+};
+
+// Invoke BinaryXmlWireFormat to set the default format.
+// Since binary-xml-wire-format.js includes this file, put this at the bottom 
+// to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./binary-xml-wire-format.js').BinaryXmlWireFormat;
