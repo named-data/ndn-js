@@ -25,20 +25,7 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat()
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
 
 // Default object.
-BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
-
-/**
- * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
- * wire format was set with 
- * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if 
- * this is the default wire encoding with
- * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
- * @returns {BinaryXmlWireFormat} The singleton instance.
- */
-BinaryXmlWireFormat.get = function()
-{
-  return BinaryXmlWireFormat.instance;
-};
+BinaryXmlWireFormat.instance = null;
 
 /**
  * Encode the interest and return a Buffer.
@@ -101,6 +88,21 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
 {
   this.decodeData(data, input);
 }
+
+/**
+ * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
+ * wire format was set with 
+ * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if 
+ * this is the default wire encoding with
+ * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
+ * @returns {BinaryXmlWireFormat} The singleton instance.
+ */
+BinaryXmlWireFormat.get = function()
+{
+  if (BinaryXmlWireFormat.instance === null)
+    BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
+  return BinaryXmlWireFormat.instance;
+};
 
 /**
  * Encode the interest by calling the operations on the encoder.
