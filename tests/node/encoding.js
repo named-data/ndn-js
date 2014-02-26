@@ -1,5 +1,3 @@
-var Encoder = require('../..').BinaryXMLEncoder;
-var Decoder = require('../..').BinaryXMLDecoder;
 var Name = require('../..').Name;
 var Interest = require('../..').Interest;
 var Data = require('../..').Data;
@@ -17,10 +15,8 @@ i1.childSelector = 1;
 
 var packet = i1.wireEncode();
 
-
-var decoder = new Decoder(packet);
 var i2 = new Interest();
-i2.from_ndnb(decoder);
+i2.wireDecode(packet);
 
 console.log(i2.name.toUri());
 console.log(i2.interestLifetime);
