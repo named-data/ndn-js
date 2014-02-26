@@ -8,10 +8,15 @@ Changes
 * http://redmine.named-data.net/issues/1084 Internal: Binary XML decoding speed up to only support DTags.
 * http://redmine.named-data.net/issues/1121 In Name.get, allow a negative index.
 * In Name, added method getSubName.
+* In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
 
 Deprecated
-* Face/NDN: expressInterest(name, closure [, template]). You should use expressInterest which uses callbacks, not Closure.
-* Face/NDN: registerPrefix(name, closure [, intFlags]). You should use registerPrefix which uses callbacks, not Closure.
+* Face/NDN: Deprecated expressInterest(name, closure [, template]). You should use 
+  expressInterest which uses callbacks, not Closure.
+* Face/NDN: Deprecated registerPrefix(name, closure [, intFlags]). You should use 
+  registerPrefix which uses callbacks, not Closure.
+* Data: Deprecated encode and decode.  You should use wireEncode and wireDecode.
+* Interest: Deprecated encode and decode.  You should use wireEncode and wireDecode.
 
 Documentation
 * wsproxy: In the README, document option -n for the remote ndnd port.

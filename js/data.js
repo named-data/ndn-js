@@ -16,6 +16,7 @@ var KeyLocator = require('./key.js').KeyLocator;
 var KeyLocatorType = require('./key.js').KeyLocatorType;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -311,6 +312,30 @@ SignedInfo.prototype.validate = function()
   return true;
 };
 
+/**
+ * Encode this Data for a particular wire format.
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Buffer} The encoded buffer.
+ */
+Data.prototype.wireEncode = function(wireFormat) 
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeData(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Data.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Data.prototype.wireDecode = function(input, wireFormat) 
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  wireFormat.decodeData(this, input);
+};
+
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
@@ -331,24 +356,22 @@ Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 };
 
 /**
- * Encode this Data for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
+ * @deprecated Use wireEncode.  If you need binary XML, use
+ * wireEncode(BinaryXmlWireFormat.get()).
  */
 Data.prototype.encode = function(wireFormat) 
 {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   return wireFormat.encodeData(this);
 };
 
 /**
- * Decode the input using a particular wire format and update this Data.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
+ * @deprecated Use wireDecode.  If you need binary XML, use
+ * wireDecode(input, BinaryXmlWireFormat.get()).
  */
 Data.prototype.decode = function(input, wireFormat) 
 {
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
+  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
 };
 

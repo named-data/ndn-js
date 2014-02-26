@@ -11,6 +11,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -362,47 +363,6 @@ Exclude.compareComponents = function(component1, component2)
   return 0;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeInterest.
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
-{
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeInterest.
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder) 
-{
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- * @returns {Buffer}
- */
-Interest.prototype.encode = function(wireFormat) 
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  return wireFormat.encodeInterest(this);
-};
-
-/**
- * Decode the input using a particular wire format and update this Interest.
- * @param {Buffer} input
- * @param {WireFormat} wireFormat if null, use BinaryXmlWireFormat.
- */
-Interest.prototype.decode = function(input, wireFormat) 
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.instance);
-  wireFormat.decodeInterest(this, input);
-};
-
 /**
  * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
@@ -437,4 +397,66 @@ Interest.prototype.toUri = function()
     result += "?" + selectors.substr(1);
   
   return result;
+};
+
+/**
+ * Encode this Interest for a particular wire format.
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Buffer} The encoded buffer.
+ */
+Interest.prototype.wireEncode = function(wireFormat) 
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeInterest(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Interest.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Interest.prototype.wireDecode = function(input, wireFormat) 
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  wireFormat.decodeInterest(this, input);
+};
+
+// Since binary-xml-wire-format.js includes this file, put these at the bottom 
+// to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use wireDecode(input, BinaryXmlWireFormat.get()).
+ */
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+{
+  BinaryXmlWireFormat.decodeInterest(this, decoder);
+};
+
+/**
+ * @deprecated Use wireEncode(BinaryXmlWireFormat.get()).
+ */
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder) 
+{
+  BinaryXmlWireFormat.encodeInterest(this, encoder);
+};
+
+/**
+ * @deprecated Use wireEncode.  If you need binary XML, use
+ * wireEncode(BinaryXmlWireFormat.get()).
+ */
+Interest.prototype.encode = function(wireFormat) 
+{
+  return this.wireEncode(BinaryXmlWireFormat.get());
+};
+
+/**
+ * @deprecated Use wireDecode.  If you need binary XML, use
+ * wireDecode(input, BinaryXmlWireFormat.get()).
+ */
+Interest.prototype.decode = function(input, wireFormat) 
+{
+  this.wireDecode(input, BinaryXmlWireFormat.get())
 };
