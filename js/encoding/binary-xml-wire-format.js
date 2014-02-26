@@ -28,6 +28,18 @@ exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
 BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
+ * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
+ * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()), 
+ * you can check if this is the default wire encoding with
+ * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
+ * @returns {BinaryXmlWireFormat} The singleton instance.
+ */
+BinaryXmlWireFormat.get = function()
+{
+  return BinaryXmlWireFormat.instance;
+}
+
+/**
  * Encode the interest and return a Buffer.
  * @param {Interest} interest
  * @returns {Buffer}
