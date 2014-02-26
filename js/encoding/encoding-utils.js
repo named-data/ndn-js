@@ -28,12 +28,12 @@ exports.EncodingUtils = EncodingUtils;
 
 EncodingUtils.encodeToHexInterest = function(interest) 
 {
-  return DataUtils.toHex(interest.encode());
+  return DataUtils.toHex(interest.wireEncode());
 };
 
 EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(data.encode());
+  return DataUtils.toHex(data.wireEncode());
 };
 
 /**
@@ -69,14 +69,14 @@ EncodingUtils.decodeHexFaceInstance = function(result)
 EncodingUtils.decodeHexInterest = function(input) 
 {
   var interest = new Interest();
-  interest.decode(DataUtils.toNumbers(input));
+  interest.wireDecode(DataUtils.toNumbers(input));
   return interest;
 };
 
 EncodingUtils.decodeHexData = function(input) 
 {
   var data = new Data();
-  data.decode(DataUtils.toNumbers(input));
+  data.wireDecode(DataUtils.toNumbers(input));
   return data;
 };
 
@@ -258,10 +258,10 @@ var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSu
 var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
- * @deprecated Use interest.encode().
+ * @deprecated Use interest.wireEncode().
  */
-function encodeToBinaryInterest(interest) { return interest.encode(); }
+function encodeToBinaryInterest(interest) { return interest.wireEncode(); }
 /**
- * @deprecated Use data.encode().
+ * @deprecated Use data.wireEncode().
  */
-function encodeToBinaryContentObject(data) { return data.encode(); }
+function encodeToBinaryContentObject(data) { return data.wireEncode(); }

@@ -97,7 +97,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       // Set the signature, but don't sign.
       data.signature.signature = signatureBits;
 
-    encoding[0] = data.encode();
+    encoding[0] = data.wireEncode();
   }
   var finish = getNowSeconds();
 
@@ -116,7 +116,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
   var start = getNowSeconds();
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data();
-    data.decode(encoding);
+    data.wireDecode(encoding);
     
     if (useCrypto) {
       if (!data.verify(globalKeyManager.key))

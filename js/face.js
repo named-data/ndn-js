@@ -378,7 +378,7 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
  */
 Face.prototype.expressInterestHelper = function(interest, closure) 
 {
-  var binaryInterest = interest.encode();
+  var binaryInterest = interest.wireEncode();
   var thisNDN = this;    
   //TODO: check local content store first
   if (closure != null) {
@@ -555,7 +555,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
     
   var data = new Data(new Name(), si, bytes); 
   data.sign();
-  var coBinary = data.encode();;
+  var coBinary = data.wireEncode();;
     
   var nodename = this.ndndid;
   var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
@@ -566,7 +566,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
-  this.transport.send(interest.encode());
+  this.transport.send(interest.wireEncode());
 };
 
 /**
@@ -592,7 +592,7 @@ Face.prototype.onReceivedElement = function(element)
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
-        this.transport.send(info.data.encode());
+        this.transport.send(info.data.wireEncode());
     }        
   } 
   else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet

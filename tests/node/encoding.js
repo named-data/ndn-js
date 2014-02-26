@@ -15,7 +15,7 @@ var i1 = new Interest(n);
 i1.interestLifetime = 1000;
 i1.childSelector = 1;
 
-var packet = i1.encode();
+var packet = i1.wireEncode();
 
 
 var decoder = new Decoder(packet);
@@ -35,10 +35,10 @@ data1.signedInfo.setFields();
 data1.sign();
 console.log("Signature is \n" + data1.signature.signature.toString('hex'));
 
-var p2 = data1.encode();
+var p2 = data1.wireEncode();
 
 var data2 = new Data();
-data2.decode(p2);
+data2.wireDecode(p2);
 
 console.log('Decoded name: ' + data2.name.toUri());
 console.log('Decoded content: ' + data2.content.toString());

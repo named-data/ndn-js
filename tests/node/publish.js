@@ -14,7 +14,7 @@ function onInterest(prefix, interest, transport)
   var data = new Data(interest.name, new SignedInfo(), new Buffer(contentString));
   data.signedInfo.setFields();
   data.sign();
-  var encodedData = data.encode();
+  var encodedData = data.wireEncode();
 
   try {
     console.log("Send content " + contentString);
