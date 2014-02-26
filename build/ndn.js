@@ -3109,7 +3109,7 @@ var Name = function Name(components)
     }
   }
   else if (components== null)
-    this.components =[];
+    this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
 };
@@ -3282,6 +3282,14 @@ Name.prototype.append = function(component)
 Name.prototype.add = function(component)
 {
   return this.append(component);
+};
+
+/**
+ * Clear all the components.
+ */
+Name.prototype.clear = function()
+{
+  this.components = [];  
 };
 
 /**
@@ -3680,6 +3688,7 @@ exports.globalKeyManager = globalKeyManager;
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  * This class represents Data Objects
  */
@@ -4067,175 +4076,18 @@ ContentObject.prototype = new Data();
 
 exports.ContentObject = ContentObject;
 /**
- * Copyright (C) 2013-2014 Regents of the University of California.
+ * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * This class represents Interest Objects
+ * This class represents an Interest Exclude.
  */
 
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-var LOG = require('./log.js').Log.LOG;
-
-/**
- * Create a new Interest with the optional values.
- * 
- * @constructor
- * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
- * other arguments.  Otherwise this is the optional name for the new Interest.
- * @param {number} minSuffixComponents
- * @param {number} maxSuffixComponents
- * @param {Buffer} publisherPublicKeyDigest
- * @param {Exclude} exclude
- * @param {number} childSelector
- * @param {number} answerOriginKind
- * @param {number} scope
- * @param {number} interestLifetimeMilliseconds in milliseconds
- * @param {Buffer} nonce
- */
-var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
-{
-  if (typeof nameOrInterest == 'object' && nameOrInterest instanceof Interest) {
-    // Special case: this is a copy constructor.  Ignore all but the first argument.
-    var interest = nameOrInterest;
-    if (interest.name)
-      // Copy the name.
-      this.name = new Name(interest.name);
-    this.maxSuffixComponents = interest.maxSuffixComponents;
-    this.minSuffixComponents = interest.minSuffixComponents;
-
-    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.exclude = interest.exclude;
-    this.childSelector = interest.childSelector;
-    this.answerOriginKind = interest.answerOriginKind;
-    this.scope = interest.scope;
-    this.interestLifetime = interest.interestLifetime;
-    if (interest.nonce)
-      // Copy.
-      this.nonce = new Buffer(interest.nonce);    
-  }  
-  else {
-    this.name = nameOrInterest;
-    this.maxSuffixComponents = maxSuffixComponents;
-    this.minSuffixComponents = minSuffixComponents;
-
-    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-    this.exclude = exclude;
-    this.childSelector = childSelector;
-    this.answerOriginKind = answerOriginKind;
-    this.scope = scope;
-    this.interestLifetime = interestLifetimeMilliseconds;
-    if (nonce)
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
-  }
-};
-
-exports.Interest = Interest;
-
-Interest.RECURSIVE_POSTFIX = "*";
-
-Interest.CHILD_SELECTOR_LEFT = 0;
-Interest.CHILD_SELECTOR_RIGHT = 1;
-
-Interest.ANSWER_NO_CONTENT_STORE = 0;
-Interest.ANSWER_CONTENT_STORE = 1;
-Interest.ANSWER_GENERATED = 2;
-Interest.ANSWER_STALE = 4;    // Stale answer OK
-Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
-
-Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
-
-/**
- * Return true if this.name.match(name) and the name conforms to the interest selectors.
- * @param {Name} name
- * @returns {boolean}
- */
-Interest.prototype.matchesName = function(/*Name*/ name) 
-{
-  if (!this.name.match(name))
-    return false;
-    
-  if (this.minSuffixComponents != null &&
-      // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
-    return false;
-  if (this.maxSuffixComponents != null &&
-      // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
-    return false;
-  if (this.exclude != null && name.size() > this.name.size() &&
-      this.exclude.matches(name.components[this.name.size()]))
-    return false;
-    
-  return true;
-};
-
-/**
- * @deprecated Use matchesName.
- */
-Interest.prototype.matches_name = function(/*Name*/ name) 
-{
-  return this.matchesName(name);
-};
-
-/**
- * Return a new Interest with the same fields as this Interest.  
- * Note: This does NOT make a deep clone of the name, exclue or other objects.
- */
-Interest.prototype.clone = function() 
-{
-  return new Interest
-     (this.name, this.minSuffixComponents, this.maxSuffixComponents, 
-      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
-      this.scope, this.interestLifetime, this.nonce);
-};
-
-Interest.prototype.setMinSuffixComponents = function(value)
-{
-  this.minSuffixComponents = value;
-}
-
-Interest.prototype.setMaxSuffixComponents = function(value)
-{
-  this.maxSuffixComponents = value;
-}
-
-Interest.prototype.setChildSelector = function(value)
-{
-  this.childSelector = value;
-}
-
-Interest.prototype.setAnswerOriginKind = function(value)
-{
-  this.answerOriginKind = value;
-}
-
-Interest.prototype.setScope = function(value)
-{
-  this.scope = value;
-}
-
-Interest.prototype.setInterestLifetimeMilliseconds = function(value)
-{
-  this.interestLifetime = value;
-}
-
-Interest.prototype.setNonce = function(value)
-{
-  if (value)
-    // Copy and make sure it is a Buffer.
-    this.nonce = new Buffer(value);
-  else
-    this.nonce = null;
-}
 
 /**
  * Create a new Exclude.
@@ -4246,7 +4098,10 @@ var Exclude = function Exclude(values)
 { 
   this.values = [];
   
-  if (values) {
+  if (typeof values === 'object' && values instanceof Exclude)
+    // Copy the exclude.
+    this.values = values.values.slice(0);
+  else if (values) {
     for (var i = 0; i < values.length; ++i) {
       if (values[i] == Exclude.ANY)
         this.appendAny();
@@ -4261,6 +4116,19 @@ exports.Exclude = Exclude;
 Exclude.ANY = "*";
 
 /**
+ * Get the number of entries.
+ * @returns {number} The number of entries.
+ */
+Exclude.prototype.size = function() { return this.values.length; };
+
+/**
+ * Get the entry at the given index.
+ * @param {number} i The index of the entry, starting from 0.
+ * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ */
+Exclude.prototype.get = function(i) { return this.values[i]; };
+
+/**
  * Append an Exclude.ANY element.
  * @returns This Exclude so that you can chain calls to append.
  */
@@ -4268,7 +4136,7 @@ Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
   return this;
-}
+};
 
 /**
  * Append a component entry, copying from component.
@@ -4279,7 +4147,15 @@ Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
   return this;
-}
+};
+
+/**
+ * Clear all the entries.
+ */
+Exclude.prototype.clear = function() 
+{
+  this.values = [];
+};
 
 Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
 {
@@ -4429,6 +4305,259 @@ Exclude.compareComponents = function(component1, component2)
   }
 
   return 0;
+};
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ * This class represents Interest Objects
+ */
+
+var Name = require('./name.js').Name;
+var Exclude = require('./exclude.js').Exclude;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * Create a new Interest with the optional values.
+ * 
+ * @constructor
+ * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
+ * other arguments.  Otherwise this is the optional name for the new Interest.
+ * @param {number} minSuffixComponents
+ * @param {number} maxSuffixComponents
+ * @param {Buffer} publisherPublicKeyDigest
+ * @param {Exclude} exclude
+ * @param {number} childSelector
+ * @param {number} answerOriginKind
+ * @param {number} scope
+ * @param {number} interestLifetimeMilliseconds in milliseconds
+ * @param {Buffer} nonce
+ */
+var Interest = function Interest
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
+    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
+{
+  if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
+    // Special case: this is a copy constructor.  Ignore all but the first argument.
+    var interest = nameOrInterest;
+    if (interest.name)
+      // Copy the name.
+      this.name = new Name(interest.name);
+    this.maxSuffixComponents = interest.maxSuffixComponents;
+    this.minSuffixComponents = interest.minSuffixComponents;
+
+    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
+    this.exclude = Exclude(interest.exclude);
+    this.childSelector = interest.childSelector;
+    this.answerOriginKind = interest.answerOriginKind;
+    this.scope = interest.scope;
+    this.interestLifetime = interest.interestLifetime;
+    if (interest.nonce)
+      // Copy.
+      this.nonce = new Buffer(interest.nonce);    
+  }  
+  else {
+    this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
+                new Name(nameOrInterest) : new Name();
+    this.maxSuffixComponents = maxSuffixComponents;
+    this.minSuffixComponents = minSuffixComponents;
+
+    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+    this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
+                   new Exclude(exclude) : new Exclude();
+    this.childSelector = childSelector;
+    this.answerOriginKind = answerOriginKind;
+    this.scope = scope;
+    this.interestLifetime = interestLifetimeMilliseconds;
+    if (nonce)
+      // Copy and make sure it is a Buffer.
+      this.nonce = new Buffer(nonce);
+  }
+};
+
+exports.Interest = Interest;
+
+Interest.RECURSIVE_POSTFIX = "*";
+
+Interest.CHILD_SELECTOR_LEFT = 0;
+Interest.CHILD_SELECTOR_RIGHT = 1;
+
+Interest.ANSWER_NO_CONTENT_STORE = 0;
+Interest.ANSWER_CONTENT_STORE = 1;
+Interest.ANSWER_GENERATED = 2;
+Interest.ANSWER_STALE = 4;    // Stale answer OK
+Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
+
+Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
+
+/**
+ * Return true if this.name.match(name) and the name conforms to the interest selectors.
+ * @param {Name} name
+ * @returns {boolean}
+ */
+Interest.prototype.matchesName = function(/*Name*/ name) 
+{
+  if (!this.name.match(name))
+    return false;
+    
+  if (this.minSuffixComponents != null &&
+      // Add 1 for the implicit digest.
+      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
+    return false;
+  if (this.maxSuffixComponents != null &&
+      // Add 1 for the implicit digest.
+      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
+    return false;
+  if (this.exclude != null && name.size() > this.name.size() &&
+      this.exclude.matches(name.components[this.name.size()]))
+    return false;
+    
+  return true;
+};
+
+/**
+ * @deprecated Use matchesName.
+ */
+Interest.prototype.matches_name = function(/*Name*/ name) 
+{
+  return this.matchesName(name);
+};
+
+/**
+ * Return a new Interest with the same fields as this Interest.  
+ */
+Interest.prototype.clone = function() 
+{
+  return new Interest
+     (this.name, this.minSuffixComponents, this.maxSuffixComponents, 
+      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
+      this.scope, this.interestLifetime, this.nonce);
+};
+
+/**
+ * Get the interest Name.
+ * @returns {Name} The name.  The name size() may be 0 if not specified.
+ */
+Interest.prototype.getName = function() { return this.name; };
+
+/**
+ * Get the min suffix components.
+ * @returns number} The min suffix components, or null if not specified.
+ */
+Interest.prototype.getMinSuffixComponents = function() 
+{ 
+  return this.minSuffixComponents; 
+};
+
+/**
+ * Get the max suffix components.
+ * @returns {number} The max suffix components, or null if not specified.
+ */
+Interest.prototype.getMaxSuffixComponents = function() 
+{ 
+  return this.maxSuffixComponents; 
+};
+
+/**
+ * Get the exclude object.
+ * @returns {Exclude} The exclude object. If the exclude size() is zero, then
+ * the exclude is not specified.
+ */
+Interest.prototype.getExclude = function() { return this.exclude; };
+
+/**
+ * Get the child selector.
+ * @returns {number} The child selector, or null if not specified.
+ */
+Interest.prototype.getChildSelector = function() 
+{ 
+  return this.childSelector; 
+};
+
+Interest.prototype.getAnswerOriginKind = function() 
+{ 
+  return this.answerOriginKind; 
+};
+
+/**
+ * 
+ * @returns {Buffer} 
+ */
+Interest.prototype.getNonce = function() { return this.nonce; };
+
+/**
+ * Get the interest scope.
+ * @returns {number} The scope, or null if not specified.
+ */
+Interest.prototype.getScope = function() { return this.scope; };
+
+/**
+ * Get the interest lifetime.
+ * @returns {number} The interest lifetime in milliseconds, or null if not 
+ * specified.
+ */
+Interest.prototype.getInterestLifetimeMilliseconds = function() 
+{ 
+  return this.interestLifetime; 
+};
+
+Interest.prototype.setName = function(name)
+{
+  this.name = typeof name === 'object' && name instanceof Interest ?
+              new Name(name) : new Name();
+};
+                
+Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
+{
+  this.minSuffixComponents = minSuffixComponents;
+};
+
+Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
+{
+  this.maxSuffixComponents = maxSuffixComponents;
+};
+
+/**
+ * Set this interest to use a copy of the given exclude object. Note: You can 
+ * also change this interest's exclude object modifying the object from 
+ * getExclude().
+ * @param {Exclude} exclude The exlcude object that is copied.
+ */
+Interest.prototype.setExclude = function(exclude)
+{
+  this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
+                 new Exclude(exclude) : new Exclude();
+};
+
+Interest.prototype.setChildSelector = function(childSelector)
+{
+  this.childSelector = childSelector;
+};
+
+Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
+{
+  this.answerOriginKind = answerOriginKind;
+};
+
+Interest.prototype.setScope = function(scope)
+{
+  this.scope = scope;
+};
+
+Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
+{
+  this.interestLifetime = interestLifetimeMilliseconds;
+};
+
+Interest.prototype.setNonce = function(nonce)
+{
+  if (nonce)
+    // Copy and make sure it is a Buffer.
+    this.nonce = new Buffer(nonce);
+  else
+    this.nonce = null;
 };
 
 /**
@@ -5237,19 +5366,7 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat()
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
 
 // Default object.
-BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
-
-/**
- * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
- * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()), 
- * you can check if this is the default wire encoding with
- * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
- * @returns {BinaryXmlWireFormat} The singleton instance.
- */
-BinaryXmlWireFormat.get = function()
-{
-  return BinaryXmlWireFormat.instance;
-}
+BinaryXmlWireFormat.instance = null;
 
 /**
  * Encode the interest and return a Buffer.
@@ -5312,6 +5429,21 @@ BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
 {
   this.decodeData(data, input);
 }
+
+/**
+ * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
+ * wire format was set with 
+ * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if 
+ * this is the default wire encoding with
+ * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
+ * @returns {BinaryXmlWireFormat} The singleton instance.
+ */
+BinaryXmlWireFormat.get = function()
+{
+  if (BinaryXmlWireFormat.instance === null)
+    BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
+  return BinaryXmlWireFormat.instance;
+};
 
 /**
  * Encode the interest by calling the operations on the encoder.
@@ -5526,12 +5658,12 @@ exports.EncodingUtils = EncodingUtils;
 
 EncodingUtils.encodeToHexInterest = function(interest) 
 {
-  return DataUtils.toHex(interest.encode());
+  return DataUtils.toHex(interest.wireEncode());
 };
 
 EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(data.encode());
+  return DataUtils.toHex(data.wireEncode());
 };
 
 /**
@@ -5567,14 +5699,14 @@ EncodingUtils.decodeHexFaceInstance = function(result)
 EncodingUtils.decodeHexInterest = function(input) 
 {
   var interest = new Interest();
-  interest.decode(DataUtils.toNumbers(input));
+  interest.wireDecode(DataUtils.toNumbers(input));
   return interest;
 };
 
 EncodingUtils.decodeHexData = function(input) 
 {
   var data = new Data();
-  data.decode(DataUtils.toNumbers(input));
+  data.wireDecode(DataUtils.toNumbers(input));
   return data;
 };
 
@@ -5756,13 +5888,13 @@ var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSu
 var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
- * @deprecated Use interest.encode().
+ * @deprecated Use interest.wireEncode().
  */
-function encodeToBinaryInterest(interest) { return interest.encode(); }
+function encodeToBinaryInterest(interest) { return interest.wireEncode(); }
 /**
- * @deprecated Use data.encode().
+ * @deprecated Use data.wireEncode().
  */
-function encodeToBinaryContentObject(data) { return data.encode(); }
+function encodeToBinaryContentObject(data) { return data.wireEncode(); }
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -6143,7 +6275,7 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
  */
 Face.prototype.expressInterestHelper = function(interest, closure) 
 {
-  var binaryInterest = interest.encode();
+  var binaryInterest = interest.wireEncode();
   var thisNDN = this;    
   //TODO: check local content store first
   if (closure != null) {
@@ -6320,7 +6452,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
     
   var data = new Data(new Name(), si, bytes); 
   data.sign();
-  var coBinary = data.encode();;
+  var coBinary = data.wireEncode();;
     
   var nodename = this.ndndid;
   var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
@@ -6331,7 +6463,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
-  this.transport.send(interest.encode());
+  this.transport.send(interest.wireEncode());
 };
 
 /**
@@ -6357,7 +6489,7 @@ Face.prototype.onReceivedElement = function(element)
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
-        this.transport.send(info.data.encode());
+        this.transport.send(info.data.wireEncode());
     }        
   } 
   else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet

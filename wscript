@@ -107,6 +107,7 @@ def build (bld):
                  "js/name.js",
                  "js/security/key-manager.js",
                  "js/data.js",
+                 "js/exclude.js",
                  "js/interest.js",
                  "js/key.js",
                  "js/face-instance.js",
