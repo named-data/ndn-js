@@ -280,3 +280,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     
   data.saveRawData(decoder.input);
 };
+
+// On loading this module, make this the default wire format.
+// This module will be loaded because WireFormat loads it.
+WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
