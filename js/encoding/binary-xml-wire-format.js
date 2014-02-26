@@ -29,9 +29,10 @@ BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
 
 /**
  * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
- * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()), 
- * you can check if this is the default wire encoding with
- * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
+ * wire format was set with 
+ * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if 
+ * this is the default wire encoding with
+ * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
  * @returns {BinaryXmlWireFormat} The singleton instance.
  */
 BinaryXmlWireFormat.get = function()
