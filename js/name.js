@@ -5,6 +5,7 @@
  * This class represents a Name as an array of components where each is a byte array.
  */
  
+var Blob = require('./util/blob.js').Blob;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
@@ -54,6 +55,8 @@ Name.Component = function NameComponent(value)
     this.value = DataUtils.stringToUtf8Array(value);
   else if (typeof value == 'object' && value instanceof Name.Component)
     this.value = new Buffer(value.value);
+  else if (typeof value == 'object' && value instanceof Blob)
+    this.value = new Buffer(value.buf());
   else if (typeof value == 'object' && value instanceof Buffer)
     this.value = new Buffer(value);
   else if (typeof value == 'object' && typeof ArrayBuffer != 'undefined' &&  value instanceof ArrayBuffer) {
