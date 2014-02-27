@@ -9,8 +9,9 @@ Changes
 * http://redmine.named-data.net/issues/1121 In Name.get, allow a negative index.
 * In Name, added method getSubName.
 * In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
-# Added class MetaInfo and deprecated SignedInfo.
+* Added class MetaInfo and deprecated SignedInfo.
 * Moved classes Exclude, Signature, MetaInfo and KeyLocator into their own source files.
+* In Interest, added getKeyLocator and setKeyLocator().
 
 Deprecated
 * SignedInfo: Deprecated class SignedInfo. Use MetaInfo.

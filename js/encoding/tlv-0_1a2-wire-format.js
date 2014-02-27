@@ -8,7 +8,9 @@ var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
-var Exclude = require('../interest.js').Exclude;
+var Exclude = require('../exclude.js').Exclude;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
  * A Tlv0_1a2WireFormat implements the WireFormat interface for encoding and 
@@ -40,6 +42,13 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   var saveLength = encoder.getLength();
   
   // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
+  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
+  
+  // TODO: Implement nonce.
+  encoder.writeBlobTlv(Tlv.Nonce, new Buffer([1, 2, 3, 4]));
+  
   Tlv0_1a2WireFormat.encodeSelectors(interest, encoder);
   Tlv0_1a2WireFormat.encodeName(interest.getName(), encoder);
   
@@ -63,6 +72,15 @@ Tlv0_1a2WireFormat.prototype.decodeInterest = function(interest, input)
   Tlv0_1a2WireFormat.decodeName(interest.getName(), decoder);
   if (decoder.peekType(Tlv.Selectors, endOffset))
     Tlv0_1a2WireFormat.decodeSelectors(interest, decoder);
+  // Require a Nonce, but don't force it to be 4 bytes.
+  var nonce = decoder.readBlobTlv(Tlv.Nonce);
+  interest.setScope(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.Scope, endOffset));
+  interest.setInterestLifetimeMilliseconds
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  // Set the nonce last because setting other interest fields clears it.
+  interest.setNonce(nonce);
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -117,9 +135,8 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
     Tlv0_1a2WireFormat.encodeExclude(interest.getExclude(), encoder);
-  // TODO: Implment KeyLocator.
-  //if (interest.getKeyLocator().getType() != null)
-  //  Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
+  if (interest.getKeyLocator().getType() != null)
+    Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -139,11 +156,10 @@ Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
   interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.MaxSuffixComponents, endOffset));
 
-  // TODO: Implment KeyLocator.
-  //if (decoder.peekType(Tlv.KeyLocator, endOffset))
-  //  Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
-  //else
-  //  interest.getKeyLocator().clear();
+  if (decoder.peekType(Tlv.KeyLocator, endOffset))
+    Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
+  else
+    interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
     Tlv0_1a2WireFormat.decodeExclude(interest.getExclude(), decoder);
@@ -192,5 +208,50 @@ Tlv0_1a2WireFormat.decodeExclude = function(exclude, decoder)
       break;
   }
   
+  decoder.finishNestedTlvs(endOffset);
+};
+
+Tlv0_1a2WireFormat.encodeKeyLocator = function(keyLocator, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  if (keyLocator.getType() != null) {
+    if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      Tlv0_1a2WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
+             keyLocator.getKeyData().length > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+    else
+      throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
+  }
+  
+  encoder.writeTypeAndLength(Tlv.KeyLocator, encoder.getLength() - saveLength);
+};
+
+Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.KeyLocator);
+
+  keyLocator.clear();
+
+  if (decoder.getOffset() == endOffset)
+    // The KeyLocator is omitted, so leave the fields as none.
+    return;
+
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    // KeyLocator is a Name.
+    keyLocator.setType(KeyLocatorType.KEYNAME);
+    Tlv0_1a2WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+  }
+  else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
+    // KeyLocator is a KeyLocatorDigest.
+    keyLocator.setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
+    keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
+  }
+  else
+    throw new DecodingException
+      ("decodeKeyLocator: Unrecognized key locator type");
+
   decoder.finishNestedTlvs(endOffset);
 };

@@ -9,6 +9,7 @@
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -41,7 +42,8 @@ var Interest = function Interest
     this.minSuffixComponents = interest.minSuffixComponents;
 
     this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.exclude = Exclude(interest.exclude);
+    this.keyLocator = new KeyLocator(interest.keyLocator);
+    this.exclude = new Exclude(interest.exclude);
     this.childSelector = interest.childSelector;
     this.answerOriginKind = interest.answerOriginKind;
     this.scope = interest.scope;
@@ -57,6 +59,7 @@ var Interest = function Interest
     this.minSuffixComponents = minSuffixComponents;
 
     this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+    this.keyLocator = new KeyLocator();
     this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                    new Exclude(exclude) : new Exclude();
     this.childSelector = childSelector;
@@ -150,6 +153,16 @@ Interest.prototype.getMinSuffixComponents = function()
 Interest.prototype.getMaxSuffixComponents = function() 
 { 
   return this.maxSuffixComponents; 
+};
+
+/**
+ * Get the interest key locator.
+ * @returns {KeyLocator} The key locator. If its getType() is null, 
+ * then the key locator is not specified.
+ */
+Interest.prototype.getKeyLocator = function() 
+{ 
+  return this.keyLocator; 
 };
 
 /**
@@ -277,7 +290,7 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
   if (this.nonce != null)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
-  if (this.exclude != null)
+  if (this.exclude != null && this.exclude.size() > 0)
     selectors += "&ndn.Exclude=" + this.exclude.toUri();
 
   var result = this.name.toUri();

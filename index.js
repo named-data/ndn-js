@@ -17,6 +17,7 @@ exports.KeyLocatorType = require('./js/key-locator.js').KeyLocatorType;
 exports.PublisherPublicKeyDigest = require('./js/publisher-public-key-digest.js').PublisherPublicKeyDigest;
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
 exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
 exports.NDNProtocolDTags = require('./js/util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 exports.NDNProtocolDTagsStrings = require('./js/util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
 exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;

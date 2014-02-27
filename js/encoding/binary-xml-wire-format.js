@@ -149,8 +149,6 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   encoder.writeElementClose();
 };
 
-var Exclude = require('../interest.js').Exclude;
-
 /**
  * Use the decoder to place the result in interest.
  * @param {Interest} interest

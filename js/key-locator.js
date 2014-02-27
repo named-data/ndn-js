@@ -28,16 +28,38 @@ exports.KeyLocatorType = KeyLocatorType;
  */
 var KeyLocator = function KeyLocator(input,type) 
 { 
-  this.type = type;
-    
-  if (type == KeyLocatorType.KEYNAME)
-    this.keyName = input;
-  else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-    this.keyData = input;
-  else if (type == KeyLocatorType.KEY)
-    this.publicKey = input;
-  else if (type == KeyLocatorType.CERTIFICATE)
-    this.certificate = input;
+  if (typeof input === 'object' && input instanceof KeyLocator) {
+    // Copy from the input KeyLocator.
+    this.type = input.type;
+    this.keyName = new KeyName();
+    if (input.keyName != null) {
+      this.keyName.contentName = input.keyName.contentName == null ? 
+        null : new Name(input.keyName.contentName);
+      this.keyName.publisherID = input.keyName.publisherID;
+    }
+    this.keyData = input.keyData == null ? null : new Buffer(input.keyData);
+    this.publicKey = input.publicKey == null ? null : new Buffer(input.publicKey);
+    this.certificate = input.certificate == null ? null : new Buffer(input.certificate);
+  }
+  else {
+    this.type = type;
+    this.keyName = new KeyName();
+
+    if (type == KeyLocatorType.KEYNAME)
+      this.keyName = input;
+    else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      this.keyData = new Buffer(input);
+    else if (type == KeyLocatorType.KEY) {
+      this.keyData = new Buffer(input);
+      // Set for backwards compatibility.
+      this.publicKey = this.keyData;
+    }
+    else if (type == KeyLocatorType.CERTIFICATE) {
+      this.keyData = new Buffer(input);
+      // Set for backwards compatibility.
+      this.certificate = this.keyData;
+    }
+  }
 };
 
 exports.KeyLocator = KeyLocator;
@@ -56,10 +78,12 @@ KeyLocator.prototype.getType = function() { return this.type; };
  */
 KeyLocator.prototype.getKeyName = function() 
 { 
-  if (this.keyName != null)
-    return this.contentName;
-  else
-    return Name();
+  if (this.keyName == null)
+    this.keyName = new KeyName();
+  if (this.keyName.contentName == null)
+    this.keyName.contentName = new Name();
+  
+  return this.keyName.contentName;
 };
 
 /**
@@ -95,7 +119,7 @@ KeyLocator.prototype.setType = function(type) { this.type = type; };
 KeyLocator.prototype.setKeyName = function(name) 
 { 
   if (this.keyName == null)
-    this.keyName = KeyName();
+    this.keyName = new KeyName();
   
   this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
                              new Name(name) : new Name(); 
@@ -222,7 +246,7 @@ KeyLocator.prototype.getElementLabel = function()
  */
 var KeyName = function KeyName() 
 {
-  this.contentName = this.contentName;  //contentName
+  this.contentName = new Name();  //contentName
   this.publisherID = this.publisherID;  //publisherID
 };
 

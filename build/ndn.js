@@ -2425,6 +2425,591 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset)
   this.offset = offset;
 };
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * The Tlv class has static type codes for the NDN-TLV wire format.
+ * @constructor
+ */
+var Tlv = function Tlv()
+{
+}
+
+exports.Tlv = Tlv;
+
+Tlv.Interest =         5;
+Tlv.Data =             6;
+Tlv.Name =             7;
+Tlv.NameComponent =    8;
+Tlv.Selectors =        9;
+Tlv.Nonce =            10;
+Tlv.Scope =            11;
+Tlv.InterestLifetime = 12;
+Tlv.MinSuffixComponents = 13;
+Tlv.MaxSuffixComponents = 14;
+Tlv.PublisherPublicKeyLocator = 15;
+Tlv.Exclude =          16;
+Tlv.ChildSelector =    17;
+Tlv.MustBeFresh =      18;
+Tlv.Any =              19;
+Tlv.MetaInfo =         20;
+Tlv.Content =          21;
+Tlv.SignatureInfo =    22;
+Tlv.SignatureValue =   23;
+Tlv.ContentType =      24;
+Tlv.FreshnessPeriod =  25;
+Tlv.FinalBlockId =     26;
+Tlv.SignatureType =    27;
+Tlv.KeyLocator =       28;
+Tlv.KeyLocatorDigest = 29;
+Tlv.FaceInstance =     128;
+Tlv.ForwardingEntry =  129;
+Tlv.StatusResponse =   130;
+Tlv.Action =           131;
+Tlv.FaceID =           132;
+Tlv.IPProto =          133;
+Tlv.Host =             134;
+Tlv.Port =             135;
+Tlv.MulticastInterface = 136;
+Tlv.MulticastTTL =     137;
+Tlv.ForwardingFlags =  138;
+Tlv.StatusCode =       139;
+Tlv.StatusText =       140;
+
+Tlv.SignatureType_DigestSha256 = 0;
+Tlv.SignatureType_SignatureSha256WithRsa = 1;
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+
+/**
+ * Create a new TlvEncoder with an initialCapacity for the encoding buffer.
+ * @constructor
+ * @param {number} initialCapacity (optional) The initial capacity of the 
+ * encoding buffer. If omitted, use a default value.
+ */
+var TlvEncoder = function TlvEncoder(initialCapacity)
+{
+  initialCapacity = initialCapacity || 16;
+  this.output = new DynamicBuffer(initialCapacity);
+  // length is the number of bytes that have been written to the back of 
+  //  this.output.array.
+  this.length = 0;
+};
+
+exports.TlvEncoder = TlvEncoder;
+
+/**
+ * Get the number of bytes that have been written to the output.  You can
+ * save this number, write sub TLVs, then subtract the new length from this
+ * to get the total length of the sub TLVs.
+ * @returns {number} The number of bytes that have been written to the output.
+ */
+TlvEncoder.prototype.getLength = function()
+{
+  return this.length;
+};
+
+/**
+ * Encode varNumber as a VAR-NUMBER in NDN-TLV and write it to this.output just 
+ * before this.length from the back.  Advance this.length.
+ * @param {number} varNumber The non-negative number to encode.
+ */
+TlvEncoder.prototype.writeVarNumber = function(varNumber)
+{
+  if (varNumber < 253) {
+    this.length += 1;
+    this.output.ensureLengthFromBack(this.length);
+    this.output.array[this.output.array.length - this.length] = varNumber & 0xff;
+  }
+  else if (varNumber <= 0xffff) {
+    this.length += 3;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset] = 253;
+    this.output.array[offset + 1] = (varNumber >> 8) & 0xff;
+    this.output.array[offset + 2] = varNumber & 0xff;
+  }
+  else if (varNumber <= 0xffffffff) {
+    this.length += 5;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset] = 254;
+    this.output.array[offset + 1] = (varNumber >> 24) & 0xff;
+    this.output.array[offset + 2] = (varNumber >> 16) & 0xff;
+    this.output.array[offset + 3] = (varNumber >> 8) & 0xff;
+    this.output.array[offset + 4] = varNumber & 0xff;
+  }
+  else {
+    this.length += 9;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset] = 255;
+    this.output.array[offset + 1] = (varNumber >> 56) & 0xff;
+    this.output.array[offset + 2] = (varNumber >> 48) & 0xff;
+    this.output.array[offset + 3] = (varNumber >> 40) & 0xff;
+    this.output.array[offset + 4] = (varNumber >> 32) & 0xff;
+    this.output.array[offset + 5] = (varNumber >> 24) & 0xff;
+    this.output.array[offset + 6] = (varNumber >> 16) & 0xff;
+    this.output.array[offset + 7] = (varNumber >> 8) & 0xff;
+    this.output.array[offset + 8] = varNumber & 0xff;
+  }
+};
+
+/**
+ * Encode the type and length as VAR-NUMBER and write to this.output just before 
+ * this.length from the back.  Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {number} length The non-negative length of the TLV.
+ */
+TlvEncoder.prototype.writeTypeAndLength = function(type, length)
+{
+  // Write backwards.
+  this.writeVarNumber(length);
+  this.writeVarNumber(type);
+};
+
+/**
+ * Write the type, then the length of the encoded value then encode value as a 
+ * non-negative integer and write it to this.output just before this.length from 
+ * the back. Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {number} value The non-negative integer to encode.
+ */
+TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+{
+  if (value < 0)
+    throw new Error("TLV integer value may not be negative");
+
+  // JavaScript doesn't distinguish int from float, so round.
+  value = Math.round(value)
+
+  // Write backwards.
+  var saveNBytes = this.length;
+  if (value < 253) {
+    this.length += 1;
+    this.output.ensureLengthFromBack(this.length);
+    this.output.array[this.output.array.length - this.length] = value & 0xff;
+  }
+  else if (value <= 0xffff) {
+    this.length += 2;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset]     = (value >> 8) & 0xff;
+    this.output.array[offset + 1] = value & 0xff;
+  }
+  else if (value <= 0xffffffff) {
+    this.length += 4;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset]     = (value >> 24) & 0xff;
+    this.output.array[offset + 1] = (value >> 16) & 0xff;
+    this.output.array[offset + 2] = (value >> 8) & 0xff;
+    this.output.array[offset + 3] = value & 0xff;
+  }
+  else {
+    this.length += 8;
+    this.output.ensureLengthFromBack(this.length);
+    var offset = this.output.array.length - this.length;
+    this.output.array[offset]     = (value >> 56) & 0xff;
+    this.output.array[offset + 1] = (value >> 48) & 0xff;
+    this.output.array[offset + 2] = (value >> 40) & 0xff;
+    this.output.array[offset + 3] = (value >> 32) & 0xff;
+    this.output.array[offset + 4] = (value >> 24) & 0xff;
+    this.output.array[offset + 5] = (value >> 16) & 0xff;
+    this.output.array[offset + 6] = (value >> 8) & 0xff;
+    this.output.array[offset + 7] = value & 0xff;
+  }
+
+  this.writeTypeAndLength(type, this.length - saveNBytes);
+};
+
+/**
+ * If value is negative or null then do nothing, otherwise call 
+ * writeNonNegativeIntegerTlv.
+ * @param {number} type The type of the TLV.
+ * @param {number} value If negative or None do nothing, otherwise the integer 
+ *   to encode.
+ */
+TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
+{
+  if (value != null && value >= 0)
+    this.writeNonNegativeIntegerTlv(type, value);
+};
+
+/**
+ * Write the type, then the length of the buffer then the buffer value to 
+ * this.output just before this.length from the back. Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {Buffer} value The byte array with the bytes of the blob.  If value is
+    null, then just write the type and length 0.
+ */
+TlvEncoder.prototype.writeBlobTlv = function(type, value)
+{
+  if (value == null) {
+    this.writeTypeAndLength(type, 0);
+    return;
+  }
+
+  // Write backwards, starting with the blob array.    
+  this.length += value.length;
+  this.output.copyFromBack(value, this.length);
+
+  this.writeTypeAndLength(type, value.length);
+};
+
+/**
+ * If the byte array is null or zero length then do nothing, otherwise call 
+ * writeBlobTlv.
+ * @param {number} type The type of the TLV.
+ * @param {Buffer} value If null or zero length do nothing, otherwise the byte 
+ * array with the bytes of the blob.
+ */
+TlvEncoder.prototype.writeOptionalBlobTlv = function(type, value)
+{
+  if (value != null && value.length > 0)
+    this.writeBlobTlv(type, value);
+};
+
+/**
+ * Get a slice of the encoded bytes.
+ * @returns {Buffer} A slice backed by the encoding Buffer.
+ */
+TlvEncoder.prototype.getOutput = function()
+{
+  return this.output.array.slice(this.output.array.length - this.length);
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var DecodingException = require('../decoding-exception.js').DecodingException;
+
+/**
+ * Create a new TlvDecoder for decoding the input in the NDN-TLV wire format.
+ * @constructor
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+var TlvDecoder = function TlvDecoder(input)
+{
+  this.input = input;
+  this.offset = 0;
+};
+
+exports.TlvDecoder = TlvDecoder;
+
+/**
+ * Decode VAR-NUMBER in NDN-TLV and return it. Update offset.
+ * @returns {number} The decoded VAR-NUMBER.
+ */
+TlvDecoder.prototype.readVarNumber = function() 
+{
+  // Assume array values are in the range 0 to 255.
+  firstOctet = this.input[this.offset];
+  this.offset += 1;
+  if (firstOctet < 253)
+    return firstOctet;
+  else
+    return this.readExtendedVarNumber(firstOctet);
+};
+
+/**
+ * A private function to do the work of readVarNumber, given the firstOctet
+ * which is >= 253.
+ * @param {number} firstOctet The first octet which is >= 253, used to decode 
+ * the remaining bytes.
+ * @returns {number} The decoded VAR-NUMBER.
+ */
+TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet) 
+{
+  // This is a private function so we know firstOctet >= 253.
+  if (firstOctet == 253) {
+    result = ((this.input[this.offset] << 8) +
+           this.input[this.offset + 1]);
+    this.offset += 2;
+  }
+  else if (firstOctet == 254) {
+    result = ((this.input[this.offset] << 24) +
+          (this.input[this.offset + 1] << 16) +
+          (this.input[this.offset + 2] << 8) +
+           this.input[this.offset + 3]);
+    this.offset += 4;
+  }
+  else {
+    result = ((this.input[this.offset] << 56) +
+          (this.input[this.offset + 1] << 48) +
+          (this.input[this.offset + 2] << 40) +
+          (this.input[this.offset + 3] << 32) +
+          (this.input[this.offset + 4] << 24) +
+          (this.input[this.offset + 5] << 16) +
+          (this.input[this.offset + 6] << 8) +
+           this.input[this.offset + 7]);
+    this.offset += 8;
+  }
+  
+  return result;
+};
+
+/**
+ * Decode the type and length from this's input starting at offset, expecting 
+ * the type to be expectedType and return the length. Update offset.  Also make 
+ * sure the decoded length does not exceed the number of bytes remaining in the 
+ * input.
+ * @param {number} expectedType The expected type.
+ * @returns {number} The length of the TLV.
+ * @throws DecodingException if (did not get the expected TLV type or the TLV length 
+ * exceeds the buffer length.
+ */
+TlvDecoder.prototype.readTypeAndLength = function(expectedType) 
+{
+  var type = this.readVarNumber();
+  if (type != expectedType)
+    throw new DecodingException("Did not get the expected TLV type");
+
+  var length = this.readVarNumber();
+  if (this.offset + length > this.input.length)
+    throw new DecodingException("TLV length exceeds the buffer length");
+
+  return length;
+};
+
+/**
+ * Decode the type and length from the input starting at offset, expecting the 
+ * type to be expectedType.  Update offset.  Also make sure the decoded length 
+ * does not exceed the number of bytes remaining in the input. Return the offset 
+ * of the end of this parent TLV, which is used in decoding optional nested 
+ * TLVs. After reading all nested TLVs, call finishNestedTlvs.
+ * @param {number} expectedType The expected type.
+ * @returns {number} The offset of the end of the parent TLV.
+ * @throws DecodingException if did not get the expected TLV type or the TLV 
+ * length exceeds the buffer length.
+ */
+TlvDecoder.prototype.readNestedTlvsStart = function(expectedType) 
+{
+  return this.readTypeAndLength(expectedType) + this.offset;
+};
+
+/**
+ * Call this after reading all nested TLVs to skip any remaining unrecognized 
+ * TLVs and to check if the offset after the final nested TLV matches the 
+ * endOffset returned by readNestedTlvsStart.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * by readNestedTlvsStart.
+ * @throws DecodingException if the TLV length does not equal the total length 
+ * of the nested TLVs.
+ */
+TlvDecoder.prototype.finishNestedTlvs = function(endOffset) 
+{
+  // We expect offset to be endOffset, so check this first.
+  if (this.offset == endOffset)
+    return;
+
+  // Skip remaining TLVs.
+  while (this.offset < endOffset) {
+    // Skip the type VAR-NUMBER.
+    this.readVarNumber();
+    // Read the length and update offset.
+    var length = this.readVarNumber();
+    this.offset += length;
+
+    if (this.offset > this.input.length)
+      throw new DecodingException("TLV length exceeds the buffer length");
+  }
+  
+  if (this.offset != endOffset)
+    throw new DecodingException
+      ("TLV length does not equal the total length of the nested TLVs");
+};
+
+/**
+ * Decode the type from this's input starting at offset, and if it is the 
+ * expectedType, then return true, else false.  However, if this's offset is 
+ * greater than or equal to endOffset, then return false and don't try to read 
+ * the type. Do not update offset.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * by readNestedTlvsStart.
+ * @returns {boolean} true if the type of the next TLV is the expectedType, 
+ *  otherwise false.
+ */
+TlvDecoder.prototype.peekType = function(expectedType, endOffset) 
+{
+  if (this.offset >= endOffset)
+    // No more sub TLVs to look at.
+    return false;
+  else {
+    var saveOffset = this.offset;
+    var type = this.readVarNumber();
+    // Restore offset.
+    this.offset = saveOffset;
+
+    return type == expectedType;
+  }
+};
+
+/**
+ * Decode a non-negative integer in NDN-TLV and return it. Update offset by 
+ * length.
+ * @param {number} length The number of bytes in the encoded integer.
+ * @returns {number} The integer.
+ * @throws DecodingException if length is an invalid length for a TLV 
+ * non-negative integer.
+ */
+TlvDecoder.prototype.readNonNegativeInteger = function(length) 
+{
+  var result;
+  if (length == 1)
+    result = this.input[this.offset];
+  else if (length == 2)
+    result = ((this.input[this.offset] << 8) +
+           this.input[this.offset + 1]);
+  else if (length == 4)
+    result = ((this.input[this.offset] << 24) +
+          (this.input[this.offset + 1] << 16) +
+          (this.input[this.offset + 2] << 8) +
+           this.input[this.offset + 3]);
+  else if (length == 8)
+    result = ((this.input[this.offset] << 56) +
+          (this.input[this.offset + 1] << 48) +
+          (this.input[this.offset + 2] << 40) +
+          (this.input[this.offset + 3] << 32) +
+          (this.input[this.offset + 4] << 24) +
+          (this.input[this.offset + 5] << 16) +
+          (this.input[this.offset + 6] << 8) +
+           this.input[this.offset + 7]);
+  else
+    throw new DecodingException("Invalid length for a TLV nonNegativeInteger");
+
+  this.offset += length;
+  return result;
+};
+
+/**
+ * Decode the type and length from this's input starting at offset, expecting 
+ * the type to be expectedType. Then decode a non-negative integer in NDN-TLV 
+ * and return it.  Update offset.
+ * @param {number} expectedType The expected type.
+ * @returns {number} The integer.
+ * @throws DecodingException if did not get the expected TLV type or can't 
+ * decode the value.
+ */
+TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType) 
+{
+  var length = this.readTypeAndLength(expectedType);
+  return this.readNonNegativeInteger(length);
+};
+
+/**
+ * Peek at the next TLV, and if it has the expectedType then call 
+ * readNonNegativeIntegerTlv and return the integer.  Otherwise, return null.  
+ * However, if this's offset is greater than or equal to endOffset, then return 
+ * null and don't try to read the type.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * by readNestedTlvsStart.
+ * @returns {number} The integer or null if the next TLV doesn't have the 
+ * expected type.
+ */
+TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
+  (expectedType, endOffset) 
+{
+  if (this.peekType(expectedType, endOffset))
+    return this.readNonNegativeIntegerTlv(expectedType);
+  else
+    return null;
+};
+
+/**
+ * Decode the type and length from this's input starting at offset, expecting 
+ * the type to be expectedType. Then return an array of the bytes in the value.
+ * Update offset.
+ * @param {number} expectedType The expected type.
+ * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * not a copy of the bytes in the input buffer.  If you need a copy, then you 
+ * must make a copy of the return value.
+ * @throws DecodingException if did not get the expected TLV type.
+ */
+TlvDecoder.prototype.readBlobTlv = function(expectedType) 
+{
+  var length = this.readTypeAndLength(expectedType);
+  var result = this.input.slice(this.offset, this.offset + length);
+
+  // readTypeAndLength already checked if length exceeds the input buffer.
+  this.offset += length;
+  return result;
+};
+
+/**
+ * Peek at the next TLV, and if it has the expectedType then call readBlobTlv 
+ * and return the value.  Otherwise, return null. However, if this's offset is 
+ * greater than or equal to endOffset, then return null and don't try to read 
+ * the type.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * by readNestedTlvsStart.
+ * @returns {Buffer} The bytes in the value as a slice on the buffer or null if 
+ * the next TLV doesn't have the expected type.  This is not a copy of the bytes 
+ * in the input buffer.  If you need a copy, then you must make a copy of the 
+ * return value.
+ */
+TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset) 
+{
+  if (this.peekType(expectedType, endOffset))
+    return this.readBlobTlv(expectedType);
+  else
+    return null;
+};
+
+/**
+ * Peek at the next TLV, and if it has the expectedType then read a type and 
+ * value, ignoring the value, and return true. Otherwise, return false.
+ * However, if this's offset is greater than or equal to endOffset, then return 
+ * false and don't try to read the type.
+ * @param {number} expectedType The expected type.
+ * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * by readNestedTlvsStart.
+ * @returns {boolean} true, or else false if the next TLV doesn't have the 
+ * expected type.
+ */
+TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset) 
+{
+  if (this.peekType(expectedType, endOffset)) {
+    var length = this.readTypeAndLength(expectedType);
+    // We expect the length to be 0, but update offset anyway.
+    this.offset += length;
+    return true;
+  }
+  else
+    return false;
+};
+
+/**
+ * Get the offset into the input, used for the next read.
+ * @returns {number} The offset.
+ */
+TlvDecoder.prototype.getOffset = function() 
+{
+  return this.offset;
+};
+
+/**
+ * Set the offset into the input, used for the next read.
+ * @param {number} offset The new offset.
+ */
+TlvDecoder.prototype.seek = function(offset) 
+{
+  this.offset = offset;
+};  
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
@@ -3767,9 +4352,10 @@ var LOG = require('./log.js').Log.LOG;
  * KeyLocator
  */
 var KeyLocatorType = {
-  KEY:1,
-  CERTIFICATE:2,
-  KEYNAME:3
+  KEYNAME: 1,
+  KEY_LOCATOR_DIGEST: 2,
+  KEY: 3,
+  CERTIFICATE: 4
 };
 
 exports.KeyLocatorType = KeyLocatorType;
@@ -3779,23 +4365,132 @@ exports.KeyLocatorType = KeyLocatorType;
  */
 var KeyLocator = function KeyLocator(input,type) 
 { 
-  this.type = type;
-    
-  if (type == KeyLocatorType.KEYNAME) {
-    if (LOG > 3) console.log('KeyLocator: SET KEYNAME');
-    this.keyName = input;
+  if (typeof input === 'object' && input instanceof KeyLocator) {
+    // Copy from the input KeyLocator.
+    this.type = input.type;
+    this.keyName = new KeyName();
+    if (input.keyName != null) {
+      this.keyName.contentName = input.keyName.contentName == null ? 
+        null : new Name(input.keyName.contentName);
+      this.keyName.publisherID = input.keyName.publisherID;
+    }
+    this.keyData = input.keyData == null ? null : new Buffer(input.keyData);
+    this.publicKey = input.publicKey == null ? null : new Buffer(input.publicKey);
+    this.certificate = input.certificate == null ? null : new Buffer(input.certificate);
   }
-  else if (type == KeyLocatorType.KEY) {
-    if (LOG > 3) console.log('KeyLocator: SET KEY');
-    this.publicKey = input;
-  }
-  else if (type == KeyLocatorType.CERTIFICATE) {
-    if (LOG > 3) console.log('KeyLocator: SET CERTIFICATE');
-    this.certificate = input;
+  else {
+    this.type = type;
+    this.keyName = new KeyName();
+
+    if (type == KeyLocatorType.KEYNAME)
+      this.keyName = input;
+    else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      this.keyData = new Buffer(input);
+    else if (type == KeyLocatorType.KEY) {
+      this.keyData = new Buffer(input);
+      // Set for backwards compatibility.
+      this.publicKey = this.keyData;
+    }
+    else if (type == KeyLocatorType.CERTIFICATE) {
+      this.keyData = new Buffer(input);
+      // Set for backwards compatibility.
+      this.certificate = this.keyData;
+    }
   }
 };
 
 exports.KeyLocator = KeyLocator;
+
+/**
+ * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
+ * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
+ * getKeyData() to get the digest.
+ * @returns {number} The key locator type, or null if not specified.
+ */
+KeyLocator.prototype.getType = function() { return this.type; };
+
+/**
+ * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
+ * @returns {Name} The key name. If not specified, the Name is empty.
+ */
+KeyLocator.prototype.getKeyName = function() 
+{ 
+  if (this.keyName == null)
+    this.keyName = new KeyName();
+  if (this.keyName.contentName == null)
+    this.keyName.contentName = new Name();
+  
+  return this.keyName.contentName;
+};
+
+/**
+ * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is 
+ * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER 
+ * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the 
+ * DER encoded certificate. 
+ * @returns {Buffer} The key data, or null if not specified.
+ */
+KeyLocator.prototype.getKeyData = function() 
+{ 
+  if (this.type == KeyLocatorType.KEY)
+    return this.publicKey;
+  else if (this.type == KeyLocatorType.CERTIFICATE)
+    return this.certificate;
+  else
+    return this.keyData;
+};
+
+/**
+ * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
+ * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
+ * setKeyData() to the digest.
+ * @param {number} type The key locator type.  If null, the type is unspecified.
+ */
+KeyLocator.prototype.setType = function(type) { this.type = type; }; 
+
+/**
+ * Set key name to a copy of the given Name.  This is the name if getType() 
+ * is KeyLocatorType.KEYNAME.
+ * @param {Name} name The key name which is copied.
+ */
+KeyLocator.prototype.setKeyName = function(name) 
+{ 
+  if (this.keyName == null)
+    this.keyName = new KeyName();
+  
+  this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
+                             new Name(name) : new Name(); 
+}; 
+
+/**
+ * Set the key data to the given value. This is the digest bytes if getType() is 
+ * KeyLocatorType.KEY_LOCATOR_DIGEST.
+ * @param {Buffer} keyData The array with the key data bytes.
+ */
+KeyLocator.prototype.setKeyData = function(keyData)
+{
+  var value = keyData;
+  if (value != null)
+    // Make a copy.
+    value = new Buffer(value);
+  
+  this.keyData = value;
+  // Set for backwards compatibility.
+  this.publicKey = value;
+  this.certificate = value;
+};
+
+/**
+ * Clear the keyData and set the type to none.
+ */
+KeyLocator.prototype.clear = function() 
+{
+  this.type = null;
+  this.keyName = null;
+  this.keyData = null;
+  this.publicKey = null;
+  this.certificate = null;
+};
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
@@ -3851,11 +4546,12 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
 KeyLocator.prototype.to_ndnb = function(encoder) 
 {
   if (LOG > 4) console.log('type is is ' + this.type);
-  //TODO Check if Name is missing
-  if (!this.validate())
-    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
-  //TODO FIX THIS TOO
+  if (this.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+    // encodeSignedInfo already encoded this as the publisherPublicKeyDigest,
+    //   so do nothing here.
+    return;
+
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (this.type == KeyLocatorType.KEY) {
@@ -3881,18 +4577,13 @@ KeyLocator.prototype.getElementLabel = function()
   return NDNProtocolDTags.KeyLocator; 
 };
 
-KeyLocator.prototype.validate = function() 
-{
-  return null != this.keyName || null != this.publicKey || null != this.certificate;
-};
-
 /**
  * KeyName is only used by KeyLocator.
  * @constructor
  */
 var KeyName = function KeyName() 
 {
-  this.contentName = this.contentName;  //contentName
+  this.contentName = new Name();  //contentName
   this.publisherID = this.publisherID;  //publisherID
 };
 
@@ -3917,9 +4608,6 @@ KeyName.prototype.from_ndnb = function(decoder)
 
 KeyName.prototype.to_ndnb = function(encoder)
 {
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-  
   encoder.writeElementStartDTag(this.getElementLabel());
   
   this.contentName.to_ndnb(encoder);
@@ -3931,12 +4619,6 @@ KeyName.prototype.to_ndnb = function(encoder)
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
-KeyName.prototype.validate = function() 
-{
-    // DKS -- do we do recursive validation?
-    // null signedInfo ok
-    return (null != this.contentName);
-};
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -4129,8 +4811,19 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.publisher) {
+    // We have a publisherPublicKeyDigest, so use it.
     if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
     this.publisher.to_ndnb(encoder);
+  }
+  else {
+    if (null != this.locator &&
+        this.locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+        this.locator.getKeyData() != null &&
+        this.locator.getKeyData().length > 0)
+      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
+      //   publisherPublicKeyDigest.
+      encoder.writeDTagElement
+        (NDNProtocolDTags.PublisherPublicKeyDigest, this.locator.getKeyData());
   }
 
   if (null != this.timestamp)
@@ -4164,7 +4857,7 @@ MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null ==this.publisher || null==this.timestamp ||null== this.locator)
+  if (null==this.timestamp ||null== this.locator)
     return false;
   return true;
 };
@@ -4678,6 +5371,7 @@ Exclude.compareComponents = function(component1, component2)
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -4710,7 +5404,8 @@ var Interest = function Interest
     this.minSuffixComponents = interest.minSuffixComponents;
 
     this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.exclude = Exclude(interest.exclude);
+    this.keyLocator = new KeyLocator(interest.keyLocator);
+    this.exclude = new Exclude(interest.exclude);
     this.childSelector = interest.childSelector;
     this.answerOriginKind = interest.answerOriginKind;
     this.scope = interest.scope;
@@ -4726,6 +5421,7 @@ var Interest = function Interest
     this.minSuffixComponents = minSuffixComponents;
 
     this.publisherPublicKeyDigest = publisherPublicKeyDigest;
+    this.keyLocator = new KeyLocator();
     this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                    new Exclude(exclude) : new Exclude();
     this.childSelector = childSelector;
@@ -4819,6 +5515,16 @@ Interest.prototype.getMinSuffixComponents = function()
 Interest.prototype.getMaxSuffixComponents = function() 
 { 
   return this.maxSuffixComponents; 
+};
+
+/**
+ * Get the interest key locator.
+ * @returns {KeyLocator} The key locator. If its getType() is null, 
+ * then the key locator is not specified.
+ */
+Interest.prototype.getKeyLocator = function() 
+{ 
+  return this.keyLocator; 
 };
 
 /**
@@ -4946,7 +5652,7 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
   if (this.nonce != null)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
-  if (this.exclude != null)
+  if (this.exclude != null && this.exclude.size() > 0)
     selectors += "&ndn.Exclude=" + this.exclude.toUri();
 
   var result = this.name.toUri();
@@ -5538,8 +6244,6 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   encoder.writeElementClose();
 };
 
-var Exclude = require('../interest.js').Exclude;
-
 /**
  * Use the decoder to place the result in interest.
  * @param {Interest} interest
@@ -5676,6 +6380,302 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
 // On loading this module, make this the default wire format.
 // This module will be loaded because WireFormat loads it.
 WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var Tlv = require('./tlv/tlv.js').Tlv;
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
+var WireFormat = require('./wire-format.js').WireFormat;
+var Exclude = require('../exclude.js').Exclude;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var DecodingException = require('./decoding-exception.js').DecodingException;
+
+/**
+ * A Tlv0_1a2WireFormat implements the WireFormat interface for encoding and 
+ * decoding with the NDN-TLV wire format, version 0.1a2
+ * @constructor
+ */
+var Tlv0_1a2WireFormat = function Tlv0_1a2WireFormat() 
+{
+  // Inherit from WireFormat.
+  WireFormat.call(this);
+};
+
+Tlv0_1a2WireFormat.prototype = new WireFormat();
+Tlv0_1a2WireFormat.prototype.name = "Tlv0_1a2WireFormat";
+
+exports.Tlv0_1a2WireFormat = Tlv0_1a2WireFormat;
+
+// Default object.
+Tlv0_1a2WireFormat.instance = null;
+
+/**
+ * Encode the interest using NDN-TLV and return a Buffer.
+ * @param {Interest} interest The Interest object to encode.
+ * @returns {Buffer} A buffer containing the encoding.
+ */
+Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest) 
+{
+  var encoder = new TlvEncoder();
+  var saveLength = encoder.getLength();
+  
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
+  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
+  
+  // TODO: Implement nonce.
+  encoder.writeBlobTlv(Tlv.Nonce, new Buffer([1, 2, 3, 4]));
+  
+  Tlv0_1a2WireFormat.encodeSelectors(interest, encoder);
+  Tlv0_1a2WireFormat.encodeName(interest.getName(), encoder);
+  
+  encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+      
+  //return Blob(encoder.getOutput());
+  return encoder.getOutput();
+};
+
+/**
+ * Decode input as an NDN-TLV interest and set the fields of the interest 
+ * object.  
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1a2WireFormat.prototype.decodeInterest = function(interest, input) 
+{
+  var decoder = new TlvDecoder(input);
+
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
+  Tlv0_1a2WireFormat.decodeName(interest.getName(), decoder);
+  if (decoder.peekType(Tlv.Selectors, endOffset))
+    Tlv0_1a2WireFormat.decodeSelectors(interest, decoder);
+  // Require a Nonce, but don't force it to be 4 bytes.
+  var nonce = decoder.readBlobTlv(Tlv.Nonce);
+  interest.setScope(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.Scope, endOffset));
+  interest.setInterestLifetimeMilliseconds
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  // Set the nonce last because setting other interest fields clears it.
+  interest.setNonce(nonce);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Get a singleton instance of a Tlv1_0a2WireFormat.  To always use the
+ * preferred version NDN-TLV, you should use TlvWireFormat.get().
+ * @returns {Tlv0_1a2WireFormat} The singleton instance.
+ */
+Tlv0_1a2WireFormat.get = function()
+{
+  if (Tlv0_1a2WireFormat.instance === null)
+    Tlv0_1a2WireFormat.instance = new Tlv0_1a2WireFormat();
+  return Tlv0_1a2WireFormat.instance;
+};
+
+Tlv0_1a2WireFormat.encodeName = function(name, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode the components backwards.
+  for (var i = name.size() - 1; i >= 0; --i)
+    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue());
+
+  encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
+};
+        
+Tlv0_1a2WireFormat.decodeName = function(name, decoder)
+{
+  name.clear();
+  
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Name);      
+  while (decoder.getOffset() < endOffset)
+      name.append(decoder.readBlobTlv(Tlv.NameComponent));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode the interest selectors.  If no selectors are written, do not output a 
+ * Selectors TLV.
+ */
+Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // TODO: Implment MustBeFresh.
+  //if (interest.getMustBeFresh())
+  //  encoder.writeTypeAndLength(Tlv.MustBeFresh, 0);
+  encoder.writeOptionalNonNegativeIntegerTlv(
+    Tlv.ChildSelector, interest.getChildSelector());
+  if (interest.getExclude().size() > 0)
+    Tlv0_1a2WireFormat.encodeExclude(interest.getExclude(), encoder);
+  if (interest.getKeyLocator().getType() != null)
+    Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
+  encoder.writeOptionalNonNegativeIntegerTlv(
+    Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
+  encoder.writeOptionalNonNegativeIntegerTlv(
+    Tlv.MinSuffixComponents, interest.getMinSuffixComponents());
+
+  // Only output the type and length if values were written.
+  if (encoder.getLength() != saveLength)
+    encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
+};
+
+Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Selectors);
+
+  interest.setMinSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.MinSuffixComponents, endOffset));
+  interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.MaxSuffixComponents, endOffset));
+
+  if (decoder.peekType(Tlv.KeyLocator, endOffset))
+    Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
+  else
+    interest.getKeyLocator().clear();
+
+  if (decoder.peekType(Tlv.Exclude, endOffset))
+    Tlv0_1a2WireFormat.decodeExclude(interest.getExclude(), decoder);
+  else
+    interest.getExclude().clear();
+
+  interest.setChildSelector(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ChildSelector, endOffset));
+  // TODO: Implment MustBeFresh.
+  //interest.setMustBeFresh(
+  //  decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+  
+Tlv0_1a2WireFormat.encodeExclude = function(exclude, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // TODO: Do we want to order the components (except for ANY)?
+  // Encode the entries backwards.
+  for (var i = exclude.size() - 1; i >= 0; --i) {
+    var entry = exclude.get(i);
+
+    if (entry == Exclude.ANY)
+      encoder.writeTypeAndLength(Tlv.Any, 0);
+    else
+      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue());
+  }
+  
+  encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
+};
+  
+Tlv0_1a2WireFormat.decodeExclude = function(exclude, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
+
+  exclude.clear();
+  while (true) {
+    if (decoder.peekType(Tlv.NameComponent, endOffset))
+      exclude.appendComponent(decoder.readBlobTlv(Tlv.NameComponent));
+    else if (decoder.readBooleanTlv(Tlv.Any, endOffset))
+      exclude.appendAny();
+    else
+      // Else no more entries.
+      break;
+  }
+  
+  decoder.finishNestedTlvs(endOffset);
+};
+
+Tlv0_1a2WireFormat.encodeKeyLocator = function(keyLocator, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  if (keyLocator.getType() != null) {
+    if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      Tlv0_1a2WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
+             keyLocator.getKeyData().length > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+    else
+      throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
+  }
+  
+  encoder.writeTypeAndLength(Tlv.KeyLocator, encoder.getLength() - saveLength);
+};
+
+Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.KeyLocator);
+
+  keyLocator.clear();
+
+  if (decoder.getOffset() == endOffset)
+    // The KeyLocator is omitted, so leave the fields as none.
+    return;
+
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    // KeyLocator is a Name.
+    keyLocator.setType(KeyLocatorType.KEYNAME);
+    Tlv0_1a2WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+  }
+  else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
+    // KeyLocator is a KeyLocatorDigest.
+    keyLocator.setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
+    keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
+  }
+  else
+    throw new DecodingException
+      ("decodeKeyLocator: Unrecognized key locator type");
+
+  decoder.finishNestedTlvs(endOffset);
+};
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+var Tlv0_1a2WireFormat = require('./tlv-0_1a2-wire-format.js').Tlv0_1a2WireFormat;
+
+/**
+ * A TlvWireFormat extends Tlv0_1a2WireFormat to override its methods to 
+ * implement encoding and decoding using the preferred implementation of NDN-TLV.
+ * @constructor
+ */
+var TlvWireFormat = function TlvWireFormat() 
+{
+  // Inherit from Tlv0_1a2WireFormat.
+  Tlv0_1a2WireFormat.call(this);
+};
+
+TlvWireFormat.prototype = new Tlv0_1a2WireFormat();
+TlvWireFormat.prototype.name = "TlvWireFormat";
+
+exports.TlvWireFormat = TlvWireFormat;
+
+// Default object.
+TlvWireFormat.instance = null;
+
+/**
+ * Get a singleton instance of a TlvWireFormat.  Assuming that the default 
+ * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()), 
+ * you can check if this is the default wire encoding with
+ * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
+ * @returns {TlvWireFormat} The singleton instance.
+ */
+TlvWireFormat.get = function()
+{
+  if (TlvWireFormat.instance === null)
+    TlvWireFormat.instance = new TlvWireFormat();
+  return TlvWireFormat.instance;
+};
 /**
  * This file contains utilities to help encode and decode NDN objects.
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -5865,6 +6865,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output += "keyLocator: ";
       if (data.signedInfo.locator.type == KeyLocatorType.KEY)
         output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData()).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
