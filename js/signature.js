@@ -62,7 +62,7 @@ Signature.prototype.setSignature = function(signature)
     this.signature = null;
   else if (typeof signature === 'object' && signature instanceof Blob)
     this.signature = new Buffer(signature.buf());
-  else if (typeof value === 'object' && value instanceof Buffer)
+  else
     this.signature = new Buffer(signature);
 };
 
