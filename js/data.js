@@ -96,6 +96,9 @@ Data.prototype.setName = function(name)
 {
   this.name = typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -108,6 +111,9 @@ Data.prototype.setMetaInfo = function(metaInfo)
 {
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
     new MetaInfo(metaInfo) : new MetaInfo();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -120,6 +126,9 @@ Data.prototype.setSignature = function(signature)
 {
   this.signature = typeof signature === 'object' && signature instanceof Signature ?
     signature.clone() : new Signature();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -135,7 +144,10 @@ Data.prototype.setContent = function(content)
   else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
   else 
-    this.content = content;
+    this.content = new Buffer(content);
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
