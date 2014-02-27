@@ -21,13 +21,19 @@ var Signature = function Signature(witnessOrSignatureObject, signature, digestAl
   if (typeof witnessOrSignatureObject === 'object' && 
       witnessOrSignatureObject instanceof Signature) {
     // Copy the values.
-    this.witness = witnessOrSignatureObject.witness;
+    this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
     this.signature = witnessOrSignatureObject.signature;
+    // witness is deprecated.
+    this.witness = witnessOrSignatureObject.witness;
+    // digestAlgorithm is deprecated.
     this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
   }
   else {
-    this.witness = witnessOrSignatureObject;
+    this.keyLocator = new KeyLocator();
     this.signature = signature;
+    // witness is deprecated.
+    this.witness = witnessOrSignatureObject;
+    // digestAlgorithm is deprecated.
     this.digestAlgorithm = digestAlgorithm;
   }
 };
@@ -44,6 +50,15 @@ Signature.prototype.clone = function()
 };
 
 /**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator.
+ */
+Signature.prototype.getKeyLocator = function()
+{
+  return this.keyLocator;
+};
+
+/**
  * Get the data packet's signature bytes.
  * @returns {Buffer} The signature bytes.
  */
@@ -52,6 +67,16 @@ Signature.prototype.getSignature = function()
   return this.signature;
 };
 
+/**
+ * Set the key locator to a copy of the given keyLocator.
+ * @param {KeyLocator} keyLocator The KeyLocator to copy.
+ */
+Signature.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+                    new KeyLocator(keyLocator) : new KeyLocator();
+};
+  
 /**
  * Set the data packet's signature bytes.
  * @param {type} signature
