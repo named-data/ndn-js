@@ -35,7 +35,7 @@ var Name = function Name(components)
         this.append(components[i]);
     }
   }
-  else if (components== null)
+  else if (components == null)
     this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
@@ -51,20 +51,20 @@ exports.Name = Name;
  */
 Name.Component = function NameComponent(value) 
 {
-  if (typeof value == 'string')
+  if (typeof value === 'string')
     this.value = DataUtils.stringToUtf8Array(value);
-  else if (typeof value == 'object' && value instanceof Name.Component)
+  else if (typeof value === 'object' && value instanceof Name.Component)
     this.value = new Buffer(value.value);
-  else if (typeof value == 'object' && value instanceof Blob)
+  else if (typeof value === 'object' && value instanceof Blob)
     this.value = new Buffer(value.buf());
-  else if (typeof value == 'object' && value instanceof Buffer)
+  else if (typeof value === 'object' && value instanceof Buffer)
     this.value = new Buffer(value);
-  else if (typeof value == 'object' && typeof ArrayBuffer != 'undefined' &&  value instanceof ArrayBuffer) {
+  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
     // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
     this.value = new Buffer(new ArrayBuffer(value.byteLength));
     this.value.set(new Buffer(value));
   }
-  else if (typeof value == 'object')
+  else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
     this.value = new Buffer(value);

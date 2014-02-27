@@ -15,14 +15,55 @@ var LOG = require('./log.js').Log.LOG;
  * Create a new Signature with the optional values.
  * @constructor
  */
-var Signature = function Signature(witness, signature, digestAlgorithm) 
+var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm) 
 {
-  this.witness = witness;
-  this.signature = signature;
-  this.digestAlgorithm = digestAlgorithm
+  if (typeof witnessOrSignatureObject === 'object' && 
+      witnessOrSignatureObject instanceof Signature) {
+    // Copy the values.
+    this.witness = witnessOrSignatureObject.witness;
+    this.signature = witnessOrSignatureObject.signature;
+    this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
+  }
+  else {
+    this.witness = witnessOrSignatureObject;
+    this.signature = signature;
+    this.digestAlgorithm = digestAlgorithm;
+  }
 };
 
 exports.Signature = Signature;
+
+/**
+ * Create a new Signature which is a copy of this object.
+ * @returns {Signature} A new object which is a copy of this object.
+ */
+Signature.prototype.clone = function()
+{
+  return new Signature(this);
+};
+
+/**
+ * Get the data packet's signature bytes.
+ * @returns {Buffer} The signature bytes.
+ */
+Signature.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Set the data packet's signature bytes.
+ * @param {type} signature
+ */
+Signature.prototype.setSignature = function(signature)
+{
+  if (signature == null)
+    this.signature = null;
+  else if (typeof signature === 'object' && signature instanceof Blob)
+    this.signature = new Buffer(signature.buf());
+  else if (typeof value === 'object' && value instanceof Buffer)
+    this.signature = new Buffer(signature);
+};
 
 Signature.prototype.from_ndnb = function(decoder) 
 {
