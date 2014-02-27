@@ -5,6 +5,7 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
+var crypto = require('crypto');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -548,8 +549,9 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
  */
 Face.prototype.registerPrefixHelper = function(prefix, closure, flags) 
 {
-  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, 2147483647);
+  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
     
+  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   var encoder = new BinaryXMLEncoder();
   fe.to_ndnb(encoder);
   var bytes = encoder.getReducedOstream();
@@ -557,9 +559,11 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
   var si = new MetaInfo();
   si.setFields();
     
-  var data = new Data(new Name(), si, bytes); 
-  data.sign();
-  var coBinary = data.wireEncode();;
+  // Set the name to a random value so that each request is unique.
+  var data = new Data(new Name().append(crypto.randomBytes(4)), si, bytes); 
+  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
+  data.sign(BinaryXmlWireFormat.get());
+  var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
     
   var nodename = this.ndndid;
   var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
@@ -570,6 +574,9 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
+  // Even though the inner Data packet and ForwardingEntry are encoded as 
+  //   BinaryXml, we send the interest using the given wire format so that the 
+  //   hub receives (and sends) in the application's desired wire format.
   this.transport.send(interest.wireEncode().buf());
 };
 
@@ -587,7 +594,7 @@ Face.prototype.onReceivedElement = function(element)
   //   conflict with the first byte of a binary XML packet, so we can
   //   just look at the first byte.
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
-    var decoder = TlvDecoder (element);  
+    var decoder = new TlvDecoder (element);  
     if (decoder.peekType(Tlv.Interest, element.length)) {
       interest = new Interest();
       interest.wireDecode(element, TlvWireFormat.get());
