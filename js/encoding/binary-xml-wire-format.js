@@ -4,6 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
+var Blob = require('../util/blob.js').Blob;
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
@@ -31,21 +32,21 @@ exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
 BinaryXmlWireFormat.instance = null;
 
 /**
- * Encode the interest and return a Buffer.
- * @param {Interest} interest
- * @returns {Buffer}
+ * Encode interest as Binary XML and return the encoding.
+ * @param {Interest} interest The Interest to encode.
+ * @returns {Blob} A Blob containing the encoding.
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest) 
 {
   var encoder = new BinaryXMLEncoder();
   BinaryXmlWireFormat.encodeInterest(interest, encoder);  
-  return encoder.getReducedOstream();  
+  return new Blob(encoder.getReducedOstream(), false);  
 };
 
 /**
- * Decode the input and put the result in interest.
- * @param {Interest} interest
- * @param {Buffer} input
+ * Decode input as a Binary XML interest and set the fields of the interest object. 
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) 
 {
@@ -54,15 +55,22 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * Encode the data and return a Buffer. 
- * @param {Data} data
- * @returns {Buffer}
+ * Encode data as Binary XML and return the encoding and signed offsets.
+ * @param {Data} data The Data object to encode.
+ * @returns {object with (Blob, int, int)} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
+ * the encoding of the beginning of the signed portion, and 
+ * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * signed portion.
  */
 BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
   var encoder = new BinaryXMLEncoder(1500);
   BinaryXmlWireFormat.encodeData(data, encoder);  
-  return encoder.getReducedOstream();  
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: data.startSIG, 
+           signedPortionEndOffset: data.endSIG };  
 };
 
 /**
@@ -71,17 +79,25 @@ BinaryXmlWireFormat.prototype.encodeData = function(data)
 BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
 {
   return this.encodeData(data);
-}
+};
 
 /**
- * Decode the input and put the result in data.
- * @param {Data} data
- * @param {Buffer} input
+ * Decode input as a Binary XML data packet, set the fields in the data object, and return 
+ * the signed offsets. 
+ * @param {Data} data The Data object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  */
 BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
 {
   var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeData(data, decoder);
+  return { signedPortionBeginOffset: data.startSIG, 
+           signedPortionEndOffset: data.endSIG };  
 };
 
 /**
@@ -90,7 +106,7 @@ BinaryXmlWireFormat.prototype.decodeData = function(data, input)
 BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input) 
 {
   this.decodeData(data, input);
-}
+};
 
 /**
  * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 

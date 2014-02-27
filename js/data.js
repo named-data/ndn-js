@@ -6,6 +6,8 @@
  * This class represents an NDN Data object.
  */
 
+var Blob = require('./util/blob.js').Blob;
+var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -35,6 +37,8 @@ var Data = function Data(name, metaInfo, content)
   
   if (typeof content == 'string') 
     this.content = DataUtils.toNumbersFromString(content);
+  else if (typeof content == 'object' && content instanceof Blob)
+    this.content = content.buf();
   else 
     this.content = content;
   
@@ -107,12 +111,15 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
  * Encode this Data for a particular wire format.
  * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
  * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Buffer} The encoded buffer.
+ * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeData(this);
+  var result = wireFormat.encodeData(this);
+  return new SignedBlob
+    (result.encoding, result.signedPortionBeginOffset, 
+     result.signedPortionEndOffset);
 };
 
 /**
@@ -124,7 +131,10 @@ Data.prototype.wireEncode = function(wireFormat)
 Data.prototype.wireDecode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  wireFormat.decodeData(this, input);
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+                     input.buf() : input;
+  wireFormat.decodeData(this, decodeBuffer);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
@@ -153,7 +163,7 @@ Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 Data.prototype.encode = function(wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this);
+  return wireFormat.encodeData(this).buf();
 };
 
 /**

@@ -544,6 +544,182 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
   }
 };
 /**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+/**
+ * A Blob holds an immutable byte array implemented as a Buffer.  This should be 
+ * treated like a string which is a pointer to an immutable string. (It is OK to 
+ * pass a pointer to the string because the new owner can’t change the bytes of 
+ * the string.)  Blob does not inherit from Buffer. Instead you must call buf() 
+ * to get the byte array which reminds you that you should not change the 
+ * contents.  Also remember that buf() can return null.
+ * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
+ * another pointer to the Buffer without copying. If value is a Buffer or byte 
+ * array, copy to create a new Buffer.  If omitted, buf() will return null.
+ * @param {boolean} copy (optional) (optional) If true, copy the contents of 
+ * value into a new Buffer.  If false, just use the existing value without 
+ * copying. If omitted, then copy the contents (unless value is already a Blob).
+ * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
+ * treat the value as immutable and promise not to change it.
+ */
+var Blob = function Blob(value, copy) 
+{
+  if (copy == null)
+    copy = true;
+  
+  if (value == null)
+    this.buffer = null;
+  else if (typeof value === 'object' && value instanceof Blob)
+    // Use the existing buffer.  Don't need to check for copy.
+    this.buffer = value.buffer;
+  else {
+    if (typeof value === 'string')
+      // Convert from a string to utf-8 byte encoding.
+      this.buffer = new Buffer(value, 'utf8');
+    else {
+      if (copy)
+        // We are copying, so just make another Buffer.
+        this.value = new Buffer(value);
+      else {
+        if (typeof value === 'object' && value instanceof Buffer)
+          // We can use as-is.
+          this.buffer = value;
+        else
+          // We need a Buffer, so copy.
+          this.buffer = new Buffer(value);
+      }
+    }
+  }
+};
+
+exports.Blob = Blob;
+
+/**
+ * Return the length of the immutable byte array.
+ * @returns {number} The length of the array.  If buf() is null, return 0.
+ */
+Blob.prototype.size = function()
+{
+  if (this.buffer != null)
+    return this.buffer.length;
+  else
+    return 0;
+};
+
+/**
+ * Return the immutable byte array.  DO NOT change the contents of the Buffer.  
+ * If you need to change it, make a copy.
+ * @returns {Buffer} The Buffer holding the immutable byte array, or null.
+ */
+Blob.prototype.buf = function()
+{
+  return this.buffer;
+};
+
+/**
+ * Return the hex representation of the bytes in the byte array.
+ * @returns {string} The hex string.
+ */
+Blob.prototype.toHex = function() 
+{  
+  if (this.buffer == null)
+    return "";
+  else
+    return this.buffer.toString('hex');
+};/**
+ * Copyright (C) 2013 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var Blob = require('./blob.js').Blob;
+
+/**
+ * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the 
+ * bytes of Data packet). This inherits from Blob, including Blob.size and Blob.buf.
+ * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
+ * another pointer to the Buffer without copying. If value is a Buffer or byte 
+ * array, copy to create a new Buffer.  If omitted, buf() will return null.
+ * @param {number} signedPortionBeginOffset (optional) The offset in the 
+ * encoding of the beginning of the signed portion. If omitted, set to 0.
+ * @param {number} signedPortionEndOffset (optional) The offset in the encoding 
+ * of the end of the signed portion. If omitted, set to 0.
+ */
+var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset) 
+{
+  // Call the base constructor.
+  Blob.call(this, value);
+  
+  if (this.buffer == null) {
+    this.signedPortionBeginOffset = 0;
+    this.signedPortionEndOffset = 0;
+  }
+  else if (typeof value === 'object' && value instanceof SignedBlob) {
+    // Copy the SignedBlob, allowing override for offsets.
+    this.signedPortionBeginOffset = signedPortionBeginOffset == null ? 
+      value.signedPortionBeginOffset : signedPortionBeginOffset;
+    this.signedPortionEndOffset = signedPortionEndOffset == null ? 
+      value.signedPortionEndOffset : signedPortionEndOffset;
+  }
+  else {
+    this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
+    this.signedPortionEndOffset = signedPortionEndOffset || 0;
+  }
+};
+
+SignedBlob.prototype = new Blob();
+SignedBlob.prototype.name = "SignedBlob";
+
+exports.SignedBlob = SignedBlob;
+
+/**
+ * Return the length of the signed portion of the immutable byte array.
+ * @returns {number} The length of the signed portion.  If signedBuf() is null, 
+ * return 0.
+ */
+SignedBlob.prototype.signedSize = function()
+{
+  if (this.buffer != null)
+    return this.signedPortionEndOffset - this.signedPortionBeginOffset;
+  else
+    return 0;
+};
+
+/**
+ * Return a the signed portion of the immutable byte array.
+ * @returns {Buffer} A slice into the Buffer which is the signed portion.  
+ * If the pointer to the array is null, return null.
+ */
+SignedBlob.prototype.signedBuf = function()
+{
+  if (this.buffer != null)
+    return this.buffer.slice
+      (this.signedPortionBeginOffset, this.signedPortionEndOffset);
+  else
+    return null;
+};
+
+/**
+ * Return the offset in the array of the beginning of the signed portion.
+ * @returns {number} The offset in the array.
+ */
+SignedBlob.prototype.getSignedPortionBeginOffset = function()
+{
+  return this.signedPortionBeginOffset;
+};
+
+/**
+ * Return the offset in the array of the end of the signed portion.
+ * @returns {number} The offset in the array.
+ */
+SignedBlob.prototype.getSignedPortionEndOffset = function()
+{
+  return this.signedPortionEndOffset;
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
@@ -3035,9 +3211,9 @@ var WireFormat = function WireFormat() {
 exports.WireFormat = WireFormat;
 
 /**
- * The override method in the derived class should encode the interest and return a Buffer.
- * @param {Interest} interest
- * @returns {Buffer}
+ * Encode interest and return the encoding.  Your derived class should override.
+ * @param {Interest} interest The Interest to encode.
+ * @returns {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest) 
@@ -3046,9 +3222,10 @@ WireFormat.prototype.encodeInterest = function(interest)
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in interest.
- * @param {Interest} interest
- * @param {Buffer} input
+ * Decode input as an interest and set the fields of the interest object. 
+ * Your derived class should override.
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeInterest = function(interest, input) 
@@ -3057,9 +3234,15 @@ WireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * The override method in the derived class should encode the data and return a Buffer. 
- * @param {Data} data
- * @returns {Buffer}
+ * Encode data and return the encoding and signed offsets. Your derived class 
+ * should override.
+ * @param {Data} data The Data object to encode.
+ * @returns {object with (Blob, int, int)} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
+ * the encoding of the beginning of the signed portion, and 
+ * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeData = function(data) 
@@ -3068,9 +3251,15 @@ WireFormat.prototype.encodeData = function(data)
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in data.
- * @param {Data} data
- * @param {Buffer} input
+ * Decode input as a data packet, set the fields in the data object, and return 
+ * the signed offsets.  Your derived class should override.
+ * @param {Data} data The Data object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeData = function(data, input) 
@@ -3673,6 +3862,7 @@ PublisherID.prototype.validate = function()
  * This class represents a Name as an array of components where each is a byte array.
  */
  
+var Blob = require('./util/blob.js').Blob;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
@@ -3722,6 +3912,8 @@ Name.Component = function NameComponent(value)
     this.value = DataUtils.stringToUtf8Array(value);
   else if (typeof value == 'object' && value instanceof Name.Component)
     this.value = new Buffer(value.value);
+  else if (typeof value == 'object' && value instanceof Blob)
+    this.value = new Buffer(value.buf());
   else if (typeof value == 'object' && value instanceof Buffer)
     this.value = new Buffer(value);
   else if (typeof value == 'object' && typeof ArrayBuffer != 'undefined' &&  value instanceof ArrayBuffer) {
@@ -4966,6 +5158,8 @@ Signature.prototype.validate = function()
  * This class represents an NDN Data object.
  */
 
+var Blob = require('./util/blob.js').Blob;
+var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -4995,6 +5189,8 @@ var Data = function Data(name, metaInfo, content)
   
   if (typeof content == 'string') 
     this.content = DataUtils.toNumbersFromString(content);
+  else if (typeof content == 'object' && content instanceof Blob)
+    this.content = content.buf();
   else 
     this.content = content;
   
@@ -5067,12 +5263,15 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
  * Encode this Data for a particular wire format.
  * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
  * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Buffer} The encoded buffer.
+ * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeData(this);
+  var result = wireFormat.encodeData(this);
+  return new SignedBlob
+    (result.encoding, result.signedPortionBeginOffset, 
+     result.signedPortionEndOffset);
 };
 
 /**
@@ -5084,7 +5283,10 @@ Data.prototype.wireEncode = function(wireFormat)
 Data.prototype.wireDecode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  wireFormat.decodeData(this, input);
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+                     input.buf() : input;
+  wireFormat.decodeData(this, decodeBuffer);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
@@ -5113,7 +5315,7 @@ Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 Data.prototype.encode = function(wireFormat) 
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this);
+  return wireFormat.encodeData(this).buf();
 };
 
 /**
@@ -5377,6 +5579,7 @@ Exclude.compareComponents = function(component1, component2)
  * This class represents Interest Objects
  */
 
+var Blob = require('./util/blob.js').Blob;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
@@ -5719,7 +5922,7 @@ Interest.prototype.toUri = function()
  * Encode this Interest for a particular wire format.
  * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
  * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Buffer} The encoded buffer.
+ * @returns {Blob} The encoded buffer in a Blob object.
  */
 Interest.prototype.wireEncode = function(wireFormat) 
 {
@@ -5736,7 +5939,10 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  wireFormat.decodeInterest(this, input);
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+                     input.buf() : input;
+  wireFormat.decodeInterest(this, decodeBuffer);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom 
@@ -5765,7 +5971,7 @@ Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
  */
 Interest.prototype.encode = function(wireFormat) 
 {
-  return this.wireEncode(BinaryXmlWireFormat.get());
+  return this.wireEncode(BinaryXmlWireFormat.get()).buf();
 };
 
 /**
@@ -6151,6 +6357,7 @@ ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = valu
  * See COPYING for copyright and distribution information.
  */
 
+var Blob = require('../util/blob.js').Blob;
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
@@ -6178,21 +6385,21 @@ exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
 BinaryXmlWireFormat.instance = null;
 
 /**
- * Encode the interest and return a Buffer.
- * @param {Interest} interest
- * @returns {Buffer}
+ * Encode interest as Binary XML and return the encoding.
+ * @param {Interest} interest The Interest to encode.
+ * @returns {Blob} A Blob containing the encoding.
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest) 
 {
   var encoder = new BinaryXMLEncoder();
   BinaryXmlWireFormat.encodeInterest(interest, encoder);  
-  return encoder.getReducedOstream();  
+  return new Blob(encoder.getReducedOstream(), false);  
 };
 
 /**
- * Decode the input and put the result in interest.
- * @param {Interest} interest
- * @param {Buffer} input
+ * Decode input as a Binary XML interest and set the fields of the interest object. 
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) 
 {
@@ -6201,15 +6408,22 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * Encode the data and return a Buffer. 
- * @param {Data} data
- * @returns {Buffer}
+ * Encode data as Binary XML and return the encoding and signed offsets.
+ * @param {Data} data The Data object to encode.
+ * @returns {object with (Blob, int, int)} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
+ * the encoding of the beginning of the signed portion, and 
+ * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * signed portion.
  */
 BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
   var encoder = new BinaryXMLEncoder(1500);
   BinaryXmlWireFormat.encodeData(data, encoder);  
-  return encoder.getReducedOstream();  
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: data.startSIG, 
+           signedPortionEndOffset: data.endSIG };  
 };
 
 /**
@@ -6218,17 +6432,25 @@ BinaryXmlWireFormat.prototype.encodeData = function(data)
 BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
 {
   return this.encodeData(data);
-}
+};
 
 /**
- * Decode the input and put the result in data.
- * @param {Data} data
- * @param {Buffer} input
+ * Decode input as a Binary XML data packet, set the fields in the data object, and return 
+ * the signed offsets. 
+ * @param {Data} data The Data object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  */
 BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
 {
   var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeData(data, decoder);
+  return { signedPortionBeginOffset: data.startSIG, 
+           signedPortionEndOffset: data.endSIG };  
 };
 
 /**
@@ -6237,7 +6459,7 @@ BinaryXmlWireFormat.prototype.decodeData = function(data, input)
 BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input) 
 {
   this.decodeData(data, input);
-}
+};
 
 /**
  * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
@@ -6439,6 +6661,7 @@ WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
  */
 
 var crypto = require('crypto');
+var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
@@ -6469,7 +6692,7 @@ Tlv0_1a2WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Buffer} A buffer containing the encoding.
+ * @returns {Blob} A Blob containing the encoding.
  */
 Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest) 
 {
@@ -6509,8 +6732,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
       
-  //return Blob(encoder.getOutput());
-  return encoder.getOutput();
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**
@@ -6776,12 +6998,12 @@ exports.EncodingUtils = EncodingUtils;
 
 EncodingUtils.encodeToHexInterest = function(interest) 
 {
-  return DataUtils.toHex(interest.wireEncode());
+  return DataUtils.toHex(interest.wireEncode().buf());
 };
 
 EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(data.wireEncode());
+  return DataUtils.toHex(data.wireEncode().buf());
 };
 
 /**
@@ -7010,11 +7232,11 @@ var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data)
 /**
  * @deprecated Use interest.wireEncode().
  */
-function encodeToBinaryInterest(interest) { return interest.wireEncode(); }
+function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
 /**
  * @deprecated Use data.wireEncode().
  */
-function encodeToBinaryContentObject(data) { return data.wireEncode(); }
+function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -7421,14 +7643,14 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
-        thisNDN.transport.send(binaryInterest);
+        thisNDN.transport.send(binaryInterest.buf());
       }
     };
   
     pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
   }
 
-  this.transport.send(binaryInterest);
+  this.transport.send(binaryInterest.buf());
 };
 
 /**
@@ -7583,7 +7805,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
-  this.transport.send(interest.wireEncode());
+  this.transport.send(interest.wireEncode().buf());
 };
 
 /**
@@ -7609,7 +7831,7 @@ Face.prototype.onReceivedElement = function(element)
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
-        this.transport.send(info.data.wireEncode());
+        this.transport.send(info.data.wireEncode().buf());
     }        
   } 
   else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet

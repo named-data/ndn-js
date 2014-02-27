@@ -404,14 +404,14 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
-        thisNDN.transport.send(binaryInterest);
+        thisNDN.transport.send(binaryInterest.buf());
       }
     };
   
     pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
   }
 
-  this.transport.send(binaryInterest);
+  this.transport.send(binaryInterest.buf());
 };
 
 /**
@@ -566,7 +566,7 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
-  this.transport.send(interest.wireEncode());
+  this.transport.send(interest.wireEncode().buf());
 };
 
 /**
@@ -592,7 +592,7 @@ Face.prototype.onReceivedElement = function(element)
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
-        this.transport.send(info.data.wireEncode());
+        this.transport.send(info.data.wireEncode().buf());
     }        
   } 
   else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet

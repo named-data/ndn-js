@@ -15,9 +15,9 @@ var WireFormat = function WireFormat() {
 exports.WireFormat = WireFormat;
 
 /**
- * The override method in the derived class should encode the interest and return a Buffer.
- * @param {Interest} interest
- * @returns {Buffer}
+ * Encode interest and return the encoding.  Your derived class should override.
+ * @param {Interest} interest The Interest to encode.
+ * @returns {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest) 
@@ -26,9 +26,10 @@ WireFormat.prototype.encodeInterest = function(interest)
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in interest.
- * @param {Interest} interest
- * @param {Buffer} input
+ * Decode input as an interest and set the fields of the interest object. 
+ * Your derived class should override.
+ * @param {Interest} interest The Interest object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeInterest = function(interest, input) 
@@ -37,9 +38,15 @@ WireFormat.prototype.decodeInterest = function(interest, input)
 };
 
 /**
- * The override method in the derived class should encode the data and return a Buffer. 
- * @param {Data} data
- * @returns {Buffer}
+ * Encode data and return the encoding and signed offsets. Your derived class 
+ * should override.
+ * @param {Data} data The Data object to encode.
+ * @returns {object with (Blob, int, int)} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
+ * the encoding of the beginning of the signed portion, and 
+ * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeData = function(data) 
@@ -48,9 +55,15 @@ WireFormat.prototype.encodeData = function(data)
 };
 
 /**
- * The override method in the derived class should decode the input and put the result in data.
- * @param {Data} data
- * @param {Buffer} input
+ * Decode input as a data packet, set the fields in the data object, and return 
+ * the signed offsets.  Your derived class should override.
+ * @param {Data} data The Data object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeData = function(data, input) 

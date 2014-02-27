@@ -5,6 +5,7 @@
  */
 
 var crypto = require('crypto');
+var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
@@ -35,7 +36,7 @@ Tlv0_1a2WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Buffer} A buffer containing the encoding.
+ * @returns {Blob} A Blob containing the encoding.
  */
 Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest) 
 {
@@ -75,8 +76,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
       
-  //return Blob(encoder.getOutput());
-  return encoder.getOutput();
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**

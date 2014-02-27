@@ -6,6 +6,7 @@
  * This class represents Interest Objects
  */
 
+var Blob = require('./util/blob.js').Blob;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
@@ -348,7 +349,7 @@ Interest.prototype.toUri = function()
  * Encode this Interest for a particular wire format.
  * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
  * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Buffer} The encoded buffer.
+ * @returns {Blob} The encoded buffer in a Blob object.
  */
 Interest.prototype.wireEncode = function(wireFormat) 
 {
@@ -365,7 +366,10 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  wireFormat.decodeInterest(this, input);
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+                     input.buf() : input;
+  wireFormat.decodeInterest(this, decodeBuffer);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom 
@@ -394,7 +398,7 @@ Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
  */
 Interest.prototype.encode = function(wireFormat) 
 {
-  return this.wireEncode(BinaryXmlWireFormat.get());
+  return this.wireEncode(BinaryXmlWireFormat.get()).buf();
 };
 
 /**

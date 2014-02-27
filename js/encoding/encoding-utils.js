@@ -28,12 +28,12 @@ exports.EncodingUtils = EncodingUtils;
 
 EncodingUtils.encodeToHexInterest = function(interest) 
 {
-  return DataUtils.toHex(interest.wireEncode());
+  return DataUtils.toHex(interest.wireEncode().buf());
 };
 
 EncodingUtils.encodeToHexData = function(data) 
 {
-  return DataUtils.toHex(data.wireEncode());
+  return DataUtils.toHex(data.wireEncode().buf());
 };
 
 /**
@@ -262,8 +262,8 @@ var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data)
 /**
  * @deprecated Use interest.wireEncode().
  */
-function encodeToBinaryInterest(interest) { return interest.wireEncode(); }
+function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
 /**
  * @deprecated Use data.wireEncode().
  */
-function encodeToBinaryContentObject(data) { return data.wireEncode(); }
+function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }

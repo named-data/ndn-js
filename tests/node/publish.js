@@ -18,7 +18,7 @@ function onInterest(prefix, interest, transport)
 
   try {
     console.log("Send content " + contentString);
-    transport.send(encodedData);
+    transport.send(encodedData.buf());
   } catch (e) {
     console.log(e.toString());
   }
