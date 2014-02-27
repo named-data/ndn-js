@@ -578,11 +578,12 @@ Face.prototype.onReceivedElement = function(element)
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
   var decoder = new BinaryXMLDecoder(element);
   // Dispatch according to packet type
+  // TODO: Check for wire format.
   if (decoder.peekDTag(NDNProtocolDTags.Interest)) {  // Interest packet
     if (LOG > 3) console.log('Interest packet received.');
         
     var interest = new Interest();
-    interest.from_ndnb(decoder);
+    interest.wireDecode(element);
     if (LOG > 3) console.log(interest);
     if (LOG > 3) console.log(interest.name.toUri());
         
@@ -599,7 +600,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Data packet received.');
         
     var data = new Data();
-    data.from_ndnb(decoder);
+    data.wireDecode(element);
         
     var pitEntry = Face.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {

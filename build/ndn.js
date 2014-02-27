@@ -7687,11 +7687,11 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       this.dataParts.push(data.slice(0, this.structureDecoder.offset));
       var element = DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
-      try {
+      //try {
         this.elementListener.onReceivedElement(element);
-      } catch (ex) {
-          console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
-      }
+      //} catch (ex) {
+      //    console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+      //}
   
       // Need to read a new object.
       data = data.slice(this.structureDecoder.offset, data.length);
@@ -9820,8 +9820,8 @@ Data.prototype.verify = function(/*Key*/ key)
     throw new Error('Cannot verify Data without a public key.');
 
   if (this.wireEncoding == null || this.wireEncoding.isNull())
-    // Need to decode to set wireEncoding.
-    this.wireDecode();
+    // Need to encode to set wireEncoding.
+    this.wireEncode();
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   return verifier.verify(key.publicKeyPem, this.signature.signature);
@@ -12523,11 +12523,12 @@ Face.prototype.onReceivedElement = function(element)
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
   var decoder = new BinaryXMLDecoder(element);
   // Dispatch according to packet type
+  // TODO: Check for wire format.
   if (decoder.peekDTag(NDNProtocolDTags.Interest)) {  // Interest packet
     if (LOG > 3) console.log('Interest packet received.');
         
     var interest = new Interest();
-    interest.from_ndnb(decoder);
+    interest.wireDecode(element);
     if (LOG > 3) console.log(interest);
     if (LOG > 3) console.log(interest.name.toUri());
         
@@ -12544,7 +12545,7 @@ Face.prototype.onReceivedElement = function(element)
     if (LOG > 3) console.log('Data packet received.');
         
     var data = new Data();
-    data.from_ndnb(decoder);
+    data.wireDecode(element);
         
     var pitEntry = Face.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {
