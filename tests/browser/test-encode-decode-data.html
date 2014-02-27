@@ -43,7 +43,14 @@
 			if(LOG>3)console.log('DATA PACKET DECODED');
 			if(LOG>3)console.log(data);
 			
-			document.getElementById('result').innerHTML = EncodingUtils.dataToHtml(data);
+            var output = EncodingUtils.dataToHtml(data);
+            // Verify with the same key from globalKeyManager used to sign.
+            if (data.verify(globalKeyManager.key))
+              output+= "<br/>SIGNATURE VALID<br/>";
+            else
+              output+= "<br/>SIGNATURE INVALID<br/>";
+          
+			document.getElementById('result').innerHTML = output;
 		}
 
 	</script>

@@ -196,41 +196,6 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       else
         output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
     }
-    if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
-      var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
-      var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
-      var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
-      
-      var witHex = "";
-      if (data.signature.witness != null)
-        witHex = DataUtils.toHex(data.signature.witness);
-
-      // Already showed data.signedInfo.locator.publicKey above.
-      output+= "<br />";
-      
-      if (LOG > 2) console.log(" ContentName + MetaInfo + Content = "+input);
-      if (LOG > 2) console.log(" PublicKeyHex = "+publickeyHex);
-      if (LOG > 2) console.log(" PublicKeyString = "+publickeyString);
-      
-      if (LOG > 2) console.log(" Signature "+signature);
-      if (LOG > 2) console.log(" Witness "+witHex);
-      
-      if (LOG > 2) console.log(" Signature NOW IS");
-      
-      if (LOG > 2) console.log(data.signature.signature);
-     
-      var rsakey = new Key();
-      rsakey.readDerPublicKey(data.signedInfo.locator.publicKey);
-
-      var result = data.verify(rsakey);
-      if (result)
-      output += 'SIGNATURE VALID';
-      else
-      output += 'SIGNATURE INVALID';
-      
-      output+= "<br />";
-      output+= "<br />";
-    }
   }
 
   return output;

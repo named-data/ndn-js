@@ -4,6 +4,7 @@ var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
 var Key = require('../..').Key;
 var EncodingUtils = require('../..').EncodingUtils;
+var globalKeyManager = require('../..').globalKeyManager;
 
 var n = new Name('/a/b/c.txt');
 
@@ -44,3 +45,9 @@ console.log('Content verification passed: ' + data2.verify(rsakey));
 
 console.log('Data in XML representation:');
 console.log(EncodingUtils.dataToHtml(data2).replace(/<br \/>/g, "\n"));
+
+// Verify with the same key from globalKeyManager used to sign.
+if (data2.verify(globalKeyManager.key))
+  console.log("SIGNATURE VALID");
+else
+  console.log("SIGNATURE INVALID");

@@ -7552,6 +7552,216 @@ TlvDecoder.prototype.seek = function(offset)
   this.offset = offset;
 };  
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * See COPYING for copyright and distribution information.
+ */
+
+var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
+
+/**
+ * Create and initialize a TlvStructureDecoder.
+ */
+var TlvStructureDecoder = function TlvStructureDecoder()
+{
+  this.gotElementEnd = false;
+  this.offset = 0;
+  this.state = this.READ_TYPE;
+  this.headerLength = 0;
+  this.useHeaderBuffer = false;
+  // 8 bytes is enough to hold the extended bytes in the length encoding 
+  // where it is an 8-byte number.
+  this.headerBuffer = new Buffer(8);
+  this.nBytesToRead = 0;
+};
+
+exports.TlvStructureDecoder = TlvStructureDecoder;
+
+TlvStructureDecoder.READ_TYPE =         0;
+TlvStructureDecoder.READ_TYPE_BYTES =   1;
+TlvStructureDecoder.READ_LENGTH =       2;
+TlvStructureDecoder.READ_LENGTH_BYTES = 3;
+TlvStructureDecoder.READ_VALUE_BYTES =  4;
+
+/**
+ * Continue scanning input starting from this.offset to find the element end.  
+ * If the end of the element which started at offset 0 is found, this returns 
+ * true and getOffset() is the length of the element.  Otherwise, this returns 
+ * false which means you should read more into input and call again.
+ * @param {Buffer} input The input buffer. You have to pass in input each time
+ * because the buffer could be reallocated.
+ * @returns {boolean} true if found the element end, false if not.
+ */
+TlvStructureDecoder.prototype.findElementEnd = function(input)
+{
+  if (this.gotElementEnd)
+    // Someone is calling when we already got the end.
+    return true
+
+  var decoder = new TlvDecoder(input);
+
+  while (true) {
+    if (this.offset >= input.length)
+      // All the cases assume we have some input. Return and wait 
+      //   for more.
+      return false;
+
+    if (this.state == TlvStructureDecoder.READ_TYPE) {
+      var firstOctet = input[this.offset];
+      this.offset += 1;
+      if (firstOctet < 253)
+        // The value is simple, so we can skip straight to reading 
+        //   the length.
+        this.state = TlvStructureDecoder.READ_LENGTH;
+      else {
+        // Set up to skip the type bytes.
+        if (firstOctet == 253)
+          this.nBytesToRead = 2;
+        else if (firstOctet == 254)
+          this.nBytesToRead = 4;
+        else
+          // value == 255.
+          this.nBytesToRead = 8;
+
+        this.state = TlvStructureDecoder.READ_TYPE_BYTES;
+      }
+    }
+    else if (this.state == TlvStructureDecoder.READ_TYPE_BYTES) {
+      var nRemainingBytes = input.length - this.offset;
+      if (nRemainingBytes < this.nBytesToRead) {
+        // Need more.
+        this.offset += nRemainingBytes;
+        this.nBytesToRead -= nRemainingBytes;
+        return false;
+      }
+
+      // Got the type bytes. Move on to read the length.
+      this.offset += this.nBytesToRead;
+      this.state = TlvStructureDecoder.READ_LENGTH;
+    }
+    else if (this.state == TlvStructureDecoder.READ_LENGTH) {
+      var firstOctet = input[this.offset];
+      this.offset += 1;
+      if (firstOctet < 253) {
+        // The value is simple, so we can skip straight to reading 
+        //  the value bytes.
+        this.nBytesToRead = firstOctet;
+        if (this.nBytesToRead == 0) {
+          // No value bytes to read. We're finished.
+          this.gotElementEnd = true;
+          return true;
+        }
+
+        this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+      }
+      else {
+        // We need to read the bytes in the extended encoding of 
+        //  the length.
+        if (firstOctet == 253)
+          this.nBytesToRead = 2;
+        else if (firstOctet == 254)
+          this.nBytesToRead = 4;
+        else
+          // value == 255.
+          this.nBytesToRead = 8;
+
+        // We need to use firstOctet in the next state.
+        this.firstOctet = firstOctet;
+        this.state = TlvStructureDecoder.READ_LENGTH_BYTES;
+      }
+    }
+    else if (this.state == TlvStructureDecoder.READ_LENGTH_BYTES) {
+      var nRemainingBytes = input.length - this.offset;
+      if (!this.useHeaderBuffer && nRemainingBytes >= this.nBytesToRead) {
+        // We don't have to use the headerBuffer. Set nBytesToRead.
+        decoder.seek(this.offset);
+
+        this.nBytesToRead = decoder.readExtendedVarNumber(this.firstOctet);
+        // Update this.offset to the decoder's offset after reading.
+        this.offset = decoder.getOffset();
+      }
+      else {
+        this.useHeaderBuffer = true;
+
+        var nNeededBytes = this.nBytesToRead - this.headerLength;
+        if (nNeededBytes > nRemainingBytes) {
+          // We can't get all of the header bytes from this input. 
+          // Save in headerBuffer.
+          if (this.headerLength + nRemainingBytes > headerBuffer.length)
+            // We don't expect this to happen.
+            throw new Error
+              ("Cannot store more header bytes than the size of headerBuffer");
+          input.slice(this.offset, this.offset + nRemainingBytes).copy
+            (this.headerBuffer, this.headerLength);
+          this.offset += nRemainingBytes;
+          this.headerLength += nRemainingBytes;
+
+          return false;
+        }
+
+        // Copy the remaining bytes into headerBuffer, read the 
+        //   length and set nBytesToRead.
+        if (this.headerLength + nNeededBytes > headerBuffer.length)
+          // We don't expect this to happen.
+          throw new Error
+            ("Cannot store more header bytes than the size of headerBuffer");
+        input.slice(this.offset, this.offset + nNeededBytes).copy
+          (this.headerBuffer, this.headerLength);
+        this.offset += nNeededBytes;
+
+        // Use a local decoder just for the headerBuffer.
+        var bufferDecoder = new TlvDecoder(this.headerBuffer);
+        // Replace nBytesToRead with the length of the value.
+        this.nBytesToRead = bufferDecoder.readExtendedVarNumber(this.firstOctet);
+      }
+      
+      if (this.nBytesToRead == 0) {
+        // No value bytes to read. We're finished.
+        this.gotElementEnd = true;
+        return true;
+      }
+
+      // Get ready to read the value bytes.
+      this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+    }
+    else if (this.state == TlvStructureDecoder.READ_VALUE_BYTES) {
+      nRemainingBytes = input.length - this.offset;
+      if (nRemainingBytes < this.nBytesToRead) {
+        // Need more.
+        this.offset += nRemainingBytes;
+        this.nBytesToRead -= nRemainingBytes;
+        return false;
+      }
+
+      // Got the bytes. We're finished.
+      this.offset += this.nBytesToRead;
+      this.gotElementEnd = true;
+      return true;
+    }
+    else
+      // We don't expect this to happen.
+      throw new Error("findElementEnd: unrecognized state");
+  }
+};
+
+/**
+ * Get the current offset into the input buffer.
+ * @returns {number} The offset.
+ */
+TlvStructureDecoder.prototype.getOffset = function()
+{
+  return this.offset;
+};
+
+/**
+ * Set the offset into the input, used for the next read.
+ * @param {number} offset The new offset.
+ */
+TlvStructureDecoder.prototype.seek = function(offset)
+{
+  this.offset = offset;
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
@@ -7657,6 +7867,8 @@ var BinaryXmlWireFormat = require('./binary-xml-wire-format.js').BinaryXmlWireFo
 
 var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
+var Tlv = require('./tlv/tlv.js').Tlv;
+var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -7672,7 +7884,9 @@ var ElementReader = function ElementReader(elementListener)
 {
   this.elementListener = elementListener;
   this.dataParts = [];
-  this.structureDecoder = new BinaryXMLStructureDecoder();
+  this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+  this.tlvStructureDecoder = new TlvStructureDecoder();
+  this.useTlv = null;
 };
 
 exports.ElementReader = ElementReader;
@@ -7681,11 +7895,40 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 {
   // Process multiple objects in the data.
   while (true) {
-    // Scan the input to check if a whole ndnb object has been read.
-    this.structureDecoder.seek(0);
-    if (this.structureDecoder.findElementEnd(data)) {
+    if (this.dataParts.length == 0) {
+      // This is the beginning of an element.  Check whether it is binaryXML or TLV.
+      if (data.length <= 0)
+        // Wait for more data.
+        return;
+      
+      // The type codes for TLV Interest and Data packets are chosen to not
+      //   conflict with the first byte of a binary XML packet, so we can
+      //   just look at the first byte.
+      if (data[0] == Tlv.Interest || data[0] == Tlv.Data)
+        this.useTlv = true;
+      else
+        // Binary XML.
+        this.useTlv = false;
+    }
+
+    var gotElementEnd;
+    var offset;
+    if (this.useTlv) {
+      // Scan the input to check if a whole TLV object has been read.
+      this.tlvStructureDecoder.seek(0);
+      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
+      offset = this.tlvStructureDecoder.getOffset();
+    }
+    else {
+      // Scan the input to check if a whole Binary XML object has been read.
+      this.binaryXmlStructureDecoder.seek(0);
+      gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
+      offset = this.binaryXmlStructureDecoder.offset;
+    }
+    
+    if (gotElementEnd) {
       // Got the remainder of an object.  Report to the caller.
-      this.dataParts.push(data.slice(0, this.structureDecoder.offset));
+      this.dataParts.push(data.slice(0, offset));
       var element = DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
       try {
@@ -7695,8 +7938,9 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       }
   
       // Need to read a new object.
-      data = data.slice(this.structureDecoder.offset, data.length);
-      this.structureDecoder = new BinaryXMLStructureDecoder();
+      data = data.slice(offset, data.length);
+      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+      this.tlvStructureDecoder = new TlvStructureDecoder();
       if (data.length == 0)
         // No more data in the packet.
         return;
@@ -11873,41 +12117,6 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
         output += "KeyName: " + data.signedInfo.locator.keyName.contentName.to_uri() + "<br />";
       else
         output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
-    }
-    if (data.signedInfo!= null && data.signedInfo.locator!= null && data.signedInfo.locator.publicKey!= null) {
-      var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
-      var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
-      var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
-      
-      var witHex = "";
-      if (data.signature.witness != null)
-        witHex = DataUtils.toHex(data.signature.witness);
-
-      // Already showed data.signedInfo.locator.publicKey above.
-      output+= "<br />";
-      
-      if (LOG > 2) console.log(" ContentName + MetaInfo + Content = "+input);
-      if (LOG > 2) console.log(" PublicKeyHex = "+publickeyHex);
-      if (LOG > 2) console.log(" PublicKeyString = "+publickeyString);
-      
-      if (LOG > 2) console.log(" Signature "+signature);
-      if (LOG > 2) console.log(" Witness "+witHex);
-      
-      if (LOG > 2) console.log(" Signature NOW IS");
-      
-      if (LOG > 2) console.log(data.signature.signature);
-     
-      var rsakey = new Key();
-      rsakey.readDerPublicKey(data.signedInfo.locator.publicKey);
-
-      var result = data.verify(rsakey);
-      if (result)
-      output += 'SIGNATURE VALID';
-      else
-      output += 'SIGNATURE INVALID';
-      
-      output+= "<br />";
-      output+= "<br />";
     }
   }
 
