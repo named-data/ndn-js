@@ -158,7 +158,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
-  this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
+  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder) 
@@ -209,7 +209,14 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-MetaInfo.prototype.to_ndnb = function(encoder)  {
+/**
+ * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
+ * locator in this object.
+ * @param {BinaryXMLEncoder} encoder The encoder.
+ * @param {KeyLocator} keyLocator The key locator to use (from 
+ * Data.getSignatureOrMetaInfoKeyLocator).
+ */
+MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
@@ -221,14 +228,14 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
     this.publisher.to_ndnb(encoder);
   }
   else {
-    if (null != this.locator &&
-        this.locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-        this.locator.getKeyData() != null &&
-        this.locator.getKeyData().length > 0)
+    if (null != keyLocator &&
+        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+        keyLocator.getKeyData() != null &&
+        keyLocator.getKeyData().length > 0)
       // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
       //   publisherPublicKeyDigest.
       encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, this.locator.getKeyData());
+        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData());
   }
 
   if (null != this.timestamp)
@@ -243,8 +250,8 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
   if (null != this.finalBlockID)
     encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
 
-  if (null != this.locator)
-    this.locator.to_ndnb(encoder);
+  if (null != keyLocator)
+    keyLocator.to_ndnb(encoder);
 
   encoder.writeElementClose();       
 };
@@ -262,7 +269,7 @@ MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null==this.timestamp ||null== this.locator)
+  if (null == this.timestamp)
     return false;
   return true;
 };

@@ -13,6 +13,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var Signature = require('../signature.js').Signature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -128,8 +129,10 @@ Tlv0_1a2WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
+  // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
+  //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue
-    (data.getSignature(), encoder);
+    (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent());
   Tlv0_1a2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1a2WireFormat.encodeName(data.getName(), encoder);
@@ -167,6 +170,12 @@ Tlv0_1a2WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1a2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1a2WireFormat.decodeSignatureInfo(data, decoder);
+  if (data.getSignature() != null && 
+      data.getSignature().getKeyLocator() != null && 
+      data.getMetaInfo() != null)
+    // Copy the key locator pointer to the MetaInfo object for the transition of 
+    //   moving the key locator from the MetaInfo to the Signature object.
+    data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than 
@@ -346,14 +355,47 @@ Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function(signature, encoder)
+/**
+ * Encode the signature object in TLV, using the given keyLocator instead of the
+ * locator in this object.
+ * @param {Signature} signature The Signature object to encode.
+ * @param {TlvEncoder} encoder The encoder.
+ * @param {KeyLocator} keyLocator The key locator to use (from 
+ * Data.getSignatureOrMetaInfoKeyLocator).
+ */
+Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function
+  (signature, encoder, keyLocator)
 {
-  // TODO: Implement.
+  var saveLength = encoder.getLength()
+
+  // Encode backwards.
+  Tlv0_1a2WireFormat.encodeKeyLocator(keyLocator, encoder);
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
+
+  encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
 Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
 {
-  // TODO: Implement.
+  var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
+
+  var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
+  // TODO: The library needs to handle other signature types than 
+  //     SignatureSha256WithRsa.
+  if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
+      data.setSignature(Signature());
+      // Modify data's signature object because if we create an object
+      //   and set it, then data will have to copy all the fields.
+      var signatureInfo = data.getSignature();
+      Tlv0_1a2WireFormat.decodeKeyLocator
+        (signatureInfo.getKeyLocator(), decoder);
+  }
+  else
+      throw new DecodingException
+       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
+
+  decoder.finishNestedTlvs(endOffset)
 };
 
 Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)

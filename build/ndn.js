@@ -9652,7 +9652,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
-  this.locator = new KeyLocator(key.publicToDER(), KeyLocatorType.KEY);
+  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder) 
@@ -9703,7 +9703,14 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-MetaInfo.prototype.to_ndnb = function(encoder)  {
+/**
+ * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
+ * locator in this object.
+ * @param {BinaryXMLEncoder} encoder The encoder.
+ * @param {KeyLocator} keyLocator The key locator to use (from 
+ * Data.getSignatureOrMetaInfoKeyLocator).
+ */
+MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
   if (!this.validate())
     throw new Error("Cannot encode : field values missing.");
 
@@ -9715,14 +9722,14 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
     this.publisher.to_ndnb(encoder);
   }
   else {
-    if (null != this.locator &&
-        this.locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-        this.locator.getKeyData() != null &&
-        this.locator.getKeyData().length > 0)
+    if (null != keyLocator &&
+        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+        keyLocator.getKeyData() != null &&
+        keyLocator.getKeyData().length > 0)
       // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
       //   publisherPublicKeyDigest.
       encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, this.locator.getKeyData());
+        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData());
   }
 
   if (null != this.timestamp)
@@ -9737,8 +9744,8 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
   if (null != this.finalBlockID)
     encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
 
-  if (null != this.locator)
-    this.locator.to_ndnb(encoder);
+  if (null != keyLocator)
+    keyLocator.to_ndnb(encoder);
 
   encoder.writeElementClose();       
 };
@@ -9756,7 +9763,7 @@ MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null==this.timestamp ||null== this.locator)
+  if (null == this.timestamp)
     return false;
   return true;
 };
@@ -9786,6 +9793,7 @@ var Blob = require('./util/blob.js').Blob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -9797,13 +9805,19 @@ var Signature = function Signature(witnessOrSignatureObject, signature, digestAl
   if (typeof witnessOrSignatureObject === 'object' && 
       witnessOrSignatureObject instanceof Signature) {
     // Copy the values.
-    this.witness = witnessOrSignatureObject.witness;
+    this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
     this.signature = witnessOrSignatureObject.signature;
+    // witness is deprecated.
+    this.witness = witnessOrSignatureObject.witness;
+    // digestAlgorithm is deprecated.
     this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
   }
   else {
-    this.witness = witnessOrSignatureObject;
+    this.keyLocator = new KeyLocator();
     this.signature = signature;
+    // witness is deprecated.
+    this.witness = witnessOrSignatureObject;
+    // digestAlgorithm is deprecated.
     this.digestAlgorithm = digestAlgorithm;
   }
 };
@@ -9820,6 +9834,15 @@ Signature.prototype.clone = function()
 };
 
 /**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator.
+ */
+Signature.prototype.getKeyLocator = function()
+{
+  return this.keyLocator;
+};
+
+/**
  * Get the data packet's signature bytes.
  * @returns {Buffer} The signature bytes.
  */
@@ -9828,6 +9851,16 @@ Signature.prototype.getSignature = function()
   return this.signature;
 };
 
+/**
+ * Set the key locator to a copy of the given keyLocator.
+ * @param {KeyLocator} keyLocator The KeyLocator to copy.
+ */
+Signature.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+                    new KeyLocator(keyLocator) : new KeyLocator();
+};
+  
 /**
  * Set the data packet's signature bytes.
  * @param {type} signature
@@ -9906,6 +9939,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Signature = require('./signature.js').Signature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
+var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -10109,6 +10143,38 @@ Data.prototype.wireDecode = function(input, wireFormat)
     (new Blob(input), result.signedPortionBeginOffset, 
      result.signedPortionEndOffset);
 };
+
+/**
+ * If getSignature() has a key locator, return it.  Otherwise, use
+ * the key locator from getMetaInfo() for backward compatibility and print
+ * a warning to console.log that the key locator has moved to the Signature
+ * object.  If neither has a key locator, return an empty key locator.
+ * When we stop supporting the key locator in MetaInfo, this function is not
+ * necessary and we will just use the key locator in the Signature.
+ * @returns {KeyLocator} The key locator to use.
+ */
+Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
+{
+  if (this.signature != null && this.signature.getKeyLocator() != null &&
+      this.signature.getKeyLocator().getType() != null &&
+      this.signature.getKeyLocator().getType() >= 0)
+    // The application is using the key locator in the correct object.
+    return this.signature.getKeyLocator();
+  
+  if (this.signedInfo != null && this.signedInfo.locator != null &&
+      this.signedInfo.locator.type != null &&
+      this.signedInfo.locator.type >= 0) {
+    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
+    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
+    return this.signedInfo.locator;
+  }
+  
+  // Return the empty key locator from the Signature object if possible.
+  if (this.signature != null && this.signature.getKeyLocator() != null)
+    return this.signature.getKeyLocator();
+  else
+    return new KeyLocator();
+}
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
@@ -11457,7 +11523,9 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
     data.name.to_ndnb(encoder);
   
   if (null != data.signedInfo) 
-    data.signedInfo.to_ndnb(encoder);
+    // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
+    //   the key locator from the MetaInfo to the Signauture object.
+    data.signedInfo.to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
   encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
   
@@ -11499,6 +11567,10 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.signedInfo = new MetaInfo();
     data.signedInfo.from_ndnb(decoder);
+    if (data.signedInfo.locator != null && data.getSignature() != null)
+      // Copy the key locator pointer to the Signature object for the transition 
+      //   of moving the key locator from the MetaInfo to the Signature object.
+      data.getSignature().keyLocator = data.signedInfo.locator;
   }
   else
     data.signedInfo = null;
@@ -11531,6 +11603,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var Signature = require('../signature.js').Signature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -11646,8 +11719,10 @@ Tlv0_1a2WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
+  // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
+  //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue
-    (data.getSignature(), encoder);
+    (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent());
   Tlv0_1a2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1a2WireFormat.encodeName(data.getName(), encoder);
@@ -11685,6 +11760,12 @@ Tlv0_1a2WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1a2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1a2WireFormat.decodeSignatureInfo(data, decoder);
+  if (data.getSignature() != null && 
+      data.getSignature().getKeyLocator() != null && 
+      data.getMetaInfo() != null)
+    // Copy the key locator pointer to the MetaInfo object for the transition of 
+    //   moving the key locator from the MetaInfo to the Signature object.
+    data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than 
@@ -11864,14 +11945,47 @@ Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function(signature, encoder)
+/**
+ * Encode the signature object in TLV, using the given keyLocator instead of the
+ * locator in this object.
+ * @param {Signature} signature The Signature object to encode.
+ * @param {TlvEncoder} encoder The encoder.
+ * @param {KeyLocator} keyLocator The key locator to use (from 
+ * Data.getSignatureOrMetaInfoKeyLocator).
+ */
+Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function
+  (signature, encoder, keyLocator)
 {
-  // TODO: Implement.
+  var saveLength = encoder.getLength()
+
+  // Encode backwards.
+  Tlv0_1a2WireFormat.encodeKeyLocator(keyLocator, encoder);
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
+
+  encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
 Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
 {
-  // TODO: Implement.
+  var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
+
+  var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
+  // TODO: The library needs to handle other signature types than 
+  //     SignatureSha256WithRsa.
+  if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
+      data.setSignature(Signature());
+      // Modify data's signature object because if we create an object
+      //   and set it, then data will have to copy all the fields.
+      var signatureInfo = data.getSignature();
+      Tlv0_1a2WireFormat.decodeKeyLocator
+        (signatureInfo.getKeyLocator(), decoder);
+  }
+  else
+      throw new DecodingException
+       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
+
+  decoder.finishNestedTlvs(endOffset)
 };
 
 Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)

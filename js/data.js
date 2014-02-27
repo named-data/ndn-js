@@ -14,6 +14,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Signature = require('./signature.js').Signature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
+var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -217,6 +218,38 @@ Data.prototype.wireDecode = function(input, wireFormat)
     (new Blob(input), result.signedPortionBeginOffset, 
      result.signedPortionEndOffset);
 };
+
+/**
+ * If getSignature() has a key locator, return it.  Otherwise, use
+ * the key locator from getMetaInfo() for backward compatibility and print
+ * a warning to console.log that the key locator has moved to the Signature
+ * object.  If neither has a key locator, return an empty key locator.
+ * When we stop supporting the key locator in MetaInfo, this function is not
+ * necessary and we will just use the key locator in the Signature.
+ * @returns {KeyLocator} The key locator to use.
+ */
+Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
+{
+  if (this.signature != null && this.signature.getKeyLocator() != null &&
+      this.signature.getKeyLocator().getType() != null &&
+      this.signature.getKeyLocator().getType() >= 0)
+    // The application is using the key locator in the correct object.
+    return this.signature.getKeyLocator();
+  
+  if (this.signedInfo != null && this.signedInfo.locator != null &&
+      this.signedInfo.locator.type != null &&
+      this.signedInfo.locator.type >= 0) {
+    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
+    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
+    return this.signedInfo.locator;
+  }
+  
+  // Return the empty key locator from the Signature object if possible.
+  if (this.signature != null && this.signature.getKeyLocator() != null)
+    return this.signature.getKeyLocator();
+  else
+    return new KeyLocator();
+}
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;

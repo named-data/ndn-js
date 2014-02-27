@@ -39,11 +39,8 @@ data2.wireDecode(p2);
 
 console.log('Decoded name: ' + data2.name.toUri());
 console.log('Decoded content: ' + data2.content.toString());
-var rsakey = new Key();
-rsakey.readDerPublicKey(data2.signedInfo.locator.publicKey);
-console.log('Content verification passed: ' + data2.verify(rsakey));
 
-console.log('Data in XML representation:');
+console.log('Data in field values:');
 console.log(EncodingUtils.dataToHtml(data2).replace(/<br \/>/g, "\n"));
 
 // Verify with the same key from globalKeyManager used to sign.
