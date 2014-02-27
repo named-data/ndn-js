@@ -75,6 +75,15 @@ Blob.prototype.buf = function()
 };
 
 /**
+ * Return true if the array is null, otherwise false.
+ * @returns {boolean} True if the array is null.
+ */
+Blob.prototype.isNull = function()
+{
+  return this.buffer == null;
+};
+
+/**
  * Return the hex representation of the bytes in the byte array.
  * @returns {string} The hex string.
  */
