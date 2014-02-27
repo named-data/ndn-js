@@ -87,7 +87,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
   var thisXpcomTransport = this;
   var inStream = this.socket.openInputStream(0, 0, 0);
   var dataListener = {
-    elementReader: new BinaryXmlElementReader(elementListener),
+    elementReader: new ElementReader(elementListener),
     gotFirstData: false,
     
     onStartRequest: function(request, context) {

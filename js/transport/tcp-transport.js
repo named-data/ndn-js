@@ -5,7 +5,7 @@
  */
 
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
-var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
+var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 
 var TcpTransport = function TcpTransport() 
@@ -32,7 +32,7 @@ TcpTransport.prototype.connect = function(face, onopenCallback)
   if (this.socket != null)
     delete this.socket;
 
-  this.elementReader = new BinaryXmlElementReader(face);
+  this.elementReader = new ElementReader(face);
 
   // Connect to local ndnd via TCP
   var net = require('net');

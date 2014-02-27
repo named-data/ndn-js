@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
-var BinaryXmlElementReader = require('../encoding/binary-xml-element-reader.js').BinaryXmlElementReader;
+var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -45,7 +45,7 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
   
   this.ws.binaryType = "arraybuffer";
   
-  this.elementReader = new BinaryXmlElementReader(face);
+  this.elementReader = new ElementReader(face);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;

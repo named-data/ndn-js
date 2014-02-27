@@ -102,7 +102,7 @@ def build (bld):
                  "js/encoding/tlv/tlv-encoder.js",
                  "js/encoding/tlv/tlv-decoder.js",
                  "js/encoding/wire-format.js",
-                 "js/encoding/binary-xml-element-reader.js",
+                 "js/encoding/element-reader.js",
                  "js/util/name-enumeration.js",
                  "js/transport/web-socket-transport.js",
                  "js/browserify-tcp-transport.js",

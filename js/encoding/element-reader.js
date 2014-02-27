@@ -9,23 +9,24 @@ var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').Bin
 var LOG = require('../log.js').Log.LOG;
 
 /**
- * A BinaryXmlElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder to detect the end of a binary XML element and calls
- * elementListener.onReceivedElement(element) with the element. 
- * This handles the case where a single call to onReceivedData may contain multiple elements.
+ * A ElementReader lets you call onReceivedData multiple times which uses a
+ * BinaryXMLStructureDecoder or TlvStructureDecoder to detect the end of a 
+ * binary XML or TLV element and calls elementListener.onReceivedElement(element) 
+ * with the element.  This handles the case where a single call to 
+ * onReceivedData may contain multiple elements.
  * @constructor
  * @param {{onReceivedElement:function}} elementListener
  */
-var BinaryXmlElementReader = function BinaryXmlElementReader(elementListener) 
+var ElementReader = function ElementReader(elementListener) 
 {
   this.elementListener = elementListener;
   this.dataParts = [];
   this.structureDecoder = new BinaryXMLStructureDecoder();
 };
 
-exports.BinaryXmlElementReader = BinaryXmlElementReader;
+exports.ElementReader = ElementReader;
 
-BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data) 
+ElementReader.prototype.onReceivedData = function(/* Buffer */ data) 
 {
   // Process multiple objects in the data.
   while (true) {
@@ -39,7 +40,7 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       try {
         this.elementListener.onReceivedElement(element);
       } catch (ex) {
-          console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+          console.log("ElementReader: ignoring exception from onReceivedElement: " + ex);
       }
   
       // Need to read a new object.
