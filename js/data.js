@@ -173,8 +173,8 @@ Data.prototype.verify = function(/*Key*/ key)
     throw new Error('Cannot verify Data without a public key.');
 
   if (this.wireEncoding == null || this.wireEncoding.isNull())
-    // Need to decode to set wireEncoding.
-    this.wireDecode();
+    // Need to encode to set wireEncoding.
+    this.wireEncode();
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   return verifier.verify(key.publicKeyPem, this.signature.signature);
