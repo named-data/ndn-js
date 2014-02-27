@@ -26,17 +26,31 @@ exports.ContentType = ContentType;
  * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var MetaInfo = function MetaInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields) 
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields) 
 {
-  this.publisher = publisher; //publisherPublicKeyDigest
-  this.timestamp=timestamp; // NDN Time
-  this.type=type; // ContentType
-  this.locator =locator;//KeyLocator
-  this.freshnessSeconds =freshnessSeconds; // Integer
-  this.finalBlockID=finalBlockID; //byte array
-    
-  if (!skipSetFields)
-    this.setFields();
+  if (typeof publisherOrMetaInfo === 'object' && 
+      publisherOrMetaInfo instanceof MetaInfo) {
+    // Copy values.
+    var metaInfo = publisherOrMetaInfo;
+    this.publisher = metaInfo.publisher;
+    this.timestamp = metaInfo.timestamp;
+    this.type = metaInfo.type;
+    this.locator = metaInfo.locator == null ? 
+      new KeyLocator() : new KeyLocator(metaInfo.locator);
+    this.freshnessSeconds = metaInfo.freshnessSeconds;
+    this.finalBlockID = metaInfo.finalBlockID;
+  }
+  else {
+    this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
+    this.timestamp = timestamp; // NDN Time
+    this.type = type; // ContentType
+    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
+    this.freshnessSeconds = freshnessSeconds; // Integer
+    this.finalBlockID = finalBlockID; //byte array
+
+    if (!skipSetFields)
+      this.setFields();
+  }
 };
 
 exports.MetaInfo = MetaInfo;
@@ -174,10 +188,10 @@ MetaInfo.prototype.validate = function()
 /**
  * @deprecated Use new MetaInfo.
  */
-var SignedInfo = function SignedInfo(publisher, timestamp, type, locator, freshnessSeconds, finalBlockID) 
+var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID) 
 {
   // Call the base constructor.
-  MetaInfo.call(this, publisher, timestamp, type, locator, freshnessSeconds, finalBlockID); 
+  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID); 
 }
 
 // Set skipSetFields true since we only need the prototype functions.
