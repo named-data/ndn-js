@@ -120,8 +120,19 @@ MetaInfo.prototype.to_ndnb = function(encoder)  {
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (null != this.publisher) {
+    // We have a publisherPublicKeyDigest, so use it.
     if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
     this.publisher.to_ndnb(encoder);
+  }
+  else {
+    if (null != this.locator &&
+        this.locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+        this.locator.getKeyData() != null &&
+        this.locator.getKeyData().length > 0)
+      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
+      //   publisherPublicKeyDigest.
+      encoder.writeDTagElement
+        (NDNProtocolDTags.PublisherPublicKeyDigest, this.locator.getKeyData());
   }
 
   if (null != this.timestamp)
@@ -155,7 +166,7 @@ MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null ==this.publisher || null==this.timestamp ||null== this.locator)
+  if (null==this.timestamp ||null== this.locator)
     return false;
   return true;
 };

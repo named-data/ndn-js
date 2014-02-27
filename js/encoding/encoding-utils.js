@@ -187,6 +187,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output += "keyLocator: ";
       if (data.signedInfo.locator.type == KeyLocatorType.KEY)
         output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
+      else if (data.signedInfo.locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData()).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)

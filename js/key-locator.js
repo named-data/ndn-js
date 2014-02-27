@@ -15,9 +15,10 @@ var LOG = require('./log.js').Log.LOG;
  * KeyLocator
  */
 var KeyLocatorType = {
-  KEY:1,
-  CERTIFICATE:2,
-  KEYNAME:3
+  KEYNAME: 1,
+  KEY_LOCATOR_DIGEST: 2,
+  KEY: 3,
+  CERTIFICATE: 4
 };
 
 exports.KeyLocatorType = KeyLocatorType;
@@ -29,21 +30,106 @@ var KeyLocator = function KeyLocator(input,type)
 { 
   this.type = type;
     
-  if (type == KeyLocatorType.KEYNAME) {
-    if (LOG > 3) console.log('KeyLocator: SET KEYNAME');
+  if (type == KeyLocatorType.KEYNAME)
     this.keyName = input;
-  }
-  else if (type == KeyLocatorType.KEY) {
-    if (LOG > 3) console.log('KeyLocator: SET KEY');
+  else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+    this.keyData = input;
+  else if (type == KeyLocatorType.KEY)
     this.publicKey = input;
-  }
-  else if (type == KeyLocatorType.CERTIFICATE) {
-    if (LOG > 3) console.log('KeyLocator: SET CERTIFICATE');
+  else if (type == KeyLocatorType.CERTIFICATE)
     this.certificate = input;
-  }
 };
 
 exports.KeyLocator = KeyLocator;
+
+/**
+ * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
+ * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
+ * getKeyData() to get the digest.
+ * @returns {number} The key locator type, or null if not specified.
+ */
+KeyLocator.prototype.getType = function() { return this.type; };
+
+/**
+ * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
+ * @returns {Name} The key name. If not specified, the Name is empty.
+ */
+KeyLocator.prototype.getKeyName = function() 
+{ 
+  if (this.keyName != null)
+    return this.contentName;
+  else
+    return Name();
+};
+
+/**
+ * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is 
+ * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER 
+ * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the 
+ * DER encoded certificate. 
+ * @returns {Buffer} The key data, or null if not specified.
+ */
+KeyLocator.prototype.getKeyData = function() 
+{ 
+  if (this.type == KeyLocatorType.KEY)
+    return this.publicKey;
+  else if (this.type == KeyLocatorType.CERTIFICATE)
+    return this.certificate;
+  else
+    return this.keyData;
+};
+
+/**
+ * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
+ * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
+ * setKeyData() to the digest.
+ * @param {number} type The key locator type.  If null, the type is unspecified.
+ */
+KeyLocator.prototype.setType = function(type) { this.type = type; }; 
+
+/**
+ * Set key name to a copy of the given Name.  This is the name if getType() 
+ * is KeyLocatorType.KEYNAME.
+ * @param {Name} name The key name which is copied.
+ */
+KeyLocator.prototype.setKeyName = function(name) 
+{ 
+  if (this.keyName == null)
+    this.keyName = KeyName();
+  
+  this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
+                             new Name(name) : new Name(); 
+}; 
+
+/**
+ * Set the key data to the given value. This is the digest bytes if getType() is 
+ * KeyLocatorType.KEY_LOCATOR_DIGEST.
+ * @param {Buffer} keyData The array with the key data bytes.
+ */
+KeyLocator.prototype.setKeyData = function(keyData)
+{
+  var value = keyData;
+  if (value != null)
+    // Make a copy.
+    value = new Buffer(value);
+  
+  this.keyData = value;
+  // Set for backwards compatibility.
+  this.publicKey = value;
+  this.certificate = value;
+};
+
+/**
+ * Clear the keyData and set the type to none.
+ */
+KeyLocator.prototype.clear = function() 
+{
+  this.type = null;
+  this.keyName = null;
+  this.keyData = null;
+  this.publicKey = null;
+  this.certificate = null;
+};
 
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
@@ -99,11 +185,12 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
 KeyLocator.prototype.to_ndnb = function(encoder) 
 {
   if (LOG > 4) console.log('type is is ' + this.type);
-  //TODO Check if Name is missing
-  if (!this.validate())
-    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
 
-  //TODO FIX THIS TOO
+  if (this.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+    // encodeSignedInfo already encoded this as the publisherPublicKeyDigest,
+    //   so do nothing here.
+    return;
+
   encoder.writeElementStartDTag(this.getElementLabel());
   
   if (this.type == KeyLocatorType.KEY) {
@@ -127,11 +214,6 @@ KeyLocator.prototype.to_ndnb = function(encoder)
 KeyLocator.prototype.getElementLabel = function() 
 {
   return NDNProtocolDTags.KeyLocator; 
-};
-
-KeyLocator.prototype.validate = function() 
-{
-  return null != this.keyName || null != this.publicKey || null != this.certificate;
 };
 
 /**
@@ -165,9 +247,6 @@ KeyName.prototype.from_ndnb = function(decoder)
 
 KeyName.prototype.to_ndnb = function(encoder)
 {
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-  
   encoder.writeElementStartDTag(this.getElementLabel());
   
   this.contentName.to_ndnb(encoder);
@@ -179,9 +258,3 @@ KeyName.prototype.to_ndnb = function(encoder)
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
-KeyName.prototype.validate = function() 
-{
-    // DKS -- do we do recursive validation?
-    // null signedInfo ok
-    return (null != this.contentName);
-};
