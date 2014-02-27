@@ -2,6 +2,8 @@ Interim changes since NDN-JS v0.2 (2013-12-26)
 --------------------------------------
 
 Changes
+* You should use get/setKeyLocator in the Signature object instead of locator in the Data signedInfo.
+* Added get/setKeyLocator in the Signature object.
 * http://redmine.named-data.net/issues/1073 In Face.expressInterest, support onData and onTimeout callbacks.
 * http://redmine.named-data.net/issues/1087 In Name.getPrefix, support a negative argument, e.g. getPrefix(-1).
 * In Face.registerPrefix, add support for onInterest and onRegisterFailed callbacks and ForwardingFlags.
@@ -16,8 +18,11 @@ Changes
 * Moved classes Exclude, Signature, MetaInfo and KeyLocator into their own source files.
 * In Interest, added get/setKeyLocator.
 * In Interest, added get/setMustBeFresh.
+* In KeyLocatorType, added KEY_LOCATOR_DIGEST.
+* In MetaInfo (formerly SignedInfo) setFields, set a KeyLocatorType.KEY_LOCATOR_DIGEST instead of a KEY.
 
 Deprecated
+* SignedInfo (MetaInfo): Deprecated the locator. You should use get/setKeyLocator in the Signature object.
 * Interest: Deprecated getAnswerOriginKind.  Use getMustBeFresh.
 * Interest: Deprecated setAnswerOriginKind.  Use setMustBeFresh.
 * Interest: Deprecated getPublicKeyLocator.  If the interest has a public key locator, its keyLocator has
