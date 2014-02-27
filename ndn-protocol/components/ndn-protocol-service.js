@@ -17,6 +17,9 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/content-channel.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
+// For now, keep the default wire format as Binary XML.
+WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
+
 function NdnProtocol() {
 }
 
