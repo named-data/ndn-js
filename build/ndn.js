@@ -7769,7 +7769,7 @@ TlvStructureDecoder.prototype.seek = function(offset)
  */
 
 /**
- * Create a WireFormat base class where the encode and decode methods throw an error. You should use a derived class like BinaryXmlWireFormat.
+ * Create a WireFormat base class where the encode and decode methods throw an error. You should use a derived class like TlvWireFormat.
  * @constructor
  */
 var WireFormat = function WireFormat() {
@@ -7855,10 +7855,10 @@ WireFormat.getDefaultWireFormat = function()
   return WireFormat.defaultWireFormat;
 };
 
-// Invoke BinaryXmlWireFormat to set the default format.
-// Since binary-xml-wire-format.js includes this file, put this at the bottom 
+// Invoke TlvWireFormat to set the default format.
+// Since tlv-wire-format.js includes this file, put this at the bottom 
 // to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./binary-xml-wire-format.js').BinaryXmlWireFormat;
+var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -11586,10 +11586,6 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   return { signedPortionBeginOffset: signedPortionBeginOffset, 
            signedPortionEndOffset: signedPortionEndOffset };  
 };
-
-// On loading this module, make this the default wire format.
-// This module will be loaded because WireFormat loads it.
-WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -12034,6 +12030,8 @@ Tlv0_1a2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
+
+var WireFormat = require('./wire-format.js').WireFormat;
 var Tlv0_1a2WireFormat = require('./tlv-0_1a2-wire-format.js').Tlv0_1a2WireFormat;
 
 /**
@@ -12068,6 +12066,10 @@ TlvWireFormat.get = function()
     TlvWireFormat.instance = new TlvWireFormat();
   return TlvWireFormat.instance;
 };
+
+// On loading this module, make this the default wire format.
+// This module will be loaded because WireFormat loads it.
+WireFormat.setDefaultWireFormat(TlvWireFormat.get());
 /**
  * This file contains utilities to help encode and decode NDN objects.
  * Copyright (C) 2013-2014 Regents of the University of California.

@@ -3,6 +3,8 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
+
+var WireFormat = require('./wire-format.js').WireFormat;
 var Tlv0_1a2WireFormat = require('./tlv-0_1a2-wire-format.js').Tlv0_1a2WireFormat;
 
 /**
@@ -37,3 +39,7 @@ TlvWireFormat.get = function()
     TlvWireFormat.instance = new TlvWireFormat();
   return TlvWireFormat.instance;
 };
+
+// On loading this module, make this the default wire format.
+// This module will be loaded because WireFormat loads it.
+WireFormat.setDefaultWireFormat(TlvWireFormat.get());

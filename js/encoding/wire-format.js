@@ -6,7 +6,7 @@
  */
 
 /**
- * Create a WireFormat base class where the encode and decode methods throw an error. You should use a derived class like BinaryXmlWireFormat.
+ * Create a WireFormat base class where the encode and decode methods throw an error. You should use a derived class like TlvWireFormat.
  * @constructor
  */
 var WireFormat = function WireFormat() {
@@ -92,7 +92,7 @@ WireFormat.getDefaultWireFormat = function()
   return WireFormat.defaultWireFormat;
 };
 
-// Invoke BinaryXmlWireFormat to set the default format.
-// Since binary-xml-wire-format.js includes this file, put this at the bottom 
+// Invoke TlvWireFormat to set the default format.
+// Since tlv-wire-format.js includes this file, put this at the bottom 
 // to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./binary-xml-wire-format.js').BinaryXmlWireFormat;
+var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
