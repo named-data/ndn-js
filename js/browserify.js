@@ -265,3 +265,12 @@ exports.createVerify = function(alg)
 
   return obj;
 };
+
+exports.randomBytes = function(size)
+{
+  // TODO: Use a cryptographic random number generator.
+  var result = new Buffer(size);
+  for (var i = 0; i < size; ++i)
+    result[i] = Math.floor(Math.random() * 256);
+  return result;
+};
