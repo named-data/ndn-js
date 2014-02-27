@@ -22,6 +22,7 @@ Changes
 * In Interest, added get/setMustBeFresh.
 * In KeyLocatorType, added KEY_LOCATOR_DIGEST.
 * In MetaInfo (formerly SignedInfo) setFields, set a KeyLocatorType.KEY_LOCATOR_DIGEST instead of a KEY.
+* In EncodingUtils.decodeHexData, etc., added an optional wireFormat argument.
 
 Deprecated
 * SignedInfo (MetaInfo): Deprecated the locator. You should use get/setKeyLocator in the Signature object.

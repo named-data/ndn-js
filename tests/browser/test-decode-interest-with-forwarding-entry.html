@@ -19,8 +19,8 @@
 
 			var input = document.getElementById('result').innerHTML;
 
-			
-			var interest = EncodingUtils.decodeHexInterest(input);
+			// The hard-wired input is in Binary XML.
+			var interest = EncodingUtils.decodeHexInterest(input, BinaryXmlWireFormat.get());
 			
 			if(LOG>3)console.log('INTEREST DECODED');
 			if(LOG>3)console.log(interest);
@@ -136,7 +136,8 @@
 				
 				var input = DataUtils.toHex(interest.name.get(3).getValue()) ;
 
-				var data = EncodingUtils.decodeHexData(input);
+    			// The hard-wired input is in Binary XML.
+				var data = EncodingUtils.decodeHexData(input, BinaryXmlWireFormat.get());
 				
 				if(data.content!=null ){
 					output+= "Content of data packet: ";

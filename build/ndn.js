@@ -12086,6 +12086,7 @@ var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
 var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
+var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -12098,22 +12099,24 @@ var EncodingUtils = function EncodingUtils()
 
 exports.EncodingUtils = EncodingUtils;
 
-EncodingUtils.encodeToHexInterest = function(interest) 
+EncodingUtils.encodeToHexInterest = function(interest, wireFormat) 
 {
-  return DataUtils.toHex(interest.wireEncode().buf());
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return DataUtils.toHex(interest.wireEncode(wireFormat).buf());
 };
 
-EncodingUtils.encodeToHexData = function(data) 
+EncodingUtils.encodeToHexData = function(data, wireFormat) 
 {
-  return DataUtils.toHex(data.wireEncode().buf());
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return DataUtils.toHex(data.wireEncode(wireFormat).buf());
 };
 
 /**
  * @deprecated Use EncodingUtils.encodeToHexData(data).
  */
-EncodingUtils.encodeToHexContentObject = function(data) 
+EncodingUtils.encodeToHexContentObject = function(data, wireFormat) 
 {
-  return EncodingUtils.encodeToHexData(data);
+  return EncodingUtils.encodeToHexData(data, wireFormat);
 }
 
 EncodingUtils.encodeForwardingEntry = function(data) 
@@ -12138,26 +12141,28 @@ EncodingUtils.decodeHexFaceInstance = function(result)
   return faceInstance;
 };
 
-EncodingUtils.decodeHexInterest = function(input) 
+EncodingUtils.decodeHexInterest = function(input, wireFormat) 
 {
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var interest = new Interest();
-  interest.wireDecode(DataUtils.toNumbers(input));
+  interest.wireDecode(DataUtils.toNumbers(input), wireFormat);
   return interest;
 };
 
-EncodingUtils.decodeHexData = function(input) 
+EncodingUtils.decodeHexData = function(input, wireFormat) 
 {
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var data = new Data();
-  data.wireDecode(DataUtils.toNumbers(input));
+  data.wireDecode(DataUtils.toNumbers(input), wireFormat);
   return data;
 };
 
 /**
  * @deprecated Use EncodingUtils.decodeHexData(input).
  */
-EncodingUtils.decodeHexContentObject = function(input) 
+EncodingUtils.decodeHexContentObject = function(input, wireFormat) 
 {
-  return EncodingUtils.decodeHexData(input);
+  return EncodingUtils.decodeHexData(input, wireFormat);
 }
 
 EncodingUtils.decodeHexForwardingEntry = function(result) 
