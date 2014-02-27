@@ -7687,11 +7687,11 @@ BinaryXmlElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       this.dataParts.push(data.slice(0, this.structureDecoder.offset));
       var element = DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
-      //try {
+      try {
         this.elementListener.onReceivedElement(element);
-      //} catch (ex) {
-      //    console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
-      //}
+      } catch (ex) {
+          console.log("BinaryXmlElementReader: ignoring exception from onReceivedElement: " + ex);
+      }
   
       // Need to read a new object.
       data = data.slice(this.structureDecoder.offset, data.length);
@@ -11956,6 +11956,10 @@ var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+var Tlv = require('./encoding/tlv/tlv.js').Tlv;
+var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -12521,16 +12525,39 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
 Face.prototype.onReceivedElement = function(element) 
 {
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
-  var decoder = new BinaryXMLDecoder(element);
-  // Dispatch according to packet type
-  // TODO: Check for wire format.
-  if (decoder.peekDTag(NDNProtocolDTags.Interest)) {  // Interest packet
+  // First, decode as Interest or Data.
+  var interest = null;
+  var data = null;
+  // The type codes for TLV Interest and Data packets are chosen to not
+  //   conflict with the first byte of a binary XML packet, so we can
+  //   just look at the first byte.
+  if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
+    var decoder = TlvDecoder (element);  
+    if (decoder.peekType(Tlv.Interest, element.length)) {
+      interest = new Interest();
+      interest.wireDecode(element, TlvWireFormat.get());
+    }
+    else if (decoder.peekType(Tlv.Data, element.length)) {
+      data = new Data();
+      data.wireDecode(element, TlvWireFormat.get());
+    }
+  }
+  else {
+    // Binary XML.
+    var decoder = new BinaryXMLDecoder(element);
+    if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
+      interest = new Interest();
+      interest.wireDecode(element, BinaryXmlWireFormat.get());
+    }
+    else if (decoder.peekDTag(NDNProtocolDTags.Data)) {
+      data = new Data();
+      data.wireDecode(element, BinaryXmlWireFormat.get());
+    }
+  }
+
+  // Now process as Interest or Data.
+  if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
-        
-    var interest = new Interest();
-    interest.wireDecode(element);
-    if (LOG > 3) console.log(interest);
-    if (LOG > 3) console.log(interest.name.toUri());
         
     var entry = getEntryForRegisteredPrefix(interest.name);
     if (entry != null) {
@@ -12541,11 +12568,8 @@ Face.prototype.onReceivedElement = function(element)
         this.transport.send(info.data.wireEncode().buf());
     }        
   } 
-  else if (decoder.peekDTag(NDNProtocolDTags.Data)) {  // Content packet
+  else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
-        
-    var data = new Data();
-    data.wireDecode(element);
         
     var pitEntry = Face.getEntryForExpressedInterest(data.name);
     if (pitEntry != null) {
