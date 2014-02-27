@@ -9257,17 +9257,27 @@ exports.globalKeyManager = globalKeyManager;
 
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var Blob = require('./util/blob.js').Blob;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
+var Name = require('./name.js').Name;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var LOG = require('./log.js').Log.LOG;
 
-var ContentType = {DATA:0, ENCR:1, GONE:2, KEY:3, LINK:4, NACK:5};
-var ContentTypeValue = {0:0x0C04C0, 1:0x10D091,2:0x18E344,3:0x28463F,4:0x2C834A,5:0x34008A};
-var ContentTypeValueReverse = {0x0C04C0:0, 0x10D091:1,0x18E344:2,0x28463F:3,0x2C834A:4,0x34008A:5};
+var ContentType = {
+  BLOB:0,
+  // ContentType DATA is deprecated.  Use ContentType.BLOB .
+  DATA:0, 
+  LINK:1, 
+  KEY: 2, 
+  // ContentType ENCR, GONE and NACK are not supported in NDN-TLV encoding and are deprecated.
+  ENCR:3, 
+  GONE:4, 
+  NACK:5
+};
 
 exports.ContentType = ContentType;
 
@@ -9304,6 +9314,78 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
 
 exports.MetaInfo = MetaInfo;
 
+/**
+ * Get the content type.
+ * @returns {an int from ContentType} The content type.
+ */
+MetaInfo.prototype.getType = function()
+{
+  return this.type;
+};
+
+/**
+ * Get the freshness period.
+ * @returns {number} The freshness period in milliseconds, or null if not 
+ * specified.
+ */
+MetaInfo.prototype.getFreshnessPeriod = function()
+{
+  // Use attribute freshnessSeconds for backwards compatibility.
+  if (this.freshnessSeconds == null || this.freshnessSeconds < 0)
+    return null;
+  else
+    // Convert to milliseconds.
+    return this.freshnessSeconds * 1000.0;
+};
+
+/**
+ * Get the final block ID.
+ * @returns {Buffer} The final block ID or null if not specified.
+ */
+MetaInfo.prototype.getFinalBlockID = function()
+{
+  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  return this.finalBlockID;
+};
+
+/**
+ * Set the content type.
+ * @param {an int from ContentType} type The content type.  If null, this 
+ * uses ContentType.BLOB.
+ */
+MetaInfo.prototype.setType = function(type)
+{
+  this.type = type == null || type < 0 ? ContentType.BLOB : type;
+};
+
+/**
+ * Set the freshness period.
+ * @param {type} freshnessPeriod The freshness period in milliseconds, or null
+ * for not specified.
+ */
+MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
+{
+  // Use attribute freshnessSeconds for backwards compatibility.
+  if (freshnessPeriod == null || freshnessPeriod < 0)
+    this.freshnessSeconds = null;
+  else
+    // Convert from milliseconds.
+    this.freshnessSeconds = freshnessPeriod / 1000.0;
+};
+
+MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
+{
+  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  if (finalBlockID == null)
+    this.finalBlockID = null;
+  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Blob)
+    this.finalBlockID = finalBlockID.buf();
+  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
+    this.finalBlockID = finalBlockID.getValue();
+  else 
+    this.finalBlockID = new Buffer(finalBlockID);
+};
+
 MetaInfo.prototype.setFields = function() 
 {
   var key = globalKeyManager.getKey();
@@ -9320,7 +9402,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(this.timestamp.msec);
 
   //DATA
-  this.type = 0;//0x0C04C0;//ContentTypeValue[ContentType.DATA];
+  this.type = ContentType.BLOB;
   
   if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
@@ -9661,6 +9743,9 @@ Data.prototype.setName = function(name)
 {
   this.name = typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -9673,6 +9758,9 @@ Data.prototype.setMetaInfo = function(metaInfo)
 {
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
     new MetaInfo(metaInfo) : new MetaInfo();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -9685,6 +9773,9 @@ Data.prototype.setSignature = function(signature)
 {
   this.signature = typeof signature === 'object' && signature instanceof Signature ?
     signature.clone() : new Signature();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -9700,7 +9791,10 @@ Data.prototype.setContent = function(content)
   else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
   else 
-    this.content = content;
+    this.content = new Buffer(content);
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = SignedBlob();
   return this;
 };
 
@@ -11158,6 +11252,7 @@ var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
+var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -11504,12 +11599,42 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
 
 Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 {
-  // TODO: Implement.
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  encoder.writeOptionalBlobTlv(Tlv.FinalBlockId, metaInfo.getFinalBlockID());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FreshnessPeriod, metaInfo.getFreshnessPeriod());
+  if (metaInfo.getType() != ContentType.BLOB) {
+    // Not the default, so we need to encode the type.
+    if (metaInfo.getType() == ContentType.LINK ||
+        metaInfo.getType() == ContentType.KEY)
+      // The ContentType enum is set up with the correct integer for 
+      // each NDN-TLV ContentType.
+      encoder.writeNonNegativeIntegerTlv(Tlv.ContentType, metaInfo.getType());
+    else
+      throw new Error("unrecognized TLV ContentType");
+  }
+
+  encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
 Tlv0_1a2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
-  // TODO: Implement.
+  var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);  
+
+  // The ContentType enum is set up with the correct integer for each 
+  // NDN-TLV ContentType.  If readOptionalNonNegativeIntegerTlv returns
+  // None, then setType will convert it to BLOB.
+  metaInfo.setType(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ContentType, endOffset));
+  metaInfo.setFreshnessPeriod
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
+  metaInfo.setFinalBlockID
+    (decoder.readOptionalBlobTlv(Tlv.FinalBlockId, endOffset));
+
+  decoder.finishNestedTlvs(endOffset);
 };
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.

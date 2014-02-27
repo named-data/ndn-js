@@ -11,6 +11,7 @@ var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
+var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -104,6 +105,77 @@ Tlv0_1a2WireFormat.prototype.decodeInterest = function(interest, input)
   interest.setNonce(nonce);
 
   decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Encode data as NDN-TLV and return the encoding and signed offsets.
+ * @param {Data} data The Data object to encode.
+ * @returns {object with (Blob, int, int)} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
+ * the encoding of the beginning of the signed portion, and 
+ * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * signed portion.
+ */
+Tlv0_1a2WireFormat.prototype.encodeData = function(data) 
+{
+  var encoder = new TlvEncoder(1500);
+  var saveLength = encoder.getLength();
+  
+  // Encode backwards.
+  // TODO: The library needs to handle other signature types than 
+  //   SignatureSha256WithRsa.
+  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
+  var signedPortionEndOffsetFromBack = encoder.getLength();
+
+  Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue
+    (data.getSignature(), encoder);
+  encoder.writeBlobTlv(Tlv.Content, data.getContent());
+  Tlv0_1a2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
+  Tlv0_1a2WireFormat.encodeName(data.getName(), encoder);
+  var signedPortionBeginOffsetFromBack = encoder.getLength();
+
+  encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset = 
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset, 
+           signedPortionEndOffset: signedPortionEndOffset };  
+};
+
+/**
+ * Decode input as an NDN-TLV data packet, set the fields in the data object, 
+ * and return the signed offsets. 
+ * @param {Data} data The Data object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
+ */
+Tlv0_1a2WireFormat.prototype.decodeData = function(data, input) 
+{
+  var decoder = new TlvDecoder(input);
+
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
+  var signedPortionBeginOffset = decoder.getOffset();
+
+  Tlv0_1a2WireFormat.decodeName(data.getName(), decoder);
+  Tlv0_1a2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
+  data.setContent(decoder.readBlobTlv(Tlv.Content));
+  Tlv0_1a2WireFormat.decodeSignatureInfo(data, decoder);
+
+  var signedPortionEndOffset = decoder.getOffset();
+  // TODO: The library needs to handle other signature types than 
+  //   SignatureSha256WithRsa.
+  data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
+
+  decoder.finishNestedTlvs(endOffset);
+  return { signedPortionBeginOffset: signedPortionBeginOffset, 
+           signedPortionEndOffset: signedPortionEndOffset };  
 };
 
 /**
@@ -270,6 +342,56 @@ Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
   else
     throw new DecodingException
       ("decodeKeyLocator: Unrecognized key locator type");
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function(signature, encoder)
+{
+  // TODO: Implement.
+};
+
+Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
+{
+  // TODO: Implement.
+};
+
+Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  encoder.writeOptionalBlobTlv(Tlv.FinalBlockId, metaInfo.getFinalBlockID());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FreshnessPeriod, metaInfo.getFreshnessPeriod());
+  if (metaInfo.getType() != ContentType.BLOB) {
+    // Not the default, so we need to encode the type.
+    if (metaInfo.getType() == ContentType.LINK ||
+        metaInfo.getType() == ContentType.KEY)
+      // The ContentType enum is set up with the correct integer for 
+      // each NDN-TLV ContentType.
+      encoder.writeNonNegativeIntegerTlv(Tlv.ContentType, metaInfo.getType());
+    else
+      throw new Error("unrecognized TLV ContentType");
+  }
+
+  encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
+};
+
+Tlv0_1a2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);  
+
+  // The ContentType enum is set up with the correct integer for each 
+  // NDN-TLV ContentType.  If readOptionalNonNegativeIntegerTlv returns
+  // None, then setType will convert it to BLOB.
+  metaInfo.setType(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ContentType, endOffset));
+  metaInfo.setFreshnessPeriod
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
+  metaInfo.setFinalBlockID
+    (decoder.readOptionalBlobTlv(Tlv.FinalBlockId, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
 };
