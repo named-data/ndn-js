@@ -13,7 +13,7 @@ var TlvStructureDecoder = function TlvStructureDecoder()
 {
   this.gotElementEnd = false;
   this.offset = 0;
-  this.state = this.READ_TYPE;
+  this.state = TlvStructureDecoder.READ_TYPE;
   this.headerLength = 0;
   this.useHeaderBuffer = false;
   // 8 bytes is enough to hold the extended bytes in the length encoding 
