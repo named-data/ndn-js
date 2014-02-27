@@ -27,23 +27,26 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  */
 var Data = function Data(name, metaInfo, content) 
 {
-  if (typeof name == 'string')
+  if (typeof name === 'string')
     this.name = new Name(name);
   else
-    //TODO Check the class of name
-    this.name = name;
+    this.name = typeof name === 'object' && name instanceof Name ?
+       new Name(name) : new Name();
+
+  // Use signedInfo instead of metaInfo for backward compatibility.
+  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+       new MetaInfo(metaInfo) : new MetaInfo();
   
-  this.signedInfo = metaInfo;
-  
-  if (typeof content == 'string') 
+  if (typeof content === 'string') 
     this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content == 'object' && content instanceof Blob)
+  else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
   else 
     this.content = content;
   
   this.signature = new Signature();
   
+  // Only used by BinaryXMLWireFormat.
   this.startSIG = null;
   this.endSIG = null;
   
@@ -53,6 +56,94 @@ var Data = function Data(name, metaInfo, content)
 };
 
 exports.Data = Data;
+
+/**
+ * Get the data packet's name.
+ * @returns {Name} The name.
+ */
+Data.prototype.getName = function() 
+{
+  return this.name;
+};
+
+/**
+ * Get the data packet's meta info.
+ * @returns {MetaInfo} The meta info.
+ */
+Data.prototype.getMetaInfo = function() 
+{
+  return this.signedInfo;
+};
+
+/**
+ * Get the data packet's signature object.
+ * @returns {Signature} The signature object.
+ */
+Data.prototype.getSignature = function() 
+{
+  return this.signature;
+};
+
+/**
+ * Get the data packet's content.
+ * @returns {Buffer} The content as a Buffer, which is null if unspecified.
+ */
+Data.prototype.getContent = function() 
+{
+  return this.content;
+};
+
+/**
+ * Set name to a copy of the given Name.
+ * @param {Name} name The Name which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setName = function(name) 
+{
+  this.name = typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name();
+  return this;
+};
+
+/**
+ * Set metaInfo to a copy of the given MetaInfo.
+ * @param {MetaInfo} metaInfo The MetaInfo which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setMetaInfo = function(metaInfo) 
+{
+  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+    new MetaInfo(metaInfo) : new MetaInfo();
+  return this;
+};
+
+/**
+ * Set the signature to a copy of the given signature.
+ * @param {Signature} signature The signature object which is cloned.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setSignature = function(signature) 
+{
+  this.signature = typeof signature === 'object' && signature instanceof Signature ?
+    signature.clone() : new Signature();
+  return this;
+};
+
+/**
+ * Set the content to the given value.
+ * @param {type} content The array this is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setContent = function(content) 
+{
+  if (typeof content === 'string') 
+    this.content = DataUtils.toNumbersFromString(content);
+  else if (typeof content === 'object' && content instanceof Blob)
+    this.content = content.buf();
+  else 
+    this.content = content;
+  return this;
+};
 
 Data.prototype.sign = function() 
 {

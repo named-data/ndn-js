@@ -6,6 +6,7 @@
  * This class represents an NDN Data Signature object.
  */
 
+var Blob = require('./util/blob.js').Blob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
