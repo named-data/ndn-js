@@ -200,7 +200,6 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       var publickeyHex = DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase();
       var publickeyString = DataUtils.toString(data.signedInfo.locator.publicKey);
       var signature = DataUtils.toHex(data.signature.signature).toLowerCase();
-      var input = DataUtils.toString(data.rawSignatureData);
       
       var witHex = "";
       if (data.signature.witness != null)

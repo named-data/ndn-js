@@ -67,10 +67,9 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 BinaryXmlWireFormat.prototype.encodeData = function(data) 
 {
   var encoder = new BinaryXMLEncoder(1500);
-  BinaryXmlWireFormat.encodeData(data, encoder);  
-  return { encoding: new Blob(encoder.getReducedOstream(), false),
-           signedPortionBeginOffset: data.startSIG, 
-           signedPortionEndOffset: data.endSIG };  
+  var result = BinaryXmlWireFormat.encodeData(data, encoder);
+  result.encoding = new Blob(encoder.getReducedOstream(), false);
+  return result;
 };
 
 /**
@@ -95,9 +94,7 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
 BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
 {
   var decoder = new BinaryXMLDecoder(input);
-  BinaryXmlWireFormat.decodeData(data, decoder);
-  return { signedPortionBeginOffset: data.startSIG, 
-           signedPortionEndOffset: data.endSIG };  
+  return BinaryXmlWireFormat.decodeData(data, decoder);
 };
 
 /**
@@ -234,6 +231,11 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  * Encode the data by calling the operations on the encoder.
  * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  */
 BinaryXmlWireFormat.encodeData = function(data, encoder)  
 {
@@ -243,7 +245,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   if (null != data.signature) 
     data.signature.to_ndnb(encoder);
     
-  data.startSIG = encoder.offset;
+  var signedPortionBeginOffset = encoder.offset;
 
   if (null != data.name) 
     data.name.to_ndnb(encoder);
@@ -253,17 +255,23 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
 
   encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
   
-  data.endSIG = encoder.offset;
+  var signedPortionEndOffset = encoder.offset;
   
   encoder.writeElementClose();
   
-  data.saveRawData(encoder.ostream);  
+  return { signedPortionBeginOffset: signedPortionBeginOffset, 
+           signedPortionEndOffset: signedPortionEndOffset };  
 };
 
 /**
  * Use the decoder to place the result in data.
  * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
+ * @returns {object with (int, int)} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where 
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of 
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * of the end of the signed portion.
  */
 BinaryXmlWireFormat.decodeData = function(data, decoder) 
 {
@@ -277,7 +285,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   else
     data.signature = null;
     
-  data.startSIG = decoder.offset;
+  var signedPortionBeginOffset = decoder.offset;
 
   data.name = new Name();
   data.name.from_ndnb(decoder);
@@ -291,11 +299,12 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
 
   data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
     
-  data.endSIG = decoder.offset;
+  var signedPortionEndOffset = decoder.offset;
     
   decoder.readElementClose();
     
-  data.saveRawData(decoder.input);
+  return { signedPortionBeginOffset: signedPortionBeginOffset, 
+           signedPortionEndOffset: signedPortionEndOffset };  
 };
 
 // On loading this module, make this the default wire format.

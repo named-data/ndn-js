@@ -46,13 +46,7 @@ var Data = function Data(name, metaInfo, content)
   
   this.signature = new Signature();
   
-  // Only used by BinaryXMLWireFormat.
-  this.startSIG = null;
-  this.endSIG = null;
-  
-  this.endContent = null;
-  
-  this.rawSignatureData = null;
+  this.wireEncoding = SignedBlob();
 };
 
 exports.Data = Data;
@@ -147,18 +141,17 @@ Data.prototype.setContent = function(content)
 
 Data.prototype.sign = function() 
 {
-  // TODO: Use SignedBlob.
-  var n1 = this.encodeObject(this.name);
-  var n2 = this.encodeObject(this.signedInfo);
-  var n3 = this.encodeContent();
+  if (this.wireEncoding == null || this.wireEncoding.isNull()) {
+    // Need to encode to set wireEncoding.
+    // Set an initial empty signature so that we can encode.
+    this.getSignature().setSignature(new Buffer(128));
+    this.wireEncode();
+  }
   
   var rsa = require("crypto").createSign('RSA-SHA256');
-  rsa.update(n1);
-  rsa.update(n2);
-  rsa.update(n3);
+  rsa.update(this.wireEncoding.signedBuf());
     
   var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
-
   this.signature.signature = sig;
 };
 
@@ -167,33 +160,12 @@ Data.prototype.verify = function(/*Key*/ key)
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
 
+  if (this.wireEncoding == null || this.wireEncoding.isNull())
+    // Need to decode to set wireEncoding.
+    this.wireDecode();
   var verifier = require('crypto').createVerify('RSA-SHA256');
-  verifier.update(this.rawSignatureData);
+  verifier.update(this.wireEncoding.signedBuf());
   return verifier.verify(key.publicKeyPem, this.signature.signature);
-};
-
-Data.prototype.encodeObject = function encodeObject(obj) 
-{
-  var enc = new BinaryXMLEncoder(); 
-  obj.to_ndnb(enc);
-  var num = enc.getReducedOstream();
-
-  return num;
-};
-
-Data.prototype.encodeContent = function encodeContent() 
-{
-  var enc = new BinaryXMLEncoder();   
-  enc.writeDTagElement(NDNProtocolDTags.Content, this.content);
-  var num = enc.getReducedOstream();
-
-  return num;
-};
-
-Data.prototype.saveRawData = function(bytes) 
-{  
-  var sigBits = bytes.slice(this.startSIG, this.endSIG);
-  this.rawSignatureData = new Buffer(sigBits);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
@@ -208,14 +180,16 @@ Data.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeData(this);
-  return new SignedBlob
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  this.wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset, 
      result.signedPortionEndOffset);
+  return this.wireEncoding;
 };
 
 /**
  * Decode the input using a particular wire format and update this Data.
- * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
  * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
@@ -225,7 +199,11 @@ Data.prototype.wireDecode = function(input, wireFormat)
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
                      input.buf() : input;
-  wireFormat.decodeData(this, decodeBuffer);
+  var result = wireFormat.decodeData(this, decodeBuffer);
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  this.wireEncoding = new SignedBlob
+    (new Blob(input), result.signedPortionBeginOffset, 
+     result.signedPortionEndOffset);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
