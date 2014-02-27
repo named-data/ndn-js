@@ -37,6 +37,12 @@ var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPort
     this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
     this.signedPortionEndOffset = signedPortionEndOffset || 0;
   }
+  
+  if (this.buffer == null)
+    this.signedBuffer = null;
+  else
+    this.signedBuffer = this.buffer.slice
+      (this.signedPortionBeginOffset, this.signedPortionEndOffset);
 };
 
 SignedBlob.prototype = new Blob();
@@ -51,8 +57,8 @@ exports.SignedBlob = SignedBlob;
  */
 SignedBlob.prototype.signedSize = function()
 {
-  if (this.buffer != null)
-    return this.signedPortionEndOffset - this.signedPortionBeginOffset;
+  if (this.signedBuffer != null)
+    return this.signedBuffer.length;
   else
     return 0;
 };
@@ -64,9 +70,8 @@ SignedBlob.prototype.signedSize = function()
  */
 SignedBlob.prototype.signedBuf = function()
 {
-  if (this.buffer != null)
-    return this.buffer.slice
-      (this.signedPortionBeginOffset, this.signedPortionEndOffset);
+  if (this.signedBuffer != null)
+    return this.signedBuffer;
   else
     return null;
 };
