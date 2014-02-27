@@ -84,7 +84,7 @@ def build (bld):
                        "contrib/securityLib/jsbn.js",
                        "contrib/securityLib/jsbn2.js"]
 
-        ndnjs = ["js/browserify.js",
+        ndnjs = ["js/browserify.js"] + securityLib + [
                  "js/log.js",
                  "js/util/ndn-protoco-id-tags.js",
                  "js/util/ndn-time.js",
@@ -125,7 +125,7 @@ def build (bld):
                  "js/encoding/tlv-0_1a2-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
                  "js/encoding/encoding-utils.js",
-                 "js/face.js"] + securityLib
+                 "js/face.js"]
 
         ndnjs = bld (features="combine",
                      target="ndn",
