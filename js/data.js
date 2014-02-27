@@ -152,13 +152,15 @@ Data.prototype.setContent = function(content)
   return this;
 };
 
-Data.prototype.sign = function() 
+Data.prototype.sign = function(wireFormat) 
 {
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  
   if (this.wireEncoding == null || this.wireEncoding.isNull()) {
     // Need to encode to set wireEncoding.
     // Set an initial empty signature so that we can encode.
     this.getSignature().setSignature(new Buffer(128));
-    this.wireEncode();
+    this.wireEncode(wireFormat);
   }
   
   var rsa = require("crypto").createSign('RSA-SHA256');
