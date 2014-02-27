@@ -11,9 +11,14 @@ Changes
 * In WireFormat, added getDefaultWireFormat and setDefaultWireFormat.
 * Added class MetaInfo and deprecated SignedInfo.
 * Moved classes Exclude, Signature, MetaInfo and KeyLocator into their own source files.
-* In Interest, added getKeyLocator and setKeyLocator().
+* In Interest, added get/setKeyLocator.
+* In Interest, added get/setMustBeFresh.
 
 Deprecated
+* Interest: Deprecated getAnswerOriginKind.  Use getMustBeFresh.
+* Interest: Deprecated setAnswerOriginKind.  Use setMustBeFresh.
+* Interest: Deprecated getPublicKeyLocator.  If the interest has a public key locator, its keyLocator has
+  type KeyLocatorType.KEY_LOCATOR_DIGEST and the key data has the digest.
 * SignedInfo: Deprecated class SignedInfo. Use MetaInfo.
 * Face/NDN: Deprecated expressInterest(name, closure [, template]). You should use 
   expressInterest which uses callbacks, not Closure.

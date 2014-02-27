@@ -128,9 +128,8 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: Implment MustBeFresh.
-  //if (interest.getMustBeFresh())
-  //  encoder.writeTypeAndLength(Tlv.MustBeFresh, 0);
+  if (interest.getMustBeFresh())
+    encoder.writeTypeAndLength(Tlv.MustBeFresh, 0);
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
@@ -168,9 +167,7 @@ Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
 
   interest.setChildSelector(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.ChildSelector, endOffset));
-  // TODO: Implment MustBeFresh.
-  //interest.setMustBeFresh(
-  //  decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
+  interest.setMustBeFresh(decoder.readBooleanTlv(Tlv.MustBeFresh, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
 };

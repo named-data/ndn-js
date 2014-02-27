@@ -181,9 +181,28 @@ Interest.prototype.getChildSelector = function()
   return this.childSelector; 
 };
 
+/**
+ * @deprecated Use getMustBeFresh.
+ */
 Interest.prototype.getAnswerOriginKind = function() 
 { 
   return this.answerOriginKind; 
+};
+  
+  /**
+   * Return true if the content must be fresh.
+   * @return true if must be fresh, otherwise false.
+   */
+  
+/**
+ * Get the must be fresh flag. 
+ * @returns {boolean} The must be fresh flag.  If not specified, the default is
+ * false.
+ */
+Interest.prototype.getMustBeFresh = function() 
+{
+  return this.answerOriginKind != null && this.answerOriginKind != null >= 0 && 
+    (this.answerOriginKind & Interest.ANSWER_STALE) == 0;
 };
 
 /**
@@ -241,9 +260,33 @@ Interest.prototype.setChildSelector = function(childSelector)
   this.childSelector = childSelector;
 };
 
+/**
+ * @deprecated Use setMustBeFresh.
+ */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
   this.answerOriginKind = answerOriginKind;
+};
+
+/**
+ * Set the MustBeFresh flag.
+ * @param {boolean} mustBeFresh True if the content must be fresh, otherwise false.
+ */
+Interest.prototype.setMustBeFresh = function(mustBeFresh)
+{
+  if (this.answerOriginKind == null || this.answerOriginKind < 0) {
+    // It is is already the default where MustBeFresh is false.
+    if (mustBeFresh)
+      this.answerOriginKind = 0; 
+  }
+  else {
+    if (mustBeFresh)
+      // Clear the stale bit.
+      this.answerOriginKind &= ~Interest.ANSWER_STALE;
+    else
+      // Set the stale bit.
+      this.answerOriginKind |= Interest.ANSWER_STALE;
+  }
 };
 
 Interest.prototype.setScope = function(scope)
