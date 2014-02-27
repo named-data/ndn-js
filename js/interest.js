@@ -207,8 +207,9 @@ Interest.prototype.getMustBeFresh = function()
 };
 
 /**
- * 
- * @returns {Buffer} 
+ * Return the nonce value from the incoming interest.  If you change any of the 
+ * fields in this Interest object, then the nonce value is cleared.
+ * @returns {Buffer} The nonce, or null if not specified.
  */
 Interest.prototype.getNonce = function() { return this.nonce; };
 
@@ -230,17 +231,26 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 
 Interest.prototype.setName = function(name)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.name = typeof name === 'object' && name instanceof Interest ?
               new Name(name) : new Name();
 };
                 
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.minSuffixComponents = minSuffixComponents;
 };
 
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.maxSuffixComponents = maxSuffixComponents;
 };
 
@@ -252,12 +262,18 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
 };
 
 Interest.prototype.setChildSelector = function(childSelector)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.childSelector = childSelector;
 };
 
@@ -266,6 +282,9 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.answerOriginKind = answerOriginKind;
 };
 
@@ -275,6 +294,9 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   if (this.answerOriginKind == null || this.answerOriginKind < 0) {
     // It is is already the default where MustBeFresh is false.
     if (mustBeFresh)
@@ -292,14 +314,24 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 
 Interest.prototype.setScope = function(scope)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.scope = scope;
 };
 
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
+  // The object has changed, so the nonce is invalid.
+  this.nonce = null;
+  
   this.interestLifetime = interestLifetimeMilliseconds;
 };
 
+/**
+ * @deprecated You should let the wire encoder generate a random nonce 
+ * internally before sending the interest.
+ */
 Interest.prototype.setNonce = function(nonce)
 {
   if (nonce)
