@@ -526,20 +526,14 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
        
-  var data = upcallInfo.data;
-  if (!data.signedInfo || !data.signedInfo.publisher || !data.signedInfo.publisher.publisherPublicKeyDigest) {
-    console.log
-      ("Data doesn't have a publisherPublicKeyDigest. Cannot set ndndid and registerPrefix for "
-       + this.prefix.toUri() + " .");
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
-  }
-  else {
-    if (LOG > 3) console.log('Got ndndid from ndnd.');
-    this.face.ndndid = data.signedInfo.publisher.publisherPublicKeyDigest;
-    if (LOG > 3) console.log(this.face.ndndid);
-    this.face.registerPrefixHelper(this.prefix, this.callerClosure, this.flags);
-  }
+  if (LOG > 3) console.log('Got ndndid from ndnd.');
+  // Get the digest of the public key in the data packet content.
+  var hash = require("crypto").createHash('sha256');
+  hash.update(upcallInfo.data.getContent());
+  this.face.ndndid = new Buffer(hash.digest());
+  if (LOG > 3) console.log(this.face.ndndid);
+  
+  this.face.registerPrefixHelper(this.prefix, this.callerClosure, this.flags);
     
   return Closure.RESULT_OK;
 };
