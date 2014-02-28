@@ -1,6 +1,6 @@
 var Name = require('../..').Name;
 var Data = require('../..').Data;
-var SignedInfo = require('../..').SignedInfo;
+var MetaInfo = require('../..').MetaInfo;
 var KeyLocator = require('../..').KeyLocator;
 var KeyLocatorType = require('../..').KeyLocatorType;
 var KeyName = require('../..').KeyName;
@@ -77,20 +77,21 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   var start = getNowSeconds();
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data(name);
-    data.content = content;
-    data.signedInfo = new SignedInfo();
+    data.setContent(content);
+    data.signedInfo = new MetaInfo();
     if (useComplex) {
-      data.signedInfo.timestamp = new NDNTime(1.3e+12);
-      data.signedInfo.freshnessSeconds = 1000;
-      data.signedInfo.finalBlockID = finalBlockId;
+      // timestamp is deprecated.
+      data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
+      data.getMetaInfo().setFreshnessPeriod(30000);
+      data.getMetaInfo().setFinalBlockID(finalBlockId);
     }
 
     var keyLocator = new KeyLocator();    
-    keyLocator.type = KeyLocatorType.KEYNAME;
-    keyLocator.keyName = new KeyName();
-    keyLocator.keyName.contentName = certificateName;
-    data.signedInfo.locator = keyLocator;
-    data.signedInfo.publisher = new PublisherPublicKeyDigest(publisherPublicKeyDigest);
+    keyLocator.setType(KeyLocatorType.KEYNAME);
+    keyLocator.setKeyName(certificateName);
+    data.getSignature().setKeyLocator(keyLocator);
+    // publisherPublicKeyDigest is deprecated.
+    data.getMetaInfo().publisher = new PublisherPublicKeyDigest(publisherPublicKeyDigest);
     if (useCrypto)
       data.sign();
     else

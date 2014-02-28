@@ -23,20 +23,21 @@
      */
     function benchmarkEncodeDecodeData(useComplex, useCrypto, continuation)
     {
+      var format = WireFormat.getDefaultWireFormat() === BinaryXmlWireFormat.get() ? "ndnb" : "TLV ";
       // Use setTimeout so that the browser will update the display before continuing.
       var encoding = [];
       {
         var nIterations = useCrypto ? 1000 : 150000;
         var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
         document.getElementById('result').innerHTML +=
-          "Encode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          "Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
       }
       setTimeout(function() {
         var nIterations = useCrypto ? 8000 : 50000;
         var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
         document.getElementById('result').innerHTML +=
-          "Decode " + (useComplex ? "complex" : "simple ") + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
   
         if (continuation)
@@ -47,11 +48,22 @@
 		function test(){
       document.getElementById('result').innerHTML = "Results:<br/>";
       
+      // Make two passes, one for each wire format.
+      WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
+      benchmarkEncodeDecodeData(false, false, function() {
+      benchmarkEncodeDecodeData(true, false, function() {
+      benchmarkEncodeDecodeData(false, true, function() {
+      benchmarkEncodeDecodeData(true, true, function() {
+      WireFormat.setDefaultWireFormat(TlvWireFormat.get());
       benchmarkEncodeDecodeData(false, false, function() {
       benchmarkEncodeDecodeData(true, false, function() {
       benchmarkEncodeDecodeData(false, true, function() {
       benchmarkEncodeDecodeData(true, true, function() {
       document.getElementById('result').innerHTML += "Finished.<br/>";
+      });
+      });
+      });
+      });
       });
       });
       });
