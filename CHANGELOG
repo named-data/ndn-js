@@ -1,4 +1,4 @@
-NDN-JS v0.3 (2013-12-27)
+NDN-JS v0.3 (2014-02-27)
 --------------------------------------
 
 This release uses NDN-TLV for the default wire format.
