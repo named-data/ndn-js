@@ -38,6 +38,9 @@ Deprecated
 * Data: Deprecated encode and decode.  You should use wireEncode (which returns a SignedBlob) and wireDecode.
 * Interest: Deprecated encode and decode.  You should use wireEncode (which returns a Blob) and wireDecode.
 
+Bug fixes
+* http://redmine.named-data.net/issues/1303 Call all callbacks where the interest matches the incoming data packet.
+
 Documentation
 * wsproxy: In the README, document option -n for the remote ndnd port.
 
