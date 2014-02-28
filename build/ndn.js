@@ -12464,17 +12464,32 @@ var PITEntry = function PITEntry(interest, closure)
  * Return the entry from Face.PITTable where the name conforms to the interest selectors, and
  * the interest name is the longest that matches name.
  */
-Face.getEntryForExpressedInterest = function(/*Name*/ name) 
+
+/**
+ * Find all entries from Face.PITTable where the name conforms to the entry's 
+ * interest selectors, remove the entries from the table, cancel their timeout
+ * timers and return them.
+ * @param {Name} name The name to find the interest for (from the incoming data
+ * packet).
+ * @returns {Array<PITEntry>} The matching entries from Face.PITTable, or [] if 
+ * none are found.
+ */
+Face.extractEntriesForExpressedInterest = function(name) 
 {
-  var result = null;
+  var result = [];
     
-  for (var i = 0; i < Face.PITTable.length; i++) {
-    if (Face.PITTable[i].interest.matchesName(name)) {
-      if (result == null || Face.PITTable[i].interest.name.components.length > result.interest.name.components.length)
-        result = Face.PITTable[i];
+  // Go backwards through the list so we can erase entries.
+  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
+    var entry = Face.PITTable[i];
+    if (entry.interest.matchesName(name)) {
+      // Cancel the timeout timer.
+      clearTimeout(entry.timerID);
+
+      result.push(entry);
+      Face.PITTable.splice(i, 1);
     }
   }
-    
+
   return result;
 };
 
@@ -12937,22 +12952,16 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
         
-    var pitEntry = Face.getEntryForExpressedInterest(data.name);
-    if (pitEntry != null) {
-      // Cancel interest timer
-      clearTimeout(pitEntry.timerID);
-            
-      // Remove PIT entry from Face.PITTable
-      var index = Face.PITTable.indexOf(pitEntry);
-      if (index >= 0)
-        Face.PITTable.splice(index, 1);
-            
+    var pendingInterests = Face.extractEntriesForExpressedInterest(data.name);
+    // Process each matching PIT entry (if any).
+    for (var i = 0; i < pendingInterests.length; ++i) {
+      var pitEntry = pendingInterests[i];
       var currentClosure = pitEntry.closure;
                     
       if (this.verify == false) {
         // Pass content up without verifying the signature
         currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
-        return;
+        continue;
       }
         
       // Key verification
