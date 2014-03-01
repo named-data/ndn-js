@@ -162,6 +162,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         return Closure.RESULT_ERR;
     
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+        dump("NdnProtocol: Interest timed out: " + upcallInfo.interest.toUri());
         if (!this.didOnStart) {
             // We have not received a segment to start the content yet, so assume the URI can't be fetched.
             this.contentListener.onStart("text/plain", "utf-8", this.aURI);
