@@ -43,7 +43,7 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       // The type codes for TLV Interest and Data packets are chosen to not
       //   conflict with the first byte of a binary XML packet, so we can
       //   just look at the first byte.
-      if (data[0] == Tlv.Interest || data[0] == Tlv.Data)
+      if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 0x80)
         this.useTlv = true;
       else
         // Binary XML.
