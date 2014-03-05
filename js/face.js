@@ -757,8 +757,6 @@ Face.prototype.onReceivedElement = function(element)
       }
     }
   } 
-  else
-    console.log('Incoming packet is not Interest or Data. Discard now.');
 };
 
 /**
