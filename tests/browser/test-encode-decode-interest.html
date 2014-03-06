@@ -19,7 +19,7 @@
             interest.minSuffixComponents = 2;
             interest.maxSuffixComponents = 4;
             interest.childSelector = 1;
-            interest.answerOriginKind = 4;
+            interest.setMustBeFresh(false);
             interest.scope = 2;
             interest.interestLifetime = 30000;
             interest.nonce = new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
@@ -58,8 +58,7 @@
 				  DataUtils.toHex(interest.publisherPublicKeyDigest.publisherPublicKeyDigest) + "<br/>";
 			if (interest.childSelector != null )
 				output += "ChildSelector: " + interest.childSelector + "<br/>";
-			if (interest.answerOriginKind != null )
-				output += "AnswerOriginKind: " + interest.answerOriginKind + "<br/>";
+			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
 			if (interest.scope != null )
 				output += "Scope: " + interest.scope + "<br/>";
 			if (interest.interestLifetime != null )
