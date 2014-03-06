@@ -23,12 +23,10 @@ var XpcomTransport = function XpcomTransport()
   this.httpListener = null;
 
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
-    // Connect directly to borges until the DNS is updated with new testbed hubs.
-    (["borges.metwi.ucla.edu"],
-    //(["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
-    //  "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu"],
-     // Connect to port 9695 until the testbed hubs use NDNx.
-     9695);
+    (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
+      "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu", 
+      "I.hub.ndn.ucla.edu", "J.hub.ndn.ucla.edu", "K.hub.ndn.ucla.edu"],
+     6363);
 };
 
 /**
