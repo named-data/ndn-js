@@ -174,7 +174,7 @@ NdnProtocolInfo.setHub = function(currentWindow, alertFunction)
   if (host == "")
     return null;
 
-  var port = 9695;
+  var port = 6363;
   if (splitHostAndPort.length >= 2) {
     port = parseInt(splitHostAndPort[1].trim());
     if (isNaN(port)) {
