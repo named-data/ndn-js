@@ -8117,7 +8117,9 @@ var WebSocketTransport = function WebSocketTransport()
   this.elementReader = null;
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
     (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
-      "E.ws.ndn.ucla.edu"],
+      "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
+      "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 
+      "M.ws.ndn.ucla.edu", "N.ws.ndn.ucla.edu"],
      9696);
 };
 
