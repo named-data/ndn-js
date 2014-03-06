@@ -196,14 +196,15 @@ Interest.prototype.getAnswerOriginKind = function()
    */
   
 /**
- * Get the must be fresh flag. 
- * @returns {boolean} The must be fresh flag.  If not specified, the default is
- * false.
+ * Get the must be fresh flag. If not specified, the default is true.
+ * @returns {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function() 
 {
-  return this.answerOriginKind != null && this.answerOriginKind != null >= 0 && 
-    (this.answerOriginKind & Interest.ANSWER_STALE) == 0;
+  if (this.answerOriginKind == null || this.answerOriginKind < 0)
+    return true;
+  else
+    return (this.answerOriginKind & Interest.ANSWER_STALE) == 0;
 };
 
 /**
@@ -298,9 +299,10 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
   this.nonce = null;
   
   if (this.answerOriginKind == null || this.answerOriginKind < 0) {
-    // It is is already the default where MustBeFresh is false.
-    if (mustBeFresh)
-      this.answerOriginKind = 0; 
+    // It is is already the default where MustBeFresh is true. 
+    if (!mustBeFresh)
+      // Set answerOriginKind_ so that getMustBeFresh returns false.
+      this.answerOriginKind = Interest.ANSWER_STALE; 
   }
   else {
     if (mustBeFresh)

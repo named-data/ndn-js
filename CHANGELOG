@@ -1,4 +1,4 @@
-Intirim changes since NDN-JS v0.3 (2014-03-05)
+Interim changes since NDN-JS v0.3 (2014-03-06)
 ----------------------------------------------
 
 Changes
@@ -6,6 +6,7 @@ Changes
 * In the Firefox add-on, by default connect on port 6363 to a random testbed hub.
 
 Bug fixes
+* http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
 * For TLV packets over UDP, ignore packets starting with 0x80.
 
 NDN-JS v0.3 (2014-02-27)
