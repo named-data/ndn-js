@@ -11996,7 +11996,15 @@ Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 
   // Encode backwards.
   // TODO: finalBlockID should be a Name.Component, not Buffer.
-  encoder.writeOptionalBlobTlv(Tlv.FinalBlockId, metaInfo.getFinalBlockID());
+  var finalBlockIdBuf = metaInfo.getFinalBlockID();
+  if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
+    // FinalBlockId has an inner NameComponent.
+    var finalBlockIdSaveLength = encoder.getLength();
+    encoder.writeBlobTlv(Tlv.NameComponent, finalBlockIdBuf);
+    encoder.writeTypeAndLength
+      (Tlv.FinalBlockId, encoder.getLength() - finalBlockIdSaveLength);
+  }
+
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.FreshnessPeriod, metaInfo.getFreshnessPeriod());
   if (metaInfo.getType() != ContentType.BLOB) {
@@ -12024,8 +12032,13 @@ Tlv0_1a2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (Tlv.ContentType, endOffset));
   metaInfo.setFreshnessPeriod
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
-  metaInfo.setFinalBlockID
-    (decoder.readOptionalBlobTlv(Tlv.FinalBlockId, endOffset));
+  if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
+    var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
+    metaInfo.setFinalBlockID(decoder.readBlobTlv(Tlv.NameComponent));
+    decoder.finishNestedTlvs(finalBlockIdEndOffset);
+  }
+  else
+    metaInfo.setFinalBlockID(null);
 
   decoder.finishNestedTlvs(endOffset);
 };
