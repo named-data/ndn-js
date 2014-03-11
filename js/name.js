@@ -92,6 +92,16 @@ Name.Component.prototype.toEscapedString = function()
 }
 
 /**
+ * Check if this is the same component as other.
+ * @param {Name.Component} other The other Component to compare with.
+ * @returns {Boolean} true if the components are equal, otherwise false.
+ */
+Name.Component.prototype.equals = function(other) 
+{
+  return DataUtils.arraysEqual(this.value, other.value);
+}
+
+/**
  * @deprecated Use toUri.
  */
 Name.prototype.getName = function() 
@@ -400,7 +410,7 @@ Name.prototype.equals = function(name)
     
   // Start from the last component because they are more likely to differ.
   for (var i = this.components.length - 1; i >= 0; --i) {
-    if (!DataUtils.arraysEqual(this.components[i].getValue(), name.components[i].getValue()))
+    if (!this.components[i].equals(name.components[i]))
       return false;
   }
     
@@ -538,7 +548,7 @@ Name.prototype.match = function(name)
 
   // Check if at least one of given components doesn't match.
   for (var i = 0; i < i_name.length; ++i) {
-    if (!DataUtils.arraysEqual(i_name[i].getValue(), o_name[i].getValue()))
+    if (!i_name[i].equals(o_name[i]))
       return false;
   }
 
