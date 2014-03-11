@@ -499,7 +499,7 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
         (interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, intFlags, onRegisterFailed));
     }
     else  
-      thisNDN.registerPrefixHelper(prefix, closure, flags);
+      thisNDN.registerPrefixHelper(prefix, closure, flags, onRegisterFailed);
   };
 
   if (this.host == null || this.port == null) {
@@ -548,15 +548,56 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   this.face.ndndid = new Buffer(hash.digest());
   if (LOG > 3) console.log(this.face.ndndid);
   
-  this.face.registerPrefixHelper(this.prefix, this.callerClosure, this.flags);
+  this.face.registerPrefixHelper
+    (this.prefix, this.callerClosure, this.flags, this.onRegisterFailed);
     
+  return Closure.RESULT_OK;
+};
+/**
+ * This is a closure to receive the response Data packet from the register 
+ * prefix interest sent to the connected NDN hub. If this gets a bad response
+ * or a timeout, call onRegisterFailed.
+ */
+Face.RegisterResponseClosure = function RegisterResponseClosure
+  (prefix, onRegisterFailed) 
+{
+  // Inherit from Closure.
+  Closure.call(this);
+    
+  this.prefix = prefix;
+  this.onRegisterFailed = onRegisterFailed;
+};
+
+Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo) 
+{
+  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+    return Closure.RESULT_OK;
+  }
+  if (!(kind == Closure.UPCALL_CONTENT ||
+        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
+    // The upcall is not for us.  Don't expect this to happen.
+    return Closure.RESULT_ERR;
+       
+  var expectedName = new Name("/ndnx/.../selfreg");
+  // Got a response. Do a quick check of expected name components.
+  if (upcallInfo.data.getName().size() < 4 ||
+      !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
+      !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
+    this.onRegisterFailed(this.prefix);
+    return;
+  }
+  
+  // Otherwise, silently succeed.  
   return Closure.RESULT_OK;
 };
 
 /**
  * Do the work of registerPrefix once we know we are connected with a ndndid.
  */
-Face.prototype.registerPrefixHelper = function(prefix, closure, flags) 
+Face.prototype.registerPrefixHelper = function
+  (prefix, closure, flags, onRegisterFailed) 
 {
   var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
     
@@ -578,15 +619,14 @@ Face.prototype.registerPrefixHelper = function(prefix, closure, flags)
   var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
 
   var interest = new Interest(interestName);
-  interest.scope = 1;
+  interest.setInterestLifetimeMilliseconds(4000.0);
+  interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
       
   Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
     
-  // Even though the inner Data packet and ForwardingEntry are encoded as 
-  //   BinaryXml, we send the interest using the given wire format so that the 
-  //   hub receives (and sends) in the application's desired wire format.
-  this.transport.send(interest.wireEncode().buf());
+  this.reconnectAndExpressInterest
+    (interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
 };
 
 /**
