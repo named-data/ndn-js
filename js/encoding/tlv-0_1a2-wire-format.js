@@ -236,8 +236,23 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
     Tlv0_1a2WireFormat.encodeExclude(interest.getExclude(), encoder);
+  
   if (interest.getKeyLocator().getType() != null)
     Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
+  else {
+    // There is no keyLocator. If there is a publisherPublicKeyDigest, then 
+    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated 
+    //   publisherPublicKeyDigest, we don't need this.)
+    if (null != interest.publisherPublicKeyDigest) {
+      var savePublisherPublicKeyDigestLength = encoder.getLength();
+      encoder.writeBlobTlv
+        (Tlv.KeyLocatorDigest, 
+         interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
+      encoder.writeTypeAndLength
+        (Tlv.KeyLocator, encoder.getLength() - savePublisherPublicKeyDigestLength);
+    }
+  }
+  
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -257,8 +272,17 @@ Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
   interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.MaxSuffixComponents, endOffset));
 
-  if (decoder.peekType(Tlv.KeyLocator, endOffset))
+  // Initially set publisherPublicKeyDigest to none.
+  interest.publisherPublicKeyDigest = null;
+  if (decoder.peekType(Tlv.KeyLocator, endOffset)) {
     Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
+    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      // For backwards compatibility, also set the publisherPublicKeyDigest.
+      interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
+      interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
+        interest.getKeyLocator().getKeyData();
+    }
+  }
   else
     interest.getKeyLocator().clear();
 
