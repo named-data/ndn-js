@@ -12,7 +12,6 @@
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
 		function encode() {
 			var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
@@ -26,7 +25,8 @@
             var pkd = [];
             for (i = 0; i < 32; ++i)
                 pkd.push(i);
-			interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest(new Buffer(pkd));
+            interest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
+            interest.getKeyLocator().setKeyData(new Buffer(pkd));
             interest.exclude = new Exclude([Name.fromEscapedString("abc"), Exclude.ANY]);
                 
 			var output = EncodingUtils.encodeToHexInterest(interest);
@@ -53,10 +53,25 @@
 				output += "MinSuffixComponents : " + interest.minSuffixComponents + "<br/>";
 			if (interest.maxSuffixComponents != null )
 				output += "MaxSuffixComponents : " + interest.maxSuffixComponents + "<br/>";
-			if (interest.publisherPublicKeyDigest != null )
-				output += "PublisherPublicKeyDigest: " + 
-				  DataUtils.toHex(interest.publisherPublicKeyDigest.publisherPublicKeyDigest) + "<br/>";
-			if (interest.childSelector != null )
+          
+            output += "KeyLocator: ";
+            if (interest.getKeyLocator().getType() >= 0) {
+                if (interest.getKeyLocator().getType() == KeyLocatorType.KEY)
+                  output += "Key: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                else if (interest.getKeyLocator().getType() == KeyLocatorType.CERTIFICATE)
+                  output += "Certificate: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                else if (interest.getKeyLocator().getType() ==KeyLocatorType.KEY_LOCATOR_DIGEST)
+                  output += "KeyLocatorDigest: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                else if (interest.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
+                  output += "KeyName: " + interest.getKeyLocator().getKeyName().toUri();
+                else
+                  output += "<unrecognized ndn_KeyLocatorType>";
+            }
+            else
+                output += "<none>";
+            output += "<br/>";
+
+            if (interest.childSelector != null )
 				output += "ChildSelector: " + interest.childSelector + "<br/>";
 			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
 			if (interest.scope != null )
