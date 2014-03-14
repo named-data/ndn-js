@@ -11425,8 +11425,17 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   if (null != interest.maxSuffixComponents) 
     encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
-  if (null != interest.publisherPublicKeyDigest)
-    interest.publisherPublicKeyDigest.to_ndnb(encoder);
+  if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+      interest.getKeyLocator().getKeyData() != null &&
+      interest.getKeyLocator().getKeyData().length > 0)
+    // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
+    encoder.writeDTagElement
+      (NDNProtocolDTags.PublisherPublicKeyDigest, 
+       interest.getKeyLocator().getKeyData());
+  else {
+    if (null != interest.publisherPublicKeyDigest)
+      interest.publisherPublicKeyDigest.to_ndnb(encoder);
+  }
     
   if (null != interest.exclude)
     interest.exclude.to_ndnb(encoder);
@@ -11472,12 +11481,22 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   else
     interest.maxSuffixComponents = null;
       
+  // Initially clear the keyLocator.
+  interest.getKeyLocator().clear();
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
     interest.publisherPublicKeyDigest.from_ndnb(decoder);
   }
   else
     interest.publisherPublicKeyDigest = null;
+  if (interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
+      interest.publisherPublicKeyDigest.publisherPublicKeyDigest.length > 0) {
+    // We keep the deprecated publisherPublicKeyDigest for backwards 
+    //   compatibility.  Also set the key locator.
+    interest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
+    interest.getKeyLocator().setKeyData
+      (interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
+  }
 
   if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
     interest.exclude = new Exclude();
@@ -11838,8 +11857,23 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
     Tlv0_1a2WireFormat.encodeExclude(interest.getExclude(), encoder);
+  
   if (interest.getKeyLocator().getType() != null)
     Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
+  else {
+    // There is no keyLocator. If there is a publisherPublicKeyDigest, then 
+    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated 
+    //   publisherPublicKeyDigest, we don't need this.)
+    if (null != interest.publisherPublicKeyDigest) {
+      var savePublisherPublicKeyDigestLength = encoder.getLength();
+      encoder.writeBlobTlv
+        (Tlv.KeyLocatorDigest, 
+         interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
+      encoder.writeTypeAndLength
+        (Tlv.KeyLocator, encoder.getLength() - savePublisherPublicKeyDigestLength);
+    }
+  }
+  
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -11859,8 +11893,17 @@ Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
   interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.MaxSuffixComponents, endOffset));
 
-  if (decoder.peekType(Tlv.KeyLocator, endOffset))
+  // Initially set publisherPublicKeyDigest to none.
+  interest.publisherPublicKeyDigest = null;
+  if (decoder.peekType(Tlv.KeyLocator, endOffset)) {
     Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
+    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      // For backwards compatibility, also set the publisherPublicKeyDigest.
+      interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
+      interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
+        interest.getKeyLocator().getKeyData();
+    }
+  }
   else
     interest.getKeyLocator().clear();
 
