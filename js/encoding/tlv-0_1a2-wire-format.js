@@ -56,12 +56,11 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
     encoder.writeBlobTlv(Tlv.Nonce, crypto.randomBytes(4));
   else if (interest.getNonce().length < 4) {
     var nonce = Buffer(4);
-    if (interest.getNonce().length > 0)
-      // Copy existing nonce bytes.
-      interest.getNonce().copy(nonce);
+    // Copy existing nonce bytes.
+    interest.getNonce().copy(nonce);
 
-    // Generate random bytes for remainig bytes in the nonce.
-    for (var i = interest.getNonce().length; i < 44; ++i)
+    // Generate random bytes for remaining bytes in the nonce.
+    for (var i = interest.getNonce().length; i < 4; ++i)
       nonce[i] = crypto.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
