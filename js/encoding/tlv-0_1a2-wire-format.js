@@ -389,7 +389,7 @@ Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
 Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function
   (signature, encoder, keyLocator)
 {
-  var saveLength = encoder.getLength()
+  var saveLength = encoder.getLength();
 
   // Encode backwards.
   Tlv0_1a2WireFormat.encodeKeyLocator(keyLocator, encoder);
@@ -418,7 +418,7 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
       throw new DecodingException
        ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
 
-  decoder.finishNestedTlvs(endOffset)
+  decoder.finishNestedTlvs(endOffset);
 };
 
 Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
