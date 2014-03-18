@@ -7596,22 +7596,20 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
   if (this.gotElementEnd)
     // Someone is calling when we already got the end.
-    return true
+    return true;
 
   var decoder = new TlvDecoder(input);
 
   while (true) {
     if (this.offset >= input.length)
-      // All the cases assume we have some input. Return and wait 
-      //   for more.
+      // All the cases assume we have some input. Return and wait for more.
       return false;
 
     if (this.state == TlvStructureDecoder.READ_TYPE) {
       var firstOctet = input[this.offset];
       this.offset += 1;
       if (firstOctet < 253)
-        // The value is simple, so we can skip straight to reading 
-        //   the length.
+        // The value is simple, so we can skip straight to reading the length.
         this.state = TlvStructureDecoder.READ_LENGTH;
       else {
         // Set up to skip the type bytes.
@@ -7687,7 +7685,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         if (nNeededBytes > nRemainingBytes) {
           // We can't get all of the header bytes from this input. 
           // Save in headerBuffer.
-          if (this.headerLength + nRemainingBytes > headerBuffer.length)
+          if (this.headerLength + nRemainingBytes > this.headerBuffer.length)
             // We don't expect this to happen.
             throw new Error
               ("Cannot store more header bytes than the size of headerBuffer");
@@ -7701,7 +7699,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
         // Copy the remaining bytes into headerBuffer, read the 
         //   length and set nBytesToRead.
-        if (this.headerLength + nNeededBytes > headerBuffer.length)
+        if (this.headerLength + nNeededBytes > this.headerBuffer.length)
           // We don't expect this to happen.
           throw new Error
             ("Cannot store more header bytes than the size of headerBuffer");
@@ -10153,8 +10151,10 @@ Data.prototype.wireDecode = function(input, wireFormat)
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  // In the Blob constructor, set copy true, but if input is already a Blob, it 
+  //   won't copy.
   this.wireEncoding = new SignedBlob
-    (new Blob(input), result.signedPortionBeginOffset, 
+    (new Blob(input, true), result.signedPortionBeginOffset, 
      result.signedPortionEndOffset);
 };
 
@@ -12010,7 +12010,7 @@ Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
 Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function
   (signature, encoder, keyLocator)
 {
-  var saveLength = encoder.getLength()
+  var saveLength = encoder.getLength();
 
   // Encode backwards.
   Tlv0_1a2WireFormat.encodeKeyLocator(keyLocator, encoder);
@@ -12039,7 +12039,7 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
       throw new DecodingException
        ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
 
-  decoder.finishNestedTlvs(endOffset)
+  decoder.finishNestedTlvs(endOffset);
 };
 
 Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)

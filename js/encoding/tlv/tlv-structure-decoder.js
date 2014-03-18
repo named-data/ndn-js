@@ -43,22 +43,20 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
   if (this.gotElementEnd)
     // Someone is calling when we already got the end.
-    return true
+    return true;
 
   var decoder = new TlvDecoder(input);
 
   while (true) {
     if (this.offset >= input.length)
-      // All the cases assume we have some input. Return and wait 
-      //   for more.
+      // All the cases assume we have some input. Return and wait for more.
       return false;
 
     if (this.state == TlvStructureDecoder.READ_TYPE) {
       var firstOctet = input[this.offset];
       this.offset += 1;
       if (firstOctet < 253)
-        // The value is simple, so we can skip straight to reading 
-        //   the length.
+        // The value is simple, so we can skip straight to reading the length.
         this.state = TlvStructureDecoder.READ_LENGTH;
       else {
         // Set up to skip the type bytes.
@@ -134,7 +132,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         if (nNeededBytes > nRemainingBytes) {
           // We can't get all of the header bytes from this input. 
           // Save in headerBuffer.
-          if (this.headerLength + nRemainingBytes > headerBuffer.length)
+          if (this.headerLength + nRemainingBytes > this.headerBuffer.length)
             // We don't expect this to happen.
             throw new Error
               ("Cannot store more header bytes than the size of headerBuffer");
@@ -148,7 +146,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
         // Copy the remaining bytes into headerBuffer, read the 
         //   length and set nBytesToRead.
-        if (this.headerLength + nNeededBytes > headerBuffer.length)
+        if (this.headerLength + nNeededBytes > this.headerBuffer.length)
           // We don't expect this to happen.
           throw new Error
             ("Cannot store more header bytes than the size of headerBuffer");
