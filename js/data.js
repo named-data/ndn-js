@@ -216,8 +216,10 @@ Data.prototype.wireDecode = function(input, wireFormat)
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  // In the Blob constructor, set copy true, but if input is already a Blob, it 
+  //   won't copy.
   this.wireEncoding = new SignedBlob
-    (new Blob(input), result.signedPortionBeginOffset, 
+    (new Blob(input, true), result.signedPortionBeginOffset, 
      result.signedPortionEndOffset);
 };
 
