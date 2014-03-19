@@ -165,7 +165,14 @@ function getIndexOfVersion(name)
  */
 NdnProtocolInfo.setHub = function(currentWindow, alertFunction)  
 {
-  var hostAndPort = currentWindow.prompt("Enter hub host:", NdnProtocolInfo.face.host);
+  // Set the default port.
+  var port = 6363;
+  var hostAndPort = currentWindow.prompt
+    ("Enter hub host:", 
+     NdnProtocolInfo.face.host ?
+       (NdnProtocolInfo.face.host + 
+        (NdnProtocolInfo.face.port != port ? ":" + NdnProtocolInfo.face.port : ""))
+       : "");
   if (!hostAndPort)
     return null;
     
@@ -174,7 +181,6 @@ NdnProtocolInfo.setHub = function(currentWindow, alertFunction)
   if (host == "")
     return null;
 
-  var port = 6363;
   if (splitHostAndPort.length >= 2) {
     port = parseInt(splitHostAndPort[1].trim());
     if (isNaN(port)) {
