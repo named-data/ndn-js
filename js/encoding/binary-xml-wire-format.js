@@ -202,7 +202,8 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
   else
     interest.publisherPublicKeyDigest = null;
-  if (interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
+  if (interest.publisherPublicKeyDigest != null &&
+      interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest.length > 0) {
     // We keep the deprecated publisherPublicKeyDigest for backwards 
     //   compatibility.  Also set the key locator.
