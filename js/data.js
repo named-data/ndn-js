@@ -155,6 +155,10 @@ Data.prototype.setContent = function(content)
 Data.prototype.sign = function(wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+ 
+  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
+      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
+    this.getMetaInfo().setFields();
   
   if (this.wireEncoding == null || this.wireEncoding.isNull()) {
     // Need to encode to set wireEncoding.

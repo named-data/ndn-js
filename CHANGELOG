@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-03-07)
+Interim changes since NDN-JS v0.3 (2014-03-19)
 ----------------------------------------------
 
 Changes
@@ -9,6 +9,7 @@ Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
 * http://redmine.named-data.net/issues/1339 Fix FinalBlockID TLV encoding.
 * For TLV packets over UDP, ignore packets starting with 0x80.
+* Fix bug for signing old format Binary XML data packets (after adding TLV code).
 
 NDN-JS v0.3 (2014-02-27)
 ------------------------
