@@ -15,6 +15,7 @@ var Signature = require('../signature.js').Signature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
