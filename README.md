@@ -135,7 +135,7 @@ ndn-protocol.xpi.  (In Firefox for Android, type file: in the address bar and cl
 downloaded ndn-protocol.xpi.)  Restart Firefox.
 
 Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples:  
-ndn:/ndn/ucla.edu/apps/ndn-js-test/NDNProtocolExamples.html?ndn.ChildSelector=1
+ndn:/ndn/edu/ucla/remap/ndn-js-test/NDNProtocolExamples.html/?ndn.ChildSelector=1
 
 When the page is loaded, Firefox updates the address bar with the full matched name from
 the retrieved content object including the version, but without the implicit digest or
@@ -145,12 +145,12 @@ segment number (see below).
 
 You can add interest selectors. For example, this uses 1 to select the "rightmost" child
 (latest version):  
-ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref
+ndn:/ndn/edu/ucla/remap/ndn-js-test/howdy.txt?my=query&ndn.ChildSelector=1&key=value#ref
 
 The browser loads the latest version and changes the address to:  
-ndn:/ndn/ucla.edu/apps/ndn-js-test/hello.txt?ndn.ChildSelector=1&key=value#ref
+ndn:/ndn/edu/ucla/remap/ndn-js-test/howdy.txt/%FD%052%A1%EA_%89?my=query&key=value#ref
 
-The child selector was used and removed. Note that the other non-ndn query values and 
+The child selector was used and removed. Note that the other non-ndn query and 
 ref "?key=value#ref" are still present, in case they are needed by the web application.
 
 The following selector keys are supported:
