@@ -257,21 +257,35 @@ Name.prototype.to_uri = function()
 };
 
 /**
- * Append a component that represents a segment number
- *
- * This component has a special format handling:
- * - if number is zero, then %00 is added
- * - if number is between 1 and 255, %00%01 .. %00%FF is added
- * - ...
- * @param {number} number the segment number (integer is expected)
- * @returns {Name}
+ * Append a component with the encoded segment number.
+ * @param {number} segment The segment number.
+ * @returns {Name} This name so that you can chain calls to append.
  */
-Name.prototype.appendSegment = function(number) 
+Name.prototype.appendSegment = function(segment) 
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
   // Put a 0 byte in front.
   var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
   segmentNumberComponent[0] = 0;
+  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
+
+  this.components.push(new Name.Component(segmentNumberComponent));
+  return this;
+};
+
+/**
+ * Append a component with the encoded version number.
+ * Note that this encodes the exact value of version without converting from a 
+ * time representation.
+ * @param {number} version The version number.
+ * @returns {Name} This name so that you can chain calls to append.
+ */
+Name.prototype.appendVersion = function(version) 
+{
+  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
+  // Put a 0 byte in front.
+  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+  segmentNumberComponent[0] = 0xfD;
   segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
   this.components.push(new Name.Component(segmentNumberComponent));

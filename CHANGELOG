@@ -1,9 +1,10 @@
-Interim changes since NDN-JS v0.3 (2014-03-19)
+Interim changes since NDN-JS v0.3 (2014-03-20)
 ----------------------------------------------
 
 Changes
 * In Node, by default connect on port 6363 to a random testbed hub.
 * In the Firefox add-on, by default connect on port 6363 to a random testbed hub.
+* In Name, added method appendVersion.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
