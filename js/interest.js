@@ -347,6 +347,8 @@ Interest.prototype.setNonce = function(nonce)
  * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
  * @returns {string} The URI string.
+ * @note This is an experimental feature.  See the API docs for more detail at
+ * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
  */
 Interest.prototype.toUri = function() 
 {  
