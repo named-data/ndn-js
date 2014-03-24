@@ -8716,21 +8716,35 @@ Name.prototype.to_uri = function()
 };
 
 /**
- * Append a component that represents a segment number
- *
- * This component has a special format handling:
- * - if number is zero, then %00 is added
- * - if number is between 1 and 255, %00%01 .. %00%FF is added
- * - ...
- * @param {number} number the segment number (integer is expected)
- * @returns {Name}
+ * Append a component with the encoded segment number.
+ * @param {number} segment The segment number.
+ * @returns {Name} This name so that you can chain calls to append.
  */
-Name.prototype.appendSegment = function(number) 
+Name.prototype.appendSegment = function(segment) 
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
   // Put a 0 byte in front.
   var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
   segmentNumberComponent[0] = 0;
+  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
+
+  this.components.push(new Name.Component(segmentNumberComponent));
+  return this;
+};
+
+/**
+ * Append a component with the encoded version number.
+ * Note that this encodes the exact value of version without converting from a 
+ * time representation.
+ * @param {number} version The version number.
+ * @returns {Name} This name so that you can chain calls to append.
+ */
+Name.prototype.appendVersion = function(version) 
+{
+  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
+  // Put a 0 byte in front.
+  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+  segmentNumberComponent[0] = 0xfD;
   segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
   this.components.push(new Name.Component(segmentNumberComponent));
@@ -9954,14 +9968,16 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
- * Create a new Data with the optional values.
+ * Create a new Data with the optional values.  There are forms of constructor:
+ * new Data([name] [, content]);
+ * new Data(name, metaInfo [, content]);
  * 
  * @constructor
  * @param {Name} name
  * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, metaInfo, content) 
+var Data = function Data(name, metaInfoOrContent, arg3) 
 {
   if (typeof name === 'string')
     this.name = new Name(name);
@@ -9969,6 +9985,18 @@ var Data = function Data(name, metaInfo, content)
     this.name = typeof name === 'object' && name instanceof Name ?
        new Name(name) : new Name();
 
+  var metaInfo;
+  var content;
+  if (typeof metaInfoOrContent === 'object' && 
+      metaInfoOrContent instanceof MetaInfo) {
+    metaInfo = metaInfoOrContent;
+    content = arg3;
+  }
+  else {
+    metaInfo = null;
+    content = metaInfoOrContent;
+  }
+    
   // Use signedInfo instead of metaInfo for backward compatibility.
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
        new MetaInfo(metaInfo) : new MetaInfo();
@@ -10090,6 +10118,10 @@ Data.prototype.setContent = function(content)
 Data.prototype.sign = function(wireFormat) 
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+ 
+  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
+      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
+    this.getMetaInfo().setFields();
   
   if (this.wireEncoding == null || this.wireEncoding.isNull()) {
     // Need to encode to set wireEncoding.
@@ -10821,6 +10853,8 @@ Interest.prototype.setNonce = function(nonce)
  * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
  * @returns {string} The URI string.
+ * @note This is an experimental feature.  See the API docs for more detail at
+ * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
  */
 Interest.prototype.toUri = function() 
 {  
@@ -11303,6 +11337,7 @@ var Signature = require('../signature.js').Signature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 
 /**
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
@@ -11489,7 +11524,8 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
   else
     interest.publisherPublicKeyDigest = null;
-  if (interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
+  if (interest.publisherPublicKeyDigest != null &&
+      interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest.length > 0) {
     // We keep the deprecated publisherPublicKeyDigest for backwards 
     //   compatibility.  Also set the key locator.

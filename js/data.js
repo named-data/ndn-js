@@ -19,14 +19,16 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
- * Create a new Data with the optional values.
+ * Create a new Data with the optional values.  There are 2 forms of constructor:
+ * new Data([name] [, content]);
+ * new Data(name, metaInfo [, content]);
  * 
  * @constructor
  * @param {Name} name
  * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, metaInfo, content) 
+var Data = function Data(name, metaInfoOrContent, arg3) 
 {
   if (typeof name === 'string')
     this.name = new Name(name);
@@ -34,6 +36,18 @@ var Data = function Data(name, metaInfo, content)
     this.name = typeof name === 'object' && name instanceof Name ?
        new Name(name) : new Name();
 
+  var metaInfo;
+  var content;
+  if (typeof metaInfoOrContent === 'object' && 
+      metaInfoOrContent instanceof MetaInfo) {
+    metaInfo = metaInfoOrContent;
+    content = arg3;
+  }
+  else {
+    metaInfo = null;
+    content = metaInfoOrContent;
+  }
+    
   // Use signedInfo instead of metaInfo for backward compatibility.
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
        new MetaInfo(metaInfo) : new MetaInfo();
