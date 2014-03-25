@@ -8131,8 +8131,7 @@ exports.WebSocketTransport = WebSocketTransport;
  */
 WebSocketTransport.prototype.connect = function(face, onopenCallback) 
 {
-  if (this.ws != null)
-    delete this.ws;
+  this.close();
   
   this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
   if (LOG > 0) console.log('ws connection created.');
@@ -8212,6 +8211,16 @@ WebSocketTransport.prototype.send = function(data)
   else
     console.log('WebSocket connection is not established.');
 };
+
+/**
+ * Close the connection.
+ */
+WebSocketTransport.prototype.close = function()
+{
+  if (this.ws != null)
+    delete this.ws;
+}
+
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -9968,7 +9977,7 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
- * Create a new Data with the optional values.  There are forms of constructor:
+ * Create a new Data with the optional values.  There are 2 forms of constructor:
  * new Data([name] [, content]);
  * new Data(name, metaInfo [, content]);
  * 

@@ -37,8 +37,7 @@ exports.WebSocketTransport = WebSocketTransport;
  */
 WebSocketTransport.prototype.connect = function(face, onopenCallback) 
 {
-  if (this.ws != null)
-    delete this.ws;
+  this.close();
   
   this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
   if (LOG > 0) console.log('ws connection created.');
@@ -118,3 +117,13 @@ WebSocketTransport.prototype.send = function(data)
   else
     console.log('WebSocket connection is not established.');
 };
+
+/**
+ * Close the connection.
+ */
+WebSocketTransport.prototype.close = function()
+{
+  if (this.ws != null)
+    delete this.ws;
+}
+
