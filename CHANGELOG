@@ -11,6 +11,7 @@ Bug fixes
 * http://redmine.named-data.net/issues/1339 Fix FinalBlockID TLV encoding.
 * For TLV packets over UDP, ignore packets starting with 0x80.
 * Fix bug for signing old format Binary XML data packets (after adding TLV code).
+* Fix bug for generating a random nonce on Ubuntu.
 
 NDN-JS v0.3 (2014-02-27)
 ------------------------

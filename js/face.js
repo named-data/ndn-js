@@ -610,7 +610,7 @@ Face.prototype.registerPrefixHelper = function
   si.setFields();
     
   // Set the name to a random value so that each request is unique.
-  var data = new Data(new Name().append(crypto.randomBytes(4)), si, bytes); 
+  var data = new Data(new Name().append(require("crypto").randomBytes(4)), si, bytes); 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   data.sign(BinaryXmlWireFormat.get());
   var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
