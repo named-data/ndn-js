@@ -108,7 +108,7 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
     self.ws = null;
     
     // Close Face when WebSocket is closed
-    face.readyStatus = Face.CLOSED;
+    face.readyStatus = 2; //Face.CLOSED
     face.onclose();
     //console.log("NDN.onclose event fired.");
   }
