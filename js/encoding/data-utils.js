@@ -11,18 +11,18 @@
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils() 
+var DataUtils = function()
 {
 };
 
-exports.DataUtils = DataUtils;
+exports.DataUtils = new DataUtils();
 
 /*
  * NOTE THIS IS CURRENTLY NOT BEING USED
  * 
  */
 
-DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
+DataUtils.prototype.keyStr = "ABCDEFGHIJKLMNOP" +
                    "QRSTUVWXYZabcdef" +
                    "ghijklmnopqrstuv" +
                    "wxyz0123456789+/" +
@@ -31,7 +31,7 @@ DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
 /**
  * Raw String to Base 64
  */
-DataUtils.stringtoBase64 = function stringtoBase64(input) 
+DataUtils.prototype.stringtoBase64 = function stringtoBase64(input) 
 {
    //input = escape(input);
    var output = "";
@@ -69,7 +69,7 @@ DataUtils.stringtoBase64 = function stringtoBase64(input)
 /**
  * Base 64 to Raw String 
  */
-DataUtils.base64toString = function base64toString(input) 
+DataUtils.prototype.base64toString = function base64toString(input) 
 {
   var output = "";
   var chr1, chr2, chr3 = "";
@@ -115,7 +115,7 @@ DataUtils.base64toString = function base64toString(input)
 /**
  * Buffer to Hex String
  */
-DataUtils.toHex = function(buffer) 
+DataUtils.prototype.toHex = function(buffer) 
 {
   return buffer.toString('hex');
 };
@@ -123,7 +123,7 @@ DataUtils.toHex = function(buffer)
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(args) 
+DataUtils.prototype.stringToHex = function(args) 
 {
   var ret = "";
   for (var i = 0; i < args.length; ++i) {
@@ -136,7 +136,7 @@ DataUtils.stringToHex = function(args)
 /**
  * Buffer to raw string.
  */
-DataUtils.toString = function(buffer) 
+DataUtils.prototype.toString = function(buffer) 
 {
   return buffer.toString();
 };
@@ -144,7 +144,7 @@ DataUtils.toString = function(buffer)
 /**
  * Hex String to Buffer.
  */
-DataUtils.toNumbers = function(str) 
+DataUtils.prototype.toNumbers = function(str) 
 {
   return new Buffer(str, 'hex');
 };
@@ -152,7 +152,7 @@ DataUtils.toNumbers = function(str)
 /**
  * Hex String to raw string.
  */
-DataUtils.hexToRawString = function(str) 
+DataUtils.prototype.hexToRawString = function(str) 
 {
   if (typeof str =='string') {
   var ret = "";
@@ -166,7 +166,7 @@ DataUtils.hexToRawString = function(str)
 /**
  * Raw String to Buffer.
  */
-DataUtils.toNumbersFromString = function(str) 
+DataUtils.prototype.toNumbersFromString = function(str) 
 {
   return new Buffer(str, 'binary');
 };
@@ -174,7 +174,7 @@ DataUtils.toNumbersFromString = function(str)
 /**
  * Encode str as utf8 and return as Buffer.
  */
-DataUtils.stringToUtf8Array = function(str) 
+DataUtils.prototype.stringToUtf8Array = function(str) 
 {
   return new Buffer(str, 'utf8');
 };
@@ -182,13 +182,13 @@ DataUtils.stringToUtf8Array = function(str)
 /**
  * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
  */
-DataUtils.concatArrays = function(arrays) 
+DataUtils.prototype.concatArrays = function(arrays) 
 {
   return Buffer.concat(arrays);
 };
  
 // TODO: Take Buffer and use TextDecoder when available.
-DataUtils.decodeUtf8 = function(utftext) 
+DataUtils.prototype.decodeUtf8 = function(utftext) 
 {
   var string = "";
   var i = 0;
@@ -222,7 +222,7 @@ DataUtils.decodeUtf8 = function(utftext)
 /**
  * Return true if a1 and a2 are the same length with equal elements.
  */
-DataUtils.arraysEqual = function(a1, a2) 
+DataUtils.prototype.arraysEqual = function(a1, a2) 
 {
   // A simple sanity check that it is an array.
   if (!a1.slice)
@@ -245,7 +245,7 @@ DataUtils.arraysEqual = function(a1, a2)
  * Convert the big endian Buffer to an unsigned int.
  * Don't check for overflow.
  */
-DataUtils.bigEndianToUnsignedInt = function(bytes) 
+DataUtils.prototype.bigEndianToUnsignedInt = function(bytes) 
 {
   var result = 0;
   for (var i = 0; i < bytes.length; ++i) {
@@ -259,7 +259,7 @@ DataUtils.bigEndianToUnsignedInt = function(bytes)
  * Convert the int value to a new big endian Buffer and return.
  * If value is 0 or negative, return new Buffer(0). 
  */
-DataUtils.nonNegativeIntToBigEndian = function(value) 
+DataUtils.prototype.nonNegativeIntToBigEndian = function(value) 
 {
   value = Math.round(value);
   if (value <= 0)
@@ -280,7 +280,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value)
 /**
  * Modify array to randomly shuffle the elements.
  */
-DataUtils.shuffle = function(array) 
+DataUtils.prototype.shuffle = function(array) 
 {
   for (var i = array.length - 1; i >= 1; --i) {
     // j is from 0 to i.

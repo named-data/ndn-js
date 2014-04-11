@@ -407,7 +407,9 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
   // TODO: The library needs to handle other signature types than 
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(Signature());
+      var signature = {}
+      signature.sig = Signature
+      data.setSignature(signature.sig());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();

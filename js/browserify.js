@@ -274,3 +274,5 @@ exports.randomBytes = function(size)
     result[i] = Math.floor(Math.random() * 256);
   return result;
 };
+
+exports.Buffer = Buffer;

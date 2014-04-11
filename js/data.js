@@ -211,7 +211,7 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
  */
 Data.prototype.wireEncode = function(wireFormat) 
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  var wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeData(this);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
   this.wireEncoding = new SignedBlob
@@ -228,7 +228,7 @@ Data.prototype.wireEncode = function(wireFormat)
  */
 Data.prototype.wireDecode = function(input, wireFormat) 
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  var wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
                      input.buf() : input;
@@ -261,8 +261,8 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
   if (this.signedInfo != null && this.signedInfo.locator != null &&
       this.signedInfo.locator.type != null &&
       this.signedInfo.locator.type >= 0) {
-    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
-    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
+    //console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
+    //console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
     return this.signedInfo.locator;
   }
   

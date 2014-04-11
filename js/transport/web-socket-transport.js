@@ -39,7 +39,7 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
 {
   this.close();
   
-  this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
+  this.ws = new WebSocket('ws:' + face.host + ':' + face.port);
   if (LOG > 0) console.log('ws connection created.');
     this.connectedHost = face.host;
     this.connectedPort = face.port;
