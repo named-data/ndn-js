@@ -20,7 +20,7 @@
  * @since 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
-
+var CryptoJS = require('./sha256.js')
 /** 
  * kjur's class library name space
  * @name KJUR
@@ -684,4 +684,4 @@ KJUR.crypto.Signature = function(params) {
 	}
     }
 };
-
+module.exports = KJUR

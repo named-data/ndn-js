@@ -1,3 +1,7 @@
+NPM BRANCH
+----------
+
+This branch of NDN-js is shimmed for use in Node.js and the browser (via Browserify CommonJS style require call). No changes to functionality, added features, or bugfixes are targeted at this branch; only the minimum set of changes to allow for these build/deployment enviroments
 
 NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------

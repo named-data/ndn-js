@@ -710,3 +710,5 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
+
+module.exports = CryptoJS

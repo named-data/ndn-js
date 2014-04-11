@@ -1,5 +1,6 @@
 // Depends on rsa.js and jsbn2.js
-
+var BigInteger = require('jsbn')
+var RSAKey = require('./rsa.js')
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext

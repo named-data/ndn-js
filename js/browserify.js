@@ -9,8 +9,9 @@ var ndn = ndn || {};
 
 var exports = ndn;
 
-var require = function(ignore) { return ndn; };
-
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js')
+var KJUR = require('../contrib/securityLib/crypto-1.0.js')
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js')
 // Factory method to create node.js compatible buffer objects
 var Buffer = function Buffer(data, format) 
 {

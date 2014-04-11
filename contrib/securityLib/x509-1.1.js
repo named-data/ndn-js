@@ -18,6 +18,9 @@
 //   base64.js
 //   rsa.js
 //   asn1hex.js
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js');
+var ASN1HEX = require('./asn1hex-1.1.js');
 
 /**
  * @fileOverview
@@ -260,3 +263,4 @@ X509.prototype.getSubjectString = _x509_getSubjectString;
 X509.prototype.getNotBefore = _x509_getNotBefore;
 X509.prototype.getNotAfter = _x509_getNotAfter;
 
+module.exports = X509
