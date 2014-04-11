@@ -3,9 +3,27 @@
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  */
+
 var customBuf = require('../buffer.js').Buffer
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
+var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var LOG = require('../log.js').Log.LOG;
+
+
+function makeShuffledGetHostAndPort (hostList, port)
+{
+  // Make a copy.
+  hostList = hostList.slice(0, hostList.length);
+  DataUtils.shuffle(hostList);
+
+  return function() {
+    if (hostList.length == 0)
+      return null;
+
+    return { host: hostList.splice(0, 1)[0], port: port };
+  };
+};
+
 
 /**
  * @constructor
@@ -19,7 +37,7 @@ var WebSocketTransport = function WebSocketTransport()
   this.connectedHost = null; // Read by Face.
   this.connectedPort = null; // Read by Face.
   this.elementReader = null;
-  this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
+  this.defaultGetHostAndPort = makeShuffledGetHostAndPort
     (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
       "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
       "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 

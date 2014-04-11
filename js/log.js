@@ -17,4 +17,4 @@ exports.Log = Log;
  * LOG is the level for logging debugging statements.  0 means no log messages. 
  * @type Number
  */
-Log.LOG = 5;
+Log.LOG = 0;
