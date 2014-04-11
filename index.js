@@ -24,3 +24,5 @@ exports.Blob = require('./js/util/blob.js').Blob;
 exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumeration;
 exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
 exports.globalKeyManager = require('./js/security/key-manager.js').globalKeyManager;
+exports.ElementReader = require('./js/encoding/element-reader.js').ElementReader;
+exports.customBuffer = require('./js/browserify.js').Buffer

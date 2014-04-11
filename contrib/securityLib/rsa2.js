@@ -2,6 +2,9 @@
 var BigInteger = require('jsbn')
 var RSAKey = require('./rsa.js')
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
 function pkcs1unpad2(d,n) {
@@ -242,3 +245,5 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+module.exports = RSAKey

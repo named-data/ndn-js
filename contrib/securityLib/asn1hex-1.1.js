@@ -15,7 +15,10 @@
 //
 // Depends on:
 //
-
+var BigInteger = require('jsbn')
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte

@@ -21,6 +21,11 @@
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 var CryptoJS = require('./sha256.js')
+var BigInteger = require('jsbn')
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
+
 /** 
  * kjur's class library name space
  * @name KJUR

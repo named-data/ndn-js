@@ -24,7 +24,9 @@
 //
 var BigInteger = require('jsbn')
 var RSAKey= require('./rsapem-1.1.js')
-
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // keysize / pmstrlen
 //  512 /  128

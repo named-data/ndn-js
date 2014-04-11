@@ -3,7 +3,7 @@ var ndn = ndn || {};
 
 var exports = ndn;
 
-var internalRequire = function(ignore) { return ndn; };
+var require = function(ignore) { return ndn; };
 
 
 var internalBuf = function internalBuf(data, format) 
@@ -3841,7 +3841,7 @@ var NDNProtocolDTagsStrings = [
     "ConfigSlice", "ConfigSliceList", "ConfigSliceOp" ];
 
 exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
-;var LOG = internalRequire('../log.js').Log.LOG;
+
 
 
 var NDNTime = function NDNTime(input) 
@@ -3863,7 +3863,7 @@ NDNTime.prototype.getJavascriptDate = function()
   d.setTime(this.msec);
   return d
 };  
-;var Closure = internalRequire('../closure.js').Closure;
+
 
 
 var ExponentialReExpressClosure = function ExponentialReExpressClosure(callerClosure, settings) 
@@ -3965,7 +3965,7 @@ Blob.prototype.toHex = function()
     return "";
   else
     return this.buffer.toString('hex');
-};;var Blob = internalRequire('./blob.js').Blob;
+
 
 
 var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset) 
@@ -4476,12 +4476,12 @@ DecodingException.prototype = new Error();
 DecodingException.prototype.name = "DecodingException";
 
 exports.DecodingException = DecodingException;
-;var LOG = internalRequire('../log.js').Log.LOG;
 
-var NDNProtocolDTags = internalRequire('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var DynamicBuffer = internalRequire('../util/dynamic-buffer.js').DynamicBuffer;
-var DataUtils = internalRequire('./data-utils.js').DataUtils;
-var LOG = internalRequire('../log.js').Log.LOG;
+
+
+
+
+
 
 var XML_EXT = 0x00; 
   
@@ -4864,11 +4864,11 @@ BinaryXMLEncoder.prototype.getReducedOstream = function()
 {
   return this.ostream.slice(0, this.offset);
 };
-;var NDNProtocolDTags = internalRequire('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNTime = internalRequire('../util/ndn-time.js').NDNTime;
-var DataUtils = internalRequire('./data-utils.js').DataUtils;
-var DecodingException = internalRequire('./decoding-exception.js').DecodingException;
-var LOG = internalRequire('../log.js').Log.LOG;
+
+
+
+
+
 
 var XML_EXT = 0x00; 
   
@@ -5492,8 +5492,8 @@ BinaryXMLDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
 };
-;var BinaryXMLDecoder = internalRequire('./binary-xml-decoder.js').BinaryXMLDecoder;
-var DynamicBuffer = internalRequire('../util/dynamic-buffer.js').DynamicBuffer;
+
+
 
 var XML_EXT = 0x00; 
 var XML_TAG = 0x01; 
@@ -5712,7 +5712,7 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
-;var DynamicBuffer = internalRequire('../../util/dynamic-buffer.js').DynamicBuffer;
+
 
 
 var TlvEncoder = function TlvEncoder(initialCapacity)
@@ -5865,7 +5865,7 @@ TlvEncoder.prototype.getOutput = function()
 {
   return this.output.array.slice(this.output.array.length - this.length);
 };
-;var DecodingException = internalRequire('../decoding-exception.js').DecodingException;
+
 
 
 var TlvDecoder = function TlvDecoder(input)
@@ -6070,7 +6070,7 @@ TlvDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
 };  
-;var TlvDecoder = internalRequire('./tlv-decoder.js').TlvDecoder;
+
 
 
 var TlvStructureDecoder = function TlvStructureDecoder()
@@ -6301,12 +6301,12 @@ WireFormat.getDefaultWireFormat = function()
 
 
 
-var TlvWireFormat = internalRequire('./tlv-wire-format.js').TlvWireFormat;
-;var DataUtils = internalRequire('./data-utils.js').DataUtils;
-var BinaryXMLStructureDecoder = internalRequire('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
-var Tlv = internalRequire('./tlv/tlv.js').Tlv;
-var TlvStructureDecoder = internalRequire('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
-var LOG = internalRequire('../log.js').Log.LOG;
+
+
+
+
+
+
 
 
 var ElementReader = function ElementReader(elementListener) 
@@ -6384,10 +6384,10 @@ ElementReader.prototype.onReceivedData = function( data)
     }
   }    
 };
-;var DataUtils = internalRequire('../encoding/data-utils.js').DataUtils;
-var BinaryXMLDecoder = internalRequire('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = internalRequire('./ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Name = internalRequire('../name.js').Name;
+
+
+
+
 
 
 var NameEnumeration = function NameEnumeration(face, onComponents) 
@@ -6492,8 +6492,8 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
          name.get(name.size() - 1).getValue().length >= 1 &&
          name.get(name.size() - 1).getValue()[0] == 0;
 };
-;var ElementReader = internalRequire('../encoding/element-reader.js').ElementReader;
-var LOG = internalRequire('../log.js').Log.LOG;
+
+
 
 
 var WebSocketTransport = function WebSocketTransport() 
@@ -6666,8 +6666,8 @@ UpcallInfo.prototype.toString = function()
 };
 
 exports.UpcallInfo = UpcallInfo;
-;var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var LOG = internalRequire('./log.js').Log.LOG;
+
+
 
 
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd) 
@@ -6713,9 +6713,9 @@ PublisherPublicKeyDigest.prototype.validate = function()
 {
     return null != this.publisherPublicKeyDigest;
 };
-;var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNProtocolDTagsStrings = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
-var DecodingException = internalRequire('./encoding/decoding-exception.js').DecodingException;
+
+
+
 
 
 var PublisherType = function PublisherType(tag) 
@@ -6798,12 +6798,12 @@ PublisherID.prototype.validate = function()
 {
   return null != id() && null != type();
 };
-;var Blob = internalRequire('./util/blob.js').Blob;
-var DataUtils = internalRequire('./encoding/data-utils.js').DataUtils;
-var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var LOG = internalRequire('./log.js').Log.LOG;
+
+
+
+
+
+
 
 
 var Name = function Name(components) 
@@ -7254,7 +7254,7 @@ Name.prototype.match = function(name)
 
   return true;
 };
-;var LOG = internalRequire('./log.js').Log.LOG;
+
 
 
 
@@ -7310,7 +7310,7 @@ Key.prototype.readDerPublicKey = function(pub_der)
 
   this.publicKeyDer = pub_der;
 
-  var hash = internalRequire("crypto").createHash('sha256');
+  var hash = require("crypto").createHash('sha256');
   hash.update(this.publicKeyDer);
   this.publicKeyDigest = new internalBuf(hash.digest());
     
@@ -7344,7 +7344,7 @@ Key.prototype.fromPemString = function(pub, pri)
     this.publicKeyDer = new internalBuf(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
   
-    var hash = internalRequire("crypto").createHash('sha256');
+    var hash = require("crypto").createHash('sha256');
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new internalBuf(hash.digest());
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
@@ -7366,10 +7366,10 @@ Key.createFromPEM = function(obj)
     key.fromPemString(obj.pub, obj.pri);
     return key;
 };
-;var Name = internalRequire('./name.js').Name;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherID = internalRequire('./publisher-id.js').PublisherID;
-var LOG = internalRequire('./log.js').Log.LOG;
+
+
+
+
 
 
 var KeyLocatorType = {
@@ -7604,7 +7604,7 @@ KeyName.prototype.to_ndnb = function(encoder)
   
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
-;var Key = internalRequire('../key.js').Key;
+
 
 
 var KeyManager = function KeyManager()
@@ -7662,17 +7662,17 @@ KeyManager.prototype.getKey = function()
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
-;var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var Blob = internalRequire('./util/blob.js').Blob;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var KeyLocator = internalRequire('./key-locator.js').KeyLocator;
-var KeyLocatorType = internalRequire('./key-locator.js').KeyLocatorType;
-var Name = internalRequire('./name.js').Name;
-var PublisherPublicKeyDigest = internalRequire('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var NDNTime = internalRequire('./util/ndn-time.js').NDNTime;
-var globalKeyManager = internalRequire('./security/key-manager.js').globalKeyManager;
-var LOG = internalRequire('./log.js').Log.LOG;
+
+
+
+
+
+
+
+
+
+
+
 
 var ContentType = {
   BLOB:0,
@@ -7914,12 +7914,12 @@ var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locat
 SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
 
 exports.SignedInfo = SignedInfo;
-;var Blob = internalRequire('./util/blob.js').Blob;
-var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var KeyLocator = internalRequire('./key-locator.js').KeyLocator;
-var LOG = internalRequire('./log.js').Log.LOG;
+
+
+
+
+
+
 
 
 var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm) 
@@ -8030,17 +8030,17 @@ Signature.prototype.validate = function()
 {
   return null != this.signature;
 };
-;var Blob = internalRequire('./util/blob.js').Blob;
-var SignedBlob = internalRequire('./util/signed-blob.js').SignedBlob;
-var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var DataUtils = internalRequire('./encoding/data-utils.js').DataUtils;
-var Name = internalRequire('./name.js').Name;
-var Signature = internalRequire('./signature.js').Signature;
-var MetaInfo = internalRequire('./meta-info.js').MetaInfo;
-var KeyLocator = internalRequire('./key-locator.js').KeyLocator;
-var globalKeyManager = internalRequire('./security/key-manager.js').globalKeyManager;
-var WireFormat = internalRequire('./encoding/wire-format.js').WireFormat;
+
+
+
+
+
+
+
+
+
+
+
 
 
 var Data = function Data(name, metaInfoOrContent, arg3) 
@@ -8168,7 +8168,7 @@ Data.prototype.sign = function(wireFormat)
     this.wireEncode(wireFormat);
   }
   
-  var rsa = internalRequire("crypto").createSign('RSA-SHA256');
+  var rsa = require("crypto").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
     
   var sig = new internalBuf(rsa.sign(globalKeyManager.privateKey));
@@ -8183,7 +8183,7 @@ Data.prototype.verify = function( key)
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     
     this.wireEncode();
-  var verifier = internalRequire('crypto').createVerify('RSA-SHA256');
+  var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   return verifier.verify(key.publicKeyPem, this.signature.signature);
 };
@@ -8243,7 +8243,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
 }
 
 
-var BinaryXmlWireFormat = internalRequire('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+
 
 
 Data.prototype.from_ndnb = function( decoder) 
@@ -8281,11 +8281,11 @@ var ContentObject = function ContentObject(name, signedInfo, content)
 ContentObject.prototype = new Data();
 
 exports.ContentObject = ContentObject;
-;var Name = internalRequire('./name.js').Name;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var DataUtils = internalRequire('./encoding/data-utils.js').DataUtils;
+
+
+
+
+
 
 
 var Exclude = function Exclude(values) 
@@ -8477,12 +8477,12 @@ Exclude.compareComponents = function(component1, component2)
 
   return 0;
 };
-;var Blob = internalRequire('./util/blob.js').Blob;
-var Name = internalRequire('./name.js').Name;
-var Exclude = internalRequire('./exclude.js').Exclude;
-var PublisherPublicKeyDigest = internalRequire('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var KeyLocator = internalRequire('./key-locator.js').KeyLocator;
-var WireFormat = internalRequire('./encoding/wire-format.js').WireFormat;
+
+
+
+
+
+
 
 
 var Interest = function Interest
@@ -8790,7 +8790,7 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 
 
 
-var BinaryXmlWireFormat = internalRequire('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+
 
 
 Interest.prototype.from_ndnb = function( decoder) 
@@ -8815,8 +8815,8 @@ Interest.prototype.decode = function(input, wireFormat)
 {
   this.wireDecode(input, BinaryXmlWireFormat.get())
 };
-;var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = internalRequire('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+
+
 
 
 var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
@@ -8914,9 +8914,9 @@ FaceInstance.prototype.getElementLabel = function()
   return NDNProtocolDTags.FaceInstance;
 };
 
-;var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = internalRequire('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var Name = internalRequire('./name.js').Name;
+
+
+
 
 
 var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime) 
@@ -8988,7 +8988,7 @@ ForwardingEntry.prototype.to_ndnb = function(
 };
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
-;var ForwardingEntry = internalRequire('./forwarding-entry.js').ForwardingEntry;
+
 
 
 var ForwardingFlags = function ForwardingFlags() 
@@ -9090,18 +9090,18 @@ ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
 
   
 ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
-;var Blob = internalRequire('../util/blob.js').Blob;
-var NDNProtocolDTags = internalRequire('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = internalRequire('./binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./binary-xml-decoder.js').BinaryXMLDecoder;
-var WireFormat = internalRequire('./wire-format.js').WireFormat;
-var Name = internalRequire('../name.js').Name;
-var Exclude = internalRequire('../exclude.js').Exclude;
-var Signature = internalRequire('../signature.js').Signature;
-var MetaInfo = internalRequire('../meta-info.js').MetaInfo;
-var PublisherPublicKeyDigest = internalRequire('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var DataUtils = internalRequire('./data-utils.js').DataUtils;
-var KeyLocatorType = internalRequire('../key-locator.js').KeyLocatorType;
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 var BinaryXmlWireFormat = function BinaryXmlWireFormat() 
@@ -9352,17 +9352,17 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   return { signedPortionBeginOffset: signedPortionBeginOffset, 
            signedPortionEndOffset: signedPortionEndOffset };  
 };
-;var crypto = internalRequire('crypto');
-var Blob = internalRequire('../util/blob.js').Blob;
-var Tlv = internalRequire('./tlv/tlv.js').Tlv;
-var TlvEncoder = internalRequire('./tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = internalRequire('./tlv/tlv-decoder.js').TlvDecoder;
-var WireFormat = internalRequire('./wire-format.js').WireFormat;
-var Exclude = internalRequire('../exclude.js').Exclude;
-var ContentType = internalRequire('../meta-info.js').ContentType;
-var KeyLocatorType = internalRequire('../key-locator.js').KeyLocatorType;
-var Signature = internalRequire('../signature.js').Signature;
-var DecodingException = internalRequire('./decoding-exception.js').DecodingException;
+;var crypto = require('crypto');
+
+
+
+
+
+
+
+
+
+
 
 
 var Tlv0_1a2WireFormat = function Tlv0_1a2WireFormat() 
@@ -9393,7 +9393,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   
   if (interest.getNonce() == null || interest.getNonce().length == 0)
     
-    encoder.writeBlobTlv(Tlv.Nonce, internalRequire("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
   else if (interest.getNonce().length < 4) {
     var nonce = internalBuf(4);
     
@@ -9401,7 +9401,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
 
     
     for (var i = interest.getNonce().length; i < 4; ++i)
-      nonce[i] = internalRequire("crypto").randomBytes(1)[0];
+      nonce[i] = require("crypto").randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
@@ -9777,8 +9777,8 @@ Tlv0_1a2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 
   decoder.finishNestedTlvs(endOffset);
 };
-;var WireFormat = internalRequire('./wire-format.js').WireFormat;
-var Tlv0_1a2WireFormat = internalRequire('./tlv-0_1a2-wire-format.js').Tlv0_1a2WireFormat;
+
+
 
 
 var TlvWireFormat = function TlvWireFormat() 
@@ -9806,17 +9806,17 @@ TlvWireFormat.get = function()
 
 
 WireFormat.setDefaultWireFormat(TlvWireFormat.get());
-;var DataUtils = internalRequire('./data-utils.js').DataUtils;
-var BinaryXMLEncoder = internalRequire('./binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = internalRequire('./binary-xml-decoder.js').BinaryXMLDecoder;
-var Key = internalRequire('../key.js').Key;
-var KeyLocatorType = internalRequire('../key-locator.js').KeyLocatorType;
-var Interest = internalRequire('../interest.js').Interest;
-var Data = internalRequire('../data.js').Data;
-var FaceInstance = internalRequire('../face-instance.js').FaceInstance;
-var ForwardingEntry = internalRequire('../forwarding-entry.js').ForwardingEntry;
-var WireFormat = internalRequire('./wire-format.js').WireFormat;
-var LOG = internalRequire('../log.js').Log.LOG;
+
+
+
+
+
+
+
+
+
+
+
 
 
 var EncodingUtils = function EncodingUtils() 
@@ -10019,27 +10019,27 @@ var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data)
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
 
 function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
-;var crypto = internalRequire('crypto');
-var DataUtils = internalRequire('./encoding/data-utils.js').DataUtils;
-var Name = internalRequire('./name.js').Name;
-var Interest = internalRequire('./interest.js').Interest;
-var Data = internalRequire('./data.js').Data;
-var MetaInfo = internalRequire('./meta-info.js').MetaInfo;
-var ForwardingEntry = internalRequire('./forwarding-entry.js').ForwardingEntry;
-var TlvWireFormat = internalRequire('./encoding/tlv-wire-format.js').TlvWireFormat;
-var BinaryXmlWireFormat = internalRequire('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-var Tlv = internalRequire('./encoding/tlv/tlv.js').Tlv;
-var TlvDecoder = internalRequire('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var BinaryXMLDecoder = internalRequire('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var BinaryXMLEncoder = internalRequire('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = internalRequire('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Key = internalRequire('./key.js').Key;
-var KeyLocatorType = internalRequire('./key-locator.js').KeyLocatorType;
-var ForwardingFlags = internalRequire('./forwarding-flags.js').ForwardingFlags;
-var Closure = internalRequire('./closure.js').Closure;
-var UpcallInfo = internalRequire('./closure.js').UpcallInfo;
-var TcpTransport = internalRequire('./transport/tcp-transport.js').TcpTransport;
-var LOG = internalRequire('./log.js').Log.LOG;
+;var crypto = require('crypto');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 var Face = function Face(settings) 
@@ -10456,7 +10456,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
        
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   
-  var hash = internalRequire("crypto").createHash('sha256');
+  var hash = require("crypto").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
   this.face.ndndid = new internalBuf(hash.digest());
   if (LOG > 3) console.log(this.face.ndndid);
@@ -10517,7 +10517,7 @@ Face.prototype.registerPrefixHelper = function
   si.setFields();
     
   
-  var data = new Data(new Name().append(internalRequire("crypto").randomBytes(4)), si, bytes); 
+  var data = new Data(new Name().append(require("crypto").randomBytes(4)), si, bytes); 
   
   data.sign(BinaryXmlWireFormat.get());
   var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
@@ -10789,5 +10789,5 @@ NDN.supported = Face.supported;
 NDN.UNOPEN = Face.UNOPEN;
 NDN.OPENED = Face.OPENED;
 NDN.CLOSED = Face.CLOSED;
-;
-module.exports = exports;
+;console.log(exports)
+module.exports = ndn;

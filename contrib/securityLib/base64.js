@@ -1,6 +1,7 @@
 var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var b64pad="=";
-
+var BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz"
+function int2char(n) { return BI_RM.charAt(n); }
 function hex2b64(h) {
   var i;
   var c;

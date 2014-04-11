@@ -168,6 +168,9 @@ Data.prototype.setContent = function(content)
 
 Data.prototype.sign = function(wireFormat) 
 {
+  var rs = require('buffer')
+  var ss = require('./crypto.js')
+  console.log(Buffer, ss, rs)
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
  
   if (this.getSignatureOrMetaInfoKeyLocator() == null ||
@@ -181,7 +184,7 @@ Data.prototype.sign = function(wireFormat)
     this.wireEncode(wireFormat);
   }
   
-  var rsa = require("crypto").createSign('RSA-SHA256');
+  var rsa = require("./crypto.js").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
     
   var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
@@ -196,7 +199,7 @@ Data.prototype.verify = function(/*Key*/ key)
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
-  var verifier = require('crypto').createVerify('RSA-SHA256');
+  var verifier = require('./crypto.js').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   return verifier.verify(key.publicKeyPem, this.signature.signature);
 };

@@ -9,9 +9,11 @@ var ndn = ndn || {};
 
 var exports = ndn;
 
+console.log(Buffer)
 var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js')
 var KJUR = require('../contrib/securityLib/crypto-1.0.js')
 var RSAKey = require('../contrib/securityLib/rsasign-1.2.js')
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 // Factory method to create node.js compatible buffer objects
 var Buffer = function Buffer(data, format) 
 {
@@ -277,3 +279,6 @@ exports.randomBytes = function(size)
 };
 
 exports.Buffer = Buffer;
+console.log(Buffer)
+
+module.exports = exports;

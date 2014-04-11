@@ -5,7 +5,7 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
-var crypto = require('crypto');
+var crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -543,7 +543,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
        
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
-  var hash = require("crypto").createHash('sha256');
+  var hash = require("./crypto.js").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
   this.face.ndndid = new Buffer(hash.digest());
   if (LOG > 3) console.log(this.face.ndndid);

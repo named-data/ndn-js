@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
-var crypto = require('crypto');
+var crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -53,7 +53,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce() == null || interest.getNonce().length == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, require("../crypto.js").randomBytes(4));
   else if (interest.getNonce().length < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.

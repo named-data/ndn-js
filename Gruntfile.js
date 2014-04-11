@@ -109,14 +109,16 @@ comments: {
                 replace: '.internalBuf'
             },{
                 name: 'require def',
-                search: ' require ',
-                replace: ' internalRequire ',
-                flags: ''
+                search: ".*require([(]['][^c]).*",
+                replace: '',
+                flags: 'g'
             },{
-               name: 'require call',
-               search:  'require[(]',
-               replace: 'internalRequire('
+                name: 'require def',
+                search: "require('crypto')",
+                replace: 'ndn',
+                flags: 'g'
             }
+
         ]
     }
 },

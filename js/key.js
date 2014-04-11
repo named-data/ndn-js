@@ -68,7 +68,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   this.publicKeyDer = pub_der;
 
-  var hash = require("crypto").createHash('sha256');
+  var hash = require("./crypto.js").createHash('sha256');
   hash.update(this.publicKeyDer);
   this.publicKeyDigest = new Buffer(hash.digest());
     
@@ -105,7 +105,7 @@ Key.prototype.fromPemString = function(pub, pri)
     this.publicKeyDer = new Buffer(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
   
-    var hash = require("crypto").createHash('sha256');
+    var hash = require("./crypto.js").createHash('sha256');
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(hash.digest());
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));

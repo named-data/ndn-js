@@ -1,2 +1,2 @@
-
-module.exports = exports;
+console.log(exports)
+module.exports = ndn;
