@@ -17,7 +17,7 @@ var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
-
+var customBuf = require('./buffer.js').Buffer
 /**
  * Create a new Data with the optional values.  There are 2 forms of constructor:
  * new Data([name] [, content]);
@@ -95,7 +95,7 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Buffer} The content as a Buffer, which is null if unspecified.
+ * @returns {Buffer} The content as a customBuf, which is null if unspecified.
  */
 Data.prototype.getContent = function() 
 {

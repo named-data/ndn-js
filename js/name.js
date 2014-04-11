@@ -10,7 +10,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Buffer = require('./browserify.js').Buffer
+var customBuf = require('./buffer.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -19,7 +19,7 @@ var LOG = require('./log.js').Log.LOG;
  * @constructor
  * @param {string|Name|Array<string|Array<number>|ArrayBuffer|Buffer|Name>} components if a string, parse it as a URI.  If a Name, add a deep copy of its components.  
  * Otherwise it is an array of components which are appended according to Name.append, so
- * convert each and store it as an array of Buffer.  If a component is a string, encode as utf8.
+ * convert each and store it as an array of customBuf.  If a component is a string, encode as utf8.
  */
 var Name = function Name(components) 
 {
@@ -58,7 +58,7 @@ Name.Component = function NameComponent(value)
     this.value = new customBuf(value.value);
   else if (typeof value === 'object' && value instanceof Blob)
     this.value = new customBuf(value.buf());
-  else if (typeof value === 'object' && value instanceof Buffer)
+  else if (typeof value === 'object' && value instanceof customBuf)
     this.value = new customBuf(value);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
     // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
@@ -110,7 +110,7 @@ Name.prototype.getName = function()
   return this.toUri();
 };
 
-/** Parse uri as a URI and return an array of Buffer components.
+/** Parse uri as a URI and return an array of customBuf components.
  */
 Name.createNameArray = function(uri) 
 {
@@ -191,7 +191,7 @@ Name.prototype.getElementLabel = function()
 };
 
 /**
- * Convert the component to a Buffer and append to this Name.
+ * Convert the component to a customBuf and append to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
  * @returns {Name}
@@ -441,7 +441,7 @@ Name.prototype.equalsName = function(name)
 };
 
 /**
- * Find the last component in name that has a ContentDigest and return the digest value as Buffer, 
+ * Find the last component in name that has a ContentDigest and return the digest value as customBuf, 
  *   or null if not found.  See Name.getComponentContentDigestValue.
  */
 Name.prototype.getContentDigestValue = function() 
@@ -456,7 +456,7 @@ Name.prototype.getContentDigestValue = function()
 };
 
 /**
- * If component is a ContentDigest, return the digest value as a Buffer slice (don't modify!).
+ * If component is a ContentDigest, return the digest value as a customBuf slice (don't modify!).
  * If not a ContentDigest, return null.
  * A ContentDigest component is Name.ContentDigestPrefix + 32 bytes + Name.ContentDigestSuffix.
  */
@@ -524,7 +524,7 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Return a customBuf byte array by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
  * @returns {Buffer} The byte array, or null which means to skip the component in the name.

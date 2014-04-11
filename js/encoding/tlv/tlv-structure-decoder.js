@@ -5,7 +5,7 @@
  */
 
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
-
+var customBuf = require('../../buffer.js').Buffer
 /**
  * Create and initialize a TlvStructureDecoder.
  */

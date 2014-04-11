@@ -9,6 +9,7 @@
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
+var customBuf = require('./buffer.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**

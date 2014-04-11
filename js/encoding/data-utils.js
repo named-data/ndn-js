@@ -117,7 +117,7 @@ DataUtils.prototype.base64toString = function base64toString(input)
 };
 
 /**
- * Buffer to Hex String
+ * customBuf to Hex String
  */
 DataUtils.prototype.toHex = function(buffer) 
 {
@@ -138,7 +138,7 @@ DataUtils.prototype.stringToHex = function(args)
 };
 
 /**
- * Buffer to raw string.
+ * customBuf to raw string.
  */
 DataUtils.prototype.toString = function(buffer) 
 {
@@ -146,7 +146,7 @@ DataUtils.prototype.toString = function(buffer)
 };
 
 /**
- * Hex String to Buffer.
+ * Hex String to customBuf.
  */
 DataUtils.prototype.toNumbers = function(str) 
 {
@@ -168,7 +168,7 @@ DataUtils.prototype.hexToRawString = function(str)
 };
 
 /**
- * Raw String to Buffer.
+ * Raw String to customBuf.
  */
 DataUtils.prototype.toNumbersFromString = function(str) 
 {
@@ -176,7 +176,7 @@ DataUtils.prototype.toNumbersFromString = function(str)
 };
 
 /**
- * Encode str as utf8 and return as Buffer.
+ * Encode str as utf8 and return as customBuf.
  */
 DataUtils.prototype.stringToUtf8Array = function(str) 
 {
@@ -184,14 +184,14 @@ DataUtils.prototype.stringToUtf8Array = function(str)
 };
 
 /**
- * arrays is an array of Buffer. Return a new customBuf which is the concatenation of all.
+ * arrays is an array of customBuf. Return a new customBuf which is the concatenation of all.
  */
 DataUtils.prototype.concatArrays = function(arrays) 
 {
-  return Buffer.concat(arrays);
+  return customBuf.concat(arrays);
 };
  
-// TODO: Take Buffer and use TextDecoder when available.
+// TODO: Take customBuf and use TextDecoder when available.
 DataUtils.prototype.decodeUtf8 = function(utftext) 
 {
   var string = "";
@@ -246,7 +246,7 @@ DataUtils.prototype.arraysEqual = function(a1, a2)
 };
 
 /**
- * Convert the big endian Buffer to an unsigned int.
+ * Convert the big endian customBuf to an unsigned int.
  * Don't check for overflow.
  */
 DataUtils.prototype.bigEndianToUnsignedInt = function(bytes) 
@@ -260,7 +260,7 @@ DataUtils.prototype.bigEndianToUnsignedInt = function(bytes)
 };
 
 /**
- * Convert the int value to a new big endian Buffer and return.
+ * Convert the int value to a new big endian customBuf and return.
  * If value is 0 or negative, return new customBuf(0). 
  */
 DataUtils.prototype.nonNegativeIntToBigEndian = function(value) 

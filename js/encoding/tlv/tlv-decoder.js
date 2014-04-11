@@ -3,7 +3,7 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../../buffer.js').Buffer
 var DecodingException = require('../decoding-exception.js').DecodingException;
 
 /**

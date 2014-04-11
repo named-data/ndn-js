@@ -4,6 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
+var customBuf = require('../buffer.js').Buffer
 var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
 var Tlv = require('./tlv/tlv.js').Tlv;
@@ -30,7 +31,7 @@ var ElementReader = function ElementReader(elementListener)
 
 exports.ElementReader = ElementReader;
 
-ElementReader.prototype.onReceivedData = function(/* Buffer */ data) 
+ElementReader.prototype.onReceivedData = function(/* customBuf */ data) 
 {
   // Process multiple objects in the data.
   while (true) {

@@ -36,7 +36,7 @@ exports.Tlv0_1a2WireFormat = Tlv0_1a2WireFormat;
 Tlv0_1a2WireFormat.instance = null;
 
 /**
- * Encode the interest using NDN-TLV and return a Buffer.
+ * Encode the interest using NDN-TLV and return a customBuf.
  * @param {Interest} interest The Interest object to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
@@ -55,7 +55,7 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
     // This is the most common case. Generate a nonce.
     encoder.writeBlobTlv(Tlv.Nonce, require("../crypto.js").randomBytes(4));
   else if (interest.getNonce().length < 4) {
-    var nonce = Buffer(4);
+    var nonce = customBuf(4);
     // Copy existing nonce bytes.
     interest.getNonce().copy(nonce);
 
@@ -428,7 +428,7 @@ Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // TODO: finalBlockID should be a Name.Component, not customBuf.
   var finalBlockIdBuf = metaInfo.getFinalBlockID();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.

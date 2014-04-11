@@ -100,8 +100,8 @@ comments: {
           actions: [
             {
                 name: 'Buffer',
-                search: 'new Buffer',
-                replace: 'new customBuf',
+                search: ' Buffer',
+                replace: ' customBuf',
                 flags: 'gm'
             }
         ]

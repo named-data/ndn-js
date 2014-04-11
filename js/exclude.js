@@ -6,6 +6,7 @@
  * This class represents an Interest Exclude.
  */
 
+var customBuf = require('./buffer.js').Buffer
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -15,7 +16,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 /**
  * Create a new Exclude.
  * @constructor
- * @param {Array<Name.Component|Buffer|Exclude.ANY>} values (optional) An array where each element is either a Name.Component, Buffer component or Exclude.ANY.
+ * @param {Array<Name.Component|Buffer|Exclude.ANY>} values (optional) An array where each element is either a Name.Component, customBuf component or Exclude.ANY.
  */
 var Exclude = function Exclude(values) 
 { 

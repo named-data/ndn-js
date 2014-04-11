@@ -5,7 +5,7 @@
  * @author: Meki Cheraoui
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var NDNTime = require('../util/ndn-time.js').NDNTime;
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -377,11 +377,11 @@ BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
 /**
  * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
  * Then read one item of any type (presumably BLOB, UDATA, TAG or ATTR) and return a 
- * Buffer. However, if allowNull is true, then the item may be absent.
+ * customBuf. However, if allowNull is true, then the item may be absent.
  * Finally, read the element close.  Update the input's offset.
  * @param {number} expectedTag The expected value for DTAG.
  * @param {boolean} allowNull True if the binary item may be missing.
- * @returns {Buffer} A Buffer which is a slice on the data inside the input buffer. However, 
+ * @returns {Buffer} A customBuf which is a slice on the data inside the input buffer. However, 
  * if allowNull is true and the binary data item is absent, then return null.
  */
 BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNull)
@@ -447,7 +447,7 @@ BinaryXMLDecoder.prototype.readUString = function()
 };
   
 /**
- * Read a blob as well as the end element. Returns a Buffer (or null for missing blob).
+ * Read a blob as well as the end element. Returns a customBuf (or null for missing blob).
  * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
  *   just read the end element and return null.
  */

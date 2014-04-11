@@ -3,7 +3,7 @@
  * @author: Wentao Shang
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 

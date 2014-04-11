@@ -14,7 +14,7 @@ var KJUR = require('../contrib/securityLib/crypto-1.0.js')
 var RSAKey = require('../contrib/securityLib/rsasign-1.2.js')
 var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 // Factory method to create node.js compatible buffer objects
-var Buffer = function Buffer(data, format) 
+var customBuf = function customBuf(data, format) 
 {
   var obj;
 
@@ -22,7 +22,7 @@ var Buffer = function Buffer(data, format)
     obj = new Uint8Array(data);
   else if (typeof data == 'string') {
     if (format == null || format == 'utf8') {
-      var utf8 = Buffer.str2rstr_utf8(data);
+      var utf8 = customBuf.str2rstr_utf8(data);
       obj = new Uint8Array(utf8.length);
       for (var i = 0; i < utf8.length; i++)
         obj[i] = utf8.charCodeAt(i);
@@ -50,7 +50,7 @@ var Buffer = function Buffer(data, format)
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer)) {
+  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof customBuf)) {
     // The second argument is a boolean for "copy", default true.
     if (format == false)
       obj = data.subarray(0);
@@ -68,7 +68,7 @@ var Buffer = function Buffer(data, format)
     throw new Error('Buffer: unknown data type.');
 
   try {
-    obj.__proto__ = Buffer.prototype;
+    obj.__proto__ = customBuf.prototype;
   } catch(ex) {
     throw new Error("Buffer: Set obj.__proto__ exception: " + ex);
   }
@@ -110,9 +110,9 @@ var Buffer = function Buffer(data, format)
   return obj;
 };
 
-Buffer.prototype = Uint8Array.prototype;
+customBuf.prototype = Uint8Array.prototype;
 
-Buffer.concat = function(arrays) 
+customBuf.concat = function(arrays) 
 {
   var totalLength = 0;
   for (var i = 0; i < arrays.length; ++i)
@@ -127,7 +127,7 @@ Buffer.concat = function(arrays)
   return result;
 };
 
-Buffer.str2rstr_utf8 = function(input)
+customBuf.str2rstr_utf8 = function(input)
 {
   var output = "";
   var i = -1;
@@ -277,6 +277,6 @@ exports.randomBytes = function(size)
   return result;
 };
 
-exports.Buffer = Buffer;
+exports.Buffer = customBuf;
 
 module.exports = exports;

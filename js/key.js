@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  * This class represents Key Objects
  */
-
+var customBuf = require('./buffer.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -15,8 +15,8 @@ var LOG = require('./log.js').Log.LOG;
  */
 var Key = function Key() 
 {
-  this.publicKeyDer = null;     // Buffer
-  this.publicKeyDigest = null;  // Buffer
+  this.publicKeyDer = null;     // customBuf
+  this.publicKeyDigest = null;  // customBuf
   this.publicKeyPem = null;     // String
   this.privateKeyPem = null;    // String
 };
@@ -30,7 +30,7 @@ exports.Key = Key;
 
 Key.prototype.publicToDER = function() 
 {
-  return this.publicKeyDer;  // Buffer
+  return this.publicKeyDer;  // customBuf
 };
 
 Key.prototype.privateToDER = function() 

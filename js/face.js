@@ -5,6 +5,7 @@
  * This class represents the top-level object for communicating with an NDN host.
  */
 
+var customBuf = require('./buffer.js').Buffer
 var crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
@@ -79,7 +80,7 @@ Face.getSupported = function()
     var dummy = new customBuf(1).slice(0, 1);
   } 
   catch (ex) {
-    console.log("NDN not available: Buffer not supported. " + ex);
+    console.log("NDN not available: customBuf not supported. " + ex);
     return false;
   }
     

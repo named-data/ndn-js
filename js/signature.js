@@ -11,6 +11,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
+var customBuf = require('./buffer.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**
