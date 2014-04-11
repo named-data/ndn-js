@@ -1,5 +1,5 @@
 // Depends on jsbn.js and rng.js
-
+var BigInteger = require('jsbn')
 // Version 1.1: support utf-8 encoding in pkcs1pad2
 
 // convert a (hex) string to a bignum object
@@ -183,4 +183,7 @@ RSAKey.prototype.doPublic = RSADoPublic;
 RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
+
+
+module.exports = RSAKey
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
