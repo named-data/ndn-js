@@ -18,7 +18,7 @@ var TlvStructureDecoder = function TlvStructureDecoder()
   this.useHeaderBuffer = false;
   // 8 bytes is enough to hold the extended bytes in the length encoding 
   // where it is an 8-byte number.
-  this.headerBuffer = new Buffer(8);
+  this.headerBuffer = new customBuf(8);
   this.nBytesToRead = 0;
 };
 

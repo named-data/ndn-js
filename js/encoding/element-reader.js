@@ -73,7 +73,7 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       try {
         this.elementListener.onReceivedElement(element);
       } catch (ex) {
-          console.log("ElementReader: ignoring exception from onReceivedElement: " + ex);
+          console.log("ElementReader: ignoring exception from onReceivedElement: " , ex);
       }
   
       // Need to read a new object.

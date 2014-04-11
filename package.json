@@ -17,7 +17,7 @@
   "keywords": [
     "NDN"
   ],
-  "browser":{"./js/crypto.js": "./js/browserify.js", "buffer": "./js/browserify.js"},
+  "browser":{"./js/crypto.js": "./js/browserify.js", "./js/buffer.js": "./js/browserify.js"},
   "author": "UCLA",
   "license": "GPL",
   "bugs": {

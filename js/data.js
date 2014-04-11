@@ -159,7 +159,7 @@ Data.prototype.setContent = function(content)
   else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
   else 
-    this.content = new Buffer(content);
+    this.content = new customBuf(content);
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = SignedBlob();
@@ -180,14 +180,14 @@ Data.prototype.sign = function(wireFormat)
   if (this.wireEncoding == null || this.wireEncoding.isNull()) {
     // Need to encode to set wireEncoding.
     // Set an initial empty signature so that we can encode.
-    this.getSignature().setSignature(new Buffer(128));
+    this.getSignature().setSignature(new customBuf(128));
     this.wireEncode(wireFormat);
   }
   
   var rsa = require("./crypto.js").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
     
-  var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
+  var sig = new customBuf(rsa.sign(globalKeyManager.privateKey));
   this.signature.signature = sig;
 };
 

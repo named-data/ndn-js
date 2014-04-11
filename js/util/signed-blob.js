@@ -3,7 +3,7 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 var Blob = require('./blob.js').Blob;
 
 /**
@@ -11,7 +11,7 @@ var Blob = require('./blob.js').Blob;
  * bytes of Data packet). This inherits from Blob, including Blob.size and Blob.buf.
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
  * another pointer to the Buffer without copying. If value is a Buffer or byte 
- * array, copy to create a new Buffer.  If omitted, buf() will return null.
+ * array, copy to create a new customBuf.  If omitted, buf() will return null.
  * @param {number} signedPortionBeginOffset (optional) The offset in the 
  * encoding of the beginning of the signed portion. If omitted, set to 0.
  * @param {number} signedPortionEndOffset (optional) The offset in the encoding 

@@ -134,7 +134,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
   else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
     this.finalBlockID = finalBlockID.getValue();
   else 
-    this.finalBlockID = new Buffer(finalBlockID);
+    this.finalBlockID = new customBuf(finalBlockID);
 };
 
 MetaInfo.prototype.setFields = function() 

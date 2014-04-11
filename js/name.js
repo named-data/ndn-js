@@ -10,6 +10,7 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Buffer = require('./browserify.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -54,20 +55,20 @@ Name.Component = function NameComponent(value)
   if (typeof value === 'string')
     this.value = DataUtils.stringToUtf8Array(value);
   else if (typeof value === 'object' && value instanceof Name.Component)
-    this.value = new Buffer(value.value);
+    this.value = new customBuf(value.value);
   else if (typeof value === 'object' && value instanceof Blob)
-    this.value = new Buffer(value.buf());
+    this.value = new customBuf(value.buf());
   else if (typeof value === 'object' && value instanceof Buffer)
-    this.value = new Buffer(value);
+    this.value = new customBuf(value);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
     // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
-    this.value = new Buffer(new ArrayBuffer(value.byteLength));
-    this.value.set(new Buffer(value));
+    this.value = new customBuf(new ArrayBuffer(value.byteLength));
+    this.value.set(new customBuf(value));
   }
   else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
-    this.value = new Buffer(value);
+    this.value = new customBuf(value);
   else 
     throw new Error("Name.Component constructor: Invalid type");
 }
@@ -265,7 +266,7 @@ Name.prototype.appendSegment = function(segment)
 {
   var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
   // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+  var segmentNumberComponent = new customBuf(segmentNumberBigEndian.length + 1);
   segmentNumberComponent[0] = 0;
   segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
@@ -284,7 +285,7 @@ Name.prototype.appendVersion = function(version)
 {
   var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
   // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
+  var segmentNumberComponent = new customBuf(segmentNumberBigEndian.length + 1);
   segmentNumberComponent[0] = 0xfD;
   segmentNumberBigEndian.copy(segmentNumberComponent, 1);
 
@@ -389,7 +390,7 @@ Name.prototype.getComponentCount = function()
  */
 Name.prototype.getComponent = function(i) 
 {
-  return new Buffer(this.components[i].getValue());
+  return new customBuf(this.components[i].getValue());
 };
 
 /**
@@ -478,8 +479,8 @@ Name.getComponentContentDigestValue = function(component)
 };
 
 // Meta GUID "%C1.M.G%C1" + ContentDigest with a 32 byte BLOB. 
-Name.ContentDigestPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
-Name.ContentDigestSuffix = new Buffer([0x00]);
+Name.ContentDigestPrefix = new customBuf([0xc1, 0x2e, 0x4d, 0x2e, 0x47, 0xc1, 0x01, 0xaa, 0x02, 0x85]);
+Name.ContentDigestSuffix = new customBuf([0x00]);
 
 
 /**

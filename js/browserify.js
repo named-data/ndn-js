@@ -9,7 +9,6 @@ var ndn = ndn || {};
 
 var exports = ndn;
 
-console.log(Buffer)
 var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js')
 var KJUR = require('../contrib/securityLib/crypto-1.0.js')
 var RSAKey = require('../contrib/securityLib/rsasign-1.2.js')
@@ -96,9 +95,9 @@ var Buffer = function Buffer(data, format)
 
   obj.__proto__.slice = function(begin, end) {
     if (end !== undefined)
-      return new Buffer(this.subarray(begin, end), false);
+      return new customBuf(this.subarray(begin, end), false);
     else
-      return new Buffer(this.subarray(begin), false);
+      return new customBuf(this.subarray(begin), false);
   };
 
   obj.__proto__.copy = function(target, targetStart) {
@@ -119,7 +118,7 @@ Buffer.concat = function(arrays)
   for (var i = 0; i < arrays.length; ++i)
     totalLength += arrays[i].length;
     
-  var result = new Buffer(totalLength);
+  var result = new customBuf(totalLength);
   var offset = 0;
   for (var i = 0; i < arrays.length; ++i) {
     result.set(arrays[i], offset);
@@ -179,7 +178,7 @@ exports.createHash = function(alg)
   };
 
   obj.digest = function() {
-    return new Buffer(this.md.digest(), 'hex');
+    return new customBuf(this.md.digest(), 'hex');
   };
 
   return obj;
@@ -207,7 +206,7 @@ exports.createSign = function(alg)
     for (var i = 0; i < this.arr.length; ++i)
       signer.updateHex(this.arr[i].toString('hex'));
 
-    return new Buffer(signer.sign(), 'hex');
+    return new customBuf(signer.sign(), 'hex');
   };
 
   return obj;
@@ -272,13 +271,12 @@ exports.createVerify = function(alg)
 exports.randomBytes = function(size)
 {
   // TODO: Use a cryptographic random number generator.
-  var result = new Buffer(size);
+  var result = new customBuf(size);
   for (var i = 0; i < size; ++i)
     result[i] = Math.floor(Math.random() * 256);
   return result;
 };
 
 exports.Buffer = Buffer;
-console.log(Buffer)
 
 module.exports = exports;

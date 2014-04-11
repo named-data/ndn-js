@@ -6,11 +6,15 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
+var customBuf = require('../buffer.js').Buffer
+console.log(customBuf)
  
 /**
  * A DataUtils has static methods for converting data.
  * @constructor
  */
+
+
 var DataUtils = function()
 {
 };
@@ -146,7 +150,7 @@ DataUtils.prototype.toString = function(buffer)
  */
 DataUtils.prototype.toNumbers = function(str) 
 {
-  return new Buffer(str, 'hex');
+  return new customBuf(str, 'hex');
 };
 
 /**
@@ -168,7 +172,7 @@ DataUtils.prototype.hexToRawString = function(str)
  */
 DataUtils.prototype.toNumbersFromString = function(str) 
 {
-  return new Buffer(str, 'binary');
+  return new customBuf(str, 'binary');
 };
 
 /**
@@ -176,11 +180,11 @@ DataUtils.prototype.toNumbersFromString = function(str)
  */
 DataUtils.prototype.stringToUtf8Array = function(str) 
 {
-  return new Buffer(str, 'utf8');
+  return new customBuf(str, 'utf8');
 };
 
 /**
- * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
+ * arrays is an array of Buffer. Return a new customBuf which is the concatenation of all.
  */
 DataUtils.prototype.concatArrays = function(arrays) 
 {
@@ -257,17 +261,17 @@ DataUtils.prototype.bigEndianToUnsignedInt = function(bytes)
 
 /**
  * Convert the int value to a new big endian Buffer and return.
- * If value is 0 or negative, return new Buffer(0). 
+ * If value is 0 or negative, return new customBuf(0). 
  */
 DataUtils.prototype.nonNegativeIntToBigEndian = function(value) 
 {
   value = Math.round(value);
   if (value <= 0)
-    return new Buffer(0);
+    return new customBuf(0);
   
   // Assume value is not over 64 bits.
   var size = 8;
-  var result = new Buffer(size);
+  var result = new customBuf(size);
   var i = 0;
   while (value != 0) {
     ++i;

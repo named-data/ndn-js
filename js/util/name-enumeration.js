@@ -116,7 +116,7 @@ NameEnumeration.parseComponents = function(content)
     decoder.readElementStartDTag(NDNProtocolDTags.Link);    
     decoder.readElementStartDTag(NDNProtocolDTags.Name);
     
-    components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
+    components.push(new customBuf(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
     
     decoder.readElementClose();  
     decoder.readElementClose();  

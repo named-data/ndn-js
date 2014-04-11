@@ -42,7 +42,7 @@ Key.prototype.privateToDER = function()
   for (var i = 1; i < lines.length - 1; i++)
     priKey += lines[i];
   
-  return new Buffer(priKey, 'base64');    
+  return new customBuf(priKey, 'base64');    
 };
 
 Key.prototype.publicToPEM = function() 
@@ -70,7 +70,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   var hash = require("./crypto.js").createHash('sha256');
   hash.update(this.publicKeyDer);
-  this.publicKeyDigest = new Buffer(hash.digest());
+  this.publicKeyDigest = new customBuf(hash.digest());
     
   var keyStr = pub_der.toString('base64'); 
   var keyPem = "-----BEGIN PUBLIC KEY-----\n";
@@ -102,12 +102,12 @@ Key.prototype.fromPemString = function(pub, pri)
     pub = "";
     for (var i = 1; i < lines.length - 1; i++)
       pub += lines[i];
-    this.publicKeyDer = new Buffer(pub, 'base64');
+    this.publicKeyDer = new customBuf(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
   
     var hash = require("./crypto.js").createHash('sha256');
     hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(hash.digest());
+    this.publicKeyDigest = new customBuf(hash.digest());
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
   }
     

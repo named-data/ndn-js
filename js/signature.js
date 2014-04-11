@@ -87,9 +87,9 @@ Signature.prototype.setSignature = function(signature)
   if (signature == null)
     this.signature = null;
   else if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = new Buffer(signature.buf());
+    this.signature = new customBuf(signature.buf());
   else
-    this.signature = new Buffer(signature);
+    this.signature = new customBuf(signature);
 };
 
 Signature.prototype.from_ndnb = function(decoder) 

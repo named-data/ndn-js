@@ -56,7 +56,7 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
       console.log('INVALID ANSWER');
     } 
     else if (result instanceof ArrayBuffer) {
-      var bytearray = new Buffer(result);
+      var bytearray = new customBuf(result);
           
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
       

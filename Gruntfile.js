@@ -96,29 +96,14 @@ comments: {
     },
     "regex-replace": {
        ndn: { //specify a target with any name
-          src: ['build/ndn.js'],
+          src: ['js/*.js','js/**/*.js','js/**/**/*.js'],
           actions: [
             {
                 name: 'Buffer',
-                search: '( |^|[|])Buffer',
-                replace: ' internalBuf',
+                search: 'new Buffer',
+                replace: 'new customBuf',
                 flags: 'gm'
-            },{
-                name: 'Buffer export',
-                search: '[.]Buffer',
-                replace: '.internalBuf'
-            },{
-                name: 'require def',
-                search: ".*require([(]['][^c]).*",
-                replace: '',
-                flags: 'g'
-            },{
-                name: 'require def',
-                search: "require('crypto')",
-                replace: 'ndn',
-                flags: 'g'
             }
-
         ]
     }
 },

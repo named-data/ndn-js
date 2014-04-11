@@ -41,7 +41,7 @@ TcpTransport.prototype.connect = function(face, onopenCallback)
   this.socket.on('data', function(data) {      
     if (typeof data == 'object') {
       // Make a copy of data (maybe a Buffer or a String)
-      var buf = new Buffer(data);
+      var buf = new customBuf(data);
       try {
         // Find the end of the binary XML element and call face.onReceivedElement.
         self.elementReader.onReceivedData(buf);

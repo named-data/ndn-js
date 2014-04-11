@@ -37,9 +37,9 @@ var KeyLocator = function KeyLocator(input,type)
         null : new Name(input.keyName.contentName);
       this.keyName.publisherID = input.keyName.publisherID;
     }
-    this.keyData = input.keyData == null ? null : new Buffer(input.keyData);
-    this.publicKey = input.publicKey == null ? null : new Buffer(input.publicKey);
-    this.certificate = input.certificate == null ? null : new Buffer(input.certificate);
+    this.keyData = input.keyData == null ? null : new customBuf(input.keyData);
+    this.publicKey = input.publicKey == null ? null : new customBuf(input.publicKey);
+    this.certificate = input.certificate == null ? null : new customBuf(input.certificate);
   }
   else {
     this.type = type;
@@ -48,14 +48,14 @@ var KeyLocator = function KeyLocator(input,type)
     if (type == KeyLocatorType.KEYNAME)
       this.keyName = input;
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-      this.keyData = new Buffer(input);
+      this.keyData = new customBuf(input);
     else if (type == KeyLocatorType.KEY) {
-      this.keyData = new Buffer(input);
+      this.keyData = new customBuf(input);
       // Set for backwards compatibility.
       this.publicKey = this.keyData;
     }
     else if (type == KeyLocatorType.CERTIFICATE) {
-      this.keyData = new Buffer(input);
+      this.keyData = new customBuf(input);
       // Set for backwards compatibility.
       this.certificate = this.keyData;
     }
@@ -135,7 +135,7 @@ KeyLocator.prototype.setKeyData = function(keyData)
   var value = keyData;
   if (value != null)
     // Make a copy.
-    value = new Buffer(value);
+    value = new customBuf(value);
   
   this.keyData = value;
   // Set for backwards compatibility.

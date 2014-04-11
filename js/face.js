@@ -76,7 +76,7 @@ Face.CLOSED = 2;  // connection to ndnd closed
 Face.getSupported = function() 
 {
   try {
-    var dummy = new Buffer(1).slice(0, 1);
+    var dummy = new customBuf(1).slice(0, 1);
   } 
   catch (ex) {
     console.log("NDN not available: Buffer not supported. " + ex);
@@ -205,7 +205,7 @@ function getEntryForRegisteredPrefix(name)
   var iResult = -1;
   
   for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
-    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
+    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " , Face.registeredPrefixTable[i].prefix , " matches " , name);
     if (Face.registeredPrefixTable[i].prefix.match(name)) {
       if (iResult < 0 || 
           Face.registeredPrefixTable[i].prefix.size() > Face.registeredPrefixTable[iResult].prefix.size())
@@ -545,7 +545,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   // Get the digest of the public key in the data packet content.
   var hash = require("./crypto.js").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
-  this.face.ndndid = new Buffer(hash.digest());
+  this.face.ndndid = new customBuf(hash.digest());
   if (LOG > 3) console.log(this.face.ndndid);
   
   this.face.registerPrefixHelper
@@ -643,7 +643,8 @@ Face.prototype.onReceivedElement = function(element)
   //   conflict with the first byte of a binary XML packet, so we can
   //   just look at the first byte.
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
-    var decoder = new TlvDecoder (element);  
+    if (LOG > 3) console.log('Detected Tlv element', element, TlvWireFormat.get())
+    var decoder = new TlvDecoder(element);  
     if (decoder.peekType(Tlv.Interest, element.length)) {
       interest = new Interest();
       interest.wireDecode(element, TlvWireFormat.get());
@@ -654,6 +655,7 @@ Face.prototype.onReceivedElement = function(element)
     }
   }
   else {
+    if (LOG > 3) console.log('assumed BinaryXML')
     // Binary XML.
     var decoder = new BinaryXMLDecoder(element);
     if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
@@ -668,8 +670,8 @@ Face.prototype.onReceivedElement = function(element)
 
   // Now process as Interest or Data.
   if (interest !== null) {
-    if (LOG > 3) console.log('Interest packet received.');
-        
+    if (LOG > 3) console.log('Interest packet received.', interest);
+        setTimeout(function(){console.log(interest)}, 300)
     var entry = getEntryForRegisteredPrefix(interest.name);
     if (entry != null) {
       if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
