@@ -17,7 +17,11 @@
   "keywords": [
     "NDN"
   ],
-  "browser":{"./js/crypto.js": "./js/browserify.js", "./js/buffer.js": "./js/browserify.js"},
+  "browser":{
+     "./js/crypto.js": "./js/browserify.js", 
+     "./js/buffer.js": "./js/browserify.js",
+     "./js/transport/tcp-transport": "./js/browserify-tcp-transport.js"
+  },
   "author": "UCLA",
   "license": "GPL",
   "bugs": {
