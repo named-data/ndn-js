@@ -1,1 +1,1 @@
-exports.Buffer = customBuf
+exports.Buffer = Buffer
