@@ -4,6 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
+var customBuf = require('../buffer.js').Buffer
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
