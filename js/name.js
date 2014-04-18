@@ -69,6 +69,8 @@ Name.Component = function NameComponent(value)
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
     this.value = new customBuf(value);
+  else if (!value)
+    this.value = new customBuf(0);
   else 
     throw new Error("Name.Component constructor: Invalid type");
 }
