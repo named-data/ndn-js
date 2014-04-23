@@ -22,13 +22,13 @@ var customBuf = require('./buffer.js').Buffer
  * Create a new Data with the optional values.  There are 2 forms of constructor:
  * new Data([name] [, content]);
  * new Data(name, metaInfo [, content]);
- * 
+ *
  * @constructor
  * @param {Name} name
  * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, metaInfoOrContent, arg3) 
+var Data = function Data(name, metaInfoOrContent, arg3)
 {
   if (typeof name === 'string')
     this.name = new Name(name);
@@ -38,7 +38,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
 
   var metaInfo;
   var content;
-  if (typeof metaInfoOrContent === 'object' && 
+  if (typeof metaInfoOrContent === 'object' &&
       metaInfoOrContent instanceof MetaInfo) {
     metaInfo = metaInfoOrContent;
     content = arg3;
@@ -47,20 +47,20 @@ var Data = function Data(name, metaInfoOrContent, arg3)
     metaInfo = null;
     content = metaInfoOrContent;
   }
-    
+
   // Use signedInfo instead of metaInfo for backward compatibility.
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
        new MetaInfo(metaInfo) : new MetaInfo();
-  
-  if (typeof content === 'string') 
+
+  if (typeof content === 'string')
     this.content = DataUtils.toNumbersFromString(content);
   else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
-  else 
+  else
     this.content = content;
-  
+
   this.signature = new Signature();
-  
+
   this.wireEncoding = SignedBlob();
 };
 
@@ -70,7 +70,7 @@ exports.Data = Data;
  * Get the data packet's name.
  * @returns {Name} The name.
  */
-Data.prototype.getName = function() 
+Data.prototype.getName = function()
 {
   return this.name;
 };
@@ -79,7 +79,7 @@ Data.prototype.getName = function()
  * Get the data packet's meta info.
  * @returns {MetaInfo} The meta info.
  */
-Data.prototype.getMetaInfo = function() 
+Data.prototype.getMetaInfo = function()
 {
   return this.signedInfo;
 };
@@ -88,7 +88,7 @@ Data.prototype.getMetaInfo = function()
  * Get the data packet's signature object.
  * @returns {Signature} The signature object.
  */
-Data.prototype.getSignature = function() 
+Data.prototype.getSignature = function()
 {
   return this.signature;
 };
@@ -97,7 +97,7 @@ Data.prototype.getSignature = function()
  * Get the data packet's content.
  * @returns {Buffer} The content as a customBuf, which is null if unspecified.
  */
-Data.prototype.getContent = function() 
+Data.prototype.getContent = function()
 {
   return this.content;
 };
@@ -107,7 +107,7 @@ Data.prototype.getContent = function()
  * @param {Name} name The Name which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
  */
-Data.prototype.setName = function(name) 
+Data.prototype.setName = function(name)
 {
   this.name = typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name();
@@ -122,7 +122,7 @@ Data.prototype.setName = function(name)
  * @param {MetaInfo} metaInfo The MetaInfo which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
  */
-Data.prototype.setMetaInfo = function(metaInfo) 
+Data.prototype.setMetaInfo = function(metaInfo)
 {
   this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
     new MetaInfo(metaInfo) : new MetaInfo();
@@ -137,7 +137,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
  * @param {Signature} signature The signature object which is cloned.
  * @returns {Data} This Data so that you can chain calls to update values.
  */
-Data.prototype.setSignature = function(signature) 
+Data.prototype.setSignature = function(signature)
 {
   this.signature = typeof signature === 'object' && signature instanceof Signature ?
     signature.clone() : new Signature();
@@ -152,13 +152,13 @@ Data.prototype.setSignature = function(signature)
  * @param {type} content The array this is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
  */
-Data.prototype.setContent = function(content) 
+Data.prototype.setContent = function(content)
 {
-  if (typeof content === 'string') 
+  if (typeof content === 'string')
     this.content = DataUtils.toNumbersFromString(content);
   else if (typeof content === 'object' && content instanceof Blob)
     this.content = content.buf();
-  else 
+  else
     this.content = new customBuf(content);
 
   // The object has changed, so the wireEncoding is invalid.
@@ -166,32 +166,31 @@ Data.prototype.setContent = function(content)
   return this;
 };
 
-Data.prototype.sign = function(wireFormat) 
+Data.prototype.sign = function(wireFormat)
 {
   var rs = require('buffer')
   var ss = require('./crypto.js')
-  console.log(Buffer, ss, rs)
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
- 
+
   if (this.getSignatureOrMetaInfoKeyLocator() == null ||
       this.getSignatureOrMetaInfoKeyLocator().getType() == null)
     this.getMetaInfo().setFields();
-  
+
   if (this.wireEncoding == null || this.wireEncoding.isNull()) {
     // Need to encode to set wireEncoding.
     // Set an initial empty signature so that we can encode.
     this.getSignature().setSignature(new customBuf(128));
     this.wireEncode(wireFormat);
   }
-  
+
   var rsa = require("./crypto.js").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
-    
+
   var sig = new customBuf(rsa.sign(globalKeyManager.privateKey));
   this.signature.signature = sig;
 };
 
-Data.prototype.verify = function(/*Key*/ key) 
+Data.prototype.verify = function(/*Key*/ key)
 {
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
@@ -208,17 +207,17 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Encode this Data for a particular wire format.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object
  * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
-Data.prototype.wireEncode = function(wireFormat) 
+Data.prototype.wireEncode = function(wireFormat)
 {
   var wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeData(this);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
   this.wireEncoding = new SignedBlob
-    (result.encoding, result.signedPortionBeginOffset, 
+    (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
   return this.wireEncoding;
 };
@@ -226,21 +225,21 @@ Data.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Data.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
+ * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object
  * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
-Data.prototype.wireDecode = function(input, wireFormat) 
+Data.prototype.wireDecode = function(input, wireFormat)
 {
   var wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it 
+  // In the Blob constructor, set copy true, but if input is already a Blob, it
   //   won't copy.
   this.wireEncoding = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset, 
+    (new Blob(input, true), result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
 };
 
@@ -260,7 +259,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
       this.signature.getKeyLocator().getType() >= 0)
     // The application is using the key locator in the correct object.
     return this.signature.getKeyLocator();
-  
+
   if (this.signedInfo != null && this.signedInfo.locator != null &&
       this.signedInfo.locator.type != null &&
       this.signedInfo.locator.type >= 0) {
@@ -268,7 +267,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     //console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
     return this.signedInfo.locator;
   }
-  
+
   // Return the empty key locator from the Signature object if possible.
   if (this.signature != null && this.signature.getKeyLocator() != null)
     return this.signature.getKeyLocator();
@@ -282,7 +281,7 @@ var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').Binary
 /**
  * @deprecated Use BinaryXmlWireFormat.decodeData.
  */
-Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   BinaryXmlWireFormat.decodeData(this, decoder);
 };
@@ -299,7 +298,7 @@ Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
  * @deprecated Use wireEncode.  If you need binary XML, use
  * wireEncode(BinaryXmlWireFormat.get()).
  */
-Data.prototype.encode = function(wireFormat) 
+Data.prototype.encode = function(wireFormat)
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   return wireFormat.encodeData(this).buf();
@@ -309,7 +308,7 @@ Data.prototype.encode = function(wireFormat)
  * @deprecated Use wireDecode.  If you need binary XML, use
  * wireDecode(input, BinaryXmlWireFormat.get()).
  */
-Data.prototype.decode = function(input, wireFormat) 
+Data.prototype.decode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
@@ -318,10 +317,10 @@ Data.prototype.decode = function(input, wireFormat)
 /**
  * @deprecated Use new Data.
  */
-var ContentObject = function ContentObject(name, signedInfo, content) 
+var ContentObject = function ContentObject(name, signedInfo, content)
 {
   // Call the base constructor.
-  Data.call(this, name, signedInfo, content); 
+  Data.call(this, name, signedInfo, content);
 }
 
 ContentObject.prototype = new Data();

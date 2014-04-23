@@ -13,14 +13,14 @@ var LOG = require('../log.js').Log.LOG;
 
 /**
  * A ElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder or TlvStructureDecoder to detect the end of a 
- * binary XML or TLV element and calls elementListener.onReceivedElement(element) 
- * with the element.  This handles the case where a single call to 
+ * BinaryXMLStructureDecoder or TlvStructureDecoder to detect the end of a
+ * binary XML or TLV element and calls elementListener.onReceivedElement(element)
+ * with the element.  This handles the case where a single call to
  * onReceivedData may contain multiple elements.
  * @constructor
  * @param {{onReceivedElement:function}} elementListener
  */
-var ElementReader = function ElementReader(elementListener) 
+var ElementReader = function ElementReader(elementListener)
 {
   this.elementListener = elementListener;
   this.dataParts = [];
@@ -31,7 +31,7 @@ var ElementReader = function ElementReader(elementListener)
 
 exports.ElementReader = ElementReader;
 
-ElementReader.prototype.onReceivedData = function(/* customBuf */ data) 
+ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
 {
   // Process multiple objects in the data.
   while (true) {
@@ -40,7 +40,7 @@ ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
       if (data.length <= 0)
         // Wait for more data.
         return;
-      
+
       // The type codes for TLV Interest and Data packets are chosen to not
       //   conflict with the first byte of a binary XML packet, so we can
       //   just look at the first byte.
@@ -65,7 +65,7 @@ ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
       gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
       offset = this.binaryXmlStructureDecoder.offset;
     }
-    
+
     if (gotElementEnd) {
       // Got the remainder of an object.  Report to the caller.
       this.dataParts.push(data.slice(0, offset));
@@ -76,7 +76,7 @@ ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
       } catch (ex) {
           console.log("ElementReader: ignoring exception from onReceivedElement: " , ex);
       }
-  
+
       // Need to read a new object.
       data = data.slice(offset, data.length);
       this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
@@ -84,7 +84,7 @@ ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
       if (data.length == 0)
         // No more data in the packet.
         return;
-      
+
       // else loop back to decode.
     }
     else {
@@ -93,5 +93,5 @@ ElementReader.prototype.onReceivedData = function(/* customBuf */ data)
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
         return;
     }
-  }    
+  }
 };
