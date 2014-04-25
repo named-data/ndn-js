@@ -84,7 +84,7 @@ TcpTransport.prototype.connect = function(face, onopenCallback)
  */
 TcpTransport.prototype.send = function(/*Buffer*/ data)
 {
-  console.log("sending data over socke")
+  console.log("sending data over socket", data)
   if (this.sock_ready)
     this.socket.write(data);
   else
