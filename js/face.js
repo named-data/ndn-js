@@ -265,10 +265,23 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
-    if (arg3)
-      this.expressInterestWithClosure(interestOrName, arg2, arg3);
+    // The first argument is a name. Make the interest from the name and possible template.
+    interest = new Interest(interestOrName);
+    if (arg3) {
+      var template = arg3;
+      interest.minSuffixComponents = template.minSuffixComponents;
+      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+      interest.exclude = template.exclude;
+      interest.childSelector = template.childSelector;
+      interest.answerOriginKind = template.answerOriginKind;
+      interest.scope = template.scope;
+      interest.interestLifetime = template.interestLifetime;    
+    }
     else
-      this.expressInterestWithClosure(interestOrName, arg2);
+      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+
+    this.expressInterestWithClosure(interest, arg2);
     return;
   }
   
@@ -340,30 +353,16 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
 };
 
 /**
- * A private method to encode name as an Interest and send the it to host:port, read the entire response and call
+ * A private method to send the the interest to host:port, read the entire response and call
  * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
  *                 new UpcallInfo(this, interest, 0, data)). 
  * @deprecated Use expressInterest with callback functions, not Closure.
- * @param {Name} name Encode name as an Interest using the template (if supplied).
+ * @param {Interest} the interest, already processed with a template (if supplied).
  * @param {Closure} closure
- * @param {Interest} template If not null, use its attributes.
  */
-Face.prototype.expressInterestWithClosure = function(name, closure, template) 
+Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
-  var interest = new Interest(name);
-  if (template != null) {
-    interest.minSuffixComponents = template.minSuffixComponents;
-    interest.maxSuffixComponents = template.maxSuffixComponents;
-    interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-    interest.exclude = template.exclude;
-    interest.childSelector = template.childSelector;
-    interest.answerOriginKind = template.answerOriginKind;
-    interest.scope = template.scope;
-    interest.interestLifetime = template.interestLifetime;
-  }
-  else
-    interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
-  
+  console.log("debug interest " + interest.toUri());
   if (this.host == null || this.port == null) {
     if (this.getHostAndPort == null)
       console.log('ERROR: host OR port NOT SET');
