@@ -314,7 +314,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 
   // Make a Closure from the callbacks so we can use expressInterestWithClosure.
   // TODO: Convert the PIT to use callbacks, not a closure.
-  this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
+  this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout), interest);
 }
 
 Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
@@ -360,7 +360,7 @@ Face.prototype.expressInterestWithClosure = function(name, closure, template)
     interest.childSelector = template.childSelector;
     interest.answerOriginKind = template.answerOriginKind;
     interest.scope = template.scope;
-    interest.interestLifetime = template.interestLifetime;
+    interest.interestLifetime = template.interestLifetime || 4000;
   }
   else
     interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
@@ -671,7 +671,7 @@ Face.prototype.onReceivedElement = function(element)
 
   // Now process as Interest or Data.
   if (interest !== null) {
-    if (LOG > 3) console.log('Interest packet received.', interest);
+    if (LOG > 3) console.log('Interest packet received.');
     var entry = getEntryForRegisteredPrefix(interest.name);
     if (entry != null) {
       if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
