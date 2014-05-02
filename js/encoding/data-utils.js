@@ -172,6 +172,20 @@ DataUtils.toNumbersFromString = function(str)
 };
 
 /**
+ * If value is a string, then interpret it as a raw string and convert to
+ * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
+ * @param {string|any} value
+ * @returns {Buffer}
+ */
+DataUtils.toNumbersIfString = function(value) 
+{
+  if (typeof value === 'string')
+    return new Buffer(value, 'binary');
+  else
+    return value;
+};
+
+/**
  * Encode str as utf8 and return as Buffer.
  */
 DataUtils.stringToUtf8Array = function(str) 
