@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-04-18)
+Interim changes since NDN-JS v0.3 (2014-04-28)
 ----------------------------------------------
 
 Changes
@@ -10,6 +10,7 @@ Changes
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
 * http://redmine.named-data.net/issues/1339 Fix FinalBlockID TLV encoding.
+* http://redmine.named-data.net/issues/1549 expressInterest overwrites interestLifetime.
 * For TLV packets over UDP, ignore packets starting with 0x80.
 * Fix bug for signing old format Binary XML data packets (after adding TLV code).
 * Fix bug for generating a random nonce on Ubuntu.
