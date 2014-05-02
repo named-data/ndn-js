@@ -544,7 +544,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   // Get the digest of the public key in the data packet content.
   var hash = require("crypto").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
-  this.face.ndndid = new Buffer(hash.digest());
+  this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
   
   this.face.registerPrefixHelper

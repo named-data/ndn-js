@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-04-28)
+Interim changes since NDN-JS v0.3 (2014-05-02)
 ----------------------------------------------
 
 Changes
@@ -14,6 +14,7 @@ Bug fixes
 * For TLV packets over UDP, ignore packets starting with 0x80.
 * Fix bug for signing old format Binary XML data packets (after adding TLV code).
 * Fix bug for generating a random nonce on Ubuntu.
+* Fix bug for generating a hash on older versions of Node-js.
 
 NDN-JS v0.3 (2014-02-27)
 ------------------------

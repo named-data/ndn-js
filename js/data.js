@@ -184,7 +184,8 @@ Data.prototype.sign = function(wireFormat)
   var rsa = require("crypto").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
     
-  var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
+  var sig = new Buffer
+    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
   this.signature.signature = sig;
 };
 
