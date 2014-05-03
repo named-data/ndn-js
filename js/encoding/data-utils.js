@@ -138,7 +138,7 @@ DataUtils.stringToHex = function(args)
  */
 DataUtils.toString = function(buffer) 
 {
-  return buffer.toString();
+  return buffer.toString('binary');
 };
 
 /**
