@@ -362,7 +362,6 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
-  console.log("debug interest " + interest.toUri());
   if (this.host == null || this.port == null) {
     if (this.getHostAndPort == null)
       console.log('ERROR: host OR port NOT SET');
