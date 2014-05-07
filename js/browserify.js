@@ -72,7 +72,7 @@ var Buffer = function Buffer(data, format)
   }
 
   obj.__proto__.toString = function(encoding) {
-    if (encoding == null) {
+    if (encoding == null || encoding == 'binary') {
       var ret = "";
       for (var i = 0; i < this.length; i++)
         ret += String.fromCharCode(this[i]);

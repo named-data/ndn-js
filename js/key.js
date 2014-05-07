@@ -5,6 +5,7 @@
  * This class represents Key Objects
  */
 
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -70,7 +71,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   var hash = require("crypto").createHash('sha256');
   hash.update(this.publicKeyDer);
-  this.publicKeyDigest = new Buffer(hash.digest());
+  this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     
   var keyStr = pub_der.toString('base64'); 
   var keyPem = "-----BEGIN PUBLIC KEY-----\n";
@@ -107,7 +108,7 @@ Key.prototype.fromPemString = function(pub, pri)
   
     var hash = require("crypto").createHash('sha256');
     hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(hash.digest());
+    this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
   }
     

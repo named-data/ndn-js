@@ -72,7 +72,7 @@ var Buffer = function Buffer(data, format)
   }
 
   obj.__proto__.toString = function(encoding) {
-    if (encoding == null) {
+    if (encoding == null || encoding == 'binary') {
       var ret = "";
       for (var i = 0; i < this.length; i++)
         ret += String.fromCharCode(this[i]);
@@ -5328,7 +5328,7 @@ DataUtils.stringToHex = function(args)
  */
 DataUtils.toString = function(buffer) 
 {
-  return buffer.toString();
+  return buffer.toString('binary');
 };
 
 /**
@@ -5359,6 +5359,20 @@ DataUtils.hexToRawString = function(str)
 DataUtils.toNumbersFromString = function(str) 
 {
   return new Buffer(str, 'binary');
+};
+
+/**
+ * If value is a string, then interpret it as a raw string and convert to
+ * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
+ * @param {string|any} value
+ * @returns {Buffer}
+ */
+DataUtils.toNumbersIfString = function(value) 
+{
+  if (typeof value === 'string')
+    return new Buffer(value, 'binary');
+  else
+    return value;
 };
 
 /**
@@ -8536,6 +8550,8 @@ Name.Component = function NameComponent(value)
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
     this.value = new Buffer(value);
+  else if (!value)
+    this.value = new Buffer(0);
   else 
     throw new Error("Name.Component constructor: Invalid type");
 }
@@ -9043,6 +9059,7 @@ Name.prototype.match = function(name)
  * This class represents Key Objects
  */
 
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -9108,7 +9125,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   var hash = require("crypto").createHash('sha256');
   hash.update(this.publicKeyDer);
-  this.publicKeyDigest = new Buffer(hash.digest());
+  this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     
   var keyStr = pub_der.toString('base64'); 
   var keyPem = "-----BEGIN PUBLIC KEY-----\n";
@@ -9145,7 +9162,7 @@ Key.prototype.fromPemString = function(pub, pri)
   
     var hash = require("crypto").createHash('sha256');
     hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(hash.digest());
+    this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
   }
     
@@ -10142,21 +10159,34 @@ Data.prototype.sign = function(wireFormat)
   var rsa = require("crypto").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
     
-  var sig = new Buffer(rsa.sign(globalKeyManager.privateKey));
+  var sig = new Buffer
+    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
   this.signature.signature = sig;
 };
 
+// The first time verify is called, it sets this to determine if a signature
+//   buffer needs to be converted to a string for the crypto verifier.
+Data.verifyUsesString = null;
 Data.prototype.verify = function(/*Key*/ key) 
 {
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
+
+  if (Data.verifyUsesString == null) {
+    var hashResult = require("crypto").createHash('sha256').digest();
+    // If the has result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    Data.verifyUsesString = (typeof hashResult === 'string');
+  }
 
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
-  return verifier.verify(key.publicKeyPem, this.signature.signature);
+  var signatureBytes = Data.verifyUsesString ? 
+    DataUtils.toString(this.signature.signature) : this.signature.signature;
+  return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
@@ -12689,10 +12719,23 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
-    if (arg3)
-      this.expressInterestWithClosure(interestOrName, arg2, arg3);
+    // The first argument is a name. Make the interest from the name and possible template.
+    interest = new Interest(interestOrName);
+    if (arg3) {
+      var template = arg3;
+      interest.minSuffixComponents = template.minSuffixComponents;
+      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
+      interest.exclude = template.exclude;
+      interest.childSelector = template.childSelector;
+      interest.answerOriginKind = template.answerOriginKind;
+      interest.scope = template.scope;
+      interest.interestLifetime = template.interestLifetime;    
+    }
     else
-      this.expressInterestWithClosure(interestOrName, arg2);
+      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+
+    this.expressInterestWithClosure(interest, arg2);
     return;
   }
   
@@ -12764,30 +12807,16 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
 };
 
 /**
- * A private method to encode name as an Interest and send the it to host:port, read the entire response and call
+ * A private method to send the the interest to host:port, read the entire response and call
  * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
  *                 new UpcallInfo(this, interest, 0, data)). 
  * @deprecated Use expressInterest with callback functions, not Closure.
- * @param {Name} name Encode name as an Interest using the template (if supplied).
+ * @param {Interest} the interest, already processed with a template (if supplied).
  * @param {Closure} closure
- * @param {Interest} template If not null, use its attributes.
  */
-Face.prototype.expressInterestWithClosure = function(name, closure, template) 
+Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
-  var interest = new Interest(name);
-  if (template != null) {
-    interest.minSuffixComponents = template.minSuffixComponents;
-    interest.maxSuffixComponents = template.maxSuffixComponents;
-    interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-    interest.exclude = template.exclude;
-    interest.childSelector = template.childSelector;
-    interest.answerOriginKind = template.answerOriginKind;
-    interest.scope = template.scope;
-    interest.interestLifetime = template.interestLifetime;
-  }
-  else
-    interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
-  
+  console.log("debug interest " + interest.toUri());
   if (this.host == null || this.port == null) {
     if (this.getHostAndPort == null)
       console.log('ERROR: host OR port NOT SET');
@@ -12969,7 +12998,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   // Get the digest of the public key in the data packet content.
   var hash = require("crypto").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
-  this.face.ndndid = new Buffer(hash.digest());
+  this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
   
   this.face.registerPrefixHelper

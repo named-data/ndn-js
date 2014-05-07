@@ -138,7 +138,7 @@ DataUtils.stringToHex = function(args)
  */
 DataUtils.toString = function(buffer) 
 {
-  return buffer.toString();
+  return buffer.toString('binary');
 };
 
 /**
@@ -169,6 +169,20 @@ DataUtils.hexToRawString = function(str)
 DataUtils.toNumbersFromString = function(str) 
 {
   return new Buffer(str, 'binary');
+};
+
+/**
+ * If value is a string, then interpret it as a raw string and convert to
+ * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
+ * @param {string|any} value
+ * @returns {Buffer}
+ */
+DataUtils.toNumbersIfString = function(value) 
+{
+  if (typeof value === 'string')
+    return new Buffer(value, 'binary');
+  else
+    return value;
 };
 
 /**
