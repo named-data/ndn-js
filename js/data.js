@@ -186,21 +186,34 @@ Data.prototype.sign = function(wireFormat)
   var rsa = require("./crypto.js").createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
 
-  var sig = new customBuf(rsa.sign(globalKeyManager.privateKey));
+  var sig = new customBuf
+    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
   this.signature.signature = sig;
 };
 
+// The first time verify is called, it sets this to determine if a signature
+//   buffer needs to be converted to a string for the crypto verifier.
+Data.verifyUsesString = null;
 Data.prototype.verify = function(/*Key*/ key)
 {
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
+
+  if (Data.verifyUsesString == null) {
+    var hashResult = require("crypto").createHash('sha256').digest();
+    // If the has result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    Data.verifyUsesString = (typeof hashResult === 'string');
+  }
 
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
   var verifier = require('./crypto.js').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
-  return verifier.verify(key.publicKeyPem, this.signature.signature);
+  var signatureBytes = Data.verifyUsesString ?
+    DataUtils.toString(this.signature.signature) : this.signature.signature;
+  return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };

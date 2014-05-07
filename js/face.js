@@ -277,7 +277,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       interest.childSelector = template.childSelector;
       interest.answerOriginKind = template.answerOriginKind;
       interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;    
+      interest.interestLifetime = template.interestLifetime;
     }
     else
       interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
@@ -361,7 +361,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  * @param {Interest} the interest, already processed with a template (if supplied).
  * @param {Closure} closure
  */
-Face.prototype.expressInterestWithClosure = function(interest, closure) 
+Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
   console.log("debug interest " + interest.toUri());
   if (this.host == null || this.port == null) {
@@ -545,7 +545,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   // Get the digest of the public key in the data packet content.
   var hash = require("./crypto.js").createHash('sha256');
   hash.update(upcallInfo.data.getContent());
-  this.face.ndndid = new customBuf(hash.digest());
+  this.face.ndndid = new customBuf(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
 
   this.face.registerPrefixHelper

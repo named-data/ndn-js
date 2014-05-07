@@ -141,7 +141,7 @@ DataUtils.prototype.stringToHex = function(args)
  */
 DataUtils.prototype.toString = function(buffer)
 {
-  return buffer.toString();
+  return buffer.toString('binary');
 };
 
 /**
@@ -176,6 +176,21 @@ DataUtils.prototype.toNumbersFromString = function(str)
 
 /**
  * Encode str as utf8 and return as customBuf.
+ * If value is a string, then interpret it as a raw string and convert to
+ * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
+ * @param {string|any} value
+ * @returns {Buffer}
+ */
+DataUtils.prototype.toNumbersIfString = function(value)
+{
+  if (typeof value === 'string')
+    return new customBuf(value, 'binary');
+  else
+    return value;
+};
+
+/**
+ * Encode str as utf8 and return as Buffer.
  */
 DataUtils.prototype.stringToUtf8Array = function(str)
 {
