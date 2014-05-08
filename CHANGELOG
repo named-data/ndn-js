@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-05-02)
+Interim changes since NDN-JS v0.3 (2014-05-08)
 ----------------------------------------------
 
 Changes
@@ -16,6 +16,7 @@ Bug fixes
 * Fix bug for generating a random nonce on Ubuntu.
 * Fix bug for generating a hash on older versions of Node-js.
 * Fix bug in DataUtils.toString: Need to call Buffer.toString('binary').
+* Fix bug for encoding/decoding the TLV Interest PublisherPublicKeyLocator.
 
 NDN-JS v0.3 (2014-02-27)
 ------------------------
