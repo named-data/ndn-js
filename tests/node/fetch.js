@@ -1,7 +1,5 @@
 var Face = require('../..').Face;
 var Name = require('../..').Name;
-var Interest = require('../..').Interest;
-var Closure = require('../..').Closure;
 var EncodingUtils = require('../..').EncodingUtils;
 
 var onData = function(interest, data) {
@@ -22,8 +20,6 @@ var onTimeout = function(interest) {
 };
 
 var face = new Face();
-var name = new Name('/');
-var template = new Interest();
-template.interestLifetime = 4000;
-face.expressInterest(name, template, onData, onTimeout);
-console.log('Interest expressed.');
+var name = new Name("/");
+console.log("Express name " + name.toUri());
+face.expressInterest(name, onData, onTimeout);

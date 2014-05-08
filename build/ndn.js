@@ -10420,8 +10420,11 @@ Face.prototype.expressInterestWithClosure = function(name, closure, template)
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
+<<<<<<< HEAD
   console.log("debug interest " + interest.toUri());
 >>>>>>> 6e8949611133ba85a3a0e09dfdde3367a89c6977
+=======
+>>>>>>> f61ea2c619ab5eca449f47e54589b2e5c340acc2
   if (this.host == null || this.port == null) {
     if (this.getHostAndPort == null)
       console.log('ERROR: host OR port NOT SET');
