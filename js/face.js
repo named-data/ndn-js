@@ -21,6 +21,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;
@@ -604,11 +605,14 @@ Face.prototype.registerPrefixHelper = function
   fe.to_ndnb(encoder);
   var bytes = encoder.getReducedOstream();
     
-  var si = new MetaInfo();
-  si.setFields();
+  var metaInfo = new MetaInfo();
+  metaInfo.setFields();
+  // Since we encode the register prefix message as BinaryXml, use the full
+  //   public key in the key locator to make the legacy NDNx happy.
+  metaInfo.locator.setType(KeyLocatorType.KEY);
+  metaInfo.locator.setKeyData(globalKeyManager.getKey().publicToDER());
     
-  // Set the name to a random value so that each request is unique.
-  var data = new Data(new Name().append(require("crypto").randomBytes(4)), si, bytes); 
+  var data = new Data(new Name(), metaInfo, bytes); 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   data.sign(BinaryXmlWireFormat.get());
   var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
