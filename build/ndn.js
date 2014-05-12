@@ -9623,7 +9623,8 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
     Tlv0_1a2WireFormat.encodeExclude(interest.getExclude(), encoder);
   
   if (interest.getKeyLocator().getType() != null)
-    Tlv0_1a2WireFormat.encodeKeyLocator(interest.getKeyLocator(), encoder);
+    Tlv0_1a2WireFormat.encodeKeyLocator
+      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
   else {
     
     
@@ -9634,7 +9635,8 @@ Tlv0_1a2WireFormat.encodeSelectors = function(interest, encoder)
         (Tlv.KeyLocatorDigest, 
          interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
       encoder.writeTypeAndLength
-        (Tlv.KeyLocator, encoder.getLength() - savePublisherPublicKeyDigestLength);
+        (Tlv.PublisherPublicKeyLocator, 
+         encoder.getLength() - savePublisherPublicKeyDigestLength);
     }
   }
   
@@ -9659,8 +9661,9 @@ Tlv0_1a2WireFormat.decodeSelectors = function(interest, decoder)
 
   
   interest.publisherPublicKeyDigest = null;
-  if (decoder.peekType(Tlv.KeyLocator, endOffset)) {
-    Tlv0_1a2WireFormat.decodeKeyLocator(interest.getKeyLocator(), decoder);
+  if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset)) {
+    Tlv0_1a2WireFormat.decodeKeyLocator
+      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
     if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
       
       interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
@@ -9719,7 +9722,7 @@ Tlv0_1a2WireFormat.decodeExclude = function(exclude, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1a2WireFormat.encodeKeyLocator = function(keyLocator, encoder)
+Tlv0_1a2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -9734,12 +9737,13 @@ Tlv0_1a2WireFormat.encodeKeyLocator = function(keyLocator, encoder)
       throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
   }
   
-  encoder.writeTypeAndLength(Tlv.KeyLocator, encoder.getLength() - saveLength);
+  encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
-Tlv0_1a2WireFormat.decodeKeyLocator = function(keyLocator, decoder)
+Tlv0_1a2WireFormat.decodeKeyLocator = function
+  (expectedType, keyLocator, decoder)
 {
-  var endOffset = decoder.readNestedTlvsStart(Tlv.KeyLocator);
+  var endOffset = decoder.readNestedTlvsStart(expectedType);
 
   keyLocator.clear();
 
@@ -9770,8 +9774,13 @@ Tlv0_1a2WireFormat.encodeSignatureSha256WithRsaValue = function
 {
   var saveLength = encoder.getLength();
 
+<<<<<<< HEAD
   
   Tlv0_1a2WireFormat.encodeKeyLocator(keyLocator, encoder);
+=======
+  // Encode backwards.
+  Tlv0_1a2WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+>>>>>>> 711b51b33c791ac82292f42a9dfca7f3dd320a13
   encoder.writeNonNegativeIntegerTlv
     (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
 
@@ -9793,7 +9802,7 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
       
       var signatureInfo = data.getSignature();
       Tlv0_1a2WireFormat.decodeKeyLocator
-        (signatureInfo.getKeyLocator(), decoder);
+        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else
       throw new DecodingException
