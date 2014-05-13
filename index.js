@@ -27,4 +27,4 @@ exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumerati
 exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
 exports.globalKeyManager = require('./js/security/key-manager.js').globalKeyManager;
 exports.ElementReader = require('./js/encoding/element-reader.js').ElementReader;
-exports.customBuffer = require('./js/browserify.js').Buffer
+exports.customBuffer = require('./js/buffer.js').Buffer
