@@ -16,7 +16,6 @@ var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 // Factory method to create node.js compatible buffer objects
 var customBuf = function customBuf(data, format)
 {
-  console.log("creating custom Buffer")
   var obj;
 
   if (typeof data == 'number')
