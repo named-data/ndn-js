@@ -123,7 +123,7 @@ def build (bld):
                  "js/forwarding-entry.js",
                  "js/forwarding-flags.js",
                  "js/encoding/binary-xml-wire-format.js",
-                 "js/encoding/tlv-0_1a2-wire-format.js",
+                 "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
                  "js/encoding/encoding-utils.js",
                  "js/face.js"]

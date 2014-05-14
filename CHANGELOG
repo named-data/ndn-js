@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-05-08)
+Interim changes since NDN-JS v0.3 (2014-05-14)
 ----------------------------------------------
 
 Changes
@@ -6,6 +6,7 @@ Changes
 * In the Firefox add-on, by default connect on port 6363 to a random testbed hub.
 * In Name, added method appendVersion.
 * Added a default Name.Component constructor to create a zero-length value.
+* Renamed internal class Tlv1_0a2WireFormat to Tlv0_1WireFormat.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
