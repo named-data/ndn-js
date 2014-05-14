@@ -24,7 +24,9 @@
 //   removing PEM header, PEM footer and space characters including
 //   new lines from PEM formatted RSA private key string.
 //
-
+var ASN1HEX = require('./asn1hex-1.1.js')
+var b64tohex = require('./base64.js').b64tohex
+var RSAKey = require('./rsa2.js')
 /**
  * @fileOverview
  * @name rsapem-1.1.js
@@ -100,3 +102,5 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
 RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN1HexString;
+
+module.exports = RSAKey

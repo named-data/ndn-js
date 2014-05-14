@@ -4,9 +4,8 @@ code.google.com/p/crypto-js
 (c) 2009-2013 by Jeff Mott. All rights reserved.
 code.google.com/p/crypto-js/wiki/License
 */
-(function (Math) {
     // Shortcuts
-    var C = CryptoJS;
+    var C = require('./core.js');
     var C_lib = C.lib;
     var WordArray = C_lib.WordArray;
     var Hasher = C_lib.Hasher;
@@ -182,4 +181,5 @@ code.google.com/p/crypto-js/wiki/License
      *     var hmac = CryptoJS.HmacSHA256(message, key);
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
-}(Math));
+
+module.exports = C

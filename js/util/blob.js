@@ -3,19 +3,19 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 /**
- * A Blob holds an immutable byte array implemented as a Buffer.  This should be 
+ * A Blob holds an immutable byte array implemented as a customBuf.  This should be 
  * treated like a string which is a pointer to an immutable string. (It is OK to 
  * pass a pointer to the string because the new owner can’t change the bytes of 
- * the string.)  Blob does not inherit from Buffer. Instead you must call buf() 
+ * the string.)  Blob does not inherit from customBuf. Instead you must call buf() 
  * to get the byte array which reminds you that you should not change the 
  * contents.  Also remember that buf() can return null.
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
- * another pointer to the Buffer without copying. If value is a Buffer or byte 
- * array, copy to create a new Buffer.  If omitted, buf() will return null.
+ * another pointer to the customBuf without copying. If value is a customBuf or byte 
+ * array, copy to create a new customBuf.  If omitted, buf() will return null.
  * @param {boolean} copy (optional) (optional) If true, copy the contents of 
- * value into a new Buffer.  If false, just use the existing value without 
+ * value into a new customBuf.  If false, just use the existing value without 
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
  * treat the value as immutable and promise not to change it.
@@ -33,18 +33,18 @@ var Blob = function Blob(value, copy)
   else {
     if (typeof value === 'string')
       // Convert from a string to utf-8 byte encoding.
-      this.buffer = new Buffer(value, 'utf8');
+      this.buffer = new customBuf(value, 'utf8');
     else {
       if (copy)
-        // We are copying, so just make another Buffer.
-        this.buffer = new Buffer(value);
+        // We are copying, so just make another customBuf.
+        this.buffer = new customBuf(value);
       else {
-        if (typeof value === 'object' && value instanceof Buffer)
+        if (typeof value === 'object' && value instanceof customBuf)
           // We can use as-is.
           this.buffer = value;
         else
-          // We need a Buffer, so copy.
-          this.buffer = new Buffer(value);
+          // We need a customBuf, so copy.
+          this.buffer = new customBuf(value);
       }
     }
   }
@@ -65,9 +65,9 @@ Blob.prototype.size = function()
 };
 
 /**
- * Return the immutable byte array.  DO NOT change the contents of the Buffer.  
+ * Return the immutable byte array.  DO NOT change the contents of the customBuf.  
  * If you need to change it, make a copy.
- * @returns {Buffer} The Buffer holding the immutable byte array, or null.
+ * @returns {Buffer} The customBuf holding the immutable byte array, or null.
  */
 Blob.prototype.buf = function()
 {

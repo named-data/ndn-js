@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  */
 
-var crypto = require('crypto');
+var crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -36,7 +36,7 @@ exports.Tlv0_1a2WireFormat = Tlv0_1a2WireFormat;
 Tlv0_1a2WireFormat.instance = null;
 
 /**
- * Encode the interest using NDN-TLV and return a Buffer.
+ * Encode the interest using NDN-TLV and return a customBuf.
  * @param {Interest} interest The Interest object to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
@@ -53,9 +53,9 @@ Tlv0_1a2WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce() == null || interest.getNonce().length == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, require("../crypto.js").randomBytes(4));
   else if (interest.getNonce().length < 4) {
-    var nonce = Buffer(4);
+    var nonce = customBuf(4);
     // Copy existing nonce bytes.
     interest.getNonce().copy(nonce);
 
@@ -411,7 +411,9 @@ Tlv0_1a2WireFormat.decodeSignatureInfo = function(data, decoder)
   // TODO: The library needs to handle other signature types than 
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(Signature());
+      var signature = {}
+      signature.sig = Signature
+      data.setSignature(signature.sig());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();
@@ -430,7 +432,7 @@ Tlv0_1a2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // TODO: finalBlockID should be a Name.Component, not customBuf.
   var finalBlockIdBuf = metaInfo.getFinalBlockID();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.

@@ -106,7 +106,7 @@ EncodingUtils.decodeHexForwardingEntry = function(result)
 };
 
 /**
- * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
+ * Decode the customBuf array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
 EncodingUtils.decodeSubjectPublicKeyInfo = function(array) 
 {

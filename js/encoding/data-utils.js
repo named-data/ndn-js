@@ -6,32 +6,35 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
- 
+var customBuf = require('../buffer.js').Buffer
+
 /**
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils() 
+
+
+var DataUtils = function()
 {
 };
 
-exports.DataUtils = DataUtils;
+exports.DataUtils = new DataUtils();
 
 /*
  * NOTE THIS IS CURRENTLY NOT BEING USED
- * 
+ *
  */
 
-DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
+DataUtils.prototype.keyStr = "ABCDEFGHIJKLMNOP" +
                    "QRSTUVWXYZabcdef" +
                    "ghijklmnopqrstuv" +
                    "wxyz0123456789+/" +
                    "=";
-               
+
 /**
  * Raw String to Base 64
  */
-DataUtils.stringtoBase64 = function stringtoBase64(input) 
+DataUtils.prototype.stringtoBase64 = function stringtoBase64(input)
 {
    //input = escape(input);
    var output = "";
@@ -67,9 +70,9 @@ DataUtils.stringtoBase64 = function stringtoBase64(input)
 };
 
 /**
- * Base 64 to Raw String 
+ * Base 64 to Raw String
  */
-DataUtils.base64toString = function base64toString(input) 
+DataUtils.prototype.base64toString = function base64toString(input)
 {
   var output = "";
   var chr1, chr2, chr3 = "";
@@ -84,7 +87,7 @@ DataUtils.base64toString = function base64toString(input)
           "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
           "Expect errors in decoding.");
   }
-  
+
   input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
   do {
@@ -113,9 +116,9 @@ DataUtils.base64toString = function base64toString(input)
 };
 
 /**
- * Buffer to Hex String
+ * customBuf to Hex String
  */
-DataUtils.toHex = function(buffer) 
+DataUtils.prototype.toHex = function(buffer)
 {
   return buffer.toString('hex');
 };
@@ -123,7 +126,7 @@ DataUtils.toHex = function(buffer)
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(args) 
+DataUtils.prototype.stringToHex = function(args)
 {
   var ret = "";
   for (var i = 0; i < args.length; ++i) {
@@ -134,25 +137,25 @@ DataUtils.stringToHex = function(args)
 };
 
 /**
- * Buffer to raw string.
+ * customBuf to raw string.
  */
-DataUtils.toString = function(buffer) 
+DataUtils.prototype.toString = function(buffer)
 {
   return buffer.toString('binary');
 };
 
 /**
- * Hex String to Buffer.
+ * Hex String to customBuf.
  */
-DataUtils.toNumbers = function(str) 
+DataUtils.prototype.toNumbers = function(str)
 {
-  return new Buffer(str, 'hex');
+  return new customBuf(str, 'hex');
 };
 
 /**
  * Hex String to raw string.
  */
-DataUtils.hexToRawString = function(str) 
+DataUtils.prototype.hexToRawString = function(str)
 {
   if (typeof str =='string') {
   var ret = "";
@@ -164,23 +167,24 @@ DataUtils.hexToRawString = function(str)
 };
 
 /**
- * Raw String to Buffer.
+ * Raw String to customBuf.
  */
-DataUtils.toNumbersFromString = function(str) 
+DataUtils.prototype.toNumbersFromString = function(str)
 {
-  return new Buffer(str, 'binary');
+  return new customBuf(str, 'binary');
 };
 
 /**
+ * Encode str as utf8 and return as customBuf.
  * If value is a string, then interpret it as a raw string and convert to
  * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
  * @param {string|any} value
  * @returns {Buffer}
  */
-DataUtils.toNumbersIfString = function(value) 
+DataUtils.prototype.toNumbersIfString = function(value)
 {
   if (typeof value === 'string')
-    return new Buffer(value, 'binary');
+    return new customBuf(value, 'binary');
   else
     return value;
 };
@@ -188,31 +192,31 @@ DataUtils.toNumbersIfString = function(value)
 /**
  * Encode str as utf8 and return as Buffer.
  */
-DataUtils.stringToUtf8Array = function(str) 
+DataUtils.prototype.stringToUtf8Array = function(str)
 {
-  return new Buffer(str, 'utf8');
+  return new customBuf(str, 'utf8');
 };
 
 /**
- * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
+ * arrays is an array of customBuf. Return a new customBuf which is the concatenation of all.
  */
-DataUtils.concatArrays = function(arrays) 
+DataUtils.prototype.concatArrays = function(arrays)
 {
-  return Buffer.concat(arrays);
+  return customBuf.concat(arrays);
 };
- 
-// TODO: Take Buffer and use TextDecoder when available.
-DataUtils.decodeUtf8 = function(utftext) 
+
+// TODO: Take customBuf and use TextDecoder when available.
+DataUtils.prototype.decodeUtf8 = function(utftext)
 {
   var string = "";
   var i = 0;
   var c = 0;
     var c1 = 0;
     var c2 = 0;
- 
+
   while (i < utftext.length) {
     c = utftext.charCodeAt(i);
- 
+
     if (c < 128) {
       string += String.fromCharCode(c);
       i++;
@@ -229,24 +233,24 @@ DataUtils.decodeUtf8 = function(utftext)
       i += 3;
     }
   }
- 
+
   return string;
 };
 
 /**
  * Return true if a1 and a2 are the same length with equal elements.
  */
-DataUtils.arraysEqual = function(a1, a2) 
+DataUtils.prototype.arraysEqual = function(a1, a2)
 {
   // A simple sanity check that it is an array.
   if (!a1.slice)
     throw new Error("DataUtils.arraysEqual: a1 is not an array");
   if (!a2.slice)
     throw new Error("DataUtils.arraysEqual: a2 is not an array");
-    
+
   if (a1.length != a2.length)
     return false;
-  
+
   for (var i = 0; i < a1.length; ++i) {
     if (a1[i] != a2[i])
       return false;
@@ -256,10 +260,10 @@ DataUtils.arraysEqual = function(a1, a2)
 };
 
 /**
- * Convert the big endian Buffer to an unsigned int.
+ * Convert the big endian customBuf to an unsigned int.
  * Don't check for overflow.
  */
-DataUtils.bigEndianToUnsignedInt = function(bytes) 
+DataUtils.prototype.bigEndianToUnsignedInt = function(bytes)
 {
   var result = 0;
   for (var i = 0; i < bytes.length; ++i) {
@@ -270,18 +274,18 @@ DataUtils.bigEndianToUnsignedInt = function(bytes)
 };
 
 /**
- * Convert the int value to a new big endian Buffer and return.
- * If value is 0 or negative, return new Buffer(0). 
+ * Convert the int value to a new big endian customBuf and return.
+ * If value is 0 or negative, return new customBuf(0).
  */
-DataUtils.nonNegativeIntToBigEndian = function(value) 
+DataUtils.prototype.nonNegativeIntToBigEndian = function(value)
 {
   value = Math.round(value);
   if (value <= 0)
-    return new Buffer(0);
-  
+    return new customBuf(0);
+
   // Assume value is not over 64 bits.
   var size = 8;
-  var result = new Buffer(size);
+  var result = new customBuf(size);
   var i = 0;
   while (value != 0) {
     ++i;
@@ -294,7 +298,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value)
 /**
  * Modify array to randomly shuffle the elements.
  */
-DataUtils.shuffle = function(array) 
+DataUtils.prototype.shuffle = function(array)
 {
   for (var i = array.length - 1; i >= 1; --i) {
     // j is from 0 to i.

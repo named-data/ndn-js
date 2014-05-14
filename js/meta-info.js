@@ -6,6 +6,7 @@
  * This class represents an NDN Data MetaInfo object.
  */
 
+var customBuf = require('./buffer.js').Buffer
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var Blob = require('./util/blob.js').Blob;
@@ -95,7 +96,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
  */
 MetaInfo.prototype.getFinalBlockID = function()
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // TODO: finalBlockID should be a Name.Component, not customBuf.
   return this.finalBlockID;
 };
 
@@ -126,7 +127,7 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 
 MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // TODO: finalBlockID should be a Name.Component, not customBuf.
   if (finalBlockID == null)
     this.finalBlockID = null;
   else if (typeof finalBlockID === 'object' && finalBlockID instanceof Blob)
@@ -134,7 +135,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
   else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
     this.finalBlockID = finalBlockID.getValue();
   else 
-    this.finalBlockID = new Buffer(finalBlockID);
+    this.finalBlockID = new customBuf(finalBlockID);
 };
 
 MetaInfo.prototype.setFields = function() 

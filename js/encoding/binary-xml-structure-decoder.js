@@ -57,7 +57,7 @@ BinaryXMLStructureDecoder.READ_BYTES = 1;
  * This throws an exception for badly formed ndnb.
  */
 BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-  // Buffer
+  // customBuf
   input)
 {
   if (this.gotElementEnd)

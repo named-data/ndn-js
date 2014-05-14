@@ -8,6 +8,7 @@
 
 var LOG = require('../log.js').Log.LOG;
 
+var customBuf = require('../buffer.js').Buffer
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
 var DataUtils = require('./data-utils.js').DataUtils;

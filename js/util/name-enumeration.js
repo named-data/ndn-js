@@ -3,7 +3,7 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var BinaryXMLDecoder = require('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -33,7 +33,7 @@ exports.NameEnumeration = NameEnumeration;
  * @param {Face} face The Face object for using expressInterest.
  * @param {Name} name The name prefix for finding the child components.
  * @param {function} onComponents On getting the response, this calls onComponents(components) where
- * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
+ * components is an array of customBuf name components.  If there is no response, this calls onComponents(null). 
  */
 NameEnumeration.getComponents = function(face, prefix, onComponents)
 {
@@ -116,7 +116,7 @@ NameEnumeration.parseComponents = function(content)
     decoder.readElementStartDTag(NDNProtocolDTags.Link);    
     decoder.readElementStartDTag(NDNProtocolDTags.Name);
     
-    components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
+    components.push(new customBuf(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
     
     decoder.readElementClose();  
     decoder.readElementClose();  

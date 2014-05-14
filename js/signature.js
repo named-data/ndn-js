@@ -11,6 +11,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
+var customBuf = require('./buffer.js').Buffer
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -87,9 +88,9 @@ Signature.prototype.setSignature = function(signature)
   if (signature == null)
     this.signature = null;
   else if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = new Buffer(signature.buf());
+    this.signature = new customBuf(signature.buf());
   else
-    this.signature = new Buffer(signature);
+    this.signature = new customBuf(signature);
 };
 
 Signature.prototype.from_ndnb = function(decoder) 

@@ -3,15 +3,15 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../buffer.js').Buffer
 var Blob = require('./blob.js').Blob;
 
 /**
  * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the 
  * bytes of Data packet). This inherits from Blob, including Blob.size and Blob.buf.
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
- * another pointer to the Buffer without copying. If value is a Buffer or byte 
- * array, copy to create a new Buffer.  If omitted, buf() will return null.
+ * another pointer to the customBuf without copying. If value is a customBuf or byte 
+ * array, copy to create a new customBuf.  If omitted, buf() will return null.
  * @param {number} signedPortionBeginOffset (optional) The offset in the 
  * encoding of the beginning of the signed portion. If omitted, set to 0.
  * @param {number} signedPortionEndOffset (optional) The offset in the encoding 
@@ -65,7 +65,7 @@ SignedBlob.prototype.signedSize = function()
 
 /**
  * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.  
+ * @returns {Buffer} A slice into the customBuf which is the signed portion.  
  * If the pointer to the array is null, return null.
  */
 SignedBlob.prototype.signedBuf = function()

@@ -2,11 +2,11 @@
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
- * Encapsulate a Buffer and support dynamic reallocation.
+ * Encapsulate a customBuf and support dynamic reallocation.
  */
-
+var customBuf = require('../buffer.js').Buffer
 /**
- * Create a DynamicBuffer where this.array is a Buffer of size length.
+ * Create a DynamicBuffer where this.array is a customBuf of size length.
  * To access the array, use this.array or call slice.
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
@@ -16,7 +16,7 @@ var DynamicBuffer = function DynamicBuffer(length)
   if (!length)
     length = 16;
     
-  this.array = new Buffer(length);
+  this.array = new customBuf(length);
 };
 
 exports.DynamicBuffer = DynamicBuffer;
@@ -37,7 +37,7 @@ DynamicBuffer.prototype.ensureLength = function(length)
     // The needed length is much greater, so use it.
     newLength = length;
     
-  var newArray = new Buffer(newLength);
+  var newArray = new customBuf(newLength);
   this.array.copy(newArray);
   this.array = newArray;
 };
@@ -51,11 +51,11 @@ DynamicBuffer.prototype.copy = function(value, offset)
 {
   this.ensureLength(value.length + offset);
     
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (typeof value == 'object' && value instanceof customBuf)
     value.copy(this.array, offset);
   else
-    // Need to make value a Buffer to copy.
-    new Buffer(value).copy(this.array, offset);
+    // Need to make value a customBuf to copy.
+    new customBuf(value).copy(this.array, offset);
 };
 
 /**
@@ -75,7 +75,7 @@ DynamicBuffer.prototype.ensureLengthFromBack = function(length)
     // The needed length is much greater, so use it.
     newLength = length;
     
-  var newArray = new Buffer(newLength);
+  var newArray = new customBuf(newLength);
   // Copy to the back of newArray.
   this.array.copy(newArray, newArray.length - this.array.length);
   this.array = newArray;
@@ -93,11 +93,11 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 {
   this.ensureLengthFromBack(offsetFromBack);
 
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (typeof value == 'object' && value instanceof customBuf)
     value.copy(this.array, this.array.length - offsetFromBack);
   else
-    // Need to make value a Buffer to copy.
-    new Buffer(value).copy(this.array, this.array.length - offsetFromBack);
+    // Need to make value a customBuf to copy.
+    new customBuf(value).copy(this.array, this.array.length - offsetFromBack);
 };
 
 /**

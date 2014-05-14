@@ -3,7 +3,7 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../../buffer.js').Buffer
 var DecodingException = require('../decoding-exception.js').DecodingException;
 
 /**
@@ -26,7 +26,7 @@ exports.TlvDecoder = TlvDecoder;
 TlvDecoder.prototype.readVarNumber = function() 
 {
   // Assume array values are in the range 0 to 255.
-  firstOctet = this.input[this.offset];
+  var firstOctet = this.input[this.offset];
   this.offset += 1;
   if (firstOctet < 253)
     return firstOctet;

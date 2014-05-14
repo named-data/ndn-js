@@ -95,7 +95,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
     onDataAvailable: function(request, context, _inputStream, offset, count) {
       try {
         // Use readInputStreamToString to handle binary data.
-        // TODO: Can we go directly from the stream to Buffer?
+        // TODO: Can we go directly from the stream to customBuf?
         var inputString = NetUtil.readInputStreamToString(inStream, count);
         if (!this.gotFirstData) {
           // Check if the connection is from a non-NDN source.
@@ -126,7 +126,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
 /**
  * Send the data over the connection created by connect.
  */
-XpcomTransport.prototype.send = function(/* Buffer */ data) 
+XpcomTransport.prototype.send = function(/* customBuf */ data) 
 {
   if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
     console.log("XpcomTransport connection is not established.");

@@ -15,7 +15,10 @@
 //
 // Depends on:
 //
-
+var BigInteger = require('jsbn')
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte
@@ -286,3 +289,5 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+
+module.exports = ASN1HEX;

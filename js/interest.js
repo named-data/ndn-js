@@ -12,7 +12,8 @@ var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
-
+var customBuf = require('./buffer.js').Buffer
+var LOG = require('./log.js').LOG
 /**
  * Create a new Interest with the optional values.
  * 
@@ -51,7 +52,7 @@ var Interest = function Interest
     this.interestLifetime = interest.interestLifetime;
     if (interest.nonce)
       // Copy.
-      this.nonce = new Buffer(interest.nonce);    
+      this.nonce = new customBuf(interest.nonce);    
   }  
   else {
     this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
@@ -68,8 +69,8 @@ var Interest = function Interest
     this.scope = scope;
     this.interestLifetime = interestLifetimeMilliseconds;
     if (nonce)
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
+      // Copy and make sure it is a customBuf.
+      this.nonce = new customBuf(nonce);
   }
 };
 
@@ -337,8 +338,8 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
 Interest.prototype.setNonce = function(nonce)
 {
   if (nonce)
-    // Copy and make sure it is a Buffer.
-    this.nonce = new Buffer(nonce);
+    // Copy and make sure it is a customBuf.
+    this.nonce = new customBuf(nonce);
   else
     this.nonce = null;
 };
@@ -403,6 +404,7 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   // If input is a blob, get its buf().
+  if (LOG > 3 ) console.log('decoding input to interes', input)
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
                      input.buf() : input;
   wireFormat.decodeInterest(this, decodeBuffer);

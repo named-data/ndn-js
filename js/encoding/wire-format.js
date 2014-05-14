@@ -4,7 +4,7 @@
  * See COPYING for copyright and distribution information.
  * This class represents Interest Objects
  */
-
+var customBuf = require('../buffer.js').Buffer
 /**
  * Create a WireFormat base class where the encode and decode methods throw an error. You should use a derived class like TlvWireFormat.
  * @constructor

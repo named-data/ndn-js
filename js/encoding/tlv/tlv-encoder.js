@@ -3,7 +3,7 @@
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * See COPYING for copyright and distribution information.
  */
-
+var customBuf = require('../../buffer.js').Buffer
 var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
 
 /**
@@ -197,7 +197,7 @@ TlvEncoder.prototype.writeOptionalBlobTlv = function(type, value)
 
 /**
  * Get a slice of the encoded bytes.
- * @returns {Buffer} A slice backed by the encoding Buffer.
+ * @returns {Buffer} A slice backed by the encoding customBuf.
  */
 TlvEncoder.prototype.getOutput = function()
 {
