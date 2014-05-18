@@ -161,6 +161,16 @@ Name.createNameArray = function(uri)
   return array;
 };
 
+/**
+ * Parse the uri according to the NDN URI Scheme and set the name with the 
+ * components.
+ * @param {string} uri The URI string.
+ */
+Name.prototype.set = function(uri)  
+{
+  this.components = Name.createNameArray(uri);
+}
+  
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)  
 {
   decoder.readElementStartDTag(this.getElementLabel());
