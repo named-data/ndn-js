@@ -145,7 +145,7 @@ Face.getKeyByName = function(/* KeyName */ name)
 Face.prototype.close = function() 
 {
   if (this.readyStatus != Face.OPENED)
-    throw new Error('Cannot close because Face connection is not opened.');
+    return;
 
   this.readyStatus = Face.CLOSED;
   this.transport.close();
