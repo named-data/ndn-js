@@ -93,7 +93,6 @@ def build (bld):
                  "js/util/signed-blob.js",
                  "js/util/dynamic-buffer.js",
                  "js/encoding/data-utils.js",
-                 "js/encoding/date-format.js",
                  "js/encoding/decoding-exception.js",
                  "js/encoding/binary-xml-encoder.js",
                  "js/encoding/binary-xml-decoder.js",
