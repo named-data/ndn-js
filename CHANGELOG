@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-05-14)
+Interim changes since NDN-JS v0.3 (2014-05-21)
 ----------------------------------------------
 
 Changes
@@ -7,6 +7,7 @@ Changes
 * In Name, added method appendVersion.
 * Added a default Name.Component constructor to create a zero-length value.
 * Renamed internal class Tlv1_0a2WireFormat to Tlv0_1WireFormat.
+* COPYING: Changed the license to LGPLv3.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 

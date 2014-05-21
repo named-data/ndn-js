@@ -9,14 +9,27 @@ The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
 	
-NDN-JS is open source under a license described in the file COPYING.  While the license
-does not require it, we really would appreciate it if others would share their
-contributions to the library if they are willing to do so under the same license. 
-
 See the file INSTALL for build and install instructions.
 
----
 
+License
+-------
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+A copy of the GNU General Public License is in the file COPYING.
+
+Overview
+--------
 This is a young project, with minimal documentation that we are slowly enhancing.  Please
 submit any bugs or issues to the NDN-JS issue tracker:
 http://redmine.named-data.net/projects/ndn-js/issues
