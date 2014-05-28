@@ -16,13 +16,13 @@ function benchmarkEncodeDecodeData(useComplex, useCrypto)
   {
     var nIterations = useCrypto ? 8000 : 500000;
     var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
-    console.log("Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+    console.log("Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
       + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));  
   }
   {
     var nIterations = useCrypto ? 50000 : 300000;
     var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
-    console.log("Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+    console.log("Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
       + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));  
   }
 }

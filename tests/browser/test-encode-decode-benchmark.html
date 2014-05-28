@@ -30,14 +30,14 @@
         var nIterations = useCrypto ? 1000 : 150000;
         var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
         document.getElementById('result').innerHTML +=
-          "Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          "Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
       }
       setTimeout(function() {
         var nIterations = useCrypto ? 8000 : 50000;
         var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
         document.getElementById('result').innerHTML +=
-          "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "yes" : "no ") 
+          "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
   
         if (continuation)
