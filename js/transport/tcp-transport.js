@@ -21,6 +21,9 @@ var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 
+/**
+ * A TcpTransport connects to the forwarder using TCP.
+ */
 var TcpTransport = function TcpTransport() 
 {    
   this.socket = null;
@@ -45,7 +48,6 @@ TcpTransport.prototype.connect = function(face, onopenCallback)
 
   this.elementReader = new ElementReader(face);
 
-  // Connect to local ndnd via TCP
   var net = require('net');
   this.socket = new net.Socket();
     
