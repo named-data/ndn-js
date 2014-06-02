@@ -39,7 +39,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
     var contentString = "";
     var count = 1;
     contentString += "" + (count++);
-    while (contentString.length < 1170)
+    while (contentString.length < 1115)
       contentString += " " + (count++);
     content = new Buffer(contentString);
   }
