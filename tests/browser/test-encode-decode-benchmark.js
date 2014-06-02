@@ -70,7 +70,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   var publisherPublicKeyDigest = new Buffer(32);
   for (var i = 0; i < publisherPublicKeyDigest.length; ++i)
     publisherPublicKeyDigest[i] = 0;
-  var signatureBits = new Buffer(128);
+  var signatureBits = new Buffer(256);
   for (var i = 0; i < signatureBits.length; ++i)
     signatureBits[i] = 0;
 
