@@ -261,9 +261,10 @@ Face.makeShuffledGetHostAndPort = function(hostList, port)
  * expressInterest(name [, template], onData [, onTimeout]).
  * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
- * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where:
- *   interest is the interest given to expressInterest,
- *   data is the received Data object.
+ * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
+ * interest is the interest given to expressInterest and data is the received 
+ * Data object. NOTE: You must not change the interest object - if you need to 
+ * change it then make a copy.
  * @param {function} onTimeout (optional) If the interest times out according to the interest lifetime, 
  *   this calls onTimeout(interest) where:
  *   interest is the interest given to expressInterest.
