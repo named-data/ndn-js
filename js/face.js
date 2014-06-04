@@ -458,7 +458,9 @@ Face.prototype.expressInterestHelper = function(interest, closure)
  *   prefix is the prefix given to registerPrefix.
  *   interest is the received interest.
  *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
- * @param {function} onRegisterFailed If failed to retrieve the connected hub's ID or failed to register the prefix, 
+ * NOTE: You must not change the prefix object - if you need to change it then 
+ * make a copy.
+ * @param {function} onRegisterFailed If register prefix fails for any reason, 
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
  * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.  
