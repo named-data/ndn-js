@@ -63,7 +63,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
     (keyName.get(keyName.size() - 1)).append("ID-CERT").append("0");
   /*
   privateKeyStorage->setKeyPairForKeyName
-    (keyName, DEFAULT_PUBLIC_KEY_DER, sizeof(DEFAULT_PUBLIC_KEY_DER), DEFAULT_PRIVATE_KEY_DER, sizeof(DEFAULT_PRIVATE_KEY_DER));
+    (keyName, DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER), DEFAULT_RSA_PRIVATE_KEY_DER, sizeof(DEFAULT_RSA_PRIVATE_KEY_DER));
   */
 
   // Set up publisherPublicKeyDigest and signatureBits in case useCrypto is false.
