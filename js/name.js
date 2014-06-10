@@ -68,8 +68,12 @@ Name.Component = function NameComponent(value)
     this.value = DataUtils.stringToUtf8Array(value);
   else if (typeof value === 'object' && value instanceof Name.Component)
     this.value = new Buffer(value.value);
-  else if (typeof value === 'object' && value instanceof Blob)
-    this.value = new Buffer(value.buf());
+  else if (typeof value === 'object' && value instanceof Blob) {
+    if (value.isNull())
+      this.value = new Buffer(0);
+    else
+      this.value = new Buffer(value.buf());
+  }
   else if (typeof value === 'object' && value instanceof Buffer)
     this.value = new Buffer(value);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
