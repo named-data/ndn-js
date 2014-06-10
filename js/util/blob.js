@@ -61,6 +61,9 @@ var Blob = function Blob(value, copy)
       }
     }
   }
+  
+  // Set the length to be "JavaScript-like".
+  this.length = this.buffer != null ? this.buffer.length : 0;
 };
 
 exports.Blob = Blob;
