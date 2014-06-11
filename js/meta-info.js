@@ -66,7 +66,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   else {
     this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
     this.timestamp = timestamp; // NDN Time
-    this.type = type; // ContentType
+    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // Integer
     this.finalBlockID = finalBlockID; //byte array

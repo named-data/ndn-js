@@ -5014,6 +5014,9 @@ var Blob = function Blob(value, copy)
       }
     }
   }
+  
+  // Set the length to be "JavaScript-like".
+  this.length = this.buffer != null ? this.buffer.length : 0;
 };
 
 exports.Blob = Blob;
@@ -8749,8 +8752,12 @@ Name.Component = function NameComponent(value)
     this.value = DataUtils.stringToUtf8Array(value);
   else if (typeof value === 'object' && value instanceof Name.Component)
     this.value = new Buffer(value.value);
-  else if (typeof value === 'object' && value instanceof Blob)
-    this.value = new Buffer(value.buf());
+  else if (typeof value === 'object' && value instanceof Blob) {
+    if (value.isNull())
+      this.value = new Buffer(0);
+    else
+      this.value = new Buffer(value.buf());
+  }
   else if (typeof value === 'object' && value instanceof Buffer)
     this.value = new Buffer(value);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
@@ -9875,7 +9882,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   else {
     this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
     this.timestamp = timestamp; // NDN Time
-    this.type = type; // ContentType
+    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // Integer
     this.finalBlockID = finalBlockID; //byte array
@@ -13140,9 +13147,10 @@ Face.makeShuffledGetHostAndPort = function(hostList, port)
  * expressInterest(name [, template], onData [, onTimeout]).
  * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
- * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where:
- *   interest is the interest given to expressInterest,
- *   data is the received Data object.
+ * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
+ * interest is the interest given to expressInterest and data is the received 
+ * Data object. NOTE: You must not change the interest object - if you need to 
+ * change it then make a copy.
  * @param {function} onTimeout (optional) If the interest times out according to the interest lifetime, 
  *   this calls onTimeout(interest) where:
  *   interest is the interest given to expressInterest.
@@ -13336,7 +13344,9 @@ Face.prototype.expressInterestHelper = function(interest, closure)
  *   prefix is the prefix given to registerPrefix.
  *   interest is the received interest.
  *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
- * @param {function} onRegisterFailed If failed to retrieve the connected hub's ID or failed to register the prefix, 
+ * NOTE: You must not change the prefix object - if you need to change it then 
+ * make a copy.
+ * @param {function} onRegisterFailed If register prefix fails for any reason, 
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
  * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.  
