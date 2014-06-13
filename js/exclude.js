@@ -228,17 +228,5 @@ Exclude.compareComponents = function(component1, component2)
   if (typeof component2 == 'object' && component2 instanceof Name.Component)
     component2 = component2.getValue();
 
-  if (component1.length < component2.length)
-    return -1;
-  if (component1.length > component2.length)
-    return 1;
-  
-  for (var i = 0; i < component1.length; ++i) {
-    if (component1[i] < component2[i])
-      return -1;
-    if (component1[i] > component2[i])
-      return 1;
-  }
-
-  return 0;
+  return Name.Component.compareBuffers(component1, component2);
 };
