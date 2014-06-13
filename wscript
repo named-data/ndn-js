@@ -101,6 +101,7 @@ def build (bld):
                  "js/encoding/tlv/tlv-encoder.js",
                  "js/encoding/tlv/tlv-decoder.js",
                  "js/encoding/tlv/tlv-structure-decoder.js",
+                 "js/encoding/protobuf-tlv.js",
                  "js/encoding/wire-format.js",
                  "js/encoding/element-reader.js",
                  "js/util/name-enumeration.js",
