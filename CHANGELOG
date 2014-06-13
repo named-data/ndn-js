@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-06-12)
+Interim changes since NDN-JS v0.3 (2014-06-13)
 ----------------------------------------------
 
 Changes
@@ -9,7 +9,7 @@ Changes
 * Renamed internal class Tlv1_0a2WireFormat to Tlv0_1WireFormat.
 * COPYING: Changed the license to LGPLv3.
 * Changed the default RSA key to 2048 bits.
-* Added ProtobufTlv support for node.js.
+* Added ProtobufTlv support for node.js and the browser.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
