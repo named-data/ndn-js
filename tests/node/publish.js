@@ -18,10 +18,8 @@
 
 var Face = require('../..').Face;
 var Name = require('../..').Name;
-var Interest = require('../..').Interest;
 var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
-var Closure = require('../..').Closure;
 
 function onInterest(prefix, interest, transport) 
 {
