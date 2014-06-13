@@ -1,0 +1,67 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!-- 
+	See COPYING for copyright and distribution information.
+-->
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Encode/Decode FibEntry</title>
+	
+	<script type="text/javascript" src="../../contrib/dcodeio/long.min.js"></script>
+	<script type="text/javascript" src="../../contrib/dcodeio/bytebuffer-ab.min.js"></script>
+	<script type="text/javascript" src="../../contrib/dcodeio/protobuf.min.js"></script>
+
+    <script type="text/javascript" src="../../build/ndn.js"></script>
+
+	<script type="text/javascript">
+	
+function testEncodeDecodeFibEntry() 
+{
+  var result = document.getElementById('result');
+  result.innerHTML = "";
+    
+  var ProtoBuf = dcodeIO.ProtoBuf;
+  var builder = ProtoBuf.loadProtoFile("fib-entry.proto");
+  var descriptor = builder.lookup("ndn_message.FibEntryMessage");
+  var FibEntryMessage = descriptor.build();
+  var message = new FibEntryMessage();
+  message.fib_entry = new FibEntryMessage.FibEntry();
+  message.fib_entry.name = new FibEntryMessage.Name();
+  message.fib_entry.name.add("component", "ndn");
+  message.fib_entry.name.add("component", "ucla");
+  var nextHopRecord = new FibEntryMessage.NextHopRecord();
+  message.fib_entry.add("next_hop_records", nextHopRecord);
+  nextHopRecord.face_id = 16;
+  nextHopRecord.cost = 1;
+
+  // Encode the Protobuf message object as TLV.
+  var encoding = ProtobufTlv.encode(message, descriptor);
+
+  var decodedMessage = new FibEntryMessage();
+  ProtobufTlv.decode(decodedMessage, descriptor, encoding);
+    
+  result.innerHTML += "Re-decoded FibEntry:</br>";
+  // This should print the same values that we put in message above.
+  var value = "";
+  for (var i = 0; i < decodedMessage.fib_entry.name.component.length; ++i)
+    value += "/" + decodedMessage.fib_entry.name.component[i].toString("utf8");
+  value += " nexthops = {";
+  for (var i = 0; i < decodedMessage.fib_entry.next_hop_records.length; ++i)
+    value += "faceid=" + decodedMessage.fib_entry.next_hop_records[i].face_id
+           + " (cost=" + decodedMessage.fib_entry.next_hop_records[i].cost + ")";
+  value += " }";
+  result.innerHTML += value + "</br>";
+}
+
+	</script>
+
+</head>
+<body >
+	<button onclick="testEncodeDecodeFibEntry()">Test</button>
+	
+	<p id="result"></p>
+
+</body>
+</html>
