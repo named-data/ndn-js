@@ -121,6 +121,45 @@ Name.Component.prototype.equals = function(other)
 }
 
 /**
+ * Compare this to the other Component using NDN canonical ordering.
+ * @param {Name.Component} other The other Component to compare with.
+ * @returns {number} 0 if they compare equal, -1 if this comes before other in 
+ * the canonical ordering, or 1 if this comes after other in the canonical 
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.Component.prototype.compare = function(other) 
+{
+  return Name.Component.compareBuffers(this.value, other.value);
+}
+
+/**
+ * Do the work of Name.Component.compare to compare the component buffers.
+ * @param {Buffer} component1
+ * @param {Buffer} component2
+ * @returns {number} 0 if they compare equal, -1 if component1 comes before 
+ * component2 in the canonical ordering, or 1 if component1 comes after 
+ * component2 in the canonical ordering.
+ */
+Name.Component.compareBuffers = function(component1, component2) 
+{
+  if (component1.length < component2.length)
+    return -1;
+  if (component1.length > component2.length)
+    return 1;
+  
+  for (var i = 0; i < component1.length; ++i) {
+    if (component1[i] < component2[i])
+      return -1;
+    if (component1[i] > component2[i])
+      return 1;
+  }
+
+  return 0;
+}
+
+/**
  * @deprecated Use toUri.
  */
 Name.prototype.getName = function() 
