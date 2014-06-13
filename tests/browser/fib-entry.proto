@@ -1,0 +1,25 @@
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("fib-entry.proto");
+
+package ndn_message;
+
+// Protobuf has no "outer" message type, so we need to put the TLV FibEntry
+// message inside an outer "typeless" FibEntryMessage.
+message FibEntryMessage {
+  message Name {
+    repeated bytes component = 8;
+  }
+
+  message NextHopRecord {
+    required uint32 face_id = 105;
+    required uint32 cost = 106;
+  }
+
+  message FibEntry {
+    required Name name = 7;
+    repeated NextHopRecord next_hop_records = 129;
+  }
+
+  // A FibEntryMessage has one FibEntry.
+  required FibEntry fib_entry = 128;
+}

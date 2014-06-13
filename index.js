@@ -20,6 +20,7 @@ exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js')
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
 exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;
 exports.EncodingUtils = require('./js/encoding/encoding-utils.js').EncodingUtils;
+exports.ProtobufTlv = require('./js/encoding/protobuf-tlv.js').ProtobufTlv;
 exports.Blob = require('./js/util/blob.js').Blob;
 exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumeration;
 exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
