@@ -58,7 +58,7 @@ ProtobufTlv.establishField = function()
 
 /**
  * Encode the Protobuf message object as NDN-TLV. This calls 
- * message.toArrayBuffer() to ensure that all required fields are present and 
+ * message.encodeAB() to ensure that all required fields are present and 
  * raises an exception if not. (This does not use the result of toArrayBuffer().)
  * @param {ProtoBuf.Builder.Message} message The Protobuf message object. 
  * @param {ProtoBuf.Reflect.T} descriptor The reflection descriptor for the
@@ -70,7 +70,9 @@ ProtobufTlv.encode = function(message, descriptor)
 {
   ProtobufTlv.establishField();
   
-  message.toArrayBuffer();
+  // Debug: For now, don't call encodeAB until this issue is addressed:
+  // https://github.com/dcodeIO/ProtoBuf.js/issues/138
+  //message.encodeAB();
   var encoder = new TlvEncoder();
   ProtobufTlv._encodeMessageValue(message, descriptor, encoder);
   return new Blob(encoder.getOutput(), false);
@@ -145,7 +147,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       }
       else if (field.type.name == "bytes")
-        encoder.writeBlobTlv(tlvType, value.toBuffer());
+        encoder.writeBlobTlv(tlvType, value.toBinary());
       else if (field.type.name == "string")
         // Use Blob to convert.
         encoder.writeBlobTlv(tlvType, new Blob(value, false).buf());
