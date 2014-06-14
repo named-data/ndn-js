@@ -11,6 +11,7 @@ Changes
 * COPYING: Changed the license to LGPLv3.
 * Changed the default RSA key to 2048 bits.
 * Added ProtobufTlv support for node.js and the browser.
+* Added MemoryContentCache. See http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 

@@ -105,6 +105,7 @@ def build (bld):
                  "js/encoding/wire-format.js",
                  "js/encoding/element-reader.js",
                  "js/util/name-enumeration.js",
+                 "js/util/memory-content-cache.js",
                  "js/transport/web-socket-transport.js",
                  "js/browserify-tcp-transport.js",
                  "js/closure.js",

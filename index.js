@@ -23,5 +23,6 @@ exports.EncodingUtils = require('./js/encoding/encoding-utils.js').EncodingUtils
 exports.ProtobufTlv = require('./js/encoding/protobuf-tlv.js').ProtobufTlv;
 exports.Blob = require('./js/util/blob.js').Blob;
 exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumeration;
+exports.MemoryContentCache = require('./js/util/memory-content-cache.js').MemoryContentCache;
 exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
 exports.globalKeyManager = require('./js/security/key-manager.js').globalKeyManager;
