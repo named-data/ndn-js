@@ -8070,9 +8070,7 @@ ProtobufTlv.encode = function(message, descriptor)
 {
   ProtobufTlv.establishField();
   
-  // Debug: For now, don't call encodeAB until this issue is addressed:
-  // https://github.com/dcodeIO/ProtoBuf.js/issues/138
-  //message.encodeAB();
+  message.encodeAB();
   var encoder = new TlvEncoder();
   ProtobufTlv._encodeMessageValue(message, descriptor, encoder);
   return new Blob(encoder.getOutput(), false);
