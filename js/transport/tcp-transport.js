@@ -1,6 +1,7 @@
 /** 
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,7 +18,6 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-var DataUtils = require('../encoding/data-utils.js').DataUtils;
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 var Transport = require('./transport.js').Transport;
