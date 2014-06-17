@@ -40,6 +40,8 @@ var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
+var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
+var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -50,7 +52,10 @@ var LOG = require('./log.js').Log.LOG;
  * {
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
+ *              // If getTransport creates a UnixTransport and connectionInfo is null,
+ *              // then connect to the local forwarder's Unix socket.
  *   getConnectionInfo: transport.defaultGetConnectionInfo, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
+ *                                                          // If connectionInfo or host is not null, getConnectionInfo is ignored.
  *   connectionInfo: null,
  *   host: null, // If null and connectionInfo is null, use getConnectionInfo when connecting. 
  *               // However, if connectionInfo is not null, use it instead.
@@ -76,13 +81,35 @@ var Face = function Face(settings)
   this.connectionInfo = (settings.connectionInfo || null);
   if (this.connectionInfo == null) {
     var host = (settings.host !== undefined ? settings.host : null);
-    if (host != null) {
-      if (typeof WebSocketTransport != 'undefined')
-        this.connectionInfo = new WebSocketTransport.ConnectionInfo
-          (host, settings.port || 9696);
-      else
-        this.connectionInfo = new TcpTransport.ConnectionInfo
-          (host, settings.port || 6363);
+    
+    if (this.transport && this.transport.__proto__ && 
+        this.transport.__proto__.name == "UnixTransport") {
+      // We are using UnixTransport on Node.js. There is no IP-style host and port.
+      if (host != null)
+        // Assume the host is the local Unix socket path.
+        this.connectionInfo = new UnixTransport.ConnectionInfo(host);
+      else {
+        // If getConnectionInfo is not null, it will be used instead so no
+        // need to set this.connectionInfo.
+        if (this.getConnectionInfo == null) {
+          var filePath = Face.getUnixSocketFilePathForLocalhost();
+          if (filePath != null)
+            this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
+          else
+            console.log
+              ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport")
+        }
+      }
+    }
+    else {
+      if (host != null) {
+        if (typeof WebSocketTransport != 'undefined')
+          this.connectionInfo = new WebSocketTransport.ConnectionInfo
+            (host, settings.port || 9696);
+        else
+          this.connectionInfo = new TcpTransport.ConnectionInfo
+            (host, settings.port || 6363);
+      }
     }
   }
   
@@ -109,6 +136,26 @@ exports.Face = Face;
 Face.UNOPEN = 0;  // created but not opened yet
 Face.OPENED = 1;  // connection to ndnd opened
 Face.CLOSED = 2;  // connection to ndnd closed
+
+/**
+ * If the forwarder's Unix socket file path exists, then return the file path.
+ * Otherwise return an empty string. This uses Node.js blocking file system
+ * utilities.
+ * @return The Unix socket file path to use, or an empty string.
+ */
+Face.getUnixSocketFilePathForLocalhost = function()
+{
+  var filePath = "/var/run/nfd.sock";
+  if (fs.existsSync(filePath))
+    return filePath;
+  else {
+    filePath = "/tmp/.ndnd.sock";
+    if (fs.existsSync(filePath))
+      return filePath;
+    else
+      return "";
+  }
+}
 
 /**
  * Return true if necessary JavaScript support is available, else log an error and return false.
