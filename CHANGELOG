@@ -14,6 +14,7 @@ Changes
 * Changed the default RSA key to 2048 bits.
 * Added ProtobufTlv support for node.js and the browser.
 * Added MemoryContentCache. See http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
+* Added UnixTransport for Unix socket support in Node.js .
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 

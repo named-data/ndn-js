@@ -19,6 +19,7 @@ exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
 exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
 exports.TcpTransport = require('./js/transport/tcp-transport.js').TcpTransport;
+exports.UnixTransport = require('./js/transport/unix-transport.js').UnixTransport;
 exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;
 exports.EncodingUtils = require('./js/encoding/encoding-utils.js').EncodingUtils;
 exports.ProtobufTlv = require('./js/encoding/protobuf-tlv.js').ProtobufTlv;
