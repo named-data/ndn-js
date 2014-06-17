@@ -23,7 +23,7 @@ var LOG = require('../log.js').Log.LOG;
 var Transport = require('./transport.js').Transport;
 
 /**
- * A TcpTransport connects to the forwarder using TCP.
+ * A TcpTransport connects to the forwarder using TCP for Node.js.
  */
 var TcpTransport = function TcpTransport() 
 {    
