@@ -19,47 +19,104 @@
 
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
+var Transport = require('./transport.js').Transport;
 
 /**
  * @constructor
  */
 var WebSocketTransport = function WebSocketTransport() 
-{    
+{
+  // Call the base constructor.
+  Transport.call(this);
+  
   if (!WebSocket)
     throw new Error("WebSocket support is not available on this platform.");
     
   this.ws = null;
-  this.connectedHost = null; // Read by Face.
-  this.connectedPort = null; // Read by Face.
+  this.connectionInfo = null; // Read by Face.
   this.elementReader = null;
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
     (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
       "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
       "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 
       "M.ws.ndn.ucla.edu", "N.ws.ndn.ucla.edu"],
-     9696);
+     9696,
+     function(host, port) { return new WebSocketTransport.ConnectionInfo(host, port); });
 };
+
+WebSocketTransport.prototype = new Transport();
+WebSocketTransport.prototype.name = "WebSocketTransport";
 
 exports.WebSocketTransport = WebSocketTransport;
 
 /**
- * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
- *   and connectedPort.  Once connected, call onopenCallback().
- * Listen on the port to read an entire binary XML encoded element and call
- *    face.onReceivedElement(element).
+ * Create a new WebSocketTransport.ConnectionInfo which extends 
+ * Transport.ConnectionInfo to hold the host and port info for the WebSocket 
+ * connection.
+ * @param {string} host The host for the connection.
+ * @param {number} port (optional) The port number for the connection. If
+ * omitted, use 9696.
  */
-WebSocketTransport.prototype.connect = function(face, onopenCallback) 
+WebSocketTransport.ConnectionInfo = function WebSocketTransportConnectionInfo
+  (host, port) 
+{
+  // Call the base constructor.
+  Transport.ConnectionInfo .call(this);
+  
+  port = (port !== undefined ? port : 9696);
+
+  this.host = host;
+  this.port = port;
+};
+
+WebSocketTransport.ConnectionInfo.prototype = new Transport.ConnectionInfo();
+WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.ConnectionInfo";
+
+/**
+ * Check if the fields of this WebSocketTransport.ConnectionInfo equal the other
+ * WebSocketTransport.ConnectionInfo.
+ * @param {WebSocketTransport.ConnectionInfo} The other object to check.
+ * @returns {boolean} True if the objects have equal fields, false if not.
+ */
+WebSocketTransport.ConnectionInfo.prototype.equals = function(other) 
+{
+  if (other == null || other.host == undefined || other.port == undefined)
+    return false;
+  return this.host == other.host && this.port == other.port;
+};
+
+WebSocketTransport.ConnectionInfo.prototype.toString = function()
+{
+  return "{ host: " + this.host + ", port: " + this.port + " }";
+};
+
+/**
+ * Connect to a WebSocket according to the info in connectionInfo. Listen on 
+ * the port to read an entire packet element and call 
+ * elementListener.onReceivedElement(element). Note: this connect method 
+ * previously took a Face object which is deprecated and renamed as the method 
+ * connectByFace.
+ * @param {WebSocketTransport.ConnectionInfo} connectionInfo A
+ * WebSocketTransport.ConnectionInfo with the host and port.
+ * @param {an object with onReceivedElement} elementListener The elementListener 
+ * must remain valid during the life of this object.
+ * @param {function} onopenCallback Once connected, call onopenCallback().
+ * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * call onclosedCallback().
+ * @returns {undefined}
+ */
+WebSocketTransport.prototype.connect = function
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
 {
   this.close();
   
-  this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
+  this.ws = new WebSocket('ws://' + connectionInfo.host + ':' + connectionInfo.port);
   if (LOG > 0) console.log('ws connection created.');
-    this.connectedHost = face.host;
-    this.connectedPort = face.port;
+    this.connectionInfo = connectionInfo;
   
   this.ws.binaryType = "arraybuffer";
   
-  this.elementReader = new ElementReader(face);
+  this.elementReader = new ElementReader(elementListener);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
@@ -102,13 +159,21 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
     
-    // Close Face when WebSocket is closed
-    face.readyStatus = Face.CLOSED;
-    face.onclose();
-    //console.log("NDN.onclose event fired.");
+    onclosedCallback();
   }
 };
 
+/**
+ * @deprecated This is deprecated. You should not call Transport.connect 
+ * directly, since it is called by Face methods.
+ */
+WebSocketTransport.prototype.connectByFace = function(face, onopenCallback) 
+{
+  this.connect
+    (face.connectionInfo, face, onopenCallback,
+     function() { face.closeByTransport(); });
+};
+  
 /**
  * Send the Uint8Array data.
  */

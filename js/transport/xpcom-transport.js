@@ -28,45 +28,114 @@
  */
 var XpcomTransport = function XpcomTransport() 
 {
+  // Call the base constructor.
+  Transport.call(this);
+  
   this.elementListener = null;
   this.socket = null; // nsISocketTransport
   this.outStream = null;
-  this.connectedHost = null; // Read by Face.
-  this.connectedPort = null; // Read by Face.
+  this.connectionInfo = null; // Read by Face.
   this.httpListener = null;
 
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
     (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
       "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu", 
       "I.hub.ndn.ucla.edu", "J.hub.ndn.ucla.edu", "K.hub.ndn.ucla.edu"],
-     6363);
+     6363,
+     function(host, port) { return new XpcomTransport.ConnectionInfo(host, port); });
+};
+
+XpcomTransport.prototype = new Transport();
+XpcomTransport.prototype.name = "XpcomTransport";
+
+/**
+ * Create a new XpcomTransport.ConnectionInfo which extends 
+ * Transport.ConnectionInfo to hold the host and port info for the XPCOM 
+ * connection.
+ * @param {string} host The host for the connection.
+ * @param {number} port (optional) The port number for the connection. If
+ * omitted, use 6363.
+ */
+XpcomTransport.ConnectionInfo = function XpcomTransportConnectionInfo(host, port) 
+{
+  // Call the base constructor.
+  Transport.ConnectionInfo .call(this);
+  
+  port = (port !== undefined ? port : 6363);
+  
+  this.host = host;
+  this.port = port;
+};
+
+XpcomTransport.ConnectionInfo.prototype = new Transport.ConnectionInfo();
+XpcomTransport.ConnectionInfo.prototype.name = "XpcomTransport.ConnectionInfo";
+
+/**
+ * Check if the fields of this XpcomTransport.ConnectionInfo equal the other
+ * XpcomTransport.ConnectionInfo.
+ * @param {XpcomTransport.ConnectionInfo} The other object to check.
+ * @returns {boolean} True if the objects have equal fields, false if not.
+ */
+XpcomTransport.ConnectionInfo.prototype.equals = function(other) 
+{
+  if (other == null || other.host == undefined || other.port == undefined)
+    return false;
+  return this.host == other.host && this.port == other.port;
+};
+
+XpcomTransport.ConnectionInfo.prototype.toString = function()
+{
+  return "{ host: " + this.host + ", port: " + this.port + " }";
 };
 
 /**
- * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
- *   and connectedPort.  Once connected, call onopenCallback().
- * Listen on the port to read an entire binary XML encoded element and call
- *    face.onReceivedElement(element).
+ * Connect to a TCP socket through Xpcom according to the info in connectionInfo. 
+ * Listen on the port to read an entire packet element and call 
+ * elementListener.onReceivedElement(element). Note: this connect method 
+ * previously took a Face object which is deprecated and renamed as the method 
+ * connectByFace.
+ * @param {XpcomTransport.ConnectionInfo} connectionInfo A
+ * XpcomTransport.ConnectionInfo with the host and port.
+ * @param {an object with onReceivedElement} elementListener The elementListener 
+ * must remain valid during the life of this object.
+ * @param {function} onopenCallback Once connected, call onopenCallback().
+ * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * call onclosedCallback().
+ * @returns {undefined}
  */
-XpcomTransport.prototype.connect = function(face, onopenCallback) 
+XpcomTransport.prototype.connect = function
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
 {
-  this.elementListener = face;
-  this.connectHelper(face.host, face.port, face);
+  this.elementListener = elementListener;
+  this.connectHelper(connectionInfo, elementListener);
 
   onopenCallback();
 };
 
 /**
- * Do the work to connect to the socket.  This replaces a previous connection and sets connectedHost
- *   and connectedPort.
- * @param {string|object} host The host to connect to. However, if host is not a string, assume it is an
- * nsISocketTransport which is already configured for a host and port, in which case ignore port and set 
- * connectedHost and connectedPort to host.host and host.port .
- * @param {number} port The port number to connect to.  If host is an nsISocketTransport then this is ignored.
- * @param {object} elementListener Listen on the port to read an entire binary XML encoded element and call
+ * @deprecated This is deprecated. You should not call Transport.connect 
+ * directly, since it is called by Face methods.
+ */
+XpcomTransport.prototype.connectByFace = function(face, onopenCallback) 
+{
+  this.connect
+    (face.connectionInfo, face, onopenCallback,
+     function() { face.closeByTransport(); });
+};
+
+/**
+ * Do the work to connect to the socket.  This replaces a previous connection 
+ * and sets connectionInfo.
+ * @param {XpcomTransport.ConnectionInfo|object} connectionInfoOrSocketTransport 
+ * The connectionInfo with the host and port to connect to. However, if this is not a 
+ * Transport.ConnectionInfo, assume it is an nsISocketTransport which is already 
+ * configured for a host and port, in which case set connectionInfo to new 
+ * XpcomTransport.ConnectionInfo(connectionInfoOrSocketTransport.host, connectionInfoOrSocketTransport.port).
+ * @param {an object with onReceivedElement} elementListener Listen on the port to read an entire binary XML encoded element and call
  *    elementListener.onReceivedElement(element).
  */
-XpcomTransport.prototype.connectHelper = function(host, port, elementListener) 
+XpcomTransport.prototype.connectHelper = function
+  (connectionInfoOrSocketTransport, elementListener) 
 {
   if (this.socket != null) {
     try {
@@ -79,19 +148,22 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
 
   var pump = Components.classes["@mozilla.org/network/input-stream-pump;1"].createInstance
         (Components.interfaces.nsIInputStreamPump);
-  if (typeof host == 'string') {
+  if (connectionInfoOrSocketTransport instanceof Transport.ConnectionInfo) {
+    var connectionInfo = connectionInfoOrSocketTransport;
     var transportService = Components.classes["@mozilla.org/network/socket-transport-service;1"].getService
           (Components.interfaces.nsISocketTransportService);
-    this.socket = transportService.createTransport(null, 0, host, port, null);
-    if (LOG > 0) console.log('XpcomTransport: Connected to ' + host + ":" + port);
-    this.connectedHost = host;
-    this.connectedPort = port;
+    this.socket = transportService.createTransport
+      (null, 0, connectionInfo.host, connectionInfo.port, null);
+    if (LOG > 0) console.log('XpcomTransport: Connected to ' + 
+      connectionInfo.host + ":" + connectionInfo.port);
+    this.connectionInfo = connectionInfo;
   }
-  else if (typeof host == 'object') {
+  else if (typeof connectionInfoOrSocketTransport == 'object') {
+    var socketTransport = connectionInfoOrSocketTransport;
     // Assume host is an nsISocketTransport which is already configured for a host and port.
-    this.socket = host;
-    this.connectedHost = this.socket.host;
-    this.connectedPort = this.socket.port;
+    this.socket = socketTransport;
+    this.connectionInfo = new XpcomTransport.ConnectionInfo
+      (socketTransport.host, socketTransport.port);
   }
   this.outStream = this.socket.openOutputStream(1, 0, 0);
 
@@ -141,7 +213,7 @@ XpcomTransport.prototype.connectHelper = function(host, port, elementListener)
  */
 XpcomTransport.prototype.send = function(/* Buffer */ data) 
 {
-  if (this.socket == null || this.connectedHost == null || this.connectedPort == null) {
+  if (this.socket == null || this.connectionInfo == null) {
     console.log("XpcomTransport connection is not established.");
     return;
   }
@@ -156,10 +228,10 @@ XpcomTransport.prototype.send = function(/* Buffer */ data)
       throw ex;
 
     if (LOG > 0) 
-      console.log("XpcomTransport.send: Trying to reconnect to " + this.connectedHost + ":" + 
-                  this.connectedPort + " and resend after exception: " + ex);
+      console.log("XpcomTransport.send: Trying to reconnect to " + 
+        this.connectionInfo.toString() + " and resend after exception: " + ex);
 
-    this.connectHelper(this.connectedHost, this.connectedPort, this.elementListener);
+    this.connectHelper(this.connectionInfo, this.elementListener);
     this.outStream.write(rawDataString, rawDataString.length);
     this.outStream.flush();
   }
