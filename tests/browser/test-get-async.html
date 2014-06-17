@@ -32,7 +32,7 @@
     function onData(interest, data) 
     {
       console.log("Closure.upcall: content signature verification pass.");
-      console.log("Host: " + face.host + ":" + face.port);
+      console.log("Host: " + face.connectionInfo.toString());
       nameStr = escape(data.name.toUri());
       document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
       document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
