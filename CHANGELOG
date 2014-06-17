@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-06-13)
+Interim changes since NDN-JS v0.3 (2014-06-16)
 ----------------------------------------------
 
 Changes
@@ -12,6 +12,7 @@ Changes
 * Changed the default RSA key to 2048 bits.
 * Added ProtobufTlv support for node.js and the browser.
 * Added MemoryContentCache. See http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
+* Removed Face.host and Face.port and use Face.connectionInfo (e.g., TcpTransport.ConnectionInfo).
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
