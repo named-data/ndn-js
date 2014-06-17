@@ -18,7 +18,8 @@
 
 var Face = require('../..').Face;
 var Name = require('../..').Name;
-var EncodingUtils = require('../..').EncodingUtils;
+var Name = require('../..').Name;
+var TcpTransport = require('../..').TcpTransport;
 
 var onData = function(interest, data) {
   console.log("Data received in callback.");
@@ -37,7 +38,7 @@ var onTimeout = function(interest) {
   face.close();  // This will cause the script to quit.
 };
 
-var face = new Face();
+var face = new Face({connectionInfo: new TcpTransport.ConnectionInfo("H.hub.ndn.ucla.edu")});
 var name = new Name("/");
 console.log("Express name " + name.toUri());
 face.expressInterest(name, onData, onTimeout);

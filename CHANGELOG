@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.3 (2014-06-16)
+Interim changes since NDN-JS v0.3 (2014-06-17)
 ----------------------------------------------
 
 Changes
@@ -7,12 +7,12 @@ Changes
 * In Name, added method appendVersion.
 * In Name.Component, added method compare.
 * Added a default Name.Component constructor to create a zero-length value.
+* Face constructor: Support settings.connectionInfo.
 * Renamed internal class Tlv1_0a2WireFormat to Tlv0_1WireFormat.
 * COPYING: Changed the license to LGPLv3.
 * Changed the default RSA key to 2048 bits.
 * Added ProtobufTlv support for node.js and the browser.
 * Added MemoryContentCache. See http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
-* Removed Face.host and Face.port and use Face.connectionInfo (e.g., TcpTransport.ConnectionInfo).
 
 Bug fixes
 * http://redmine.named-data.net/issues/1336 Make Interest.getMustBeFresh() return default true. 
@@ -24,6 +24,9 @@ Bug fixes
 * Fix bug for generating a hash on older versions of Node-js.
 * Fix bug in DataUtils.toString: Need to call Buffer.toString('binary').
 * Fix bug for encoding/decoding the TLV Interest PublisherPublicKeyLocator.
+
+Deprecated
+* Deprecated getting the connection info with face.host and face.port. Use face.connectionInfo.
 
 NDN-JS v0.3 (2014-02-27)
 ------------------------

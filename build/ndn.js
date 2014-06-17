@@ -13681,9 +13681,12 @@ var LOG = require('./log.js').Log.LOG;
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
  *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
- *   host: null, // If null, use getHostAndPort when connecting.
+ *   connectionInfo: null,
+ *   host: null, // If null and connectionInfo is null, use getHostAndPort when connecting. 
+ *               // However, if connectionInfo is not null, use it instead.
  *   port: 9696, // If in the browser.
  *      OR 6363, // If in Node.js.
+ *               // However, if connectionInfo is not null, use it instead.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
@@ -13700,17 +13703,27 @@ var Face = function Face(settings)
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
   
-  // TODO: Allow the caller to supply a ConnectionInfo.
-  var host = (settings.host !== undefined ? settings.host : null);
-  if (host == null)
-    this.connectionInfo = null;
+  this.connectionInfo = (settings.connectionInfo || null);
+  if (this.connectionInfo == null) {
+    var host = (settings.host !== undefined ? settings.host : null);
+    if (host != null) {
+      if (typeof WebSocketTransport != 'undefined')
+        this.connectionInfo = new WebSocketTransport.ConnectionInfo
+          (host, settings.port || 9696);
+      else
+        this.connectionInfo = new TcpTransport.ConnectionInfo
+          (host, settings.port || 6363);
+    }
+  }
+  
+  // Deprecated: Set this.host and this.port for backwards compatibility.
+  if (this.connectionInfo == null) {
+    this.host = null;
+    this.host = null;
+  }
   else {
-    if (typeof WebSocketTransport != 'undefined')
-      this.connectionInfo = new WebSocketTransport.ConnectionInfo
-        (host, settings.port || 9696);
-    else
-      this.connectionInfo = new TcpTransport.ConnectionInfo
-        (host, settings.port || 6363);
+    this.host = this.connectionInfo.host;
+    this.host = this.connectionInfo.port;
   }
   
   this.readyStatus = Face.UNOPEN;
@@ -13753,6 +13766,10 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
     this.connectionInfo = hostOrConnectionInfo;
   else
     this.connectionInfo = new TcpTransport.ConnectionInfo(hostOrConnectionInfo, port);
+  
+  // Deprecated: Set this.host and this.port for backwards compatibility.
+  this.host = this.connectionInfo.host;
+  this.host = this.connectionInfo.port;
 };
 
 Face.KeyStore = new Array();
@@ -14482,6 +14499,10 @@ Face.prototype.connectAndExecute = function(onConnected)
   if (connectionInfo == null) {
     console.log('ERROR: No more connectionInfo from getHostAndPort');
     this.connectionInfo = null;
+    // Deprecated: Set this.host and this.port for backwards compatibility.
+    this.host = null;
+    this.host = null;
+  
     return;
   }
 
@@ -14494,7 +14515,10 @@ Face.prototype.connectAndExecute = function(onConnected)
         
   this.connectionInfo = connectionInfo;   
   if (LOG>0) console.log("connectAndExecute: trying host from getHostAndPort: " + 
-                         this.connectionInfo.toString());
+                         this.connectionInfo.toString());  
+  // Deprecated: Set this.host and this.port for backwards compatibility.
+  this.host = this.connectionInfo.host;
+  this.host = this.connectionInfo.port;
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
