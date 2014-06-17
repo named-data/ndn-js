@@ -201,7 +201,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     }
     
     // Assume this is only called once we're connected, report the host and port.
-    NdnProtocolInfo.setConnectedNdnHub(this.face.host, this.face.port);
+    NdnProtocolInfo.setConnectedNdnHub
+      (this.face.connectionInfo.host, this.face.connectionInfo.port);
     
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
