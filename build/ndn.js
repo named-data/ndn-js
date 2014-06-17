@@ -8862,6 +8862,40 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
   return this.staleTimeMilliseconds <= nowMilliseconds;
 };
 /** 
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * Transport is a base class for specific transport classes such as TcpTransport.
+ */
+var Transport = function Transport() 
+{    
+};
+
+exports.Transport = Transport;
+
+/**
+ * Transport.ConnectionInfo is a base class for connection information used by 
+ * subclasses of Transport.
+ */
+Transport.ConnectionInfo = function TransportConnectionInfo() 
+{    
+};/** 
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
  * 
@@ -8882,47 +8916,104 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
 
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
+var Transport = require('./transport.js').Transport;
 
 /**
  * @constructor
  */
 var WebSocketTransport = function WebSocketTransport() 
-{    
+{
+  // Call the base constructor.
+  Transport.call(this);
+  
   if (!WebSocket)
     throw new Error("WebSocket support is not available on this platform.");
     
   this.ws = null;
-  this.connectedHost = null; // Read by Face.
-  this.connectedPort = null; // Read by Face.
+  this.connectionInfo = null; // Read by Face.
   this.elementReader = null;
   this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
     (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
       "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
       "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 
       "M.ws.ndn.ucla.edu", "N.ws.ndn.ucla.edu"],
-     9696);
+     9696,
+     function(host, port) { return new WebSocketTransport.ConnectionInfo(host, port); });
 };
+
+WebSocketTransport.prototype = new Transport();
+WebSocketTransport.prototype.name = "WebSocketTransport";
 
 exports.WebSocketTransport = WebSocketTransport;
 
 /**
- * Connect to the host and port in face.  This replaces a previous connection and sets connectedHost
- *   and connectedPort.  Once connected, call onopenCallback().
- * Listen on the port to read an entire binary XML encoded element and call
- *    face.onReceivedElement(element).
+ * Create a new WebSocketTransport.ConnectionInfo which extends 
+ * Transport.ConnectionInfo to hold the host and port info for the WebSocket 
+ * connection.
+ * @param {string} host The host for the connection.
+ * @param {number} port (optional) The port number for the connection. If
+ * omitted, use 9696.
  */
-WebSocketTransport.prototype.connect = function(face, onopenCallback) 
+WebSocketTransport.ConnectionInfo = function WebSocketTransportConnectionInfo
+  (host, port) 
+{
+  // Call the base constructor.
+  Transport.ConnectionInfo .call(this);
+  
+  port = (port !== undefined ? port : 9696);
+
+  this.host = host;
+  this.port = port;
+};
+
+WebSocketTransport.ConnectionInfo.prototype = new Transport.ConnectionInfo();
+WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.ConnectionInfo";
+
+/**
+ * Check if the fields of this WebSocketTransport.ConnectionInfo equal the other
+ * WebSocketTransport.ConnectionInfo.
+ * @param {WebSocketTransport.ConnectionInfo} The other object to check.
+ * @returns {boolean} True if the objects have equal fields, false if not.
+ */
+WebSocketTransport.ConnectionInfo.prototype.equals = function(other) 
+{
+  if (other == null || other.host == undefined || other.port == undefined)
+    return false;
+  return this.host == other.host && this.port == other.port;
+};
+
+WebSocketTransport.ConnectionInfo.prototype.toString = function()
+{
+  return "{ host: " + this.host + ", port: " + this.port + " }";
+};
+
+/**
+ * Connect to a WebSocket according to the info in connectionInfo. Listen on 
+ * the port to read an entire packet element and call 
+ * elementListener.onReceivedElement(element). Note: this connect method 
+ * previously took a Face object which is deprecated and renamed as the method 
+ * connectByFace.
+ * @param {WebSocketTransport.ConnectionInfo} connectionInfo A
+ * WebSocketTransport.ConnectionInfo with the host and port.
+ * @param {an object with onReceivedElement} elementListener The elementListener 
+ * must remain valid during the life of this object.
+ * @param {function} onopenCallback Once connected, call onopenCallback().
+ * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * call onclosedCallback().
+ * @returns {undefined}
+ */
+WebSocketTransport.prototype.connect = function
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
 {
   this.close();
   
-  this.ws = new WebSocket('ws://' + face.host + ':' + face.port);
+  this.ws = new WebSocket('ws://' + connectionInfo.host + ':' + connectionInfo.port);
   if (LOG > 0) console.log('ws connection created.');
-    this.connectedHost = face.host;
-    this.connectedPort = face.port;
+    this.connectionInfo = connectionInfo;
   
   this.ws.binaryType = "arraybuffer";
   
-  this.elementReader = new ElementReader(face);
+  this.elementReader = new ElementReader(elementListener);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
@@ -8965,13 +9056,21 @@ WebSocketTransport.prototype.connect = function(face, onopenCallback)
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
     
-    // Close Face when WebSocket is closed
-    face.readyStatus = Face.CLOSED;
-    face.onclose();
-    //console.log("NDN.onclose event fired.");
+    onclosedCallback();
   }
 };
 
+/**
+ * @deprecated This is deprecated. You should not call Transport.connect 
+ * directly, since it is called by Face methods.
+ */
+WebSocketTransport.prototype.connectByFace = function(face, onopenCallback) 
+{
+  this.connect
+    (face.connectionInfo, face, onopenCallback,
+     function() { face.closeByTransport(); });
+};
+  
 /**
  * Send the Uint8Array data.
  */
@@ -13569,6 +13668,7 @@ var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Closure = require('./closure.js').Closure;
 var UpcallInfo = require('./closure.js').UpcallInfo;
+var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var LOG = require('./log.js').Log.LOG;
 
@@ -13580,7 +13680,7 @@ var LOG = require('./log.js').Log.LOG;
  * {
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
- *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new { host: host, port: port } or null if there are no more hosts.
+ *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
  *   host: null, // If null, use getHostAndPort when connecting.
  *   port: 9696, // If in the browser.
  *      OR 6363, // If in Node.js.
@@ -13599,8 +13699,20 @@ var Face = function Face(settings)
   var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
   this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
-  this.host = (settings.host !== undefined ? settings.host : null);
-  this.port = (settings.port || (typeof WebSocketTransport != 'undefined' ? 9696 : 6363));
+  
+  // TODO: Allow the caller to supply a ConnectionInfo.
+  var host = (settings.host !== undefined ? settings.host : null);
+  if (host == null)
+    this.connectionInfo = null;
+  else {
+    if (typeof WebSocketTransport != 'undefined')
+      this.connectionInfo = new WebSocketTransport.ConnectionInfo
+        (host, settings.port || 9696);
+    else
+      this.connectionInfo = new TcpTransport.ConnectionInfo
+        (host, settings.port || 6363);
+  }
+  
   this.readyStatus = Face.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
   // Event handler
@@ -13635,10 +13747,12 @@ Face.supported = Face.getSupported();
 
 Face.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
 
-Face.prototype.createRoute = function(host, port) 
+Face.prototype.createRoute = function(hostOrConnectionInfo, port) 
 {
-  this.host=host;
-  this.port=port;
+  if (hostOrConnectionInfo instanceof Transport.ConnectionInfo)
+    this.connectionInfo = hostOrConnectionInfo;
+  else
+    this.connectionInfo = new TcpTransport.ConnectionInfo(hostOrConnectionInfo, port);
 };
 
 Face.KeyStore = new Array();
@@ -13766,10 +13880,16 @@ function getEntryForRegisteredPrefix(name)
 }
 
 /**
- * Return a function that selects a host at random from hostList and returns { host: host, port: port }.
- * If no more hosts remain, return null.
+ * Return a function that selects a host at random from hostList and returns 
+ * makeConnectionInfo(host, port), and if no more hosts remain, return null.
+ * @param {Array<string>} hostList An array of host names.
+ * @param {number} port The port for the connection.
+ * @param {function} makeConnectionInfo This calls makeConnectionInfo(host, port)
+ * to make the Transport.ConnectionInfo. For example:
+ * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
+ * @returns {function} A function which returns a Transport.ConnectionInfo.
  */
-Face.makeShuffledGetHostAndPort = function(hostList, port) 
+Face.makeShuffledGetHostAndPort = function(hostList, port, makeConnectionInfo) 
 {
   // Make a copy.
   hostList = hostList.slice(0, hostList.length);
@@ -13779,7 +13899,7 @@ Face.makeShuffledGetHostAndPort = function(hostList, port)
     if (hostList.length == 0)
       return null;
       
-    return { host: hostList.splice(0, 1)[0], port: port };
+    return makeConnectionInfo(hostList.splice(0, 1)[0], port);
   };
 };
 
@@ -13908,12 +14028,12 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
-  if (this.host == null || this.port == null) {
+  if (this.connectionInfo == null) {
     if (this.getHostAndPort == null)
-      console.log('ERROR: host OR port NOT SET');
+      console.log('ERROR: connectionInfo is NOT SET');
     else {
-      var thisNDN = this;
-      this.connectAndExecute(function() { thisNDN.reconnectAndExpressInterest(interest, closure); });
+      var thisFace = this;
+      this.connectAndExecute(function() { thisFace.reconnectAndExpressInterest(interest, closure); });
     }
   }
   else
@@ -13927,9 +14047,12 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  */
 Face.prototype.reconnectAndExpressInterest = function(interest, closure) 
 {
-  if (this.transport.connectedHost != this.host || this.transport.connectedPort != this.port) {
-    var thisNDN = this;
-    this.transport.connect(thisNDN, function() { thisNDN.expressInterestHelper(interest, closure); });
+  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+    var thisFace = this;
+    this.transport.connect
+      (this.connectionInfo, this, 
+       function() { thisFace.expressInterestHelper(interest, closure); },
+       function() { thisFace.closeByTransport(); });
     this.readyStatus = Face.OPENED;
   }
   else
@@ -13943,7 +14066,7 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
 Face.prototype.expressInterestHelper = function(interest, closure) 
 {
   var binaryInterest = interest.wireEncode();
-  var thisNDN = this;    
+  var thisFace = this;    
   //TODO: check local content store first
   if (closure != null) {
     var pitEntry = new PITEntry(interest, closure);
@@ -13964,11 +14087,11 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         Face.PITTable.splice(index, 1);
         
       // Raise closure callback
-      if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisNDN, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
+      if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
         if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
-        thisNDN.transport.send(binaryInterest.buf());
+        thisFace.transport.send(binaryInterest.buf());
       }
     };
   
@@ -14034,23 +14157,23 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, onRegisterFailed) 
 {
   intFlags = intFlags | 3;
-  var thisNDN = this;
+  var thisFace = this;
   var onConnected = function() {
-    if (thisNDN.ndndid == null) {
+    if (thisFace.ndndid == null) {
       // Fetch ndndid first, then register.
       var interest = new Interest(Face.ndndIdFetcher);
       interest.interestLifetime = 4000; // milliseconds
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisNDN.reconnectAndExpressInterest
-        (interest, new Face.FetchNdndidClosure(thisNDN, prefix, closure, intFlags, onRegisterFailed));
+      thisFace.reconnectAndExpressInterest
+        (interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
     }
     else  
-      thisNDN.registerPrefixHelper(prefix, closure, flags, onRegisterFailed);
+      thisFace.registerPrefixHelper(prefix, closure, flags, onRegisterFailed);
   };
 
-  if (this.host == null || this.port == null) {
+  if (this.connectionInfo == null) {
     if (this.getHostAndPort == null)
-      console.log('ERROR: host OR port NOT SET');
+      console.log('ERROR: connectionInfo is NOT SET');
     else
       this.connectAndExecute(onConnected);
   }
@@ -14254,7 +14377,7 @@ Face.prototype.onReceivedElement = function(element)
         Closure.call(this);
       };
             
-      var thisNDN = this;
+      var thisFace = this;
       KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
         if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
           console.log("In KeyFetchClosure.upcall: interest time out.");
@@ -14266,7 +14389,7 @@ Face.prototype.onReceivedElement = function(element)
           var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          this.closure.upcall(flag, new UpcallInfo(thisNDN, null, 0, this.data));
+          this.closure.upcall(flag, new UpcallInfo(thisFace, null, 0, this.data));
                 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
@@ -14349,36 +14472,39 @@ Face.prototype.onReceivedElement = function(element)
 };
 
 /**
- * Assume this.getHostAndPort is not null.  This is called when this.host is null or its host
- *   is not alive.  Get a host and port, connect, then execute onConnected().
+ * Assume this.getHostAndPort is not null.  This is called when 
+ * this.connectionInfo is null or its host is not alive.  
+ * Get a connectionInfo, connect, then execute onConnected().
  */
 Face.prototype.connectAndExecute = function(onConnected) 
 {
-  var hostAndPort = this.getHostAndPort();
-  if (hostAndPort == null) {
-    console.log('ERROR: No more hosts from getHostAndPort');
-    this.host = null;
+  var connectionInfo = this.getHostAndPort();
+  if (connectionInfo == null) {
+    console.log('ERROR: No more connectionInfo from getHostAndPort');
+    this.connectionInfo = null;
     return;
   }
 
-  if (hostAndPort.host == this.host && hostAndPort.port == this.port) {
-    console.log('ERROR: The host returned by getHostAndPort is not alive: ' + this.host + ":" + this.port);
+  if (connectionInfo.equals(this.connectionInfo)) {
+    console.log
+      ('ERROR: The host returned by getHostAndPort is not alive: ' + 
+       this.connectionInfo.toString());
     return;
   }
         
-  this.host = hostAndPort.host;
-  this.port = hostAndPort.port;   
-  if (LOG>0) console.log("connectAndExecute: trying host from getHostAndPort: " + this.host);
+  this.connectionInfo = connectionInfo;   
+  if (LOG>0) console.log("connectAndExecute: trying host from getHostAndPort: " + 
+                         this.connectionInfo.toString());
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
   interest.interestLifetime = 4000; // milliseconds    
 
-  var thisNDN = this;
+  var thisFace = this;
   var timerID = setTimeout(function() {
-    if (LOG>0) console.log("connectAndExecute: timeout waiting for host " + thisNDN.host);
+    if (LOG>0) console.log("connectAndExecute: timeout waiting for host " + thisFace.host);
       // Try again.
-      thisNDN.connectAndExecute(onConnected);
+      thisFace.connectAndExecute(onConnected);
   }, 3000);
   
   this.reconnectAndExpressInterest(interest, new Face.ConnectClosure(this, onConnected, timerID));
