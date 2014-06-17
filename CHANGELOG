@@ -8,6 +8,7 @@ Changes
 * In Name.Component, added method compare.
 * Added a default Name.Component constructor to create a zero-length value.
 * Face constructor: Support settings.connectionInfo.
+* Face constructor: Renamed settings.getHostAndPort to getConnectionInfo.
 * Renamed internal class Tlv1_0a2WireFormat to Tlv0_1WireFormat.
 * COPYING: Changed the license to LGPLv3.
 * Changed the default RSA key to 2048 bits.

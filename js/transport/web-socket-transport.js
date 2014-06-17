@@ -35,7 +35,7 @@ var WebSocketTransport = function WebSocketTransport()
   this.ws = null;
   this.connectionInfo = null; // Read by Face.
   this.elementReader = null;
-  this.defaultGetHostAndPort = Face.makeShuffledGetHostAndPort
+  this.defaultGetConnectionInfo = Face.makeShuffledHostGetConnectionInfo
     (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
       "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
       "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 

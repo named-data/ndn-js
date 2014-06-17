@@ -35,7 +35,7 @@ var TcpTransport = function TcpTransport()
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
 
-  this.defaultGetHostAndPort = require('../face.js').Face.makeShuffledGetHostAndPort
+  this.defaultGetConnectionInfo = require('../face.js').Face.makeShuffledHostGetConnectionInfo
     (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
       "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu", 
       "I.hub.ndn.ucla.edu", "J.hub.ndn.ucla.edu", "K.hub.ndn.ucla.edu"],

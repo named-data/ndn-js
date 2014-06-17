@@ -50,9 +50,9 @@ var LOG = require('./log.js').Log.LOG;
  * {
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
- *   getHostAndPort: transport.defaultGetHostAndPort, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
+ *   getConnectionInfo: transport.defaultGetConnectionInfo, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
  *   connectionInfo: null,
- *   host: null, // If null and connectionInfo is null, use getHostAndPort when connecting. 
+ *   host: null, // If null and connectionInfo is null, use getConnectionInfo when connecting. 
  *               // However, if connectionInfo is not null, use it instead.
  *   port: 9696, // If in the browser.
  *      OR 6363, // If in Node.js.
@@ -71,7 +71,7 @@ var Face = function Face(settings)
   // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
   var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
   this.transport = getTransport();
-  this.getHostAndPort = (settings.getHostAndPort || this.transport.defaultGetHostAndPort);
+  this.getConnectionInfo = (settings.getConnectionInfo || this.transport.defaultGetConnectionInfo);
   
   this.connectionInfo = (settings.connectionInfo || null);
   if (this.connectionInfo == null) {
@@ -276,7 +276,7 @@ function getEntryForRegisteredPrefix(name)
  * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
  * @returns {function} A function which returns a Transport.ConnectionInfo.
  */
-Face.makeShuffledGetHostAndPort = function(hostList, port, makeConnectionInfo) 
+Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnectionInfo) 
 {
   // Make a copy.
   hostList = hostList.slice(0, hostList.length);
@@ -416,7 +416,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
 Face.prototype.expressInterestWithClosure = function(interest, closure) 
 {
   if (this.connectionInfo == null) {
-    if (this.getHostAndPort == null)
+    if (this.getConnectionInfo == null)
       console.log('ERROR: connectionInfo is NOT SET');
     else {
       var thisFace = this;
@@ -559,7 +559,7 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
   };
 
   if (this.connectionInfo == null) {
-    if (this.getHostAndPort == null)
+    if (this.getConnectionInfo == null)
       console.log('ERROR: connectionInfo is NOT SET');
     else
       this.connectAndExecute(onConnected);
@@ -859,15 +859,15 @@ Face.prototype.onReceivedElement = function(element)
 };
 
 /**
- * Assume this.getHostAndPort is not null.  This is called when 
+ * Assume this.getConnectionInfo is not null.  This is called when 
  * this.connectionInfo is null or its host is not alive.  
  * Get a connectionInfo, connect, then execute onConnected().
  */
 Face.prototype.connectAndExecute = function(onConnected) 
 {
-  var connectionInfo = this.getHostAndPort();
+  var connectionInfo = this.getConnectionInfo();
   if (connectionInfo == null) {
-    console.log('ERROR: No more connectionInfo from getHostAndPort');
+    console.log('ERROR: No more connectionInfo from getConnectionInfo');
     this.connectionInfo = null;
     // Deprecated: Set this.host and this.port for backwards compatibility.
     this.host = null;
@@ -878,13 +878,13 @@ Face.prototype.connectAndExecute = function(onConnected)
 
   if (connectionInfo.equals(this.connectionInfo)) {
     console.log
-      ('ERROR: The host returned by getHostAndPort is not alive: ' + 
+      ('ERROR: The host returned by getConnectionInfo is not alive: ' + 
        this.connectionInfo.toString());
     return;
   }
         
   this.connectionInfo = connectionInfo;   
-  if (LOG>0) console.log("connectAndExecute: trying host from getHostAndPort: " + 
+  if (LOG>0) console.log("connectAndExecute: trying host from getConnectionInfo: " + 
                          this.connectionInfo.toString());  
   // Deprecated: Set this.host and this.port for backwards compatibility.
   this.host = this.connectionInfo.host;
@@ -953,7 +953,7 @@ var NDN = function NDN(settings)
 }
 
 // Use dummy functions so that the Face constructor will not try to set its own defaults.                                      
-NDN.prototype = new Face({ getTransport: function(){}, getHostAndPort: function(){} });
+NDN.prototype = new Face({ getTransport: function(){}, getConnectionInfo: function(){} });
 
 exports.NDN = NDN;
 
