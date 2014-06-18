@@ -11,7 +11,7 @@ BUILD A COMBINED, COMPRESSED LIBRARY
 ====================================
 
 While the combined file ndn.js is useful for debugging, a more efficient way to include the library 
-is to used the combined, compressed library build/ndn-js.min.js.
+is to used the combined, compressed library build/ndn.min.js.
 While we try to keep a built version in that directory for convenience, it
 may fall out of sync with the library, so we recommend building it as follows if possible.
 
@@ -20,13 +20,13 @@ To create a combined and compressed versions of NDN-JS scripts:
     ./waf configure
     ./waf
 
-These commands will create a combined version build/ndn.js, and combined version build/ndn-js.min.js, compressed 
+These commands will create a combined version build/ndn.js, and combined version build/ndn.min.js, compressed 
 using  Google's Closure Compiler.
 
 The compressed version is what we recommend including in applications.
 
 DOCUMENTATION
-================
+=============
 The documentation is auto-generated using JSDoc.  If you don't have JSDoc installed, download and unzip from:
 https://github.com/jsdoc3/jsdoc/archive/master.zip
 
