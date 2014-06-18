@@ -396,8 +396,8 @@ Interest.prototype.toUri = function()
 
 /**
  * Encode this Interest for a particular wire format.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {Blob} The encoded buffer in a Blob object.
  */
 Interest.prototype.wireEncode = function(wireFormat) 
@@ -409,8 +409,8 @@ Interest.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Interest.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
 Interest.prototype.wireDecode = function(input, wireFormat) 
 {

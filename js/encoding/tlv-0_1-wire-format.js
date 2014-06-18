@@ -123,7 +123,7 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object with (Blob, int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
  * the encoding of the beginning of the signed portion, and 
@@ -165,7 +165,7 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets. 
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 

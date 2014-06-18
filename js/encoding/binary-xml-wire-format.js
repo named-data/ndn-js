@@ -71,7 +71,7 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as Binary XML and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object with (Blob, int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
  * the encoding of the beginning of the signed portion, and 
@@ -99,7 +99,7 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
  * the signed offsets. 
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -265,7 +265,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  * Encode the data by calling the operations on the encoder.
  * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -303,7 +303,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
  * Use the decoder to place the result in data.
  * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 

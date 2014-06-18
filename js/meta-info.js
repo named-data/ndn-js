@@ -80,7 +80,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {an int from ContentType} The content type.
+ * @returns {number} The content type as an int from ContentType.
  */
 MetaInfo.prototype.getType = function()
 {
@@ -114,8 +114,8 @@ MetaInfo.prototype.getFinalBlockID = function()
 
 /**
  * Set the content type.
- * @param {an int from ContentType} type The content type.  If null, this 
- * uses ContentType.BLOB.
+ * @param {number} type The content type as an int from ContentType.  If null, 
+ * this uses ContentType.BLOB.
  */
 MetaInfo.prototype.setType = function(type)
 {

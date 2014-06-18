@@ -231,8 +231,8 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Encode this Data for a particular wire format.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat) 
@@ -249,8 +249,8 @@ Data.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Data.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
 Data.prototype.wireDecode = function(input, wireFormat) 
 {

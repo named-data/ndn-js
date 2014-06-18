@@ -86,8 +86,8 @@ UnixTransport.ConnectionInfo.prototype.toString = function()
  * connectByFace.
  * @param {UnixTransport.ConnectionInfo} connectionInfo A
  * UnixTransport.ConnectionInfo with the Unix socket filePath.
- * @param {an object with onReceivedElement} elementListener The elementListener 
- * must remain valid during the life of this object.
+ * @param {object} elementListener The elementListener with function 
+ * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host, 
  * call onclosedCallback().

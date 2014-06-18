@@ -96,8 +96,8 @@ XpcomTransport.ConnectionInfo.prototype.toString = function()
  * connectByFace.
  * @param {XpcomTransport.ConnectionInfo} connectionInfo A
  * XpcomTransport.ConnectionInfo with the host and port.
- * @param {an object with onReceivedElement} elementListener The elementListener 
- * must remain valid during the life of this object.
+ * @param {object} elementListener The elementListener with function 
+ * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host, 
  * call onclosedCallback().
@@ -131,8 +131,10 @@ XpcomTransport.prototype.connectByFace = function(face, onopenCallback)
  * Transport.ConnectionInfo, assume it is an nsISocketTransport which is already 
  * configured for a host and port, in which case set connectionInfo to new 
  * XpcomTransport.ConnectionInfo(connectionInfoOrSocketTransport.host, connectionInfoOrSocketTransport.port).
- * @param {an object with onReceivedElement} elementListener Listen on the port to read an entire binary XML encoded element and call
- *    elementListener.onReceivedElement(element).
+ * @param {object} elementListener The elementListener with function 
+ * onReceivedElement which must remain valid during the life of this object.
+ * Listen on the port to read an entire binary XML encoded element and call
+ * elementListener.onReceivedElement(element).
  */
 XpcomTransport.prototype.connectHelper = function
   (connectionInfoOrSocketTransport, elementListener) 
