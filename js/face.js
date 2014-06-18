@@ -47,8 +47,17 @@ var LOG = require('./log.js').Log.LOG;
 /**
  * Create a new Face with the given settings.
  * This throws an exception if Face.supported is false.
+ * There are two forms of the constructor.  The first form takes the transport and connectionInfo:
+ * Face(transport, connectionInfo).  The second form takes an optional settings object:
+ * Face([settings]).
  * @constructor
- * @param {Object} settings if not null, an associative array with the following defaults:
+ * @param {Transport} transport An object of a subclass of Transport to use for 
+ * communication.
+ * @param {Transport.ConnectionInfo} connectionInfo This must be a ConnectionInfo 
+ * from the same subclass of Transport as transport. If omitted and transport is
+ * a new UnixTransport() then attempt to create to the Unix socket for the local
+ * forwarder.
+ * @param {Object} settings (optional) An associative array with the following defaults:
  * {
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
@@ -67,48 +76,72 @@ var LOG = require('./log.js').Log.LOG;
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
-var Face = function Face(settings) 
+var Face = function Face(transportOrSettings, connectionInfo) 
 {
   if (!Face.supported)
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
-  settings = (settings || {});
-  // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
-  var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
-  this.transport = getTransport();
-  this.getConnectionInfo = (settings.getConnectionInfo || this.transport.defaultGetConnectionInfo);
-  
-  this.connectionInfo = (settings.connectionInfo || null);
-  if (this.connectionInfo == null) {
-    var host = (settings.host !== undefined ? settings.host : null);
+  var settings;
+  if (typeof transportOrSettings == 'object' && transportOrSettings instanceof Transport) {
+    this.getConnectionInfo = null;
+    this.transport = transportOrSettings;
+    this.connectionInfo = (connectionInfo || null);
+    // Use defaults for other settings.
+    settings = {};
     
-    if (this.transport && this.transport.__proto__ && 
-        this.transport.__proto__.name == "UnixTransport") {
-      // We are using UnixTransport on Node.js. There is no IP-style host and port.
-      if (host != null)
-        // Assume the host is the local Unix socket path.
-        this.connectionInfo = new UnixTransport.ConnectionInfo(host);
-      else {
-        // If getConnectionInfo is not null, it will be used instead so no
-        // need to set this.connectionInfo.
-        if (this.getConnectionInfo == null) {
-          var filePath = Face.getUnixSocketFilePathForLocalhost();
-          if (filePath != null)
-            this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
-          else
-            console.log
-              ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport")
-        }
+    if (this.connectionInfo == null) {
+      if (this.transport && this.transport.__proto__ && 
+          this.transport.__proto__.name == "UnixTransport") {
+        // Try to create the default connectionInfo for UnixTransport.
+        var filePath = Face.getUnixSocketFilePathForLocalhost();
+        if (filePath != null)
+          this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
+        else
+          console.log
+            ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
+        console.log("Using " + this.connectionInfo.toString());
       }
     }
-    else {
-      if (host != null) {
-        if (typeof WebSocketTransport != 'undefined')
-          this.connectionInfo = new WebSocketTransport.ConnectionInfo
-            (host, settings.port || 9696);
-        else
-          this.connectionInfo = new TcpTransport.ConnectionInfo
-            (host, settings.port || 6363);
+  }
+  else {
+    settings = (transportOrSettings || {});
+    // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
+    var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
+    this.transport = getTransport();
+    this.getConnectionInfo = (settings.getConnectionInfo || this.transport.defaultGetConnectionInfo);
+
+    this.connectionInfo = (settings.connectionInfo || null);
+    if (this.connectionInfo == null) {
+      var host = (settings.host !== undefined ? settings.host : null);
+
+      if (this.transport && this.transport.__proto__ && 
+          this.transport.__proto__.name == "UnixTransport") {
+        // We are using UnixTransport on Node.js. There is no IP-style host and port.
+        if (host != null)
+          // Assume the host is the local Unix socket path.
+          this.connectionInfo = new UnixTransport.ConnectionInfo(host);
+        else {
+          // If getConnectionInfo is not null, it will be used instead so no
+          // need to set this.connectionInfo.
+          if (this.getConnectionInfo == null) {
+            var filePath = Face.getUnixSocketFilePathForLocalhost();
+            if (filePath != null)
+              this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
+            else
+              console.log
+                ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
+          }
+        }
+      }
+      else {
+        if (host != null) {
+          if (typeof WebSocketTransport != 'undefined')
+            this.connectionInfo = new WebSocketTransport.ConnectionInfo
+              (host, settings.port || 9696);
+          else
+            this.connectionInfo = new TcpTransport.ConnectionInfo
+              (host, settings.port || 6363);
+        }
       }
     }
   }
