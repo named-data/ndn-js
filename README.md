@@ -2,15 +2,14 @@
 NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------
 
-NDN-JS is the first native version of the NDN protocol written in JavaScript.  It is wire
-format compatible with PARC's CCNx. 
+NDN-JS is the first native version of the NDN protocol written in JavaScript.  It
+implements the NDN-TLV wire format and is also wire format compatible with PARC's CCNx. 
 
 The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
 	
 See the file INSTALL for build and install instructions.
-
 
 License
 -------
@@ -43,10 +42,12 @@ Additional goals for the project:
 - Websockets transport (rather than TCP or UDP, which are not directly supported in
 Javascript).
 - Relatively lightweight and compact, to enable efficient use on the web.	
-- Wire format compatible with PARC's CCNx implementation of NDN.
+- Implement the NDN-TLV wire format and be wire format compatible with the PARC's CCNx implementation of NDN.
 	
 The library currently requires a remote NDN daemon, and has been tested with ndnd, from
-the's NDNx package: http://ndnx.org/
+the's NDNx package: http://ndnx.org/ , ndnd-tlv from the package 
+https://github.com/named-data/ndnd-tlv and with NFD from the package
+https://github.com/named-data/NFD .
 
 Currently, the library has two APIs for developers: 
 
@@ -89,35 +90,26 @@ See INSTALL for instructions on how to build these files.
 
 Or they can be downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
 
-- http://raw.github.com/named-data/ndn-js/downloads/ndn.js
-- http://raw.github.com/named-data/ndn-js/downloads/ndn.min.js
+- https://github.com/named-data/ndn-js/raw/master/build/ndn.js
+- https://github.com/named-data/ndn-js/raw/master/build/ndn.min.js
 
 ** Examples **
 
 *** ndn-ping
 
-You can check out `examples/ndn-ping.html` to see an example how to implement ndn-ping in NDN.js
+You can check out `examples/ndnping/ndn-ping.html` to see an example how to implement ndn-ping in NDN.js
 
 *** Example to retrieve content ***
 
 A simple example of the current API to express an Interest and receive data:
 
-var ndn = new NDN();	// connect to a default hub/proxy
+var face = new Face();	// connect to a default hub/proxy
         
-var AsyncGetClosure = function AsyncGetClosure() {
-    // Inherit from Closure.
-    Closure.call(this);
-};		
-AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
-    if (kind == Closure.UPCALL_CONTENT) {
-        console.log("Received " + upcallInfo.contentObject.name.to_uri());
-        console.log(upcallInfo.contentObject.content);
-    }
-    return Closure.RESULT_OK;
-};
+function onData(interest, data) {
+  console.log("Received " + data.getName().toUri());
+}
 
-ndn.expressInterest(new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt"), new
-AsyncGetClosure());
+face.expressInterest(new Name("/ndn/edu/ucla/remap/ndn-js-test/hello.txt"), onData);
 
 ** Example to publish content **
 
@@ -126,7 +118,7 @@ AsyncGetClosure());
 // on a way to either obtain that prefix or use the /local
 // convention. 
 
-For now, see tests/test-publish-async.html
+For now, see tests/browser/test-publish-async.html
 
 
 
