@@ -20,6 +20,7 @@
 var readline = require('readline');
 var Face = require('../..').Face;
 var Name = require('../..').Name;
+var UnixTransport = require('../..').UnixTransport;
 
 var onData = function(interest, data) {
   console.log("Got data packet with name " + data.name.toUri());
@@ -33,7 +34,8 @@ var onTimeout = function(interest) {
   face.close();  // This will cause the script to quit.
 };
 
-var face = new Face({host: "localhost"});
+// Connect to the local forwarder with a Unix socket.
+var face = new Face(new UnixTransport());
 
 var rl = readline.createInterface({
   input: process.stdin,

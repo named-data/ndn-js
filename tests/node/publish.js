@@ -20,6 +20,7 @@ var Face = require('../..').Face;
 var Name = require('../..').Name;
 var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
+var UnixTransport = require('../..').UnixTransport;
 
 function onInterest(prefix, interest, transport) 
 {
@@ -46,7 +47,8 @@ function onRegisterFailed(prefix)
   face.close();  // This will cause the script to quit.
 }
 
-var face = new Face({host: "localhost"});
+// Connect to the local forwarder with a Unix socket.
+var face = new Face(new UnixTransport());
 
 face.registerPrefix(new Name("/testecho"), onInterest, onRegisterFailed);
 console.log("Started...");
