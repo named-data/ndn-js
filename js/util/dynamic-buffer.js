@@ -64,7 +64,7 @@ DynamicBuffer.prototype.copy = function(value, offset)
 {
   this.ensureLength(value.length + offset);
     
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (Buffer.isBuffer(value))
     value.copy(this.array, offset);
   else
     // Need to make value a Buffer to copy.
@@ -106,7 +106,7 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 {
   this.ensureLengthFromBack(offsetFromBack);
 
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (Buffer.isBuffer(value))
     value.copy(this.array, this.array.length - offsetFromBack);
   else
     // Need to make value a Buffer to copy.

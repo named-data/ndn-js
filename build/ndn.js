@@ -61,7 +61,7 @@ var Buffer = function Buffer(data, format)
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer)) {
+  else if (typeof data == 'object' && data instanceof Uint8Array || Buffer.isBuffer(data)) {
     // The second argument is a boolean for "copy", default true.
     if (format == false)
       obj = data.subarray(0);
@@ -122,6 +122,11 @@ var Buffer = function Buffer(data, format)
 };
 
 Buffer.prototype = Uint8Array.prototype;
+
+Buffer.isBuffer = function(obj)
+{
+  return typeof obj === 'object' && obj instanceof Buffer;
+};
 
 Buffer.concat = function(arrays) 
 {
@@ -5132,7 +5137,7 @@ var Blob = function Blob(value, copy)
         // We are copying, so just make another Buffer.
         this.buffer = new Buffer(value);
       else {
-        if (typeof value === 'object' && value instanceof Buffer)
+        if (Buffer.isBuffer(value))
           // We can use as-is.
           this.buffer = value;
         else
@@ -5363,7 +5368,7 @@ DynamicBuffer.prototype.copy = function(value, offset)
 {
   this.ensureLength(value.length + offset);
     
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (Buffer.isBuffer(value))
     value.copy(this.array, offset);
   else
     // Need to make value a Buffer to copy.
@@ -5405,7 +5410,7 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 {
   this.ensureLengthFromBack(offsetFromBack);
 
-  if (typeof value == 'object' && value instanceof Buffer)
+  if (Buffer.isBuffer(value))
     value.copy(this.array, this.array.length - offsetFromBack);
   else
     // Need to make value a Buffer to copy.
@@ -8277,7 +8282,7 @@ WireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data and return the encoding and signed offsets. Your derived class 
  * should override.
  * @param {Data} data The Data object to encode.
- * @returns {object with (Blob, int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
  * the encoding of the beginning of the signed portion, and 
@@ -8295,7 +8300,7 @@ WireFormat.prototype.encodeData = function(data)
  * the signed offsets.  Your derived class should override.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -8310,8 +8315,7 @@ WireFormat.prototype.decodeData = function(data, input)
 /**
  * Set the static default WireFormat used by default encoding and decoding 
  * methods.
- * @param wireFormat {a subclass of WireFormat} An object of a subclass of 
- * WireFormat.
+ * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
  */
 WireFormat.setDefaultWireFormat = function(wireFormat)
 {
@@ -8321,7 +8325,7 @@ WireFormat.setDefaultWireFormat = function(wireFormat)
 /**
  * Return the default WireFormat used by default encoding and decoding methods 
  * which was set with setDefaultWireFormat.
- * @returns {a subclass of WireFormat} The WireFormat object.
+ * @returns {WireFormat} An object of a subclass of WireFormat.
  */
 WireFormat.getDefaultWireFormat = function()
 {
@@ -8995,8 +8999,8 @@ WebSocketTransport.ConnectionInfo.prototype.toString = function()
  * connectByFace.
  * @param {WebSocketTransport.ConnectionInfo} connectionInfo A
  * WebSocketTransport.ConnectionInfo with the host and port.
- * @param {an object with onReceivedElement} elementListener The elementListener 
- * must remain valid during the life of this object.
+ * @param {object} elementListener The elementListener with function 
+ * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host, 
  * call onclosedCallback().
@@ -9475,7 +9479,7 @@ Name.Component = function NameComponent(value)
     else
       this.value = new Buffer(value.buf());
   }
-  else if (typeof value === 'object' && value instanceof Buffer)
+  else if (Buffer.isBuffer(value))
     this.value = new Buffer(value);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
     // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.                                                      
@@ -10652,7 +10656,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {an int from ContentType} The content type.
+ * @returns {number} The content type as an int from ContentType.
  */
 MetaInfo.prototype.getType = function()
 {
@@ -10686,8 +10690,8 @@ MetaInfo.prototype.getFinalBlockID = function()
 
 /**
  * Set the content type.
- * @param {an int from ContentType} type The content type.  If null, this 
- * uses ContentType.BLOB.
+ * @param {number} type The content type as an int from ContentType.  If null, 
+ * this uses ContentType.BLOB.
  */
 MetaInfo.prototype.setType = function(type)
 {
@@ -11260,8 +11264,8 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
  * Encode this Data for a particular wire format.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat) 
@@ -11278,8 +11282,8 @@ Data.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Data.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
 Data.prototype.wireDecode = function(input, wireFormat) 
 {
@@ -12009,8 +12013,8 @@ Interest.prototype.toUri = function()
 
 /**
  * Encode this Interest for a particular wire format.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to encode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {Blob} The encoded buffer in a Blob object.
  */
 Interest.prototype.wireEncode = function(wireFormat) 
@@ -12022,8 +12026,8 @@ Interest.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Interest.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @param {a subclass of WireFormat} wireFormat (optional) A WireFormat object 
- * used to decode this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode 
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
 Interest.prototype.wireDecode = function(input, wireFormat) 
 {
@@ -12552,7 +12556,7 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as Binary XML and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object with (Blob, int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
  * the encoding of the beginning of the signed portion, and 
@@ -12580,7 +12584,7 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
  * the signed offsets. 
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -12746,7 +12750,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  * Encode the data by calling the operations on the encoder.
  * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -12784,7 +12788,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
  * Use the decoder to place the result in data.
  * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -12952,7 +12956,7 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object with (Blob, int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
  * the encoding of the beginning of the signed portion, and 
@@ -12994,7 +12998,7 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets. 
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object with (int, int)} An associative array with fields
+ * @returns {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where 
  * signedPortionBeginOffset is the offset in the encoding of the beginning of 
  * the signed portion, and signedPortionEndOffset is the offset in the encoding 
@@ -13677,11 +13681,22 @@ var LOG = require('./log.js').Log.LOG;
 /**
  * Create a new Face with the given settings.
  * This throws an exception if Face.supported is false.
+ * There are two forms of the constructor.  The first form takes the transport and connectionInfo:
+ * Face(transport, connectionInfo).  The second form takes an optional settings object:
+ * Face([settings]).
  * @constructor
- * @param {Object} settings if not null, an associative array with the following defaults:
+ * @param {Transport} transport An object of a subclass of Transport to use for 
+ * communication.
+ * @param {Transport.ConnectionInfo} connectionInfo This must be a ConnectionInfo 
+ * from the same subclass of Transport as transport. If omitted and transport is
+ * a new UnixTransport() then attempt to create to the Unix socket for the local
+ * forwarder.
+ * @param {Object} settings (optional) An associative array with the following defaults:
  * {
  *   getTransport: function() { return new WebSocketTransport(); }, // If in the browser.
  *              OR function() { return new TcpTransport(); },       // If in Node.js.
+ *              // If getTransport creates a UnixTransport and connectionInfo is null,
+ *              // then connect to the local forwarder's Unix socket.
  *   getConnectionInfo: transport.defaultGetConnectionInfo, // a function, on each call it returns a new Transport.ConnectionInfo or null if there are no more hosts.
  *                                                          // If connectionInfo or host is not null, getConnectionInfo is ignored.
  *   connectionInfo: null,
@@ -13695,45 +13710,72 @@ var LOG = require('./log.js').Log.LOG;
  *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
-var Face = function Face(settings) 
+var Face = function Face(transportOrSettings, connectionInfo) 
 {
   if (!Face.supported)
     throw new Error("The necessary JavaScript support is not available on this platform.");
     
-  settings = (settings || {});
-  // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
-  var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
-  this.transport = getTransport();
-  this.getConnectionInfo = (settings.getConnectionInfo || this.transport.defaultGetConnectionInfo);
-  
-  this.connectionInfo = (settings.connectionInfo || null);
-  if (this.connectionInfo == null) {
-    var host = (settings.host !== undefined ? settings.host : null);
+  var settings;
+  if (typeof transportOrSettings == 'object' && transportOrSettings instanceof Transport) {
+    this.getConnectionInfo = null;
+    this.transport = transportOrSettings;
+    this.connectionInfo = (connectionInfo || null);
+    // Use defaults for other settings.
+    settings = {};
     
-    if (this.transport && this.transport.__proto__ && 
-        this.transport.__proto__.name == "UnixTransport") {
-      // We are using UnixTransport on Node.js. There is no IP-style host and port.
-      if (host != null)
-        // Assume the host is the local Unix socket path.
-        this.connectionInfo = new UnixTransport.ConnectionInfo(host);
-      else {
-        // If getConnectionInfo is not null, it will be used instead so no
-        // need to set this.connectionInfo.
-        if (this.getConnectionInfo == null) {
-          var filePath = Face.getUnixSocketFilePathForLocalhost();
-          if (filePath != null)
-            this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
-        }
+    if (this.connectionInfo == null) {
+      if (this.transport && this.transport.__proto__ && 
+          this.transport.__proto__.name == "UnixTransport") {
+        // Try to create the default connectionInfo for UnixTransport.
+        var filePath = Face.getUnixSocketFilePathForLocalhost();
+        if (filePath != null)
+          this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
+        else
+          console.log
+            ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
+        console.log("Using " + this.connectionInfo.toString());
       }
     }
-    else {
-      if (host != null) {
-        if (typeof WebSocketTransport != 'undefined')
-          this.connectionInfo = new WebSocketTransport.ConnectionInfo
-            (host, settings.port || 9696);
-        else
-          this.connectionInfo = new TcpTransport.ConnectionInfo
-            (host, settings.port || 6363);
+  }
+  else {
+    settings = (transportOrSettings || {});
+    // For the browser, browserify-tcp-transport.js replaces TcpTransport with WebSocketTransport.
+    var getTransport = (settings.getTransport || function() { return new TcpTransport(); });
+    this.transport = getTransport();
+    this.getConnectionInfo = (settings.getConnectionInfo || this.transport.defaultGetConnectionInfo);
+
+    this.connectionInfo = (settings.connectionInfo || null);
+    if (this.connectionInfo == null) {
+      var host = (settings.host !== undefined ? settings.host : null);
+
+      if (this.transport && this.transport.__proto__ && 
+          this.transport.__proto__.name == "UnixTransport") {
+        // We are using UnixTransport on Node.js. There is no IP-style host and port.
+        if (host != null)
+          // Assume the host is the local Unix socket path.
+          this.connectionInfo = new UnixTransport.ConnectionInfo(host);
+        else {
+          // If getConnectionInfo is not null, it will be used instead so no
+          // need to set this.connectionInfo.
+          if (this.getConnectionInfo == null) {
+            var filePath = Face.getUnixSocketFilePathForLocalhost();
+            if (filePath != null)
+              this.connectionInfo = new UnixTransport.ConnectionInfo(filePath);
+            else
+              console.log
+                ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
+          }
+        }
+      }
+      else {
+        if (host != null) {
+          if (typeof WebSocketTransport != 'undefined')
+            this.connectionInfo = new WebSocketTransport.ConnectionInfo
+              (host, settings.port || 9696);
+          else
+            this.connectionInfo = new TcpTransport.ConnectionInfo
+              (host, settings.port || 6363);
+        }
       }
     }
   }

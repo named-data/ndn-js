@@ -52,7 +52,7 @@ var Blob = function Blob(value, copy)
         // We are copying, so just make another Buffer.
         this.buffer = new Buffer(value);
       else {
-        if (typeof value === 'object' && value instanceof Buffer)
+        if (Buffer.isBuffer(value))
           // We can use as-is.
           this.buffer = value;
         else
