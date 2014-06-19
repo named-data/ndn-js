@@ -61,7 +61,7 @@ var Buffer = function Buffer(data, format)
     else 
       throw new Error('Buffer: unknown encoding format ' + format);
   } 
-  else if (typeof data == 'object' && (data instanceof Uint8Array || data instanceof Buffer)) {
+  else if (typeof data == 'object' && data instanceof Uint8Array || Buffer.isBuffer(data)) {
     // The second argument is a boolean for "copy", default true.
     if (format == false)
       obj = data.subarray(0);
@@ -122,6 +122,11 @@ var Buffer = function Buffer(data, format)
 };
 
 Buffer.prototype = Uint8Array.prototype;
+
+Buffer.isBuffer = function(obj)
+{
+  return typeof obj === 'object' && obj instanceof Buffer;
+};
 
 Buffer.concat = function(arrays) 
 {
