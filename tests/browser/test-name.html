@@ -58,7 +58,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.size(); ++i) {
-            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name2.get(i).getValue())) {
+            if (!name1.get(i).equals(name2.get(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Compare with " + name2.toUri() + ": Names differ at component at index " + i + ".<br/>";
             }
@@ -76,7 +76,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name1.size(); ++i) {
-            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name3.get(i).getValue())) {
+            if (!name1.get(i).equals(name3.get(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -94,7 +94,7 @@ function testName() {
     else {
         var allEqual = true;
         for (var i = 0; i < name4.size(); ++i) {
-            if (!DataUtils.arraysEqual(name1.get(i).getValue(), name4.get(i).getValue())) {
+            if (!name1.get(i).equals(name4.get(i))) {
                 allEqual = false;
                 result.innerHTML += "ERROR: Names differ at component at index " + i + ".<br/>";
             }
@@ -105,7 +105,7 @@ function testName() {
     
     result.innerHTML += "Check with Name component at index 2:<br/>";
     // Returns ArrayBuffer of "%00%01%02%03"
-    var component2Out = name1.get(2).getValue();
+    var component2Out = name1.get(2).getValue().buf();
     if (DataUtils.arraysEqual(component2Out, comp2))
         result.innerHTML += "SUCCESS: Components at index 2 are equal.<br/>";
     else

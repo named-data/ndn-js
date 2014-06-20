@@ -121,7 +121,7 @@
     
         // Use the segmentNumber to load multiple segments.
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-                    (data.name.get(data.name.size() - 1).getValue());
+                    (data.name.get(-1).getValue().buf());
       
       // Process received data here...
       // Count content length

@@ -217,7 +217,7 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
 
   // Encode the components backwards.
   for (var i = name.size() - 1; i >= 0; --i)
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue());
+    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
 
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
 };
@@ -325,7 +325,7 @@ Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue());
+      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
   }
   
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
@@ -443,7 +443,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue();
+  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();

@@ -45,11 +45,7 @@
 			
 			
 			if(interest.name!=null && interest.name.components!=null){
-				output+= "NAME: ";
-				
-				for(var i=0;i<interest.name.size();i++)
-					output+= "/"+ DataUtils.toString(interest.name.get(i).getValue());
-				
+				output+= "NAME: " + interest.getName().toUri();
 				output+= "<br />";
 				output+= "<br />";
 			}
@@ -148,7 +144,7 @@
 			if(interest.name.get(3) !=null){
 				
 				
-				var input = DataUtils.toHex(interest.name.get(3).getValue()) ;
+				var input = interest.getName().get(3).getValue().toHex();
 
     			// The hard-wired input is in Binary XML.
 				var data = EncodingUtils.decodeHexData(input, BinaryXmlWireFormat.get());
@@ -172,11 +168,7 @@
 				
 
 				if(data.name!=null && data.name.components!=null){
-					output+= "NAME: ";
-					
-					for(var i=0;i<data.name.size();i++)
-						output+= "/"+ DataUtils.toString(data.name.get(i).getValue());
-					
+					output+= "NAME: " + data.getName().toUri();
 					output+= "<br />";
 					output+= "<br />";
 				}

@@ -70,7 +70,7 @@ NameEnumeration.prototype.processData = function(data)
       this.onComponents(null);
     else {
       var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.name.get(data.name.size() - 1).getValue());
+          (data.name.get(data.name.size() - 1).getValue().buf());
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
@@ -147,6 +147,6 @@ NameEnumeration.parseComponents = function(content)
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
   return name.components != null && name.size() >= 1 &&
-         name.get(name.size() - 1).getValue().length >= 1 &&
-         name.get(name.size() - 1).getValue()[0] == 0;
+         name.get(-1).getValue().size() >= 1 &&
+         name.get(-1).getValue().buf()[0] == 0;
 };

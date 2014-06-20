@@ -209,7 +209,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.name))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.get(data.name.size() - 1).getValue());
+            (data.name.get(-1).getValue().buf());
     
     if (!this.didOnStart) {
         // This is the first or only segment.
@@ -534,7 +534,7 @@ function getNameContentTypeAndCharset(name)
         return MimeTypes.getContentTypeAndCharset("");
     
     return MimeTypes.getContentTypeAndCharset
-        (DataUtils.toString(name.get(iFileName).getValue()).toLowerCase());
+        (DataUtils.toString(name.get(iFileName).getValue().buf()).toLowerCase());
 }
 
 /*
@@ -544,8 +544,8 @@ function getNameContentTypeAndCharset(name)
 function endsWithSegmentNumber(name) 
 {
     return name.components != null && name.size() >= 2 &&
-        name.get(name.size() - 1).getValue().length >= 1 &&
-        name.get(name.size() - 1).getValue()[0] == 0;
+        name.get(-1).getValue().size() >= 1 &&
+        name.get(-1).getValue().buf()[0] == 0;
 }
 
 /*
@@ -628,7 +628,7 @@ function parseExclude(value)
 function getIndexOfMetaComponent(name) 
 {
   for (var i = 0; i < name.size(); ++i) {
-    var component = name.get(i).getValue();
+    var component = name.get(i).getValue().buf();
     if (component.length >= MetaComponentPrefix.length &&
       DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), MetaComponentPrefix))
         return i;
@@ -647,7 +647,7 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
 function getIndexOfNdnfsFileComponent(name) 
 {
   for (var i = 0; i < name.size(); ++i) {
-    if (DataUtils.arraysEqual(name.get(i).getValue(), NdnfsFileComponent))
+    if (DataUtils.arraysEqual(name.get(i).getValue().buf(), NdnfsFileComponent))
       return i;
   }
     
