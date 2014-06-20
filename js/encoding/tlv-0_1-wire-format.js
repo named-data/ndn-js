@@ -145,7 +145,7 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
   //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
-  encoder.writeBlobTlv(Tlv.Content, data.getContent());
+  encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();

@@ -108,9 +108,19 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Buffer} The content as a Buffer, which is null if unspecified.
+ * @returns {Blob} The data packet content as a Blob.
  */
 Data.prototype.getContent = function() 
+{
+  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
+  return new Blob(this.content, false);
+};
+
+/**
+ * @deprecated Use getContent. This method returns a Buffer which is the former
+ * behavior of getContent, and should only be used while updating your code.
+ */
+Data.prototype.getContentAsBuffer = function() 
 {
   return this.content;
 };
