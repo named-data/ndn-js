@@ -8517,7 +8517,7 @@ NameEnumeration.prototype.processData = function(data)
       this.onComponents(null);
     else {
       var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.name.get(data.name.size() - 1).getValue());
+          (data.name.get(data.name.size() - 1).getValue().buf());
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
@@ -8562,7 +8562,7 @@ NameEnumeration.prototype.processTimeout = function()
 
 /**
  * Parse the content as a name enumeration response and return an array of components.  This makes a copy of the component.
- * @param {Uint8Array} content The content to parse.
+ * @param {Buffer} content The content to parse.
  * @returns {Array<Buffer>} The array of components.
  */
 NameEnumeration.parseComponents = function(content)
@@ -8594,8 +8594,8 @@ NameEnumeration.parseComponents = function(content)
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
   return name.components != null && name.size() >= 1 &&
-         name.get(name.size() - 1).getValue().length >= 1 &&
-         name.get(name.size() - 1).getValue()[0] == 0;
+         name.get(-1).getValue().size() >= 1 &&
+         name.get(-1).getValue().buf()[0] == 0;
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -9498,12 +9498,22 @@ Name.Component = function NameComponent(value)
 
 /**
  * Get the component value.
- * @returns {Buffer} The component value.
+ * @returns {Blob} The component value.
  */
 Name.Component.prototype.getValue = function() 
 {
-  return this.value;
+  // For temporary backwards compatibility, leave this.value as a Buffer but return a Blob.
+  return new Blob(this.value, false);
 }
+
+/**
+ * @deprecated Use getValue. This method returns a Buffer which is the former
+ * behavior of getValue, and should only be used while updating your code.
+ */
+Name.prototype.getValueAsBuffer = function() 
+{
+  return this.value;
+};
 
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
@@ -9652,7 +9662,7 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   encoder.writeElementStartDTag(this.getElementLabel());
   var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue());
+    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
   
   encoder.writeElementClose();
 };
@@ -9716,7 +9726,7 @@ Name.prototype.toUri = function()
   var result = "";
   
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue());
+    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
   
   return result;  
 };
@@ -9827,7 +9837,7 @@ Name.prototype.size = function()
 };
 
 /**
- * Return a new Name.Component of the component at the given index.  To get just the component value, use get(i).getValue().
+ * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
  * @returns {Name.Component}
@@ -9858,11 +9868,11 @@ Name.prototype.getComponentCount = function()
 };
 
 /**
- * @deprecated To get just the component value, use get(i).getValue().
+ * @deprecated To get just the component value array, use get(i).getValue().buf().
  */
 Name.prototype.getComponent = function(i) 
 {
-  return new Buffer(this.components[i].getValue());
+  return new Buffer(this.components[i].getValue().buf());
 };
 
 /**
@@ -9873,7 +9883,7 @@ Name.prototype.getComponent = function(i)
 Name.prototype.indexOfFileName = function() 
 {
   for (var i = this.size() - 1; i >= 0; --i) {
-    var component = this.components[i].getValue();
+    var component = this.components[i].getValue().buf();
     if (component.length <= 0)
       continue;
         
@@ -9935,7 +9945,7 @@ Name.prototype.getContentDigestValue = function()
 Name.getComponentContentDigestValue = function(component) 
 {
   if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue();
+    component = component.getValue().buf();
 
   var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
   // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
@@ -9964,7 +9974,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 Name.toEscapedString = function(value) 
 {
   if (typeof value == 'object' && value instanceof Name.Component)
-    value = value.getValue();
+    value = value.getValue().buf();
   
   var result = "";
   var gotNonDot = false;
@@ -10211,6 +10221,7 @@ Key.createFromPEM = function(obj)
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var Blob = require('./util/blob.js').Blob;
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
@@ -10296,9 +10307,19 @@ KeyLocator.prototype.getKeyName = function()
  * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER 
  * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the 
  * DER encoded certificate. 
- * @returns {Buffer} The key data, or null if not specified.
+ * @returns {Blob} The key data, or null if not specified.
  */
 KeyLocator.prototype.getKeyData = function() 
+{ 
+  // For temporary backwards compatibility, leave the fields as a Buffer but return a Blob.
+  return new Blob(this.getKeyDataAsBuffer(), false);
+};
+
+/**
+ * @deprecated Use getKeyData. This method returns a Buffer which is the former
+ * behavior of getKeyData, and should only be used while updating your code.
+ */
+KeyLocator.prototype.getKeyDataAsBuffer = function() 
 { 
   if (this.type == KeyLocatorType.KEY)
     return this.publicKey;
@@ -10338,9 +10359,13 @@ KeyLocator.prototype.setKeyName = function(name)
 KeyLocator.prototype.setKeyData = function(keyData)
 {
   var value = keyData;
-  if (value != null)
-    // Make a copy.
-    value = new Buffer(value);
+  if (value != null) {
+    if (typeof value === 'object' && value instanceof Blob)
+      value = new Buffer(value.buf());
+    else
+      // Make a copy.                                                                                                      
+      value = new Buffer(value);
+  }
   
   this.keyData = value;
   // Set for backwards compatibility.
@@ -10680,11 +10705,21 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Buffer} The final block ID or null if not specified.
+ * @returns {Name.Component} The final block ID as a Name.Component. If the 
+ * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockID = function()
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.                         
+  return new Name.Component(new Blob(this.finalBlockID, true));
+};
+
+/**
+ * @deprecated Use getFinalBlockID. This method returns a Buffer which is the former
+ * behavior of getFinalBlockID, and should only be used while updating your code.
+ */
+MetaInfo.prototype.getFinalBlockIDAsBuffer = function() 
+{
   return this.finalBlockID;
 };
 
@@ -10721,7 +10756,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
   else if (typeof finalBlockID === 'object' && finalBlockID instanceof Blob)
     this.finalBlockID = finalBlockID.buf();
   else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
-    this.finalBlockID = finalBlockID.getValue();
+    this.finalBlockID = finalBlockID.getValue().buf();
   else 
     this.finalBlockID = new Buffer(finalBlockID);
 };
@@ -10819,12 +10854,12 @@ MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
   else {
     if (null != keyLocator &&
         keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-        keyLocator.getKeyData() != null &&
-        keyLocator.getKeyData().length > 0)
+        !keyLocator.getKeyData().isNull() &&
+        keyLocator.getKeyData().size() > 0)
       // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
       //   publisherPublicKeyDigest.
       encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData());
+        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
   }
 
   if (null != this.timestamp)
@@ -10952,9 +10987,19 @@ Signature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Buffer} The signature bytes.
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
  */
 Signature.prototype.getSignature = function()
+{
+  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.                                        
+  return new Blob(this.signature, false);
+};
+
+/**
+ * @deprecated Use getSignature. This method returns a Buffer which is the former
+ * behavior of getSignature, and should only be used while updating your code.
+ */
+Signature.prototype.getSignatureAsBuffer = function() 
 {
   return this.signature;
 };
@@ -10971,7 +11016,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
   
 /**
  * Set the data packet's signature bytes.
- * @param {type} signature
+ * @param {Blob} signature
  */
 Signature.prototype.setSignature = function(signature)
 {
@@ -11141,9 +11186,19 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Buffer} The content as a Buffer, which is null if unspecified.
+ * @returns {Blob} The data packet content as a Blob.
  */
 Data.prototype.getContent = function() 
+{
+  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
+  return new Blob(this.content, false);
+};
+
+/**
+ * @deprecated Use getContent. This method returns a Buffer which is the former
+ * behavior of getContent, and should only be used while updating your code.
+ */
+Data.prototype.getContentAsBuffer = function() 
 {
   return this.content;
 };
@@ -11516,7 +11571,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
       encoder.writeElementClose();
     }
     else
-      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue());
+      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue().buf());
   }
 
   encoder.writeElementClose();
@@ -11538,7 +11593,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue());
+      result += Name.toEscapedString(this.values[i].getValue().buf());
   }
   return result;
 };
@@ -11549,7 +11604,7 @@ Exclude.prototype.toUri = function()
 Exclude.prototype.matches = function(/*Buffer*/ component) 
 {
   if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue();
+    component = component.getValue().buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -11594,7 +11649,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue()))
+      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
         return true;
     }
   }
@@ -11609,9 +11664,9 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 Exclude.compareComponents = function(component1, component2) 
 {
   if (typeof component1 == 'object' && component1 instanceof Name.Component)
-    component1 = component1.getValue();
+    component1 = component1.getValue().buf();
   if (typeof component2 == 'object' && component2 instanceof Name.Component)
-    component2 = component2.getValue();
+    component2 = component2.getValue().buf();
 
   return Name.Component.compareBuffers(component1, component2);
 };
@@ -11840,9 +11895,22 @@ Interest.prototype.getMustBeFresh = function()
 /**
  * Return the nonce value from the incoming interest.  If you change any of the 
  * fields in this Interest object, then the nonce value is cleared.
- * @returns {Buffer} The nonce, or null if not specified.
+ * @returns {Blob} The nonce. If not specified, the value isNull().
  */
-Interest.prototype.getNonce = function() { return this.nonce; };
+Interest.prototype.getNonce = function() 
+{ 
+  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.                                          
+  return  new Blob(this.nonce, false);
+};
+
+/**
+ * @deprecated Use getNonce. This method returns a Buffer which is the former
+ * behavior of getNonce, and should only be used while updating your code.
+ */
+Interest.prototype.getNonceAsBuffer = function() 
+{
+  return this.nonce; 
+};
 
 /**
  * Get the interest scope.
@@ -11966,9 +12034,13 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
-  if (nonce)
-    // Copy and make sure it is a Buffer.
-    this.nonce = new Buffer(nonce);
+  if (nonce) {
+    if (typeof nonce === 'object' && nonce instanceof Blob)
+      this.nonce = nonce.buf();
+    else
+      // Copy and make sure it is a Buffer.                                                                                
+      this.nonce = new Buffer(nonce);
+  }
   else
     this.nonce = null;
 };
@@ -12637,8 +12709,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
   if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-      interest.getKeyLocator().getKeyData() != null &&
-      interest.getKeyLocator().getKeyData().length > 0)
+      !interest.getKeyLocator().getKeyData().isNull() &&
+      interest.getKeyLocator().getKeyData().size() > 0)
     // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
     encoder.writeDTagElement
       (NDNProtocolDTags.PublisherPublicKeyDigest, 
@@ -12897,26 +12969,26 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
   
   // Encode the Nonce as 4 bytes.
-  if (interest.getNonce() == null || interest.getNonce().length == 0)
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
     encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
-  else if (interest.getNonce().length < 4) {
+  else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
-    interest.getNonce().copy(nonce);
+    interest.getNonce().buf().copy(nonce);
 
     // Generate random bytes for remaining bytes in the nonce.
-    for (var i = interest.getNonce().length; i < 4; ++i)
+    for (var i = interest.getNonce().size(); i < 4; ++i)
       nonce[i] = require("crypto").randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
-  else if (interest.getNonce().length == 4)
+  else if (interest.getNonce().size() == 4)
     // Use the nonce as-is.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce());
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
   else
     // Truncate.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().slice(0, 4));
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
   
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
   Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
@@ -12971,14 +13043,14 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
   // Encode backwards.
   // TODO: The library needs to handle other signature types than 
   //   SignatureSha256WithRsa.
-  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
+  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
-  encoder.writeBlobTlv(Tlv.Content, data.getContent());
+  encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
@@ -13050,7 +13122,7 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
 
   // Encode the components backwards.
   for (var i = name.size() - 1; i >= 0; --i)
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue());
+    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
 
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
 };
@@ -13128,7 +13200,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
       // For backwards compatibility, also set the publisherPublicKeyDigest.
       interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData();
+        interest.getKeyLocator().getKeyData().buf();
     }
   }
   else
@@ -13158,7 +13230,7 @@ Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue());
+      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
   }
   
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
@@ -13191,8 +13263,8 @@ Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
       Tlv0_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-             keyLocator.getKeyData().length > 0)
-      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+             keyLocator.getKeyData().size() > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
     else
       throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
   }
@@ -13276,8 +13348,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID();
+  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
@@ -13589,7 +13660,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       if (data.signedInfo.locator.type == KeyLocatorType.KEY)
         output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData()).toLowerCase() + "<br />";
+        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData().buf()).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
       else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
@@ -14314,7 +14385,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
   var hash = require("crypto").createHash('sha256');
-  hash.update(upcallInfo.data.getContent());
+  hash.update(upcallInfo.data.getContent().buf());
   this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
   
