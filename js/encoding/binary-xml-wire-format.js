@@ -152,8 +152,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
 
   if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-      interest.getKeyLocator().getKeyData() != null &&
-      interest.getKeyLocator().getKeyData().length > 0)
+      !interest.getKeyLocator().getKeyData().isNull() &&
+      interest.getKeyLocator().getKeyData().size() > 0)
     // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
     encoder.writeDTagElement
       (NDNProtocolDTags.PublisherPublicKeyDigest, 

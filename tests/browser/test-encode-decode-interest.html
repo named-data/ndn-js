@@ -71,11 +71,11 @@
             output += "KeyLocator: ";
             if (interest.getKeyLocator().getType() >= 0) {
                 if (interest.getKeyLocator().getType() == KeyLocatorType.KEY)
-                  output += "Key: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "Key: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() == KeyLocatorType.CERTIFICATE)
-                  output += "Certificate: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "Certificate: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() ==KeyLocatorType.KEY_LOCATOR_DIGEST)
-                  output += "KeyLocatorDigest: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "KeyLocatorDigest: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
                   output += "KeyName: " + interest.getKeyLocator().getKeyName().toUri();
                 else

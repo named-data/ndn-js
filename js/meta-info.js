@@ -243,12 +243,12 @@ MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
   else {
     if (null != keyLocator &&
         keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-        keyLocator.getKeyData() != null &&
-        keyLocator.getKeyData().length > 0)
+        !keyLocator.getKeyData().isNull() &&
+        keyLocator.getKeyData().size() > 0)
       // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
       //   publisherPublicKeyDigest.
       encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData());
+        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
   }
 
   if (null != this.timestamp)

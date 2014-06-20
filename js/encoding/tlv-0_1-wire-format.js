@@ -295,7 +295,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
       // For backwards compatibility, also set the publisherPublicKeyDigest.
       interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData();
+        interest.getKeyLocator().getKeyData().buf();
     }
   }
   else
@@ -358,8 +358,8 @@ Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
       Tlv0_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-             keyLocator.getKeyData().length > 0)
-      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+             keyLocator.getKeyData().size() > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
     else
       throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
   }
