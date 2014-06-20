@@ -223,9 +223,22 @@ Interest.prototype.getMustBeFresh = function()
 /**
  * Return the nonce value from the incoming interest.  If you change any of the 
  * fields in this Interest object, then the nonce value is cleared.
- * @returns {Buffer} The nonce, or null if not specified.
+ * @returns {Blob} The nonce. If not specified, the value isNull().
  */
-Interest.prototype.getNonce = function() { return this.nonce; };
+Interest.prototype.getNonce = function() 
+{ 
+  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.                                          
+  return  new Blob(this.nonce, false);
+};
+
+/**
+ * @deprecated Use getNonce. This method returns a Buffer which is the former
+ * behavior of getNonce, and should only be used while updating your code.
+ */
+Interest.prototype.getNonceAsBuffer = function() 
+{
+  return this.nonce; 
+};
 
 /**
  * Get the interest scope.
@@ -349,9 +362,13 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
-  if (nonce)
-    // Copy and make sure it is a Buffer.
-    this.nonce = new Buffer(nonce);
+  if (nonce) {
+    if (typeof nonce === 'object' && nonce instanceof Blob)
+      this.nonce = nonce.buf();
+    else
+      // Copy and make sure it is a Buffer.                                                                                
+      this.nonce = new Buffer(nonce);
+  }
   else
     this.nonce = null;
 };

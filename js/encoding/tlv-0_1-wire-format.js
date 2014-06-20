@@ -64,26 +64,26 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
   
   // Encode the Nonce as 4 bytes.
-  if (interest.getNonce() == null || interest.getNonce().length == 0)
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
     encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
-  else if (interest.getNonce().length < 4) {
+  else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
-    interest.getNonce().copy(nonce);
+    interest.getNonce().buf().copy(nonce);
 
     // Generate random bytes for remaining bytes in the nonce.
-    for (var i = interest.getNonce().length; i < 4; ++i)
+    for (var i = interest.getNonce().size(); i < 4; ++i)
       nonce[i] = require("crypto").randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
-  else if (interest.getNonce().length == 4)
+  else if (interest.getNonce().size() == 4)
     // Use the nonce as-is.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce());
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
   else
     // Truncate.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().slice(0, 4));
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
   
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
   Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
