@@ -104,11 +104,21 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Buffer} The final block ID or null if not specified.
+ * @returns {Name.Component} The final block ID as a Name.Component. If the 
+ * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockID = function()
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.                         
+  return new Name.Component(new Blob(this.finalBlockID, true));
+};
+
+/**
+ * @deprecated Use getFinalBlockID. This method returns a Buffer which is the former
+ * behavior of getFinalBlockID, and should only be used while updating your code.
+ */
+MetaInfo.prototype.getFinalBlockIDAsBuffer = function() 
+{
   return this.finalBlockID;
 };
 

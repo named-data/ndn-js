@@ -443,8 +443,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID();
+  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
