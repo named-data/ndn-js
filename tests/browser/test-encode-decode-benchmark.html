@@ -49,7 +49,7 @@
           + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
       }
       setTimeout(function() {
-        var nIterations = useCrypto ? 4000 : 50000;
+        var nIterations = useCrypto ? 4000 : 100000;
         var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
         document.getElementById('result').innerHTML +=
           "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
