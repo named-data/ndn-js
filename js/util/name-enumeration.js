@@ -115,7 +115,7 @@ NameEnumeration.prototype.processTimeout = function()
 
 /**
  * Parse the content as a name enumeration response and return an array of components.  This makes a copy of the component.
- * @param {Uint8Array} content The content to parse.
+ * @param {Buffer} content The content to parse.
  * @returns {Array<Buffer>} The array of components.
  */
 NameEnumeration.parseComponents = function(content)
