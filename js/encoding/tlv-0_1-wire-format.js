@@ -138,7 +138,7 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
   // Encode backwards.
   // TODO: The library needs to handle other signature types than 
   //   SignatureSha256WithRsa.
-  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
+  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
