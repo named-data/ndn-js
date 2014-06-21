@@ -207,22 +207,22 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
-    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.name))
+    if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName()))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.name.get(-1).getValue().buf());
+            (data.getName().get(-1).getValue().buf());
     
     if (!this.didOnStart) {
         // This is the first or only segment.
-        var iMetaComponent = getIndexOfMetaComponent(data.name);
+        var iMetaComponent = getIndexOfMetaComponent(data.getName());
         if (!this.uriEndsWithSegmentNumber && iMetaComponent >= 0 && getIndexOfMetaComponent(this.uriName) < 0) {
             // The matched content name has a META component that wasn't requested in the original
             //   URI.  Add this to the excluded META components to try to get the "real" content.
-            var nameWithoutMeta = data.name.getPrefix(iMetaComponent);
+            var nameWithoutMeta = data.getName().getPrefix(iMetaComponent);
             if (this.excludedMetaComponents.length > 0 && iMetaComponent != this.iMetaComponent)
                 // We are excluding META components at a new position in the name, so start over.
                 this.excludedMetaComponents = [];
             this.iMetaComponent = iMetaComponent;
-            this.excludedMetaComponents.push(data.name.getComponent(iMetaComponent));
+            this.excludedMetaComponents.push(data.getName().getComponent(iMetaComponent));
             // Exclude components are required to be sorted.
             this.excludedMetaComponents.sort(Exclude.compareComponents);
             
@@ -233,15 +233,15 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             return Closure.RESULT_OK;
         }
         
-        iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.name);
+        iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
         if (!this.uriEndsWithSegmentNumber && iNdnfsFileComponent >= 0 && getIndexOfNdnfsFileComponent(this.uriName) < 0) {
            // The matched content name has an NDNFS file meta component that wasn't requested in the original
-           //   URI.  Expect the data.name to be /<prefix>/<file component>/<version>.
+           //   URI.  Expect the data.getName() to be /<prefix>/<file component>/<version>.
            // (We expect there to be a component after iNdnfsFileComponent but check anyway.)
-           if (data.name.size() >= iNdnfsFileComponent + 2) {
+           if (data.getName().size() >= iNdnfsFileComponent + 2) {
              // Make a name /<prefix>/<version>/%00.
-             var nameWithoutMeta = data.name.getPrefix(iNdnfsFileComponent).append
-               (data.name.get(iNdnfsFileComponent + 1)).appendSegment(0);    
+             var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
+               (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);    
              // TODO: Use expressInterest with callbacks, not Closure.
              this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
            }
@@ -252,18 +252,18 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         
         // Get the URI from the Data including the version.
         var contentUriSpec;
-        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.name)) {
+        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
             var nameWithoutSegmentNumber = new Name
-                (data.name.components.slice(0, data.name.size() - 1));
+                (data.getName().components.slice(0, data.getName().size() - 1));
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
         else
-            contentUriSpec = "ndn:" + data.name.toUri();
+            contentUriSpec = "ndn:" + data.getName().toUri();
     
         // Include the search and hash.
         contentUriSpec += this.uriSearchAndHash;
     
-        var contentTypeEtc = getNameContentTypeAndCharset(data.name);
+        var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
@@ -276,27 +276,27 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             ContentClosure.removeClosureForWindow(this);
 
             if (!this.uriEndsWithSegmentNumber) {
-                var nameContentDigest = data.name.getContentDigestValue();
+                var nameContentDigest = data.getName().getContentDigestValue();
                 if (nameContentDigest != null && this.contentSha256 != null &&
                     !DataUtils.arraysEqual(nameContentDigest, 
                               DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                     // TODO: How to show the user an error for invalid digest?
-                    dump("Content does not match digest in name " + data.name.toUri() + "\n");
+                    dump("Content does not match digest in name " + data.getName().toUri() + "\n");
             }
             return Closure.RESULT_OK;
         }
         else
             // We are doing segments.  Make sure we always request the same base name.
-            this.nameWithoutSegment = new Name(data.name.components.slice
-                (0, data.name.size() - 1));
+            this.nameWithoutSegment = new Name(data.getName().components.slice
+                (0, data.getName().size() - 1));
     }
     
     if (segmentNumber == null)
         // We should be doing segments at this point.
         return Closure.RESULT_ERR;
     
-    if (!(data.name.size() == this.nameWithoutSegment.size() + 1 &&
-          this.nameWithoutSegment.match(data.name)))
+    if (!(data.getName().size() == this.nameWithoutSegment.size() + 1 &&
+          this.nameWithoutSegment.match(data.getName())))
         // The data packet object name is not part of our sequence of segments.
         return Closure.RESULT_ERR;
     
@@ -317,12 +317,12 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             // Finished.
             this.contentListener.onStop();
             ContentClosure.removeClosureForWindow(this);
-            var nameContentDigest = data.name.getContentDigestValue();
+            var nameContentDigest = data.getName().getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
                 !DataUtils.arraysEqual(nameContentDigest, 
                       DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                 // TODO: How to show the user an error for invalid digest?
-                dump("Content does not match digest in name " + data.name.toUri() + "\n");
+                dump("Content does not match digest in name " + data.getName().toUri() + "\n");
 
             return Closure.RESULT_OK;
         }

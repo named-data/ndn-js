@@ -44,7 +44,7 @@
 			var output ="";
 			
 			
-			if(interest.name!=null && interest.name.components!=null){
+			if(interest.getName()!=null && interest.getName().components!=null){
 				output+= "NAME: " + interest.getName().toUri();
 				output+= "<br />";
 				output+= "<br />";
@@ -141,7 +141,7 @@
 				output+= "<br />";
 			}
 			
-			if(interest.name.get(3) !=null){
+			if(interest.getName().get(3) !=null){
 				
 				
 				var input = interest.getName().get(3).getValue().toHex();
@@ -167,7 +167,7 @@
 				////////////////////////////////////////
 				
 
-				if(data.name!=null && data.name.components!=null){
+				if(data.getName()!=null && data.getName().components!=null){
 					output+= "NAME: " + data.getName().toUri();
 					output+= "<br />";
 					output+= "<br />";

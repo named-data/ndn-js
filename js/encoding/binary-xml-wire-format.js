@@ -143,7 +143,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
     
-  interest.name.to_ndnb(encoder);
+  interest.getName().to_ndnb(encoder);
   
   if (null != interest.minSuffixComponents) 
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
@@ -194,8 +194,8 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.name = new Name();
-  interest.name.from_ndnb(decoder);
+  interest.setName(new Name());
+  interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
     interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
@@ -281,8 +281,8 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
     
   var signedPortionBeginOffset = encoder.offset;
 
-  if (null != data.name) 
-    data.name.to_ndnb(encoder);
+  if (null != data.getName()) 
+    data.getName().to_ndnb(encoder);
   
   if (null != data.signedInfo) 
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
@@ -323,8 +323,8 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     
   var signedPortionBeginOffset = decoder.offset;
 
-  data.name = new Name();
-  data.name.from_ndnb(decoder);
+  data.setName(new Name());
+  data.getName().from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.signedInfo = new MetaInfo();

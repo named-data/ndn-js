@@ -63,7 +63,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
       var nextInterest = upcallInfo.interest.clone();
       nextInterest.interestLifetime = nextInterestLifetime;
       // TODO: Use expressInterest with callbacks, not Closure.
-      upcallInfo.face.expressInterest(nextInterest.name, this, nextInterest);
+      upcallInfo.face.expressInterest(nextInterest.getName(), this, nextInterest);
       return Closure.RESULT_OK;
     }  
     else

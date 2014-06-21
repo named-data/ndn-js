@@ -544,7 +544,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
     // Set interest timer.
     var timeoutMilliseconds = (interest.interestLifetime || 4000);
     var timeoutCallback = function() {
-      if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
         
       // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
       //   the interest because we don't want to match it in the mean time.
@@ -555,7 +555,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         
       // Raise closure callback
       if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-        if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
+        if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
         thisFace.transport.send(binaryInterest.buf());
@@ -809,9 +809,9 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
         
-    var entry = getEntryForRegisteredPrefix(interest.name);
+    var entry = getEntryForRegisteredPrefix(interest.getName());
     if (entry != null) {
-      if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
+      if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
@@ -821,7 +821,7 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
         
-    var pendingInterests = Face.extractEntriesForExpressedInterest(data.name);
+    var pendingInterests = Face.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
@@ -879,7 +879,7 @@ Face.prototype.onReceivedElement = function(element)
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
-          if (keylocator.keyName.contentName.match(data.name)) {
+          if (keylocator.keyName.contentName.match(data.getName())) {
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();

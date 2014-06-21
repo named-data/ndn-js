@@ -57,7 +57,7 @@
         
         if (kind == Closure.UPCALL_CONTENT_BAD) {
           console.log("NdnProtocol.ContentClosure: signature verification failed");
-          console.log(upcallInfo.data.name.toUri());
+          console.log(upcallInfo.data.getName().toUri());
           console.log(DataUtils.toHex(upcallInfo.data.signature.witness).toLowerCase());
           return Closure.RESULT_OK;
         }
@@ -75,7 +75,7 @@
     
         // Use the segmentNumber to load multiple segments.
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-                    (data.name.get(-1).getValue().buf());
+                    (data.getName().get(-1).getValue().buf());
         
           if (this.firstReceivedSegmentNumber == null) {
               // This is the first call.
@@ -83,8 +83,8 @@
               if (segmentNumber != 0) {
                   // Special case: Save this data packet object for later and request segment zero.
                   this.firstReceivedData = data;
-                  var componentsForZero = data.name.components.slice
-                      (0, data.name.size() - 1);
+                  var componentsForZero = data.getName().components.slice
+                      (0, data.getName().size() - 1);
                   componentsForZero.push([0]);
                   // TODO: Use expressInterest with callbacks, not Closure.
                   this.face.expressInterest(new Name(componentsForZero), this);
@@ -94,10 +94,8 @@
         
         // Process received data here...
         // Count content length
-        //nameStr = escape(data.name.toUri());
-      //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-      //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
-      this.totalBlocks++;
+        //nameStr = escape(data.getName().toUri());
+        this.totalBlocks++;
         
         // Check for the special case if the saved content is for the next segment that we need.
         if (this.firstReceivedData != null && 
@@ -110,7 +108,7 @@
             
             // Process received data here...
           // Count content length
-          //nameStr = escape(data.name.toUri());
+          //nameStr = escape(data.getName().toUri());
         //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
         //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
         this.totalBlocks++;
@@ -130,8 +128,8 @@
             var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
             nextSegmentNumber.set(segmentNumberPlus1, 1);
             
-            var components = data.name.components.slice
-                (0, data.name.size() - 1);
+            var components = data.getName().components.slice
+                (0, data.getName().size() - 1);
             components.push(nextSegmentNumber);
             // TODO: Use expressInterest with callbacks, not Closure.
             this.face.expressInterest(new Name(components), this);
@@ -178,37 +176,6 @@
         }
         return result;
     };
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-        
-        /*
-        var AsyncGetClosure = function AsyncGetClosure(T0) {
-          this.T0 = T0;  // Start time
-          // Inherit from Closure.
-      Closure.call(this);
-    };
-    
-    AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
-      //console.log("Closure.upcall() executed.");
-      if (kind == Closure.UPCALL_FINAL) {
-        // Do nothing.
-      } else if (kind == Closure.UPCALL_CONTENT) {
-        var T1 = new Date();
-        
-        var content = upcallInfo.data;
-        nameStr = escape(content.name.toUri());
-        document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
-        document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.content.length + "</p>";
-        //console.log("In callback, nameStr: " + nameStr);
-        //console.log("In callback, content: ");
-        //console.log(content.content.length);
-        //document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
-      } else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-        console.log("Closure.upcall called with interest time out.");
-      }
-      return Closure.RESULT_OK;
-    };
-    */
     
     function run() {
       document.getElementById('content').innerHTML += "<p>Started...</p>";

@@ -143,8 +143,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   else if (data == -2)
     output+= "CONTENT NAME IS EMPTY"
   else {
-    if (data.name != null && data.name.components != null) {
-      output+= "NAME: " + data.name.toUri();
+    if (data.getName() != null) {
+      output+= "NAME: " + data.getName().toUri();
         
       output+= "<br />";
       output+= "<br />";

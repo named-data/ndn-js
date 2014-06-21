@@ -37,7 +37,7 @@ var packet = i1.wireEncode();
 var i2 = new Interest();
 i2.wireDecode(packet);
 
-console.log(i2.name.toUri());
+console.log(i2.getName().toUri());
 console.log(i2.interestLifetime);
 console.log(i2.childSelector);
 
@@ -55,7 +55,7 @@ var p2 = data1.wireEncode();
 var data2 = new Data();
 data2.wireDecode(p2);
 
-console.log('Decoded name: ' + data2.name.toUri());
+console.log('Decoded name: ' + data2.getName().toUri());
 console.log('Decoded content: ' + data2.content.toString());
 
 console.log('Data in field values:');

@@ -5073,7 +5073,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
       var nextInterest = upcallInfo.interest.clone();
       nextInterest.interestLifetime = nextInterestLifetime;
       // TODO: Use expressInterest with callbacks, not Closure.
-      upcallInfo.face.expressInterest(nextInterest.name, this, nextInterest);
+      upcallInfo.face.expressInterest(nextInterest.getName(), this, nextInterest);
       return Closure.RESULT_OK;
     }  
     else
@@ -8512,19 +8512,19 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
 NameEnumeration.prototype.processData = function(data) 
 {
   try {
-    if (!NameEnumeration.endsWithSegmentNumber(data.name))
+    if (!NameEnumeration.endsWithSegmentNumber(data.getName()))
       // We don't expect a name without a segment number.  Treat it as a bad packet.
       this.onComponents(null);
     else {
       var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.name.get(data.name.size() - 1).getValue().buf());
+          (data.getName().get(-1).getValue().buf());
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
       if (segmentNumber != expectedSegmentNumber)
         // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
         this.contentParts.push(data.content);
@@ -8540,7 +8540,7 @@ NameEnumeration.prototype.processData = function(data)
 
         // Fetch the next segment.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
       }
     }
   } catch (ex) {
@@ -12700,7 +12700,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
     
-  interest.name.to_ndnb(encoder);
+  interest.getName().to_ndnb(encoder);
   
   if (null != interest.minSuffixComponents) 
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
@@ -12751,8 +12751,8 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.name = new Name();
-  interest.name.from_ndnb(decoder);
+  interest.setName(new Name());
+  interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
     interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
@@ -12838,8 +12838,8 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
     
   var signedPortionBeginOffset = encoder.offset;
 
-  if (null != data.name) 
-    data.name.to_ndnb(encoder);
+  if (null != data.getName()) 
+    data.getName().to_ndnb(encoder);
   
   if (null != data.signedInfo) 
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
@@ -12880,8 +12880,8 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     
   var signedPortionBeginOffset = decoder.offset;
 
-  data.name = new Name();
-  data.name.from_ndnb(decoder);
+  data.setName(new Name());
+  data.getName().from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.signedInfo = new MetaInfo();
@@ -13597,8 +13597,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   else if (data == -2)
     output+= "CONTENT NAME IS EMPTY"
   else {
-    if (data.name != null && data.name.components != null) {
-      output+= "NAME: " + data.name.toUri();
+    if (data.getName() != null) {
+      output+= "NAME: " + data.getName().toUri();
         
       output+= "<br />";
       output+= "<br />";
@@ -14249,7 +14249,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
     // Set interest timer.
     var timeoutMilliseconds = (interest.interestLifetime || 4000);
     var timeoutCallback = function() {
-      if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
         
       // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
       //   the interest because we don't want to match it in the mean time.
@@ -14260,7 +14260,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         
       // Raise closure callback
       if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-        if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
+        if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
         thisFace.transport.send(binaryInterest.buf());
@@ -14514,9 +14514,9 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
         
-    var entry = getEntryForRegisteredPrefix(interest.name);
+    var entry = getEntryForRegisteredPrefix(interest.getName());
     if (entry != null) {
-      if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
+      if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
@@ -14526,7 +14526,7 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
         
-    var pendingInterests = Face.extractEntriesForExpressedInterest(data.name);
+    var pendingInterests = Face.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
@@ -14584,7 +14584,7 @@ Face.prototype.onReceivedElement = function(element)
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
-          if (keylocator.keyName.contentName.match(data.name)) {
+          if (keylocator.keyName.contentName.match(data.getName())) {
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();

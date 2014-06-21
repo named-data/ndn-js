@@ -35,7 +35,7 @@
       console.log("onInterest called.");
       var contentString = document.getElementById('content').value;
 
-      var data = new Data(interest.name, new SignedInfo(), new Buffer(contentString));
+      var data = new Data(interest.getName(), new SignedInfo(), new Buffer(contentString));
       data.signedInfo.setFields();
       data.sign();
       var encodedData = data.wireEncode();
