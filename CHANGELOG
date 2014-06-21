@@ -28,6 +28,7 @@ Deprecated
 * Signature: Deprecated getSignatureAsBuffer(). Use getSignature().
 * KeyLocator: Deprecated getKeyDataAsBuffer(). Use getKeyData().
 * MetaInfo: Deprecated getFinalBlockIDAsBuffer(). Use getFinalBlockID().
+* Name: Deprecated cut(nComponents). Use getPrefix(-nComponents).
 
 NDN-JS v0.4 (2014-06-18)
 ------------------------
