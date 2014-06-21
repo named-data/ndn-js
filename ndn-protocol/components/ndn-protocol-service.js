@@ -73,7 +73,7 @@ NdnProtocol.prototype = {
             
             var prefixUri = "/";
             if (iFileName > 0)
-                prefixUri = new Name(baseName.components.slice(0, iFileName)).toUri() + "/";
+                prefixUri = baseName.getPrefix(iFileName).toUri() + "/";
             uri.spec = "ndn:" + prefixUri + relativeName + uriParts.search + uriParts.hash;
         }
         
@@ -253,8 +253,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Get the URI from the Data including the version.
         var contentUriSpec;
         if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
-            var nameWithoutSegmentNumber = new Name
-                (data.getName().components.slice(0, data.getName().size() - 1));
+            var nameWithoutSegmentNumber = data.getName().getPrefix(-1);
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
         else
@@ -287,8 +286,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         }
         else
             // We are doing segments.  Make sure we always request the same base name.
-            this.nameWithoutSegment = new Name(data.getName().components.slice
-                (0, data.getName().size() - 1));
+            this.nameWithoutSegment = data.getName().getPrefix(-1);
     }
     
     if (segmentNumber == null)
@@ -543,7 +541,7 @@ function getNameContentTypeAndCharset(name)
  */
 function endsWithSegmentNumber(name) 
 {
-    return name.components != null && name.size() >= 2 &&
+    return name.size() >= 2 &&
         name.get(-1).getValue().size() >= 1 &&
         name.get(-1).getValue().buf()[0] == 0;
 }

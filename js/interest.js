@@ -120,7 +120,7 @@ Interest.prototype.matchesName = function(/*Name*/ name)
       !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
     return false;
   if (this.exclude != null && name.size() > this.name.size() &&
-      this.exclude.matches(name.components[this.name.size()]))
+      this.exclude.matches(name.get(this.name.size())))
     return false;
     
   return true;

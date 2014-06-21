@@ -8593,7 +8593,7 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.size() >= 1 &&
+  return name.size() >= 1 &&
          name.get(-1).getValue().size() >= 1 &&
          name.get(-1).getValue().buf()[0] == 0;
 };
@@ -9819,12 +9819,11 @@ Name.prototype.getPrefix = function(nComponents)
 };
 
 /**
- * @brief Get prefix of the name, containing less minusComponents right components
- * @param minusComponents number of components to cut from the back
+ * @deprecated Use getPrefix(-nComponents).
  */
-Name.prototype.cut = function(minusComponents) 
+Name.prototype.cut = function(nComponents) 
 {
-  return new Name(this.components.slice(0, this.components.length - minusComponents));
+  return new Name(this.components.slice(0, this.components.length - nComponents));
 };
 
 /**
@@ -11792,7 +11791,7 @@ Interest.prototype.matchesName = function(/*Name*/ name)
       !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
     return false;
   if (this.exclude != null && name.size() > this.name.size() &&
-      this.exclude.matches(name.components[this.name.size()]))
+      this.exclude.matches(name.get(this.name.size())))
     return false;
     
   return true;

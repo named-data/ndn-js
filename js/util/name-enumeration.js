@@ -146,7 +146,7 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.size() >= 1 &&
+  return name.size() >= 1 &&
          name.get(-1).getValue().size() >= 1 &&
          name.get(-1).getValue().buf()[0] == 0;
 };
