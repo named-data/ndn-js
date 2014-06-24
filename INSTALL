@@ -31,7 +31,7 @@ The documentation is auto-generated using JSDoc.  If you don't have JSDoc instal
 https://github.com/jsdoc3/jsdoc/archive/master.zip
 
 To make doc, cd to the root directory of ndn-js and run the following command to put the output in subdirectory doc:
-<path-to-jsdoc>/jsdoc --recurse --destination doc js
+<path-to-jsdoc>/jsdoc --recurse --destination doc js README.md
 
 WEBSOCKETS PROXY
 ================
