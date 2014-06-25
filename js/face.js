@@ -246,7 +246,7 @@ Face.getKeyByName = function(/* KeyName */ name)
   
   for (var i = 0; i < Face.KeyStore.length; i++) {
     if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || Face.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+      if (result == null || Face.KeyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
         result = Face.KeyStore[i];
     }
   }
@@ -866,7 +866,7 @@ Face.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (data.signedInfo && data.signedInfo.locator && data.signature) {
+      if (data.getMetaInfo() && data.getMetaInfo().locator && data.signature) {
         if (LOG > 3) console.log("Key verification...");
         var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
               
@@ -875,7 +875,7 @@ Face.prototype.onReceivedElement = function(element)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
-        var keylocator = data.signedInfo.locator;
+        var keylocator = data.getMetaInfo().locator;
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
