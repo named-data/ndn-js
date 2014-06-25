@@ -315,11 +315,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.signature = new Signature();
+    data.setSignature(new Signature());
     data.signature.from_ndnb(decoder);
   }
   else
-    data.signature = null;
+    data.setSignature(new Signature());
     
   var signedPortionBeginOffset = decoder.offset;
 

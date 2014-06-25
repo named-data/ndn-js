@@ -209,7 +209,7 @@ Data.prototype.sign = function(wireFormat)
     
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.signature = sig;
+  this.signature.setSignature(sig);
 };
 
 // The first time verify is called, it sets this to determine if a signature

@@ -114,7 +114,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       data.sign();
     else
       // Set the signature, but don't sign.
-      data.signature.signature = signatureBits;
+      data.signature.setSignature(signatureBits);
 
     encoding[0] = data.wireEncode().buf();
   }
