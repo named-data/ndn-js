@@ -185,9 +185,9 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.getSignature() !=null && data.getSignature().signature!=null){
+				if(data.getSignature() != null && data.getSignature().getSignature() != null){
 					
-					output += "SIGNATURE(hex): "+ DataUtils.toHex(data.getSignature().signature);
+					output += "SIGNATURE(hex): "+ data.getSignature().getSignature().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";

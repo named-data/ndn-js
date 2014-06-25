@@ -868,7 +868,7 @@ Face.prototype.onReceivedElement = function(element)
             
       if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(data.getSignature().signature).toLowerCase();
+        var sigHex = data.getSignature().getSignature().toHex();
               
         var wit = null;
         if (data.getSignature().witness != null)

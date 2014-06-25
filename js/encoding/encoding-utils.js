@@ -174,7 +174,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
     }
     if (data.getSignature() != null && data.getSignature().getSignature() != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(data.getSignature().signature);
+      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
       
       output+= "<br />";
       output+= "<br />";

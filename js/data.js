@@ -233,7 +233,7 @@ Data.prototype.verify = function(/*Key*/ key)
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ? 
-    DataUtils.toString(this.signature.signature) : this.signature.signature;
+    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
