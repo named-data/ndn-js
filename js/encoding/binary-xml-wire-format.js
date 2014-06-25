@@ -163,8 +163,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
       interest.publisherPublicKeyDigest.to_ndnb(encoder);
   }
     
-  if (null != interest.exclude)
-    interest.exclude.to_ndnb(encoder);
+  if (null != interest.getExclude())
+    interest.getExclude().to_ndnb(encoder);
     
   if (null != interest.childSelector) 
     encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
@@ -226,11 +226,11 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
 
   if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
-    interest.exclude = new Exclude();
-    interest.exclude.from_ndnb(decoder);
+    interest.setExclude(new Exclude());
+    interest.getExclude().from_ndnb(decoder);
   }
   else
-    interest.exclude = null;
+    interest.setExclude(new Exclude());
     
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
     interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);

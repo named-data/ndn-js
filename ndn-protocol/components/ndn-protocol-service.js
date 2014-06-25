@@ -227,7 +227,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             this.excludedMetaComponents.sort(Exclude.compareComponents);
             
             var excludeMetaTemplate = this.segmentTemplate.clone();
-            excludeMetaTemplate.exclude = new Exclude(this.excludedMetaComponents);
+            excludeMetaTemplate.setExclude(new Exclude(this.excludedMetaComponents));
             // TODO: Use expressInterest with callbacks, not Closure.
             this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
@@ -583,7 +583,7 @@ function extractNdnSearch(search, template)
                 else if (key == "ndn.Nonce")
                     template.nonce = DataUtils.toNumbersFromString(unescape(value));
                 else if (key == "ndn.Exclude")
-                    template.exclude = parseExclude(value);
+                    template.setExclude(parseExclude(value));
             }
         
             // Remove the "ndn." term and don't advance i.

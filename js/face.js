@@ -405,7 +405,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       interest.minSuffixComponents = template.minSuffixComponents;
       interest.maxSuffixComponents = template.maxSuffixComponents;
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
+      interest.setExclude(template.getExclude());
       interest.childSelector = template.childSelector;
       interest.answerOriginKind = template.answerOriginKind;
       interest.scope = template.scope;
@@ -439,7 +439,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       interest.minSuffixComponents = template.minSuffixComponents;
       interest.maxSuffixComponents = template.maxSuffixComponents;
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
+      interest.setExclude(template.getExclude());
       interest.childSelector = template.childSelector;
       interest.answerOriginKind = template.answerOriginKind;
       interest.scope = template.scope;

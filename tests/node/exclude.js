@@ -29,7 +29,7 @@ interest.interestLifetime = 1234;
 // Note: this filter is meaningless, just for test purposes.
 var filter = new Exclude
   ([Name.fromEscapedString('before'), Exclude.ANY, new Buffer('after', 'ascii'), Exclude.ANY, Name.fromEscapedString('%00%10')]);
-interest.exclude = filter;
+interest.setExclude(filter);
 
 console.log('Interest with random Exclude:');
 console.log(interest.toUri());

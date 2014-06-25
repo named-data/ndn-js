@@ -59,10 +59,10 @@
 				output+= "<br />";
 			}
 			
-			if(interest.exclude!=null ){
+			if(interest.getExclude()!=null ){
 				output+= "Exclude: ";
 				
-					output+=  interest.exclude;
+					output+=  interest.getExclude().toUri();
 				
 				output+= "<br />";
 				output+= "<br />";
