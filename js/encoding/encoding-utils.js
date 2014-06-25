@@ -197,8 +197,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       
       output+= "<br />";
     }
-    if (data.getMetaInfo() != null && data.getMetaInfo().finalBlockID != null) {
-      output += "FinalBlockID: "+ DataUtils.toHex(data.getMetaInfo().finalBlockID);
+    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
+      output += "FinalBlockID: "+ data.getMetaInfo().getFinalBlockID().getValue().toHex();
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.type) {

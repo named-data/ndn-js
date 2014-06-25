@@ -230,9 +230,9 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.getMetaInfo() !=null && data.getMetaInfo().finalBlockID!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0){
 
-					output += "FinalBlockID: "+data.getMetaInfo().finalBlockID;
+					output += "FinalBlockID: " + data.getMetaInfo().getFinalBlockID().getValue().toHex();
 					output+= "<br />";
 					output+= "<br />";
 				}

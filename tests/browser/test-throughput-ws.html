@@ -115,9 +115,8 @@
         }
     
         var finalSegmentNumber = null;
-        if (data.getMetaInfo() != null && data.getMetaInfo().finalBlockID != null)
-            //finalSegmentNumber = ArrayToNum(data.getMetaInfo().finalBlockID);
-            finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().finalBlockID);
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
+            finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
         
         if (finalSegmentNumber == null || segmentNumber != finalSegmentNumber) {
             // Make a name for the next segment and get it.
