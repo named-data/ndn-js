@@ -161,20 +161,20 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.signature.digestAlgorithm);
+    if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(data.signature.witness);
+    if (data.getSignature() != null && data.getSignature().witness != null) {
+      output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.signature != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(data.signature.signature);
+    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
+      output += "Signature(hex): "+ DataUtils.toHex(data.getSignature().signature);
       
       output+= "<br />";
       output+= "<br />";

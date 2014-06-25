@@ -58,7 +58,7 @@
         if (kind == Closure.UPCALL_CONTENT_BAD) {
           console.log("NdnProtocol.ContentClosure: signature verification failed");
           console.log(upcallInfo.data.getName().toUri());
-          console.log(DataUtils.toHex(upcallInfo.data.signature.witness).toLowerCase());
+          console.log(DataUtils.toHex(upcallInfo.data.getSignature().witness).toLowerCase());
           return Closure.RESULT_OK;
         }
         

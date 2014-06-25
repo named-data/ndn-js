@@ -276,8 +276,8 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
-  if (null != data.signature) 
-    data.signature.to_ndnb(encoder);
+  if (null != data.getSignature()) 
+    data.getSignature().to_ndnb(encoder);
     
   var signedPortionBeginOffset = encoder.offset;
 
@@ -316,7 +316,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
     data.setSignature(new Signature());
-    data.signature.from_ndnb(decoder);
+    data.getSignature().from_ndnb(decoder);
   }
   else
     data.setSignature(new Signature());

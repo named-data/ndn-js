@@ -866,12 +866,12 @@ Face.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (data.getMetaInfo() && data.getMetaInfo().locator && data.signature) {
+      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
+        var sigHex = DataUtils.toHex(data.getSignature().signature).toLowerCase();
               
         var wit = null;
-        if (data.signature.witness != null)
+        if (data.getSignature().witness != null)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
