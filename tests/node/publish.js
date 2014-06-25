@@ -29,7 +29,7 @@ function onInterest(prefix, interest, transport)
   // Make and sign a Data packet.
   var contentString = "Echo " + interest.getName().toUri();
   var data = new Data(interest.getName(), new SignedInfo(), new Buffer(contentString));
-  data.signedInfo.setFields();
+  data.getMetaInfo().setFields();
   data.sign();
   var encodedData = data.wireEncode();
 

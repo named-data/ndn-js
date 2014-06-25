@@ -284,10 +284,10 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   if (null != data.getName()) 
     data.getName().to_ndnb(encoder);
   
-  if (null != data.signedInfo) 
+  if (null != data.getMetaInfo()) 
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
     //   the key locator from the MetaInfo to the Signauture object.
-    data.signedInfo.to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
+    data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
   encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
   
@@ -327,15 +327,15 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.getName().from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.signedInfo = new MetaInfo();
-    data.signedInfo.from_ndnb(decoder);
-    if (data.signedInfo.locator != null && data.getSignature() != null)
+    data.setMetaInfo(new MetaInfo());
+    data.getMetaInfo().from_ndnb(decoder);
+    if (data.getMetaInfo().locator != null && data.getSignature() != null)
       // Copy the key locator pointer to the Signature object for the transition 
       //   of moving the key locator from the MetaInfo to the Signature object.
-      data.getSignature().keyLocator = data.signedInfo.locator;
+      data.getSignature().keyLocator = data.getMetaInfo().locator;
   }
   else
-    data.signedInfo = null;
+    data.setMetaInfo(new MetaInfo());
 
   data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
     

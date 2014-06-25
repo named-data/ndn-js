@@ -36,7 +36,7 @@
       var contentString = document.getElementById('content').value;
 
       var data = new Data(interest.getName(), new SignedInfo(), new Buffer(contentString));
-      data.signedInfo.setFields();
+      data.getMetaInfo().setFields();
       data.sign();
       var encodedData = data.wireEncode();
       

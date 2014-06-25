@@ -150,8 +150,8 @@
       
       // Record final seg# if present
       var finalSegmentNumber = null;
-      if (data.signedInfo != null && data.signedInfo.finalBlockID != null)
-        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+      if (data.getMetaInfo() != null && data.getMetaInfo().finalBlockID != null)
+        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().finalBlockID);
       
       // Check for out-of-order segment
       if (segmentNumber != this.snd_una) {

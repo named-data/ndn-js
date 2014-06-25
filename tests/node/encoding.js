@@ -46,7 +46,7 @@ console.log("Encoding/Decoding data packet objects...");
 var content = "NDN on Node";
 
 var data1 = new Data(new Name(n), new SignedInfo(), content);
-data1.signedInfo.setFields();
+data1.getMetaInfo().setFields();
 data1.sign();
 console.log("Signature is \n" + data1.getSignature().getSignature().toHex());
 

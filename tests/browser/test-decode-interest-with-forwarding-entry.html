@@ -192,47 +192,47 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.signedInfo !=null && data.signedInfo.publisher!=null && data.signedInfo.publisher.publisherPublicKeyDigest!=null){
+				if(data.getMetaInfo() !=null && data.getMetaInfo().publisher!=null && data.getMetaInfo().publisher.publisherPublicKeyDigest!=null){
 					
-					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.signedInfo !=null && data.signedInfo.timestamp!=null){
+				if(data.getMetaInfo() !=null && data.getMetaInfo().timestamp!=null){
 					var d = new Date();
-					d.setTime( data.signedInfo.timestamp.msec );
+					d.setTime( data.getMetaInfo().timestamp.msec );
 					
 					var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
 					
 					output += "TimeStamp: "+d;
 					output+= "<br />";
-					output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
+					output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
 					
 					
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.type!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().type!=null){
 
-					output += "Type: "+data.signedInfo.type;
+					output += "Type: "+data.getMetaInfo().type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.locator!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().locator!=null){
 
-					output += "Locator: "+data.signedInfo.locator.type;
+					output += "Locator: "+data.getMetaInfo().locator.type;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.freshnessSeconds!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().freshnessSeconds!=null){
 
-					output += "FreshnessSeconds: "+data.signedInfo.freshnessSeconds;
+					output += "FreshnessSeconds: "+data.getMetaInfo().freshnessSeconds;
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.finalBlockID!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().finalBlockID!=null){
 
-					output += "FinalBlockID: "+data.signedInfo.finalBlockID;
+					output += "FinalBlockID: "+data.getMetaInfo().finalBlockID;
 					output+= "<br />";
 					output+= "<br />";
 				}
