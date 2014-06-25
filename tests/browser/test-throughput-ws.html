@@ -68,8 +68,8 @@
             return Closure.RESULT_ERR;
         
         var data = upcallInfo.data;
-        if (data.content == null) {
-            console.log("NdnProtocol.ContentClosure: data.content is null");
+        if (data.getContent().isNull()) {
+            console.log("data content is null");
             return Closure.RESULT_ERR;
         }
     
@@ -110,7 +110,7 @@
           // Count content length
           //nameStr = escape(data.getName().toUri());
         //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         this.totalBlocks++;
         }
     

@@ -289,7 +289,7 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
     //   the key locator from the MetaInfo to the Signauture object.
     data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
-  encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
+  encoder.writeDTagElement(NDNProtocolDTags.Content, data.getContent().buf());
   
   var signedPortionEndOffset = encoder.offset;
   
@@ -337,7 +337,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   else
     data.setMetaInfo(new MetaInfo());
 
-  data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
+  data.setContent(decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true));
     
   var signedPortionEndOffset = decoder.offset;
     

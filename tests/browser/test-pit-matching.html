@@ -40,7 +40,7 @@
     AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
       if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
         document.getElementById(this.target).innerHTML = 
-                    DataUtils.toString(upcallInfo.data.content);
+                    DataUtils.toString(upcallInfo.data.getContent().buf());
                 return Closure.RESULT_OK;
             }
             else

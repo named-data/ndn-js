@@ -149,14 +149,14 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(hex): "+ data.getContent().toHex();
       
       output+= "<br />";
       output+= "<br />";

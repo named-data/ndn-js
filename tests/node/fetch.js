@@ -23,7 +23,7 @@ var EncodingUtils = require('../..').EncodingUtils;
 var onData = function(interest, data) {
   console.log("Data received in callback.");
   console.log('Name: ' + data.getName().toUri());
-  console.log('Content: ' + data.content.toString());
+  console.log('Content: ' + data.getContent().buf().toString());
   console.log(EncodingUtils.dataToHtml(data).replace(/<br \/>/g, "\n"));
 
   console.log('Quit script now.');

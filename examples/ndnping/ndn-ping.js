@@ -36,7 +36,7 @@
 				var T1 = new Date();
 				var content = upcallInfo.data;
 				nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
-				strContent = DataUtils.toString(content.content);
+				strContent = DataUtils.toString(content.getContent().buf());
 				if (strContent=="ping ack") {
 					document.getElementById('pingreport').innerHTML += '<tr><td width="65%">' + nameStr + ' </td><td align="right">' + (T1-this.T0) + ' ms</td></tr>' ;
 				} else {

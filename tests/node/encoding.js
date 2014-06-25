@@ -56,7 +56,7 @@ var data2 = new Data();
 data2.wireDecode(p2);
 
 console.log('Decoded name: ' + data2.getName().toUri());
-console.log('Decoded content: ' + data2.content.toString());
+console.log('Decoded content: ' + data2.getContent().buf().toString());
 
 console.log('Data in field values:');
 console.log(EncodingUtils.dataToHtml(data2).replace(/<br \/>/g, "\n"));

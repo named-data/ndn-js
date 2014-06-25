@@ -80,7 +80,7 @@ NameEnumeration.prototype.processData = function(data)
           (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
-        this.contentParts.push(data.content);
+        this.contentParts.push(data.getContent().buf());
 
         if (data.getMetaInfo() != null && data.getMetaInfo().finalBlockID != null) {
           var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().finalBlockID);

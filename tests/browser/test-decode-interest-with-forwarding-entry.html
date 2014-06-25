@@ -149,17 +149,17 @@
     			// The hard-wired input is in Binary XML.
 				var data = EncodingUtils.decodeHexData(input, BinaryXmlWireFormat.get());
 				
-				if(data.content!=null ){
+				if(!data.getContent().isNull()){
 					output+= "Content of data packet: ";
 					
-						output+=  DataUtils.toHex(data.content);
+						output+=  data.getContent().toHex();
 						
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
 				
-				var content = DataUtils.toHex(data.content);
+				var content = data.getContent().toHex();
 				
 				var data = data;
 				
@@ -173,14 +173,14 @@
 					output+= "<br />";
 				}
 	
-				if(data.content !=null){
-					output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
+				if(!data.getContent().isNull()) {
+					output += "CONTENT(ASCII): "+ data.getContent().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.content !=null){
-					output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
+				if(!data.getContent().isNull()){
+					output += "CONTENT(hex): "+ data.getContent().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";

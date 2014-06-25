@@ -114,8 +114,8 @@
             return Closure.RESULT_ERR;
         
         var data = upcallInfo.data;
-        if (data.content == null) {
-            console.log("NdnProtocol.ContentClosure: data.content is null");
+        if (data.getContent().isNull()) {
+            console.log("data content is null");
             return Closure.RESULT_ERR;
         }
     
@@ -127,7 +127,7 @@
       // Count content length
       //nameStr = escape(data.getName().toUri());
       //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-      //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+      //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         
         /*
         // Check for the special case if the saved content is for the next segment that we need.
@@ -143,7 +143,7 @@
           // Count content length
           //nameStr = escape(data.getName().toUri());
         //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         this.totalBlocks++;
         }
         */
@@ -295,10 +295,10 @@
         nameStr = escape(content.getName().toUri());
         document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
         document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.content.length + "</p>";
+        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.getContent().size() + "</p>";
         //console.log("In callback, nameStr: " + nameStr);
         //console.log("In callback, content: ");
-        //console.log(content.content.length);
+        //console.log(content.getContent().size());
         //document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
       } else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         console.log("Closure.upcall called with interest time out.");

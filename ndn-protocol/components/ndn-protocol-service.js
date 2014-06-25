@@ -195,8 +195,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         return Closure.RESULT_ERR;
         
     var data = upcallInfo.data;
-    if (data.content == null) {
-        dump("NdnProtocol.ContentClosure: data.content is null\n");
+    if (data.getContent().isNull()) {
+        dump("NdnProtocol.ContentClosure: data content is null\n");
         return Closure.RESULT_ERR;
     }
     
@@ -269,8 +269,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
 
         if (segmentNumber == null) {
             // We are not doing segments, so just finish.
-            this.contentListener.onReceivedContent(DataUtils.toString(data.content));
-            this.contentSha256.update(data.content, data.content.length);
+            this.contentListener.onReceivedContent(DataUtils.toString(data.getContent().buf()));
+            this.contentSha256.update(data.getContent().buf(), data.getContent().size());
             this.contentListener.onStop();
             ContentClosure.removeClosureForWindow(this);
 
@@ -308,8 +308,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     while ((entry = this.segmentStore.maybeRetrieveNextEntry()) != null) {
         segmentNumber = entry.key;
         data = entry.value;
-        this.contentListener.onReceivedContent(DataUtils.toString(data.content));
-        this.contentSha256.update(data.content, data.content.length);
+        this.contentListener.onReceivedContent(DataUtils.toString(data.getContent().buf()));
+        this.contentSha256.update(data.getContent().buf(), data.getContent().size());
         
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.

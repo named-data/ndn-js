@@ -852,7 +852,7 @@ Face.prototype.onReceivedElement = function(element)
         } 
         else if (kind == Closure.UPCALL_CONTENT) {
           var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.content);
+          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
           var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
@@ -883,7 +883,7 @@ Face.prototype.onReceivedElement = function(element)
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();
-            rsakey.readDerPublicKey(data.content);
+            rsakey.readDerPublicKey(data.getContent().buf());
             var verified = data.verify(rsakey);
             var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
               

@@ -24,7 +24,7 @@ var UnixTransport = require('../..').UnixTransport;
 
 var onData = function(interest, data) {
   console.log("Got data packet with name " + data.getName().toUri());
-  console.log(data.content.toString('binary'));
+  console.log(data.getContent().buf().toString('binary'));
 
   face.close();  // This will cause the script to quit.
 };
