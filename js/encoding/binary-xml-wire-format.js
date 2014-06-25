@@ -332,7 +332,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     if (data.getMetaInfo().locator != null && data.getSignature() != null)
       // Copy the key locator pointer to the Signature object for the transition 
       //   of moving the key locator from the MetaInfo to the Signature object.
-      data.getSignature().keyLocator = data.getMetaInfo().locator;
+      data.getSignature().setKeyLocator(data.getMetaInfo().locator);
   }
   else
     data.setMetaInfo(new MetaInfo());
