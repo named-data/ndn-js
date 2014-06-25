@@ -581,7 +581,7 @@ function extractNdnSearch(search, template)
                 else if (key == "ndn.PublisherPublicKeyDigest")
                     template.publisherPublicKeyDigest = DataUtils.toNumbersFromString(unescape(value));
                 else if (key == "ndn.Nonce")
-                    template.nonce = DataUtils.toNumbersFromString(unescape(value));
+                    template.setNonce(DataUtils.toNumbersFromString(unescape(value)));
                 else if (key == "ndn.Exclude")
                     template.setExclude(parseExclude(value));
             }

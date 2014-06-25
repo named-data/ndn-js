@@ -35,7 +35,7 @@
             interest.setMustBeFresh(false);
             interest.scope = 2;
             interest.interestLifetime = 30000;
-            interest.nonce = new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
+            interest.setNonce(new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]));
             var pkd = [];
             for (i = 0; i < 32; ++i)
                 pkd.push(i);
@@ -94,8 +94,8 @@
 				output += "Scope: " + interest.scope + "<br/>";
 			if (interest.interestLifetime != null )
 				output += "InterestLifetime (milliseconds): " + interest.interestLifetime + "<br/>";
-			if (interest.nonce != null )
-				output += "Nonce: " + DataUtils.toHex(interest.nonce) + "<br/>";
+			if (interest.getNonce().size() > 0)
+				output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
 			if (interest.getExclude() != null )
 				output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
 			

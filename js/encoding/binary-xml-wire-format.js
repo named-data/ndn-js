@@ -179,8 +179,8 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
                 DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
     
-  if (null != interest.nonce)
-    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.nonce);
+  if (interest.getNonce().size() > 0)
+    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
     
   encoder.writeElementClose();
 };
@@ -254,9 +254,9 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
     interest.interestLifetime = null;              
     
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
-    interest.nonce = decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce);
+    interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));
   else
-    interest.nonce = null;
+    interest.setNonce(null);
     
   decoder.readElementClose();
 };

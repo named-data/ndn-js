@@ -95,10 +95,10 @@
 				output+= "<br />";
 			}
 			
-			if(interest.nonce!=null ){
+			if (interest.getNonce().size() > 0) {
 				output+= "Nonce: ";
 				
-					output+=  interest.nonce;
+				output+=  interest.getNonce().toHex();
 				
 				output+= "<br />";
 				output+= "<br />";
