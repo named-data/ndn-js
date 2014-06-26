@@ -121,7 +121,7 @@ Data.prototype.getContent = function()
  * @deprecated Use getContent. This method returns a Buffer which is the former
  * behavior of getContent, and should only be used while updating your code.
  */
-Data.prototype.getContentAsBuffer = function() 
+Data.prototype.getContentAsBuffer = function()
 {
   return this.content;
 };
@@ -232,13 +232,9 @@ Data.prototype.verify = function(/*Key*/ key)
     this.wireEncode();
   var verifier = cryptoJS.createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
-<<<<<<< HEAD
   var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature.signature) : this.signature.signature;
-=======
-  var signatureBytes = Data.verifyUsesString ? 
     DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
->>>>>>> 7e351e8f3cb356c8e95b8ba271540bef46c43648
+
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
