@@ -19,6 +19,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var Blob = require('./util/blob.js').Blob;
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
@@ -104,9 +105,19 @@ KeyLocator.prototype.getKeyName = function()
  * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER 
  * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the 
  * DER encoded certificate. 
- * @returns {Buffer} The key data, or null if not specified.
+ * @returns {Blob} The key data, or null if not specified.
  */
 KeyLocator.prototype.getKeyData = function() 
+{ 
+  // For temporary backwards compatibility, leave the fields as a Buffer but return a Blob.
+  return new Blob(this.getKeyDataAsBuffer(), false);
+};
+
+/**
+ * @deprecated Use getKeyData. This method returns a Buffer which is the former
+ * behavior of getKeyData, and should only be used while updating your code.
+ */
+KeyLocator.prototype.getKeyDataAsBuffer = function() 
 { 
   if (this.type == KeyLocatorType.KEY)
     return this.publicKey;
@@ -146,9 +157,13 @@ KeyLocator.prototype.setKeyName = function(name)
 KeyLocator.prototype.setKeyData = function(keyData)
 {
   var value = keyData;
-  if (value != null)
-    // Make a copy.
-    value = new Buffer(value);
+  if (value != null) {
+    if (typeof value === 'object' && value instanceof Blob)
+      value = new Buffer(value.buf());
+    else
+      // Make a copy.                                                                                                      
+      value = new Buffer(value);
+  }
   
   this.keyData = value;
   // Set for backwards compatibility.

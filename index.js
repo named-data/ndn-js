@@ -28,3 +28,6 @@ exports.NameEnumeration = require('./js/util/name-enumeration.js').NameEnumerati
 exports.MemoryContentCache = require('./js/util/memory-content-cache.js').MemoryContentCache;
 exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
 exports.globalKeyManager = require('./js/security/key-manager.js').globalKeyManager;
+
+
+module.exports = exports

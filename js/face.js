@@ -246,7 +246,7 @@ Face.getKeyByName = function(/* KeyName */ name)
   
   for (var i = 0; i < Face.KeyStore.length; i++) {
     if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || Face.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+      if (result == null || Face.KeyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
         result = Face.KeyStore[i];
     }
   }
@@ -402,17 +402,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     interest = new Interest(interestOrName);
     if (arg3) {
       var template = arg3;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;    
+      interest.setExclude(template.getExclude());
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
     }
     else
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
 
     this.expressInterestWithClosure(interest, arg2);
     return;
@@ -436,14 +436,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, Interest template, function onData, function onTimeout); 
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;
+      interest.setExclude(template.getExclude());
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
@@ -451,7 +451,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, function onData); 
     // expressInterest(Name name, function onData,   function onTimeout); 
     else {
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
     }
@@ -542,9 +542,9 @@ Face.prototype.expressInterestHelper = function(interest, closure)
     closure.pitEntry = pitEntry;
 
     // Set interest timer.
-    var timeoutMilliseconds = (interest.interestLifetime || 4000);
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     var timeoutCallback = function() {
-      if (LOG > 1) console.log("Interest time out: " + interest.name.toUri());
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
         
       // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
       //   the interest because we don't want to match it in the mean time.
@@ -555,7 +555,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
         
       // Raise closure callback
       if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-        if (LOG > 1) console.log("Re-express interest: " + interest.name.toUri());
+        if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
         pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
         Face.PITTable.push(pitEntry);
         thisFace.transport.send(binaryInterest.buf());
@@ -629,7 +629,7 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
     if (thisFace.ndndid == null) {
       // Fetch ndndid first, then register.
       var interest = new Interest(Face.ndndIdFetcher);
-      interest.interestLifetime = 4000; // milliseconds
+      interest.setInterestLifetimeMilliseconds(4000);
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
         (interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
@@ -680,7 +680,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
   var hash = require("crypto").createHash('sha256');
-  hash.update(upcallInfo.data.getContent());
+  hash.update(upcallInfo.data.getContent().buf());
   this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
   
@@ -809,9 +809,9 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
         
-    var entry = getEntryForRegisteredPrefix(interest.name);
+    var entry = getEntryForRegisteredPrefix(interest.getName());
     if (entry != null) {
-      if (LOG > 3) console.log("Found registered prefix for " + interest.name.toUri());
+      if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
       var info = new UpcallInfo(this, interest, 0, null);
       var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
       if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null) 
@@ -821,7 +821,7 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
         
-    var pendingInterests = Face.extractEntriesForExpressedInterest(data.name);
+    var pendingInterests = Face.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
@@ -852,7 +852,7 @@ Face.prototype.onReceivedElement = function(element)
         } 
         else if (kind == Closure.UPCALL_CONTENT) {
           var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.content);
+          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
           var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
@@ -866,24 +866,24 @@ Face.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (data.signedInfo && data.signedInfo.locator && data.signature) {
+      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
+        var sigHex = data.getSignature().getSignature().toHex();
               
         var wit = null;
-        if (data.signature.witness != null)
+        if (data.getSignature().witness != null)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
-        var keylocator = data.signedInfo.locator;
-        if (keylocator.type == KeyLocatorType.KEYNAME) {
+        var keylocator = data.getMetaInfo().locator;
+        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
-          if (keylocator.keyName.contentName.match(data.name)) {
+          if (keylocator.keyName.contentName.match(data.getName())) {
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();
-            rsakey.readDerPublicKey(data.content);
+            rsakey.readDerPublicKey(data.getContent().buf());
             var verified = data.verify(rsakey);
             var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
               
@@ -913,7 +913,7 @@ Face.prototype.onReceivedElement = function(element)
             }
           }
         } 
-        else if (keylocator.type == KeyLocatorType.KEY) {
+        else if (keylocator.getType() == KeyLocatorType.KEY) {
           if (LOG > 3) console.log("Keylocator contains KEY");
                 
           var rsakey = new Key();
@@ -972,7 +972,7 @@ Face.prototype.connectAndExecute = function(onConnected)
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
-  interest.interestLifetime = 4000; // milliseconds    
+  interest.setInterestLifetimeMilliseconds(4000);
 
   var thisFace = this;
   var timerID = setTimeout(function() {

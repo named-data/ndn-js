@@ -14,10 +14,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // This software is licensed under the terms of the MIT License.
 // http://kjur.github.com/jsrsasign/license/
 //
@@ -29,6 +29,12 @@
 //   rsa.js
 //   rsa2.js
 //
+var BigInteger = require('jsbn')
+var RSAKey = require('./rsapem-1.1.js').RSAKey
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // keysize / pmstrlen
 //  512 /  128
@@ -280,7 +286,7 @@ function _rsasign_verifyString(sMsg, hSig) {
     var biDecryptedSig = this.doPublic(biSig);
     var hDigestInfo = biDecryptedSig.toString(16).replace(/^1f+00/, '');
     var digestInfoAry = _rsasign_getAlgNameAndHashFromHexDisgestInfo(hDigestInfo);
-  
+
     if (digestInfoAry.length == 0) return false;
     var algName = digestInfoAry[0];
     var diHashValue = digestInfoAry[1];
@@ -397,3 +403,6 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey
+module.exports = exports;

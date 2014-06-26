@@ -74,9 +74,19 @@ Signature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Buffer} The signature bytes.
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
  */
 Signature.prototype.getSignature = function()
+{
+  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.                                        
+  return new Blob(this.signature, false);
+};
+
+/**
+ * @deprecated Use getSignature. This method returns a Buffer which is the former
+ * behavior of getSignature, and should only be used while updating your code.
+ */
+Signature.prototype.getSignatureAsBuffer = function() 
 {
   return this.signature;
 };
@@ -93,7 +103,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
   
 /**
  * Set the data packet's signature bytes.
- * @param {type} signature
+ * @param {Blob} signature
  */
 Signature.prototype.setSignature = function(signature)
 {

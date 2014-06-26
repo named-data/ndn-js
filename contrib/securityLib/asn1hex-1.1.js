@@ -13,16 +13,20 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // This software is licensed under the terms of the MIT License.
 // http://kjur.github.com/jsrsasign/license/
 //
 // Depends on:
 //
+var BigInteger = require('jsbn')
 
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte
@@ -31,9 +35,9 @@
 //   f('3080....0000', 2) ... 80 ... -1
 //
 //   Requirements:
-//   - ASN.1 type octet length MUST be 1. 
+//   - ASN.1 type octet length MUST be 1.
 //     (i.e. ASN.1 primitives like SET, SEQUENCE, INTEGER, OCTETSTRING ...)
-//   - 
+//   -
 
 /**
  * @fileOverview
@@ -277,7 +281,7 @@ function _asnhex_getDecendantHexVByNthList(h, currentIndex, nthList) {
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  * @since 1.1
  */
-function ASN1HEX() {
+var ASN1HEX = function ASN1HEX() {
   return ASN1HEX;
 }
 
@@ -293,3 +297,6 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;

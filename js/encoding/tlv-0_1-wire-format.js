@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+var cryptoJS = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -30,11 +30,11 @@ var Signature = require('../signature.js').Signature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
- * A Tlv0_1WireFormat implements the WireFormat interface for encoding and 
+ * A Tlv0_1WireFormat implements the WireFormat interface for encoding and
  * decoding with the NDN-TLV wire format, version 0.1a2.
  * @constructor
  */
-var Tlv0_1WireFormat = function Tlv0_1WireFormat() 
+var Tlv0_1WireFormat = function Tlv0_1WireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
@@ -53,53 +53,53 @@ Tlv0_1WireFormat.instance = null;
  * @param {Interest} interest The Interest object to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1WireFormat.prototype.encodeInterest = function(interest) 
+Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new TlvEncoder();
   var saveLength = encoder.getLength();
-  
+
   // Encode backwards.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
   encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
-  
+
   // Encode the Nonce as 4 bytes.
-  if (interest.getNonce() == null || interest.getNonce().length == 0)
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
-  else if (interest.getNonce().length < 4) {
+    encoder.writeBlobTlv(Tlv.Nonce, cryptoJS.randomBytes(4));
+  else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
-    interest.getNonce().copy(nonce);
+    interest.getNonce().buf().copy(nonce);
 
     // Generate random bytes for remaining bytes in the nonce.
-    for (var i = interest.getNonce().length; i < 4; ++i)
-      nonce[i] = require("crypto").randomBytes(1)[0];
+    for (var i = interest.getNonce().size(); i < 4; ++i)
+      nonce[i] = cryptoJS.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
-  else if (interest.getNonce().length == 4)
+  else if (interest.getNonce().size() == 4)
     // Use the nonce as-is.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce());
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
   else
     // Truncate.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().slice(0, 4));
-  
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
+
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
   Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
-  
+
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
-      
+
   return new Blob(encoder.getOutput(), false);
 };
 
 /**
- * Decode input as an NDN-TLV interest and set the fields of the interest 
- * object.  
+ * Decode input as an NDN-TLV interest and set the fields of the interest
+ * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input) 
+Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new TlvDecoder(input);
 
@@ -124,54 +124,54 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
  * @returns {object} An associative array with fields
- * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
- * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
- * the encoding of the beginning of the signed portion, and 
- * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-Tlv0_1WireFormat.prototype.encodeData = function(data) 
+Tlv0_1WireFormat.prototype.encodeData = function(data)
 {
   var encoder = new TlvEncoder(1500);
   var saveLength = encoder.getLength();
-  
+
   // Encode backwards.
-  // TODO: The library needs to handle other signature types than 
+  // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
+  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
-  encoder.writeBlobTlv(Tlv.Content, data.getContent());
+  encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
 
   encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
-  var signedPortionBeginOffset = 
+  var signedPortionBeginOffset =
     encoder.getLength() - signedPortionBeginOffsetFromBack;
   var signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
 
   return { encoding: new Blob(encoder.getOutput(), false),
-           signedPortionBeginOffset: signedPortionBeginOffset, 
-           signedPortionEndOffset: signedPortionEndOffset };  
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
- * Decode input as an NDN-TLV data packet, set the fields in the data object, 
- * and return the signed offsets. 
+ * Decode input as an NDN-TLV data packet, set the fields in the data object,
+ * and return the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where 
- * signedPortionBeginOffset is the offset in the encoding of the beginning of 
- * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_1WireFormat.prototype.decodeData = function(data, input) 
+Tlv0_1WireFormat.prototype.decodeData = function(data, input)
 {
   var decoder = new TlvDecoder(input);
 
@@ -182,21 +182,21 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1WireFormat.decodeSignatureInfo(data, decoder);
-  if (data.getSignature() != null && 
-      data.getSignature().getKeyLocator() != null && 
+  if (data.getSignature() != null &&
+      data.getSignature().getKeyLocator() != null &&
       data.getMetaInfo() != null)
-    // Copy the key locator pointer to the MetaInfo object for the transition of 
+    // Copy the key locator pointer to the MetaInfo object for the transition of
     //   moving the key locator from the MetaInfo to the Signature object.
     data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
-  // TODO: The library needs to handle other signature types than 
+  // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
   data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
 
   decoder.finishNestedTlvs(endOffset);
-  return { signedPortionBeginOffset: signedPortionBeginOffset, 
-           signedPortionEndOffset: signedPortionEndOffset };  
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -217,16 +217,16 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
 
   // Encode the components backwards.
   for (var i = name.size() - 1; i >= 0; --i)
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue());
+    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
 
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
 };
-        
+
 Tlv0_1WireFormat.decodeName = function(name, decoder)
 {
   name.clear();
-  
-  var endOffset = decoder.readNestedTlvsStart(Tlv.Name);      
+
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Name);
   while (decoder.getOffset() < endOffset)
       name.append(decoder.readBlobTlv(Tlv.NameComponent));
 
@@ -234,7 +234,7 @@ Tlv0_1WireFormat.decodeName = function(name, decoder)
 };
 
 /**
- * Encode the interest selectors.  If no selectors are written, do not output a 
+ * Encode the interest selectors.  If no selectors are written, do not output a
  * Selectors TLV.
  */
 Tlv0_1WireFormat.encodeSelectors = function(interest, encoder)
@@ -248,25 +248,25 @@ Tlv0_1WireFormat.encodeSelectors = function(interest, encoder)
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
     Tlv0_1WireFormat.encodeExclude(interest.getExclude(), encoder);
-  
+
   if (interest.getKeyLocator().getType() != null)
     Tlv0_1WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
   else {
-    // There is no keyLocator. If there is a publisherPublicKeyDigest, then 
-    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated 
+    // There is no keyLocator. If there is a publisherPublicKeyDigest, then
+    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated
     //   publisherPublicKeyDigest, we don't need this.)
     if (null != interest.publisherPublicKeyDigest) {
       var savePublisherPublicKeyDigestLength = encoder.getLength();
       encoder.writeBlobTlv
-        (Tlv.KeyLocatorDigest, 
+        (Tlv.KeyLocatorDigest,
          interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
       encoder.writeTypeAndLength
-        (Tlv.PublisherPublicKeyLocator, 
+        (Tlv.PublisherPublicKeyLocator,
          encoder.getLength() - savePublisherPublicKeyDigestLength);
     }
   }
-  
+
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -295,7 +295,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
       // For backwards compatibility, also set the publisherPublicKeyDigest.
       interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData();
+        interest.getKeyLocator().getKeyData().buf();
     }
   }
   else
@@ -312,7 +312,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
 
   decoder.finishNestedTlvs(endOffset);
 };
-  
+
 Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
 {
   var saveLength = encoder.getLength();
@@ -325,12 +325,12 @@ Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue());
+      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
   }
-  
+
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
-  
+
 Tlv0_1WireFormat.decodeExclude = function(exclude, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
@@ -345,7 +345,7 @@ Tlv0_1WireFormat.decodeExclude = function(exclude, decoder)
       // Else no more entries.
       break;
   }
-  
+
   decoder.finishNestedTlvs(endOffset);
 };
 
@@ -358,12 +358,12 @@ Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
       Tlv0_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-             keyLocator.getKeyData().length > 0)
-      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+             keyLocator.getKeyData().size() > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
     else
       throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
   }
-  
+
   encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
@@ -400,7 +400,7 @@ Tlv0_1WireFormat.decodeKeyLocator = function
  * locator in this object.
  * @param {Signature} signature The Signature object to encode.
  * @param {TlvEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from 
+ * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
  */
 Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue = function
@@ -421,7 +421,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
   var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
-  // TODO: The library needs to handle other signature types than 
+  // TODO: The library needs to handle other signature types than
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
       data.setSignature(Signature());
@@ -443,8 +443,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID();
+  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
@@ -459,7 +458,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
     // Not the default, so we need to encode the type.
     if (metaInfo.getType() == ContentType.LINK ||
         metaInfo.getType() == ContentType.KEY)
-      // The ContentType enum is set up with the correct integer for 
+      // The ContentType enum is set up with the correct integer for
       // each NDN-TLV ContentType.
       encoder.writeNonNegativeIntegerTlv(Tlv.ContentType, metaInfo.getType());
     else
@@ -471,9 +470,9 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 
 Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
-  var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);  
+  var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
-  // The ContentType enum is set up with the correct integer for each 
+  // The ContentType enum is set up with the correct integer for each
   // NDN-TLV ContentType.  If readOptionalNonNegativeIntegerTlv returns
   // None, then setType will convert it to BLOB.
   metaInfo.setType(decoder.readOptionalNonNegativeIntegerTlv

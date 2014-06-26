@@ -3,19 +3,20 @@ CryptoJS v3.1.2
 code.google.com/p/crypto-js
 (c) 2009-2013 by Jeff Mott. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
-associated documentation files (the "Software"), to deal in the Software without restriction, including 
-without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
-sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
 subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 code.google.com/p/crypto-js/wiki/License
 */
+
+var C = require('./core.js').CryptoJS;
 (function (Math) {
     // Shortcuts
-    var C = CryptoJS;
     var C_lib = C.lib;
     var WordArray = C_lib.WordArray;
     var Hasher = C_lib.Hasher;
@@ -192,3 +193,7 @@ code.google.com/p/crypto-js/wiki/License
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
+
+exports.CryptoJS = C
+module.exports = exports
+

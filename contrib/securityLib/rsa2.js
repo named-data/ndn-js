@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -11,12 +11,18 @@
 //
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on rsa.js and jsbn2.js
+var intShim = require("jsbn")
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
+var RSAKey = require('./rsa.js').RSAKey;
 
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
 function pkcs1unpad2(d,n) {
@@ -195,7 +201,7 @@ function RSAGenerate(B,E) {
     var phi = p1.multiply(q1);
     if(phi.gcd(ee).compareTo(BigInteger.ONE) == 0) {
       this.n = this.p.multiply(this.q);	// this.n = p * q
-      this.d = ee.modInverse(phi);	// this.d = 
+      this.d = ee.modInverse(phi);	// this.d =
       this.dmp1 = this.d.mod(p1);	// this.dmp1 = d mod (p - 1)
       this.dmq1 = this.d.mod(q1);	// this.dmq1 = d mod (q - 1)
       this.coeff = this.q.modInverse(this.p);	// this.coeff = (q ^ -1) mod p
@@ -257,3 +263,6 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;

@@ -143,17 +143,17 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
     
-  interest.name.to_ndnb(encoder);
+  interest.getName().to_ndnb(encoder);
   
-  if (null != interest.minSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
+  if (null != interest.getMinSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());  
 
-  if (null != interest.maxSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+  if (null != interest.getMaxSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.getMaxSuffixComponents());
 
   if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
-      interest.getKeyLocator().getKeyData() != null &&
-      interest.getKeyLocator().getKeyData().length > 0)
+      !interest.getKeyLocator().getKeyData().isNull() &&
+      interest.getKeyLocator().getKeyData().size() > 0)
     // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
     encoder.writeDTagElement
       (NDNProtocolDTags.PublisherPublicKeyDigest, 
@@ -163,24 +163,24 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
       interest.publisherPublicKeyDigest.to_ndnb(encoder);
   }
     
-  if (null != interest.exclude)
-    interest.exclude.to_ndnb(encoder);
+  if (null != interest.getExclude())
+    interest.getExclude().to_ndnb(encoder);
     
-  if (null != interest.childSelector) 
-    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
+  if (null != interest.getChildSelector()) 
+    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null) 
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
     
-  if (null != interest.scope) 
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.scope);
+  if (null != interest.setScope()) 
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
     
-  if (null != interest.interestLifetime) 
+  if (null != interest.getInterestLifetimeMilliseconds()) 
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
+                DataUtils.nonNegativeIntToBigEndian((interest.getInterestLifetimeMilliseconds() / 1000.0) * 4096));
     
-  if (null != interest.nonce)
-    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.nonce);
+  if (interest.getNonce().size() > 0)
+    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
     
   encoder.writeElementClose();
 };
@@ -194,18 +194,18 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.name = new Name();
-  interest.name.from_ndnb(decoder);
+  interest.setName(new Name());
+  interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
-    interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
+    interest.setMinSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents));
   else
-    interest.minSuffixComponents = null;
+    interest.setMinSuffixComponents(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
-    interest.maxSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents);
+    interest.setMaxSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents));
   else
-    interest.maxSuffixComponents = null;
+    interest.setMaxSuffixComponents(null);
       
   // Initially clear the keyLocator.
   interest.getKeyLocator().clear();
@@ -226,37 +226,37 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
 
   if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
-    interest.exclude = new Exclude();
-    interest.exclude.from_ndnb(decoder);
+    interest.setExclude(new Exclude());
+    interest.getExclude().from_ndnb(decoder);
   }
   else
-    interest.exclude = null;
+    interest.setExclude(new Exclude());
     
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
-    interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);
+    interest.setChildSelector(decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector));
   else
-    interest.childSelector = null;
+    interest.setChildSelector(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
-    interest.answerOriginKind = decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind);
+    interest.setAnswerOriginKind(decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind));
   else
-    interest.answerOriginKind = null;
+    interest.setAnswerOriginKind(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.Scope))
-    interest.scope = decoder.readIntegerDTagElement(NDNProtocolDTags.Scope);
+    interest.setScope(decoder.readIntegerDTagElement(NDNProtocolDTags.Scope));
   else
-    interest.scope = null;
+    interest.setScope(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
-    interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096;
+    interest.setInterestLifetimeMilliseconds(1000.0 * DataUtils.bigEndianToUnsignedInt
+               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096);
   else
-    interest.interestLifetime = null;              
+    interest.setInterestLifetimeMilliseconds(null);              
     
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
-    interest.nonce = decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce);
+    interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));
   else
-    interest.nonce = null;
+    interest.setNonce(null);
     
   decoder.readElementClose();
 };
@@ -276,20 +276,20 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
-  if (null != data.signature) 
-    data.signature.to_ndnb(encoder);
+  if (null != data.getSignature()) 
+    data.getSignature().to_ndnb(encoder);
     
   var signedPortionBeginOffset = encoder.offset;
 
-  if (null != data.name) 
-    data.name.to_ndnb(encoder);
+  if (null != data.getName()) 
+    data.getName().to_ndnb(encoder);
   
-  if (null != data.signedInfo) 
+  if (null != data.getMetaInfo()) 
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
     //   the key locator from the MetaInfo to the Signauture object.
-    data.signedInfo.to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
+    data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
-  encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
+  encoder.writeDTagElement(NDNProtocolDTags.Content, data.getContent().buf());
   
   var signedPortionEndOffset = encoder.offset;
   
@@ -315,29 +315,29 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.signature = new Signature();
-    data.signature.from_ndnb(decoder);
+    data.setSignature(new Signature());
+    data.getSignature().from_ndnb(decoder);
   }
   else
-    data.signature = null;
+    data.setSignature(new Signature());
     
   var signedPortionBeginOffset = decoder.offset;
 
-  data.name = new Name();
-  data.name.from_ndnb(decoder);
+  data.setName(new Name());
+  data.getName().from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.signedInfo = new MetaInfo();
-    data.signedInfo.from_ndnb(decoder);
-    if (data.signedInfo.locator != null && data.getSignature() != null)
+    data.setMetaInfo(new MetaInfo());
+    data.getMetaInfo().from_ndnb(decoder);
+    if (data.getMetaInfo().locator != null && data.getSignature() != null)
       // Copy the key locator pointer to the Signature object for the transition 
       //   of moving the key locator from the MetaInfo to the Signature object.
-      data.getSignature().keyLocator = data.signedInfo.locator;
+      data.getSignature().setKeyLocator(data.getMetaInfo().locator);
   }
   else
-    data.signedInfo = null;
+    data.setMetaInfo(new MetaInfo());
 
-  data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
+  data.setContent(decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true));
     
   var signedPortionEndOffset = decoder.offset;
     

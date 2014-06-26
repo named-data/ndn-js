@@ -1,6 +1,6 @@
 /*! x509-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
-// 
+//
 // x509.js - X509 class to read subject public key from certificate.
 //
 // version: 1.1 (10-May-2012)
@@ -15,10 +15,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // This software is licensed under the terms of the MIT License.
 // http://kjur.github.com/jsrsasign/license
 //
@@ -27,6 +27,9 @@
 //   base64.js
 //   rsa.js
 //   asn1hex.js
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js').RSAKey;
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
 
 /**
  * @fileOverview
@@ -59,7 +62,7 @@ function _x509_getHexTbsCertificateFromCert(hCert) {
 // NOTE: v1 and v3 supported
 function _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert) {
   var pTbsCert = ASN1HEX.getStartPosOfV_AtObj(hCert, 0);
-  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pTbsCert); 
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pTbsCert);
   if (a.length < 1) return -1;
   if (hCert.substring(a[0], a[0] + 10) == "a003020102") { // v3
     if (a.length < 6) return -1;
@@ -73,8 +76,8 @@ function _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert) {
 // NOTE: Without BITSTRING encapsulation.
 function _x509_getSubjectPublicKeyPosFromCertHex(hCert) {
   var pInfo = _x509_getSubjectPublicKeyInfoPosFromCertHex(hCert);
-  if (pInfo == -1) return -1;    
-  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pInfo); 
+  if (pInfo == -1) return -1;
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, pInfo);
   if (a.length != 2) return -1;
   var pBitString = a[1];
   if (hCert.substring(pBitString, pBitString + 2) != '03') return -1;
@@ -86,7 +89,7 @@ function _x509_getSubjectPublicKeyPosFromCertHex(hCert) {
 
 function _x509_getPublicKeyHexArrayFromCertHex(hCert) {
   var p = _x509_getSubjectPublicKeyPosFromCertHex(hCert);
-  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, p); 
+  var a = ASN1HEX.getPosArrayOfChildren_AtObj(hCert, p);
   if (a.length != 2) return [];
   var hN = ASN1HEX.getHexOfV_AtObj(hCert, a[0]);
   var hE = ASN1HEX.getHexOfV_AtObj(hCert, a[1]);
@@ -269,3 +272,5 @@ X509.prototype.getSubjectString = _x509_getSubjectString;
 X509.prototype.getNotBefore = _x509_getNotBefore;
 X509.prototype.getNotAfter = _x509_getNotAfter;
 
+exports.X509 = X509
+module.exports = exports

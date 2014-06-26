@@ -44,12 +44,8 @@
 			var output ="";
 			
 			
-			if(interest.name!=null && interest.name.components!=null){
-				output+= "NAME: ";
-				
-				for(var i=0;i<interest.name.size();i++)
-					output+= "/"+ DataUtils.toString(interest.name.get(i).getValue());
-				
+			if(interest.getName()!=null){
+				output+= "NAME: " + interest.getName().toUri();
 				output+= "<br />";
 				output+= "<br />";
 			}
@@ -63,56 +59,56 @@
 				output+= "<br />";
 			}
 			
-			if(interest.exclude!=null ){
+			if(interest.getExclude()!=null ){
 				output+= "Exclude: ";
 				
-					output+=  interest.exclude;
+					output+=  interest.getExclude().toUri();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.childSelector!=null ){
+			if(interest.getChildSelector()!=null ){
 				output+= "ChildSelector: ";
 				
-					output+=  interest.childSelector;
+					output+=  interest.getChildSelector();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.answerOriginKind!=null ){
+			if(interest.setAnswerOriginKind()!=null ){
 				output+= "AnswerOriginKind: ";
 				
-					output+=  interest.answerOriginKind;
+					output+=  interest.setAnswerOriginKind();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.interestLifetime!=null ){
+			if(interest.getInterestLifetimeMilliseconds()!=null ){
 				output+= "InterestLifetime: ";
 				
-					output+=  interest.interestLifetime;
+					output+=  interest.getInterestLifetimeMilliseconds();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.nonce!=null ){
+			if (interest.getNonce().size() > 0) {
 				output+= "Nonce: ";
 				
-					output+=  interest.nonce;
+				output+=  interest.getNonce().toHex();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
 			
-			if(interest.scope!=null ){
+			if(interest.setScope()!=null ){
 				output+= "SCOPE: ";
 				
-					output+=  interest.scope;
+					output+=  interest.setScope();
 				
 				output+= "<br />";
 				output+= "<br />";
@@ -127,43 +123,43 @@
 				output+= "<br />";
 			}
 			
-			if(interest.maxSuffixComponents!=null ){
+			if(interest.getMaxSuffixComponents()!=null ){
 				output+= "MaxSuffixComponents : ";
 				
-				output+=  interest.maxSuffixComponents;
+				output+=  interest.getMaxSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.minSuffixComponents!=null ){
+			if(interest.getMinSuffixComponents()!=null ){
 				output+= "MinSuffixComponents : ";
 				
-				output+=  interest.minSuffixComponents;
+				output+=  interest.getMinSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.name.get(3) !=null){
+			if(interest.getName().get(3) !=null){
 				
 				
-				var input = DataUtils.toHex(interest.name.get(3).getValue()) ;
+				var input = interest.getName().get(3).getValue().toHex();
 
     			// The hard-wired input is in Binary XML.
 				var data = EncodingUtils.decodeHexData(input, BinaryXmlWireFormat.get());
 				
-				if(data.content!=null ){
+				if(!data.getContent().isNull()){
 					output+= "Content of data packet: ";
 					
-						output+=  DataUtils.toHex(data.content);
+						output+=  data.getContent().toHex();
 						
 					output+= "<br />";
 					output+= "<br />";
 				}
 				
 				
-				var content = DataUtils.toHex(data.content);
+				var content = data.getContent().toHex();
 				
 				var data = data;
 				
@@ -171,76 +167,72 @@
 				////////////////////////////////////////
 				
 
-				if(data.name!=null && data.name.components!=null){
-					output+= "NAME: ";
-					
-					for(var i=0;i<data.name.size();i++)
-						output+= "/"+ DataUtils.toString(data.name.get(i).getValue());
-					
+				if(data.getName()!=null){
+					output+= "NAME: " + data.getName().toUri();
 					output+= "<br />";
 					output+= "<br />";
 				}
 	
-				if(data.content !=null){
-					output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
+				if(!data.getContent().isNull()) {
+					output += "CONTENT(ASCII): "+ data.getContent().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.content !=null){
-					output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
+				if(!data.getContent().isNull()){
+					output += "CONTENT(hex): "+ data.getContent().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.signature !=null && data.signature.signature!=null){
+				if(data.getSignature() != null && data.getSignature().getSignature() != null){
 					
-					output += "SIGNATURE(hex): "+ DataUtils.toHex(data.signature.signature);
-					
-					output+= "<br />";
-					output+= "<br />";
-				}
-				if(data.signedInfo !=null && data.signedInfo.publisher!=null && data.signedInfo.publisher.publisherPublicKeyDigest!=null){
-					
-					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
+					output += "SIGNATURE(hex): "+ data.getSignature().getSignature().toHex();
 					
 					output+= "<br />";
 					output+= "<br />";
 				}
-				if(data.signedInfo !=null && data.signedInfo.timestamp!=null){
+				if(data.getMetaInfo() !=null && data.getMetaInfo().publisher!=null && data.getMetaInfo().publisher.publisherPublicKeyDigest!=null){
+					
+					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
+					
+					output+= "<br />";
+					output+= "<br />";
+				}
+				if(data.getMetaInfo() !=null && data.getMetaInfo().timestamp!=null){
 					var d = new Date();
-					d.setTime( data.signedInfo.timestamp.msec );
+					d.setTime( data.getMetaInfo().timestamp.msec );
 					
 					var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
 					
 					output += "TimeStamp: "+d;
 					output+= "<br />";
-					output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
+					output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
 					
 					
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.type!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getType()!=null){
 
-					output += "Type: "+data.signedInfo.type;
+					output += "Type: "+data.getMetaInfo().getType();
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.locator!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().locator!=null){
 
-					output += "Locator: "+data.signedInfo.locator.type;
+					output += "Locator: "+data.getMetaInfo().locator.getType();
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.freshnessSeconds!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getFreshnessPeriod() != null){
 
-					output += "FreshnessSeconds: "+data.signedInfo.freshnessSeconds;
+					output += "FreshnessPeriod (milliseconds): "+data.getMetaInfo().getFreshnessPeriod();
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.signedInfo !=null && data.signedInfo.finalBlockID!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0){
 
-					output += "FinalBlockID: "+data.signedInfo.finalBlockID;
+					output += "FinalBlockID: " + data.getMetaInfo().getFinalBlockID().getValue().toHex();
 					output+= "<br />";
 					output+= "<br />";
 				}

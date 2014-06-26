@@ -29,19 +29,21 @@
 		function encode() {
 			var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
-            interest.minSuffixComponents = 2;
-            interest.maxSuffixComponents = 4;
-            interest.childSelector = 1;
+            interest.setMinSuffixComponents(2);
+            interest.setMaxSuffixComponents(4);
+            interest.setChildSelector(1);
             interest.setMustBeFresh(false);
-            interest.scope = 2;
-            interest.interestLifetime = 30000;
-            interest.nonce = new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]);
+            interest.setScope(2);
+            interest.setInterestLifetimeMilliseconds(30000);
+            interest.setNonce(new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]));
             var pkd = [];
             for (i = 0; i < 32; ++i)
                 pkd.push(i);
             interest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
             interest.getKeyLocator().setKeyData(new Buffer(pkd));
-            interest.exclude = new Exclude([Name.fromEscapedString("abc"), Exclude.ANY]);
+            interest.setExclude(new Exclude());
+            interest.getExclude().appendComponent(Name.fromEscapedString("abc"));
+            interest.getExclude().appendAny();
                 
 			var output = EncodingUtils.encodeToHexInterest(interest);
 			
@@ -61,21 +63,21 @@
 			
 			var output ="";
 			
-			if (interest.name != null && interest.name.components != null)
-				output += "Name: " + interest.name.toUri() + "<br/>";
-			if (interest.minSuffixComponents != null )
-				output += "MinSuffixComponents : " + interest.minSuffixComponents + "<br/>";
-			if (interest.maxSuffixComponents != null )
-				output += "MaxSuffixComponents : " + interest.maxSuffixComponents + "<br/>";
+			if (interest.getName() != null)
+				output += "Name: " + interest.getName().toUri() + "<br/>";
+			if (interest.getMinSuffixComponents() != null )
+				output += "MinSuffixComponents : " + interest.getMinSuffixComponents() + "<br/>";
+			if (interest.getMaxSuffixComponents() != null )
+				output += "MaxSuffixComponents : " + interest.getMaxSuffixComponents() + "<br/>";
           
             output += "KeyLocator: ";
             if (interest.getKeyLocator().getType() >= 0) {
                 if (interest.getKeyLocator().getType() == KeyLocatorType.KEY)
-                  output += "Key: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "Key: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() == KeyLocatorType.CERTIFICATE)
-                  output += "Certificate: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "Certificate: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() ==KeyLocatorType.KEY_LOCATOR_DIGEST)
-                  output += "KeyLocatorDigest: " + DataUtils.toHex(interest.getKeyLocator().getKeyData());
+                  output += "KeyLocatorDigest: " + interest.getKeyLocator().getKeyData().toHex();
                 else if (interest.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
                   output += "KeyName: " + interest.getKeyLocator().getKeyName().toUri();
                 else
@@ -85,17 +87,17 @@
                 output += "<none>";
             output += "<br/>";
 
-            if (interest.childSelector != null )
-				output += "ChildSelector: " + interest.childSelector + "<br/>";
+            if (interest.getChildSelector() != null )
+				output += "ChildSelector: " + interest.getChildSelector() + "<br/>";
 			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
-			if (interest.scope != null )
-				output += "Scope: " + interest.scope + "<br/>";
-			if (interest.interestLifetime != null )
-				output += "InterestLifetime (milliseconds): " + interest.interestLifetime + "<br/>";
-			if (interest.nonce != null )
-				output += "Nonce: " + DataUtils.toHex(interest.nonce) + "<br/>";
-			if (interest.exclude != null )
-				output += "Exclude: " + interest.exclude.toUri() + "<br/>";
+			if (interest.setScope() != null )
+				output += "Scope: " + interest.setScope() + "<br/>";
+			if (interest.getInterestLifetimeMilliseconds() != null )
+				output += "InterestLifetime (milliseconds): " + interest.getInterestLifetimeMilliseconds() + "<br/>";
+			if (interest.getNonce().size() > 0)
+				output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
+			if (interest.getExclude() != null )
+				output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
 			
 			document.getElementById('result').innerHTML = output;
 		}

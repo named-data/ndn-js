@@ -23,14 +23,14 @@ var Name = require('../..').Name;
 var UnixTransport = require('../..').UnixTransport;
 
 var onData = function(interest, data) {
-  console.log("Got data packet with name " + data.name.toUri());
-  console.log(data.content.toString('binary'));
+  console.log("Got data packet with name " + data.getName().toUri());
+  console.log(data.getContent().buf().toString('binary'));
 
   face.close();  // This will cause the script to quit.
 };
 
 var onTimeout = function(interest) {
-  console.log("Time out for interest " + interest.name.toUri());
+  console.log("Time out for interest " + interest.getName().toUri());
   face.close();  // This will cause the script to quit.
 };
 

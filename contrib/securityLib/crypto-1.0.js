@@ -11,7 +11,7 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * This software is licensed under the terms of the MIT License.
  * http://kjur.github.com/jsrsasign/license
  *
@@ -27,8 +27,13 @@
  * @since 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+var CryptoJS = require('./sha256.js').CryptoJS
+var BigInteger = require('jsbn')
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
-/** 
+/**
  * kjur's class library name space
  * @name KJUR
  * @namespace kjur's class library name space
@@ -497,7 +502,7 @@ KJUR.crypto.Signature = function(params) {
 		var keyLen = this.prvKey.n.bitLength();
 		this.sHashHex = this.md.digest();
 		this.hDigestInfo = util.getDigestInfoHex(this.sHashHex, this.mdAlgName);
-		this.hPaddedDigestInfo = 
+		this.hPaddedDigestInfo =
                     util.getPaddedDigestInfoHex(this.sHashHex, this.mdAlgName, keyLen);
 
 		var biPaddedDigestInfo = parseBigInt(this.hPaddedDigestInfo, 16);
@@ -692,3 +697,5 @@ KJUR.crypto.Signature = function(params) {
     }
 };
 
+exports.KJUR = KJUR;
+module.exports = exports;
