@@ -93,12 +93,22 @@ Name.Component = function NameComponent(value)
 
 /**
  * Get the component value.
- * @returns {Buffer} The component value.
+ * @returns {Blob} The component value.
  */
 Name.Component.prototype.getValue = function() 
 {
-  return this.value;
+  // For temporary backwards compatibility, leave this.value as a Buffer but return a Blob.
+  return new Blob(this.value, false);
 }
+
+/**
+ * @deprecated Use getValue. This method returns a Buffer which is the former
+ * behavior of getValue, and should only be used while updating your code.
+ */
+Name.prototype.getValueAsBuffer = function() 
+{
+  return this.value;
+};
 
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
@@ -247,7 +257,7 @@ Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
   encoder.writeElementStartDTag(this.getElementLabel());
   var count = this.size();
   for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue());
+    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
   
   encoder.writeElementClose();
 };
@@ -311,7 +321,7 @@ Name.prototype.toUri = function()
   var result = "";
   
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue());
+    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
   
   return result;  
 };
@@ -404,12 +414,11 @@ Name.prototype.getPrefix = function(nComponents)
 };
 
 /**
- * @brief Get prefix of the name, containing less minusComponents right components
- * @param minusComponents number of components to cut from the back
+ * @deprecated Use getPrefix(-nComponents).
  */
-Name.prototype.cut = function(minusComponents) 
+Name.prototype.cut = function(nComponents) 
 {
-  return new Name(this.components.slice(0, this.components.length - minusComponents));
+  return new Name(this.components.slice(0, this.components.length - nComponents));
 };
 
 /**
@@ -422,7 +431,7 @@ Name.prototype.size = function()
 };
 
 /**
- * Return a new Name.Component of the component at the given index.  To get just the component value, use get(i).getValue().
+ * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
  * @returns {Name.Component}
@@ -453,11 +462,11 @@ Name.prototype.getComponentCount = function()
 };
 
 /**
- * @deprecated To get just the component value, use get(i).getValue().
+ * @deprecated To get just the component value array, use get(i).getValue().buf().
  */
 Name.prototype.getComponent = function(i) 
 {
-  return new Buffer(this.components[i].getValue());
+  return new Buffer(this.components[i].getValue().buf());
 };
 
 /**
@@ -468,7 +477,7 @@ Name.prototype.getComponent = function(i)
 Name.prototype.indexOfFileName = function() 
 {
   for (var i = this.size() - 1; i >= 0; --i) {
-    var component = this.components[i].getValue();
+    var component = this.components[i].getValue().buf();
     if (component.length <= 0)
       continue;
         
@@ -530,7 +539,7 @@ Name.prototype.getContentDigestValue = function()
 Name.getComponentContentDigestValue = function(component) 
 {
   if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue();
+    component = component.getValue().buf();
 
   var digestComponentLength = Name.ContentDigestPrefix.length + 32 + Name.ContentDigestSuffix.length; 
   // Check for the correct length and equal ContentDigestPrefix and ContentDigestSuffix.
@@ -559,7 +568,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 Name.toEscapedString = function(value) 
 {
   if (typeof value == 'object' && value instanceof Name.Component)
-    value = value.getValue();
+    value = value.getValue().buf();
   
   var result = "";
   var gotNonDot = false;

@@ -23,13 +23,13 @@ console.log("typeof " + typeof true);
 
 var name = new Name('/wentao.shang/test001');
 var interest = new Interest(name);
-interest.answerOriginKind = Interest.ANSWER_NO_CONTENT_STORE;
-interest.interestLifetime = 1234;
+interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
+interest.setInterestLifetimeMilliseconds(1234);
 
 // Note: this filter is meaningless, just for test purposes.
 var filter = new Exclude
   ([Name.fromEscapedString('before'), Exclude.ANY, new Buffer('after', 'ascii'), Exclude.ANY, Name.fromEscapedString('%00%10')]);
-interest.exclude = filter;
+interest.setExclude(filter);
 
 console.log('Interest with random Exclude:');
 console.log(interest.toUri());

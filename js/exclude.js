@@ -131,7 +131,7 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
       encoder.writeElementClose();
     }
     else
-      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue());
+      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue().buf());
   }
 
   encoder.writeElementClose();
@@ -153,7 +153,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue());
+      result += Name.toEscapedString(this.values[i].getValue().buf());
   }
   return result;
 };
@@ -164,7 +164,7 @@ Exclude.prototype.toUri = function()
 Exclude.prototype.matches = function(/*Buffer*/ component) 
 {
   if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue();
+    component = component.getValue().buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -209,7 +209,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue()))
+      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
         return true;
     }
   }
@@ -224,9 +224,9 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 Exclude.compareComponents = function(component1, component2) 
 {
   if (typeof component1 == 'object' && component1 instanceof Name.Component)
-    component1 = component1.getValue();
+    component1 = component1.getValue().buf();
   if (typeof component2 == 'object' && component2 instanceof Name.Component)
-    component2 = component2.getValue();
+    component2 = component2.getValue().buf();
 
   return Name.Component.compareBuffers(component1, component2);
 };

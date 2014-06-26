@@ -108,9 +108,19 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Buffer} The content as a Buffer, which is null if unspecified.
+ * @returns {Blob} The data packet content as a Blob.
  */
 Data.prototype.getContent = function() 
+{
+  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
+  return new Blob(this.content, false);
+};
+
+/**
+ * @deprecated Use getContent. This method returns a Buffer which is the former
+ * behavior of getContent, and should only be used while updating your code.
+ */
+Data.prototype.getContentAsBuffer = function() 
 {
   return this.content;
 };
@@ -199,7 +209,7 @@ Data.prototype.sign = function(wireFormat)
     
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.signature = sig;
+  this.signature.setSignature(sig);
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -223,7 +233,7 @@ Data.prototype.verify = function(/*Key*/ key)
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ? 
-    DataUtils.toString(this.signature.signature) : this.signature.signature;
+    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
@@ -285,8 +295,8 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   
   if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.type != null &&
-      this.signedInfo.locator.type >= 0) {
+      this.signedInfo.locator.getType() != null &&
+      this.signedInfo.locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
     return this.signedInfo.locator;

@@ -143,76 +143,76 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   else if (data == -2)
     output+= "CONTENT NAME IS EMPTY"
   else {
-    if (data.name != null && data.name.components != null) {
-      output+= "NAME: " + data.name.toUri();
+    if (data.getName() != null) {
+      output+= "NAME: " + data.getName().toUri();
         
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(hex): "+ data.getContent().toHex();
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.signature.digestAlgorithm);
+    if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(data.signature.witness);
+    if (data.getSignature() != null && data.getSignature().witness != null) {
+      output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.signature != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(data.signature.signature);
+    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
+      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.publisher != null && data.signedInfo.publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
+    if (data.getMetaInfo() != null && data.getMetaInfo().publisher != null && data.getMetaInfo().publisher.publisherPublicKeyDigest != null) {
+      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.timestamp != null) {
+    if (data.getMetaInfo() != null && data.getMetaInfo().timestamp != null) {
       var d = new Date();
-      d.setTime(data.signedInfo.timestamp.msec);
+      d.setTime(data.getMetaInfo().timestamp.msec);
       
       var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
       
       output += "TimeStamp: "+d;
       output+= "<br />";
-      output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
+      output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
       
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
-      output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
+    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
+      output += "FinalBlockID: "+ data.getMetaInfo().getFinalBlockID().getValue().toHex();
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.locator != null && data.signedInfo.locator.type) {
+    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
       output += "keyLocator: ";
-      if (data.signedInfo.locator.type == KeyLocatorType.KEY)
-        output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData()).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
-        output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.signedInfo.locator.keyName.contentName.to_uri() + "<br />";
+      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY)
+        output += "Key: " + DataUtils.toHex(data.getMetaInfo().locator.publicKey).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+        output += "KeyLocatorDigest: " + DataUtils.toHex(data.getMetaInfo().locator.getKeyData().buf()).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
+        output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
+        output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
       else
-        output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
+        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";      
     }
   }
 

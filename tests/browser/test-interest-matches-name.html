@@ -29,7 +29,7 @@
 	
 		function check(){
 			var interest = new Interest( new Name(document.getElementById('interest').value));
-			interest.scope = 1;
+			interest.setScope(1);
                         
 			var nameToCheck = new Name(document.getElementById('nameToCheck').value);
 			
