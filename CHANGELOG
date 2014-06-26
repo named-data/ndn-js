@@ -5,7 +5,7 @@ Changes
 * As described below, the return type is changed for the following methods. If
   these changes cause unexpected behavior in your application, you can revert
   to NDN-JS version v0.4 while updating your application.
-  - Changed Name.getValue() to return a Blob, not Buffer. If you need the
+  - Changed Name.Component.getValue() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getValueAsBuffer().
   - Changed Interest.getNonce() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getNonceAsBuffer().
@@ -22,7 +22,7 @@ Deprecated
 * Direct use of object fields is deprecated. Use the get/set methods.
   For example, interest.name is deprecated. Use interest.getName() and setName(name).
   The names and data type of object fields may change in the future.
-* Name: Deprecated getValueAsBuffer(). Use getValue().
+* Name.Component: Deprecated getValueAsBuffer(). Use getValue().
 * Interest: Deprecated getNonceAsBuffer(). Use getNonce().
 * Data: Deprecated getContentAsBuffer(). Use getContent().
 * Signature: Deprecated getSignatureAsBuffer(). Use getSignature().
