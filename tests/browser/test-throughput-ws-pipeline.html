@@ -81,13 +81,13 @@
             
             // Retransmit interest for this segment
             // TODO: Use expressInterest with callbacks, not Closure.
-            this.face.expressInterest(upcallInfo.interest.name, this);
-          //console.log("Resend interest sent for " + upcallInfo.interest.name.toUri());
+            this.face.expressInterest(upcallInfo.interest.getName(), this);
+          //console.log("Resend interest sent for " + upcallInfo.interest.getName().toUri());
           document.getElementById('content').innerHTML += "<p>Resend interest sent for " 
-                                   + upcallInfo.interest.name.toUri() + "</p>";
+                                   + upcallInfo.interest.getName().toUri() + "</p>";
           this.interest_sent++;
           
-            document.getElementById('content').innerHTML += "<p>Interest " + upcallInfo.interest.name.toUri() + " time out.</p>";
+            document.getElementById('content').innerHTML += "<p>Interest " + upcallInfo.interest.getName().toUri() + " time out.</p>";
               document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
               document.getElementById('content').innerHTML += "<p>Total number of packets: " + this.pkt_recved + "</p>";
           document.getElementById('content').innerHTML += "<p>Total number of dup segments: " + this.dups + "</p>";
@@ -103,8 +103,8 @@
         
         if (kind == Closure.UPCALL_CONTENT_BAD) {
           console.log("NdnProtocol.ContentClosure: signature verification failed");
-          console.log(upcallInfo.data.name.toUri());
-          console.log(DataUtils.toHex(upcallInfo.data.signature.witness).toLowerCase());
+          console.log(upcallInfo.data.getName().toUri());
+          console.log(DataUtils.toHex(upcallInfo.data.getSignature().witness).toLowerCase());
           return Closure.RESULT_OK;
         }
         
@@ -114,20 +114,20 @@
             return Closure.RESULT_ERR;
         
         var data = upcallInfo.data;
-        if (data.content == null) {
-            console.log("NdnProtocol.ContentClosure: data.content is null");
+        if (data.getContent().isNull()) {
+            console.log("data content is null");
             return Closure.RESULT_ERR;
         }
     
         // Use the segmentNumber to load multiple segments.
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
-                    (data.name.get(data.name.size() - 1).getValue());
+                    (data.getName().get(-1).getValue().buf());
       
       // Process received data here...
       // Count content length
-      //nameStr = escape(data.name.toUri());
+      //nameStr = escape(data.getName().toUri());
       //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-      //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+      //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         
         /*
         // Check for the special case if the saved content is for the next segment that we need.
@@ -141,17 +141,17 @@
             
             // Process received data here...
           // Count content length
-          //nameStr = escape(data.name.toUri());
+          //nameStr = escape(data.getName().toUri());
         //document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+        //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         this.totalBlocks++;
         }
         */
       
       // Record final seg# if present
       var finalSegmentNumber = null;
-      if (data.signedInfo != null && data.signedInfo.finalBlockID != null)
-        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+      if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
+        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
       
       // Check for out-of-order segment
       if (segmentNumber != this.snd_una) {
@@ -220,7 +220,7 @@
       }
       
       // Send the next interest if allowed by snd_wnd
-      var nextNameComponents = data.name.components.slice(0, data.name.size() - 1);
+      var nextNameComponents = data.getName().components.slice(0, data.getName().size() - 1);
       //console.log("SND_UNA: " + this.snd_una);
       //console.log("SND_NXT: " + this.snd_nxt);
       while (this.snd_nxt - this.snd_una < this.snd_wnd) {
@@ -292,13 +292,13 @@
         var T1 = new Date();
         
         var content = upcallInfo.data;
-        nameStr = escape(content.name.toUri());
+        nameStr = escape(content.getName().toUri());
         document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>"; 
         document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.content.length + "</p>";
+        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.getContent().size() + "</p>";
         //console.log("In callback, nameStr: " + nameStr);
         //console.log("In callback, content: ");
-        //console.log(content.content.length);
+        //console.log(content.getContent().size());
         //document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
       } else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         console.log("Closure.upcall called with interest time out.");

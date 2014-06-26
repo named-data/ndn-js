@@ -31,18 +31,18 @@
         
     function onData(interest, data) 
     {
-      console.log("Closure.upcall: content signature verification pass.");
+      console.log("onData called.");
       console.log("Host: " + face.connectionInfo.toString());
-      nameStr = escape(data.name.toUri());
+      nameStr = escape(data.getName().toUri());
       document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-      document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.content.length + "</p>";
+      document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
       document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(data);
     } 
     
     function onTimeout(interest)
     {
-      console.log("Closure.upcall called with interest time out. Re-expressing the interest.");
-      console.log("Host: " + face.host + ":" + face.port);
+      console.log("onTimeout called. Re-expressing the interest.");
+      console.log("Host: " + face.connectionInfo.toString());
       face.expressInterest(interest, onData, onTimeout);
     }
     

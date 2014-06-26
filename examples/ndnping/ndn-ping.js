@@ -30,13 +30,13 @@
 				// Do nothing.
 			} else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
 		
-				nameStr = upcallInfo.interest.name.toUri().split("/").slice(0,-2).join("/");
+				nameStr = upcallInfo.interest.getName().toUri().split("/").slice(0,-2).join("/");
 				document.getElementById('pingreport').innerHTML += '<tr><td width="65%">' + nameStr + ' </td><td align="right">timeout</td></tr>' ;
 			} else if (kind == Closure.UPCALL_CONTENT) {
 				var T1 = new Date();
 				var content = upcallInfo.data;
-				nameStr = content.name.toUri().split("/").slice(0,-2).join("/");
-				strContent = DataUtils.toString(content.content);
+				nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
+				strContent = DataUtils.toString(content.getContent().buf());
 				if (strContent=="ping ack") {
 					document.getElementById('pingreport').innerHTML += '<tr><td width="65%">' + nameStr + ' </td><td align="right">' + (T1-this.T0) + ' ms</td></tr>' ;
 				} else {

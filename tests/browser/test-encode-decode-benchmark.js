@@ -96,7 +96,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data(name);
     data.setContent(content);
-    data.signedInfo = new MetaInfo();
+    data.setMetaInfo(new MetaInfo());
     if (useComplex) {
       // timestamp is deprecated.
       data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
@@ -114,7 +114,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       data.sign();
     else
       // Set the signature, but don't sign.
-      data.signature.signature = signatureBits;
+      data.getSignature().setSignature(signatureBits);
 
     encoding[0] = data.wireEncode().buf();
   }

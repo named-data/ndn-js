@@ -65,25 +65,25 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
 NameEnumeration.prototype.processData = function(data) 
 {
   try {
-    if (!NameEnumeration.endsWithSegmentNumber(data.name))
+    if (!NameEnumeration.endsWithSegmentNumber(data.getName()))
       // We don't expect a name without a segment number.  Treat it as a bad packet.
       this.onComponents(null);
     else {
       var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.name.get(data.name.size() - 1).getValue());
+          (data.getName().get(-1).getValue().buf());
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
       if (segmentNumber != expectedSegmentNumber)
         // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
-        this.contentParts.push(data.content);
+        this.contentParts.push(data.getContent().buf());
 
-        if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
-          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
+          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
@@ -93,7 +93,7 @@ NameEnumeration.prototype.processData = function(data)
 
         // Fetch the next segment.
         this.face.expressInterest
-          (data.name.getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
       }
     }
   } catch (ex) {
@@ -146,7 +146,7 @@ NameEnumeration.parseComponents = function(content)
  * @returns {Boolean} True if the name ends with a segment number, otherwise false.
  */
 NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.components != null && name.size() >= 1 &&
-         name.get(name.size() - 1).getValue().length >= 1 &&
-         name.get(name.size() - 1).getValue()[0] == 0;
+  return name.size() >= 1 &&
+         name.get(-1).getValue().size() >= 1 &&
+         name.get(-1).getValue().buf()[0] == 0;
 };

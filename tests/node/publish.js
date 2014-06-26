@@ -24,12 +24,12 @@ var UnixTransport = require('../..').UnixTransport;
 
 function onInterest(prefix, interest, transport) 
 {
-  console.log("Interest received : " + interest.name.toUri());
+  console.log("Interest received : " + interest.getName().toUri());
 
   // Make and sign a Data packet.
-  var contentString = "Echo " + interest.name.toUri();
-  var data = new Data(interest.name, new SignedInfo(), new Buffer(contentString));
-  data.signedInfo.setFields();
+  var contentString = "Echo " + interest.getName().toUri();
+  var data = new Data(interest.getName(), new SignedInfo(), new Buffer(contentString));
+  data.getMetaInfo().setFields();
   data.sign();
   var encodedData = data.wireEncode();
 

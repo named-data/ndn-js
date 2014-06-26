@@ -162,7 +162,7 @@ NdnProtocolInfo.getVersion = function(selector, currentWindow, alertFunction)
 function getIndexOfVersion(name) 
 {
   for (var i = name.size() - 1; i >= 0; --i) {
-    if (name.get(i).getValue().length >= 1 && name.get(i).getValue()[0] == 0xfd)
+    if (name.get(i).getValue().size() >= 1 && name.get(i).getValue().buf()[0] == 0xfd)
       return i;
   }
 

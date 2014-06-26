@@ -64,27 +64,32 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
 
   // Encode the Nonce as 4 bytes.
-  if (interest.getNonce() == null || interest.getNonce().length == 0)
+  if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
     encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
-  else if (interest.getNonce().length < 4) {
+  else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
-    interest.getNonce().copy(nonce);
+    interest.getNonce().buf().copy(nonce);
 
     // Generate random bytes for remaining bytes in the nonce.
-    for (var i = interest.getNonce().length; i < 4; ++i)
+    for (var i = interest.getNonce().size(); i < 4; ++i)
       nonce[i] = require("crypto").randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
-  else if (interest.getNonce().length == 4)
+  else if (interest.getNonce().size() == 4)
     // Use the nonce as-is.
-    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce());
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf());
   else
     // Truncate.
+<<<<<<< HEAD
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().slice(0, 4));
 
+=======
+    encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
+  
+>>>>>>> 7e351e8f3cb356c8e95b8ba271540bef46c43648
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
   Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
 
@@ -138,14 +143,14 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
   // Encode backwards.
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature());
+  encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
   Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
-  encoder.writeBlobTlv(Tlv.Content, data.getContent());
+  encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
@@ -217,7 +222,7 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
 
   // Encode the components backwards.
   for (var i = name.size() - 1; i >= 0; --i)
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue());
+    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
 
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
 };
@@ -295,7 +300,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
       // For backwards compatibility, also set the publisherPublicKeyDigest.
       interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData();
+        interest.getKeyLocator().getKeyData().buf();
     }
   }
   else
@@ -325,7 +330,7 @@ Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue());
+      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
   }
 
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
@@ -358,8 +363,8 @@ Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
       Tlv0_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-             keyLocator.getKeyData().length > 0)
-      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData());
+             keyLocator.getKeyData().size() > 0)
+      encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
     else
       throw new Error("Unrecognized KeyLocatorType " + keyLocator.getType());
   }
@@ -443,8 +448,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID();
+  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
