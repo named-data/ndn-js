@@ -1,4 +1,4 @@
-Interim changes after NDN-JS v0.4 (2014-06-20)
+Interim changes after NDN-JS v0.4 (2014-06-26)
 ----------------------------------------------
 
 Changes
@@ -17,6 +17,7 @@ Changes
     former behavior, call the deprecated method getKeyDataAsBuffer().
   - Changed MetaInfo.getFinalBlockID() to return a Name.Component, not Buffer. If you need the
     former behavior, call the deprecated method getFinalBlockIDAsBuffer().
+* http://redmine.named-data.net/issues/1704 Remove trailing whitespace
 
 Deprecated
 * Direct use of object fields is deprecated. Use the get/set methods.
