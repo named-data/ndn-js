@@ -23,7 +23,7 @@ var ndn = ndn || {};
 var exports = ndn;
 
 var require = function(ignore) { return ndn; };
-	
+
 // Factory method to create hasher objects
 exports.createHash = function(alg)
 {
