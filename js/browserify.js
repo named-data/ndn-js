@@ -1,7 +1,7 @@
-/** 
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,15 +17,20 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
+
 // Library namespace
 var ndn = ndn || {};
+ndn.Key = require("./key.js").Key
 
 var exports = ndn;
 
-var require = function(ignore) { return ndn; };
-	
+
 // Factory method to create hasher objects
-exports.createHash = function(alg) 
+exports.createHash = function(alg)
 {
   if (alg != 'sha256')
     throw new Error('createHash: unsupported algorithm.');
@@ -46,7 +51,7 @@ exports.createHash = function(alg)
 };
 
 // Factory method to create RSA signer objects
-exports.createSign = function(alg) 
+exports.createSign = function(alg)
 {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
@@ -74,37 +79,37 @@ exports.createSign = function(alg)
 };
 
 // Factory method to create RSA verifier objects
-exports.createVerify = function(alg) 
+exports.createVerify = function(alg)
 {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
   var obj = {};
-    
+
   obj.arr = [];
 
   obj.update = function(buf) {
     this.arr.push(buf);
   };
 
-  var getSubjectPublicKeyPosFromHex = function(hPub) {  
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0); 
-    if (a.length != 2) 
+  var getSubjectPublicKeyPosFromHex = function(hPub) {
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
+    if (a.length != 2)
       return -1;
     var pBitString = a[1];
-    if (hPub.substring(pBitString, pBitString + 2) != '03') 
+    if (hPub.substring(pBitString, pBitString + 2) != '03')
       return -1;
     var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
-    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00') 
+    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
       return -1;
     return pBitStringV + 2;
   };
 
   var readPublicDER = function(pub_der) {
-    var hex = pub_der.toString('hex'); 
+    var hex = pub_der.toString('hex');
     var p = getSubjectPublicKeyPosFromHex(hex);
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
-    if (a.length != 2) 
+    if (a.length != 2)
       return null;
     var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
     var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
@@ -122,7 +127,7 @@ exports.createVerify = function(alg)
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
       signer.updateHex(this.arr[i].toString('hex'));
-    var hSig = sig.toString('hex'); 
+    var hSig = sig.toString('hex');
     return signer.verify(hSig);
   };
 
@@ -149,4 +154,5 @@ exports.toByteArray = function(str) {
   return result;
 };
 
+module.exports = exports
 // After this we include contrib/feross/buffer.js to define the Buffer class.

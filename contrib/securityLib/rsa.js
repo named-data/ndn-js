@@ -1,6 +1,6 @@
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -11,11 +11,13 @@
 //
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on jsbn.js and rng.js
+var intShim = require("jsbn");
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
 // Version 1.1: support utf-8 encoding in pkcs1pad2
 
 // convert a (hex) string to a bignum object
@@ -114,7 +116,7 @@ function oaep_pad(s, n, hash)
     var DB = rstr_sha1('') + PS + '\x01' + s;
     var seed = new Array(SHA1_SIZE);
     new SecureRandom().nextBytes(seed);
-    
+
     var dbMask = oaep_mgf1_arr(seed, DB.length, hash || rstr_sha1);
     var maskedDB = [];
 
@@ -135,7 +137,7 @@ function oaep_pad(s, n, hash)
 }
 
 // "empty" RSA key constructor
-function RSAKey() {
+var RSAKey = function RSAKey() {
   this.n = null;
   this.e = 0;
   this.d = null;
@@ -199,4 +201,9 @@ RSAKey.prototype.doPublic = RSADoPublic;
 RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
+
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
+
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;

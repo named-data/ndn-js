@@ -84,8 +84,9 @@ def build (bld):
                        "contrib/securityLib/jsbn.js",
                        "contrib/securityLib/jsbn2.js"]
 
-        ndnjs = ["js/browserify.js",
-                 "contrib/feross/buffer.js"] + securityLib + [
+        ndnjs = ["js/browserify-require.js"] + securityLib + [
+                 "js/browserify.js",
+                 "contrib/feross/buffer.js",
                  "js/log.js",
                  "js/util/ndn-protoco-id-tags.js",
                  "js/util/ndn-time.js",

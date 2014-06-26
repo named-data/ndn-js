@@ -1,6 +1,6 @@
 // Copyright (c) 2005-2009  Tom Wu
 // All Rights Reserved.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -11,13 +11,15 @@
 //
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Extended JavaScript BN functions, required for RSA private ops.
 
 // Version 1.1: new BigInteger("0", 10) returns "proper" zero
 // Version 1.2: square() API, isProbablePrime fix
+
+
 
 // (public)
 function bnClone() { var r = nbi(); this.copyTo(r); return r; }
@@ -666,3 +668,7 @@ BigInteger.prototype.square = bnSquare;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+
+
+exports.BigInteger = BigInteger;
+module.exports = exports;

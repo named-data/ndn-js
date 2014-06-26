@@ -1,6 +1,6 @@
 // Copyright (c) 2005  Tom Wu
 // All Rights Reserved.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
@@ -11,7 +11,7 @@
 //
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Basic JavaScript BN library - subset useful for RSA encryption.
@@ -24,7 +24,7 @@ var canary = 0xdeadbeefcafe;
 var j_lm = ((canary&0xffffff)==0xefcafe);
 
 // (public) Constructor
-function BigInteger(a,b,c) {
+var BigInteger = function BigInteger(a,b,c) {
   if(a != null)
     if("number" == typeof a) this.fromNumber(a,b,c);
     else if(b == null && "string" != typeof a) this.fromString(a,256);
