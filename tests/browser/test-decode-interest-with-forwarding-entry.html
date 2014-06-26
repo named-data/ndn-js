@@ -212,9 +212,9 @@
 					
 					output+= "<br />";
 				}
-			    if(data.getMetaInfo() !=null && data.getMetaInfo().type!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getType()!=null){
 
-					output += "Type: "+data.getMetaInfo().type;
+					output += "Type: "+data.getMetaInfo().getType();
 					output+= "<br />";
 					output+= "<br />";
 				}
@@ -224,9 +224,9 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-			    if(data.getMetaInfo() !=null && data.getMetaInfo().freshnessSeconds!=null){
+			    if(data.getMetaInfo() !=null && data.getMetaInfo().getFreshnessPeriod() != null){
 
-					output += "FreshnessSeconds: "+data.getMetaInfo().freshnessSeconds;
+					output += "FreshnessPeriod (milliseconds): "+data.getMetaInfo().getFreshnessPeriod();
 					output+= "<br />";
 					output+= "<br />";
 				}
