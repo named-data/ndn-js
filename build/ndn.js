@@ -11372,8 +11372,8 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   
   if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.type != null &&
-      this.signedInfo.locator.type >= 0) {
+      this.signedInfo.locator.getType() != null &&
+      this.signedInfo.locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
     return this.signedInfo.locator;
@@ -13654,18 +13654,18 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output += "FinalBlockID: "+ data.getMetaInfo().getFinalBlockID().getValue().toHex();
       output+= "<br />";
     }
-    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.type) {
+    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
       output += "keyLocator: ";
-      if (data.getMetaInfo().locator.type == KeyLocatorType.KEY)
+      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY)
         output += "Key: " + DataUtils.toHex(data.getMetaInfo().locator.publicKey).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
         output += "KeyLocatorDigest: " + DataUtils.toHex(data.getMetaInfo().locator.getKeyData().buf()).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.type == KeyLocatorType.CERTIFICATE)
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.type == KeyLocatorType.KEYNAME)
+      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
         output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
       else
-        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.type + "]<br />";      
+        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";      
     }
   }
 
@@ -14580,7 +14580,7 @@ Face.prototype.onReceivedElement = function(element)
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
         var keylocator = data.getMetaInfo().locator;
-        if (keylocator.type == KeyLocatorType.KEYNAME) {
+        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
           if (keylocator.keyName.contentName.match(data.getName())) {
@@ -14617,7 +14617,7 @@ Face.prototype.onReceivedElement = function(element)
             }
           }
         } 
-        else if (keylocator.type == KeyLocatorType.KEY) {
+        else if (keylocator.getType() == KeyLocatorType.KEY) {
           if (LOG > 3) console.log("Keylocator contains KEY");
                 
           var rsakey = new Key();
