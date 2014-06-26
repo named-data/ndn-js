@@ -112,9 +112,9 @@ function testName() {
         result.innerHTML += "ERROR: Components at index 2 are different.<br/>";
     
     var name5 = new Name("/localhost/user/folders/files/%00%0F");
-    result.innerHTML += "Check chaining calls to add() to create Name: " + name5.toUri() + "<br/>";
-    if (name5.equals(new Name(new Name("/localhost")).add(new Name("/user/folders")).add
-          ("files").addSegment(15)))
+    result.innerHTML += "Check chaining calls to append() to create Name: " + name5.toUri() + "<br/>";
+    if (name5.equals(new Name(new Name("/localhost")).append(new Name("/user/folders")).append
+          ("files").appendSegment(15)))
         result.innerHTML += "SUCCESS: Names are equal.<br/>";
     else
         result.innerHTML += "ERROR: Names are different.<br/>";
