@@ -1,7 +1,7 @@
-/** 
+/**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,11 +24,11 @@ var Transport = require('./transport.js').Transport;
 /**
  * A UnixTransport connects to the forwarder using a Unix socket for Node.js.
  */
-var UnixTransport = function UnixTransport() 
-{    
+var UnixTransport = function UnixTransport()
+{
   // Call the base constructor.
   Transport.call(this);
-  
+
   this.socket = null;
   this.sock_ready = false;
   this.elementReader = null;
@@ -44,16 +44,16 @@ UnixTransport.prototype.name = "UnixTransport";
 exports.UnixTransport = UnixTransport;
 
 /**
- * Create a new UnixTransport.ConnectionInfo which extends 
+ * Create a new UnixTransport.ConnectionInfo which extends
  * Transport.ConnectionInfo to hold the socket file path for the Unix
  * socket connection.
  * @param {string} filePath The file path of the Unix socket file.
  */
-UnixTransport.ConnectionInfo = function UnixTransportConnectionInfo(filePath) 
+UnixTransport.ConnectionInfo = function UnixTransportConnectionInfo(filePath)
 {
   // Call the base constructor.
   Transport.ConnectionInfo .call(this);
-  
+
   this.filePath = filePath;
 };
 
@@ -66,7 +66,7 @@ UnixTransport.ConnectionInfo.prototype.name = "UnixTransport.ConnectionInfo";
  * @param {UnixTransport.ConnectionInfo} The other object to check.
  * @returns {boolean} True if the objects have equal fields, false if not.
  */
-UnixTransport.ConnectionInfo.prototype.equals = function(other) 
+UnixTransport.ConnectionInfo.prototype.equals = function(other)
 {
   if (other == null || other.filePath == undefined)
     return false;
@@ -79,22 +79,22 @@ UnixTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
- * Connect to a Unix socket according to the info in connectionInfo. Listen on 
- * the port to read an entire packet element and call 
- * elementListener.onReceivedElement(element). Note: this connect method 
- * previously took a Face object which is deprecated and renamed as the method 
+ * Connect to a Unix socket according to the info in connectionInfo. Listen on
+ * the port to read an entire packet element and call
+ * elementListener.onReceivedElement(element). Note: this connect method
+ * previously took a Face object which is deprecated and renamed as the method
  * connectByFace.
  * @param {UnixTransport.ConnectionInfo} connectionInfo A
  * UnixTransport.ConnectionInfo with the Unix socket filePath.
- * @param {object} elementListener The elementListener with function 
+ * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
  * @returns {undefined}
  */
 UnixTransport.prototype.connect = function
-  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback)
 {
   if (this.socket != null)
     delete this.socket;
@@ -103,10 +103,10 @@ UnixTransport.prototype.connect = function
 
   var net = require('net');
   this.socket = new net.createConnection(connectionInfo.filePath);
-    
+
   var thisTransport = this;
 
-  this.socket.on('data', function(data) {      
+  this.socket.on('data', function(data) {
     if (typeof data == 'object') {
       // Make a copy of data (maybe a Buffer or a String)
       var buf = new Buffer(data);
@@ -119,24 +119,24 @@ UnixTransport.prototype.connect = function
       }
     }
   });
-    
+
   this.socket.on('connect', function() {
     if (LOG > 3) console.log('socket.onopen: Unix socket connection opened.');
-      
+
     thisTransport.sock_ready = true;
 
     onopenCallback();
   });
-    
+
   this.socket.on('error', function() {
     if (LOG > 3) console.log('socket.onerror: Unix socket error');
   });
-    
+
   this.socket.on('close', function() {
     if (LOG > 3) console.log('socket.onclose: Unix socket connection closed.');
 
     thisTransport.socket = null;
-      
+
     onclosedCallback();
   });
 
@@ -146,7 +146,7 @@ UnixTransport.prototype.connect = function
 /**
  * Send data.
  */
-UnixTransport.prototype.send = function(/*Buffer*/ data) 
+UnixTransport.prototype.send = function(/*Buffer*/ data)
 {
   if (this.sock_ready)
     this.socket.write(data);
@@ -157,7 +157,7 @@ UnixTransport.prototype.send = function(/*Buffer*/ data)
 /**
  * Close transport
  */
-UnixTransport.prototype.close = function() 
+UnixTransport.prototype.close = function()
 {
   this.socket.end();
   if (LOG > 3) console.log('Unix socket connection closed.');

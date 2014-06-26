@@ -2,7 +2,7 @@
  * This class represents Publisher and PublisherType Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ var DecodingException = require('./encoding/decoding-exception.js').DecodingExce
 /**
  * @constructor
  */
-var PublisherType = function PublisherType(tag) 
+var PublisherType = function PublisherType(tag)
 {
   this.KEY = NDNProtocolDTags.PublisherPublicKeyDigest;
   this.CERTIFICATE = NDNProtocolDTags.PublisherCertificateDigest;
@@ -33,35 +33,35 @@ var PublisherType = function PublisherType(tag)
   this.ISSUER_CERTIFICATE = NDNProtocolDTags.PublisherIssuerCertificateDigest;
 
   this.Tag = tag;
-}; 
+};
 
 /**
  * @constructor
  */
-var PublisherID = function PublisherID() 
+var PublisherID = function PublisherID()
 {
   this.PUBLISHER_ID_DIGEST_ALGORITHM = "SHA-256";
   this.PUBLISHER_ID_LEN = 256/8;
-    
+
   //TODO, implement publisherID creation and key creation
 
   //TODO implement generatePublicKeyDigest
   this.publisherID =null;//= generatePublicKeyDigest(key);//ByteArray
-    
+
   //TODO implement generate key
   //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
-  this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type   
+  this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
 };
 
 exports.PublisherID = PublisherID;
 
-PublisherID.prototype.from_ndnb = function(decoder) 
-{    
+PublisherID.prototype.from_ndnb = function(decoder)
+{
   // We have a choice here of one of 4 binary element types.
   var nextTag = PublisherID.peekAndGetNextDTag(decoder);
-    
-  this.publisherType = new PublisherType(nextTag); 
-    
+
+  this.publisherType = new PublisherType(nextTag);
+
   if (nextTag < 0)
     throw new Error("Invalid publisher ID, got unexpected type");
 
@@ -70,7 +70,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
     throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
 };
 
-PublisherID.prototype.to_ndnb = function(encoder) 
+PublisherID.prototype.to_ndnb = function(encoder)
 {
   if (!this.validate())
     throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
@@ -83,7 +83,7 @@ PublisherID.prototype.to_ndnb = function(encoder)
  * @param {BinaryXMLDecoder} decoder The BinaryXMLDecoder with the input to decode.
  * @returns {number} The PublisherID DTag or -1 if it is not one of them.
  */
-PublisherID.peekAndGetNextDTag = function(decoder) 
+PublisherID.peekAndGetNextDTag = function(decoder)
 {
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest))
     return             NDNProtocolDTags.PublisherPublicKeyDigest;
@@ -93,21 +93,21 @@ PublisherID.peekAndGetNextDTag = function(decoder)
     return             NDNProtocolDTags.PublisherIssuerKeyDigest;
   if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerCertificateDigest))
     return             NDNProtocolDTags.PublisherIssuerCertificateDigest;
-  
+
   return -1;
 };
-  
-PublisherID.peek = function(/* XMLDecoder */ decoder) 
+
+PublisherID.peek = function(/* XMLDecoder */ decoder)
 {
   return PublisherID.peekAndGetNextDTag(decoder) >= 0;
 };
 
 PublisherID.prototype.getElementLabel = function()
-{ 
+{
   return this.publisherType.Tag;
 };
 
-PublisherID.prototype.validate = function() 
+PublisherID.prototype.validate = function()
 {
   return null != id() && null != type();
 };

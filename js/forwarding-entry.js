@@ -2,7 +2,7 @@
  * This class represents Forwarding Entries
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -32,7 +32,7 @@ var Name = require('./name.js').Name;
  * @param {number} flags
  * @param {number} lifetime in seconds
  */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime) 
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
 {
   this.action = action;
   this.prefixName = prefixName;
@@ -54,13 +54,13 @@ ForwardingEntry.TAP           = 64;
 ForwardingEntry.CAPTURE_OK   = 128;
 
 ForwardingEntry.prototype.from_ndnb = function(
-  //XMLDecoder 
-  decoder) 
+  //XMLDecoder
+  decoder)
   //throws DecodingException
 {
   decoder.readElementStartDTag(this.getElementLabel());
   if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action); 
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
   if (decoder.peekDTag(NDNProtocolDTags.Name)) {
     this.prefixName = new Name();
     this.prefixName.from_ndnb(decoder) ;
@@ -70,22 +70,22 @@ ForwardingEntry.prototype.from_ndnb = function(
     this.NdndId.from_ndnb(decoder);
   }
   if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID); 
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
   if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags); 
+    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds); 
+    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
 
   decoder.readElementClose();
 };
 
 ForwardingEntry.prototype.to_ndnb = function(
-  //XMLEncoder 
-  encoder) 
+  //XMLEncoder
+  encoder)
 {
   encoder.writeElementStartDTag(this.getElementLabel());
   if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
   if (null != this.prefixName)
     this.prefixName.to_ndnb(encoder);
   if (null != this.NdndId)
@@ -97,7 +97,7 @@ ForwardingEntry.prototype.to_ndnb = function(
   if (null != this.lifetime)
     encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
 
-  encoder.writeElementClose();         
+  encoder.writeElementClose();
 };
 
 ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }

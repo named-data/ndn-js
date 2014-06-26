@@ -3,7 +3,7 @@
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -30,10 +30,10 @@ var DataUtils = require('./encoding/data-utils.js').DataUtils;
  * @constructor
  * @param {Array<Name.Component|Buffer|Exclude.ANY>} values (optional) An array where each element is either a Name.Component, Buffer component or Exclude.ANY.
  */
-var Exclude = function Exclude(values) 
-{ 
+var Exclude = function Exclude(values)
+{
   this.values = [];
-  
+
   if (typeof values === 'object' && values instanceof Exclude)
     // Copy the exclude.
     this.values = values.values.slice(0);
@@ -68,7 +68,7 @@ Exclude.prototype.get = function(i) { return this.values[i]; };
  * Append an Exclude.ANY element.
  * @returns This Exclude so that you can chain calls to append.
  */
-Exclude.prototype.appendAny = function() 
+Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
   return this;
@@ -79,7 +79,7 @@ Exclude.prototype.appendAny = function()
  * @param {Name.Component|Buffer} component
  * @returns This Exclude so that you can chain calls to append.
  */
-Exclude.prototype.appendComponent = function(component) 
+Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
   return this;
@@ -88,12 +88,12 @@ Exclude.prototype.appendComponent = function(component)
 /**
  * Clear all the entries.
  */
-Exclude.prototype.clear = function() 
+Exclude.prototype.clear = function()
 {
   this.values = [];
 };
 
-Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
 
@@ -113,17 +113,17 @@ Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
     else
       break;
   }
-    
+
   decoder.readElementClose();
 };
 
-Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)  
+Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 {
   if (this.values == null || this.values.length == 0)
     return;
 
   encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
-    
+
   // TODO: Do we want to order the components (except for ANY)?
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -138,9 +138,9 @@ Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 };
 
 /**
- * Return a string with elements separated by "," and Exclude.ANY shown as "*". 
+ * Return a string with elements separated by "," and Exclude.ANY shown as "*".
  */
-Exclude.prototype.toUri = function() 
+Exclude.prototype.toUri = function()
 {
   if (this.values == null || this.values.length == 0)
     return "";
@@ -149,7 +149,7 @@ Exclude.prototype.toUri = function()
   for (var i = 0; i < this.values.length; ++i) {
     if (i > 0)
       result += ",";
-        
+
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
@@ -161,7 +161,7 @@ Exclude.prototype.toUri = function()
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Buffer*/ component) 
+Exclude.prototype.matches = function(/*Buffer*/ component)
 {
   if (typeof component == 'object' && component instanceof Name.Component)
     component = component.getValue().buf();
@@ -171,7 +171,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       var lowerBound = null;
       if (i > 0)
         lowerBound = this.values[i - 1];
-      
+
       // Find the upper bound, possibly skipping over multiple ANY in a row.
       var iUpperBound;
       var upperBound = null;
@@ -181,7 +181,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
           break;
         }
       }
-      
+
       // If lowerBound != null, we already checked component equals lowerBound on the last pass.
       // If upperBound != null, we will check component equals upperBound on the next pass.
       if (upperBound != null) {
@@ -194,7 +194,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
           if (Exclude.compareComponents(component, upperBound) < 0)
             return true;
         }
-          
+
         // Make i equal iUpperBound on the next pass.
         i = iUpperBound - 1;
       }
@@ -213,7 +213,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
         return true;
     }
   }
-  
+
   return false;
 };
 
@@ -221,7 +221,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
  * Return -1 if component1 is less than component2, 1 if greater or 0 if equal.
  * A component is less if it is shorter, otherwise if equal length do a byte comparison.
  */
-Exclude.compareComponents = function(component1, component2) 
+Exclude.compareComponents = function(component1, component2)
 {
   if (typeof component1 == 'object' && component1 instanceof Name.Component)
     component1 = component1.getValue().buf();

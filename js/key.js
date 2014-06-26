@@ -2,7 +2,7 @@
  * This class represents Key Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -27,7 +27,7 @@ var LOG = require('./log.js').Log.LOG;
 /**
  * Key
  */
-var Key = function Key() 
+var Key = function Key()
 {
   this.publicKeyDer = null;     // Buffer
   this.publicKeyDigest = null;  // Buffer
@@ -42,12 +42,12 @@ exports.Key = Key;
  * TODO: generateRSA()
  */
 
-Key.prototype.publicToDER = function() 
+Key.prototype.publicToDER = function()
 {
   return this.publicKeyDer;  // Buffer
 };
 
-Key.prototype.privateToDER = function() 
+Key.prototype.privateToDER = function()
 {
   // Remove the '-----XXX-----' from the beginning and the end of the key
   // and also remove any \n in the key string
@@ -55,28 +55,28 @@ Key.prototype.privateToDER = function()
   priKey = "";
   for (var i = 1; i < lines.length - 1; i++)
     priKey += lines[i];
-  
-  return new Buffer(priKey, 'base64');    
+
+  return new Buffer(priKey, 'base64');
 };
 
-Key.prototype.publicToPEM = function() 
+Key.prototype.publicToPEM = function()
 {
   return this.publicKeyPem;
 };
 
-Key.prototype.privateToPEM = function() 
+Key.prototype.privateToPEM = function()
 {
   return this.privateKeyPem;
 };
 
-Key.prototype.getKeyID = function() 
+Key.prototype.getKeyID = function()
 {
   return this.publicKeyDigest;
 };
 
 exports.Key = Key;
 
-Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der) 
+Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 {
   if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
 
@@ -85,8 +85,8 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
   var hash = require("crypto").createHash('sha256');
   hash.update(this.publicKeyDer);
   this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-    
-  var keyStr = pub_der.toString('base64'); 
+
+  var keyStr = pub_der.toString('base64');
   var keyPem = "-----BEGIN PUBLIC KEY-----\n";
   for (var i = 0; i < keyStr.length; i += 64)
   keyPem += (keyStr.substr(i, 64) + "\n");
@@ -100,7 +100,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
  * Load RSA key pair from PEM-encoded strings.
  * Will throw an Error if both 'pub' and 'pri' are null.
  */
-Key.prototype.fromPemString = function(pub, pri) 
+Key.prototype.fromPemString = function(pub, pri)
 {
   if (pub == null && pri == null)
     throw new Error('Cannot create Key object if both public and private PEM string is empty.');
@@ -109,7 +109,7 @@ Key.prototype.fromPemString = function(pub, pri)
   if (pub != null) {
     this.publicKeyPem = pub;
     if (LOG > 4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
-  
+
     // Remove the '-----XXX-----' from the beginning and the end of the public key
     // and also remove any \n in the public key string
     var lines = pub.split('\n');
@@ -118,13 +118,13 @@ Key.prototype.fromPemString = function(pub, pri)
       pub += lines[i];
     this.publicKeyDer = new Buffer(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
-  
+
     var hash = require("crypto").createHash('sha256');
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
   }
-    
+
   // Read private key
   if (pri != null) {
     this.privateKeyPem = pri;
@@ -141,7 +141,7 @@ Key.prototype.fromPem = Key.prototype.fromPemString;
  *   pri: the PEM string for the private key
  * Will throw an Error if both obj.pub and obj.pri are null.
  */
-Key.createFromPEM = function(obj) 
+Key.createFromPEM = function(obj)
 {
     var key = new Key();
     key.fromPemString(obj.pub, obj.pri);

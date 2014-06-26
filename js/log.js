@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -20,14 +20,14 @@
 /**
  * The Log class holds the global static variable LOG.
  */
-var Log = function Log() 
+var Log = function Log()
 {
 }
 
 exports.Log = Log;
 
 /**
- * LOG is the level for logging debugging statements.  0 means no log messages. 
+ * LOG is the level for logging debugging statements.  0 means no log messages.
  * @type Number
  */
 Log.LOG = 0;

@@ -1,10 +1,10 @@
 /**
- * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to 
+ * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to
  * determine its end.
- * 
+ *
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,16 +23,16 @@
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
 
-var XML_EXT = 0x00; 
-var XML_TAG = 0x01; 
-var XML_DTAG = 0x02; 
-var XML_ATTR = 0x03; 
-var XML_DATTR = 0x04; 
-var XML_BLOB = 0x05; 
-var XML_UDATA = 0x06;   
+var XML_EXT = 0x00;
+var XML_TAG = 0x01;
+var XML_DTAG = 0x02;
+var XML_ATTR = 0x03;
+var XML_DATTR = 0x04;
+var XML_BLOB = 0x05;
+var XML_UDATA = 0x06;
 var XML_CLOSE = 0x0;
 
-var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16; 
+var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16;
 
 var XML_TT_BITS = 3;
 var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
@@ -45,7 +45,7 @@ var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
 /**
  * @constructor
  */
-var BinaryXMLStructureDecoder = function BinaryXMLDecoder() 
+var BinaryXMLStructureDecoder = function BinaryXMLDecoder()
 {
   this.gotElementEnd = false;
   this.offset = 0;
@@ -78,14 +78,14 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
     return true;
 
   var decoder = new BinaryXMLDecoder(input);
-  
+
   while (true) {
     if (this.offset >= input.length)
       // All the cases assume we have some input.
       return false;
-  
+
     switch (this.state) {
-      case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:               
+      case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:
         // First check for XML_CLOSE.
         if (this.headerLength == 0 && input[this.offset] == XML_CLOSE) {
           ++this.offset;
@@ -98,12 +98,12 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
           }
           if (this.level < 0)
             throw new Error("BinaryXMLStructureDecoder: Unexpected close tag at offset " + (this.offset - 1));
-              
+
           // Get ready for the next header.
           this.startHeader();
           break;
         }
-        
+
         var startingHeaderLength = this.headerLength;
         while (true) {
           if (this.offset >= input.length) {
@@ -111,7 +111,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
             this.useHeaderBuffer = true;
             var nNewBytes = this.headerLength - startingHeaderLength;
             this.headerBuffer.copy(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
-              
+
             return false;
           }
           var headerByte = input[this.offset++];
@@ -120,7 +120,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
             // Break and read the header.
             break;
         }
-        
+
         var typeAndVal;
         if (this.useHeaderBuffer) {
           // Copy the remaining bytes into headerBuffer.
@@ -134,11 +134,11 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
           decoder.seek(this.offset - this.headerLength);
           typeAndVal = decoder.decodeTypeAndVal();
         }
-        
+
         if (typeAndVal == null)
           throw new Error("BinaryXMLStructureDecoder: Can't read header starting at offset " +
                           (this.offset - this.headerLength));
-        
+
         // Set the next state based on the type.
         var type = typeAndVal.t;
         if (type == XML_DATTR)
@@ -166,7 +166,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         else
           throw new Error("BinaryXMLStructureDecoder: Unrecognized header type " + type);
         break;
-    
+
       case BinaryXMLStructureDecoder.READ_BYTES:
         var nRemainingBytes = input.length - this.offset;
         if (nRemainingBytes < this.nBytesToRead) {
@@ -179,7 +179,7 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
         this.offset += this.nBytesToRead;
         this.startHeader();
         break;
-    
+
       default:
         // We don't expect this to happen.
         throw new Error("BinaryXMLStructureDecoder: Unrecognized state " + this.state);
@@ -190,17 +190,17 @@ BinaryXMLStructureDecoder.prototype.findElementEnd = function(
 /**
  * Set the state to READ_HEADER_OR_CLOSE and set up to start reading the header
  */
-BinaryXMLStructureDecoder.prototype.startHeader = function() 
+BinaryXMLStructureDecoder.prototype.startHeader = function()
 {
   this.headerLength = 0;
   this.useHeaderBuffer = false;
-  this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;    
+  this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
 };
 
 /**
  *  Set the offset into the input, used for the next read.
  */
-BinaryXMLStructureDecoder.prototype.seek = function(offset) 
+BinaryXMLStructureDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
 };

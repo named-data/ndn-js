@@ -1,10 +1,10 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,22 +23,22 @@
 
 <head>
 	<title>NDN Name</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
+
 function testName() {
     var result = document.getElementById('result');
     result.innerHTML = "";
-    
+
     var comp1 = new Buffer(['.'.charCodeAt(0)]);
     var comp2 = new Buffer([0x00, 0x01, 0x02, 0x03]);
 
     // \u00E9 is e with accent.
     var entree = "entr\u00E9e";
 
-    // When Name constructor is passed an array, each item is a name component represented with Buffer, 
+    // When Name constructor is passed an array, each item is a name component represented with Buffer,
     //   typed array, or string (parsed as UTF-8)
     var name1 = new Name([entree, comp1, comp2]);
     var name1Uri = name1.toUri();
@@ -53,7 +53,7 @@ function testName() {
     // Equivalent with name1
     var name2 = new Name([entree, ".", comp2]);
     if (name2.size() != name1.size())
-        result.innerHTML += "ERROR: Got name with " + name2.size() + 
+        result.innerHTML += "ERROR: Got name with " + name2.size() +
             " components, expected " + name1.size() + ".<br/>";
     else {
         var allEqual = true;
@@ -66,12 +66,12 @@ function testName() {
         if (allEqual)
             result.innerHTML += "SUCCESS: Names are equal.<br/>";
     }
-    
+
     result.innerHTML += "Compare with same Name from URI:<br/>";
     // Equivalent with name1; when Name constructor is passed a string, it is treated as a URI
     var name3 = new Name("/entr%C3%A9e/..../%00%01%02%03");
     if (name3.size() != name1.size())
-        result.innerHTML += "ERROR: Got name with " + name3.size() + 
+        result.innerHTML += "ERROR: Got name with " + name3.size() +
             " components, expected " + name1.size() + ".<br/>";
     else {
         var allEqual = true;
@@ -83,13 +83,13 @@ function testName() {
         }
         if (allEqual)
             result.innerHTML += "SUCCESS: Names are equal.<br/>";
-    }    
-    
+    }
+
     result.innerHTML += "Compare with Name prefix of first 2 components:<br/>";
     // Returns new Name([entree, "."])
     var name4 = name2.getPrefix(2);
     if (name4.size() != 2)
-        result.innerHTML += "ERROR: Got name with " + name4.size() + 
+        result.innerHTML += "ERROR: Got name with " + name4.size() +
             " components, expected 2.<br/>";
     else {
         var allEqual = true;
@@ -101,8 +101,8 @@ function testName() {
         }
         if (allEqual)
             result.innerHTML += "SUCCESS: First 2 components are equal: " + name4.toUri() + " .<br/>";
-    }    
-    
+    }
+
     result.innerHTML += "Check with Name component at index 2:<br/>";
     // Returns ArrayBuffer of "%00%01%02%03"
     var component2Out = name1.get(2).getValue().buf();
@@ -110,7 +110,7 @@ function testName() {
         result.innerHTML += "SUCCESS: Components at index 2 are equal.<br/>";
     else
         result.innerHTML += "ERROR: Components at index 2 are different.<br/>";
-    
+
     var name5 = new Name("/localhost/user/folders/files/%00%0F");
     result.innerHTML += "Check chaining calls to append() to create Name: " + name5.toUri() + "<br/>";
     if (name5.equals(new Name(new Name("/localhost")).append(new Name("/user/folders")).append
@@ -125,7 +125,7 @@ function testName() {
 </head>
 <body >
 	<button onclick="testName()">Test</button>
-	
+
 	<p id="result"></p>
 
 </body>

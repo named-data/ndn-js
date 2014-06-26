@@ -2,7 +2,7 @@
  * This class defines MOME types based on the filename extension.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU General Public License is in the file COPYING.
  */
- 
+
 /**
  * MimeTypes contains a mapping of filename extension to MIME type, and a function getContentTypeAndCharset to select it.
  */
@@ -25,7 +25,7 @@ var MimeTypes = {
   /**
    * Based on filename, return an object with properties contentType and charset.
    */
-  getContentTypeAndCharset: function(filename) {      
+  getContentTypeAndCharset: function(filename) {
       var iDot = filename.lastIndexOf('.');
       if (iDot >= 0) {
           var extension = filename.substr(iDot + 1, filename.length - iDot - 1);
@@ -37,11 +37,11 @@ var MimeTypes = {
               return { contentType: contentType, charset: charset };
           }
       }
-      
+
       // Use a default.
       return { contentType: "text/html", charset: "utf-8" };
   },
-  
+
   /* For each file extension, define the MIME type.
    */
   "323": "text/h323",

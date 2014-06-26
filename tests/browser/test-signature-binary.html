@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -27,48 +27,48 @@
 
 	<script type="text/javascript">
 		function sign(){
-			
+
 			var input = document.getElementById('contentname').value;
-			
+
 			var  _PEM_PRIVATE_KEY_STRING_ = document.getElementById('privateKey').value;
-			
+
 			var rsa = new RSAKey();
-			
+
 			rsa.readPrivateKeyFromPEMString(_PEM_PRIVATE_KEY_STRING_);
-			
+
 			var hSig = rsa.signString(input, "sha256");
-			
+
 			document.getElementById('result').innerHTML = hSig;
 
 		}
 		function verify(){
 			var input = document.getElementById('contentname').value;
-			
+
 			var signature = document.getElementById('result').innerHTML;
-			
+
 			var  _PEM_X509CERT_STRING_ = document.getElementById('certificate').value;
-			
+
 			var x509 = new X509();
-			
+
 			x509.readCertPEM(_PEM_X509CERT_STRING_);
-			
+
 			var result = x509.subjectPublicKeyRSA.verifyString(input, signature);
-			
+
 			if(result)
 				document.getElementById('result').innerHTML = 'SIGNATURE VALID';
 			else
 				document.getElementById('result').innerHTML = 'SIGNATURE INVALID';
 
-			
+
 		}
 
 	</script>
-	
+
 
 </head>
 <body >
 	<form>
-		
+
 		<input id="privateKey" type="hidden" value="-----BEGIN RSA PRIVATE KEY-----
 			MIICWwIBAAKBgQDRhGF7X4A0ZVlEg594WmODVVUIiiPQs04aLmvfg8SborHss5gQ
 			Xu0aIdUT6nb5rTh5hD2yfpF2WIW6M8z0WxRhwicgXwi80H1aLPf6lEPPLvN29EhQ
@@ -84,8 +84,8 @@
 			Ma1qZvT/cigmdbAh7wJAQNXyoizuGEltiSaBXx4H29EdXNYWDJ9SS5f070BRbAIl
 			dqRh3rcNvpY6BKJqFapda1DjdcncZECMizT/GMrc1w==
 			-----END RSA PRIVATE KEY-----"></input>
-		
-		
+
+
 		<input id="certificate" type="hidden" value="-----BEGIN CERTIFICATE-----
 			MIIBvTCCASYCCQD55fNzc0WF7TANBgkqhkiG9w0BAQUFADAjMQswCQYDVQQGEwJK
 			UDEUMBIGA1UEChMLMDAtVEVTVC1SU0EwHhcNMTAwNTI4MDIwODUxWhcNMjAwNTI1
@@ -100,12 +100,12 @@
 			-----END CERTIFICATE-----"></input>
 
 		Please Enter a Text to sign:<br /><input id="contentname" type="text" name="CONTENTNAME" value="ª²s\nXñ­å àÄÕk...\?8ï����µhello\n�" /> <br />
-	
+
 	</form>
 	<button onclick="sign()">Sign</button>
 	<button onclick="verify()">Verify</button>
-	
-	
+
+
 
 		<p id="result"></p>
 

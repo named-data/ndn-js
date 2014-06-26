@@ -3,7 +3,7 @@
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -30,9 +30,9 @@ var LOG = require('./log.js').Log.LOG;
  * Create a new Signature with the optional values.
  * @constructor
  */
-var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm) 
+var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm)
 {
-  if (typeof witnessOrSignatureObject === 'object' && 
+  if (typeof witnessOrSignatureObject === 'object' &&
       witnessOrSignatureObject instanceof Signature) {
     // Copy the values.
     this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
@@ -78,7 +78,7 @@ Signature.prototype.getKeyLocator = function()
  */
 Signature.prototype.getSignature = function()
 {
-  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.                                        
+  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
   return new Blob(this.signature, false);
 };
 
@@ -86,7 +86,7 @@ Signature.prototype.getSignature = function()
  * @deprecated Use getSignature. This method returns a Buffer which is the former
  * behavior of getSignature, and should only be used while updating your code.
  */
-Signature.prototype.getSignatureAsBuffer = function() 
+Signature.prototype.getSignatureAsBuffer = function()
 {
   return this.signature;
 };
@@ -100,7 +100,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
   this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
                     new KeyLocator(keyLocator) : new KeyLocator();
 };
-  
+
 /**
  * Set the data packet's signature bytes.
  * @param {Blob} signature
@@ -115,21 +115,21 @@ Signature.prototype.setSignature = function(signature)
     this.signature = new Buffer(signature);
 };
 
-Signature.prototype.from_ndnb = function(decoder) 
+Signature.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
-    
+
   if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
-    
+
   if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
     if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm); 
+    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm);
   }
   if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
     if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness); 
+    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness);
   }
-    
+
   //FORCE TO READ A SIGNATURE
 
   if (LOG > 4) console.log('SIGNATURE FOUND');
@@ -138,28 +138,28 @@ Signature.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-Signature.prototype.to_ndnb = function(encoder) 
-{      
+Signature.prototype.to_ndnb = function(encoder)
+{
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
-  
+
   encoder.writeElementStartDTag(this.getElementLabel());
-  
+
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
     encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-  
+
   if (null != this.witness)
     // needs to handle null witness
     encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
 
   encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
 
-  encoder.writeElementClose();       
+  encoder.writeElementClose();
 };
 
 Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
-Signature.prototype.validate = function() 
+Signature.prototype.validate = function()
 {
   return null != this.signature;
 };
