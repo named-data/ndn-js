@@ -295,8 +295,8 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   
   if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.type != null &&
-      this.signedInfo.locator.type >= 0) {
+      this.signedInfo.locator.getType() != null &&
+      this.signedInfo.locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
     return this.signedInfo.locator;

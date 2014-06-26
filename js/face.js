@@ -876,7 +876,7 @@ Face.prototype.onReceivedElement = function(element)
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
         var keylocator = data.getMetaInfo().locator;
-        if (keylocator.type == KeyLocatorType.KEYNAME) {
+        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
           if (keylocator.keyName.contentName.match(data.getName())) {
@@ -913,7 +913,7 @@ Face.prototype.onReceivedElement = function(element)
             }
           }
         } 
-        else if (keylocator.type == KeyLocatorType.KEY) {
+        else if (keylocator.getType() == KeyLocatorType.KEY) {
           if (LOG > 3) console.log("Keylocator contains KEY");
                 
           var rsakey = new Key();
