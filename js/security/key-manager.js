@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ var Key = require('../key.js').Key;
 var KeyManager = function KeyManager()
 {
   // Public Key
-    this.publicKey = 
+    this.publicKey =
   "-----BEGIN PUBLIC KEY-----\n" +
   "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuAmnWYKE7E8G+hyy4TiT\n"	+
   "U7t91KyIGvglEeT6HWEkW4LKzXLO22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+\n" +
@@ -36,7 +36,7 @@ var KeyManager = function KeyManager()
   "QQIDAQAB\n" +
   "-----END PUBLIC KEY-----";
   // Private Key
-    this.privateKey = 
+    this.privateKey =
   "-----BEGIN RSA PRIVATE KEY-----\n" +
   "MIIEpQIBAAKCAQEAuAmnWYKE7E8G+hyy4TiTU7t91KyIGvglEeT6HWEkW4LKzXLO\n"	+
   "22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+O85u6gfbvwp+67zJe2I89eHO4dmN\n" +
@@ -64,7 +64,7 @@ var KeyManager = function KeyManager()
   "SAA31hlxu5EgneLD7Ns2HMpIfQMydB5lcwKQc9g/tVI1eRzuk6Myi+2JmPEM2BLy\n" +
   "iX8yI+xnZlKDiZleQitCS4RQGz5HbXT70aYQIGxuvkQ/uf68jdrL6o8=\n" +
   "-----END RSA PRIVATE KEY-----";
-  
+
   this.key = null;
 };
 
@@ -79,7 +79,7 @@ KeyManager.prototype.getKey = function()
     this.key = new Key();
     this.key.fromPemString(this.publicKey, this.privateKey);
   }
-  
+
   return this.key;
 }
 

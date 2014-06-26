@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,8 +21,8 @@ var Name = require("../..").Name;
 var NameEnumeration = require('../..').NameEnumeration;
 var Face = require('../..').Face;
 
-var face = new Face({host: "localhost"});    
-    
+var face = new Face({host: "localhost"});
+
 function onComponents(components)
 {
   if (components == null)
@@ -37,6 +37,6 @@ function onComponents(components)
   face.close();
 }
 
-var prefix = "/";    
+var prefix = "/";
 console.log("Components:");
 NameEnumeration.getComponents(face, new Name(prefix), onComponents);

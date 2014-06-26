@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,48 +22,48 @@
 
 <head>
 	<title>NDN Encode/Decode Data Packet</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
+
 		function encode(){
 			var contentname = new Name( document.getElementById('contentname').value );
-			
+
 			var content = document.getElementById('content').value;
-			
+
 			var signedInfo = new SignedInfo();
-			
+
 			signedInfo.setFields();
-			
-			var data = new Data(contentname, signedInfo, content); 
-			
+
+			var data = new Data(contentname, signedInfo, content);
+
 			data.sign();
-			
-			
+
+
 			var output = EncodingUtils.encodeToHexData(data);
-			
+
 			document.getElementById('result').innerHTML = output;
 
 		}
-		
+
 		function decode(){
 			var input = document.getElementById('result').innerHTML;
 
 			input = input.toUpperCase();
-			
+
 			var data = EncodingUtils.decodeHexData(input);
-			
+
 			if(LOG>3)console.log('DATA PACKET DECODED');
 			if(LOG>3)console.log(data);
-			
+
             var output = EncodingUtils.dataToHtml(data);
             // Verify with the same key from globalKeyManager used to sign.
             if (data.verify(globalKeyManager.key))
               output+= "<br/>SIGNATURE VALID<br/>";
             else
               output+= "<br/>SIGNATURE INVALID<br/>";
-          
+
 			document.getElementById('result').innerHTML = output;
 		}
 
@@ -72,20 +72,20 @@
 </head>
 <body >
 	<form>
-		
+
 		Please Enter a Content Name:<br />
-		
-		<input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" /> 
-		
+
+		<input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" />
+
 		<br />Please Enter the Content:<br />
-		
-		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea> 
-		
+
+		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea>
+
 	</form>
 	<button onclick="encode()">Encode</button>
 	<button onclick="decode()">Decode</button>
-	
-	
+
+
 	<p id="result"></p>
 
 

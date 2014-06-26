@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -36,7 +36,7 @@ exports.TlvDecoder = TlvDecoder;
  * Decode VAR-NUMBER in NDN-TLV and return it. Update offset.
  * @returns {number} The decoded VAR-NUMBER.
  */
-TlvDecoder.prototype.readVarNumber = function() 
+TlvDecoder.prototype.readVarNumber = function()
 {
   // Assume array values are in the range 0 to 255.
   firstOctet = this.input[this.offset];
@@ -50,11 +50,11 @@ TlvDecoder.prototype.readVarNumber = function()
 /**
  * A private function to do the work of readVarNumber, given the firstOctet
  * which is >= 253.
- * @param {number} firstOctet The first octet which is >= 253, used to decode 
+ * @param {number} firstOctet The first octet which is >= 253, used to decode
  * the remaining bytes.
  * @returns {number} The decoded VAR-NUMBER.
  */
-TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet) 
+TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
   // This is a private function so we know firstOctet >= 253.
   if (firstOctet == 253) {
@@ -80,21 +80,21 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
            this.input[this.offset + 7]);
     this.offset += 8;
   }
-  
+
   return result;
 };
 
 /**
- * Decode the type and length from this's input starting at offset, expecting 
- * the type to be expectedType and return the length. Update offset.  Also make 
- * sure the decoded length does not exceed the number of bytes remaining in the 
+ * Decode the type and length from this's input starting at offset, expecting
+ * the type to be expectedType and return the length. Update offset.  Also make
+ * sure the decoded length does not exceed the number of bytes remaining in the
  * input.
  * @param {number} expectedType The expected type.
  * @returns {number} The length of the TLV.
- * @throws DecodingException if (did not get the expected TLV type or the TLV length 
+ * @throws DecodingException if (did not get the expected TLV type or the TLV length
  * exceeds the buffer length.
  */
-TlvDecoder.prototype.readTypeAndLength = function(expectedType) 
+TlvDecoder.prototype.readTypeAndLength = function(expectedType)
 {
   var type = this.readVarNumber();
   if (type != expectedType)
@@ -108,31 +108,31 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
 };
 
 /**
- * Decode the type and length from the input starting at offset, expecting the 
- * type to be expectedType.  Update offset.  Also make sure the decoded length 
- * does not exceed the number of bytes remaining in the input. Return the offset 
- * of the end of this parent TLV, which is used in decoding optional nested 
+ * Decode the type and length from the input starting at offset, expecting the
+ * type to be expectedType.  Update offset.  Also make sure the decoded length
+ * does not exceed the number of bytes remaining in the input. Return the offset
+ * of the end of this parent TLV, which is used in decoding optional nested
  * TLVs. After reading all nested TLVs, call finishNestedTlvs.
  * @param {number} expectedType The expected type.
  * @returns {number} The offset of the end of the parent TLV.
- * @throws DecodingException if did not get the expected TLV type or the TLV 
+ * @throws DecodingException if did not get the expected TLV type or the TLV
  * length exceeds the buffer length.
  */
-TlvDecoder.prototype.readNestedTlvsStart = function(expectedType) 
+TlvDecoder.prototype.readNestedTlvsStart = function(expectedType)
 {
   return this.readTypeAndLength(expectedType) + this.offset;
 };
 
 /**
- * Call this after reading all nested TLVs to skip any remaining unrecognized 
- * TLVs and to check if the offset after the final nested TLV matches the 
+ * Call this after reading all nested TLVs to skip any remaining unrecognized
+ * TLVs and to check if the offset after the final nested TLV matches the
  * endOffset returned by readNestedTlvsStart.
- * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @throws DecodingException if the TLV length does not equal the total length 
+ * @throws DecodingException if the TLV length does not equal the total length
  * of the nested TLVs.
  */
-TlvDecoder.prototype.finishNestedTlvs = function(endOffset) 
+TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
 {
   // We expect offset to be endOffset, so check this first.
   if (this.offset == endOffset)
@@ -149,24 +149,24 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
     if (this.offset > this.input.length)
       throw new DecodingException("TLV length exceeds the buffer length");
   }
-  
+
   if (this.offset != endOffset)
     throw new DecodingException
       ("TLV length does not equal the total length of the nested TLVs");
 };
 
 /**
- * Decode the type from this's input starting at offset, and if it is the 
- * expectedType, then return true, else false.  However, if this's offset is 
- * greater than or equal to endOffset, then return false and don't try to read 
+ * Decode the type from this's input starting at offset, and if it is the
+ * expectedType, then return true, else false.  However, if this's offset is
+ * greater than or equal to endOffset, then return false and don't try to read
  * the type. Do not update offset.
  * @param {number} expectedType The expected type.
- * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true if the type of the next TLV is the expectedType, 
+ * @returns {boolean} true if the type of the next TLV is the expectedType,
  *  otherwise false.
  */
-TlvDecoder.prototype.peekType = function(expectedType, endOffset) 
+TlvDecoder.prototype.peekType = function(expectedType, endOffset)
 {
   if (this.offset >= endOffset)
     // No more sub TLVs to look at.
@@ -182,14 +182,14 @@ TlvDecoder.prototype.peekType = function(expectedType, endOffset)
 };
 
 /**
- * Decode a non-negative integer in NDN-TLV and return it. Update offset by 
+ * Decode a non-negative integer in NDN-TLV and return it. Update offset by
  * length.
  * @param {number} length The number of bytes in the encoded integer.
  * @returns {number} The integer.
- * @throws DecodingException if length is an invalid length for a TLV 
+ * @throws DecodingException if length is an invalid length for a TLV
  * non-negative integer.
  */
-TlvDecoder.prototype.readNonNegativeInteger = function(length) 
+TlvDecoder.prototype.readNonNegativeInteger = function(length)
 {
   var result;
   if (length == 1)
@@ -219,33 +219,33 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
 };
 
 /**
- * Decode the type and length from this's input starting at offset, expecting 
- * the type to be expectedType. Then decode a non-negative integer in NDN-TLV 
+ * Decode the type and length from this's input starting at offset, expecting
+ * the type to be expectedType. Then decode a non-negative integer in NDN-TLV
  * and return it.  Update offset.
  * @param {number} expectedType The expected type.
  * @returns {number} The integer.
- * @throws DecodingException if did not get the expected TLV type or can't 
+ * @throws DecodingException if did not get the expected TLV type or can't
  * decode the value.
  */
-TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType) 
+TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType)
 {
   var length = this.readTypeAndLength(expectedType);
   return this.readNonNegativeInteger(length);
 };
 
 /**
- * Peek at the next TLV, and if it has the expectedType then call 
- * readNonNegativeIntegerTlv and return the integer.  Otherwise, return null.  
- * However, if this's offset is greater than or equal to endOffset, then return 
+ * Peek at the next TLV, and if it has the expectedType then call
+ * readNonNegativeIntegerTlv and return the integer.  Otherwise, return null.
+ * However, if this's offset is greater than or equal to endOffset, then return
  * null and don't try to read the type.
  * @param {number} expectedType The expected type.
- * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {number} The integer or null if the next TLV doesn't have the 
+ * @returns {number} The integer or null if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
-  (expectedType, endOffset) 
+  (expectedType, endOffset)
 {
   if (this.peekType(expectedType, endOffset))
     return this.readNonNegativeIntegerTlv(expectedType);
@@ -254,16 +254,16 @@ TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
 };
 
 /**
- * Decode the type and length from this's input starting at offset, expecting 
+ * Decode the type and length from this's input starting at offset, expecting
  * the type to be expectedType. Then return an array of the bytes in the value.
  * Update offset.
  * @param {number} expectedType The expected type.
  * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
- * not a copy of the bytes in the input buffer.  If you need a copy, then you 
+ * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  * @throws DecodingException if did not get the expected TLV type.
  */
-TlvDecoder.prototype.readBlobTlv = function(expectedType) 
+TlvDecoder.prototype.readBlobTlv = function(expectedType)
 {
   var length = this.readTypeAndLength(expectedType);
   var result = this.input.slice(this.offset, this.offset + length);
@@ -274,19 +274,19 @@ TlvDecoder.prototype.readBlobTlv = function(expectedType)
 };
 
 /**
- * Peek at the next TLV, and if it has the expectedType then call readBlobTlv 
- * and return the value.  Otherwise, return null. However, if this's offset is 
- * greater than or equal to endOffset, then return null and don't try to read 
+ * Peek at the next TLV, and if it has the expectedType then call readBlobTlv
+ * and return the value.  Otherwise, return null. However, if this's offset is
+ * greater than or equal to endOffset, then return null and don't try to read
  * the type.
  * @param {number} expectedType The expected type.
- * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {Buffer} The bytes in the value as a slice on the buffer or null if 
- * the next TLV doesn't have the expected type.  This is not a copy of the bytes 
- * in the input buffer.  If you need a copy, then you must make a copy of the 
+ * @returns {Buffer} The bytes in the value as a slice on the buffer or null if
+ * the next TLV doesn't have the expected type.  This is not a copy of the bytes
+ * in the input buffer.  If you need a copy, then you must make a copy of the
  * return value.
  */
-TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset) 
+TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset)
 {
   if (this.peekType(expectedType, endOffset))
     return this.readBlobTlv(expectedType);
@@ -295,17 +295,17 @@ TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset)
 };
 
 /**
- * Peek at the next TLV, and if it has the expectedType then read a type and 
+ * Peek at the next TLV, and if it has the expectedType then read a type and
  * value, ignoring the value, and return true. Otherwise, return false.
- * However, if this's offset is greater than or equal to endOffset, then return 
+ * However, if this's offset is greater than or equal to endOffset, then return
  * false and don't try to read the type.
  * @param {number} expectedType The expected type.
- * @param {number} endOffset The offset of the end of the parent TLV, returned 
+ * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true, or else false if the next TLV doesn't have the 
+ * @returns {boolean} true, or else false if the next TLV doesn't have the
  * expected type.
  */
-TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset) 
+TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
 {
   if (this.peekType(expectedType, endOffset)) {
     var length = this.readTypeAndLength(expectedType);
@@ -321,7 +321,7 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
  * Get the offset into the input, used for the next read.
  * @returns {number} The offset.
  */
-TlvDecoder.prototype.getOffset = function() 
+TlvDecoder.prototype.getOffset = function()
 {
   return this.offset;
 };
@@ -330,7 +330,7 @@ TlvDecoder.prototype.getOffset = function()
  * Set the offset into the input, used for the next read.
  * @param {number} offset The new offset.
  */
-TlvDecoder.prototype.seek = function(offset) 
+TlvDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
-};  
+};

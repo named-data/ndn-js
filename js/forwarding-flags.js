@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
  * bits are changed, amended or deprecated.
  * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
  */
-var ForwardingFlags = function ForwardingFlags() 
+var ForwardingFlags = function ForwardingFlags()
 {
   this.active = true;
   this.childInherit = true;
@@ -46,7 +46,7 @@ exports.ForwardingFlags = ForwardingFlags;
 ForwardingFlags.prototype.getForwardingEntryFlags = function()
 {
   var result = 0;
-  
+
   if (this.active)
     result |= ForwardingEntry.ACTIVE;
   if (this.childInherit)
@@ -63,7 +63,7 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
     result |= ForwardingEntry.TAP;
   if (this.captureOk)
     result |= ForwardingEntry.CAPTURE_OK;
-  
+
   return result;
 };
 
@@ -134,47 +134,47 @@ ForwardingFlags.prototype.getCaptureOk = function() { return this.captureOk; };
 /**
  * Set the value of the "active" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setActive = function(value) { this.active = value; };
 
 /**
  * Set the value of the "childInherit" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
 
 /**
  * Set the value of the "advertise" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setAdvertise = function(value) { this.advertise = value; };
 
 /**
  * Set the value of the "last" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setLast = function(value) { this.last = value; };
 
 /**
  * Set the value of the "capture" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
 
 /**
  * Set the value of the "local" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setLocal = function(value) { this.local = value; };
 
 /**
  * Set the value of the "tap" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
 
 /**
  * Set the value of the "captureOk" flag
  * @param {number} value true to set the flag, false to clear it.
- */  
+ */
 ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };

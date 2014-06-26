@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,7 +26,7 @@ var PublisherPublicKeyDigest = require('../..').PublisherPublicKeyDigest;
 var NDNTime = require('../..').NDNTime;
 var globalKeyManager = require('../..').globalKeyManager;
 
-var TestEncodeDecodeBenchmark = function TestEncodeDecodeBenchmark() 
+var TestEncodeDecodeBenchmark = function TestEncodeDecodeBenchmark()
 {
 };
 
@@ -52,7 +52,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   var content;
   if (useComplex) {
     // Use a large name and content.
-    name = new Name("/ndn/ucla.edu/apps/lwndn-test/numbers.txt/%FD%05%05%E8%0C%CE%1D/%00"); 
+    name = new Name("/ndn/ucla.edu/apps/lwndn-test/numbers.txt/%FD%05%05%E8%0C%CE%1D/%00");
 
     var contentString = "";
     var count = 1;
@@ -73,7 +73,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   shared_ptr<MemoryIdentityStorage> identityStorage(new MemoryIdentityStorage());
   shared_ptr<MemoryPrivateKeyStorage> privateKeyStorage(new MemoryPrivateKeyStorage());
   KeyChain keyChain
-    (make_shared<IdentityManager>(identityStorage, privateKeyStorage), 
+    (make_shared<IdentityManager>(identityStorage, privateKeyStorage),
      make_shared<SelfVerifyPolicyManager>(identityStorage.get()));
   */
   var keyName = new Name("/testname/DSK-123");
@@ -104,7 +104,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       data.getMetaInfo().setFinalBlockID(finalBlockId);
     }
 
-    var keyLocator = new KeyLocator();    
+    var keyLocator = new KeyLocator();
     keyLocator.setType(KeyLocatorType.KEYNAME);
     keyLocator.setKeyName(certificateName);
     data.getSignature().setKeyLocator(keyLocator);
@@ -120,7 +120,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   }
   var finish = getNowSeconds();
 
-  return finish - start;    
+  return finish - start;
 }
 
 /**
@@ -136,7 +136,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data();
     data.wireDecode(encoding);
-    
+
     if (useCrypto) {
       if (!data.verify(globalKeyManager.key))
         throw new Error("Signature verification: FAILED");
@@ -144,5 +144,5 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
   }
   var finish = getNowSeconds();
 
-  return finish - start;  
+  return finish - start;
 };

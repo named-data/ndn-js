@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -20,37 +20,37 @@
 var Blob = require('./blob.js').Blob;
 
 /**
- * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the 
+ * A SignedBlob extends Blob to keep the offsets of a signed portion (e.g., the
  * bytes of Data packet). This inherits from Blob, including Blob.size and Blob.buf.
- * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
- * another pointer to the Buffer without copying. If value is a Buffer or byte 
+ * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
+ * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {number} signedPortionBeginOffset (optional) The offset in the 
+ * @param {number} signedPortionBeginOffset (optional) The offset in the
  * encoding of the beginning of the signed portion. If omitted, set to 0.
- * @param {number} signedPortionEndOffset (optional) The offset in the encoding 
+ * @param {number} signedPortionEndOffset (optional) The offset in the encoding
  * of the end of the signed portion. If omitted, set to 0.
  */
-var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset) 
+var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset)
 {
   // Call the base constructor.
   Blob.call(this, value);
-  
+
   if (this.buffer == null) {
     this.signedPortionBeginOffset = 0;
     this.signedPortionEndOffset = 0;
   }
   else if (typeof value === 'object' && value instanceof SignedBlob) {
     // Copy the SignedBlob, allowing override for offsets.
-    this.signedPortionBeginOffset = signedPortionBeginOffset == null ? 
+    this.signedPortionBeginOffset = signedPortionBeginOffset == null ?
       value.signedPortionBeginOffset : signedPortionBeginOffset;
-    this.signedPortionEndOffset = signedPortionEndOffset == null ? 
+    this.signedPortionEndOffset = signedPortionEndOffset == null ?
       value.signedPortionEndOffset : signedPortionEndOffset;
   }
   else {
     this.signedPortionBeginOffset = signedPortionBeginOffset || 0;
     this.signedPortionEndOffset = signedPortionEndOffset || 0;
   }
-  
+
   if (this.buffer == null)
     this.signedBuffer = null;
   else
@@ -65,7 +65,7 @@ exports.SignedBlob = SignedBlob;
 
 /**
  * Return the length of the signed portion of the immutable byte array.
- * @returns {number} The length of the signed portion.  If signedBuf() is null, 
+ * @returns {number} The length of the signed portion.  If signedBuf() is null,
  * return 0.
  */
 SignedBlob.prototype.signedSize = function()
@@ -78,7 +78,7 @@ SignedBlob.prototype.signedSize = function()
 
 /**
  * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.  
+ * @returns {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
 SignedBlob.prototype.signedBuf = function()

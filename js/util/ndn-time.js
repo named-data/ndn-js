@@ -2,7 +2,7 @@
  * This class represents NDNTime Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,10 +23,10 @@ var LOG = require('../log.js').Log.LOG;
 /**
  * @constructor
  */
-var NDNTime = function NDNTime(input) 
+var NDNTime = function NDNTime(input)
 {
   this.NANOS_MAX = 999877929;
-  
+
   if (typeof input =='number')
     this.msec = input;
   else {
@@ -36,9 +36,9 @@ var NDNTime = function NDNTime(input)
 
 exports.NDNTime = NDNTime;
 
-NDNTime.prototype.getJavascriptDate = function() 
+NDNTime.prototype.getJavascriptDate = function()
 {
   var d = new Date();
   d.setTime(this.msec);
   return d
-};  
+};

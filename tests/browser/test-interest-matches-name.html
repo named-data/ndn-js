@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,17 +22,17 @@
 
 <head>
 	<title>NDN Interest Matches Name</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
+
 		function check(){
 			var interest = new Interest( new Name(document.getElementById('interest').value));
 			interest.setScope(1);
-                        
+
 			var nameToCheck = new Name(document.getElementById('nameToCheck').value);
-			
+
 			var output = (interest.matchesName(nameToCheck) ? "matches" : "doesn't match");
 			document.getElementById('result').innerHTML = output;
 		}
@@ -42,16 +42,16 @@
 </head>
 <body >
 	<form>
-		
-		Please enter the name of an interest:<br />		
+
+		Please enter the name of an interest:<br />
 		<input id="interest" type="text" name="INTEREST" value="//domain.com/ndn/ucla.edu" /> <br/>
-		
-		Please enter a name to check if the interest matches the name:<br />		
+
+		Please enter a name to check if the interest matches the name:<br />
 		<input id="nameToCheck" type="text" name="NAME_TO_CHECK" value="/ndn/./ucla.edu/extra" /> <br/>
-		
+
 	</form>
 	<button onclick="check()">Check</button>
-	
+
 	<p id="result"></p>
 
 </body>

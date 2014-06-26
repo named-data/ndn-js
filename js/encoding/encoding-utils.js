@@ -2,7 +2,7 @@
  * This file contains utilities to help encode and decode NDN objects.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -34,19 +34,19 @@ var LOG = require('../log.js').Log.LOG;
  * An EncodingUtils has static methods for encoding data.
  * @constructor
  */
-var EncodingUtils = function EncodingUtils() 
+var EncodingUtils = function EncodingUtils()
 {
 };
 
 exports.EncodingUtils = EncodingUtils;
 
-EncodingUtils.encodeToHexInterest = function(interest, wireFormat) 
+EncodingUtils.encodeToHexInterest = function(interest, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   return DataUtils.toHex(interest.wireEncode(wireFormat).buf());
 };
 
-EncodingUtils.encodeToHexData = function(data, wireFormat) 
+EncodingUtils.encodeToHexData = function(data, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   return DataUtils.toHex(data.wireEncode(wireFormat).buf());
@@ -55,12 +55,12 @@ EncodingUtils.encodeToHexData = function(data, wireFormat)
 /**
  * @deprecated Use EncodingUtils.encodeToHexData(data).
  */
-EncodingUtils.encodeToHexContentObject = function(data, wireFormat) 
+EncodingUtils.encodeToHexContentObject = function(data, wireFormat)
 {
   return EncodingUtils.encodeToHexData(data, wireFormat);
 }
 
-EncodingUtils.encodeForwardingEntry = function(data) 
+EncodingUtils.encodeForwardingEntry = function(data)
 {
   var enc = new BinaryXMLEncoder();
   data.to_ndnb(enc);
@@ -69,20 +69,20 @@ EncodingUtils.encodeForwardingEntry = function(data)
   return bytes;
 };
 
-EncodingUtils.decodeHexFaceInstance = function(result) 
-{  
-  var numbers = DataUtils.toNumbers(result); 
+EncodingUtils.decodeHexFaceInstance = function(result)
+{
+  var numbers = DataUtils.toNumbers(result);
   var decoder = new BinaryXMLDecoder(numbers);
-  
+
   if (LOG > 3) console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
 
   var faceInstance = new FaceInstance();
   faceInstance.from_ndnb(decoder);
-  
+
   return faceInstance;
 };
 
-EncodingUtils.decodeHexInterest = function(input, wireFormat) 
+EncodingUtils.decodeHexInterest = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var interest = new Interest();
@@ -90,7 +90,7 @@ EncodingUtils.decodeHexInterest = function(input, wireFormat)
   return interest;
 };
 
-EncodingUtils.decodeHexData = function(input, wireFormat) 
+EncodingUtils.decodeHexData = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var data = new Data();
@@ -101,18 +101,18 @@ EncodingUtils.decodeHexData = function(input, wireFormat)
 /**
  * @deprecated Use EncodingUtils.decodeHexData(input).
  */
-EncodingUtils.decodeHexContentObject = function(input, wireFormat) 
+EncodingUtils.decodeHexContentObject = function(input, wireFormat)
 {
   return EncodingUtils.decodeHexData(input, wireFormat);
 }
 
-EncodingUtils.decodeHexForwardingEntry = function(result) 
+EncodingUtils.decodeHexForwardingEntry = function(result)
 {
   var numbers = DataUtils.toNumbers(result);
   var decoder = new BinaryXMLDecoder(numbers);
-  
+
   if (LOG > 3) console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
-  
+
   var forwardingEntry = new ForwardingEntry();
   forwardingEntry.from_ndnb(decoder);
   return forwardingEntry;
@@ -121,7 +121,7 @@ EncodingUtils.decodeHexForwardingEntry = function(result)
 /**
  * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
  */
-EncodingUtils.decodeSubjectPublicKeyInfo = function(array) 
+EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 {
   var hex = DataUtils.toHex(array).toLowerCase();
   var a = _x509_getPublicKeyHexArrayFromCertHex(hex, _x509_getSubjectPublicKeyPosFromCertHex(hex, 0));
@@ -134,10 +134,10 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
  * Return a user friendly HTML string with the contents of data.
  * This also outputs to console.log.
  */
-EncodingUtils.dataToHtml = function(/* Data */ data) 
+EncodingUtils.dataToHtml = function(/* Data */ data)
 {
   var output ="";
-      
+
   if (data == -1)
     output+= "NO CONTENT FOUND"
   else if (data == -2)
@@ -145,56 +145,56 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   else {
     if (data.getName() != null) {
       output+= "NAME: " + data.getName().toUri();
-        
+
       output+= "<br />";
       output+= "<br />";
     }
     if (!data.getContent().isNull()) {
       output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (!data.getContent().isNull()) {
       output += "CONTENT(hex): "+ data.getContent().toHex();
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
       output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (data.getSignature() != null && data.getSignature().witness != null) {
       output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (data.getSignature() != null && data.getSignature().getSignature() != null) {
       output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().publisher != null && data.getMetaInfo().publisher.publisherPublicKeyDigest != null) {
       output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
-      
+
       output+= "<br />";
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().timestamp != null) {
       var d = new Date();
       d.setTime(data.getMetaInfo().timestamp.msec);
-      
+
       var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-      
+
       output += "TimeStamp: "+d;
       output+= "<br />";
       output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
-      
+
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
@@ -212,7 +212,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
         output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
       else
-        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";      
+        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";
     }
   }
 
@@ -222,7 +222,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
 /**
  * @deprecated Use return EncodingUtils.dataToHtml(data).
  */
-EncodingUtils.contentObjectToHtml = function(data) 
+EncodingUtils.contentObjectToHtml = function(data)
 {
   return EncodingUtils.dataToHtml(data);
 }

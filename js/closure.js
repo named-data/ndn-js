@@ -2,10 +2,10 @@
  * Provide the callback closure for the async communication methods in the Face class.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * This is a port of Closure.py from PyNDN, written by: 
+ * This is a port of Closure.py from PyNDN, written by:
  * Derek Kulinski <takeda@takeda.tk>
  * Jeff Burke <jburke@ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,7 +26,7 @@
  * @deprecated You should use the forms of expressInterest and registerPrefix which use callbacks instead of Closure.
  * @constructor
  */
-var Closure = function Closure() 
+var Closure = function Closure()
 {
   // I don't think storing Face's closure is needed
   // and it creates a reference loop, as of now both
@@ -34,7 +34,7 @@ var Closure = function Closure()
   //
   // Use instance variables to return data to callback
   this.ndn_data = null;  // this holds the ndn_closure
-  this.ndn_data_dirty = false; 
+  this.ndn_data_dirty = false;
 };
 
 exports.Closure = Closure;
@@ -62,7 +62,7 @@ Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
  * If you're getting strange errors in upcall()
  * check your code whether you're returning a value.
  */
-Closure.prototype.upcall = function(kind, upcallInfo) 
+Closure.prototype.upcall = function(kind, upcallInfo)
 {
   //dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
   return Closure.RESULT_OK;
@@ -72,7 +72,7 @@ Closure.prototype.upcall = function(kind, upcallInfo)
  * An UpcallInfo is passed to Closure.upcall.
  * @constructor
  */
-var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data) 
+var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data)
 {
   this.face = face;  // Face object (not used)
   this.ndn = face;   // deprecated
@@ -82,7 +82,7 @@ var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data)
   this.contentObject = data; // deprecated.  Include for backward compatibility.
 };
 
-UpcallInfo.prototype.toString = function() 
+UpcallInfo.prototype.toString = function()
 {
   var ret = "face = " + this.face;
   ret += "\nInterest = " + this.interest;

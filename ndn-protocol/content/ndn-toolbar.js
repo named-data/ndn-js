@@ -2,7 +2,7 @@
  * This is called from the NDN toolbar and the doorhanger popup on Firefox for Android.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,7 +21,7 @@
 Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
-function ndnToolbarGetVersion(selector) 
+function ndnToolbarGetVersion(selector)
 {
   NdnProtocolInfo.getVersion(selector, window, alert);
 }
@@ -29,16 +29,16 @@ function ndnToolbarGetVersion(selector)
 /*
  * This is called when the connected NDN hub changes.
  */
-function onNdnHubChanged(host, port) 
+function onNdnHubChanged(host, port)
 {
   document.getElementById("ndnHubLabel").setAttribute("value", "Hub: " + host + ":" + port);
 }
 
-if (window) 
-  window.addEventListener("load", function() { NdnProtocolInfo.addNdnHubChangedListener(onNdnHubChanged); }, 
+if (window)
+  window.addEventListener("load", function() { NdnProtocolInfo.addNdnHubChangedListener(onNdnHubChanged); },
                           false);
 
-function ndnToolbarSetHub() 
+function ndnToolbarSetHub()
 {
   var message = NdnProtocolInfo.setHub(window, alert);
   if (message != null)

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,7 +23,7 @@
  * @constructor
  * @param {string} error The exception created with new Error.
  */
-function DecodingException(error) 
+function DecodingException(error)
 {
   this.message = error.message;
   // Copy lineNumber, etc. from where new Error was called.

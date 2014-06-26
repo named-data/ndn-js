@@ -1,7 +1,7 @@
-/** 
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ var exports = ndn;
 var require = function(ignore) { return ndn; };
 
 // Factory method to create node.js compatible buffer objects
-var Buffer = function Buffer(data, format) 
+var Buffer = function Buffer(data, format)
 {
   var obj;
 
@@ -37,19 +37,19 @@ var Buffer = function Buffer(data, format)
       obj = new Uint8Array(utf8.length);
       for (var i = 0; i < utf8.length; i++)
         obj[i] = utf8.charCodeAt(i);
-    } 
+    }
     else if (format == 'binary') {
       obj = new Uint8Array(data.length);
       for (var i = 0; i < data.length; i++)
         obj[i] = data.charCodeAt(i);
-    } 
+    }
     else if (format == 'hex') {
       obj = new Uint8Array(Math.floor(data.length / 2));
       var i = 0;
       data.replace(/(..)/g, function(ss) {
         obj[i++] = parseInt(ss, 16);
       });
-    } 
+    }
     else if (format == 'base64') {
       var hex = b64tohex(data);
       obj = new Uint8Array(Math.floor(hex.length / 2));
@@ -57,10 +57,10 @@ var Buffer = function Buffer(data, format)
       hex.replace(/(..)/g, function(ss) {
         obj[i++] = parseInt(ss, 16);
       });
-    } 
-    else 
+    }
+    else
       throw new Error('Buffer: unknown encoding format ' + format);
-  } 
+  }
   else if (typeof data == 'object' && data instanceof Uint8Array || Buffer.isBuffer(data)) {
     // The second argument is a boolean for "copy", default true.
     if (format == false)
@@ -128,12 +128,12 @@ Buffer.isBuffer = function(obj)
   return typeof obj === 'object' && obj instanceof Buffer;
 };
 
-Buffer.concat = function(arrays) 
+Buffer.concat = function(arrays)
 {
   var totalLength = 0;
   for (var i = 0; i < arrays.length; ++i)
     totalLength += arrays[i].length;
-    
+
   var result = new Buffer(totalLength);
   var offset = 0;
   for (var i = 0; i < arrays.length; ++i) {
@@ -180,7 +180,7 @@ Buffer.str2rstr_utf8 = function(input)
 };
 
 // Factory method to create hasher objects
-exports.createHash = function(alg) 
+exports.createHash = function(alg)
 {
   if (alg != 'sha256')
     throw new Error('createHash: unsupported algorithm.');
@@ -201,7 +201,7 @@ exports.createHash = function(alg)
 };
 
 // Factory method to create RSA signer objects
-exports.createSign = function(alg) 
+exports.createSign = function(alg)
 {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
@@ -229,37 +229,37 @@ exports.createSign = function(alg)
 };
 
 // Factory method to create RSA verifier objects
-exports.createVerify = function(alg) 
+exports.createVerify = function(alg)
 {
   if (alg != 'RSA-SHA256')
     throw new Error('createSign: unsupported algorithm.');
 
   var obj = {};
-    
+
   obj.arr = [];
 
   obj.update = function(buf) {
     this.arr.push(buf);
   };
 
-  var getSubjectPublicKeyPosFromHex = function(hPub) {  
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0); 
-    if (a.length != 2) 
+  var getSubjectPublicKeyPosFromHex = function(hPub) {
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
+    if (a.length != 2)
       return -1;
     var pBitString = a[1];
-    if (hPub.substring(pBitString, pBitString + 2) != '03') 
+    if (hPub.substring(pBitString, pBitString + 2) != '03')
       return -1;
     var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
-    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00') 
+    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
       return -1;
     return pBitStringV + 2;
   };
 
   var readPublicDER = function(pub_der) {
-    var hex = pub_der.toString('hex'); 
+    var hex = pub_der.toString('hex');
     var p = getSubjectPublicKeyPosFromHex(hex);
     var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
-    if (a.length != 2) 
+    if (a.length != 2)
       return null;
     var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
     var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
@@ -277,7 +277,7 @@ exports.createVerify = function(alg)
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
       signer.updateHex(this.arr[i].toString('hex'));
-    var hSig = sig.toString('hex'); 
+    var hSig = sig.toString('hex');
     return signer.verify(hSig);
   };
 

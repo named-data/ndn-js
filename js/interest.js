@@ -3,7 +3,7 @@
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -28,7 +28,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new Interest with the optional values.
- * 
+ *
  * @constructor
  * @param {Name|Interest} nameOrInterest If this is an Interest, copy values from the interest and ignore the
  * other arguments.  Otherwise this is the optional name for the new Interest.
@@ -43,8 +43,8 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {Buffer} nonce
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude, 
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce) 
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
+    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce)
 {
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
@@ -64,8 +64,8 @@ var Interest = function Interest
     this.interestLifetime = interest.interestLifetime;
     if (interest.nonce)
       // Copy.
-      this.nonce = new Buffer(interest.nonce);    
-  }  
+      this.nonce = new Buffer(interest.nonce);
+  }
   else {
     this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
                 new Name(nameOrInterest) : new Name();
@@ -106,11 +106,11 @@ Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.A
  * @param {Name} name
  * @returns {boolean}
  */
-Interest.prototype.matchesName = function(/*Name*/ name) 
+Interest.prototype.matchesName = function(/*Name*/ name)
 {
   if (!this.name.match(name))
     return false;
-    
+
   if (this.minSuffixComponents != null &&
       // Add 1 for the implicit digest.
       !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
@@ -122,26 +122,26 @@ Interest.prototype.matchesName = function(/*Name*/ name)
   if (this.exclude != null && name.size() > this.name.size() &&
       this.exclude.matches(name.get(this.name.size())))
     return false;
-    
+
   return true;
 };
 
 /**
  * @deprecated Use matchesName.
  */
-Interest.prototype.matches_name = function(/*Name*/ name) 
+Interest.prototype.matches_name = function(/*Name*/ name)
 {
   return this.matchesName(name);
 };
 
 /**
- * Return a new Interest with the same fields as this Interest.  
+ * Return a new Interest with the same fields as this Interest.
  */
-Interest.prototype.clone = function() 
+Interest.prototype.clone = function()
 {
   return new Interest
-     (this.name, this.minSuffixComponents, this.maxSuffixComponents, 
-      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind, 
+     (this.name, this.minSuffixComponents, this.maxSuffixComponents,
+      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind,
       this.scope, this.interestLifetime, this.nonce);
 };
 
@@ -155,28 +155,28 @@ Interest.prototype.getName = function() { return this.name; };
  * Get the min suffix components.
  * @returns number} The min suffix components, or null if not specified.
  */
-Interest.prototype.getMinSuffixComponents = function() 
-{ 
-  return this.minSuffixComponents; 
+Interest.prototype.getMinSuffixComponents = function()
+{
+  return this.minSuffixComponents;
 };
 
 /**
  * Get the max suffix components.
  * @returns {number} The max suffix components, or null if not specified.
  */
-Interest.prototype.getMaxSuffixComponents = function() 
-{ 
-  return this.maxSuffixComponents; 
+Interest.prototype.getMaxSuffixComponents = function()
+{
+  return this.maxSuffixComponents;
 };
 
 /**
  * Get the interest key locator.
- * @returns {KeyLocator} The key locator. If its getType() is null, 
+ * @returns {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
  */
-Interest.prototype.getKeyLocator = function() 
-{ 
-  return this.keyLocator; 
+Interest.prototype.getKeyLocator = function()
+{
+  return this.keyLocator;
 };
 
 /**
@@ -190,29 +190,29 @@ Interest.prototype.getExclude = function() { return this.exclude; };
  * Get the child selector.
  * @returns {number} The child selector, or null if not specified.
  */
-Interest.prototype.getChildSelector = function() 
-{ 
-  return this.childSelector; 
+Interest.prototype.getChildSelector = function()
+{
+  return this.childSelector;
 };
 
 /**
  * @deprecated Use getMustBeFresh.
  */
-Interest.prototype.getAnswerOriginKind = function() 
-{ 
-  return this.answerOriginKind; 
+Interest.prototype.getAnswerOriginKind = function()
+{
+  return this.answerOriginKind;
 };
-  
+
   /**
    * Return true if the content must be fresh.
    * @return true if must be fresh, otherwise false.
    */
-  
+
 /**
  * Get the must be fresh flag. If not specified, the default is true.
  * @returns {boolean} The must be fresh flag.
  */
-Interest.prototype.getMustBeFresh = function() 
+Interest.prototype.getMustBeFresh = function()
 {
   if (this.answerOriginKind == null || this.answerOriginKind < 0)
     return true;
@@ -221,13 +221,13 @@ Interest.prototype.getMustBeFresh = function()
 };
 
 /**
- * Return the nonce value from the incoming interest.  If you change any of the 
+ * Return the nonce value from the incoming interest.  If you change any of the
  * fields in this Interest object, then the nonce value is cleared.
  * @returns {Blob} The nonce. If not specified, the value isNull().
  */
-Interest.prototype.getNonce = function() 
-{ 
-  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.                                          
+Interest.prototype.getNonce = function()
+{
+  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.
   return  new Blob(this.nonce, false);
 };
 
@@ -235,9 +235,9 @@ Interest.prototype.getNonce = function()
  * @deprecated Use getNonce. This method returns a Buffer which is the former
  * behavior of getNonce, and should only be used while updating your code.
  */
-Interest.prototype.getNonceAsBuffer = function() 
+Interest.prototype.getNonceAsBuffer = function()
 {
-  return this.nonce; 
+  return this.nonce;
 };
 
 /**
@@ -248,28 +248,28 @@ Interest.prototype.getScope = function() { return this.scope; };
 
 /**
  * Get the interest lifetime.
- * @returns {number} The interest lifetime in milliseconds, or null if not 
+ * @returns {number} The interest lifetime in milliseconds, or null if not
  * specified.
  */
-Interest.prototype.getInterestLifetimeMilliseconds = function() 
-{ 
-  return this.interestLifetime; 
+Interest.prototype.getInterestLifetimeMilliseconds = function()
+{
+  return this.interestLifetime;
 };
 
 Interest.prototype.setName = function(name)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.name = typeof name === 'object' && name instanceof Interest ?
               new Name(name) : new Name();
 };
-                
+
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.minSuffixComponents = minSuffixComponents;
 };
 
@@ -277,13 +277,13 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.maxSuffixComponents = maxSuffixComponents;
 };
 
 /**
- * Set this interest to use a copy of the given exclude object. Note: You can 
- * also change this interest's exclude object modifying the object from 
+ * Set this interest to use a copy of the given exclude object. Note: You can
+ * also change this interest's exclude object modifying the object from
  * getExclude().
  * @param {Exclude} exclude The exlcude object that is copied.
  */
@@ -291,7 +291,7 @@ Interest.prototype.setExclude = function(exclude)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
 };
@@ -300,7 +300,7 @@ Interest.prototype.setChildSelector = function(childSelector)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.childSelector = childSelector;
 };
 
@@ -311,7 +311,7 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.answerOriginKind = answerOriginKind;
 };
 
@@ -323,12 +323,12 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   if (this.answerOriginKind == null || this.answerOriginKind < 0) {
-    // It is is already the default where MustBeFresh is true. 
+    // It is is already the default where MustBeFresh is true.
     if (!mustBeFresh)
       // Set answerOriginKind_ so that getMustBeFresh returns false.
-      this.answerOriginKind = Interest.ANSWER_STALE; 
+      this.answerOriginKind = Interest.ANSWER_STALE;
   }
   else {
     if (mustBeFresh)
@@ -344,7 +344,7 @@ Interest.prototype.setScope = function(scope)
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.scope = scope;
 };
 
@@ -352,12 +352,12 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
 {
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
-  
+
   this.interestLifetime = interestLifetimeMilliseconds;
 };
 
 /**
- * @deprecated You should let the wire encoder generate a random nonce 
+ * @deprecated You should let the wire encoder generate a random nonce
  * internally before sending the interest.
  */
 Interest.prototype.setNonce = function(nonce)
@@ -366,7 +366,7 @@ Interest.prototype.setNonce = function(nonce)
     if (typeof nonce === 'object' && nonce instanceof Blob)
       this.nonce = nonce.buf();
     else
-      // Copy and make sure it is a Buffer.                                                                                
+      // Copy and make sure it is a Buffer.
       this.nonce = new Buffer(nonce);
   }
   else
@@ -380,10 +380,10 @@ Interest.prototype.setNonce = function(nonce)
  * @note This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
  */
-Interest.prototype.toUri = function() 
-{  
+Interest.prototype.toUri = function()
+{
   var selectors = "";
-  
+
   if (this.minSuffixComponents != null)
     selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
   if (this.maxSuffixComponents != null)
@@ -407,17 +407,17 @@ Interest.prototype.toUri = function()
   if (selectors != "")
     // Replace the first & with ?.
     result += "?" + selectors.substr(1);
-  
+
   return result;
 };
 
 /**
  * Encode this Interest for a particular wire format.
- * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode 
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {Blob} The encoded buffer in a Blob object.
  */
-Interest.prototype.wireEncode = function(wireFormat) 
+Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   return wireFormat.encodeInterest(this);
@@ -426,26 +426,26 @@ Interest.prototype.wireEncode = function(wireFormat)
 /**
  * Decode the input using a particular wire format and update this Interest.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode 
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
-Interest.prototype.wireDecode = function(input, wireFormat) 
+Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
   wireFormat.decodeInterest(this, decodeBuffer);
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom 
+// Since binary-xml-wire-format.js includes this file, put these at the bottom
 // to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 
 /**
  * @deprecated Use wireDecode(input, BinaryXmlWireFormat.get()).
  */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder) 
+Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   BinaryXmlWireFormat.decodeInterest(this, decoder);
 };
@@ -453,7 +453,7 @@ Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 /**
  * @deprecated Use wireEncode(BinaryXmlWireFormat.get()).
  */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder) 
+Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
 {
   BinaryXmlWireFormat.encodeInterest(this, encoder);
 };
@@ -462,7 +462,7 @@ Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
  * @deprecated Use wireEncode.  If you need binary XML, use
  * wireEncode(BinaryXmlWireFormat.get()).
  */
-Interest.prototype.encode = function(wireFormat) 
+Interest.prototype.encode = function(wireFormat)
 {
   return this.wireEncode(BinaryXmlWireFormat.get()).buf();
 };
@@ -471,7 +471,7 @@ Interest.prototype.encode = function(wireFormat)
  * @deprecated Use wireDecode.  If you need binary XML, use
  * wireDecode(input, BinaryXmlWireFormat.get()).
  */
-Interest.prototype.decode = function(input, wireFormat) 
+Interest.prototype.decode = function(input, wireFormat)
 {
   this.wireDecode(input, BinaryXmlWireFormat.get())
 };

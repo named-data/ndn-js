@@ -1,7 +1,7 @@
-/** 
+/**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -20,16 +20,16 @@
 /**
  * Transport is a base class for specific transport classes such as TcpTransport.
  */
-var Transport = function Transport() 
-{    
+var Transport = function Transport()
+{
 };
 
 exports.Transport = Transport;
 
 /**
- * Transport.ConnectionInfo is a base class for connection information used by 
+ * Transport.ConnectionInfo is a base class for connection information used by
  * subclasses of Transport.
  */
-Transport.ConnectionInfo = function TransportConnectionInfo() 
-{    
+Transport.ConnectionInfo = function TransportConnectionInfo()
+{
 };

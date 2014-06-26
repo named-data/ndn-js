@@ -1,10 +1,10 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,7 +23,7 @@
 
 <head>
 	<title>Encode/Decode FibEntry</title>
-	
+
 	<script type="text/javascript" src="../../contrib/dcodeio/long.min.js"></script>
 	<script type="text/javascript" src="../../contrib/dcodeio/bytebuffer-ab.min.js"></script>
 	<script type="text/javascript" src="../../contrib/dcodeio/protobuf.min.js"></script>
@@ -31,12 +31,12 @@
     <script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
-function testEncodeDecodeFibEntry() 
+
+function testEncodeDecodeFibEntry()
 {
   var result = document.getElementById('result');
   result.innerHTML = "";
-    
+
   var ProtoBuf = dcodeIO.ProtoBuf;
   var builder = ProtoBuf.loadProtoFile("fib-entry.proto");
   var descriptor = builder.lookup("ndn_message.FibEntryMessage");
@@ -56,7 +56,7 @@ function testEncodeDecodeFibEntry()
 
   var decodedMessage = new FibEntryMessage();
   ProtobufTlv.decode(decodedMessage, descriptor, encoding);
-    
+
   result.innerHTML += "Re-decoded FibEntry:</br>";
   // This should print the same values that we put in message above.
   var value = "";
@@ -75,7 +75,7 @@ function testEncodeDecodeFibEntry()
 </head>
 <body >
 	<button onclick="testEncodeDecodeFibEntry()">Test</button>
-	
+
 	<p id="result"></p>
 
 </body>

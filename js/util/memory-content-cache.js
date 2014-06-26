@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,33 +25,33 @@ var Name = require('../name.js').Name;
  * remove each stale Data packet based on its FreshnessPeriod (if it has one).
  * @note This class is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
- * 
+ *
  * Create a new MemoryContentCache to use the given Face.
- * 
+ *
  * @param {Face} face The Face to use to call registerPrefix and which will call
  * the OnInterest callback.
- * @param {number} cleanupIntervalMilliseconds (optional) The interval 
- * in milliseconds between each check to clean up stale content in the cache. If 
+ * @param {number} cleanupIntervalMilliseconds (optional) The interval
+ * in milliseconds between each check to clean up stale content in the cache. If
  * omitted, use a default of 1000 milliseconds. If this is a large number, then
  * effectively the stale content will not be removed from the cache.
  */
 var MemoryContentCache = function MemoryContentCache
-  (face, cleanupIntervalMilliseconds) 
+  (face, cleanupIntervalMilliseconds)
 {
   cleanupIntervalMilliseconds = (cleanupIntervalMilliseconds || 1000.0);
-  
+
   this.face = face;
   this.cleanupIntervalMilliseconds = cleanupIntervalMilliseconds;
   this.nextCleanupTime = new Date().getTime() + cleanupIntervalMilliseconds;
-  
-  this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri(). 
+
+  this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri().
  *                                        The value is an OnInterest function. */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
   //StaleTimeContent::Compare contentCompare_;
   this.emptyComponent = new Name.Component();
 };
-  
+
 exports.MemoryContentCache = MemoryContentCache;
 
 /**
@@ -59,10 +59,10 @@ exports.MemoryContentCache = MemoryContentCache;
  * MemoryContentCache will answer interests whose name has the prefix.
  * @param {Name} prefix The Name for the prefix to register. This copies the Name.
  * @param {function} onRegisterFailed If this fails to register the prefix for
- * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix 
+ * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
  * given to registerPrefix.
- * @param {function} onDataNotFound (optional) If a data packet is not found in 
- * the cache, this calls onInterest(prefix, interest, transport) to forward the 
+ * @param {function} onDataNotFound (optional) If a data packet is not found in
+ * the cache, this calls onInterest(prefix, interest, transport) to forward the
  * interest. If omitted, this does not use it.
  * @param {ForwardingFlags} flags (optional) See Face::registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face::registerPrefix.
@@ -74,25 +74,25 @@ MemoryContentCache.prototype.registerPrefix = function
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var thisMemoryContentCache = this;
   this.face.registerPrefix
-    (prefix, 
-     function(prefix, interest, transport) 
-       { thisMemoryContentCache.onInterest(prefix, interest, transport); }, 
+    (prefix,
+     function(prefix, interest, transport)
+       { thisMemoryContentCache.onInterest(prefix, interest, transport); },
      onRegisterFailed, flags, wireFormat);
 };
 
 /**
- * Add the Data packet to the cache so that it is available to use to answer 
- * interests. If data.getFreshnessPeriod() is not negative, set the staleness 
- * time to now plus data.getFreshnessPeriod(), which is checked during cleanup 
- * to remove stale content. This also checks if cleanupIntervalMilliseconds 
- * milliseconds have passed and removes stale content from the cache. 
- * @param {Data} data The Data packet object to put in the cache. This copies 
+ * Add the Data packet to the cache so that it is available to use to answer
+ * interests. If data.getFreshnessPeriod() is not negative, set the staleness
+ * time to now plus data.getFreshnessPeriod(), which is checked during cleanup
+ * to remove stale content. This also checks if cleanupIntervalMilliseconds
+ * milliseconds have passed and removes stale content from the cache.
+ * @param {Data} data The Data packet object to put in the cache. This copies
  * the fields from the object.
  */
 MemoryContentCache.prototype.add = function(data)
 {
   this.doCleanup();
-  
+
   if (data.getMetaInfo().getFreshnessPeriod() != null &&
       data.getMetaInfo().getFreshnessPeriod() >= 0.0) {
     // The content will go stale, so use staleTimeCache.
@@ -105,7 +105,7 @@ MemoryContentCache.prototype.add = function(data)
         break;
       --i;
     }
-    // Element i is the greatest less than or equal to 
+    // Element i is the greatest less than or equal to
     // content.staleTimeMilliseconds, so insert after it.
     this.staleTimeCache.splice(i + 1, 0, content);
   }
@@ -126,7 +126,7 @@ MemoryContentCache.prototype.add = function(data)
 MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
 {
   this.doCleanup();
-  
+
   var selectedComponent = 0;
   var selectedEncoding = null;
   // We need to iterate over both arrays.
@@ -138,7 +138,7 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
     else
       // We have iterated over the first array. Get from the second.
       content = this.noStaleTimeCache[i - this.staleTimeCache.length];
-    
+
     if (interest.matchesName(content.getName())) {
       if (interest.getChildSelector() < 0) {
         // No child selector, so send the first match that we have found.
@@ -152,12 +152,12 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
           component = content.getName().get(interest.getName().size());
         else
           component = this.emptyComponent;
-        
+
         var gotBetterMatch = false;
         if (selectedEncoding === null)
           // Save the first match.
           gotBetterMatch = true;
-        else { 
+        else {
           if (interest.getChildSelector() == 0) {
             // Leftmost child.
             if (component.compare(selectedComponent) < 0)
@@ -169,7 +169,7 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
               gotBetterMatch = true;
           }
         }
-        
+
         if (gotBetterMatch) {
           selectedComponent = component;
           selectedEncoding = content.getDataEncoding();
@@ -177,7 +177,7 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
       }
     }
   }
-  
+
   if (selectedEncoding !== null)
     // We found the leftmost or rightmost child.
     transport.send(selectedEncoding);
@@ -193,19 +193,19 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
 /**
  * Check if now is greater than nextCleanupTime and, if so, remove stale
  * content from staleTimeCache and reset nextCleanupTime based on
- * cleanupIntervalMilliseconds. Since add(Data) does a sorted insert into 
+ * cleanupIntervalMilliseconds. Since add(Data) does a sorted insert into
  * staleTimeCache, the check for stale data is quick and does not require
  * searching the entire staleTimeCache.
  */
-MemoryContentCache.prototype.doCleanup = function() 
-{ 
+MemoryContentCache.prototype.doCleanup = function()
+{
   var now = new Date().getTime();
   if (now >= this.nextCleanupTime) {
     // staleTimeCache is sorted on staleTimeMilliseconds, so we only need to
     // erase the stale entries at the front, then quit.
     while (this.staleTimeCache.length > 0 && this.staleTimeCache[0].isStale(now))
       this.staleTimeCache.shift();
-    
+
     this.nextCleanupTime = now + this.cleanupIntervalMilliseconds;
   }
 };
@@ -213,7 +213,7 @@ MemoryContentCache.prototype.doCleanup = function()
 /**
  * Content is a private class to hold the name and encoding for each entry
  * in the cache. This base class is for a Data packet without a FreshnessPeriod.
- * 
+ *
  * Create a new Content entry to hold data's name and wire encoding.
  * @param {Data} data The Data packet whose name and wire encoding are copied.
  */
@@ -233,11 +233,11 @@ MemoryContentCache.Content.prototype.getName = function() { return this.name; };
 MemoryContentCache.Content.prototype.getDataEncoding = function() { return this.dataEncoding; };
 
 /**
- * StaleTimeContent extends Content to include the staleTimeMilliseconds for 
+ * StaleTimeContent extends Content to include the staleTimeMilliseconds for
  * when this entry should be cleaned up from the cache.
  *
- * Create a new StaleTimeContent to hold data's name and wire encoding as well 
- * as the staleTimeMilliseconds which is now plus 
+ * Create a new StaleTimeContent to hold data's name and wire encoding as well
+ * as the staleTimeMilliseconds which is now plus
  * data.getMetaInfo().getFreshnessPeriod().
  * @param {Data} data The Data packet whose name and wire encoding are copied.
  */
@@ -246,10 +246,10 @@ MemoryContentCache.StaleTimeContent = function MemoryContentCacheStaleTimeConten
 {
   // Call the base constructor.
   MemoryContentCache.Content.call(this, data);
-  
-  // Set up staleTimeMilliseconds which is The time when the content becomse 
+
+  // Set up staleTimeMilliseconds which is The time when the content becomse
   // stale in milliseconds according to new Date().getTime().
-  this.staleTimeMilliseconds = new Date().getTime() + 
+  this.staleTimeMilliseconds = new Date().getTime() +
     data.getMetaInfo().getFreshnessPeriod();
 };
 
@@ -258,11 +258,11 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
 
 /**
  * Check if this content is stale.
- * @param {number} nowMilliseconds The current time in milliseconds from 
+ * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
  * @returns {boolean} true if this interest is stale, otherwise false.
  */
-MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds) 
-{ 
+MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
+{
   return this.staleTimeMilliseconds <= nowMilliseconds;
 };

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,18 +23,18 @@ var Blob = require('../util/blob.js').Blob;
 
 /**
  * ProtobufTlv has static methods to encode and decode an Protobuf Message o
- * bject as NDN-TLV. The Protobuf tag value is used as the TLV type code. A 
- * Protobuf message is encoded/decoded as a nested TLV encoding. Protobuf types 
- * uint32, uint64 and enum are encoded/decoded as TLV nonNegativeInteger. (It is 
- * an error if an enum value is negative.) Protobuf types bytes and string are 
- * encoded/decoded as TLV bytes. The Protobuf type bool is encoded/decoded as a 
- * TLV boolean (a zero length value for True, omitted for False). Other Protobuf 
+ * bject as NDN-TLV. The Protobuf tag value is used as the TLV type code. A
+ * Protobuf message is encoded/decoded as a nested TLV encoding. Protobuf types
+ * uint32, uint64 and enum are encoded/decoded as TLV nonNegativeInteger. (It is
+ * an error if an enum value is negative.) Protobuf types bytes and string are
+ * encoded/decoded as TLV bytes. The Protobuf type bool is encoded/decoded as a
+ * TLV boolean (a zero length value for True, omitted for False). Other Protobuf
  * types are an error.
  *
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
  */
-var ProtobufTlv = function ProtobufTlv() 
+var ProtobufTlv = function ProtobufTlv()
 {
 };
 
@@ -48,7 +48,7 @@ ProtobufTlv.establishField = function()
     try {
       // Using protobuf.min.js in the browser.
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
-    } 
+    }
     catch (ex) {
       // Using protobufjs in node.
       ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
@@ -57,10 +57,10 @@ ProtobufTlv.establishField = function()
 }
 
 /**
- * Encode the Protobuf message object as NDN-TLV. This calls 
- * message.encodeAB() to ensure that all required fields are present and 
+ * Encode the Protobuf message object as NDN-TLV. This calls
+ * message.encodeAB() to ensure that all required fields are present and
  * raises an exception if not. (This does not use the result of toArrayBuffer().)
- * @param {ProtoBuf.Builder.Message} message The Protobuf message object. 
+ * @param {ProtoBuf.Builder.Message} message The Protobuf message object.
  * @param {ProtoBuf.Reflect.T} descriptor The reflection descriptor for the
  * message. For example, if the message is of type "MyNamespace.MyMessage" then
  * the descriptor is builder.lookup("MyNamespace.MyMessage").
@@ -69,7 +69,7 @@ ProtobufTlv.establishField = function()
 ProtobufTlv.encode = function(message, descriptor)
 {
   ProtobufTlv.establishField();
-  
+
   message.encodeAB();
   var encoder = new TlvEncoder();
   ProtobufTlv._encodeMessageValue(message, descriptor, encoder);
@@ -77,9 +77,9 @@ ProtobufTlv.encode = function(message, descriptor)
 };
 
 /**
- * Decode the input as NDN-TLV and update the fields of the Protobuf message 
+ * Decode the input as NDN-TLV and update the fields of the Protobuf message
  * object.
- * @param {ProtoBuf.Builder.Message} message The Protobuf message object. This 
+ * @param {ProtoBuf.Builder.Message} message The Protobuf message object. This
  * does not first clear the object.
  * @param {ProtoBuf.Reflect.T} descriptor The reflection descriptor for the
  * message. For example, if the message is of type "MyNamespace.MyMessage" then
@@ -89,18 +89,18 @@ ProtobufTlv.encode = function(message, descriptor)
 ProtobufTlv.decode = function(message, descriptor, input)
 {
   ProtobufTlv.establishField();
-  
+
   if (ProtobufTlv._Field === null) {
     if (dcodeIO)
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     else
       ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
   }
-  
+
   // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ? 
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
-                     
+
   var decoder = new TlvDecoder(decodeBuffer);
   ProtobufTlv._decodeMessageValue
     (message, descriptor, decoder, decodeBuffer.length);
@@ -113,7 +113,7 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
   for (var iField = fields.length - 1; iField >= 0; --iField) {
     var field = fields[iField];
     var tlvType = field.id;
-    
+
     var values;
     if (field.repeated)
       values = message[field.name];
@@ -124,11 +124,11 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
       else
         continue;
     }
-    
+
     // Encode the values backwards.
     for (var iValue = values.length - 1; iValue >= 0; --iValue) {
       var value = values[iValue];
-      
+
       if (field.type.name == "message") {
         var saveLength =  encoder.getLength();
 
@@ -165,10 +165,10 @@ ProtobufTlv._decodeMessageValue = function(message, descriptor, decoder, endOffs
   for (var iField = 0; iField < fields.length; ++iField) {
     var field = fields[iField];
     var tlvType = field.id;
-    
+
     if (!field.required && !decoder.peekType(tlvType, endOffset))
       continue;
-    
+
     if (field.repeated) {
       while (decoder.peekType(tlvType, endOffset)) {
         if (field.type.name == "message") {
@@ -181,7 +181,7 @@ ProtobufTlv._decodeMessageValue = function(message, descriptor, decoder, endOffs
         }
         else
           message.add
-            (field.name, 
+            (field.name,
              ProtobufTlv._decodeFieldValue(field, tlvType, decoder, endOffset));
       }
     }
@@ -196,14 +196,14 @@ ProtobufTlv._decodeMessageValue = function(message, descriptor, decoder, endOffs
       }
       else
         message.set
-          (field.name, 
+          (field.name,
            ProtobufTlv._decodeFieldValue(field, tlvType, decoder, endOffset));
     }
-  }  
+  }
 };
 
 /**
- * This is a helper for _decodeMessageValue. Decode a single field and return 
+ * This is a helper for _decodeMessageValue. Decode a single field and return
  * the value. Assume the field.type.name is not "message".
  */
 ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)

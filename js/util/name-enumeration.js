@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -28,12 +28,12 @@ var Name = require('../name.js').Name;
  * @param {Face} face The Face object for using expressInterest.
  * @param {function} onComponents The onComponents callback given to getComponents.
  */
-var NameEnumeration = function NameEnumeration(face, onComponents) 
+var NameEnumeration = function NameEnumeration(face, onComponents)
 {
   this.face = face;
   this.onComponents = onComponents;
   this.contentParts = [];
-  
+
   var self = this;
   this.onData = function(interest, data) { self.processData(data); };
   this.onTimeout = function(interest) { self.processTimeout(); };
@@ -46,14 +46,14 @@ exports.NameEnumeration = NameEnumeration;
  * @param {Face} face The Face object for using expressInterest.
  * @param {Name} name The name prefix for finding the child components.
  * @param {function} onComponents On getting the response, this calls onComponents(components) where
- * components is an array of Buffer name components.  If there is no response, this calls onComponents(null). 
+ * components is an array of Buffer name components.  If there is no response, this calls onComponents(null).
  */
 NameEnumeration.getComponents = function(face, prefix, onComponents)
 {
   var command = new Name(prefix);
   // Add %C1.E.be
   command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
-  
+
   var enumeration = new NameEnumeration(face, onComponents);
   face.expressInterest(command, enumeration.onData, enumeration.onTimeout);
 };
@@ -62,7 +62,7 @@ NameEnumeration.getComponents = function(face, prefix, onComponents)
  * Parse the response from the name enumeration command and call this.onComponents.
  * @param {Data} data
  */
-NameEnumeration.prototype.processData = function(data) 
+NameEnumeration.prototype.processData = function(data)
 {
   try {
     if (!NameEnumeration.endsWithSegmentNumber(data.getName()))
@@ -122,17 +122,17 @@ NameEnumeration.parseComponents = function(content)
 {
   var components = [];
   var decoder = new BinaryXMLDecoder(content);
-  
+
   decoder.readElementStartDTag(NDNProtocolDTags.Collection);
- 
+
   while (decoder.peekDTag(NDNProtocolDTags.Link)) {
-    decoder.readElementStartDTag(NDNProtocolDTags.Link);    
+    decoder.readElementStartDTag(NDNProtocolDTags.Link);
     decoder.readElementStartDTag(NDNProtocolDTags.Name);
-    
+
     components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
-    
-    decoder.readElementClose();  
-    decoder.readElementClose();  
+
+    decoder.readElementClose();
+    decoder.readElementClose();
   }
 
   decoder.readElementClose();
