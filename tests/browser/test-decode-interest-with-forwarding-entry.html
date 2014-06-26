@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,194 +22,194 @@
 
 <head>
 	<title>NDN Decode Interest + Forwarding Entry</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
-	
 
-		
+
+
 		function decode(){
 
 			var input = document.getElementById('result').innerHTML;
 
 			// The hard-wired input is in Binary XML.
 			var interest = EncodingUtils.decodeHexInterest(input, BinaryXmlWireFormat.get());
-			
+
 			if(LOG>3)console.log('INTEREST DECODED');
 			if(LOG>3)console.log(interest);
 
 			///////////////////////////////////////
-			
+
 			var output ="";
-			
-			
+
+
 			if(interest.getName()!=null){
 				output+= "NAME: " + interest.getName().toUri();
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.faceInstance!=null ){
 				output+= "FaceInstance: ";
-				
+
 					output+=  interest.faceInstance;
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getExclude()!=null ){
 				output+= "Exclude: ";
-				
+
 					output+=  interest.getExclude().toUri();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getChildSelector()!=null ){
 				output+= "ChildSelector: ";
-				
+
 					output+=  interest.getChildSelector();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.setAnswerOriginKind()!=null ){
 				output+= "AnswerOriginKind: ";
-				
+
 					output+=  interest.setAnswerOriginKind();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getInterestLifetimeMilliseconds()!=null ){
 				output+= "InterestLifetime: ";
-				
+
 					output+=  interest.getInterestLifetimeMilliseconds();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if (interest.getNonce().size() > 0) {
 				output+= "Nonce: ";
-				
+
 				output+=  interest.getNonce().toHex();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
-			
+
+
 			if(interest.setScope()!=null ){
 				output+= "SCOPE: ";
-				
+
 					output+=  interest.setScope();
-				
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-	
+
 			if(interest.publisherPublicKeyDigest!=null ){
 				output+= "PUBLISHER PUBLIC KEY DIGEST: ";
-				
+
 				output+=  interest.publisherPublicKeyDigest.publisherPublicKeyDigest;
-                                        
+
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getMaxSuffixComponents()!=null ){
 				output+= "MaxSuffixComponents : ";
-				
+
 				output+=  interest.getMaxSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getMinSuffixComponents()!=null ){
 				output+= "MinSuffixComponents : ";
-				
+
 				output+=  interest.getMinSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";
 			}
-			
+
 			if(interest.getName().get(3) !=null){
-				
-				
+
+
 				var input = interest.getName().get(3).getValue().toHex();
 
     			// The hard-wired input is in Binary XML.
 				var data = EncodingUtils.decodeHexData(input, BinaryXmlWireFormat.get());
-				
+
 				if(!data.getContent().isNull()){
 					output+= "Content of data packet: ";
-					
+
 						output+=  data.getContent().toHex();
-						
+
 					output+= "<br />";
 					output+= "<br />";
 				}
-				
-				
+
+
 				var content = data.getContent().toHex();
-				
+
 				var data = data;
-				
-				
+
+
 				////////////////////////////////////////
-				
+
 
 				if(data.getName()!=null){
 					output+= "NAME: " + data.getName().toUri();
 					output+= "<br />";
 					output+= "<br />";
 				}
-	
+
 				if(!data.getContent().isNull()) {
 					output += "CONTENT(ASCII): "+ data.getContent().toHex();
-					
+
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(!data.getContent().isNull()){
 					output += "CONTENT(hex): "+ data.getContent().toHex();
-					
+
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(data.getSignature() != null && data.getSignature().getSignature() != null){
-					
+
 					output += "SIGNATURE(hex): "+ data.getSignature().getSignature().toHex();
-					
+
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(data.getMetaInfo() !=null && data.getMetaInfo().publisher!=null && data.getMetaInfo().publisher.publisherPublicKeyDigest!=null){
-					
+
 					output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
-					
+
 					output+= "<br />";
 					output+= "<br />";
 				}
 				if(data.getMetaInfo() !=null && data.getMetaInfo().timestamp!=null){
 					var d = new Date();
 					d.setTime( data.getMetaInfo().timestamp.msec );
-					
+
 					var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-					
+
 					output += "TimeStamp: "+d;
 					output+= "<br />";
 					output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
-					
-					
+
+
 					output+= "<br />";
 				}
 			    if(data.getMetaInfo() !=null && data.getMetaInfo().getType()!=null){
@@ -236,63 +236,63 @@
 					output+= "<br />";
 					output+= "<br />";
 				}
-								
+
 				////////////////////////////////////////
-				
-				
+
+
 				var forwardingEntry = EncodingUtils.decodeHexForwardingEntry(content);
-				
+
 				if(LOG>3)console.log('FORWARDING ENTRY IS PRESENT');
 				if(LOG>3)console.log(forwardingEntry);
 
 				///////////////////////////////////////
-				
+
 				//var output ="";
-				
+
 				if(forwardingEntry.action!=null ){
 					output+= "Action: ";
-					
+
 					output+=  DataUtils.toHex(forwardingEntry.action);
-						
+
 					output+= "<br />";
 					output+= "<br />";
 				}
-				
+
 				if(forwardingEntry.prefixName!=null){
 					output+= "PrefixName: ";
-					
+
 					output+= forwardingEntry.prefixName.toUri();
 					output+= "<br />";
 				}
-				
+
 				if(forwardingEntry.ndndID!=null){
 					output+= "ndndID: ";
-					
+
 					output+= forwardingEntry.ndndID;
 					output+= "<br />";
 				}
-				
+
 				if(forwardingEntry.flags!=null){
 					output+= "Flags: ";
-					
+
 					output+= forwardingEntry.flags;
 					output+= "<br />";
 				}
-				
+
 				if(forwardingEntry.lifetime!=null){
 					output+= "Lifetime: ";
-					
+
 					output+= forwardingEntry.lifetime;
 					output+= "<br />";
 				}
 
-				
+
 			}
-			
-			
-			
+
+
+
 			document.getElementById('result').innerHTML = output;
-			
+
 		}
 
 	</script>
@@ -300,9 +300,9 @@
 </head>
 <body >
 	<form>
-		
+
 		Please Press Decode:<br />
-		
+
 
 	</form>
 	<button onclick="decode()">Decode</button>

@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,22 +24,22 @@
 	<title>Test WebSocket Support</title>
 
 	<script type="text/javascript">
-	
+
 		function test(){
 			var output = "";
-			
+
 			if ('WebSocket' in window) {
 				output += "This browser support WebSocket.";
 			} else {
 				output += "No WebSocket support.";
 			}
-			
+
 			document.getElementById('result').innerHTML += output;
-			
+
 			console.log("starting websocket...");
 			if ("WebSocket" in window) {
 			    var ws = new WebSocket("ws://localhost:9696");
-			    
+
 			    ws.onopen = function() {
 			        console.log("WebSockets connection opened");
 			        ws.send("Hello Server (from client).");
@@ -61,7 +61,7 @@
 </head>
 <body >
 	<button onclick="test()">Test Now!</button>
-	
+
 	<p id="result">Result here: </p>
 
 </body>

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,11 +21,11 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Tlv0_1WireFormat = require('./tlv-0_1-wire-format.js').Tlv0_1WireFormat;
 
 /**
- * A TlvWireFormat extends WireFormat to override its methods to 
+ * A TlvWireFormat extends WireFormat to override its methods to
  * implement encoding and decoding using the preferred implementation of NDN-TLV.
  * @constructor
  */
-var TlvWireFormat = function TlvWireFormat() 
+var TlvWireFormat = function TlvWireFormat()
 {
   // Inherit from Tlv0_1WireFormat.
   Tlv0_1WireFormat.call(this);
@@ -40,8 +40,8 @@ exports.TlvWireFormat = TlvWireFormat;
 TlvWireFormat.instance = null;
 
 /**
- * Get a singleton instance of a TlvWireFormat.  Assuming that the default 
- * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()), 
+ * Get a singleton instance of a TlvWireFormat.  Assuming that the default
+ * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()),
  * you can check if this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
  * @returns {TlvWireFormat} The singleton instance.

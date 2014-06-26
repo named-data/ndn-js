@@ -1,7 +1,7 @@
-/** 
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,21 +24,21 @@ var Transport = require('./transport.js').Transport;
 /**
  * @constructor
  */
-var WebSocketTransport = function WebSocketTransport() 
+var WebSocketTransport = function WebSocketTransport()
 {
   // Call the base constructor.
   Transport.call(this);
-  
+
   if (!WebSocket)
     throw new Error("WebSocket support is not available on this platform.");
-    
+
   this.ws = null;
   this.connectionInfo = null; // Read by Face.
   this.elementReader = null;
   this.defaultGetConnectionInfo = Face.makeShuffledHostGetConnectionInfo
-    (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu", 
-      "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu", 
-      "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu", 
+    (["A.ws.ndn.ucla.edu", "B.ws.ndn.ucla.edu", "C.ws.ndn.ucla.edu", "D.ws.ndn.ucla.edu",
+      "E.ws.ndn.ucla.edu", "F.ws.ndn.ucla.edu", "G.ws.ndn.ucla.edu", "H.ws.ndn.ucla.edu",
+      "I.ws.ndn.ucla.edu", "J.ws.ndn.ucla.edu", "K.ws.ndn.ucla.edu", "L.ws.ndn.ucla.edu",
       "M.ws.ndn.ucla.edu", "N.ws.ndn.ucla.edu"],
      9696,
      function(host, port) { return new WebSocketTransport.ConnectionInfo(host, port); });
@@ -50,19 +50,19 @@ WebSocketTransport.prototype.name = "WebSocketTransport";
 exports.WebSocketTransport = WebSocketTransport;
 
 /**
- * Create a new WebSocketTransport.ConnectionInfo which extends 
- * Transport.ConnectionInfo to hold the host and port info for the WebSocket 
+ * Create a new WebSocketTransport.ConnectionInfo which extends
+ * Transport.ConnectionInfo to hold the host and port info for the WebSocket
  * connection.
  * @param {string} host The host for the connection.
  * @param {number} port (optional) The port number for the connection. If
  * omitted, use 9696.
  */
 WebSocketTransport.ConnectionInfo = function WebSocketTransportConnectionInfo
-  (host, port) 
+  (host, port)
 {
   // Call the base constructor.
   Transport.ConnectionInfo .call(this);
-  
+
   port = (port !== undefined ? port : 9696);
 
   this.host = host;
@@ -78,7 +78,7 @@ WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.Connectio
  * @param {WebSocketTransport.ConnectionInfo} The other object to check.
  * @returns {boolean} True if the objects have equal fields, false if not.
  */
-WebSocketTransport.ConnectionInfo.prototype.equals = function(other) 
+WebSocketTransport.ConnectionInfo.prototype.equals = function(other)
 {
   if (other == null || other.host == undefined || other.port == undefined)
     return false;
@@ -91,45 +91,45 @@ WebSocketTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
- * Connect to a WebSocket according to the info in connectionInfo. Listen on 
- * the port to read an entire packet element and call 
- * elementListener.onReceivedElement(element). Note: this connect method 
- * previously took a Face object which is deprecated and renamed as the method 
+ * Connect to a WebSocket according to the info in connectionInfo. Listen on
+ * the port to read an entire packet element and call
+ * elementListener.onReceivedElement(element). Note: this connect method
+ * previously took a Face object which is deprecated and renamed as the method
  * connectByFace.
  * @param {WebSocketTransport.ConnectionInfo} connectionInfo A
  * WebSocketTransport.ConnectionInfo with the host and port.
- * @param {object} elementListener The elementListener with function 
+ * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
  * @returns {undefined}
  */
 WebSocketTransport.prototype.connect = function
-  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback)
 {
   this.close();
-  
+
   this.ws = new WebSocket('ws://' + connectionInfo.host + ':' + connectionInfo.port);
   if (LOG > 0) console.log('ws connection created.');
     this.connectionInfo = connectionInfo;
-  
+
   this.ws.binaryType = "arraybuffer";
-  
+
   this.elementReader = new ElementReader(elementListener);
   var self = this;
   this.ws.onmessage = function(ev) {
     var result = ev.data;
     //console.log('RecvHandle called.');
-      
+
     if (result == null || result == undefined || result == "") {
       console.log('INVALID ANSWER');
-    } 
+    }
     else if (result instanceof ArrayBuffer) {
       var bytearray = new Buffer(result);
-          
+
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
-      
+
       try {
         // Find the end of the binary XML element and call face.onReceivedElement.
         self.elementReader.onReceivedData(bytearray);
@@ -139,7 +139,7 @@ WebSocketTransport.prototype.connect = function
       }
     }
   }
-  
+
   this.ws.onopen = function(ev) {
     if (LOG > 3) console.log(ev);
     if (LOG > 3) console.log('ws.onopen: WebSocket connection opened.');
@@ -148,43 +148,43 @@ WebSocketTransport.prototype.connect = function
 
     onopenCallback();
   }
-  
+
   this.ws.onerror = function(ev) {
     console.log('ws.onerror: ReadyState: ' + this.readyState);
     console.log(ev);
     console.log('ws.onerror: WebSocket error: ' + ev.data);
   }
-  
+
   this.ws.onclose = function(ev) {
     console.log('ws.onclose: WebSocket connection closed.');
     self.ws = null;
-    
+
     onclosedCallback();
   }
 };
 
 /**
- * @deprecated This is deprecated. You should not call Transport.connect 
+ * @deprecated This is deprecated. You should not call Transport.connect
  * directly, since it is called by Face methods.
  */
-WebSocketTransport.prototype.connectByFace = function(face, onopenCallback) 
+WebSocketTransport.prototype.connectByFace = function(face, onopenCallback)
 {
   this.connect
     (face.connectionInfo, face, onopenCallback,
      function() { face.closeByTransport(); });
 };
-  
+
 /**
  * Send the Uint8Array data.
  */
-WebSocketTransport.prototype.send = function(data) 
+WebSocketTransport.prototype.send = function(data)
 {
   if (this.ws != null) {
-    // If we directly use data.buffer to feed ws.send(), 
+    // If we directly use data.buffer to feed ws.send(),
     // WebSocket may end up sending a packet with 10000 bytes of data.
     // That is, WebSocket will flush the entire buffer
     // regardless of the offset of the Uint8Array. So we have to create
-    // a new Uint8Array buffer with just the right size and copy the 
+    // a new Uint8Array buffer with just the right size and copy the
     // content from binaryInterest to the new buffer.
     //    ---Wentao
     var bytearray = new Uint8Array(data.length);

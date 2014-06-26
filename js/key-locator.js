@@ -3,7 +3,7 @@
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -40,14 +40,14 @@ exports.KeyLocatorType = KeyLocatorType;
 /**
  * @constructor
  */
-var KeyLocator = function KeyLocator(input,type) 
-{ 
+var KeyLocator = function KeyLocator(input,type)
+{
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
     this.type = input.type;
     this.keyName = new KeyName();
     if (input.keyName != null) {
-      this.keyName.contentName = input.keyName.contentName == null ? 
+      this.keyName.contentName = input.keyName.contentName == null ?
         null : new Name(input.keyName.contentName);
       this.keyName.publisherID = input.keyName.publisherID;
     }
@@ -90,25 +90,25 @@ KeyLocator.prototype.getType = function() { return this.type; };
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
  * @returns {Name} The key name. If not specified, the Name is empty.
  */
-KeyLocator.prototype.getKeyName = function() 
-{ 
+KeyLocator.prototype.getKeyName = function()
+{
   if (this.keyName == null)
     this.keyName = new KeyName();
   if (this.keyName.contentName == null)
     this.keyName.contentName = new Name();
-  
+
   return this.keyName.contentName;
 };
 
 /**
- * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is 
- * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER 
- * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the 
- * DER encoded certificate. 
+ * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
+ * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER
+ * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the
+ * DER encoded certificate.
  * @returns {Blob} The key data, or null if not specified.
  */
-KeyLocator.prototype.getKeyData = function() 
-{ 
+KeyLocator.prototype.getKeyData = function()
+{
   // For temporary backwards compatibility, leave the fields as a Buffer but return a Blob.
   return new Blob(this.getKeyDataAsBuffer(), false);
 };
@@ -117,8 +117,8 @@ KeyLocator.prototype.getKeyData = function()
  * @deprecated Use getKeyData. This method returns a Buffer which is the former
  * behavior of getKeyData, and should only be used while updating your code.
  */
-KeyLocator.prototype.getKeyDataAsBuffer = function() 
-{ 
+KeyLocator.prototype.getKeyDataAsBuffer = function()
+{
   if (this.type == KeyLocatorType.KEY)
     return this.publicKey;
   else if (this.type == KeyLocatorType.CERTIFICATE)
@@ -133,24 +133,24 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * setKeyData() to the digest.
  * @param {number} type The key locator type.  If null, the type is unspecified.
  */
-KeyLocator.prototype.setType = function(type) { this.type = type; }; 
+KeyLocator.prototype.setType = function(type) { this.type = type; };
 
 /**
- * Set key name to a copy of the given Name.  This is the name if getType() 
+ * Set key name to a copy of the given Name.  This is the name if getType()
  * is KeyLocatorType.KEYNAME.
  * @param {Name} name The key name which is copied.
  */
-KeyLocator.prototype.setKeyName = function(name) 
-{ 
+KeyLocator.prototype.setKeyName = function(name)
+{
   if (this.keyName == null)
     this.keyName = new KeyName();
-  
+
   this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
-                             new Name(name) : new Name(); 
-}; 
+                             new Name(name) : new Name();
+};
 
 /**
- * Set the key data to the given value. This is the digest bytes if getType() is 
+ * Set the key data to the given value. This is the digest bytes if getType() is
  * KeyLocatorType.KEY_LOCATOR_DIGEST.
  * @param {Buffer} keyData The array with the key data bytes.
  */
@@ -161,10 +161,10 @@ KeyLocator.prototype.setKeyData = function(keyData)
     if (typeof value === 'object' && value instanceof Blob)
       value = new Buffer(value.buf());
     else
-      // Make a copy.                                                                                                      
+      // Make a copy.
       value = new Buffer(value);
   }
-  
+
   this.keyData = value;
   // Set for backwards compatibility.
   this.publicKey = value;
@@ -174,7 +174,7 @@ KeyLocator.prototype.setKeyData = function(keyData)
 /**
  * Clear the keyData and set the type to none.
  */
-KeyLocator.prototype.clear = function() 
+KeyLocator.prototype.clear = function()
 {
   this.type = null;
   this.keyName = null;
@@ -187,39 +187,39 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
 
   decoder.readElementStartDTag(this.getElementLabel());
 
-  if (decoder.peekDTag(NDNProtocolDTags.Key)) 
+  if (decoder.peekDTag(NDNProtocolDTags.Key))
   {
     try {
       var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
       // This is a DER-encoded SubjectPublicKeyInfo.
-      
+
       //TODO FIX THIS, This should create a Key Object instead of keeping bytes
 
       this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-      this.type = KeyLocatorType.KEY;    
+      this.type = KeyLocatorType.KEY;
 
       if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-    } 
+    }
     catch (e) {
       throw new Error("Cannot parse key: ", e);
-    } 
+    }
 
     if (null == this.publicKey)
       throw new Error("Cannot parse key: ");
-  } 
+  }
   else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
     try {
       var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
-      
+
       /*
        * Certificates not yet working
        */
-      
+
       this.certificate = encodedCert;
       this.type = KeyLocatorType.CERTIFICATE;
 
-      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);      
-    } 
+      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);
+    }
     catch (e) {
       throw new Error("Cannot decode certificate: " +  e);
     }
@@ -227,14 +227,14 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
       throw new Error("Cannot parse certificate! ");
   } else  {
     this.type = KeyLocatorType.KEYNAME;
-    
+
     this.keyName = new KeyName();
     this.keyName.from_ndnb(decoder);
   }
   decoder.readElementClose();
-};  
+};
 
-KeyLocator.prototype.to_ndnb = function(encoder) 
+KeyLocator.prototype.to_ndnb = function(encoder)
 {
   if (LOG > 4) console.log('type is is ' + this.type);
 
@@ -244,35 +244,35 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     return;
 
   encoder.writeElementStartDTag(this.getElementLabel());
-  
+
   if (this.type == KeyLocatorType.KEY) {
     if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);  
-  } 
-  else if (this.type == KeyLocatorType.CERTIFICATE) {  
+    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);
+  }
+  else if (this.type == KeyLocatorType.CERTIFICATE) {
     try {
       encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
-    } 
+    }
     catch (e) {
       throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-    }    
-  } 
+    }
+  }
   else if (this.type == KeyLocatorType.KEYNAME)
     this.keyName.to_ndnb(encoder);
 
   encoder.writeElementClose();
 };
 
-KeyLocator.prototype.getElementLabel = function() 
+KeyLocator.prototype.getElementLabel = function()
 {
-  return NDNProtocolDTags.KeyLocator; 
+  return NDNProtocolDTags.KeyLocator;
 };
 
 /**
  * KeyName is only used by KeyLocator.
  * @constructor
  */
-var KeyName = function KeyName() 
+var KeyName = function KeyName()
 {
   this.contentName = new Name();  //contentName
   this.publisherID = this.publisherID;  //publisherID
@@ -280,33 +280,33 @@ var KeyName = function KeyName()
 
 exports.KeyName = KeyName;
 
-KeyName.prototype.from_ndnb = function(decoder) 
+KeyName.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
 
   this.contentName = new Name();
   this.contentName.from_ndnb(decoder);
-  
+
   if (LOG > 4) console.log('KEY NAME FOUND: ');
-  
+
   if (PublisherID.peek(decoder)) {
     this.publisherID = new PublisherID();
     this.publisherID.from_ndnb(decoder);
   }
-  
+
   decoder.readElementClose();
 };
 
 KeyName.prototype.to_ndnb = function(encoder)
 {
   encoder.writeElementStartDTag(this.getElementLabel());
-  
+
   this.contentName.to_ndnb(encoder);
   if (null != this.publisherID)
     this.publisherID.to_ndnb(encoder);
 
-  encoder.writeElementClose();       
+  encoder.writeElementClose();
 };
-  
+
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 

@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,29 +23,29 @@
 
 <head>
   <title>NDN Get File via WebSocket</title>
-  
+
   <script type="text/javascript" src="../../build/ndn.js"></script>
 
   <script type="text/javascript">
     hostip = "localhost";
     var face = new Face({port:9696,host:hostip,verify:false});
-        
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
                 /*
      * Closure for calling expressInterest to fetch big file.
-     */                                                
+     */
     var ContentClosure = function ContentClosure(face, T0) {
         // Inherit from Closure.
         Closure.call(this);
-        
+
         this.T0 = T0;
         this.face = face;
       this.totalBlocks = 0;
-        
+
         this.firstReceivedSegmentNumber = null;
         this.firstReceivedData = null;
     }
-    
+
     ContentClosure.prototype.upcall = function(kind, upcallInfo) {
         if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
           var T1 = new Date();
@@ -54,29 +54,29 @@
             document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
             return Closure.RESULT_OK;
         }
-        
+
         if (kind == Closure.UPCALL_CONTENT_BAD) {
           console.log("NdnProtocol.ContentClosure: signature verification failed");
           console.log(upcallInfo.data.getName().toUri());
           console.log(DataUtils.toHex(upcallInfo.data.getSignature().witness).toLowerCase());
           return Closure.RESULT_OK;
         }
-        
+
         if (!(kind == Closure.UPCALL_CONTENT ||
               kind == Closure.UPCALL_CONTENT_UNVERIFIED))
             // The upcall is not for us.
             return Closure.RESULT_ERR;
-        
+
         var data = upcallInfo.data;
         if (data.getContent().isNull()) {
             console.log("data content is null");
             return Closure.RESULT_ERR;
         }
-    
+
         // Use the segmentNumber to load multiple segments.
         var segmentNumber = DataUtils.bigEndianToUnsignedInt
                     (data.getName().get(-1).getValue().buf());
-        
+
           if (this.firstReceivedSegmentNumber == null) {
               // This is the first call.
               this.firstReceivedSegmentNumber = segmentNumber;
@@ -91,21 +91,21 @@
                   return Closure.RESULT_OK;
               }
           }
-        
+
         // Process received data here...
         // Count content length
         //nameStr = escape(data.getName().toUri());
         this.totalBlocks++;
-        
+
         // Check for the special case if the saved content is for the next segment that we need.
-        if (this.firstReceivedData != null && 
+        if (this.firstReceivedData != null &&
             this.firstReceivedSegmentNumber == segmentNumber + 1) {
             // Substitute the saved data send its content and keep going.
             data = this.firstReceivedData;
             segmentNumber = segmentNumber + 1;
             // Clear firstReceivedData to save memory.
             this.firstReceivedData = null;
-            
+
             // Process received data here...
           // Count content length
           //nameStr = escape(data.getName().toUri());
@@ -113,11 +113,11 @@
         //document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
         this.totalBlocks++;
         }
-    
+
         var finalSegmentNumber = null;
         if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
             finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
-        
+
         if (finalSegmentNumber == null || segmentNumber != finalSegmentNumber) {
             // Make a name for the next segment and get it.
             //var segmentNumberPlus1 = NumToArray(segmentNumber + 1);
@@ -126,7 +126,7 @@
             // Put a 0 byte in front.
             var nextSegmentNumber = new Uint8Array(segmentNumberPlus1.length + 1);
             nextSegmentNumber.set(segmentNumberPlus1, 1);
-            
+
             var components = data.getName().components.slice
                 (0, data.getName().size() - 1);
             components.push(nextSegmentNumber);
@@ -141,10 +141,10 @@
             document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>";
             document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
         }
-            
+
         return Closure.RESULT_OK;
     };
-    
+
     /*
      * Convert the big endian Uint8Array to an unsigned int.
      * Don't check for overflow.
@@ -157,16 +157,16 @@
         }
         return result;
     };
-    
+
     /*
      * Convert the int value to a new big endian Uint8Array and return.
-     * If value is 0 or negative, return Uint8Array(0). 
+     * If value is 0 or negative, return Uint8Array(0).
      */
     function NumToArray(value) {
         value = Math.round(value);
         if (value <= 0)
             return new Uint8Array(0);
-        
+
         numString = value.toString();
         var size = numString.length;
         var result = new Uint8Array(size);
@@ -175,27 +175,27 @@
         }
         return result;
     };
-    
+
     function run() {
       document.getElementById('content').innerHTML += "<p>Started...</p>";
       var name = new Name(document.getElementById('interest').value);
       // TODO: Use expressInterest with callbacks, not Closure.
-      face.expressInterest( name, 
+      face.expressInterest( name,
                     new ContentClosure( face, new Date() ));
     }
-    
+
   </script>
-  
+
 </head>
 <body >
 
   <form>
     Please Enter an Interest:<br />
-    <input id="interest" type="text" name="INTEREST" size="50" value="/wentao.shang/choir_jail.png" /> 
+    <input id="interest" type="text" name="INTEREST" size="50" value="/wentao.shang/choir_jail.png" />
   </form>
 
   <button onclick="run()">Fetch Content</button>
-  
+
   <p id="content">Result: <br/></p>
 
 </body>

@@ -2,7 +2,7 @@
  * Encapsulate a Buffer and support dynamic reallocation.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,11 +24,11 @@
  * @constructor
  * @param {number} length the initial length of the array.  If null, use a default.
  */
-var DynamicBuffer = function DynamicBuffer(length) 
+var DynamicBuffer = function DynamicBuffer(length)
 {
   if (!length)
     length = 16;
-    
+
   this.array = new Buffer(length);
 };
 
@@ -39,31 +39,31 @@ exports.DynamicBuffer = DynamicBuffer;
  * Update the length of this.array which may be greater than length.
  * @param {number} length The minimum length for the array.
  */
-DynamicBuffer.prototype.ensureLength = function(length) 
+DynamicBuffer.prototype.ensureLength = function(length)
 {
   if (this.array.length >= length)
     return;
-    
+
   // See if double is enough.
   var newLength = this.array.length * 2;
   if (length > newLength)
     // The needed length is much greater, so use it.
     newLength = length;
-    
+
   var newArray = new Buffer(newLength);
   this.array.copy(newArray);
   this.array = newArray;
 };
 
 /**
- * Copy the value to this.array at offset, reallocating if necessary. 
+ * Copy the value to this.array at offset, reallocating if necessary.
  * @param {Buffer} value The buffer to copy.
  * @param {number} offset The offset in the buffer to start copying into.
  */
-DynamicBuffer.prototype.copy = function(value, offset) 
+DynamicBuffer.prototype.copy = function(value, offset)
 {
   this.ensureLength(value.length + offset);
-    
+
   if (Buffer.isBuffer(value))
     value.copy(this.array, offset);
   else
@@ -77,17 +77,17 @@ DynamicBuffer.prototype.copy = function(value, offset)
  * Update the length of this.array which may be greater than length.
  * @param {number} length The minimum length for the array.
  */
-DynamicBuffer.prototype.ensureLengthFromBack = function(length) 
+DynamicBuffer.prototype.ensureLengthFromBack = function(length)
 {
   if (this.array.length >= length)
     return;
-    
+
   // See if double is enough.
   var newLength = this.array.length * 2;
   if (length > newLength)
     // The needed length is much greater, so use it.
     newLength = length;
-    
+
   var newArray = new Buffer(newLength);
   // Copy to the back of newArray.
   this.array.copy(newArray, newArray.length - this.array.length);
@@ -102,7 +102,7 @@ DynamicBuffer.prototype.ensureLengthFromBack = function(length)
  * @param {offsetFromBack} offset The offset from the back of the array to start
  * copying.
  */
-DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack) 
+DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 {
   this.ensureLengthFromBack(offsetFromBack);
 
@@ -119,7 +119,7 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
  * @param {number} end The end index for the slice.
  * @returns {Buffer} The buffer slice.
  */
-DynamicBuffer.prototype.slice = function(begin, end) 
+DynamicBuffer.prototype.slice = function(begin, end)
 {
   return this.array.slice(begin, end);
 };

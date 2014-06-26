@@ -1,9 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,7 +22,7 @@
 
 <head>
 	<title>NDN Encode/Decode Interest</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.js"></script>
 
 	<script type="text/javascript">
@@ -44,32 +44,32 @@
             interest.setExclude(new Exclude());
             interest.getExclude().appendComponent(Name.fromEscapedString("abc"));
             interest.getExclude().appendAny();
-                
+
 			var output = EncodingUtils.encodeToHexInterest(interest);
-			
+
 			document.getElementById('result').innerHTML = output;
 
 		}
-		
+
 		function decode() {
 			var input = document.getElementById('result').innerHTML;
-			
+
 			var interest = EncodingUtils.decodeHexInterest(input);
-			
+
 			if (LOG>3)console.log('INTEREST DECODED');
 			if (LOG>3)console.log(interest);
 
 			///////////////////////////////////////
-			
+
 			var output ="";
-			
+
 			if (interest.getName() != null)
 				output += "Name: " + interest.getName().toUri() + "<br/>";
 			if (interest.getMinSuffixComponents() != null )
 				output += "MinSuffixComponents : " + interest.getMinSuffixComponents() + "<br/>";
 			if (interest.getMaxSuffixComponents() != null )
 				output += "MaxSuffixComponents : " + interest.getMaxSuffixComponents() + "<br/>";
-          
+
             output += "KeyLocator: ";
             if (interest.getKeyLocator().getType() >= 0) {
                 if (interest.getKeyLocator().getType() == KeyLocatorType.KEY)
@@ -98,7 +98,7 @@
 				output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
 			if (interest.getExclude() != null )
 				output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
-			
+
 			document.getElementById('result').innerHTML = output;
 		}
 
@@ -107,18 +107,18 @@
 </head>
 <body >
 	<form>
-		
+
 		Please Enter an Interest:<br />
-		
-		<input id="interest" type="text" name="INTEREST" value="/ndn/abc" /> 
-		
+
+		<input id="interest" type="text" name="INTEREST" value="/ndn/abc" />
+
 	</form>
 	<button onclick="encode()">Encode</button>
 	<button onclick="decode()">Decode</button>
-	
+
 			<p id="result"></p>
-	
-	
+
+
 
 		<!--  p id="result">01d2f2fafdc12e4d2e532e6c6f63616c686f737400fabdc12e4d2e53525600faa563636e6400fa9d4b4559000002d28e310000</p-->
 

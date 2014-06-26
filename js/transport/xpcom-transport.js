@@ -1,9 +1,9 @@
-/** 
+/**
  * Implement getAsync and putAsync used by Face using nsISocketTransportService.
  * This is used inside Firefox XPCOM modules.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,11 +26,11 @@
 /**
  * @constructor
  */
-var XpcomTransport = function XpcomTransport() 
+var XpcomTransport = function XpcomTransport()
 {
   // Call the base constructor.
   Transport.call(this);
-  
+
   this.elementListener = null;
   this.socket = null; // nsISocketTransport
   this.outStream = null;
@@ -38,8 +38,8 @@ var XpcomTransport = function XpcomTransport()
   this.httpListener = null;
 
   this.defaultGetConnectionInfo = Face.makeShuffledHostGetConnectionInfo
-    (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu", 
-      "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu", 
+    (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu",
+      "E.hub.ndn.ucla.edu", "F.hub.ndn.ucla.edu", "G.hub.ndn.ucla.edu", "H.hub.ndn.ucla.edu",
       "I.hub.ndn.ucla.edu", "J.hub.ndn.ucla.edu", "K.hub.ndn.ucla.edu"],
      6363,
      function(host, port) { return new XpcomTransport.ConnectionInfo(host, port); });
@@ -49,20 +49,20 @@ XpcomTransport.prototype = new Transport();
 XpcomTransport.prototype.name = "XpcomTransport";
 
 /**
- * Create a new XpcomTransport.ConnectionInfo which extends 
- * Transport.ConnectionInfo to hold the host and port info for the XPCOM 
+ * Create a new XpcomTransport.ConnectionInfo which extends
+ * Transport.ConnectionInfo to hold the host and port info for the XPCOM
  * connection.
  * @param {string} host The host for the connection.
  * @param {number} port (optional) The port number for the connection. If
  * omitted, use 6363.
  */
-XpcomTransport.ConnectionInfo = function XpcomTransportConnectionInfo(host, port) 
+XpcomTransport.ConnectionInfo = function XpcomTransportConnectionInfo(host, port)
 {
   // Call the base constructor.
   Transport.ConnectionInfo .call(this);
-  
+
   port = (port !== undefined ? port : 6363);
-  
+
   this.host = host;
   this.port = port;
 };
@@ -76,7 +76,7 @@ XpcomTransport.ConnectionInfo.prototype.name = "XpcomTransport.ConnectionInfo";
  * @param {XpcomTransport.ConnectionInfo} The other object to check.
  * @returns {boolean} True if the objects have equal fields, false if not.
  */
-XpcomTransport.ConnectionInfo.prototype.equals = function(other) 
+XpcomTransport.ConnectionInfo.prototype.equals = function(other)
 {
   if (other == null || other.host == undefined || other.port == undefined)
     return false;
@@ -89,22 +89,22 @@ XpcomTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
- * Connect to a TCP socket through Xpcom according to the info in connectionInfo. 
- * Listen on the port to read an entire packet element and call 
- * elementListener.onReceivedElement(element). Note: this connect method 
- * previously took a Face object which is deprecated and renamed as the method 
+ * Connect to a TCP socket through Xpcom according to the info in connectionInfo.
+ * Listen on the port to read an entire packet element and call
+ * elementListener.onReceivedElement(element). Note: this connect method
+ * previously took a Face object which is deprecated and renamed as the method
  * connectByFace.
  * @param {XpcomTransport.ConnectionInfo} connectionInfo A
  * XpcomTransport.ConnectionInfo with the host and port.
- * @param {object} elementListener The elementListener with function 
+ * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host, 
+ * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
  * @returns {undefined}
  */
 XpcomTransport.prototype.connect = function
-  (connectionInfo, elementListener, onopenCallback, onclosedCallback) 
+  (connectionInfo, elementListener, onopenCallback, onclosedCallback)
 {
   this.elementListener = elementListener;
   this.connectHelper(connectionInfo, elementListener);
@@ -113,10 +113,10 @@ XpcomTransport.prototype.connect = function
 };
 
 /**
- * @deprecated This is deprecated. You should not call Transport.connect 
+ * @deprecated This is deprecated. You should not call Transport.connect
  * directly, since it is called by Face methods.
  */
-XpcomTransport.prototype.connectByFace = function(face, onopenCallback) 
+XpcomTransport.prototype.connectByFace = function(face, onopenCallback)
 {
   this.connect
     (face.connectionInfo, face, onopenCallback,
@@ -124,20 +124,20 @@ XpcomTransport.prototype.connectByFace = function(face, onopenCallback)
 };
 
 /**
- * Do the work to connect to the socket.  This replaces a previous connection 
+ * Do the work to connect to the socket.  This replaces a previous connection
  * and sets connectionInfo.
- * @param {XpcomTransport.ConnectionInfo|object} connectionInfoOrSocketTransport 
- * The connectionInfo with the host and port to connect to. However, if this is not a 
- * Transport.ConnectionInfo, assume it is an nsISocketTransport which is already 
- * configured for a host and port, in which case set connectionInfo to new 
+ * @param {XpcomTransport.ConnectionInfo|object} connectionInfoOrSocketTransport
+ * The connectionInfo with the host and port to connect to. However, if this is not a
+ * Transport.ConnectionInfo, assume it is an nsISocketTransport which is already
+ * configured for a host and port, in which case set connectionInfo to new
  * XpcomTransport.ConnectionInfo(connectionInfoOrSocketTransport.host, connectionInfoOrSocketTransport.port).
- * @param {object} elementListener The elementListener with function 
+ * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * Listen on the port to read an entire binary XML encoded element and call
  * elementListener.onReceivedElement(element).
  */
 XpcomTransport.prototype.connectHelper = function
-  (connectionInfoOrSocketTransport, elementListener) 
+  (connectionInfoOrSocketTransport, elementListener)
 {
   if (this.socket != null) {
     try {
@@ -156,7 +156,7 @@ XpcomTransport.prototype.connectHelper = function
           (Components.interfaces.nsISocketTransportService);
     this.socket = transportService.createTransport
       (null, 0, connectionInfo.host, connectionInfo.port, null);
-    if (LOG > 0) console.log('XpcomTransport: Connected to ' + 
+    if (LOG > 0) console.log('XpcomTransport: Connected to ' +
       connectionInfo.host + ":" + connectionInfo.port);
     this.connectionInfo = connectionInfo;
   }
@@ -174,7 +174,7 @@ XpcomTransport.prototype.connectHelper = function
   var dataListener = {
     elementReader: new ElementReader(elementListener),
     gotFirstData: false,
-    
+
     onStartRequest: function(request, context) {
     },
     onStopRequest: function(request, context, status) {
@@ -192,12 +192,12 @@ XpcomTransport.prototype.connectHelper = function
             // Set elementReader null so we ignore further input.
             if (LOG > 0) console.log("XpcomTransport: Got HTTP header. Ignoring the NDN element reader.");
             this.elementReader = null;
-            
+
             if (thisXpcomTransport.httpListener != null)
               thisXpcomTransport.httpListener.onHttpRequest(thisXpcomTransport, inputString);
           }
         }
-        
+
         if (this.elementReader != null)
           this.elementReader.onReceivedData(DataUtils.toNumbersFromString(inputString));
       } catch (ex) {
@@ -205,7 +205,7 @@ XpcomTransport.prototype.connectHelper = function
       }
     }
   };
-  
+
   pump.init(inStream, -1, -1, 0, 0, true);
   pump.asyncRead(dataListener, null);
 };
@@ -213,7 +213,7 @@ XpcomTransport.prototype.connectHelper = function
 /**
  * Send the data over the connection created by connect.
  */
-XpcomTransport.prototype.send = function(/* Buffer */ data) 
+XpcomTransport.prototype.send = function(/* Buffer */ data)
 {
   if (this.socket == null || this.connectionInfo == null) {
     console.log("XpcomTransport connection is not established.");
@@ -229,8 +229,8 @@ XpcomTransport.prototype.send = function(/* Buffer */ data)
       // The socket is still alive. Assume there could still be incoming data. Just throw the exception.
       throw ex;
 
-    if (LOG > 0) 
-      console.log("XpcomTransport.send: Trying to reconnect to " + 
+    if (LOG > 0)
+      console.log("XpcomTransport.send: Trying to reconnect to " +
         this.connectionInfo.toString() + " and resend after exception: " + ex);
 
     this.connectHelper(this.connectionInfo, this.elementListener);

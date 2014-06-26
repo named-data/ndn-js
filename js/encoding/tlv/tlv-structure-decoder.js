@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@ var TlvStructureDecoder = function TlvStructureDecoder()
   this.state = TlvStructureDecoder.READ_TYPE;
   this.headerLength = 0;
   this.useHeaderBuffer = false;
-  // 8 bytes is enough to hold the extended bytes in the length encoding 
+  // 8 bytes is enough to hold the extended bytes in the length encoding
   // where it is an 8-byte number.
   this.headerBuffer = new Buffer(8);
   this.nBytesToRead = 0;
@@ -44,9 +44,9 @@ TlvStructureDecoder.READ_LENGTH_BYTES = 3;
 TlvStructureDecoder.READ_VALUE_BYTES =  4;
 
 /**
- * Continue scanning input starting from this.offset to find the element end.  
- * If the end of the element which started at offset 0 is found, this returns 
- * true and getOffset() is the length of the element.  Otherwise, this returns 
+ * Continue scanning input starting from this.offset to find the element end.
+ * If the end of the element which started at offset 0 is found, this returns
+ * true and getOffset() is the length of the element.  Otherwise, this returns
  * false which means you should read more into input and call again.
  * @param {Buffer} input The input buffer. You have to pass in input each time
  * because the buffer could be reallocated.
@@ -101,7 +101,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
       var firstOctet = input[this.offset];
       this.offset += 1;
       if (firstOctet < 253) {
-        // The value is simple, so we can skip straight to reading 
+        // The value is simple, so we can skip straight to reading
         //  the value bytes.
         this.nBytesToRead = firstOctet;
         if (this.nBytesToRead == 0) {
@@ -113,7 +113,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         this.state = TlvStructureDecoder.READ_VALUE_BYTES;
       }
       else {
-        // We need to read the bytes in the extended encoding of 
+        // We need to read the bytes in the extended encoding of
         //  the length.
         if (firstOctet == 253)
           this.nBytesToRead = 2;
@@ -143,7 +143,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
         var nNeededBytes = this.nBytesToRead - this.headerLength;
         if (nNeededBytes > nRemainingBytes) {
-          // We can't get all of the header bytes from this input. 
+          // We can't get all of the header bytes from this input.
           // Save in headerBuffer.
           if (this.headerLength + nRemainingBytes > this.headerBuffer.length)
             // We don't expect this to happen.
@@ -157,7 +157,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
           return false;
         }
 
-        // Copy the remaining bytes into headerBuffer, read the 
+        // Copy the remaining bytes into headerBuffer, read the
         //   length and set nBytesToRead.
         if (this.headerLength + nNeededBytes > this.headerBuffer.length)
           // We don't expect this to happen.
@@ -172,7 +172,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         // Replace nBytesToRead with the length of the value.
         this.nBytesToRead = bufferDecoder.readExtendedVarNumber(this.firstOctet);
       }
-      
+
       if (this.nBytesToRead == 0) {
         // No value bytes to read. We're finished.
         this.gotElementEnd = true;

@@ -1,10 +1,10 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,13 +23,13 @@
 
 <head>
 	<title>Test Encode/Decode Benchmark</title>
-	
+
 	<script type="text/javascript" src="../../build/ndn.min.js"></script>
 	<script type="text/javascript" src="test-encode-decode-benchmark.js"></script>
 
 	<script type="text/javascript">
     /**
-     * Call benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds with appropriate nInterations.  Print the 
+     * Call benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds with appropriate nInterations.  Print the
      * results to console.log.
      * @param {boolean} useComplex See benchmarkEncodeDataSeconds.
      * @param {boolean} useCrypto See benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds.
@@ -45,16 +45,16 @@
         var nIterations = useCrypto ? 500 : 150000;
         var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
         document.getElementById('result').innerHTML +=
-          "Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
-          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
+          "Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
+          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";
       }
       setTimeout(function() {
         var nIterations = useCrypto ? 4000 : 100000;
         var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
         document.getElementById('result').innerHTML +=
-          "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ") 
-          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";  
-  
+          "Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
+          + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration) + "<br/>";
+
         if (continuation)
           setTimeout(continuation, 100);
       }, 100);
@@ -62,7 +62,7 @@
 
 		function test(){
       document.getElementById('result').innerHTML = "Results:<br/>";
-      
+
       // Make two passes, one for each wire format.
       WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
       benchmarkEncodeDecodeData(false, false, function() {
@@ -90,7 +90,7 @@
 </head>
 <body >
 	<button onclick="test()">Test</button>
-	
+
 	<p id="result"></p>
 
 </body>

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -34,7 +34,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
  * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
  * @constructor
  */
-var BinaryXmlWireFormat = function BinaryXmlWireFormat() 
+var BinaryXmlWireFormat = function BinaryXmlWireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
@@ -50,19 +50,19 @@ BinaryXmlWireFormat.instance = null;
  * @param {Interest} interest The Interest to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-BinaryXmlWireFormat.prototype.encodeInterest = function(interest) 
+BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeInterest(interest, encoder);  
-  return new Blob(encoder.getReducedOstream(), false);  
+  BinaryXmlWireFormat.encodeInterest(interest, encoder);
+  return new Blob(encoder.getReducedOstream(), false);
 };
 
 /**
- * Decode input as a Binary XML interest and set the fields of the interest object. 
+ * Decode input as a Binary XML interest and set the fields of the interest object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input) 
+BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new BinaryXMLDecoder(input);
   BinaryXmlWireFormat.decodeInterest(interest, decoder);
@@ -72,13 +72,13 @@ BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data as Binary XML and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
  * @returns {object} An associative array with fields
- * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding 
- * is a Blob containing the encoding, signedPortionBeginOffset is the offset in 
- * the encoding of the beginning of the signed portion, and 
- * signedPortionEndOffset is the offset in the encoding of the end of the 
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-BinaryXmlWireFormat.prototype.encodeData = function(data) 
+BinaryXmlWireFormat.prototype.encodeData = function(data)
 {
   var encoder = new BinaryXMLEncoder(1500);
   var result = BinaryXmlWireFormat.encodeData(data, encoder);
@@ -95,17 +95,17 @@ BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
 };
 
 /**
- * Decode input as a Binary XML data packet, set the fields in the data object, and return 
- * the signed offsets. 
+ * Decode input as a Binary XML data packet, set the fields in the data object, and return
+ * the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where 
- * signedPortionBeginOffset is the offset in the encoding of the beginning of 
- * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-BinaryXmlWireFormat.prototype.decodeData = function(data, input) 
+BinaryXmlWireFormat.prototype.decodeData = function(data, input)
 {
   var decoder = new BinaryXMLDecoder(input);
   return BinaryXmlWireFormat.decodeData(data, decoder);
@@ -114,15 +114,15 @@ BinaryXmlWireFormat.prototype.decodeData = function(data, input)
 /**
  * @deprecated Use decodeData(data, input).
  */
-BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input) 
+BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
 {
   this.decodeData(data, input);
 };
 
 /**
- * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default 
- * wire format was set with 
- * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if 
+ * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default
+ * wire format was set with
+ * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if
  * this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
  * @returns {BinaryXmlWireFormat} The singleton instance.
@@ -139,49 +139,49 @@ BinaryXmlWireFormat.get = function()
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
  */
-BinaryXmlWireFormat.encodeInterest = function(interest, encoder) 
+BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
-    
-  interest.getName().to_ndnb(encoder);
-  
-  if (null != interest.getMinSuffixComponents()) 
-    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());  
 
-  if (null != interest.getMaxSuffixComponents()) 
+  interest.getName().to_ndnb(encoder);
+
+  if (null != interest.getMinSuffixComponents())
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
+
+  if (null != interest.getMaxSuffixComponents())
     encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.getMaxSuffixComponents());
 
-  if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
+  if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
       !interest.getKeyLocator().getKeyData().isNull() &&
       interest.getKeyLocator().getKeyData().size() > 0)
     // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
     encoder.writeDTagElement
-      (NDNProtocolDTags.PublisherPublicKeyDigest, 
+      (NDNProtocolDTags.PublisherPublicKeyDigest,
        interest.getKeyLocator().getKeyData());
   else {
     if (null != interest.publisherPublicKeyDigest)
       interest.publisherPublicKeyDigest.to_ndnb(encoder);
   }
-    
+
   if (null != interest.getExclude())
     interest.getExclude().to_ndnb(encoder);
-    
-  if (null != interest.getChildSelector()) 
+
+  if (null != interest.getChildSelector())
     encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null) 
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null)
     encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
-    
-  if (null != interest.setScope()) 
+
+  if (null != interest.setScope())
     encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
-    
-  if (null != interest.getInterestLifetimeMilliseconds()) 
-    encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
+
+  if (null != interest.getInterestLifetimeMilliseconds())
+    encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime,
                 DataUtils.nonNegativeIntToBigEndian((interest.getInterestLifetimeMilliseconds() / 1000.0) * 4096));
-    
+
   if (interest.getNonce().size() > 0)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
-    
+
   encoder.writeElementClose();
 };
 
@@ -190,7 +190,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
  * @param {Interest} interest
  * @param {BinaryXMLDecoder} decoder
  */
-BinaryXmlWireFormat.decodeInterest = function(interest, decoder) 
+BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
@@ -202,11 +202,11 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   else
     interest.setMinSuffixComponents(null);
 
-  if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
+  if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents))
     interest.setMaxSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents));
   else
     interest.setMaxSuffixComponents(null);
-      
+
   // Initially clear the keyLocator.
   interest.getKeyLocator().clear();
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
@@ -218,7 +218,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   if (interest.publisherPublicKeyDigest != null &&
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
       interest.publisherPublicKeyDigest.publisherPublicKeyDigest.length > 0) {
-    // We keep the deprecated publisherPublicKeyDigest for backwards 
+    // We keep the deprecated publisherPublicKeyDigest for backwards
     //   compatibility.  Also set the key locator.
     interest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
     interest.getKeyLocator().setKeyData
@@ -231,17 +231,17 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
   else
     interest.setExclude(new Exclude());
-    
+
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
     interest.setChildSelector(decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector));
   else
     interest.setChildSelector(null);
-    
+
   if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
     interest.setAnswerOriginKind(decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind));
   else
     interest.setAnswerOriginKind(null);
-    
+
   if (decoder.peekDTag(NDNProtocolDTags.Scope))
     interest.setScope(decoder.readIntegerDTagElement(NDNProtocolDTags.Scope));
   else
@@ -251,13 +251,13 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
     interest.setInterestLifetimeMilliseconds(1000.0 * DataUtils.bigEndianToUnsignedInt
                (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096);
   else
-    interest.setInterestLifetimeMilliseconds(null);              
-    
+    interest.setInterestLifetimeMilliseconds(null);
+
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
     interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));
   else
     interest.setNonce(null);
-    
+
   decoder.readElementClose();
 };
 
@@ -266,37 +266,37 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
  * @param {Data} data
  * @param {BinaryXMLEncoder} encoder
  * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where 
- * signedPortionBeginOffset is the offset in the encoding of the beginning of 
- * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-BinaryXmlWireFormat.encodeData = function(data, encoder)  
+BinaryXmlWireFormat.encodeData = function(data, encoder)
 {
   //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
-  if (null != data.getSignature()) 
+  if (null != data.getSignature())
     data.getSignature().to_ndnb(encoder);
-    
+
   var signedPortionBeginOffset = encoder.offset;
 
-  if (null != data.getName()) 
+  if (null != data.getName())
     data.getName().to_ndnb(encoder);
-  
-  if (null != data.getMetaInfo()) 
+
+  if (null != data.getMetaInfo())
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
     //   the key locator from the MetaInfo to the Signauture object.
     data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
   encoder.writeDTagElement(NDNProtocolDTags.Content, data.getContent().buf());
-  
+
   var signedPortionEndOffset = encoder.offset;
-  
+
   encoder.writeElementClose();
-  
-  return { signedPortionBeginOffset: signedPortionBeginOffset, 
-           signedPortionEndOffset: signedPortionEndOffset };  
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -304,12 +304,12 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
  * @param {Data} data
  * @param {BinaryXMLDecoder} decoder
  * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where 
- * signedPortionBeginOffset is the offset in the encoding of the beginning of 
- * the signed portion, and signedPortionEndOffset is the offset in the encoding 
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-BinaryXmlWireFormat.decodeData = function(data, decoder) 
+BinaryXmlWireFormat.decodeData = function(data, decoder)
 {
   // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
   decoder.readElementStartDTag(data.getElementLabel());
@@ -320,17 +320,17 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   }
   else
     data.setSignature(new Signature());
-    
+
   var signedPortionBeginOffset = decoder.offset;
 
   data.setName(new Name());
   data.getName().from_ndnb(decoder);
-    
+
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
     data.setMetaInfo(new MetaInfo());
     data.getMetaInfo().from_ndnb(decoder);
     if (data.getMetaInfo().locator != null && data.getSignature() != null)
-      // Copy the key locator pointer to the Signature object for the transition 
+      // Copy the key locator pointer to the Signature object for the transition
       //   of moving the key locator from the MetaInfo to the Signature object.
       data.getSignature().setKeyLocator(data.getMetaInfo().locator);
   }
@@ -338,11 +338,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
     data.setMetaInfo(new MetaInfo());
 
   data.setContent(decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true));
-    
+
   var signedPortionEndOffset = decoder.offset;
-    
+
   decoder.readElementClose();
-    
-  return { signedPortionBeginOffset: signedPortionBeginOffset, 
-           signedPortionEndOffset: signedPortionEndOffset };  
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };

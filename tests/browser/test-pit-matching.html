@@ -1,10 +1,10 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
-<!-- 
+<!--
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -24,36 +24,36 @@
 
 <head>
   <title>NDN PIT Matching</title>
-  
+
   <script type="text/javascript" src="../../build/ndn.js"></script>
 
   <script type="text/javascript">
     var face = new Face({verify:false});
-        
+
                 var AsyncGetClosure = function AsyncGetClosure(target) {
           // Inherit from Closure.
       Closure.call(this);
-            
+
             this.target = target;
     };
-    
+
     AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
       if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
-        document.getElementById(this.target).innerHTML = 
+        document.getElementById(this.target).innerHTML =
                     DataUtils.toString(upcallInfo.data.getContent().buf());
                 return Closure.RESULT_OK;
             }
             else
                 return Closure.RESULT_ERR;
     };
-    
+
         var name = new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt");
-        
+
         var interestSelector1 = new Interest();
         interestSelector1.setInterestLifetimeMilliseconds(10000);
         interestSelector1.setMinSuffixComponents(3);
         interestSelector1.setMaxSuffixComponents(3);
-        
+
         var interestSelector2 = new Interest();
         interestSelector2.setInterestLifetimeMilliseconds(10000);
         interestSelector2.setMinSuffixComponents(4);
@@ -85,11 +85,11 @@
               // For testing, make sure we don't just process in the order returned.
               DataUtils.shuffle(Face.PITTable);
             };
-            
+
       // TODO: Use expressInterest with callbacks, not Closure.
       face.expressInterest(name, new AsyncGetClosure("col1Content0"), interestSelector1);
     }
-  </script>  
+  </script>
 </head>
 <body >
   <button id="runBtn" onclick="run()">Run</button>
@@ -164,6 +164,6 @@
       <td style="vertical-align: top;"><div id="col4Content9"/></td>
     </tr>
   </tbody>
-  </table>  
+  </table>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,7 +22,7 @@ var Data = require('../..').Data;
 var SignedInfo = require('../..').SignedInfo;
 var UnixTransport = require('../..').UnixTransport;
 
-function onInterest(prefix, interest, transport) 
+function onInterest(prefix, interest, transport)
 {
   console.log("Interest received : " + interest.getName().toUri());
 
@@ -41,7 +41,7 @@ function onInterest(prefix, interest, transport)
   }
 }
 
-function onRegisterFailed(prefix) 
+function onRegisterFailed(prefix)
 {
   console.log("Register failed for prefix " + prefix.toUri());
   face.close();  // This will cause the script to quit.

@@ -2,7 +2,7 @@
  * This class represents Face Instances
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').Publi
  * @constructor
  */
 var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
-    multicastTTL, freshnessSeconds) 
+    multicastTTL, freshnessSeconds)
 {
   this.action = action;
   this.publisherPublicKeyDigest = publisherPublicKeyDigest;
@@ -46,12 +46,12 @@ FaceInstance.NetworkProtocol = { TCP:6, UDP:17};
  * Used by NetworkObject to decode the object from a network stream.
  */
 FaceInstance.prototype.from_ndnb = function(
-  //XMLDecoder 
-  decoder) 
+  //XMLDecoder
+  decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
-  
-  if (decoder.peekDTag(NDNProtocolDTags.Action))   
+
+  if (decoder.peekDTag(NDNProtocolDTags.Action))
     this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
   if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
     this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
@@ -62,9 +62,9 @@ FaceInstance.prototype.from_ndnb = function(
   if (decoder.peekDTag(NDNProtocolDTags.IPProto)) {
     //int
     var pI = decoder.readIntegerDTagElement(NDNProtocolDTags.IPProto);
-    
+
     this.ipProto = null;
-    
+
     if (FaceInstance.NetworkProtocol.TCP == pI)
       this.ipProto = FaceInstance.NetworkProtocol.TCP;
     else if (FaceInstance.NetworkProtocol.UDP == pI)
@@ -72,17 +72,17 @@ FaceInstance.prototype.from_ndnb = function(
     else
       throw new Error("FaceInstance.decoder.  Invalid NDNProtocolDTags.IPProto field: " + pI);
   }
-  
+
   if (decoder.peekDTag(NDNProtocolDTags.Host))
     this.host = decoder.readUTF8DTagElement(NDNProtocolDTags.Host);
   if (decoder.peekDTag(NDNProtocolDTags.Port))
-    this.Port = decoder.readIntegerDTagElement(NDNProtocolDTags.Port); 
+    this.Port = decoder.readIntegerDTagElement(NDNProtocolDTags.Port);
   if (decoder.peekDTag(NDNProtocolDTags.MulticastInterface))
-    this.multicastInterface = decoder.readUTF8DTagElement(NDNProtocolDTags.MulticastInterface); 
+    this.multicastInterface = decoder.readUTF8DTagElement(NDNProtocolDTags.MulticastInterface);
   if (decoder.peekDTag(NDNProtocolDTags.MulticastTTL))
-    this.multicastTTL = decoder.readIntegerDTagElement(NDNProtocolDTags.MulticastTTL); 
+    this.multicastTTL = decoder.readIntegerDTagElement(NDNProtocolDTags.MulticastTTL);
   if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds); 
+    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
 
   decoder.readElementClose();
 };
@@ -92,12 +92,12 @@ FaceInstance.prototype.from_ndnb = function(
  */
 FaceInstance.prototype.to_ndnb = function(
   //XMLEncoder
-  encoder) 
+  encoder)
 {
   encoder.writeElementStartDTag(this.getElementLabel());
-  
+
   if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);  
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
   if (null != this.publisherPublicKeyDigest)
     this.publisherPublicKeyDigest.to_ndnb(encoder);
   if (null != this.faceID)
@@ -105,7 +105,7 @@ FaceInstance.prototype.to_ndnb = function(
   if (null != this.ipProto)
     encoder.writeDTagElement(NDNProtocolDTags.IPProto, this.ipProto);
   if (null != this.host && this.host.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Host, this.host);  
+    encoder.writeDTagElement(NDNProtocolDTags.Host, this.host);
   if (null != this.Port)
     encoder.writeDTagElement(NDNProtocolDTags.Port, this.Port);
   if (null != this.multicastInterface && this.multicastInterface.length != 0)
@@ -115,10 +115,10 @@ FaceInstance.prototype.to_ndnb = function(
   if (null != this.freshnessSeconds)
     encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
 
-  encoder.writeElementClose();         
+  encoder.writeElementClose();
 };
 
-FaceInstance.prototype.getElementLabel = function() 
+FaceInstance.prototype.getElementLabel = function()
 {
   return NDNProtocolDTags.FaceInstance;
 };

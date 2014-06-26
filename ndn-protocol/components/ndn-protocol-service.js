@@ -3,7 +3,7 @@
  * Protocol handling code derived from http://mike.kaply.com/2011/01/18/writing-a-firefox-protocol-handler/
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -56,7 +56,7 @@ NdnProtocol.prototype = {
             var baseUriParts = NdnProtocolInfo.splitUri(aBaseURI.spec);
             var baseName = new Name(baseUriParts.name);
             var iFileName = baseName.indexOfFileName();
-            
+
             var relativeName = uriParts.name;
             // Handle ../
             while (true) {
@@ -70,38 +70,38 @@ NdnProtocol.prototype = {
                 else
                     break;
             }
-            
+
             var prefixUri = "/";
             if (iFileName > 0)
                 prefixUri = baseName.getPrefix(iFileName).toUri() + "/";
             uri.spec = "ndn:" + prefixUri + relativeName + uriParts.search + uriParts.hash;
         }
-        
+
         return uri;
     },
 
     newChannel: function(aURI)
     {
-        try {            
+        try {
             var uriParts = NdnProtocolInfo.splitUri(aURI.spec);
-    
+
             var template = new Interest(new Name([]));
             // Use the same default as Face.expressInterest.
             template.setInterestLifetimeMilliseconds(4000);
             var searchWithoutNdn = extractNdnSearch(uriParts.search, template);
-            
+
             var segmentTemplate = new Interest(new Name([]));
             // Only use the interest selectors which make sense for fetching further segments.
             segmentTemplate.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
             segmentTemplate.setScope(template.setScope());
             segmentTemplate.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
-    
-            var requestContent = function(contentListener) {                
+
+            var requestContent = function(contentListener) {
                 var name = new Name(uriParts.name);
                 // Use the same Face object each time.
-                var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name, 
+                var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name,
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
-                     
+
                 /* Disable until bug is fixed for opening multiple tabs.
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
@@ -129,11 +129,11 @@ if (XPCOMUtils.generateNSGetFactory)
     var NSGetFactory = XPCOMUtils.generateNSGetFactory([NdnProtocol]);
 else
     var NSGetModule = XPCOMUtils.generateNSGetModule([NdnProtocol]);
-                
+
 /*
  * Create a closure for calling expressInterest.
  * contentListener is from the call to requestContent.
- * uriName is the name in the URI passed to newChannel (used in part to determine whether to request 
+ * uriName is the name in the URI passed to newChannel (used in part to determine whether to request
  *   only that segment number and for updating the URL bar).
  * aURI is the URI passed to newChannel.
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
@@ -141,20 +141,20 @@ else
  * segmentTemplate is the template used in expressInterest to fetch further segments.
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  * TODO: Use expressInterest with callbacks, not Closure.
- */                                                
+ */
 var ContentClosure = function ContentClosure
-      (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate) 
+      (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate)
 {
     // Inherit from Closure.
     Closure.call(this);
-    
+
     this.face = face;
     this.contentListener = contentListener;
     this.uriName = uriName;
     this.aURI = aURI;
     this.uriSearchAndHash = uriSearchAndHash;
     this.segmentTemplate = segmentTemplate;
-    
+
     this.segmentStore = new SegmentStore();
     this.contentSha256 = Cc["@mozilla.org/security/hash;1"].createInstance(Ci.nsICryptoHash);
     this.contentSha256.init(this.contentSha256.SHA256);
@@ -167,13 +167,13 @@ var ContentClosure = function ContentClosure
     this.iMetaComponent = null;
 };
 
-ContentClosure.prototype.upcall = function(kind, upcallInfo) 
+ContentClosure.prototype.upcall = function(kind, upcallInfo)
 {
   try {
     if (this.contentListener.isDone())
         // We are getting unexpected extra results.
         return Closure.RESULT_ERR;
-    
+
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
         dump("NdnProtocol: Interest timed out: " + upcallInfo.interest.toUri());
         if (!this.didOnStart) {
@@ -187,30 +187,30 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         else
             // ExponentialReExpressClosure already tried to re-express, so quit.
             return Closure.RESULT_ERR;
-    }  
-      
+    }
+
     if (!(kind == Closure.UPCALL_CONTENT ||
           kind == Closure.UPCALL_CONTENT_UNVERIFIED))
         // The upcall is not for us.
         return Closure.RESULT_ERR;
-        
+
     var data = upcallInfo.data;
     if (data.getContent().isNull()) {
         dump("NdnProtocol.ContentClosure: data content is null\n");
         return Closure.RESULT_ERR;
     }
-    
+
     // Assume this is only called once we're connected, report the host and port.
     NdnProtocolInfo.setConnectedNdnHub
       (this.face.connectionInfo.host, this.face.connectionInfo.port);
-    
+
     // If !this.uriEndsWithSegmentNumber, we use the segmentNumber to load multiple segments.
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName()))
         segmentNumber = DataUtils.bigEndianToUnsignedInt
             (data.getName().get(-1).getValue().buf());
-    
+
     if (!this.didOnStart) {
         // This is the first or only segment.
         var iMetaComponent = getIndexOfMetaComponent(data.getName());
@@ -225,14 +225,14 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             this.excludedMetaComponents.push(data.getName().getComponent(iMetaComponent));
             // Exclude components are required to be sorted.
             this.excludedMetaComponents.sort(Exclude.compareComponents);
-            
+
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.setExclude(new Exclude(this.excludedMetaComponents));
             // TODO: Use expressInterest with callbacks, not Closure.
             this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
-        
+
         iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
         if (!this.uriEndsWithSegmentNumber && iNdnfsFileComponent >= 0 && getIndexOfNdnfsFileComponent(this.uriName) < 0) {
            // The matched content name has an NDNFS file meta component that wasn't requested in the original
@@ -241,15 +241,15 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
            if (data.getName().size() >= iNdnfsFileComponent + 2) {
              // Make a name /<prefix>/<version>/%00.
              var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
-               (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);    
+               (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);
              // TODO: Use expressInterest with callbacks, not Closure.
              this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
            }
            return Closure.RESULT_OK;
         }
-            
+
         this.didOnStart = true;
-        
+
         // Get the URI from the Data including the version.
         var contentUriSpec;
         if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
@@ -258,13 +258,13 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         }
         else
             contentUriSpec = "ndn:" + data.getName().toUri();
-    
+
         // Include the search and hash.
         contentUriSpec += this.uriSearchAndHash;
-    
+
         var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-        this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset, 
+        this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset,
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
 
         if (segmentNumber == null) {
@@ -277,7 +277,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             if (!this.uriEndsWithSegmentNumber) {
                 var nameContentDigest = data.getName().getContentDigestValue();
                 if (nameContentDigest != null && this.contentSha256 != null &&
-                    !DataUtils.arraysEqual(nameContentDigest, 
+                    !DataUtils.arraysEqual(nameContentDigest,
                               DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                     // TODO: How to show the user an error for invalid digest?
                     dump("Content does not match digest in name " + data.getName().toUri() + "\n");
@@ -288,16 +288,16 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             // We are doing segments.  Make sure we always request the same base name.
             this.nameWithoutSegment = data.getName().getPrefix(-1);
     }
-    
+
     if (segmentNumber == null)
         // We should be doing segments at this point.
         return Closure.RESULT_ERR;
-    
+
     if (!(data.getName().size() == this.nameWithoutSegment.size() + 1 &&
           this.nameWithoutSegment.match(data.getName())))
         // The data packet object name is not part of our sequence of segments.
         return Closure.RESULT_ERR;
-    
+
     this.segmentStore.storeContent(segmentNumber, data);
 
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
@@ -310,14 +310,14 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         data = entry.value;
         this.contentListener.onReceivedContent(DataUtils.toString(data.getContent().buf()));
         this.contentSha256.update(data.getContent().buf(), data.getContent().size());
-        
+
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
             ContentClosure.removeClosureForWindow(this);
             var nameContentDigest = data.getName().getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
-                !DataUtils.arraysEqual(nameContentDigest, 
+                !DataUtils.arraysEqual(nameContentDigest,
                       DataUtils.toNumbersFromString(this.contentSha256.finish(false))))
                 // TODO: How to show the user an error for invalid digest?
                 dump("Content does not match digest in name " + data.getName().toUri() + "\n");
@@ -342,13 +342,13 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     for (var i = 0; i < toRequest.length; ++i) {
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
-        
+
         // TODO: Use expressInterest with callbacks, not Closure.
         this.face.expressInterest
-            (new Name(this.nameWithoutSegment).addSegment(toRequest[i]), 
+            (new Name(this.nameWithoutSegment).addSegment(toRequest[i]),
              new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
-        
+
     return Closure.RESULT_OK;
   } catch (ex) {
         dump("ContentClosure.upcall exception: " + ex + "\n" + ex.stack);
@@ -361,11 +361,11 @@ ContentClosure.closureForWindowList = [];
 /*
  * We use closureForWindowList to keep only one closure for each document window.
  * window is the window with the URL bar.
- * closure is the ContentClosure to associate with it.  
+ * closure is the ContentClosure to associate with it.
  * If there is already another closure for window, callits contentListener.onStop(); so
  *   that further calls to upcall will do nothing.
  */
-ContentClosure.setClosureForWindow = function(window, closure) 
+ContentClosure.setClosureForWindow = function(window, closure)
 {
     for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
         var entry = ContentClosure.closureForWindowList[i];
@@ -379,14 +379,14 @@ ContentClosure.setClosureForWindow = function(window, closure)
             return;
         }
     }
-    
+
     ContentClosure.closureForWindowList.push({ window: window, closure: closure });
 };
 
 /*
  * Remove any entry in closureForWindowList for closure.  This is called when the closure is done.
  */
-ContentClosure.removeClosureForWindow = function(closure) 
+ContentClosure.removeClosureForWindow = function(closure)
 {
     for (var i = ContentClosure.closureForWindowList.length - 1; i >= 0; --i) {
         if (ContentClosure.closureForWindowList[i].closure == closure)
@@ -397,7 +397,7 @@ ContentClosure.removeClosureForWindow = function(closure)
 /*
  * A SegmentStore stores segments until they are retrieved in order starting with segment 0.
  */
-var SegmentStore = function SegmentStore() 
+var SegmentStore = function SegmentStore()
 {
     // Each entry is an object where the key is the segment number and value is null if
     //   the segment number is requested or the data if received.
@@ -405,7 +405,7 @@ var SegmentStore = function SegmentStore()
     this.maxRetrievedSegmentNumber = -1;
 };
 
-SegmentStore.prototype.storeContent = function(segmentNumber, data) 
+SegmentStore.prototype.storeContent = function(segmentNumber, data)
 {
     // We don't expect to try to store a segment that has already been retrieved, but check anyway.
     if (segmentNumber > this.maxRetrievedSegmentNumber)
@@ -413,11 +413,11 @@ SegmentStore.prototype.storeContent = function(segmentNumber, data)
 };
 
 /*
- * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value is not null, 
- *   then delete from the store, return the entry with key and value, and update maxRetrievedSegmentNumber.  
+ * If the min segment number is this.maxRetrievedSegmentNumber + 1 and its value is not null,
+ *   then delete from the store, return the entry with key and value, and update maxRetrievedSegmentNumber.
  * Otherwise return null.
  */
-SegmentStore.prototype.maybeRetrieveNextEntry = function() 
+SegmentStore.prototype.maybeRetrieveNextEntry = function()
 {
     if (this.store.entries.length > 0 && this.store.entries[0].value != null &&
         this.store.entries[0].key == this.maxRetrievedSegmentNumber + 1) {
@@ -436,7 +436,7 @@ SegmentStore.prototype.maybeRetrieveNextEntry = function()
  *   already requested and is not returned.  If a segment number is returned, create a
  *   entry in the segment store with a null value.
  */
-SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments) 
+SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
 {
     // First, count how many are already requested.
     var nRequestedSegments = 0;
@@ -448,7 +448,7 @@ SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
                 return [];
         }
     }
-    
+
     var toRequest = [];
     var nextSegmentNumber = this.maxRetrievedSegmentNumber + 1;
     for (var i = 0; i < this.store.entries.length; ++i) {
@@ -463,17 +463,17 @@ SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
         }
         if (nRequestedSegments >= totalRequestedSegments)
             break;
-        
+
         nextSegmentNumber = entry.key + 1;
     }
-    
+
     // We already filled in the gaps for the segments in the store. Continue after the last.
     while (nRequestedSegments < totalRequestedSegments) {
         toRequest.push(nextSegmentNumber);
         ++nextSegmentNumber;
         ++nRequestedSegments;
     }
-    
+
     // Mark the new segment numbers as requested.
     for (var i = 0; i < toRequest.length; ++i)
         this.store.set(toRequest[i], null);
@@ -483,17 +483,17 @@ SegmentStore.prototype.requestSegmentNumbers = function(totalRequestedSegments)
 /*
  * A SortedArray is an array of objects with key and value, where the key is an integer.
  */
-var SortedArray = function SortedArray() 
+var SortedArray = function SortedArray()
 {
     this.entries = [];
 };
 
-SortedArray.prototype.sortEntries = function() 
+SortedArray.prototype.sortEntries = function()
 {
     this.entries.sort(function(a, b) { return a.key - b.key; });
 };
 
-SortedArray.prototype.indexOfKey = function(key) 
+SortedArray.prototype.indexOfKey = function(key)
 {
     for (var i = 0; i < this.entries.length; ++i) {
         if (this.entries[i].key == key)
@@ -503,19 +503,19 @@ SortedArray.prototype.indexOfKey = function(key)
     return -1;
 };
 
-SortedArray.prototype.set = function(key, value) 
+SortedArray.prototype.set = function(key, value)
 {
     var i = this.indexOfKey(key);
     if (i >= 0) {
         this.entries[i].value = value;
         return;
     }
-    
+
     this.entries.push({ key: key, value: value});
     this.sortEntries();
 };
 
-SortedArray.prototype.removeAt = function(index) 
+SortedArray.prototype.removeAt = function(index)
 {
     this.entries.splice(index, 1);
 };
@@ -524,13 +524,13 @@ SortedArray.prototype.removeAt = function(index)
  * Scan the name from the last component to the first (skipping special name components)
  *   for a recognized file name extension, and return an object with properties contentType and charset.
  */
-function getNameContentTypeAndCharset(name) 
+function getNameContentTypeAndCharset(name)
 {
     var iFileName = name.indexOfFileName();
     if (iFileName < 0)
         // Get the default mime type.
         return MimeTypes.getContentTypeAndCharset("");
-    
+
     return MimeTypes.getContentTypeAndCharset
         (DataUtils.toString(name.get(iFileName).getValue().buf()).toLowerCase());
 }
@@ -539,7 +539,7 @@ function getNameContentTypeAndCharset(name)
  * Return true if the last component in the name is a segment number.  Require at least one name component
  * before the segment number.
  */
-function endsWithSegmentNumber(name) 
+function endsWithSegmentNumber(name)
 {
     return name.size() >= 2 &&
         name.get(-1).getValue().size() >= 1 &&
@@ -551,11 +551,11 @@ function endsWithSegmentNumber(name)
  * Return the search string including the starting "?" but with the "ndn." keys removed,
  *   or return "" if there are no search terms left.
  */
-function extractNdnSearch(search, template) 
+function extractNdnSearch(search, template)
 {
     if (!(search.length >= 1 && search[0] == '?'))
         return search;
-    
+
     var terms = search.substr(1).split('&');
     var i = 0;
     while (i < terms.length) {
@@ -565,7 +565,7 @@ function extractNdnSearch(search, template)
             if (keyValue.length >= 1) {
                 var value = keyValue[1].trim();
                 var nonNegativeInt = parseInt(value);
-                
+
                 if (key == "ndn.MinSuffixComponents" && nonNegativeInt >= 0)
                     template.setMinSuffixComponents(nonNegativeInt);
                 else if (key == "ndn.MaxSuffixComponents" && nonNegativeInt >= 0)
@@ -585,14 +585,14 @@ function extractNdnSearch(search, template)
                 else if (key == "ndn.Exclude")
                     template.setExclude(parseExclude(value));
             }
-        
+
             // Remove the "ndn." term and don't advance i.
             terms.splice(i, 1);
         }
         else
             ++i;
     }
-    
+
     if (terms.length == 0)
         return "";
     else
@@ -600,12 +600,12 @@ function extractNdnSearch(search, template)
 }
 
 /*
- * Parse the comma-separated list of exclude components and return an Exclude. 
+ * Parse the comma-separated list of exclude components and return an Exclude.
  */
-function parseExclude(value) 
+function parseExclude(value)
 {
     var excludeValues = [];
-    
+
     var splitValue = value.split(',');
     for (var i = 0; i < splitValue.length; ++i) {
         var element = splitValue[i].trim();
@@ -623,7 +623,7 @@ function parseExclude(value)
  * @param {Name} name The Name to search.
  * @returns {number} The index or -1 if not found.
  */
-function getIndexOfMetaComponent(name) 
+function getIndexOfMetaComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
     var component = name.get(i).getValue().buf();
@@ -631,7 +631,7 @@ function getIndexOfMetaComponent(name)
       DataUtils.arraysEqual(component.slice(0, MetaComponentPrefix.length), MetaComponentPrefix))
         return i;
   }
-    
+
   return -1;
 }
 
@@ -642,13 +642,13 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
  * @param {type} name The Name to search.
  * @returns {number} The index or -1 if not found.
  */
-function getIndexOfNdnfsFileComponent(name) 
+function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
     if (DataUtils.arraysEqual(name.get(i).getValue().buf(), NdnfsFileComponent))
       return i;
   }
-    
+
   return -1;
 }
 

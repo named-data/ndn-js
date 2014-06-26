@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -18,26 +18,26 @@
  */
 
 /**
- * A Blob holds an immutable byte array implemented as a Buffer.  This should be 
- * treated like a string which is a pointer to an immutable string. (It is OK to 
- * pass a pointer to the string because the new owner can’t change the bytes of 
- * the string.)  Blob does not inherit from Buffer. Instead you must call buf() 
- * to get the byte array which reminds you that you should not change the 
+ * A Blob holds an immutable byte array implemented as a Buffer.  This should be
+ * treated like a string which is a pointer to an immutable string. (It is OK to
+ * pass a pointer to the string because the new owner can’t change the bytes of
+ * the string.)  Blob does not inherit from Buffer. Instead you must call buf()
+ * to get the byte array which reminds you that you should not change the
  * contents.  Also remember that buf() can return null.
- * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take 
- * another pointer to the Buffer without copying. If value is a Buffer or byte 
+ * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
+ * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {boolean} copy (optional) (optional) If true, copy the contents of 
- * value into a new Buffer.  If false, just use the existing value without 
+ * @param {boolean} copy (optional) (optional) If true, copy the contents of
+ * value into a new Buffer.  If false, just use the existing value without
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
  * treat the value as immutable and promise not to change it.
  */
-var Blob = function Blob(value, copy) 
+var Blob = function Blob(value, copy)
 {
   if (copy == null)
     copy = true;
-  
+
   if (value == null)
     this.buffer = null;
   else if (typeof value === 'object' && value instanceof Blob)
@@ -61,7 +61,7 @@ var Blob = function Blob(value, copy)
       }
     }
   }
-  
+
   // Set the length to be "JavaScript-like".
   this.length = this.buffer != null ? this.buffer.length : 0;
 };
@@ -81,7 +81,7 @@ Blob.prototype.size = function()
 };
 
 /**
- * Return the immutable byte array.  DO NOT change the contents of the Buffer.  
+ * Return the immutable byte array.  DO NOT change the contents of the Buffer.
  * If you need to change it, make a copy.
  * @returns {Buffer} The Buffer holding the immutable byte array, or null.
  */
@@ -103,8 +103,8 @@ Blob.prototype.isNull = function()
  * Return the hex representation of the bytes in the byte array.
  * @returns {string} The hex string.
  */
-Blob.prototype.toHex = function() 
-{  
+Blob.prototype.toHex = function()
+{
   if (this.buffer == null)
     return "";
   else

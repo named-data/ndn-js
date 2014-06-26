@@ -1,8 +1,8 @@
-/* 
+/*
  * Implement WebSocket proxy between ndnd and javascript stack.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Wentao Shang
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -56,18 +56,18 @@ if (LOG > 0) console.log('WebSocketServer started...');
 wss.on('connection', function(ws) {
   if (LOG > 0) console.log('WebSocket client connection received.');
   if (LOG > 0) console.log('Number of clients now is ' + wss.clients.length);
-  
+
   if (wss.clients.length > MaxNumOfClients) {
     if (LOG > 0) console.log('Max num of clients exceeded. Close WS connection now.');
     ws.terminate();
     return;
   }
-  
+
   var sock_ready = false;
   var ws_ready = true;
   var send_queue = [];
   var sock = net.connect({port: ndndport, host: ndndhost});
-  
+
   ws.on('message', function(message) {
     if (typeof message == 'string') {
       if (LOG > 1) console.log("Message from clinet: " + message);
@@ -81,7 +81,7 @@ wss.on('connection', function(ws) {
           logMsg += String.fromCharCode(bytesView[i]);
         console.log(logMsg);
       }
-      
+
       if (sock_ready) {
         sock.write(bytesView);
       } else {
@@ -89,13 +89,13 @@ wss.on('connection', function(ws) {
       }
     }
   });
-  
+
   ws.on('close', function() {
     if (LOG > 0) console.log('WebSocket connection closed.');
     ws_ready = false;
     sock.end();
   });
-  
+
   sock.on('connect', function() {
     while (send_queue.length > 0) {
       var message = send_queue.shift();
@@ -104,11 +104,11 @@ wss.on('connection', function(ws) {
     sock_ready = true;
     if (LOG > 0) console.log('ndnd socket connection ready.');
   });
-  
+
   sock.on('data', function(data) {
     if (typeof data == 'object') {
       var bytesView = new Buffer(data);
-      
+
       if (LOG > 1) {
         console.log('Byte array from server: ');
         var logMsg = "";
@@ -116,18 +116,18 @@ wss.on('connection', function(ws) {
           logMsg += String.fromCharCode(bytesView[i]);
         console.log(logMsg);
       }
-      
+
       if (ws_ready == true) {
         ws.send(bytesView, {binary: true, mask: false});
       }
     }
   });
-  
+
   sock.on('end', function() {
     if (LOG > 0) console.log('TCP connection terminated by ndnd. Shut down WS connection to client.');
     ws.terminate();
   });
-  
+
   sock.on('error', function() {
     if (LOG > 0) console.log('Error on TCP connection to ndnd. Shut down WS connection to client.');
     ws.terminate();

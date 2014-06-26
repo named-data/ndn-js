@@ -4,7 +4,7 @@
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,12 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU General Public License is in the file COPYING.
  */
- 
+
 /**
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils() 
+var DataUtils = function DataUtils()
 {
 };
 
@@ -32,7 +32,7 @@ exports.DataUtils = DataUtils;
 
 /*
  * NOTE THIS IS CURRENTLY NOT BEING USED
- * 
+ *
  */
 
 DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
@@ -40,11 +40,11 @@ DataUtils.keyStr = "ABCDEFGHIJKLMNOP" +
                    "ghijklmnopqrstuv" +
                    "wxyz0123456789+/" +
                    "=";
-               
+
 /**
  * Raw String to Base 64
  */
-DataUtils.stringtoBase64 = function stringtoBase64(input) 
+DataUtils.stringtoBase64 = function stringtoBase64(input)
 {
    //input = escape(input);
    var output = "";
@@ -80,9 +80,9 @@ DataUtils.stringtoBase64 = function stringtoBase64(input)
 };
 
 /**
- * Base 64 to Raw String 
+ * Base 64 to Raw String
  */
-DataUtils.base64toString = function base64toString(input) 
+DataUtils.base64toString = function base64toString(input)
 {
   var output = "";
   var chr1, chr2, chr3 = "";
@@ -97,7 +97,7 @@ DataUtils.base64toString = function base64toString(input)
           "Valid base64 characters are A-Z, a-z, 0-9, '+', '/',and '='\n" +
           "Expect errors in decoding.");
   }
-  
+
   input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
   do {
@@ -128,7 +128,7 @@ DataUtils.base64toString = function base64toString(input)
 /**
  * Buffer to Hex String
  */
-DataUtils.toHex = function(buffer) 
+DataUtils.toHex = function(buffer)
 {
   return buffer.toString('hex');
 };
@@ -136,7 +136,7 @@ DataUtils.toHex = function(buffer)
 /**
  * Raw string to hex string.
  */
-DataUtils.stringToHex = function(args) 
+DataUtils.stringToHex = function(args)
 {
   var ret = "";
   for (var i = 0; i < args.length; ++i) {
@@ -149,7 +149,7 @@ DataUtils.stringToHex = function(args)
 /**
  * Buffer to raw string.
  */
-DataUtils.toString = function(buffer) 
+DataUtils.toString = function(buffer)
 {
   return buffer.toString('binary');
 };
@@ -157,7 +157,7 @@ DataUtils.toString = function(buffer)
 /**
  * Hex String to Buffer.
  */
-DataUtils.toNumbers = function(str) 
+DataUtils.toNumbers = function(str)
 {
   return new Buffer(str, 'hex');
 };
@@ -165,7 +165,7 @@ DataUtils.toNumbers = function(str)
 /**
  * Hex String to raw string.
  */
-DataUtils.hexToRawString = function(str) 
+DataUtils.hexToRawString = function(str)
 {
   if (typeof str =='string') {
   var ret = "";
@@ -179,7 +179,7 @@ DataUtils.hexToRawString = function(str)
 /**
  * Raw String to Buffer.
  */
-DataUtils.toNumbersFromString = function(str) 
+DataUtils.toNumbersFromString = function(str)
 {
   return new Buffer(str, 'binary');
 };
@@ -190,7 +190,7 @@ DataUtils.toNumbersFromString = function(str)
  * @param {string|any} value
  * @returns {Buffer}
  */
-DataUtils.toNumbersIfString = function(value) 
+DataUtils.toNumbersIfString = function(value)
 {
   if (typeof value === 'string')
     return new Buffer(value, 'binary');
@@ -201,7 +201,7 @@ DataUtils.toNumbersIfString = function(value)
 /**
  * Encode str as utf8 and return as Buffer.
  */
-DataUtils.stringToUtf8Array = function(str) 
+DataUtils.stringToUtf8Array = function(str)
 {
   return new Buffer(str, 'utf8');
 };
@@ -209,23 +209,23 @@ DataUtils.stringToUtf8Array = function(str)
 /**
  * arrays is an array of Buffer. Return a new Buffer which is the concatenation of all.
  */
-DataUtils.concatArrays = function(arrays) 
+DataUtils.concatArrays = function(arrays)
 {
   return Buffer.concat(arrays);
 };
- 
+
 // TODO: Take Buffer and use TextDecoder when available.
-DataUtils.decodeUtf8 = function(utftext) 
+DataUtils.decodeUtf8 = function(utftext)
 {
   var string = "";
   var i = 0;
   var c = 0;
     var c1 = 0;
     var c2 = 0;
- 
+
   while (i < utftext.length) {
     c = utftext.charCodeAt(i);
- 
+
     if (c < 128) {
       string += String.fromCharCode(c);
       i++;
@@ -242,24 +242,24 @@ DataUtils.decodeUtf8 = function(utftext)
       i += 3;
     }
   }
- 
+
   return string;
 };
 
 /**
  * Return true if a1 and a2 are the same length with equal elements.
  */
-DataUtils.arraysEqual = function(a1, a2) 
+DataUtils.arraysEqual = function(a1, a2)
 {
   // A simple sanity check that it is an array.
   if (!a1.slice)
     throw new Error("DataUtils.arraysEqual: a1 is not an array");
   if (!a2.slice)
     throw new Error("DataUtils.arraysEqual: a2 is not an array");
-    
+
   if (a1.length != a2.length)
     return false;
-  
+
   for (var i = 0; i < a1.length; ++i) {
     if (a1[i] != a2[i])
       return false;
@@ -272,7 +272,7 @@ DataUtils.arraysEqual = function(a1, a2)
  * Convert the big endian Buffer to an unsigned int.
  * Don't check for overflow.
  */
-DataUtils.bigEndianToUnsignedInt = function(bytes) 
+DataUtils.bigEndianToUnsignedInt = function(bytes)
 {
   var result = 0;
   for (var i = 0; i < bytes.length; ++i) {
@@ -284,14 +284,14 @@ DataUtils.bigEndianToUnsignedInt = function(bytes)
 
 /**
  * Convert the int value to a new big endian Buffer and return.
- * If value is 0 or negative, return new Buffer(0). 
+ * If value is 0 or negative, return new Buffer(0).
  */
-DataUtils.nonNegativeIntToBigEndian = function(value) 
+DataUtils.nonNegativeIntToBigEndian = function(value)
 {
   value = Math.round(value);
   if (value <= 0)
     return new Buffer(0);
-  
+
   // Assume value is not over 64 bits.
   var size = 8;
   var result = new Buffer(size);
@@ -307,7 +307,7 @@ DataUtils.nonNegativeIntToBigEndian = function(value)
 /**
  * Modify array to randomly shuffle the elements.
  */
-DataUtils.shuffle = function(array) 
+DataUtils.shuffle = function(array)
 {
   for (var i = array.length - 1; i >= 1; --i) {
     // j is from 0 to i.

@@ -3,7 +3,7 @@
 "DTD/xhtml1-strict.dtd">
 <!--
  * Copyright (C) 2014 Regents of the University of California.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -39,7 +39,7 @@
       data.getMetaInfo().setFields();
       data.sign();
       var encodedData = data.wireEncode();
-      
+
       try {
         console.log("Send content " + contentString);
         transport.send(encodedData.buf());
@@ -48,7 +48,7 @@
       }
     }
 
-    function onRegisterFailed(prefix) 
+    function onRegisterFailed(prefix)
     {
       console.log("Register failed for prefix " + prefix.toUri());
     }
