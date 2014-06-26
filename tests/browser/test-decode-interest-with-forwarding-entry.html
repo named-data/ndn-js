@@ -68,28 +68,28 @@
 				output+= "<br />";
 			}
 			
-			if(interest.childSelector!=null ){
+			if(interest.getChildSelector()!=null ){
 				output+= "ChildSelector: ";
 				
-					output+=  interest.childSelector;
+					output+=  interest.getChildSelector();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.answerOriginKind!=null ){
+			if(interest.setAnswerOriginKind()!=null ){
 				output+= "AnswerOriginKind: ";
 				
-					output+=  interest.answerOriginKind;
+					output+=  interest.setAnswerOriginKind();
 				
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.interestLifetime!=null ){
+			if(interest.getInterestLifetimeMilliseconds()!=null ){
 				output+= "InterestLifetime: ";
 				
-					output+=  interest.interestLifetime;
+					output+=  interest.getInterestLifetimeMilliseconds();
 				
 				output+= "<br />";
 				output+= "<br />";
@@ -105,10 +105,10 @@
 			}
 			
 			
-			if(interest.scope!=null ){
+			if(interest.setScope()!=null ){
 				output+= "SCOPE: ";
 				
-					output+=  interest.scope;
+					output+=  interest.setScope();
 				
 				output+= "<br />";
 				output+= "<br />";
@@ -123,19 +123,19 @@
 				output+= "<br />";
 			}
 			
-			if(interest.maxSuffixComponents!=null ){
+			if(interest.getMaxSuffixComponents()!=null ){
 				output+= "MaxSuffixComponents : ";
 				
-				output+=  interest.maxSuffixComponents;
+				output+=  interest.getMaxSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";
 			}
 			
-			if(interest.minSuffixComponents!=null ){
+			if(interest.getMinSuffixComponents()!=null ){
 				output+= "MinSuffixComponents : ";
 				
-				output+=  interest.minSuffixComponents;
+				output+=  interest.getMinSuffixComponents();
 
 				output+= "<br />";
 				output+= "<br />";

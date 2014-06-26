@@ -145,11 +145,11 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     
   interest.getName().to_ndnb(encoder);
   
-  if (null != interest.minSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
+  if (null != interest.getMinSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());  
 
-  if (null != interest.maxSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+  if (null != interest.getMaxSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.getMaxSuffixComponents());
 
   if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
       !interest.getKeyLocator().getKeyData().isNull() &&
@@ -166,18 +166,18 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   if (null != interest.getExclude())
     interest.getExclude().to_ndnb(encoder);
     
-  if (null != interest.childSelector) 
-    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
+  if (null != interest.getChildSelector()) 
+    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null) 
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
     
-  if (null != interest.scope) 
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.scope);
+  if (null != interest.setScope()) 
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
     
-  if (null != interest.interestLifetime) 
+  if (null != interest.getInterestLifetimeMilliseconds()) 
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
+                DataUtils.nonNegativeIntToBigEndian((interest.getInterestLifetimeMilliseconds() / 1000.0) * 4096));
     
   if (interest.getNonce().size() > 0)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
@@ -198,14 +198,14 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
-    interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
+    interest.setMinSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents));
   else
-    interest.minSuffixComponents = null;
+    interest.setMinSuffixComponents(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
-    interest.maxSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents);
+    interest.setMaxSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents));
   else
-    interest.maxSuffixComponents = null;
+    interest.setMaxSuffixComponents(null);
       
   // Initially clear the keyLocator.
   interest.getKeyLocator().clear();
@@ -233,25 +233,25 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
     interest.setExclude(new Exclude());
     
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
-    interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);
+    interest.setChildSelector(decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector));
   else
-    interest.childSelector = null;
+    interest.setChildSelector(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
-    interest.answerOriginKind = decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind);
+    interest.setAnswerOriginKind(decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind));
   else
-    interest.answerOriginKind = null;
+    interest.setAnswerOriginKind(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.Scope))
-    interest.scope = decoder.readIntegerDTagElement(NDNProtocolDTags.Scope);
+    interest.setScope(decoder.readIntegerDTagElement(NDNProtocolDTags.Scope));
   else
-    interest.scope = null;
+    interest.setScope(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
-    interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096;
+    interest.setInterestLifetimeMilliseconds(1000.0 * DataUtils.bigEndianToUnsignedInt
+               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096);
   else
-    interest.interestLifetime = null;              
+    interest.setInterestLifetimeMilliseconds(null);              
     
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
     interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));

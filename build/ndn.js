@@ -5062,7 +5062,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
 {
   try {
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-      var interestLifetime = upcallInfo.interest.interestLifetime;
+      var interestLifetime = upcallInfo.interest.getInterestLifetimeMilliseconds();
       if (interestLifetime == null)
         return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
@@ -5071,7 +5071,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
         return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
       var nextInterest = upcallInfo.interest.clone();
-      nextInterest.interestLifetime = nextInterestLifetime;
+      nextInterest.setInterestLifetimeMilliseconds(nextInterestLifetime);
       // TODO: Use expressInterest with callbacks, not Closure.
       upcallInfo.face.expressInterest(nextInterest.getName(), this, nextInterest);
       return Closure.RESULT_OK;
@@ -8527,10 +8527,10 @@ NameEnumeration.prototype.processData = function(data)
           (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
-        this.contentParts.push(data.content);
+        this.contentParts.push(data.getContent().buf());
 
-        if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
-          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.signedInfo.finalBlockID);
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
+          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
@@ -11286,7 +11286,7 @@ Data.prototype.sign = function(wireFormat)
     
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.signature = sig;
+  this.signature.setSignature(sig);
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -11310,7 +11310,7 @@ Data.prototype.verify = function(/*Key*/ key)
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ? 
-    DataUtils.toString(this.signature.signature) : this.signature.signature;
+    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
@@ -12701,11 +12701,11 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     
   interest.getName().to_ndnb(encoder);
   
-  if (null != interest.minSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.minSuffixComponents);  
+  if (null != interest.getMinSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());  
 
-  if (null != interest.maxSuffixComponents) 
-    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.maxSuffixComponents);
+  if (null != interest.getMaxSuffixComponents()) 
+    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.getMaxSuffixComponents());
 
   if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST && 
       !interest.getKeyLocator().getKeyData().isNull() &&
@@ -12719,24 +12719,24 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
       interest.publisherPublicKeyDigest.to_ndnb(encoder);
   }
     
-  if (null != interest.exclude)
-    interest.exclude.to_ndnb(encoder);
+  if (null != interest.getExclude())
+    interest.getExclude().to_ndnb(encoder);
     
-  if (null != interest.childSelector) 
-    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.childSelector);
+  if (null != interest.getChildSelector()) 
+    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.answerOriginKind && interest.answerOriginKind!=null) 
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.answerOriginKind);
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null) 
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
     
-  if (null != interest.scope) 
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.scope);
+  if (null != interest.setScope()) 
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
     
-  if (null != interest.interestLifetime) 
+  if (null != interest.getInterestLifetimeMilliseconds()) 
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime, 
-                DataUtils.nonNegativeIntToBigEndian((interest.interestLifetime / 1000.0) * 4096));
+                DataUtils.nonNegativeIntToBigEndian((interest.getInterestLifetimeMilliseconds() / 1000.0) * 4096));
     
-  if (null != interest.nonce)
-    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.nonce);
+  if (interest.getNonce().size() > 0)
+    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
     
   encoder.writeElementClose();
 };
@@ -12754,14 +12754,14 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
-    interest.minSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents);
+    interest.setMinSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents));
   else
-    interest.minSuffixComponents = null;
+    interest.setMinSuffixComponents(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents)) 
-    interest.maxSuffixComponents = decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents);
+    interest.setMaxSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents));
   else
-    interest.maxSuffixComponents = null;
+    interest.setMaxSuffixComponents(null);
       
   // Initially clear the keyLocator.
   interest.getKeyLocator().clear();
@@ -12782,37 +12782,37 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
   }
 
   if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
-    interest.exclude = new Exclude();
-    interest.exclude.from_ndnb(decoder);
+    interest.setExclude(new Exclude());
+    interest.getExclude().from_ndnb(decoder);
   }
   else
-    interest.exclude = null;
+    interest.setExclude(new Exclude());
     
   if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
-    interest.childSelector = decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector);
+    interest.setChildSelector(decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector));
   else
-    interest.childSelector = null;
+    interest.setChildSelector(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
-    interest.answerOriginKind = decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind);
+    interest.setAnswerOriginKind(decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind));
   else
-    interest.answerOriginKind = null;
+    interest.setAnswerOriginKind(null);
     
   if (decoder.peekDTag(NDNProtocolDTags.Scope))
-    interest.scope = decoder.readIntegerDTagElement(NDNProtocolDTags.Scope);
+    interest.setScope(decoder.readIntegerDTagElement(NDNProtocolDTags.Scope));
   else
-    interest.scope = null;
+    interest.setScope(null);
 
   if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
-    interest.interestLifetime = 1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096;
+    interest.setInterestLifetimeMilliseconds(1000.0 * DataUtils.bigEndianToUnsignedInt
+               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096);
   else
-    interest.interestLifetime = null;              
+    interest.setInterestLifetimeMilliseconds(null);              
     
   if (decoder.peekDTag(NDNProtocolDTags.Nonce))
-    interest.nonce = decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce);
+    interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));
   else
-    interest.nonce = null;
+    interest.setNonce(null);
     
   decoder.readElementClose();
 };
@@ -12832,20 +12832,20 @@ BinaryXmlWireFormat.encodeData = function(data, encoder)
   //TODO verify name, MetaInfo and Signature is present
   encoder.writeElementStartDTag(data.getElementLabel());
 
-  if (null != data.signature) 
-    data.signature.to_ndnb(encoder);
+  if (null != data.getSignature()) 
+    data.getSignature().to_ndnb(encoder);
     
   var signedPortionBeginOffset = encoder.offset;
 
   if (null != data.getName()) 
     data.getName().to_ndnb(encoder);
   
-  if (null != data.signedInfo) 
+  if (null != data.getMetaInfo()) 
     // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
     //   the key locator from the MetaInfo to the Signauture object.
-    data.signedInfo.to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
+    data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
 
-  encoder.writeDTagElement(NDNProtocolDTags.Content, data.content);
+  encoder.writeDTagElement(NDNProtocolDTags.Content, data.getContent().buf());
   
   var signedPortionEndOffset = encoder.offset;
   
@@ -12871,11 +12871,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.signature = new Signature();
-    data.signature.from_ndnb(decoder);
+    data.setSignature(new Signature());
+    data.getSignature().from_ndnb(decoder);
   }
   else
-    data.signature = null;
+    data.setSignature(new Signature());
     
   var signedPortionBeginOffset = decoder.offset;
 
@@ -12883,17 +12883,17 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   data.getName().from_ndnb(decoder);
     
   if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.signedInfo = new MetaInfo();
-    data.signedInfo.from_ndnb(decoder);
-    if (data.signedInfo.locator != null && data.getSignature() != null)
+    data.setMetaInfo(new MetaInfo());
+    data.getMetaInfo().from_ndnb(decoder);
+    if (data.getMetaInfo().locator != null && data.getSignature() != null)
       // Copy the key locator pointer to the Signature object for the transition 
       //   of moving the key locator from the MetaInfo to the Signature object.
-      data.getSignature().keyLocator = data.signedInfo.locator;
+      data.getSignature().setKeyLocator(data.getMetaInfo().locator);
   }
   else
-    data.signedInfo = null;
+    data.setMetaInfo(new MetaInfo());
 
-  data.content = decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true);
+  data.setContent(decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true));
     
   var signedPortionEndOffset = decoder.offset;
     
@@ -13602,70 +13602,70 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.content != null) {
-      output += "CONTENT(hex): "+ DataUtils.toHex(data.content);
+    if (!data.getContent().isNull()) {
+      output += "CONTENT(hex): "+ data.getContent().toHex();
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.signature.digestAlgorithm);
+    if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
+      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(data.signature.witness);
+    if (data.getSignature() != null && data.getSignature().witness != null) {
+      output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signature != null && data.signature.signature != null) {
-      output += "Signature(hex): "+ DataUtils.toHex(data.signature.signature);
+    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
+      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.publisher != null && data.signedInfo.publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.signedInfo.publisher.publisherPublicKeyDigest);
+    if (data.getMetaInfo() != null && data.getMetaInfo().publisher != null && data.getMetaInfo().publisher.publisherPublicKeyDigest != null) {
+      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
       
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.timestamp != null) {
+    if (data.getMetaInfo() != null && data.getMetaInfo().timestamp != null) {
       var d = new Date();
-      d.setTime(data.signedInfo.timestamp.msec);
+      d.setTime(data.getMetaInfo().timestamp.msec);
       
       var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
       
       output += "TimeStamp: "+d;
       output+= "<br />";
-      output += "TimeStamp(number): "+ data.signedInfo.timestamp.msec;
+      output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
       
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.finalBlockID != null) {
-      output += "FinalBlockID: "+ DataUtils.toHex(data.signedInfo.finalBlockID);
+    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
+      output += "FinalBlockID: "+ data.getMetaInfo().getFinalBlockID().getValue().toHex();
       output+= "<br />";
     }
-    if (data.signedInfo != null && data.signedInfo.locator != null && data.signedInfo.locator.type) {
+    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.type) {
       output += "keyLocator: ";
-      if (data.signedInfo.locator.type == KeyLocatorType.KEY)
-        output += "Key: " + DataUtils.toHex(data.signedInfo.locator.publicKey).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-        output += "KeyLocatorDigest: " + DataUtils.toHex(data.signedInfo.locator.getKeyData().buf()).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.CERTIFICATE)
-        output += "Certificate: " + DataUtils.toHex(data.signedInfo.locator.certificate).toLowerCase() + "<br />";
-      else if (data.signedInfo.locator.type == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.signedInfo.locator.keyName.contentName.to_uri() + "<br />";
+      if (data.getMetaInfo().locator.type == KeyLocatorType.KEY)
+        output += "Key: " + DataUtils.toHex(data.getMetaInfo().locator.publicKey).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
+        output += "KeyLocatorDigest: " + DataUtils.toHex(data.getMetaInfo().locator.getKeyData().buf()).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.type == KeyLocatorType.CERTIFICATE)
+        output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
+      else if (data.getMetaInfo().locator.type == KeyLocatorType.KEYNAME)
+        output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
       else
-        output += "[unrecognized ndn_KeyLocatorType " + data.signedInfo.locator.type + "]<br />";      
+        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.type + "]<br />";      
     }
   }
 
@@ -13950,7 +13950,7 @@ Face.getKeyByName = function(/* KeyName */ name)
   
   for (var i = 0; i < Face.KeyStore.length; i++) {
     if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || Face.KeyStore[i].keyName.contentName.components.length > result.keyName.contentName.components.length)
+      if (result == null || Face.KeyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
         result = Face.KeyStore[i];
     }
   }
@@ -14106,17 +14106,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     interest = new Interest(interestOrName);
     if (arg3) {
       var template = arg3;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;    
+      interest.setExclude(template.getExclude());
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
     }
     else
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
 
     this.expressInterestWithClosure(interest, arg2);
     return;
@@ -14140,14 +14140,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, Interest template, function onData, function onTimeout); 
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.exclude = template.exclude;
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;
+      interest.setExclude(template.getExclude());
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
@@ -14155,7 +14155,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, function onData); 
     // expressInterest(Name name, function onData,   function onTimeout); 
     else {
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
     }
@@ -14246,7 +14246,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
     closure.pitEntry = pitEntry;
 
     // Set interest timer.
-    var timeoutMilliseconds = (interest.interestLifetime || 4000);
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     var timeoutCallback = function() {
       if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
         
@@ -14333,7 +14333,7 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
     if (thisFace.ndndid == null) {
       // Fetch ndndid first, then register.
       var interest = new Interest(Face.ndndIdFetcher);
-      interest.interestLifetime = 4000; // milliseconds
+      interest.setInterestLifetimeMilliseconds(4000);
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
         (interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
@@ -14556,7 +14556,7 @@ Face.prototype.onReceivedElement = function(element)
         } 
         else if (kind == Closure.UPCALL_CONTENT) {
           var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.content);
+          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
           var verified = data.verify(rsakey);
                 
           var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
@@ -14570,16 +14570,16 @@ Face.prototype.onReceivedElement = function(element)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
       };
             
-      if (data.signedInfo && data.signedInfo.locator && data.signature) {
+      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
         if (LOG > 3) console.log("Key verification...");
-        var sigHex = DataUtils.toHex(data.signature.signature).toLowerCase();
+        var sigHex = data.getSignature().getSignature().toHex();
               
         var wit = null;
-        if (data.signature.witness != null)
+        if (data.getSignature().witness != null)
             //SWT: deprecate support for Witness decoding and Merkle hash tree verification
             currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
           
-        var keylocator = data.signedInfo.locator;
+        var keylocator = data.getMetaInfo().locator;
         if (keylocator.type == KeyLocatorType.KEYNAME) {
           if (LOG > 3) console.log("KeyLocator contains KEYNAME");
                 
@@ -14587,7 +14587,7 @@ Face.prototype.onReceivedElement = function(element)
             if (LOG > 3) console.log("Content is key itself");
                   
             var rsakey = new Key();
-            rsakey.readDerPublicKey(data.content);
+            rsakey.readDerPublicKey(data.getContent().buf());
             var verified = data.verify(rsakey);
             var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
               
@@ -14676,7 +14676,7 @@ Face.prototype.connectAndExecute = function(onConnected)
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
-  interest.interestLifetime = 4000; // milliseconds    
+  interest.setInterestLifetimeMilliseconds(4000);
 
   var thisFace = this;
   var timerID = setTimeout(function() {

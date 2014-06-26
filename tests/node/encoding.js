@@ -29,8 +29,8 @@ var n = new Name('/a/b/c.txt');
 console.log("Encoding/Decoding interests...");
 
 var i1 = new Interest(n);
-i1.interestLifetime = 1000;
-i1.childSelector = 1;
+i1.setInterestLifetimeMilliseconds(1000);
+i1.setChildSelector(1);
 
 var packet = i1.wireEncode();
 
@@ -38,8 +38,8 @@ var i2 = new Interest();
 i2.wireDecode(packet);
 
 console.log(i2.getName().toUri());
-console.log(i2.interestLifetime);
-console.log(i2.childSelector);
+console.log(i2.getInterestLifetimeMilliseconds());
+console.log(i2.getChildSelector());
 
 console.log("Encoding/Decoding data packet objects...");
 

@@ -87,14 +87,14 @@ NdnProtocol.prototype = {
     
             var template = new Interest(new Name([]));
             // Use the same default as Face.expressInterest.
-            template.interestLifetime = 4000; // milliseconds
+            template.setInterestLifetimeMilliseconds(4000);
             var searchWithoutNdn = extractNdnSearch(uriParts.search, template);
             
             var segmentTemplate = new Interest(new Name([]));
             // Only use the interest selectors which make sense for fetching further segments.
             segmentTemplate.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-            segmentTemplate.scope = template.scope;
-            segmentTemplate.interestLifetime = template.interestLifetime;
+            segmentTemplate.setScope(template.setScope());
+            segmentTemplate.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
     
             var requestContent = function(contentListener) {                
                 var name = new Name(uriParts.name);
@@ -180,7 +180,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             // We have not received a segment to start the content yet, so assume the URI can't be fetched.
             this.contentListener.onStart("text/plain", "utf-8", this.aURI);
             this.contentListener.onReceivedContent
-                ("The latest interest timed out after " + upcallInfo.interest.interestLifetime + " milliseconds.");
+                ("The latest interest timed out after " + upcallInfo.interest.getInterestLifetimeMilliseconds() + " milliseconds.");
             this.contentListener.onStop();
             return Closure.RESULT_OK;
         }
@@ -331,7 +331,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Try to determine the final segment now.
         // Clone the template to set the childSelector.
         var childSelectorTemplate = this.segmentTemplate.clone();
-        childSelectorTemplate.childSelector = 1;
+        childSelectorTemplate.setChildSelector(1);
         // TODO: Use expressInterest with callbacks, not Closure.
         this.face.expressInterest
             (this.nameWithoutSegment, new ExponentialReExpressClosure(this), childSelectorTemplate);
@@ -567,17 +567,17 @@ function extractNdnSearch(search, template)
                 var nonNegativeInt = parseInt(value);
                 
                 if (key == "ndn.MinSuffixComponents" && nonNegativeInt >= 0)
-                    template.minSuffixComponents = nonNegativeInt;
+                    template.setMinSuffixComponents(nonNegativeInt);
                 else if (key == "ndn.MaxSuffixComponents" && nonNegativeInt >= 0)
-                    template.maxSuffixComponents = nonNegativeInt;
+                    template.setMaxSuffixComponents(nonNegativeInt);
                 else if (key == "ndn.ChildSelector" && nonNegativeInt >= 0)
-                    template.childSelector = nonNegativeInt;
+                    template.setChildSelector(nonNegativeInt);
                 else if (key == "ndn.AnswerOriginKind" && nonNegativeInt >= 0)
-                    template.answerOriginKind = nonNegativeInt;
+                    template.setAnswerOriginKind(nonNegativeInt);
                 else if (key == "ndn.Scope" && nonNegativeInt >= 0)
-                    template.scope = nonNegativeInt;
+                    template.setScope(nonNegativeInt);
                 else if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
-                    template.interestLifetime = nonNegativeInt;
+                    template.setInterestLifetimeMilliseconds(nonNegativeInt);
                 else if (key == "ndn.PublisherPublicKeyDigest")
                     template.publisherPublicKeyDigest = DataUtils.toNumbersFromString(unescape(value));
                 else if (key == "ndn.Nonce")

@@ -52,7 +52,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
 {
   try {
     if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-      var interestLifetime = upcallInfo.interest.interestLifetime;
+      var interestLifetime = upcallInfo.interest.getInterestLifetimeMilliseconds();
       if (interestLifetime == null)
         return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
@@ -61,7 +61,7 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
         return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
             
       var nextInterest = upcallInfo.interest.clone();
-      nextInterest.interestLifetime = nextInterestLifetime;
+      nextInterest.setInterestLifetimeMilliseconds(nextInterestLifetime);
       // TODO: Use expressInterest with callbacks, not Closure.
       upcallInfo.face.expressInterest(nextInterest.getName(), this, nextInterest);
       return Closure.RESULT_OK;

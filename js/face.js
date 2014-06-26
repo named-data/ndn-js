@@ -402,17 +402,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     interest = new Interest(interestOrName);
     if (arg3) {
       var template = arg3;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
       interest.setExclude(template.getExclude());
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;    
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
     }
     else
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
 
     this.expressInterestWithClosure(interest, arg2);
     return;
@@ -436,14 +436,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, Interest template, function onData, function onTimeout); 
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
-      interest.minSuffixComponents = template.minSuffixComponents;
-      interest.maxSuffixComponents = template.maxSuffixComponents;
+      interest.setMinSuffixComponents(template.getMinSuffixComponents());
+      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
       interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
       interest.setExclude(template.getExclude());
-      interest.childSelector = template.childSelector;
-      interest.answerOriginKind = template.answerOriginKind;
-      interest.scope = template.scope;
-      interest.interestLifetime = template.interestLifetime;
+      interest.setChildSelector(template.getChildSelector());
+      interest.getAnswerOriginKind(template.getAnswerOriginKind());
+      interest.setScope(template.getScope());
+      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());    
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
@@ -451,7 +451,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, function onData); 
     // expressInterest(Name name, function onData,   function onTimeout); 
     else {
-      interest.interestLifetime = 4000;   // default interest timeout value in milliseconds.
+      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
     }
@@ -542,7 +542,7 @@ Face.prototype.expressInterestHelper = function(interest, closure)
     closure.pitEntry = pitEntry;
 
     // Set interest timer.
-    var timeoutMilliseconds = (interest.interestLifetime || 4000);
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     var timeoutCallback = function() {
       if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
         
@@ -629,7 +629,7 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
     if (thisFace.ndndid == null) {
       // Fetch ndndid first, then register.
       var interest = new Interest(Face.ndndIdFetcher);
-      interest.interestLifetime = 4000; // milliseconds
+      interest.setInterestLifetimeMilliseconds(4000);
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
         (interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
@@ -972,7 +972,7 @@ Face.prototype.connectAndExecute = function(onConnected)
     
   // Fetch any content.
   var interest = new Interest(new Name("/"));
-  interest.interestLifetime = 4000; // milliseconds    
+  interest.setInterestLifetimeMilliseconds(4000);
 
   var thisFace = this;
   var timerID = setTimeout(function() {

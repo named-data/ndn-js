@@ -29,12 +29,12 @@
 		function encode() {
 			var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
-            interest.minSuffixComponents = 2;
-            interest.maxSuffixComponents = 4;
-            interest.childSelector = 1;
+            interest.setMinSuffixComponents(2);
+            interest.setMaxSuffixComponents(4);
+            interest.setChildSelector(1);
             interest.setMustBeFresh(false);
-            interest.scope = 2;
-            interest.interestLifetime = 30000;
+            interest.setScope(2);
+            interest.setInterestLifetimeMilliseconds(30000);
             interest.setNonce(new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]));
             var pkd = [];
             for (i = 0; i < 32; ++i)
@@ -65,10 +65,10 @@
 			
 			if (interest.getName() != null)
 				output += "Name: " + interest.getName().toUri() + "<br/>";
-			if (interest.minSuffixComponents != null )
-				output += "MinSuffixComponents : " + interest.minSuffixComponents + "<br/>";
-			if (interest.maxSuffixComponents != null )
-				output += "MaxSuffixComponents : " + interest.maxSuffixComponents + "<br/>";
+			if (interest.getMinSuffixComponents() != null )
+				output += "MinSuffixComponents : " + interest.getMinSuffixComponents() + "<br/>";
+			if (interest.getMaxSuffixComponents() != null )
+				output += "MaxSuffixComponents : " + interest.getMaxSuffixComponents() + "<br/>";
           
             output += "KeyLocator: ";
             if (interest.getKeyLocator().getType() >= 0) {
@@ -87,13 +87,13 @@
                 output += "<none>";
             output += "<br/>";
 
-            if (interest.childSelector != null )
-				output += "ChildSelector: " + interest.childSelector + "<br/>";
+            if (interest.getChildSelector() != null )
+				output += "ChildSelector: " + interest.getChildSelector() + "<br/>";
 			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
-			if (interest.scope != null )
-				output += "Scope: " + interest.scope + "<br/>";
-			if (interest.interestLifetime != null )
-				output += "InterestLifetime (milliseconds): " + interest.interestLifetime + "<br/>";
+			if (interest.setScope() != null )
+				output += "Scope: " + interest.setScope() + "<br/>";
+			if (interest.getInterestLifetimeMilliseconds() != null )
+				output += "InterestLifetime (milliseconds): " + interest.getInterestLifetimeMilliseconds() + "<br/>";
 			if (interest.getNonce().size() > 0)
 				output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
 			if (interest.getExclude() != null )

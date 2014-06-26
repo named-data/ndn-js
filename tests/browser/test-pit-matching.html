@@ -50,23 +50,23 @@
         var name = new Name("/ndn/ucla.edu/apps/ndn-js-test/hello.txt");
         
         var interestSelector1 = new Interest();
-        interestSelector1.interestLifetime = 10000;
-        interestSelector1.minSuffixComponents = 3;
-        interestSelector1.maxSuffixComponents = 3;
+        interestSelector1.setInterestLifetimeMilliseconds(10000);
+        interestSelector1.setMinSuffixComponents(3);
+        interestSelector1.setMaxSuffixComponents(3);
         
         var interestSelector2 = new Interest();
-        interestSelector2.interestLifetime = 10000;
-        interestSelector2.minSuffixComponents = 4;
-        interestSelector2.maxSuffixComponents = 4;
+        interestSelector2.setInterestLifetimeMilliseconds(10000);
+        interestSelector2.setMinSuffixComponents(4);
+        interestSelector2.setMaxSuffixComponents(4);
 
         var interestSelector3 = new Interest();
-        interestSelector3.interestLifetime = 10000;
+        interestSelector3.setInterestLifetimeMilliseconds(10000);
         interestSelector3.setExclude(new Exclude());
         interestSelector3.getExclude().appendAny();
         interestSelector3.getExclude().appendComponent(new Name.Component("zzzzzz"));
 
         var interestSelector4 = new Interest();
-        interestSelector4.interestLifetime = 10000;
+        interestSelector4.setInterestLifetimeMilliseconds(10000);
         interestSelector4.setExclude(new Exclude());
         interestSelector4.getExclude().appendComponent(new Name.Component("zzzzzz"));
         interestSelector4.getExclude().appendAny();
