@@ -16,6 +16,8 @@
 
 var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var b64pad="=";
+var BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz"
+function int2char(n) { return BI_RM.charAt(n); }
 
 function hex2b64(h) {
   var i;
@@ -85,3 +87,10 @@ function b64toBA(s) {
   }
   return a;
 }
+
+
+exports.b64tohex = b64tohex;
+exports.b64toBA  = b64toBA;
+exports.hex2b64  = hex2b64;
+
+module.exports = exports;
