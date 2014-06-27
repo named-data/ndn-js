@@ -204,8 +204,7 @@ Data.prototype.sign = function(wireFormat)
     this.getSignature().setSignature(new Buffer(128));
     this.wireEncode(wireFormat);
   }
-
-  var rsa = require("crypto").createSign('RSA-SHA256');
+  var rsa = cryptoJS.createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
 
   var sig = new Buffer
