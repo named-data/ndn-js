@@ -17,7 +17,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+var cryptoJS = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -66,7 +66,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, cryptoJS.randomBytes(4));
   else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
@@ -74,7 +74,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 
     // Generate random bytes for remaining bytes in the nonce.
     for (var i = interest.getNonce().size(); i < 4; ++i)
-      nonce[i] = require("crypto").randomBytes(1)[0];
+      nonce[i] = cryptoJS.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
