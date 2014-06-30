@@ -134,7 +134,7 @@ click Set on the NDN Toolbar to change the connected hub.
 To install, either download
 https://github.com/named-data/ndn-js/raw/master/ndn-protocol.xpi
 
-or use ndn-protocol.xpi from `downloads` branch.  In Firefox, open
+or use ndn-protocol.xpi in the distribution.  In Firefox, open
 Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File and open
 ndn-protocol.xpi.  (In Firefox for Android, type file: in the address bar and click the
 downloaded ndn-protocol.xpi.)  Restart Firefox.
