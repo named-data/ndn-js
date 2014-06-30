@@ -9510,7 +9510,7 @@ Name.Component.prototype.getValue = function()
  * @deprecated Use getValue. This method returns a Buffer which is the former
  * behavior of getValue, and should only be used while updating your code.
  */
-Name.prototype.getValueAsBuffer = function()
+Name.Component.prototype.getValueAsBuffer = function()
 {
   return this.value;
 };
