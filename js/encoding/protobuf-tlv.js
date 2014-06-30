@@ -50,8 +50,8 @@ ProtobufTlv.establishField = function()
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     }
     catch (ex) {
-      // Using protobufjs in node.
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      // Using protobufjs in node or via browserify.
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
     }
   }
 }
@@ -94,7 +94,7 @@ ProtobufTlv.decode = function(message, descriptor, input)
     if (dcodeIO)
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     else
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
   }
 
   // If input is a blob, get its buf().
