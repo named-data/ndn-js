@@ -3,12 +3,12 @@ NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------
 
 NDN-JS is the first native version of the NDN protocol written in JavaScript.  It
-implements the NDN-TLV wire format and is also wire format compatible with PARC's CCNx. 
+implements the NDN-TLV wire format and is also wire format compatible with PARC's CCNx.
 
 The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
-	
+
 See the file INSTALL for build and install instructions.
 
 License
@@ -41,30 +41,30 @@ over the current web to modern browsers with no hassle for the end user.
 Additional goals for the project:
 - Websockets transport (rather than TCP or UDP, which are not directly supported in
 Javascript).
-- Relatively lightweight and compact, to enable efficient use on the web.	
+- Relatively lightweight and compact, to enable efficient use on the web.
 - Implement the NDN-TLV wire format and be wire format compatible with the PARC's CCNx implementation of NDN.
-	
+
 The library currently requires a remote NDN daemon, and has been tested with ndnd, from
-the's NDNx package: http://ndnx.org/ , ndnd-tlv from the package 
+the's NDNx package: http://ndnx.org/ , ndnd-tlv from the package
 https://github.com/named-data/ndnd-tlv and with NFD from the package
 https://github.com/named-data/NFD .
 
-Currently, the library has two APIs for developers: 
+Currently, the library has two APIs for developers:
 
 	1. The Javascript API for asynchronous Interest/Data exchange.
-	   This uses WebSockets for transport and currently requires a 
+	   This uses WebSockets for transport and currently requires a
 	   proxy for communication with a remote ndnd daemon.
 
 	2. A Firefox plug-in, which implements an "ndn:/" url scheme
 	   following NDNx repository conventions for file retrieval.
-	   
+
 By default, both parts of the library connect automatically to a set of proxies and hubs
 that are part of the NDN research project's testbed.  http://named-data.net/ndn-testbed/
 There are currently no restrictions on non-commercial, research-oriented data exchange on
 this testbed. (Contact jburke@remap.ucla.edu for more details.)   The developer can also
-specify a local or remote ndnd as well, as an argument to the NDN constructor. 
+specify a local or remote ndnd as well, as an argument to the NDN constructor.
 
-	
+
 
 JAVASCRIPT API
 --------------
@@ -80,7 +80,7 @@ The only way (for now) to get connectivity to other NDN nodes is via ndnd.  For 
 Javascript API, a Websockets proxy that can communicate the target ndnd is currently
 required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It
 currently listens on port 9696 and passes messages (using either TCP or UDP) to ndnd on
-the same host. 
+the same host.
 
 ** Including the scripts in a web page **
 To use NDN-JS in a web page, one of two scripts must be included using a script tag:
@@ -93,6 +93,20 @@ Or they can be downloaded from the `downloads` branch (https://github.com/named-
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.js
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.min.js
 
+** Using via npm (Node.js or Browser via Browserify) **
+Though not yet published on npmjs.org, ndn-js can be used in your node or browser projects. Simply clone the git repository, and run
+
+    npm install path/to/ndn-js
+
+Then, in your app...
+
+    var ndn = require("ndn-js")
+
+    var name = new ndn.Name("some/name/in/uri/form")
+      , data = new ndn.Data()
+      , interest = new ndn.Interest()
+    // etc... All API functions are exposed through the ndn object
+
 ** Examples **
 
 *** ndn-ping
@@ -104,7 +118,7 @@ You can check out `examples/ndnping/ndn-ping.html` to see an example how to impl
 A simple example of the current API to express an Interest and receive data:
 
 var face = new Face();	// connect to a default hub/proxy
-        
+
 function onData(interest, data) {
   console.log("Received " + data.getName().toUri());
 }
@@ -113,10 +127,10 @@ face.expressInterest(new Name("/ndn/edu/ucla/remap/ndn-js-test/hello.txt"), onDa
 
 ** Example to publish content **
 
-// Note that publishing content requires knowledge of a 
+// Note that publishing content requires knowledge of a
 // routable prefix for your upstream ndnd.  We are working
 // on a way to either obtain that prefix or use the /local
-// convention. 
+// convention.
 
 For now, see tests/browser/test-publish-async.html
 
@@ -139,7 +153,7 @@ Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File
 ndn-protocol.xpi.  (In Firefox for Android, type file: in the address bar and click the
 downloaded ndn-protocol.xpi.)  Restart Firefox.
 
-Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples:  
+Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples:
 ndn:/ndn/edu/ucla/remap/ndn-js-test/NDNProtocolExamples.html/?ndn.ChildSelector=1
 
 When the page is loaded, Firefox updates the address bar with the full matched name from
@@ -149,13 +163,13 @@ segment number (see below).
 * Interest selectors in the ndn protocol:
 
 You can add interest selectors. For example, this uses 1 to select the "rightmost" child
-(latest version):  
+(latest version):
 ndn:/ndn/edu/ucla/remap/ndn-js-test/howdy.txt?my=query&ndn.ChildSelector=1&key=value#ref
 
-The browser loads the latest version and changes the address to:  
+The browser loads the latest version and changes the address to:
 ndn:/ndn/edu/ucla/remap/ndn-js-test/howdy.txt/%FD%052%A1%EA_%89?my=query&key=value#ref
 
-The child selector was used and removed. Note that the other non-ndn query and 
+The child selector was used and removed. Note that the other non-ndn query and
 ref "?key=value#ref" are still present, in case they are needed by the web application.
 
 The following selector keys are supported:
