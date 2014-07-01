@@ -182,14 +182,14 @@ NdnProtocolInfo.setHub = function(currentWindow, alertFunction)
   var port = 6363;
   var hostAndPort = currentWindow.prompt
     ("Enter hub host:", 
-     NdnProtocolInfo.face.connectionInfo.host ?
+     NdnProtocolInfo.face.connectionInfo && NdnProtocolInfo.face.connectionInfo.host ?
        (NdnProtocolInfo.face.connectionInfo.host + 
         (NdnProtocolInfo.face.connectionInfo.port != port ? ":" + 
          NdnProtocolInfo.face.connectionInfo.port : ""))
        : "");
   if (!hostAndPort)
     return null;
-    
+
   var splitHostAndPort = hostAndPort.split(':', 2);
   host = splitHostAndPort[0].trim();
   if (host == "")
@@ -203,11 +203,12 @@ NdnProtocolInfo.setHub = function(currentWindow, alertFunction)
     }
   }
 
-  if (host == NdnProtocolInfo.face.connectionInfo.host && 
+  if (NdnProtocolInfo.face.connectionInfo &&
+      host == NdnProtocolInfo.face.connectionInfo.host &&
       port == NdnProtocolInfo.face.connectionInfo.port)
     // No change.
     return null;
-    
+
   NdnProtocolInfo.face.createRoute(new XpcomTransport.ConnectionInfo(host, port));    
   if (currentWindow._content.document.location.protocol == "ndn:")
     // Reload with the new hub.
