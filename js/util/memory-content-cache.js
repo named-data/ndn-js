@@ -21,7 +21,7 @@ var Name = require('../name.js').Name;
 
 /**
  * A MemoryContentCache holds a set of Data packets and answers an Interest to
- * return the correct Data packet. The cached is periodically cleaned up to
+ * return the correct Data packet. The cache is periodically cleaned up to
  * remove each stale Data packet based on its FreshnessPeriod (if it has one).
  * @note This class is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
@@ -64,8 +64,8 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onDataNotFound (optional) If a data packet is not found in
  * the cache, this calls onInterest(prefix, interest, transport) to forward the
  * interest. If omitted, this does not use it.
- * @param {ForwardingFlags} flags (optional) See Face::registerPrefix.
- * @param {WireFormat} wireFormat (optional) See Face::registerPrefix.
+ * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
+ * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
 MemoryContentCache.prototype.registerPrefix = function
   (prefix, onRegisterFailed, onDataNotFound, flags, wireFormat)
@@ -82,7 +82,7 @@ MemoryContentCache.prototype.registerPrefix = function
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
- * interests. If data.getFreshnessPeriod() is not negative, set the staleness
+ * interests. If data.getFreshnessPeriod() is not null, set the staleness
  * time to now plus data.getFreshnessPeriod(), which is checked during cleanup
  * to remove stale content. This also checks if cleanupIntervalMilliseconds
  * milliseconds have passed and removes stale content from the cache.
