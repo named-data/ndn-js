@@ -1,5 +1,7 @@
 See the following licenses for third-party software included in this distribution:
 
+contrib/dcodeio/LICENSE
+contrib/feross/LICENSE
 contrib/securityLib/CryptoJS-LICENSE.txt
 contrib/securityLib/jsrsasig-THIRDPARTY_LICENSE.txt
 contrib/securityLib/jsrsasign-LICENSE.txt
