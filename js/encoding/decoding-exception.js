@@ -21,7 +21,7 @@
  * Create a new DecodingException wrapping the given error object.
  * Call with: throw new DecodingException(new Error("message")).
  * @constructor
- * @param {string} error The exception created with new Error.
+ * @param {Error} error The exception created with new Error.
  */
 function DecodingException(error)
 {
