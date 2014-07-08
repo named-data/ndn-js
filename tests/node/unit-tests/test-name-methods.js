@@ -26,7 +26,7 @@ describe('TestNameMethods', function() {
   it('UriConstructor', function() {
     var expectedUri = "/entr%C3%A9e/..../%00%01%02%03";
     var name = new Name(expectedUri);
-    assert.equal(name.size(), 4);
+    assert.equal(name.size(), 3);
     assert.equal(name.toUri(), expectedUri);
   });
 });
