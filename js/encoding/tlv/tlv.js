@@ -23,7 +23,7 @@
  */
 var Tlv = function Tlv()
 {
-}
+};
 
 exports.Tlv = Tlv;
 
