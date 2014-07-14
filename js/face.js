@@ -162,6 +162,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
   this.ndndid = null;
+  // This is used by reconnectAndExpressInterest.
+  this.onConnectedCallbacks = [];
 };
 
 exports.Face = Face;
@@ -515,22 +517,43 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  */
 Face.prototype.reconnectAndExpressInterest = function(interest, closure)
 {
+  var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
     this.readyStatus = Face.OPEN_REQUESTED;
-    var thisFace = this;
+    this.onConnectedCallbacks.push
+      (function() { thisFace.expressInterestHelper(interest, closure); });
+
     this.transport.connect
-      (this.connectionInfo, this,
-       function() {
-         thisFace.readyStatus = Face.OPENED;
-         thisFace.expressInterestHelper(interest, closure);
-         if (thisFace.onopen)
-           // Call Face.onopen after success
-           thisFace.onopen();
-       },
-       function() { thisFace.closeByTransport(); });
+     (this.connectionInfo, this,
+      function() {
+        thisFace.readyStatus = Face.OPENED;
+
+        // Execute each action requested while the connection was opening.
+        while (thisFace.onConnectedCallbacks.length > 0) {
+          try {
+            thisFace.onConnectedCallbacks.shift()();
+          } catch (ex) {
+            console.log("Face.reconnectAndExpressInterest: ignoring exception from onConnectedCallbacks: " + ex);
+          }
+        }
+
+        if (thisFace.onopen)
+          // Call Face.onopen after success
+          thisFace.onopen();
+      },
+      function() { thisFace.closeByTransport(); });
   }
-  else
-    this.expressInterestHelper(interest, closure);
+  else {
+    if (this.readyStatus === Face.OPEN_REQUESTED)
+      // The connection is still opening, so add to the interests to express.
+      this.onConnectedCallbacks.push
+        (function() { thisFace.expressInterestHelper(interest, closure); });
+    else if (this.readyStatus === Face.OPENED)
+      this.expressInterestHelper(interest, closure);
+    else
+      throw new Error
+        ("reconnectAndExpressInterest: unexpected connection is not opened");
+  }
 };
 
 /**
