@@ -162,13 +162,16 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
   this.ndndid = null;
+  // This is used by reconnectAndExpressInterest.
+  this.onConnectedCallbacks = [];
 };
 
 exports.Face = Face;
 
-Face.UNOPEN = 0;  // created but not opened yet
-Face.OPENED = 1;  // connection to ndnd opened
-Face.CLOSED = 2;  // connection to ndnd closed
+Face.UNOPEN = 0;  // the Face is created but not opened yet
+Face.OPEN_REQUESTED = 1;  // requested to connect but onopen is not called.
+Face.OPENED = 2;  // connection to the forwarder opened
+Face.CLOSED = 3;  // connection to the forwarder closed
 
 /**
  * If the forwarder's Unix socket file path exists, then return the file path.
@@ -514,16 +517,43 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  */
 Face.prototype.reconnectAndExpressInterest = function(interest, closure)
 {
+  var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
-    var thisFace = this;
+    this.readyStatus = Face.OPEN_REQUESTED;
+    this.onConnectedCallbacks.push
+      (function() { thisFace.expressInterestHelper(interest, closure); });
+
     this.transport.connect
-      (this.connectionInfo, this,
-       function() { thisFace.expressInterestHelper(interest, closure); },
-       function() { thisFace.closeByTransport(); });
-    this.readyStatus = Face.OPENED;
+     (this.connectionInfo, this,
+      function() {
+        thisFace.readyStatus = Face.OPENED;
+
+        // Execute each action requested while the connection was opening.
+        while (thisFace.onConnectedCallbacks.length > 0) {
+          try {
+            thisFace.onConnectedCallbacks.shift()();
+          } catch (ex) {
+            console.log("Face.reconnectAndExpressInterest: ignoring exception from onConnectedCallbacks: " + ex);
+          }
+        }
+
+        if (thisFace.onopen)
+          // Call Face.onopen after success
+          thisFace.onopen();
+      },
+      function() { thisFace.closeByTransport(); });
   }
-  else
-    this.expressInterestHelper(interest, closure);
+  else {
+    if (this.readyStatus === Face.OPEN_REQUESTED)
+      // The connection is still opening, so add to the interests to express.
+      this.onConnectedCallbacks.push
+        (function() { thisFace.expressInterestHelper(interest, closure); });
+    else if (this.readyStatus === Face.OPENED)
+      this.expressInterestHelper(interest, closure);
+    else
+      throw new Error
+        ("reconnectAndExpressInterest: unexpected connection is not opened");
+  }
 };
 
 /**
@@ -1013,10 +1043,6 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   // The host is alive, so cancel the timeout and continue with onConnected().
   clearTimeout(this.timerID);
 
-    // Call Face.onopen after success
-  this.face.readyStatus = Face.OPENED;
-  this.face.onopen();
-
   if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();
 
@@ -1039,5 +1065,6 @@ exports.NDN = NDN;
 
 NDN.supported = Face.supported;
 NDN.UNOPEN = Face.UNOPEN;
+NDN.OPEN_REQUESTED = Face.OPEN_REQUESTED;
 NDN.OPENED = Face.OPENED;
 NDN.CLOSED = Face.CLOSED;

@@ -18,19 +18,20 @@
  */
 
 /**
- * Create a new DecodingException wrapping the given error object.
- * Call with: throw new DecodingException(new Error("message")).
+ * Create a new SecurityException to report an exception from the security
+ * library, wrapping the given error object.
+ * Call with: throw new SecurityException(new Error("message")).
  * @constructor
  * @param {Error} error The exception created with new Error.
  */
-function DecodingException(error)
+function SecurityException(error)
 {
   this.message = error.message;
   // Copy lineNumber, etc. from where new Error was called.
   for (var prop in error)
       this[prop] = error[prop];
 }
-DecodingException.prototype = new Error();
-DecodingException.prototype.name = "DecodingException";
+SecurityException.prototype = new Error();
+SecurityException.prototype.name = "SecurityException";
 
-exports.DecodingException = DecodingException;
+exports.SecurityException = SecurityException;
