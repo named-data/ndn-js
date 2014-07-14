@@ -5769,7 +5769,7 @@ DataUtils.shuffle = function(array)
  * Create a new DecodingException wrapping the given error object.
  * Call with: throw new DecodingException(new Error("message")).
  * @constructor
- * @param {string} error The exception created with new Error.
+ * @param {Error} error The exception created with new Error.
  */
 function DecodingException(error)
 {
@@ -7183,7 +7183,7 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset)
  */
 var Tlv = function Tlv()
 {
-}
+};
 
 exports.Tlv = Tlv;
 
@@ -8620,7 +8620,7 @@ var Name = require('../name.js').Name;
 
 /**
  * A MemoryContentCache holds a set of Data packets and answers an Interest to
- * return the correct Data packet. The cached is periodically cleaned up to
+ * return the correct Data packet. The cache is periodically cleaned up to
  * remove each stale Data packet based on its FreshnessPeriod (if it has one).
  * @note This class is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/memory-content-cache.html .
@@ -8663,8 +8663,8 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onDataNotFound (optional) If a data packet is not found in
  * the cache, this calls onInterest(prefix, interest, transport) to forward the
  * interest. If omitted, this does not use it.
- * @param {ForwardingFlags} flags (optional) See Face::registerPrefix.
- * @param {WireFormat} wireFormat (optional) See Face::registerPrefix.
+ * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
+ * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
 MemoryContentCache.prototype.registerPrefix = function
   (prefix, onRegisterFailed, onDataNotFound, flags, wireFormat)
@@ -8681,7 +8681,7 @@ MemoryContentCache.prototype.registerPrefix = function
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
- * interests. If data.getFreshnessPeriod() is not negative, set the staleness
+ * interests. If data.getFreshnessPeriod() is not null, set the staleness
  * time to now plus data.getFreshnessPeriod(), which is checked during cleanup
  * to remove stale content. This also checks if cleanupIntervalMilliseconds
  * milliseconds have passed and removes stale content from the cache.
@@ -10598,6 +10598,258 @@ KeyManager.prototype.getKey = function()
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * Create a new SecurityException to report an exception from the security
+ * library, wrapping the given error object.
+ * Call with: throw new SecurityException(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+function SecurityException(error)
+{
+  this.message = error.message;
+  // Copy lineNumber, etc. from where new Error was called.
+  for (var prop in error)
+      this[prop] = error[prop];
+}
+SecurityException.prototype = new Error();
+SecurityException.prototype.name = "SecurityException";
+
+exports.SecurityException = SecurityException;
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * This module defines constants used by the security library.
+ */
+
+/**
+ * The KeyType integer is used by the Sqlite key storage, so don't change them.
+ * Make these the same as ndn-cpp in case the Sqlite file is shared.
+ * @constructor
+ */
+var KeyType = function KeyType()
+{
+}
+
+exports.KeyType = KeyType;
+
+KeyType.RSA = 0;
+KeyType.AES = 1;
+// KeyType.DSA
+// KeyType.DES
+// KeyType.RC4
+// KeyType.RC2
+KeyType.EC = 2;
+
+var KeyClass = function KeyClass()
+{
+};
+
+exports.KeyClass = KeyClass;
+
+KeyClass.PUBLIC = 1;
+KeyClass.PRIVATE = 2;
+KeyClass.SYMMETRIC = 3;
+
+var DigestAlgorithm = function DigestAlgorithm()
+{
+};
+
+exports.DigestAlgorithm = DigestAlgorithm;
+
+DigestAlgorithm.SHA256 = 1;
+// DigestAlgorithm.MD2
+// DigestAlgorithm.MD5
+// DigestAlgorithm.SHA1
+
+var EncryptMode = function EncryptMode()
+{
+};
+
+exports.EncryptMode = EncryptMode;
+
+EncryptMode.DEFAULT = 1;
+EncryptMode.CFB_AES = 2;
+// EncryptMode.CBC_AES
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var SecurityException = require('../security-exception.js').SecurityException;
+var KeyType = require('../security-types.js').KeyType;
+
+/**
+ * A PublicKey holds an encoded public key for use by the security library.
+ * Create a new PublicKey with the given values.
+ * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
+ * @param {Blob} keyDer The blob of the PublicKeyInfo in terms of DER.
+ */
+var PublicKey = function PublicKey(keyType, keyDer)
+{
+  this.keyType = keyType;
+  this.keyDer = keyDer;
+};
+
+exports.PublicKey = PublicKey;
+
+/**
+ * Encode the public key into DER.
+ * @returns {DerNode} The encoded DER syntax tree.
+ */
+PublicKey.prototype.toDer = function()
+{
+  throw new Error("PublicKey.toDer is not implemented");
+};
+
+/**
+ * Decode the public key from the DER blob.
+ * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
+ * @param {Blob} keyDer The DER blob.
+ * @returns {PublicKey} The decoded public key.
+ */
+PublicKey.fromDer = function(keyType, keyDer)
+{
+  if (keyType == KeyType.RSA) {
+    // TODO: Make sure we can decode the public key DER.
+  }
+  else
+    throw new SecurityException(new Error
+      ("PublicKey::fromDer: Unrecognized keyType"));
+
+  return new PublicKey(keyType, keyDer);
+};
+
+/**
+ * 
+ * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
+ * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
+ * @returns {Blob} The digest value.
+ */
+PublicKey.prototype.getDigest = function(digestAlgorithm)
+{
+  throw new Error("PublicKey.getDigest is not implemented");
+};
+
+/**
+ * Get the key type.
+ * @returns {number} The key type as an int from KeyType.
+ */
+PublicKey.prototype.getKeyType = function()
+{
+  return this.keyType;
+};
+
+/**
+ * Get the raw bytes of the public key in DER format.
+ * @returns {Blob} The public key DER.
+ */
+PublicKey.prototype.getKeyDer = function()
+{
+  return this.keyDer;
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var IdentityCertificate = function IdentityCertificate()
+{
+};
+
+exports.IdentityCertificate = IdentityCertificate;
+
+/**
+ * Get the public key name from the full certificate name.
+ * @param {Name} certificateName The full certificate name.
+ * @returns {Name} The related public key name.
+ */
+IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
+{
+  var i = certificateName.size() - 1;
+  var idString = "ID-CERT";
+  while (i >= 0) {
+    if (certificateName.get(i).toEscapedString() == idString)
+      break;
+    i -= 1;
+  }
+
+  var tmpName = certificateName.getSubName(0, i);
+  var keyString = "KEY";
+  for (var i = 0; i < tmpName.size(); ++i) {
+    if (tmpName.get(i).toEscapedString() == keyString)
+      break;
+  }
+
+  return tmpName.getSubName(0, i).append
+    (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+};
 /**
  * This class represents an NDN Data MetaInfo object.
  * Copyright (C) 2014 Regents of the University of California.
@@ -13866,13 +14118,16 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
   this.ndndid = null;
+  // This is used by reconnectAndExpressInterest.
+  this.onConnectedCallbacks = [];
 };
 
 exports.Face = Face;
 
-Face.UNOPEN = 0;  // created but not opened yet
-Face.OPENED = 1;  // connection to ndnd opened
-Face.CLOSED = 2;  // connection to ndnd closed
+Face.UNOPEN = 0;  // the Face is created but not opened yet
+Face.OPEN_REQUESTED = 1;  // requested to connect but onopen is not called.
+Face.OPENED = 2;  // connection to the forwarder opened
+Face.CLOSED = 3;  // connection to the forwarder closed
 
 /**
  * If the forwarder's Unix socket file path exists, then return the file path.
@@ -14218,16 +14473,43 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  */
 Face.prototype.reconnectAndExpressInterest = function(interest, closure)
 {
+  var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
-    var thisFace = this;
+    this.readyStatus = Face.OPEN_REQUESTED;
+    this.onConnectedCallbacks.push
+      (function() { thisFace.expressInterestHelper(interest, closure); });
+
     this.transport.connect
-      (this.connectionInfo, this,
-       function() { thisFace.expressInterestHelper(interest, closure); },
-       function() { thisFace.closeByTransport(); });
-    this.readyStatus = Face.OPENED;
+     (this.connectionInfo, this,
+      function() {
+        thisFace.readyStatus = Face.OPENED;
+
+        // Execute each action requested while the connection was opening.
+        while (thisFace.onConnectedCallbacks.length > 0) {
+          try {
+            thisFace.onConnectedCallbacks.shift()();
+          } catch (ex) {
+            console.log("Face.reconnectAndExpressInterest: ignoring exception from onConnectedCallbacks: " + ex);
+          }
+        }
+
+        if (thisFace.onopen)
+          // Call Face.onopen after success
+          thisFace.onopen();
+      },
+      function() { thisFace.closeByTransport(); });
   }
-  else
-    this.expressInterestHelper(interest, closure);
+  else {
+    if (this.readyStatus === Face.OPEN_REQUESTED)
+      // The connection is still opening, so add to the interests to express.
+      this.onConnectedCallbacks.push
+        (function() { thisFace.expressInterestHelper(interest, closure); });
+    else if (this.readyStatus === Face.OPENED)
+      this.expressInterestHelper(interest, closure);
+    else
+      throw new Error
+        ("reconnectAndExpressInterest: unexpected connection is not opened");
+  }
 };
 
 /**
@@ -14717,10 +14999,6 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
   // The host is alive, so cancel the timeout and continue with onConnected().
   clearTimeout(this.timerID);
 
-    // Call Face.onopen after success
-  this.face.readyStatus = Face.OPENED;
-  this.face.onopen();
-
   if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
   this.onConnected();
 
@@ -14743,5 +15021,6 @@ exports.NDN = NDN;
 
 NDN.supported = Face.supported;
 NDN.UNOPEN = Face.UNOPEN;
+NDN.OPEN_REQUESTED = Face.OPEN_REQUESTED;
 NDN.OPENED = Face.OPENED;
 NDN.CLOSED = Face.CLOSED;
