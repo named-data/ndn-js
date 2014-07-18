@@ -69,8 +69,7 @@ NameEnumeration.prototype.processData = function(data)
       // We don't expect a name without a segment number.  Treat it as a bad packet.
       this.onComponents(null);
     else {
-      var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.getName().get(-1).getValue().buf());
+      var segmentNumber = data.getName().get(-1).toSegment();
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
@@ -83,7 +82,7 @@ NameEnumeration.prototype.processData = function(data)
         this.contentParts.push(data.getContent().buf());
 
         if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+          var finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
