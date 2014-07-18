@@ -118,7 +118,55 @@ Name.Component.prototype.getValueAsBuffer = function()
 Name.Component.prototype.toEscapedString = function()
 {
   return Name.toEscapedString(this.value);
-}
+};
+
+/**
+ * Interpret this name component as a network-ordered number and return an integer.
+ * @returns {number} The integer number.
+ */
+Name.Component.prototype.toNumber = function()
+{
+  return DataUtils.bigEndianToUnsignedInt(this.value);
+};
+
+/**
+ * Interpret this name component as a network-ordered number with a marker and 
+ * return an integer.
+ * @param {number} marker The required first byte of the component.
+ * @returns {number} The integer number.
+ * @throws Error If the first byte of the component does not equal the marker.
+ */
+Name.Component.prototype.toNumberWithMarker = function(marker)
+{
+  if (this.value.length == 0 || this.value[0] != marker)
+    throw new Error("Name component does not begin with the expected marker");
+
+  return DataUtils.bigEndianToUnsignedInt(this.value.slice(1));
+};
+
+/**
+ * Interpret this name component as a segment number according to NDN name
+ * conventions (a network-ordered number where the first byte is the marker 0x00).
+ * @returns {number} The integer segment number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegment = function()
+{
+  return this.toNumberWithMarker(0x00);
+};
+
+/**
+ * Interpret this name component as a version number according to NDN name 
+ * conventions (a network-ordered number where the first byte is the marker 0xFD).  
+ * Note that this returns the exact number from the component without converting 
+ * it to a time representation.
+ * @returns {number} The integer version number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toVersion = function()
+{
+  return this.toNumberWithMarker(0xFD);
+};
 
 /**
  * Create a component whose value is the marker appended with the 
@@ -147,7 +195,7 @@ Name.Component.fromNumberWithMarker = function(number, marker)
 Name.Component.prototype.equals = function(other)
 {
   return DataUtils.arraysEqual(this.value, other.value);
-}
+};
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
@@ -161,7 +209,7 @@ Name.Component.prototype.equals = function(other)
 Name.Component.prototype.compare = function(other)
 {
   return Name.Component.compareBuffers(this.value, other.value);
-}
+};
 
 /**
  * Do the work of Name.Component.compare to compare the component buffers.
@@ -186,7 +234,7 @@ Name.Component.compareBuffers = function(component1, component2)
   }
 
   return 0;
-}
+};
 
 /**
  * @deprecated Use toUri.
@@ -254,7 +302,7 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
-}
+};
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {

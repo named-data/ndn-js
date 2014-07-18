@@ -8516,8 +8516,7 @@ NameEnumeration.prototype.processData = function(data)
       // We don't expect a name without a segment number.  Treat it as a bad packet.
       this.onComponents(null);
     else {
-      var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.getName().get(-1).getValue().buf());
+      var segmentNumber = data.getName().get(-1).toSegment();
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
@@ -8530,7 +8529,7 @@ NameEnumeration.prototype.processData = function(data)
         this.contentParts.push(data.getContent().buf());
 
         if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+          var finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
@@ -9523,7 +9522,74 @@ Name.Component.prototype.getValueAsBuffer = function()
 Name.Component.prototype.toEscapedString = function()
 {
   return Name.toEscapedString(this.value);
-}
+};
+
+/**
+ * Interpret this name component as a network-ordered number and return an integer.
+ * @returns {number} The integer number.
+ */
+Name.Component.prototype.toNumber = function()
+{
+  return DataUtils.bigEndianToUnsignedInt(this.value);
+};
+
+/**
+ * Interpret this name component as a network-ordered number with a marker and 
+ * return an integer.
+ * @param {number} marker The required first byte of the component.
+ * @returns {number} The integer number.
+ * @throws Error If the first byte of the component does not equal the marker.
+ */
+Name.Component.prototype.toNumberWithMarker = function(marker)
+{
+  if (this.value.length == 0 || this.value[0] != marker)
+    throw new Error("Name component does not begin with the expected marker");
+
+  return DataUtils.bigEndianToUnsignedInt(this.value.slice(1));
+};
+
+/**
+ * Interpret this name component as a segment number according to NDN name
+ * conventions (a network-ordered number where the first byte is the marker 0x00).
+ * @returns {number} The integer segment number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegment = function()
+{
+  return this.toNumberWithMarker(0x00);
+};
+
+/**
+ * Interpret this name component as a version number according to NDN name 
+ * conventions (a network-ordered number where the first byte is the marker 0xFD).  
+ * Note that this returns the exact number from the component without converting 
+ * it to a time representation.
+ * @returns {number} The integer version number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toVersion = function()
+{
+  return this.toNumberWithMarker(0xFD);
+};
+
+/**
+ * Create a component whose value is the marker appended with the 
+ * network-ordered encoding of the number. Note: if the number is zero, no bytes 
+ * are used for the number - the result will have only the marker.
+ * @param {number} number
+ * @param {number} marker
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumberWithMarker = function(number, marker)
+{
+  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+  // Put the marker byte in front.
+  var value = new Buffer(bigEndian.length + 1);
+  value[0] = marker;
+  bigEndian.copy(value, 1);
+
+  return new Name.Component(value);
+};
 
 /**
  * Check if this is the same component as other.
@@ -9533,7 +9599,7 @@ Name.Component.prototype.toEscapedString = function()
 Name.Component.prototype.equals = function(other)
 {
   return DataUtils.arraysEqual(this.value, other.value);
-}
+};
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
@@ -9547,7 +9613,7 @@ Name.Component.prototype.equals = function(other)
 Name.Component.prototype.compare = function(other)
 {
   return Name.Component.compareBuffers(this.value, other.value);
-}
+};
 
 /**
  * Do the work of Name.Component.compare to compare the component buffers.
@@ -9572,7 +9638,7 @@ Name.Component.compareBuffers = function(component1, component2)
   }
 
   return 0;
-}
+};
 
 /**
  * @deprecated Use toUri.
@@ -9640,7 +9706,7 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
-}
+};
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
@@ -9746,14 +9812,7 @@ Name.prototype.to_uri = function()
  */
 Name.prototype.appendSegment = function(segment)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0x00));
 };
 
 /**
@@ -9765,14 +9824,7 @@ Name.prototype.appendSegment = function(segment)
  */
 Name.prototype.appendVersion = function(version)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0xfD;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
 };
 
 /**

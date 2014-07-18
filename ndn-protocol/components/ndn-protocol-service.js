@@ -208,8 +208,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName()))
-        segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.getName().get(-1).getValue().buf());
+        segmentNumber = data.getName().get(-1).toSegment();
 
     if (!this.didOnStart) {
         // This is the first or only segment.
@@ -301,7 +300,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     this.segmentStore.storeContent(segmentNumber, data);
 
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-        this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+        this.finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
 
     // The content was already put in the store.  Retrieve as much as possible.
     var entry;
