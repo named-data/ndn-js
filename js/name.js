@@ -121,6 +121,25 @@ Name.Component.prototype.toEscapedString = function()
 }
 
 /**
+ * Create a component whose value is the marker appended with the 
+ * network-ordered encoding of the number. Note: if the number is zero, no bytes 
+ * are used for the number - the result will have only the marker.
+ * @param {number} number
+ * @param {number} marker
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumberWithMarker = function(number, marker)
+{
+  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+  // Put the marker byte in front.
+  var value = new Buffer(bigEndian.length + 1);
+  value[0] = marker;
+  bigEndian.copy(value, 1);
+
+  return new Name.Component(value);
+};
+
+/**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
  * @returns {Boolean} true if the components are equal, otherwise false.
@@ -341,14 +360,7 @@ Name.prototype.to_uri = function()
  */
 Name.prototype.appendSegment = function(segment)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0x00));
 };
 
 /**
@@ -360,14 +372,7 @@ Name.prototype.appendSegment = function(segment)
  */
 Name.prototype.appendVersion = function(version)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0xfD;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
 };
 
 /**
