@@ -425,7 +425,7 @@ Interest.prototype.wireEncode = function(wireFormat)
 
 /**
  * Decode the input using a particular wire format and update this Interest.
- * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */

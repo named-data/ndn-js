@@ -56,6 +56,7 @@ TlvDecoder.prototype.readVarNumber = function()
  */
 TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
+  var result;
   // This is a private function so we know firstOctet >= 253.
   if (firstOctet == 253) {
     result = ((this.input[this.offset] << 8) +
