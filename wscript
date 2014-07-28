@@ -120,6 +120,8 @@ def build (bld):
                  "js/security/security-types.js",
                  "js/security/certificate/public-key.js",
                  "js/security/certificate/identity-certificate.js",
+                 "js/security/identity/identity-storage.js",
+                 "js/security/identity/memory-identity-storage.js",
                  "js/meta-info.js",
                  "js/signature.js",
                  "js/data.js",
