@@ -8523,6 +8523,7 @@ TlvDecoder.prototype.readVarNumber = function()
  */
 TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
+  var result;
   // This is a private function so we know firstOctet >= 253.
   if (firstOctet == 253) {
     result = ((this.input[this.offset] << 8) +
@@ -11658,6 +11659,7 @@ exports.SecurityException = SecurityException;
  * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -11731,6 +11733,7 @@ EncryptMode.CFB_AES = 2;
  * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -11822,6 +11825,7 @@ PublicKey.prototype.getKeyDer = function()
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -11868,6 +11872,2211 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append
     (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Name = require('../../name.js').Name;
+var SecurityException = require('../security-exception.js').SecurityException;
+
+/**
+ * IdentityStorage is a base class for the storage of identity, public keys and
+ * certificates. Private keys are stored in PrivateKeyStorage.
+ * This is an abstract base class.  A subclass must implement the methods.
+ * @constructor
+ */
+var IdentityStorage = function IdentityStorage()
+{
+};
+
+exports.IdentityStorage = IdentityStorage;
+
+/**
+ * Check if the specified identity already exists.
+ * @param {Name} identityName The identity name.
+ * @returns {boolean} true if the identity exists, otherwise false.
+ */
+IdentityStorage.prototype.doesIdentityExist = function(identityName)
+{
+  throw new Error("IdentityStorage.doesIdentityExist is not implemented");
+};
+
+/**
+ * Add a new identity. An exception will be thrown if the identity already exists.
+ * @param {Name} identityName The identity name to be added.
+ */
+IdentityStorage.prototype.addIdentity = function(identityName)
+{
+  throw new Error("IdentityStorage.addIdentity is not implemented");
+};
+
+/**
+ * Revoke the identity.
+ * @returns {boolean} true if the identity was revoked, false if not.
+ */
+IdentityStorage.prototype.revokeIdentity = function()
+{
+  throw new Error("IdentityStorage.revokeIdentity is not implemented");
+};
+
+/**
+ * Generate a name for a new key belonging to the identity.
+ * @param {Name} identityName The identity name.
+ * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
+ * @returns {Name} The generated key name.
+ */
+IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
+{
+  var ti = new Date().getTime();
+  // Get the number of seconds.
+  var seconds = "" + Math.floor(ti / 1000.0);
+
+  var keyIdStr;
+  if (useKsk)
+    keyIdStr = "KSK-" + seconds;
+  else
+    keyIdStr = "DSK-" + seconds;
+
+  var keyName = new Name(identityName).append(keyIdStr);
+
+  if (this.doesKeyExist(keyName))
+    throw new SecurityException(new Error("Key name already exists"));
+
+  return keyName;
+};
+
+/**
+ * Check if the specified key already exists.
+ * @param {Name} keyName The name of the key.
+ * @returns {boolean} true if the key exists, otherwise false.
+ */
+IdentityStorage.prototype.doesKeyExist = function(keyName)
+{
+  throw new Error("IdentityStorage.doesKeyExist is not implemented");
+};
+
+/**
+ * Add a public key to the identity storage.
+ * @param {Name} keyName The name of the public key to be added.
+ * @param {number} keyType Type of the public key to be added from KeyType, such
+ * as KeyType.RSA..
+ * @param {Blob} publicKeyDer A blob of the public key DER to be added.
+ */
+IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
+{
+  throw new Error("IdentityStorage.addKey is not implemented");
+};
+
+/**
+ * Get the public key DER blob from the identity storage.
+ * @param {Name} keyName The name of the requested public key.
+ * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ */
+IdentityStorage.prototype.getKey = function(keyName)
+{
+  throw new Error("IdentityStorage.getKey is not implemented");
+};
+
+/**
+ * Get the KeyType of the public key with the given keyName.
+ * @param {Name} keyName The name of the requested public key.
+ * @returns {number} The KeyType, for example KEY_TYPE_RSA.
+ */
+IdentityStorage.prototype.getKeyType = function(keyName)
+{
+  throw new Error("IdentityStorage.getKeyType is not implemented");
+};
+
+/**
+ * Activate a key.  If a key is marked as inactive, its private part will not be
+ * used in packet signing.
+ * @param {Name} keyName name of the key
+ */
+IdentityStorage.prototype.activateKey = function(keyName)
+{
+  throw new Error("IdentityStorage.activateKey is not implemented");
+};
+
+/**
+ * Deactivate a key. If a key is marked as inactive, its private part will not
+ * be used in packet signing.
+ * @param {Name} keyName name of the key
+ */
+IdentityStorage.prototype.deactivateKey = function(keyName)
+{
+  throw new Error("IdentityStorage.deactivateKey is not implemented");
+};
+
+/**
+ * Check if the specified certificate already exists.
+ * @param {Name} certificateName The name of the certificate.
+ * @returns {boolean} true if the certificate exists, otherwise false.
+ */
+IdentityStorage.prototype.doesCertificateExist = function(certificateName)
+{
+  throw new Error("IdentityStorage.doesCertificateExist is not implemented");
+};
+
+/**
+ * Add a certificate to the identity storage.
+ * @param {IdentityCertificate} certificate The certificate to be added.  This
+ * makes a copy of the certificate.
+ */
+IdentityStorage.prototype.addCertificate = function(certificate)
+{
+  throw new Error("IdentityStorage.addCertificate is not implemented");
+};
+
+/**
+ * Get a certificate from the identity storage.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @param {boolean} allowAny (optional) If false, only a valid certificate will
+ * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
+ * @returns {Data} The requested certificate.  If not found, return a shared_ptr
+ * with a null pointer.
+ */
+IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+{
+  throw new Error("IdentityStorage.getCertificate is not implemented");
+};
+
+/*****************************************
+ *           Get/Set Default             *
+ *****************************************/
+
+/**
+ * Get the default identity.
+ * @returns {Name} The name of default identity.
+ * @throws SecurityException if the default identity is not set.
+ */
+IdentityStorage.prototype.getDefaultIdentity = function()
+{
+  throw new Error("IdentityStorage.getDefaultIdentity is not implemented");
+};
+
+/**
+ * Get the default key name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @returns {Name} The default key name.
+ * @throws SecurityException if the default key name for the identity is not set.
+ */
+IdentityStorage.prototype.getDefaultKeyNameForIdentity = function(identityName)
+{
+  throw new Error("IdentityStorage.getDefaultKeyNameForIdentity is not implemented");
+};
+
+/**
+ * Get the default certificate name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @returns {Name} The default certificate name.
+ * @throws SecurityException if the default key name for the identity is not
+ * set or the default certificate name for the key name is not set.
+ */
+IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
+  (identityName)
+{
+  var keyName = this.getDefaultKeyNameForIdentity(identityName);
+  return this.getDefaultCertificateNameForKey(keyName);
+};
+
+/**
+ * Get the default certificate name for the specified key.
+ * @param {Name} keyName The key name.
+ * @returns {Name} The default certificate name.
+ * @throws SecurityException if the default certificate name for the key name
+ * is not set.
+ */
+IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
+{
+  throw new Error("IdentityStorage.getDefaultCertificateNameForKey is not implemented");
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
+ */
+IdentityStorage.prototype.setDefaultIdentity = function(identityName)
+{
+  throw new Error("IdentityStorage.setDefaultIdentity is not implemented");
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} identityNameCheck (optional) The identity name to check the
+ * keyName.
+ */
+IdentityStorage.prototype.setDefaultKeyNameForIdentity = function
+  (keyName, identityNameCheck)
+{
+  throw new Error("IdentityStorage.setDefaultKeyNameForIdentity is not implemented");
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} certificateName The certificate name.
+ */
+IdentityStorage.prototype.setDefaultCertificateNameForKey = function
+  (keyName, certificateName)
+{
+  throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Data = require('../../data.js').Data;
+var Name = require('../../name.js').Name;
+var Blob = require('../../util/blob.js').Blob;
+var KeyType = require('../security-types.js').KeyType;
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var SecurityException = require('../security-exception.js').SecurityException;
+var IdentityStorage = require('./identity-storage.js').IdentityStorage;
+
+/**
+ * MemoryIdentityStorage extends IdentityStorage and implements its methods to
+ * store identity, public key and certificate objects in memory. The application
+ * must get the objects through its own means and add the objects to the
+ * MemoryIdentityStorage object. To use permanent file-based storage, see
+ * BasicIdentityStorage.
+ * @constructor
+ */
+var MemoryIdentityStorage = function MemoryIdentityStorage()
+{
+  // Call the base constructor.
+  IdentityStorage.call(this);
+
+  // A list of name URI.
+  this.identityStore = [];
+  // The default identity in identityStore_, or "" if not defined.
+  this.defaultIdentity = "";
+  // The key is the keyName.toUri(). The value is the object
+  //  {keyType, // number from KeyType
+  //   keyDer   // Blob
+  //  }.
+  this.keyStore = {};
+  // The key is the key is the certificateName.toUri(). The value is the
+  //   encoded certificate.
+  this.certificateStore = {};
+};
+
+MemoryIdentityStorage.prototype = new IdentityStorage();
+MemoryIdentityStorage.prototype.name = "MemoryIdentityStorage";
+
+exports.MemoryIdentityStorage = MemoryIdentityStorage;
+/**
+ * Check if the specified identity already exists.
+ * @param {Name} identityName The identity name.
+ * @returns {boolean} true if the identity exists, otherwise false.
+ */
+MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
+{
+  return this.identityStore[identityName.toUri()] !== undefined;
+};
+
+/**
+ * Add a new identity. An exception will be thrown if the identity already exists.
+ * @param {Name} identityName The identity name to be added.
+ */
+MemoryIdentityStorage.prototype.addIdentity = function(identityName)
+{
+  var identityUri = identityName.toUri();
+  if (this.identityStore.indexOf(identityUri) >= 0)
+      throw new SecurityException(new Error
+        ("Identity already exists: " + identityUri));
+
+  this.identityStore.push(identityUri);
+};
+
+/**
+ * Revoke the identity.
+ * @returns {boolean} true if the identity was revoked, false if not.
+ */
+MemoryIdentityStorage.prototype.revokeIdentity = function()
+{
+  throw new Error("MemoryIdentityStorage.revokeIdentity is not implemented");
+};
+
+/**
+ * Check if the specified key already exists.
+ * @param {Name} keyName The name of the key.
+ * @returns {boolean} true if the key exists, otherwise false.
+ */
+MemoryIdentityStorage.prototype.doesKeyExist = function(keyName)
+{
+  return this.keyStore[keyName.toUri()] !== undefined;
+};
+
+/**
+ * Add a public key to the identity storage.
+ * @param {Name} keyName The name of the public key to be added.
+ * @param {number} keyType Type of the public key to be added from KeyType, such
+ * as KeyType.RSA..
+ * @param {Blob} publicKeyDer A blob of the public key DER to be added.
+ */
+MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
+{
+  var identityName = keyName.getSubName(0, keyName.size() - 1);
+
+  if (!this.doesIdentityExist(identityName))
+    this.addIdentity(identityName);
+
+  if (this.doesKeyExist(keyName))
+    throw new SecurityException(new Error
+      ("A key with the same name already exists!"));
+
+  this.keyStore[keyName.toUri()] =
+    { keyType: keyType, keyDer: new Blob(publicKeyDer) };
+};
+
+/**
+ * Get the public key DER blob from the identity storage.
+ * @param {Name} keyName The name of the requested public key.
+ * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ */
+MemoryIdentityStorage.prototype.getKey = function(keyName)
+{
+  var keyNameUri = keyName.toUri();
+  var entry = this.keyStore[keyNameUri];
+  if (entry === undefined)
+    // Not found.  Silently return a null Blob.
+    return new Blob();
+
+  return entry.keyDer;
+};
+
+/**
+ * Get the KeyType of the public key with the given keyName.
+ * @param {Name} keyName The name of the requested public key.
+ * @returns {number} The KeyType, for example KEY_TYPE_RSA.
+ */
+MemoryIdentityStorage.prototype.getKeyType = function(keyName)
+{
+  var keyNameUri = keyName.toUri();
+  var entry = this.keyStore[keyNameUri];
+  if (entry === undefined)
+    throw new SecurityException(new Error
+      ("Cannot get public key type because the keyName doesn't exist"));
+
+  return entry.keyType;
+};
+
+/**
+ * Activate a key.  If a key is marked as inactive, its private part will not be
+ * used in packet signing.
+ * @param {Name} keyName name of the key
+ */
+MemoryIdentityStorage.prototype.activateKey = function(keyName)
+{
+  throw new Error("MemoryIdentityStorage.activateKey is not implemented");
+};
+
+/**
+ * Deactivate a key. If a key is marked as inactive, its private part will not
+ * be used in packet signing.
+ * @param {Name} keyName name of the key
+ */
+MemoryIdentityStorage.prototype.deactivateKey = function(keyName)
+{
+  throw new Error("MemoryIdentityStorage.deactivateKey is not implemented");
+};
+
+/**
+ * Check if the specified certificate already exists.
+ * @param {Name} certificateName The name of the certificate.
+ * @returns {boolean} true if the certificate exists, otherwise false.
+ */
+MemoryIdentityStorage.prototype.doesCertificateExist = function(certificateName)
+{
+  return this.certificateStore[certificateName.toUri()] !== undefined;
+};
+
+/**
+ * Add a certificate to the identity storage.
+ * @param {IdentityCertificate} certificate The certificate to be added.  This
+ * makes a copy of the certificate.
+ */
+MemoryIdentityStorage.prototype.addCertificate = function(certificate)
+{
+  var certificateName = certificate.getName();
+  var keyName = certificate.getPublicKeyName();
+
+  if (!this.doesKeyExist(keyName))
+    throw new SecurityException(new Error
+      ("No corresponding Key record for certificate! " +
+       keyName.toUri() + " " + certificateName.toUri()));
+
+  // Check if the certificate already exists.
+  if (this.doesCertificateExist(certificateName))
+    throw new SecurityException(new Error
+      ("Certificate has already been installed!"));
+
+  // Check if the public key of the certificate is the same as the key record.
+  var keyBlob = getKey(keyName);
+  if (keyBlob.isNull() ||
+      !DataUtils.arraysEqual(keyBlob.buf(),
+        certificate.getPublicKeyInfo().getKeyDer().buf()))
+    throw new SecurityException(new Error
+      ("The certificate does not match the public key!"));
+
+  // Insert the certificate.
+  // wireEncode returns the cached encoding if available.
+  this.certificateStore[certificateName.toUri()] = certificate.wireEncode();
+};
+
+/**
+ * Get a certificate from the identity storage.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @param {boolean} allowAny (optional) If false, only a valid certificate will
+ * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
+ * @returns {Data} The requested certificate.  If not found, return null.
+ */
+MemoryIdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+{
+  var certificateNameUri = certificateName.toUri();
+  if (this.certificateStore[certificateNameUri] === undefined)
+    // Not found.  Silently return null.
+    return null;
+
+  var data = new Data();
+  data.wireDecode(this.certificateStore[certificateNameUri]);
+  return data;
+};
+
+/*****************************************
+ *           Get/Set Default             *
+ *****************************************/
+
+/**
+ * Get the default identity.
+ * @returns {Name} The name of default identity.
+ * @throws SecurityException if the default identity is not set.
+ */
+MemoryIdentityStorage.prototype.getDefaultIdentity = function()
+{
+  if (this.defaultIdentity.length === 0)
+    throw new SecurityException(new Error
+      ("MemoryIdentityStorage.getDefaultIdentity: The default identity is not defined"));
+
+  return new Name(this.defaultIdentity);
+};
+
+/**
+ * Get the default key name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @returns {Name} The default key name.
+ * @throws SecurityException if the default key name for the identity is not set.
+ */
+MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
+  (identityName)
+{
+  throw new Error("MemoryIdentityStorage.getDefaultKeyNameForIdentity is not implemented");
+};
+
+/**
+ * Get the default certificate name for the specified key.
+ * @param {Name} keyName The key name.
+ * @returns {Name} The default certificate name.
+ * @throws SecurityException if the default certificate name for the key name
+ * is not set.
+ */
+MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
+{
+  throw new Error("MemoryIdentityStorage.getDefaultCertificateNameForKey is not implemented");
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
+ */
+MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
+{
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined)
+    this.defaultIdentity = identityUri;
+  else
+    // The identity doesn't exist, so clear the default.
+    this.defaultIdentity = "";
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} identityNameCheck (optional) The identity name to check the
+ * keyName.
+ */
+MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
+  (keyName, identityNameCheck)
+{
+  throw new Error("MemoryIdentityStorage.setDefaultKeyNameForIdentity is not implemented");
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} certificateName The certificate name.
+ */
+MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
+  (keyName, certificateName)
+{
+  throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * PrivateKeyStorage is an abstract class which declares methods for working
+ * with a private key storage. You should use a subclass.
+ * @constructor
+ */
+var PrivateKeyStorage = function PrivateKeyStorage()
+{
+};
+
+exports.PrivateKeyStorage = PrivateKeyStorage;
+
+/**
+ * Generate a pair of asymmetric keys.
+ * @param {Name} keyName The name of the key pair.
+ * @param {number} keyType (optional) The type of the key pair, e.g. KeyType.RSA.
+ * If omitted, use KeyType.RSA.
+ * @param {number} keySize (optional) The size of the key pair. If omitted, use
+ * 2048.
+ */
+PrivateKeyStorage.prototype.generateKeyPair = function(keyName, keyType, keySize)
+{
+  throw new Error("PrivateKeyStorage.generateKeyPair is not implemented");
+};
+
+/**
+ * Get the public key
+ * @param {Name} keyName The name of public key.
+ * @returns {PublicKey} The public key.
+ */
+PrivateKeyStorage.prototype.getPublicKey = function(keyName)
+{
+  throw new Error("PrivateKeyStorage.getPublicKey is not implemented");
+};
+
+/**
+ * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * @param {Buffer} data Pointer to the input byte array.
+ * @param {Name} keyName The name of the signing key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm from
+ * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
+ * DigestAlgorithm.SHA256.
+ * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ */
+PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+{
+  throw new Error("PrivateKeyStorage.sign is not implemented");
+};
+
+/**
+ * Decrypt data.
+ * @param {Name} keyName The name of the decrypting key.
+ * @param {Buffer} data The byte to be decrypted.
+ * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
+ * otherwise asymmetric encryption is used. If omitted, use asymmetric
+ * encryption.
+ * @returns {Blob} The decrypted data.
+ */
+PrivateKeyStorage.prototype.decrypt = function(keyName, data, isSymmetric)
+{
+  throw new Error("PrivateKeyStorage.decrypt is not implemented");
+};
+
+/**
+ * Encrypt data.
+ * @param {Name} keyName The name of the encrypting key.
+ * @param {Buffer} data The byte to be encrypted.
+ * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
+ * otherwise asymmetric encryption is used. If omitted, use asymmetric
+ * encryption.
+ * @returns {Blob} The encrypted data.
+ */
+PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
+{
+  throw new Error("PrivateKeyStorage.encrypt is not implemented");
+};
+
+/**
+ * @brief Generate a symmetric key.
+ * @param {Name} keyName The name of the key.
+ * @param {number} keyType (optional) The type of the key from KeyType, e.g.
+ * KeyType.AES. If omitted, use KeyType.AES.
+ * @param {number} keySize (optional) The size of the key. If omitted, use 256.
+ */
+PrivateKeyStorage.prototype.generateKey = function(keyName, keyType, keySize)
+{
+  throw new Error("PrivateKeyStorage.generateKey is not implemented");
+};
+
+/**
+ * Check if a particular key exists.
+ * @param {Name} keyName The name of the key.
+ * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
+ * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
+ * @returns {boolean} True if the key exists, otherwise false.
+ */
+PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+{
+  throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Blob = require('../../util/blob.js').Blob;
+var SecurityException = require('../security-exception.js').SecurityException;
+var PublicKey = require('../certificate/public-key.js').PublicKey;
+var KeyClass = require('../security-types.js').KeyClass;
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
+
+/**
+ * MemoryPrivateKeyStorage class extends PrivateKeyStorage to implement private
+ * key storage in memory.
+ * @constructor
+ */
+var MemoryPrivateKeyStorage = function MemoryPrivateKeyStorage()
+{
+  // Call the base constructor.
+  PrivateKeyStorage.call(this);
+
+  // The key is the keyName.toUri(). The value is security.certificate.PublicKey.
+  this.publicKeyStore = {};
+  // The key is the keyName.toUri(). The value is the object
+  //  {keyType,     // number from KeyType
+  //   privateKey   // The PEM-encoded private key.
+  //  }.
+  this.privateKeyStore = {};
+};
+
+MemoryPrivateKeyStorage.prototype = new PrivateKeyStorage();
+MemoryPrivateKeyStorage.prototype.name = "MemoryPrivateKeyStorage";
+
+exports.MemoryPrivateKeyStorage = MemoryPrivateKeyStorage;
+
+/**
+ * Set the public key for the keyName.
+ * @param {Name} keyName The key name.
+ * @param {number} keyType The KeyType, such as KeyType.RSA.
+ * @param {Buffer} publicKeyDer The public key DER byte array.
+ */
+MemoryPrivateKeyStorage.prototype.setPublicKeyForKeyName = function
+  (keyName, keyType, publicKeyDer)
+{
+  this.publicKeyStore[keyName.toUri()] = PublicKey.fromDer(
+    keyType, new Blob(publicKeyDer, true));
+};
+
+/**
+ * Set the private key for the keyName.
+ * @param {Name} keyName The key name.
+ * @param {number} keyType The KeyType, such as KeyType.RSA.
+ * @param {Buffer} privateKeyDer The private key DER byte array.
+ */
+MemoryPrivateKeyStorage.prototype.setPrivateKeyForKeyName = function
+  (keyName, keyType, privateKeyDer)
+{
+  // Encode the DER as PEM.
+  var keyBase64 = privateKeyDer.toString('base64');
+  var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+  for (var i = 0; i < keyBase64.length; i += 64)
+    keyPem += (keyBase64.substr(i, 64) + "\n");
+  keyPem += "-----END RSA PRIVATE KEY-----";
+
+  this.privateKeyStore[keyName.toUri()] =
+    { keyType: keyType, privateKey: keyPem };
+};
+
+/**
+ * Set the public and private key for the keyName.
+ * @param {Name} keyName The key name.
+ * @param {number} keyType The KeyType, such as KeyType.RSA.
+ * @param {Buffer} publicKeyDer The public key DER byte array.
+ * @param {Buffer} privateKeyDer The private key DER byte array.
+ */
+MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
+  (keyName, keyType, publicKeyDer, privateKeyDer)
+{
+  this.setPublicKeyForKeyName(keyName, keyType, publicKeyDer);
+  this.setPrivateKeyForKeyName(keyName, keyType, privateKeyDer);
+};
+
+/**
+ * Get the public key
+ * @param {Name} keyName The name of public key.
+ * @returns {PublicKey} The public key.
+ */
+MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
+{
+  var keyNameUri = keyName.toUri();
+  var publicKey = this.publicKeyStore[keyNameUri];
+  if (publicKey === undefined)
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
+
+  return publicKey;
+};
+
+/**
+ * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * @param {Buffer} data Pointer to the input byte array.
+ * @param {Name} keyName The name of the signing key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm from
+ * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
+ * DigestAlgorithm.SHA256.
+ * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ */
+MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+{
+  if (digestAlgorithm == null)
+    digestAlgorithm = DigestAlgorithm.SHA256;
+
+  if (digestAlgorithm != DigestAlgorithm.SHA256)
+    return new Blob();
+
+  // Find the private key.
+  var keyUri = keyName.toUri();
+  var privateKey = this.privateKeyStore[keyUri];
+  if (privateKey === undefined)
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: Cannot find private key " + keyUri));
+
+  var rsa = require("crypto").createSign('RSA-SHA256');
+  rsa.update(data);
+
+  var signature = new Buffer
+    (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
+  return new Blob(signature, false);
+};
+
+/**
+ * Check if a particular key exists.
+ * @param {Name} keyName The name of the key.
+ * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
+ * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
+ * @returns {boolean} True if the key exists, otherwise false.
+ */
+MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+{
+  var keyUri = keyName.toUri();
+  if (keyClass == KeyClass.PUBLIC)
+    return this.publicKeyStore[keyUri] !== undefined;
+  else if (keyClass == KeyClass.PRIVATE)
+    return this.privateKeyStore[keyUri] !== undefined;
+  else
+    // KeyClass.SYMMETRIC not implemented yet.
+    return false ;
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Name = require('../../name.js').Name;
+var Data = require('../../data.js').Data;
+var Signature = require('../../signature.js').Signature;
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
+var SecurityException = require('../security-exception.js').SecurityException;
+
+/**
+ * An IdentityManager is the interface of operations related to identity, keys,
+ * and certificates.
+ *
+ * Create a new IdentityManager to use the given IdentityStorage and
+ * PrivateKeyStorage.
+ * @param {IdentityStorage} identityStorage An object of a subclass of
+ * IdentityStorage.
+ * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of
+ * PrivateKeyStorage.
+ * @constructor
+ */
+var IdentityManager = function IdentityManager
+  (identityStorage, privateKeyStorage)
+{
+  this.identityStorage = identityStorage;
+  this.privateKeyStorage = privateKeyStorage;
+};
+
+exports.IdentityManager = IdentityManager;
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @param {Name} identityName The name of the identity.
+ * @returns {Name} The key name of the auto-generated KSK of the identity.
+ */
+IdentityManager.prototype.createIdentity = function(identityName)
+{
+  throw new Error("IdentityManager.createIdentity is not implemented");
+};
+
+/**
+ * Get the default identity.
+ * @returns {Name} The name of default identity.
+ * @throws SecurityException if the default identity is not set.
+ */
+IdentityManager.prototype.getDefaultIdentity = function()
+{
+  return this.identityStorage.getDefaultIdentity();
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
+ * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
+ * @param {number} keySize (optional) The size of the key. If omitted, use a
+ * default secure key size.
+ * @returns {Name} The generated key name.
+ */
+IdentityManager.prototype.generateRSAKeyPair = function
+  (identityName, isKsk, keySize)
+{
+  throw new Error("IdentityManager.generateRSAKeyPair is not implemented");
+};
+
+/**
+ * Set a key as the default key of an identity.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityName (optional) the name of the identity. If not
+ * specified, the identity name is inferred from the keyName.
+ */
+IdentityManager.prototype.setDefaultKeyForIdentity = function
+  (keyName, identityName)
+{
+  if (identityName == null)
+    identityName = new Name();
+  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+};
+
+/**
+ * Get the default key for an identity.
+ * @param {Name} identityName The name of the identity.
+ * @returns {Name} The default key name.
+ * @throws SecurityException if the default key name for the identity is not set.
+ */
+IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
+{
+  return this.identityStorage.getDefaultKeyNameForIdentity(identityName);
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity and set it as default
+ * key for the identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
+ * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
+ * @param {number} keySize (optional) The size of the key. If omitted, use a
+ * default secure key size.
+ * @returns {Name} The generated key name.
+ */
+IdentityManager.prototype.generateRSAKeyPairAsDefault = function
+  (identityName, isKsk, keySize)
+{
+  throw new Error("IdentityManager.generateRSAKeyPairAsDefault is not implemented");
+};
+
+/**
+ * Get the public key with the specified name.
+ * @param {Name} keyName The name of the key.
+ * @returns {PublicKey} The public key.
+ */
+IdentityManager.prototype.getPublicKey = function(keyName)
+{
+  return PublicKey.fromDer
+    (this.identityStorage.getKeyType(keyName),
+     this.identityStorage.getKey(keyName));
+};
+
+// TODO: Add two versions of createIdentityCertificate.
+
+/**
+ * Add a certificate into the public key identity storage.
+ * @param {IdentityCertificate} certificate The certificate to to added. This
+ * makes a copy of the certificate.
+ */
+IdentityManager.prototype.addCertificate = function(certificate)
+{
+  this.identityStorage.addCertificate(certificate);
+};
+
+/**
+ * Set the certificate as the default for its corresponding key.
+ * @param {IdentityCertificate} certificate The certificate.
+ */
+IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+{
+  var keyName = certificate.getPublicKeyName();
+
+  if (!this.identityStorage.doesKeyExist(keyName))
+      throw new SecurityException(new Error
+        ("No corresponding Key record for certificate!"));
+
+  this.identityStorage.setDefaultCertificateNameForKey
+    (keyName, certificate.getName());
+};
+
+/**
+ * Add a certificate into the public key identity storage and set the
+ * certificate as the default for its corresponding identity.
+ * @param {IdentityCertificate} certificate The certificate to be added. This
+ * makes a copy of the certificate.
+ */
+IdentityManager.prototype.addCertificateAsIdentityDefault = function(certificate)
+{
+  this.identityStorage.addCertificate(certificate);
+  var keyName = certificate.getPublicKeyName();
+  this.setDefaultKeyForIdentity(keyName);
+  this.setDefaultCertificateForKey(certificate);
+};
+
+/**
+ * Add a certificate into the public key identity storage and set the
+ * certificate as the default of its corresponding key.
+ * @param {IdentityCertificate} certificate The certificate to be added.  This makes a copy of the certificate.
+ */
+IdentityManager.prototype.addCertificateAsDefault = function(certificate)
+{
+  this.identityStorage.addCertificate(certificate);
+  this.setDefaultCertificateForKey(certificate);
+};
+
+/**
+ * Get a certificate with the specified name.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {IdentityCertificate} the requested certificate which is valid.
+ */
+IdentityManager.prototype.getCertificate = function(certificateName)
+{
+  return new IdentityCertificate
+    (this.identityStorage.getCertificate(certificateName, false));
+};
+
+/**
+ * Get a certificate even if the certificate is not valid anymore.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {IdentityCertificate} the requested certificate.
+ */
+IdentityManager.prototype.getAnyCertificate = function(certificateName)
+{
+  return new IdentityCertificate
+    (this.identityStorage.getCertificate(certificateName, true));
+};
+
+/**
+ * Get the default certificate name for the specified identity, which will be
+ * used when signing is performed based on identity.
+ * @param {Name} identityName The name of the specified identity.
+ * @returns {Name} The requested certificate name.
+ * @throws SecurityException if the default key name for the identity is not
+ * set or the default certificate name for the key name is not set.
+ */
+IdentityManager.prototype.getDefaultCertificateNameForIdentity = function
+  (identityName)
+{
+  return this.identityStorage.getDefaultCertificateNameForIdentity(identityName);
+};
+
+/**
+ * Get the default certificate name of the default identity, which will be used when signing is based on identity and
+ * the identity is not specified.
+ * @returns {Name} The requested certificate name.
+ * @throws SecurityException if the default identity is not set or the default
+ * key name for the identity is not set or the default certificate name for
+ * the key name is not set.
+ */
+IdentityManager.prototype.getDefaultCertificateName = function()
+{
+  return this.identityStorage.getDefaultCertificateNameForIdentity
+    (this.getDefaultIdentity());
+};
+
+/**
+ * Sign the byte array data based on the certificate name.
+ * @param {Buffer} target If this is a Data object, wire encode for signing,
+ * update its signature and key locator field and wireEncoding. If it is an
+ * array, sign it and return a Signature object.
+ * @param {Name} certificateName The Name identifying the certificate which
+ * identifies the signing key.
+ * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
+ * WireFormat.getDefaultWireFormat() if omitted.
+ * @returns {Signature} The generated signature.
+ */
+IdentityManager.prototype.signByCertificate = function
+  (target, certificateName, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (target instanceof Data) {
+    var data = target;
+    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+
+    // For temporary usage, we support RSA + SHA256 only, but will support more.
+    data.setSignature(new Signature());
+    // Get a pointer to the clone which Data made.
+    var signature = data.getSignature();
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+    // Encode once to get the signed portion.
+    var encoding = data.wireEncode(wireFormat);
+
+    signature.setSignature(this.privateKeyStorage.sign
+      (encoding.signedBuf(), keyName));
+
+    // Encode again to include the signature.
+    data.wireEncode(wireFormat);
+  }
+  else {
+    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+
+    // For temporary usage, we support RSA + SHA256 only, but will support more.
+    var signature = new Signature();
+
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+    signature.setSignature(this.privateKeyStorage.sign(target, keyName));
+
+    return signature;
+  }
+};
+
+/**
+ * Generate a self-signed certificate for a public key.
+ * @param {Name} keyName The name of the public key.
+ * @returns {IdentityCertificate} The generated certificate.
+ */
+IdentityManager.prototype.selfSign = function(keyName)
+{
+  throw new Error("IdentityManager.selfSign is not implemented");
+};
+
+/**
+ * Get the public key name from the full certificate name.
+ *
+ * @param {Name} certificateName The full certificate name.
+ * @returns {Name} The related public key name.
+ * TODO: Move this to IdentityCertificate
+ */
+IdentityManager.certificateNameToPublicKeyName = function(certificateName)
+{
+  var i = certificateName.size() - 1;
+  var idString = "ID-CERT";
+  while (i >= 0) {
+    if (certificateName.get(i).toEscapedString() == idString)
+      break;
+    --i;
+  }
+
+  var tmpName = certificateName.getSubName(0, i);
+  var keyString = "KEY";
+  i = 0;
+  while (i < tmpName.size()) {
+    if (tmpName.get(i).toEscapedString() == keyString)
+      break;
+    ++i;
+  }
+
+  return tmpName.getSubName(0, i).append(tmpName.getSubName
+    (i + 1, tmpName.size() - i - 1));
+};/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * A ValidationRequest is used to return information from
+ * PolicyManager.checkVerificationPolicy.
+ *
+ * Create a new ValidationRequest with the given values.
+ * @param {Interest} interest An interest for fetching more data.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ * @param {boolean} retry
+ * @param {number} stepCount  The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @constructor
+ */
+var ValidationRequest = function ValidationRequest
+  (interest, onVerified, onVerifyFailed, retry, stepCount)
+{
+  this.interest = interest;
+  this.onVerified = onVerified;
+  this.onVerifyFailed = onVerifyFailed;
+  this.retry = retry;
+  this.stepCount = stepCount;
+};
+
+exports.ValidationRequest = ValidationRequest;
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * A PolicyManager is an abstract base class to represent the policy for
+ * verifying data packets. You must create an object of a subclass.
+ * @constructor
+ */
+var PolicyManager = function PolicyManager()
+{
+};
+
+exports.PolicyManager = PolicyManager;
+
+/**
+ * Check if the received data packet or signed interest can escape from
+ * verification and be trusted as valid.
+ * Your derived class should override.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} True if the data or interest does not need to be verified
+ * to be trusted as valid, otherwise false.
+ */
+PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
+{
+  throw new Error("PolicyManager.skipVerifyAndTrust is not implemented");
+};
+
+/**
+ * Check if this PolicyManager has a verification rule for the received data
+ * packet or signed interest.
+ * Your derived class should override.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} True if the data or interest must be verified, otherwise
+ * false.
+ */
+PolicyManager.prototype.requireVerify = function(dataOrInterest)
+{
+  throw new Error("PolicyManager.requireVerify is not implemented");
+};
+
+/**
+ * Check whether the received data packet complies with the verification policy,
+ * and get the indication of the next verification step.
+ * Your derived class should override.
+ *
+ * @param {Data|Interest} dataOrInterest The Data object or interest with the
+ * signature to check.
+ * @param {number} stepCount The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ * @param {WireFormat} wireFormat
+ * @returns {ValidationRequest} The indication of next verification step, or
+ * null if there is no further step.
+ */
+PolicyManager.prototype.checkVerificationPolicy = function
+  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+{
+  throw new Error("PolicyManager.checkVerificationPolicy is not implemented");
+};
+
+/**
+ * Check if the signing certificate name and data name satisfy the signing
+ * policy.
+ * Your derived class should override.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @param {Name} certificateName The name of signing certificate.
+ * @returns {boolean} True if the signing certificate can be used to sign the
+ * data, otherwise false.
+ */
+PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
+{
+  throw new Error("PolicyManager.checkSigningPolicy is not implemented");
+};
+
+/**
+ * Infer the signing identity name according to the policy. If the signing
+ * identity cannot be inferred, return an empty name.
+ * Your derived class should override.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @returns {Name} The signing identity or an empty name if cannot infer.
+ */
+PolicyManager.prototype.inferSigningIdentity = function(dataName)
+{
+  throw new Error("PolicyManager.inferSigningIdentity is not implemented");
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Name = require('../../name.js').Name;
+var PolicyManager = require('./policy-manager.js').PolicyManager;
+
+/**
+ * @constructor
+ */
+var NoVerifyPolicyManager = function NoVerifyPolicyManager()
+{
+  // Call the base constructor.
+  PolicyManager.call(this);
+};
+
+NoVerifyPolicyManager.prototype = new PolicyManager();
+NoVerifyPolicyManager.prototype.name = "NoVerifyPolicyManager";
+
+exports.NoVerifyPolicyManager = NoVerifyPolicyManager;
+
+/**
+ * Override to always skip verification and trust as valid.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} True.
+ */
+NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
+{
+  return true;
+};
+
+/**
+ * Override to return false for no verification rule for the received data or
+ * signed interest.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} False.
+ */
+NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
+{
+  return false;
+};
+
+/**
+ * Override to call onVerified(data) and to indicate no further verification
+ * step.
+ *
+ * @param {Data|Interest} dataOrInterest The Data object or interest with the
+ * signature to check.
+ * @param {number} stepCount The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @param {function} onVerified This does override to call
+ * onVerified(dataOrInterest).
+ * @param {function} onVerifyFailed Override to ignore this.
+ * @param {WireFormat} wireFormat
+ * @returns {ValidationRequest} null for no further step for looking up a
+ * certificate chain.
+ */
+NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
+  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+{
+  onVerified(dataOrInterest);
+  return null;
+};
+
+/**
+ * Override to always indicate that the signing certificate name and data name
+ * satisfy the signing policy.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @param {Name} certificateName The name of signing certificate.
+ * @returns {boolean} True to indicate that the signing certificate can be used
+ * to sign the data.
+ */
+NoVerifyPolicyManager.prototype.checkSigningPolicy = function
+  (dataName, certificateName)
+{
+  return true;
+};
+
+/**
+ * Override to indicate that the signing identity cannot be inferred.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @returns {Name} An empty name because cannot infer.
+ */
+NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
+{
+  return new Name();
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Name = require('../../name.js').Name;
+var Data = require('../../data.js').Data;
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
+var SecurityException = require('../security-exception.js').SecurityException;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
+var PolicyManager = require('./policy-manager.js').PolicyManager;
+
+/**
+ * A SelfVerifyPolicyManager implements a PolicyManager to use the public key
+ * DER in the data packet's KeyLocator (if available) or look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available) and use it to verify the data packet, without searching a
+ * certificate chain.  If the public key can't be found, the verification fails.
+ *
+ * @param {IdentityStorage} identityStorage (optional) The IdentityStorage for
+ * looking up the public key. This object must remain valid during the life of
+ * this SelfVerifyPolicyManager. If omitted, then don't look for a public key
+ * with the name in the KeyLocator and rely on the KeyLocator having the full
+ * public key DER.
+ * @constructor
+ */
+var SelfVerifyPolicyManager = function SelfVerifyPolicyManager(identityStorage)
+{
+  // Call the base constructor.
+  PolicyManager.call(this);
+
+  this.identityStorage = identityStorage;
+};
+
+SelfVerifyPolicyManager.prototype = new PolicyManager();
+SelfVerifyPolicyManager.prototype.name = "SelfVerifyPolicyManager";
+
+exports.SelfVerifyPolicyManager = SelfVerifyPolicyManager;
+
+/**
+ * Never skip verification.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} False.
+ */
+SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
+{
+  return false;
+};
+
+/**
+ * Always return true to use the self-verification rule for the received data.
+ *
+ * @param {Data|Interest} dataOrInterest The received data packet or interest.
+ * @returns {boolean} True.
+ */
+SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
+{
+  return true;
+};
+
+/**
+ * Use the public key DER in the KeyLocator (if available) or look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available) and use it to verify the data packet.  If the public key can't
+   * be found, call onVerifyFailed.
+ *
+ * @param {Data|Interest} dataOrInterest The Data object or interest with the
+ * signature to check.
+ * @param {number} stepCount The number of verification steps that have been
+ * done, used to track the verification progress.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ * @param {WireFormat} wireFormat
+ * @returns {ValidationRequest} null for no further step for looking up a
+ * certificate chain.
+ */
+SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
+  (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (dataOrInterest instanceof Data) {
+    var data = dataOrInterest;
+    // wireEncode returns the cached encoding if available.
+    if (this.verify(data.getSignature(), data.wireEncode()))
+      onVerified(data);
+    else
+      onVerifyFailed(data);
+  }
+  else if (dataOrInterest instanceof Interest) {
+    var interest = dataOrInterest;
+    // Decode the last two name components of the signed interest
+    var signature = wireFormat.decodeSignatureInfoAndValue
+      (interest.getName().get(-2).getValue().buf(),
+       interest.getName().get(-1).getValue().buf());
+
+    // wireEncode returns the cached encoding if available.
+    if (this.verify(signature, interest.wireEncode()))
+      onVerified(interest);
+    else
+      onVerifyFailed(interest);
+  }
+  else
+    throw new SecurityException(new Error
+      ("checkVerificationPolicy: unrecognized type for dataOrInterest"));
+
+  // No more steps, so return a None.
+  return null;
+};
+
+/**
+ * Override to always indicate that the signing certificate name and data name
+ * satisfy the signing policy.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @param {Name} certificateName The name of signing certificate.
+ * @returns {boolean} True to indicate that the signing certificate can be used
+ * to sign the data.
+ */
+SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
+  (dataName, certificateName)
+{
+  return true;
+};
+
+/**
+ * Override to indicate that the signing identity cannot be inferred.
+ *
+ * @param {Name} dataName The name of data to be signed.
+ * @returns {Name} An empty name because cannot infer.
+ */
+SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
+{
+  return new Name();
+};
+
+/**
+ * Check the type of signatureInfo to get the KeyLocator. Use the public key
+ * DER in the KeyLocator (if available) or look in the IdentityStorage for the
+ * public key with the name in the KeyLocator (if available) and use it to
+ * verify the signedBlob. If the public key can't be found, return false.
+ * (This is a generalized method which can verify both a Data packet and an
+ * interest.)
+ * @param {Signature} signatureInfo An object of a subclass of Signature, e.g.
+ * Sha256WithRsaSignature.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
+ * verify.
+ * @returns {boolean} True if the signature is verified, false if failed.
+ */
+SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
+{
+  var signature = signatureInfo;
+  /*
+  if (!signature)
+    throw new SecurityException(new Error
+      ("SelfVerifyPolicyManager: Signature is not Sha256WithRsaSignature.");
+  */
+
+  if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
+    // Use the public key DER directly.
+    return SelfVerifyPolicyManager.verifySha256WithRsaSignature
+      (signature, signedBlob, signature.getKeyLocator().getKeyData());
+  else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
+           this.identityStorage != null) {
+    // Assume the key name is a certificate name.
+    var publicKeyDer = this.identityStorage.getKey
+      (IdentityCertificate.certificateNameToPublicKeyName
+       (signature.getKeyLocator().getKeyName()));
+    if (publicKeyDer.isNull())
+      // Can't find the public key with the name.
+      return false;
+
+    return SelfVerifyPolicyManager.verifySha256WithRsaSignature
+      (signature, signedBlob, publicKeyDer);
+  }
+  else
+    // Can't find a key to verify.
+    return false;
+};
+
+// The first time verify is called, it sets this to determine if a signature
+//   buffer needs to be converted to a string for the crypto verifier.
+SelfVerifyPolicyManager.verifyUsesString = null;
+
+/**
+ * Verify the RSA signature on the SignedBlob using the given public key.
+ * TODO: Move this general verification code to a more central location.
+ * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * signature.
+ * @returns true if the signature verifies, false if not.
+ */
+SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
+  (signature, signedBlob, publicKeyDer)
+{
+  if (SelfVerifyPolicyManager.verifyUsesString === null) {
+    var hashResult = require("crypto").createHash('sha256').digest();
+    // If the hash result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    SelfVerifyPolicyManager.verifyUsesString = (typeof hashResult === 'string');
+  }
+
+  // The crypto verifier requires a PEM-encoded public key.
+  var keyBase64 = publicKeyDer.buf().toString('base64');
+  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+  for (var i = 0; i < keyBase64.length; i += 64)
+    keyPem += (keyBase64.substr(i, 64) + "\n");
+  keyPem += "-----END PUBLIC KEY-----";
+
+  var verifier = require('crypto').createVerify('RSA-SHA256');
+  verifier.update(signedBlob.signedBuf());
+  var signatureBytes = Data.verifyUsesString ?
+    DataUtils.toString(signature.getSignature().buf()) :
+    signature.getSignature().buf();
+  return verifier.verify(keyPem, signatureBytes);
+};
+/**
+ * This class represents an Interest Exclude.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var Name = require('../name.js').Name;
+var Interest = require('../interest.js').Interest;
+var Data = require('../data.js').Data;
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
+var Tlv = require('../encoding/tlv/tlv.js').Tlv;
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+var SecurityException = require('./security-exception.js').SecurityException;
+
+/**
+ * A KeyChain provides a set of interfaces to the security library such as
+ * identity management, policy configuration and packet signing and verification.
+ * Note: This class is an experimental feature. See the API docs for more detail at
+ * http://named-data.net/doc/ndn-ccl-api/key-chain.html .
+ *
+ * Create a new KeyChain with the given IdentityManager and PolicyManager.
+ * @param {IdentityManager} identityManager An object of a subclass of
+ * IdentityManager.
+ * @param {PolicyManager} policyManager An object of a subclass of
+ * PolicyManager.
+ * @constructor
+ */
+var KeyChain = function KeyChain(identityManager, policyManager)
+{
+  this.identityManager = identityManager;
+  this.policyManager = policyManager;
+  this.encryptionManager = null;
+  this.face = null;
+  this.maxSteps = 100;
+};
+
+exports.KeyChain = KeyChain;
+
+/*****************************************
+ *          Identity Management          *
+ *****************************************/
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @param {Name} identityName The name of the identity.
+ * @returns {Name} The key name of the auto-generated KSK of the identity.
+ */
+KeyChain.prototype.createIdentity = function(identityName)
+{
+  return this.identityManager.createIdentity(identityName);
+};
+
+/**
+ * Get the default identity.
+ * @returns {Name} The name of default identity.
+ * @throws SecurityException if the default identity is not set.
+ */
+KeyChain.prototype.getDefaultIdentity = function()
+{
+  return this.identityManager.getDefaultIdentity();
+};
+
+/**
+ * Get the default certificate name of the default identity.
+ * @returns {Name} The requested certificate name.
+ * @throws SecurityException if the default identity is not set or the default
+ * key name for the identity is not set or the default certificate name for
+ * the key name is not set.
+ */
+KeyChain.prototype.getDefaultCertificateName = function()
+{
+  return this.identityManager.getDefaultCertificateName();
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
+ * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
+ * @param {number} keySize (optional) The size of the key. If omitted, use a
+ * default secure key size.
+ * @returns {Name} The generated key name.
+ */
+KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
+{
+  return this.identityManager.generateRSAKeyPair(identityName, isKsk, keySize);
+};
+
+/**
+ * Set a key as the default key of an identity.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityName (optional) the name of the identity. If not
+ * specified, the identity name is inferred from the keyName.
+ */
+KeyChain.prototype.setDefaultKeyForIdentity = function(keyName, identityName)
+{
+  if (identityName == null)
+    identityName = new Name();
+  return this.identityManager.setDefaultKeyForIdentity(keyName, identityName);
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity and set it as default
+ * key for the identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
+ * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
+ * @param {number} keySize (optional) The size of the key. If omitted, use a
+ * default secure key size.
+ * @returns {Name} The generated key name.
+ */
+KeyChain.prototype.generateRSAKeyPairAsDefault = function
+  (identityName, isKsk, keySize)
+{
+  return this.identityManager.generateRSAKeyPairAsDefault
+    (identityName, isKsk, keySize);
+};
+
+/**
+ * Create a public key signing request.
+ * @param {Name} keyName The name of the key.
+ * @returns {Blob} The signing request data.
+ */
+KeyChain.prototype.createSigningRequest = function(keyName)
+{
+  return this.identityManager.getPublicKey(keyName).getKeyDer();
+};
+
+/**
+ * Install an identity certificate into the public key identity storage.
+ * @param {IdentityCertificate} certificate The certificate to to added.
+ */
+KeyChain.prototype.installIdentityCertificate = function(certificate)
+{
+  this.identityManager.addCertificate(certificate);
+};
+
+/**
+ * Set the certificate as the default for its corresponding key.
+ * @param {IdentityCertificate} certificate The certificate.
+ */
+KeyChain.prototype.setDefaultCertificateForKey = function(certificate)
+{
+  this.identityManager.setDefaultCertificateForKey(certificate);
+};
+
+/**
+ * Get a certificate with the specified name.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {Certificate} The requested certificate which is valid.
+ */
+KeyChain.prototype.getCertificate = function(certificateName)
+{
+  return this.identityManager.getCertificate(certificateName);
+};
+
+/**
+ * Get a certificate even if the certificate is not valid anymore.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {Certificate} The requested certificate.
+ */
+KeyChain.prototype.getAnyCertificate = function(certificateName)
+{
+  return this.identityManager.getAnyCertificate(certificateName);
+};
+
+/**
+ * Get an identity certificate with the specified name.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {IdentityCertificate} The requested certificate which is valid.
+ */
+KeyChain.prototype.getIdentityCertificate = function(certificateName)
+{
+  return this.identityManager.getCertificate(certificateName);
+};
+
+/**
+ * Get an identity certificate even if the certificate is not valid anymore.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @returns {IdentityCertificate} The requested certificate.
+ */
+KeyChain.prototype.getAnyIdentityCertificate = function(certificateName)
+{
+  return this.identityManager.getAnyCertificate(certificateName);
+};
+
+/**
+ * Revoke a key.
+ * @param {Name} keyName The name of the key that will be revoked.
+ */
+KeyChain.prototype.revokeKey = function(keyName)
+{
+  //TODO: Implement
+};
+
+/**
+ * Revoke a certificate.
+ * @param {Name} certificateName The name of the certificate that will be
+ * revoked.
+ */
+KeyChain.prototype.revokeCertificate = function(certificateName)
+{
+  //TODO: Implement
+};
+
+/**
+ * Get the identity manager given to or created by the constructor.
+ * @returns {IdentityManager} The identity manager.
+ */
+KeyChain.prototype.getIdentityManager = function()
+{ 
+  return this.identityManager;
+};
+
+/*****************************************
+ *           Policy Management           *
+ *****************************************/
+
+/**
+ * Get the policy manager given to or created by the constructor.
+ * @returns {PolicyManager} The policy manager.
+ */
+KeyChain.prototype.getPolicyManager = function()
+{ 
+  return this.policyManager;
+};
+
+/*****************************************
+ *              Sign/Verify              *
+ *****************************************/
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is an array, return a signature object.
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
+ * signing, update its signature and key locator field and wireEncoding. If this
+ * is an Interest object, wire encode for signing, append a SignatureInfo to the
+ * Interest name, sign the name components and append a final name component
+ * with the signature bits. If it is an array, sign it and return a Signature
+ * object.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.prototype.sign = function(target, certificateName, wireFormat)
+{
+  if (target instanceof Interest)
+    this.signInterest(target, certificateName, wireFormat);
+  else if (target instanceof Data)
+    this.identityManager.signByCertificate(target, certificateName, wireFormat);
+  else
+    return this.identityManager.signByCertificate(target, certificateName);
+};
+
+/**
+ * Append a SignatureInfo to the Interest name, sign the name components and
+ * append a final name component with the signature bits.
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // TODO: Handle signature algorithms other than Sha256WithRsa.
+  var signature = Sha256WithRsaSignature();
+  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+  // Append the encoded SignatureInfo.
+  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+  // Append an empty signature so that the "signedPortion" is correct.
+  interest.getName().append(new Name.Component());
+  // Encode once to get the signed portion.
+  var encoding = interest.wireEncode(wireFormat);
+  var signedSignature = this.sign(encoding.toSignedBuffer(), certificateName);
+
+  // Remove the empty signature and append the real one.
+  var encoder = new TlvEncoder(256);
+  encoder.writeBlobTlv
+    (Tlv.SignatureValue, signedSignature.getSignature().buf());
+  interest.setName(interest.getName().getPrefix(-1).append
+    (wireFormat.encodeSignatureValue(signedSignature)));
+};
+
+/**
+ * Sign the target. If it is a Data object, set its signature. If it is an
+ * array, return a signature object.
+ * @param {Data|Buffer} target If this is a Data object, wire encode for
+ * signing, update its signature and key locator field and wireEncoding. If it
+ * is an array, sign it and return a Signature object.
+ * @param identityName (optional) The identity name for the key to use for
+ * signing.  If omitted, infer the signing identity from the data packet name.
+ * @param wireFormat (optional) A WireFormat object used to encode the input. If
+ * omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
+{
+  if (identityName == null)
+    identityName = new Name();
+
+  if (target instanceof Data) {
+    var signingCertificateName;
+    if (identityName.size() == 0) {
+      var inferredIdentity = this.policyManager.inferSigningIdentity
+        (data.getName());
+      if (inferredIdentity.size() == 0)
+        signingCertificateName = this.identityManager.getDefaultCertificateName();
+      else
+        signingCertificateName =
+          this.identityManager.getDefaultCertificateNameForIdentity
+            (inferredIdentity);
+    }
+    else
+      signingCertificateName =
+        this.identityManager.getDefaultCertificateNameForIdentity(identityName);
+
+    if (signingCertificateName.size() == 0)
+      throw new SecurityException(new Error
+        ("No qualified certificate name found!"));
+
+    if (!this.policyManager.checkSigningPolicy
+         (data.getName(), signingCertificateName))
+      throw new SecurityException(new Error
+        ("Signing Cert name does not comply with signing policy"));
+
+    this.identityManager.signByCertificate
+      (data, signingCertificateName, wireFormat);
+  }
+  else {
+    var signingCertificateName =
+      this.identityManager.getDefaultCertificateNameForIdentity(identityName);
+
+    if (signingCertificateName.size() == 0)
+      throw new SecurityException(new Error
+        ("No qualified certificate name found!"));
+
+    return this.identityManager.signByCertificate(array, signingCertificateName);
+  }
+};
+
+/**
+ * Check the signature on the Data object and call either onVerify or 
+ * onVerifyFailed. We use callback functions because verify may fetch
+ * information to check the signature.
+ * @param {Data} data The Data object with the signature to check.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ * @param {number} stepCount
+ */
+KeyChain.prototype.verifyData = function
+  (data, onVerified, onVerifyFailed, stepCount)
+{
+  if (this.policyManager.requireVerify(data)) {
+    var nextStep = this.policyManager.checkVerificationPolicy
+      (data, stepCount, onVerified, onVerifyFailed);
+    if (nextStep != null) {
+      var thisKeyChain = this;
+      this.face.expressInterest
+        (nextStep.interest,
+         function(callbackInterest, callbackData) {
+           thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
+         },
+         function(callbackInterest) {
+           thisKeyChain.onCertificateInterestTimeout
+             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
+         });
+    }
+  }
+  else if (this.policyManager.skipVerifyAndTrust(data))
+    onVerified(data);
+  else
+    onVerifyFailed(data);
+};
+
+/**
+ * Check the signature on the signed interest and call either onVerify or
+ * onVerifyFailed. We use callback functions because verify may fetch
+ * information to check the signature.
+ * @param {Interest} interest The interest with the signature to check.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ */
+KeyChain.prototype.verifyInterest = function
+  (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
+{
+  throw new Error("KeyChain.verifyInterest is not implemented");
+};
+
+/*****************************************
+ *           Encrypt/Decrypt             *
+ *****************************************/
+
+/**
+ * Generate a symmetric key.
+ * @param {Name} keyName The name of the generated key.
+ * @param {number} keyType (optional) The type of the key from KeyType, e.g.
+ * KeyType.AES.
+ */
+KeyChain.prototype.generateSymmetricKey = function(keyName, keyType)
+{
+  this.encryptionManager.createSymmetricKey(keyName, keyType);
+};
+
+/**
+ * Encrypt a byte array.
+ * @param {Name} keyName The name of the encrypting key.
+ * @param {Buffer} data The byte array that will be encrypted.
+ * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
+ * used, otherwise asymmetric encryption is used. If omitted, use symmetric
+ * encryption.
+ * @param encryptMode (optional) The encryption mode from EncryptMode. If
+ * omitted, use EncryptMode.DEFAULT.
+ * @returns {Blob} The encrypted data as an immutable Blob.
+ */
+KeyChain.prototype.encrypt = function(keyName, data, useSymmetric, encryptMode)
+{
+  return this.encryptionManager.encrypt(keyName, data, useSymmetric, encryptMode);
+}
+
+/**
+ * Decrypt a byte array.
+ * @param {Name} keyName The name of the decrypting key.
+ * @param {Buffer} data The byte array that will be decrypted.
+ * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
+ * used, otherwise asymmetric encryption is used. If omitted, use symmetric
+ * encryption.
+ * @param encryptMode (optional) The encryption mode from EncryptMode. If
+ * omitted, use EncryptMode.DEFAULT.
+ * @returns {Blob} The decrypted data as an immutable Blob.
+ */
+KeyChain.prototype.decrypt = function(keyName, data, useSymmetric, encryptMode)
+{
+   return this.encryptionManager.decrypt
+     (keyName, data, useSymmetric, encryptMode);
+};
+
+/**
+ * Set the Face which will be used to fetch required certificates.
+ * @param {Face} face A pointer to the Face object.
+ */
+KeyChain.prototype.setFace = function(face)
+{ 
+  this.face = face;
+};
+
+KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
+{
+  // Try to verify the certificate (data) according to the parameters in nextStep.
+  this.verifyData
+    (data, nextStep.onVerified, nextStep.onVerifyFailed, nextStep.stepCount);
+};
+
+KeyChain.prototype.onCertificateInterestTimeout = function
+  (interest, retry, onVerifyFailed, data, nextStep)
+{
+  if (retry > 0) {
+    // Issue the same expressInterest as in verifyData except decrement retry.
+    var thisKeyChain = this;
+    this.face.expressInterest
+      (interest,
+       function(callbackInterest, callbackData) {
+         thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
+       },
+       function(callbackInterest) {
+         thisKeyChain.onCertificateInterestTimeout
+           (callbackInterest, retry - 1, onVerifyFailed, data, nextStep);
+       });
+  }
+  else
+    onVerifyFailed(data);
 };
 /**
  * This class represents an NDN Data MetaInfo object.
@@ -13367,7 +15576,7 @@ Interest.prototype.wireEncode = function(wireFormat)
 
 /**
  * Decode the input using a particular wire format and update this Interest.
- * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  */
@@ -15522,7 +17731,7 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(interest, closure); });
+        (function() { thisFace.expressInterestHelper(interest, closure); });
     else if (this.readyStatus === Face.OPENED)
       this.expressInterestHelper(interest, closure);
     else

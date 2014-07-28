@@ -547,7 +547,7 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(interest, closure); });
+        (function() { thisFace.expressInterestHelper(interest, closure); });
     else if (this.readyStatus === Face.OPENED)
       this.expressInterestHelper(interest, closure);
     else
