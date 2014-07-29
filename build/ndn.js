@@ -10689,7 +10689,6 @@ SecurityException.prototype.name = "SecurityException";
 
 exports.SecurityException = SecurityException;
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -10763,7 +10762,6 @@ EncryptMode.DEFAULT = 1;
 EncryptMode.CFB_AES = 2;
 // EncryptMode.CBC_AES
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -10907,7 +10905,6 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
     (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11175,7 +11172,6 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
   throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11493,7 +11489,6 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
   throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11613,7 +11608,6 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11779,7 +11773,6 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
     return false ;
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12109,7 +12102,6 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
   return tmpName.getSubName(0, i).append(tmpName.getSubName
     (i + 1, tmpName.size() - i - 1));
 };/**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12156,7 +12148,6 @@ var ValidationRequest = function ValidationRequest
 
 exports.ValidationRequest = ValidationRequest;
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12266,7 +12257,6 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12374,7 +12364,6 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
   return new Name();
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12613,7 +12602,6 @@ SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
   return verifier.verify(keyPem, signatureBytes);
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
