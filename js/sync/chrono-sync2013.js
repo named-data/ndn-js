@@ -18,6 +18,8 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+// TODO: separate tests for different functions
+
 // TODO: the equivalent of function pointers, or are there no such things?
 // The point of naming it as 'argn'? just to correspond with boost::bind?
 // Assuming that it takes the form of (OnReceivedSyncState, OnInitialized, 
