@@ -19,55 +19,28 @@
  */
 
 /**
- * This module defines constants used by the security library.
- */
-
-/**
- * The KeyType integer is used by the Sqlite key storage, so don't change them.
- * Make these the same as ndn-cpp in case the Sqlite file is shared.
+ * A ValidationRequest is used to return information from
+ * PolicyManager.checkVerificationPolicy.
+ *
+ * Create a new ValidationRequest with the given values.
+ * @param {Interest} interest An interest for fetching more data.
+ * @param {function} onVerified If the signature is verified, this calls
+ * onVerified(data).
+ * @param {function} onVerifyFailed If the signature check fails, this calls
+ * onVerifyFailed(data).
+ * @param {boolean} retry
+ * @param {number} stepCount  The number of verification steps that have been
+ * done, used to track the verification progress.
  * @constructor
  */
-var KeyType = function KeyType()
+var ValidationRequest = function ValidationRequest
+  (interest, onVerified, onVerifyFailed, retry, stepCount)
 {
-}
-
-exports.KeyType = KeyType;
-
-KeyType.RSA = 0;
-KeyType.AES = 1;
-// KeyType.DSA
-// KeyType.DES
-// KeyType.RC4
-// KeyType.RC2
-KeyType.EC = 2;
-
-var KeyClass = function KeyClass()
-{
+  this.interest = interest;
+  this.onVerified = onVerified;
+  this.onVerifyFailed = onVerifyFailed;
+  this.retry = retry;
+  this.stepCount = stepCount;
 };
 
-exports.KeyClass = KeyClass;
-
-KeyClass.PUBLIC = 1;
-KeyClass.PRIVATE = 2;
-KeyClass.SYMMETRIC = 3;
-
-var DigestAlgorithm = function DigestAlgorithm()
-{
-};
-
-exports.DigestAlgorithm = DigestAlgorithm;
-
-DigestAlgorithm.SHA256 = 1;
-// DigestAlgorithm.MD2
-// DigestAlgorithm.MD5
-// DigestAlgorithm.SHA1
-
-var EncryptMode = function EncryptMode()
-{
-};
-
-exports.EncryptMode = EncryptMode;
-
-EncryptMode.DEFAULT = 1;
-EncryptMode.CFB_AES = 2;
-// EncryptMode.CBC_AES
+exports.ValidationRequest = ValidationRequest;
