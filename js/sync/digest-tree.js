@@ -18,6 +18,9 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+// For sha256 implementation; node.js syntax?
+var crypto = require('crypto');
+
 var DigestTree = function DigestTree()
 {
   this.root = "00";
@@ -65,17 +68,16 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
 // (also an object, Javascript being a prototypical language)
 DigestTree.Node.prototype.recomputeDigest = function()
 {
+  // TODO: SHA-256 implementation and check out the original logic
   
 }
 
 DigestTree.Node.int32ToLittleEndian = function(value, result)
 {
-
-}
-
-function strcmp(component1, component2)
-{
-  return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
+  for (var i = 0; i < 4; i++) {
+    result[i] = value % 256;
+    value = value / 256;
+  }
 }
 
 // Do the work of string and then sequence number compare
@@ -100,10 +102,14 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
   else {
     /* Debug log outputs */
     // Is this the right way to create an object? new DigestTreeNode or DigestTree.Node?
+    // TODO: Make sure this is the right way to create this object.
     var temp = new DigestTreeNode(dataPrefix, sessionNo, sequenceNo);
-    // this.digestnode is a vector, looking for its equivalent in js.
-    //this.digestnode.insert(temp);
+    // this.digestnode is a vector, seems that its equivalent is js array; 
+    // vector.push_back(temp) interpreted as array.push(temp)
+    this.digestnode.push(temp);
   }
+  this.recomputeRoot();
+  return true;
 }
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
@@ -133,5 +139,41 @@ DigestTree.prototype.getRoot = function()
 
 DigestTree.prototype.recomputeRoot = function()
 {
+  var sha256;
+  for (var i = 0; i < this.digestnode.length; ++i)
+    SHA256_UpdateHex(sha256, this.digestnode[i].getDigest());
+  var digest_root;
+  // TODO: The equivalent of SHA256_Final
   
+}
+
+// Not sure if this ascii representation works yet
+function fromHexChar(c)
+{
+  if (c >= '0' && c <= '9')
+    return (c - '0');
+  else if (c >= 'a' && c <= 'f')
+    return (c - 'a' + 10);
+  else if (c >= 'A' && c<= 'F')
+    return (c - 'A' + 10);
+  else
+    return -1;
+}
+
+// This function should be tested, as the functions of hash related functions are unverified
+function SHA256_UpdateHex(context, hex)
+{
+  var data = [];
+  for (var i = 0; i < data.length; ++i)
+    data[i] = 16 * fromHexChar(hex[2 * i]) + fromHexChar(hex[2 * i + 1]);
+  // Update hash for given ascii hex
+  var hash = crypto.createHash('sha256');
+  // Default encoding for hash.update is 'binary'
+  hash.update(data);
+  context = hash.digest('hex');
+}
+
+function strcmp(component1, component2)
+{
+  return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
 }
