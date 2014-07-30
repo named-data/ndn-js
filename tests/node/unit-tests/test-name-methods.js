@@ -33,7 +33,7 @@ describe('TestNameMethods', function() {
 
   it('UriConstructor', function() {
     var name = new Name(expectedURI);
-    assert.equal(name.size(), 3);
+    assert.equal(name.size(), 4, 'Constructed name has ' + name.size() + ' components instead of 3');
     assert.equal(name.toUri(), expectedURI);
   });
 
