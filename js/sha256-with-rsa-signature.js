@@ -27,47 +27,51 @@ var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new Signature with the optional values.
+ * Create a new Sha256WithRsaSignature object, possibly copying values from
+ * another object.
+ *
+ * @param {Sha256WithRsaSignature} value (optional) If value is a
+ * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
+ * is the default with unspecified values and the signature is unspecified.
  * @constructor
  */
-var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm)
+var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Signature) {
+  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
-    this.signature = witnessOrSignatureObject.signature;
+    this.keyLocator = new KeyLocator(value.keyLocator);
+    this.signature = value.signature;
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject.witness;
+    this.witness = value.witness;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
+    this.digestAlgorithm = value.digestAlgorithm;
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = signature;
+    this.signature = null;
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject;
+    this.witness = null;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = digestAlgorithm;
+    this.digestAlgorithm = null;
   }
 };
 
-exports.Signature = Signature;
+exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
- * Create a new Signature which is a copy of this object.
- * @returns {Signature} A new object which is a copy of this object.
+ * Create a new Sha256WithRsaSignature which is a copy of this object.
+ * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
-Signature.prototype.clone = function()
+Sha256WithRsaSignature.prototype.clone = function()
 {
-  return new Signature(this);
+  return new Sha256WithRsaSignature(this);
 };
 
 /**
  * Get the key locator.
  * @returns {KeyLocator} The key locator.
  */
-Signature.prototype.getKeyLocator = function()
+Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
   return this.keyLocator;
 };
@@ -76,7 +80,7 @@ Signature.prototype.getKeyLocator = function()
  * Get the data packet's signature bytes.
  * @returns {Blob} The signature bytes. If not specified, the value isNull().
  */
-Signature.prototype.getSignature = function()
+Sha256WithRsaSignature.prototype.getSignature = function()
 {
   // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
   return new Blob(this.signature, false);
@@ -86,7 +90,7 @@ Signature.prototype.getSignature = function()
  * @deprecated Use getSignature. This method returns a Buffer which is the former
  * behavior of getSignature, and should only be used while updating your code.
  */
-Signature.prototype.getSignatureAsBuffer = function()
+Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
 {
   return this.signature;
 };
@@ -95,7 +99,7 @@ Signature.prototype.getSignatureAsBuffer = function()
  * Set the key locator to a copy of the given keyLocator.
  * @param {KeyLocator} keyLocator The KeyLocator to copy.
  */
-Signature.prototype.setKeyLocator = function(keyLocator)
+Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
   this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
                     new KeyLocator(keyLocator) : new KeyLocator();
@@ -105,7 +109,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
  * Set the data packet's signature bytes.
  * @param {Blob} signature
  */
-Signature.prototype.setSignature = function(signature)
+Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
   if (signature == null)
     this.signature = null;
@@ -115,7 +119,7 @@ Signature.prototype.setSignature = function(signature)
     this.signature = new Buffer(signature);
 };
 
-Signature.prototype.from_ndnb = function(decoder)
+Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
 
@@ -138,7 +142,7 @@ Signature.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-Signature.prototype.to_ndnb = function(encoder)
+Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 {
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
@@ -157,9 +161,43 @@ Signature.prototype.to_ndnb = function(encoder)
   encoder.writeElementClose();
 };
 
-Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Sha256WithRsaSignature; };
 
-Signature.prototype.validate = function()
+Sha256WithRsaSignature.prototype.validate = function()
 {
   return null != this.signature;
 };
+
+/**
+ * Note: This Signature class is not the same as the base Signature class of
+ * the Common Client Libraries API. It is a deprecated name for
+ * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
+ * we may implement the CCL version of Signature.
+ * @deprecated Use new Sha256WithRsaSignature.
+ */
+var Signature = function Signature
+  (witnessOrSignatureObject, signature, digestAlgorithm)
+{
+  if (typeof witnessOrSignatureObject === 'object' &&
+      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
+    // Call the base copy constructor.
+    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
+  else {
+    // Call the base default constructor.
+    Sha256WithRsaSignature.call(this);
+
+    // Set the given fields (if supplied).
+    if (witnessOrSignatureObject != null)
+      // witness is deprecated.
+      this.witness = witnessOrSignatureObject;
+    if (signature != null)
+      this.signature = signature;
+    if (digestAlgorithm != null)
+      // digestAlgorithm is deprecated.
+      this.digestAlgorithm = digestAlgorithm;
+  }
+}
+
+Signature.prototype = new Sha256WithRsaSignature();
+
+exports.Signature = Signature;

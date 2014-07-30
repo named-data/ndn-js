@@ -26,7 +26,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Signature = require('../signature.js').Signature;
+var Signature = require('../sha256-with-rsa-signature.js').Signature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**

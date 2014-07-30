@@ -20,7 +20,7 @@
 
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
-var Signature = require('../../signature.js').Signature;
+var Signature = require('../../sha256-with-rsa-signature.js').Signature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
