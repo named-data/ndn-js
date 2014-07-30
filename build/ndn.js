@@ -11794,7 +11794,7 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
 
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
-var Signature = require('../../signature.js').Signature;
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -12033,7 +12033,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     // Get a pointer to the clone which Data made.
     var signature = data.getSignature();
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
@@ -12052,7 +12052,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    var signature = new Signature();
+    var signature = new Sha256WithRsaSignature();
 
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
@@ -13440,47 +13440,51 @@ var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new Signature with the optional values.
+ * Create a new Sha256WithRsaSignature object, possibly copying values from
+ * another object.
+ *
+ * @param {Sha256WithRsaSignature} value (optional) If value is a
+ * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
+ * is the default with unspecified values and the signature is unspecified.
  * @constructor
  */
-var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm)
+var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Signature) {
+  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
-    this.signature = witnessOrSignatureObject.signature;
+    this.keyLocator = new KeyLocator(value.keyLocator);
+    this.signature = value.signature;
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject.witness;
+    this.witness = value.witness;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
+    this.digestAlgorithm = value.digestAlgorithm;
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = signature;
+    this.signature = new Buffer(0);
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject;
+    this.witness = null;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = digestAlgorithm;
+    this.digestAlgorithm = null;
   }
 };
 
-exports.Signature = Signature;
+exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
- * Create a new Signature which is a copy of this object.
- * @returns {Signature} A new object which is a copy of this object.
+ * Create a new Sha256WithRsaSignature which is a copy of this object.
+ * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
-Signature.prototype.clone = function()
+Sha256WithRsaSignature.prototype.clone = function()
 {
-  return new Signature(this);
+  return new Sha256WithRsaSignature(this);
 };
 
 /**
  * Get the key locator.
  * @returns {KeyLocator} The key locator.
  */
-Signature.prototype.getKeyLocator = function()
+Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
   return this.keyLocator;
 };
@@ -13489,7 +13493,7 @@ Signature.prototype.getKeyLocator = function()
  * Get the data packet's signature bytes.
  * @returns {Blob} The signature bytes. If not specified, the value isNull().
  */
-Signature.prototype.getSignature = function()
+Sha256WithRsaSignature.prototype.getSignature = function()
 {
   // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
   return new Blob(this.signature, false);
@@ -13499,7 +13503,7 @@ Signature.prototype.getSignature = function()
  * @deprecated Use getSignature. This method returns a Buffer which is the former
  * behavior of getSignature, and should only be used while updating your code.
  */
-Signature.prototype.getSignatureAsBuffer = function()
+Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
 {
   return this.signature;
 };
@@ -13508,7 +13512,7 @@ Signature.prototype.getSignatureAsBuffer = function()
  * Set the key locator to a copy of the given keyLocator.
  * @param {KeyLocator} keyLocator The KeyLocator to copy.
  */
-Signature.prototype.setKeyLocator = function(keyLocator)
+Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
   this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
                     new KeyLocator(keyLocator) : new KeyLocator();
@@ -13518,7 +13522,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
  * Set the data packet's signature bytes.
  * @param {Blob} signature
  */
-Signature.prototype.setSignature = function(signature)
+Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
   if (signature == null)
     this.signature = null;
@@ -13528,7 +13532,7 @@ Signature.prototype.setSignature = function(signature)
     this.signature = new Buffer(signature);
 };
 
-Signature.prototype.from_ndnb = function(decoder)
+Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
 
@@ -13551,7 +13555,7 @@ Signature.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-Signature.prototype.to_ndnb = function(encoder)
+Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 {
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
@@ -13570,12 +13574,46 @@ Signature.prototype.to_ndnb = function(encoder)
   encoder.writeElementClose();
 };
 
-Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
-Signature.prototype.validate = function()
+Sha256WithRsaSignature.prototype.validate = function()
 {
   return null != this.signature;
 };
+
+/**
+ * Note: This Signature class is not the same as the base Signature class of
+ * the Common Client Libraries API. It is a deprecated name for
+ * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
+ * we may implement the CCL version of Signature.
+ * @deprecated Use new Sha256WithRsaSignature.
+ */
+var Signature = function Signature
+  (witnessOrSignatureObject, signature, digestAlgorithm)
+{
+  if (typeof witnessOrSignatureObject === 'object' &&
+      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
+    // Call the base copy constructor.
+    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
+  else {
+    // Call the base default constructor.
+    Sha256WithRsaSignature.call(this);
+
+    // Set the given fields (if supplied).
+    if (witnessOrSignatureObject != null)
+      // witness is deprecated.
+      this.witness = witnessOrSignatureObject;
+    if (signature != null)
+      this.signature = signature;
+    if (digestAlgorithm != null)
+      // digestAlgorithm is deprecated.
+      this.digestAlgorithm = digestAlgorithm;
+  }
+}
+
+Signature.prototype = new Sha256WithRsaSignature();
+
+exports.Signature = Signature;
 /**
  * This class represents an NDN Data object.
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -13603,7 +13641,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
-var Signature = require('./signature.js').Signature;
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
@@ -13650,7 +13688,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
   else
     this.content = content;
 
-  this.signature = new Signature();
+  this.signature = new Sha256WithRsaSignature();
 
   this.wireEncoding = SignedBlob();
 };
@@ -13740,8 +13778,8 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Signature ?
-    signature.clone() : new Signature();
+  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
+    signature.clone() : new Sha256WithRsaSignature();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = SignedBlob();
@@ -15081,7 +15119,7 @@ var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
-var Signature = require('../signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -15372,11 +15410,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     data.getSignature().from_ndnb(decoder);
   }
   else
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
 
   var signedPortionBeginOffset = decoder.offset;
 
@@ -15431,7 +15469,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Signature = require('../signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -15803,7 +15841,7 @@ Tlv0_1WireFormat.decodeKeyLocator = function
 /**
  * Encode the signature object in TLV, using the given keyLocator instead of the
  * locator in this object.
- * @param {Signature} signature The Signature object to encode.
+ * @param {Sha256WithRsaSignature} signature The Sha256WithRsaSignature object to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
@@ -15829,7 +15867,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
   // TODO: The library needs to handle other signature types than
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(Signature());
+      data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();
