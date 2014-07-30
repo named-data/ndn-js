@@ -22,21 +22,31 @@
 var assert = require("assert");
 var Name = require('../../..').Name;
 
-describe('TestNameMethods', function() {
-  it('UriConstructor', function() {
-    var expectedUri = "/entr%C3%A9e/..../%00%01%02%03";
-    var name = new Name(expectedUri);
-    assert.equal(name.size(), 3);
-    assert.equal(name.toUri(), expectedUri);
-  });
-});
+var expectedURI;
+var comp2;
 
 describe('TestNameMethods', function() {
+  beforeEach(function() {
+    expectedURI = "/entr%C3%A9e/..../%00%01%02%03";
+    comp2 = new Name.Component([0x00, 0x01, 0x02, 0x03]);
+  });
+
+  it('UriConstructor', function() {
+    var name = new Name(expectedURI);
+    assert.equal(name.size(), 3);
+    assert.equal(name.toUri(), expectedURI);
+  });
+
   it('CopyConstructor', function() {
-    var expectedUri = "/entr%C3%A9e/..../%00%01%02%03";
-    var name = new Name(expectedUri);
+    var name = new Name(expectedURI);
     var name2 = new Name(name);
     assert.equal(name.size(), 3);
     assert.ok(name.equals(name2));
+  });
+
+  it('GetComponent', function() {
+    var name = new Name(expectedURI);
+    component2 = name.get(2);
+    assert.ok(comp2.equals(component2));
   });
 });
