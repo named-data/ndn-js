@@ -26,7 +26,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Signature = require('../sha256-with-rsa-signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -398,7 +398,7 @@ Tlv0_1WireFormat.decodeKeyLocator = function
 /**
  * Encode the signature object in TLV, using the given keyLocator instead of the
  * locator in this object.
- * @param {Signature} signature The Signature object to encode.
+ * @param {Sha256WithRsaSignature} signature The Sha256WithRsaSignature object to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
@@ -424,7 +424,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
   // TODO: The library needs to handle other signature types than
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(Signature());
+      data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();

@@ -24,7 +24,7 @@ var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
-var Signature = require('../sha256-with-rsa-signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -315,11 +315,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     data.getSignature().from_ndnb(decoder);
   }
   else
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
 
   var signedPortionBeginOffset = decoder.offset;
 
