@@ -33,20 +33,19 @@ describe('TestNameMethods', function() {
 
   it('UriConstructor', function() {
     var name = new Name(expectedURI);
-    assert.equal(name.size(), 4, 'Constructed name has ' + name.size() + ' components instead of 3');
-    assert.equal(name.toUri(), expectedURI);
+    assert.equal(name.size(), 3, 'Constructed name has ' + name.size() + ' components instead of 3');
+    assert.equal(name.toUri(), expectedURI, 'URI is incorrect');
   });
 
   it('CopyConstructor', function() {
     var name = new Name(expectedURI);
     var name2 = new Name(name);
-    assert.equal(name.size(), 3);
-    assert.ok(name.equals(name2));
+    assert.ok(name.equals(name2), 'Name from copy constructor does not match original');
   });
 
   it('GetComponent', function() {
     var name = new Name(expectedURI);
     component2 = name.get(2);
-    assert.ok(comp2.equals(component2));
+    assert.ok(comp2.equals(component2), 'Component at index 2 is incorrect');
   });
 });
