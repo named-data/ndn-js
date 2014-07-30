@@ -20,7 +20,7 @@
 
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
-var Signature = require('../../signature.js').Signature;
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -259,7 +259,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     // Get a pointer to the clone which Data made.
     var signature = data.getSignature();
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
@@ -278,7 +278,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    var signature = new Signature();
+    var signature = new Sha256WithRsaSignature();
 
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));

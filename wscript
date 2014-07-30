@@ -132,7 +132,7 @@ def build (bld):
                  "js/security/policy/self-verify-policy-manager.js",
                  "js/security/key-chain.js",
                  "js/meta-info.js",
-                 "js/signature.js",
+                 "js/sha256-with-rsa-signature.js",
                  "js/data.js",
                  "js/exclude.js",
                  "js/interest.js",
