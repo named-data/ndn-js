@@ -545,6 +545,46 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Compare this to the other Name using NDN canonical ordering.  If the first 
+ * components of each name are not equal, this returns -1 if the first comes 
+ * before the second using the NDN canonical ordering for name components, or 1 
+ * if it comes after. If they are equal, this compares the second components of 
+ * each name, etc.  If both names are the same up to the size of the shorter 
+ * name, this returns -1 if the first name is shorter than the second or 1 if it 
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
+ * is intuitive because all names with the prefix /a are next to each other.  
+ * But it may be also be counter-intuitive because /c comes before /bb according 
+ * to NDN canonical ordering since it is shorter.
+ * @param {Name} other The other Name to compare with.
+ * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.prototype.compare = function(other)
+{
+  for (var i = 0; i < this.size() && i < other.size(); ++i) {
+    var comparison = this.components[i].compare(other.components[i]);
+    if (comparison == 0)
+      // The components at this index are equal, so check the next components.
+      continue;
+
+    // Otherwise, the result is based on the components at this index.
+    return comparison;
+  }
+
+  // The components up to min(this.size(), other.size()) are equal, so the
+  // shorter name is less.
+  if (this.size() < other.size())
+    return -1;
+  else if (this.size() > other.size())
+    return 1;
+  else
+    return 0;
+};
+
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equals = function(name)
