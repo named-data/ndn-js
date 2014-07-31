@@ -5194,6 +5194,31 @@ Blob.prototype.toHex = function()
     return "";
   else
     return this.buffer.toString('hex');
+};
+
+/**
+ * Check if the value of this Blob equals the other blob.
+ * @param {Blob} other The other Blob to check.
+ * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * blob equal the bytes of the other.
+ */
+Blob.prototype.equals = function(other)
+{
+  if (this.isNull())
+    return other.isNull();
+  else if (other.isNull())
+    return false;
+  else {
+    if (this.buffer.length != other.buffer.length)
+      return false;
+
+    for (var i = 0; i < this.buffer.length; ++i) {
+      if (this.buffer[i] != other.buffer[i])
+        return false;
+    }
+
+    return true;
+  }
 };/**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -9686,7 +9711,7 @@ Name.createNameArray = function(uri)
   for (var i = 0; i < array.length; ++i) {
     var value = Name.fromEscapedString(array[i]);
 
-    if (value == null) {
+    if (value.isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
@@ -9950,6 +9975,46 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Compare this to the other Name using NDN canonical ordering.  If the first 
+ * components of each name are not equal, this returns -1 if the first comes 
+ * before the second using the NDN canonical ordering for name components, or 1 
+ * if it comes after. If they are equal, this compares the second components of 
+ * each name, etc.  If both names are the same up to the size of the shorter 
+ * name, this returns -1 if the first name is shorter than the second or 1 if it 
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
+ * is intuitive because all names with the prefix /a are next to each other.  
+ * But it may be also be counter-intuitive because /c comes before /bb according 
+ * to NDN canonical ordering since it is shorter.
+ * @param {Name} other The other Name to compare with.
+ * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.prototype.compare = function(other)
+{
+  for (var i = 0; i < this.size() && i < other.size(); ++i) {
+    var comparison = this.components[i].compare(other.components[i]);
+    if (comparison == 0)
+      // The components at this index are equal, so check the next components.
+      continue;
+
+    // Otherwise, the result is based on the components at this index.
+    return comparison;
+  }
+
+  // The components up to min(this.size(), other.size()) are equal, so the
+  // shorter name is less.
+  if (this.size() < other.size())
+    return -1;
+  else if (this.size() > other.size())
+    return 1;
+  else
+    return 0;
+};
+
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equals = function(name)
@@ -10027,6 +10092,8 @@ Name.toEscapedString = function(value)
 {
   if (typeof value == 'object' && value instanceof Name.Component)
     value = value.getValue().buf();
+  else if (typeof value === 'object' && value instanceof Blob)
+    value = value.buf();
 
   var result = "";
   var gotNonDot = false;
@@ -10058,10 +10125,11 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
- * @returns {Buffer} The byte array, or null which means to skip the component in the name.
+ * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
 {
@@ -10072,13 +10140,23 @@ Name.fromEscapedString = function(escapedString)
     if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
-      return null;
+      return new Blob();
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
+      return new Blob
+        (DataUtils.toNumbersFromString(value.substr(3, value.length - 3)), false);
   }
   else
-    return DataUtils.toNumbersFromString(value);
+    return new Blob(DataUtils.toNumbersFromString(value), false);
+};
+
+/**
+ * @deprecated Use fromEscapedString. This method returns a Buffer which is the former
+ * behavior of fromEscapedString, and should only be used while updating your code.
+ */
+Name.fromEscapedStringAsBuffer = function(escapedString)
+{
+  return Name.fromEscapedString(escapedString).buf();
 };
 
 /**
@@ -14002,6 +14080,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * Create a new Exclude.
@@ -14143,6 +14222,8 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 {
   if (typeof component == 'object' && component instanceof Name.Component)
     component = component.getValue().buf();
+  else if (typeof component === 'object' && component instanceof Blob)
+    component = component.buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
