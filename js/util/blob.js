@@ -110,3 +110,28 @@ Blob.prototype.toHex = function()
   else
     return this.buffer.toString('hex');
 };
+
+/**
+ * Check if the value of this Blob equals the other blob.
+ * @param {Blob} other The other Blob to check.
+ * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * blob equal the bytes of the other.
+ */
+Blob.prototype.equals = function(other)
+{
+  if (this.isNull())
+    return other.isNull();
+  else if (other.isNull())
+    return false;
+  else {
+    if (this.buffer.length != other.buffer.length)
+      return false;
+
+    for (var i = 0; i < this.buffer.length; ++i) {
+      if (this.buffer[i] != other.buffer[i])
+        return false;
+    }
+
+    return true;
+  }
+};
