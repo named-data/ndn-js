@@ -281,7 +281,7 @@ Name.createNameArray = function(uri)
   for (var i = 0; i < array.length; ++i) {
     var value = Name.fromEscapedString(array[i]);
 
-    if (value == null) {
+    if (value.isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
@@ -622,6 +622,8 @@ Name.toEscapedString = function(value)
 {
   if (typeof value == 'object' && value instanceof Name.Component)
     value = value.getValue().buf();
+  else if (typeof value === 'object' && value instanceof Blob)
+    value = value.buf();
 
   var result = "";
   var gotNonDot = false;
@@ -653,10 +655,11 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
- * @returns {Buffer} The byte array, or null which means to skip the component in the name.
+ * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
 {
@@ -667,13 +670,23 @@ Name.fromEscapedString = function(escapedString)
     if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
-      return null;
+      return new Blob();
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
+      return new Blob
+        (DataUtils.toNumbersFromString(value.substr(3, value.length - 3)), false);
   }
   else
-    return DataUtils.toNumbersFromString(value);
+    return new Blob(DataUtils.toNumbersFromString(value), false);
+};
+
+/**
+ * @deprecated Use fromEscapedString. This method returns a Buffer which is the former
+ * behavior of fromEscapedString, and should only be used while updating your code.
+ */
+Name.fromEscapedStringAsBuffer = function(escapedString)
+{
+  return Name.fromEscapedString(escapedString).buf();
 };
 
 /**
