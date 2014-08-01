@@ -24,6 +24,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * Create a new Exclude.
@@ -165,6 +166,8 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 {
   if (typeof component == 'object' && component instanceof Name.Component)
     component = component.getValue().buf();
+  else if (typeof component === 'object' && component instanceof Blob)
+    component = component.buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {

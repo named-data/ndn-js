@@ -30,9 +30,6 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/content-channel.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
-// For now, keep the default wire format as Binary XML.
-WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
-
 function NdnProtocol() {
 }
 
@@ -644,7 +641,7 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
 function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
-    if (DataUtils.arraysEqual(name.get(i).getValue().buf(), NdnfsFileComponent))
+    if (name.get(i).getValue().equals(NdnfsFileComponent))
       return i;
   }
 

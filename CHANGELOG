@@ -1,17 +1,21 @@
-Interim changes after NDN-JS v0.4 (2014-07-18)
+Interim changes after NDN-JS v0.4 (2014-07-31)
 ----------------------------------------------
 
 Changes
+* Renamed Signature class to Sha256WithRsaSignature. The deprecated Signature
+  class is still available.
 * As described below, the return type is changed for the following methods. If
   these changes cause unexpected behavior in your application, you can revert
   to NDN-JS version v0.4 while updating your application.
   - Changed Name.Component.getValue() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getValueAsBuffer().
+  - Changed Name.fromEscapedString(escapedString) to return a Blob, not Buffer. If you need the
+    former behavior, call the deprecated method fromEscapedStringAsBuffer().
   - Changed Interest.getNonce() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getNonceAsBuffer().
   - Changed Data.getContent() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getContentAsBuffer().
-  - Changed Signature.getSignature() to return a Blob, not Buffer. If you need the
+  - Changed Sha256WithRsaSignature.getSignature() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getSignatureAsBuffer().
   - Changed KeyLocator.getKeyData() to return a Blob, not Buffer. If you need the
     former behavior, call the deprecated method getKeyDataAsBuffer().
@@ -24,13 +28,15 @@ Bug fixes
 * http://redmine.named-data.net/issues/1617 Second call to expressInterest gives "connection not established"
 
 Deprecated
+* Deprecated the Signature class. Use new Sha256WithRsaSignature.
 * Direct use of object fields is deprecated. Use the get/set methods.
   For example, interest.name is deprecated. Use interest.getName() and setName(name).
   The names and data type of object fields may change in the future.
 * Name.Component: Deprecated getValueAsBuffer(). Use getValue().
+* Name: Deprecated fromEscapedStringAsBuffer(). Use fromEscapedString().
 * Interest: Deprecated getNonceAsBuffer(). Use getNonce().
 * Data: Deprecated getContentAsBuffer(). Use getContent().
-* Signature: Deprecated getSignatureAsBuffer(). Use getSignature().
+* Sha256WithRsaSignature: Deprecated getSignatureAsBuffer(). Use getSignature().
 * KeyLocator: Deprecated getKeyDataAsBuffer(). Use getKeyData().
 * MetaInfo: Deprecated getFinalBlockIDAsBuffer(). Use getFinalBlockID().
 * Name: Deprecated cut(nComponents). Use getPrefix(-nComponents).

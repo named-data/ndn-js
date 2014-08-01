@@ -5194,6 +5194,31 @@ Blob.prototype.toHex = function()
     return "";
   else
     return this.buffer.toString('hex');
+};
+
+/**
+ * Check if the value of this Blob equals the other blob.
+ * @param {Blob} other The other Blob to check.
+ * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * blob equal the bytes of the other.
+ */
+Blob.prototype.equals = function(other)
+{
+  if (this.isNull())
+    return other.isNull();
+  else if (other.isNull())
+    return false;
+  else {
+    if (this.buffer.length != other.buffer.length)
+      return false;
+
+    for (var i = 0; i < this.buffer.length; ++i) {
+      if (this.buffer[i] != other.buffer[i])
+        return false;
+    }
+
+    return true;
+  }
 };/**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -9686,7 +9711,7 @@ Name.createNameArray = function(uri)
   for (var i = 0; i < array.length; ++i) {
     var value = Name.fromEscapedString(array[i]);
 
-    if (value == null) {
+    if (value.isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
@@ -9950,6 +9975,46 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Compare this to the other Name using NDN canonical ordering.  If the first 
+ * components of each name are not equal, this returns -1 if the first comes 
+ * before the second using the NDN canonical ordering for name components, or 1 
+ * if it comes after. If they are equal, this compares the second components of 
+ * each name, etc.  If both names are the same up to the size of the shorter 
+ * name, this returns -1 if the first name is shorter than the second or 1 if it 
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
+ * is intuitive because all names with the prefix /a are next to each other.  
+ * But it may be also be counter-intuitive because /c comes before /bb according 
+ * to NDN canonical ordering since it is shorter.
+ * @param {Name} other The other Name to compare with.
+ * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.prototype.compare = function(other)
+{
+  for (var i = 0; i < this.size() && i < other.size(); ++i) {
+    var comparison = this.components[i].compare(other.components[i]);
+    if (comparison == 0)
+      // The components at this index are equal, so check the next components.
+      continue;
+
+    // Otherwise, the result is based on the components at this index.
+    return comparison;
+  }
+
+  // The components up to min(this.size(), other.size()) are equal, so the
+  // shorter name is less.
+  if (this.size() < other.size())
+    return -1;
+  else if (this.size() > other.size())
+    return 1;
+  else
+    return 0;
+};
+
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equals = function(name)
@@ -10027,6 +10092,8 @@ Name.toEscapedString = function(value)
 {
   if (typeof value == 'object' && value instanceof Name.Component)
     value = value.getValue().buf();
+  else if (typeof value === 'object' && value instanceof Blob)
+    value = value.buf();
 
   var result = "";
   var gotNonDot = false;
@@ -10058,10 +10125,11 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
- * @returns {Buffer} The byte array, or null which means to skip the component in the name.
+ * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
 {
@@ -10072,13 +10140,23 @@ Name.fromEscapedString = function(escapedString)
     if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
-      return null;
+      return new Blob();
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
+      return new Blob
+        (DataUtils.toNumbersFromString(value.substr(3, value.length - 3)), false);
   }
   else
-    return DataUtils.toNumbersFromString(value);
+    return new Blob(DataUtils.toNumbersFromString(value), false);
+};
+
+/**
+ * @deprecated Use fromEscapedString. This method returns a Buffer which is the former
+ * behavior of fromEscapedString, and should only be used while updating your code.
+ */
+Name.fromEscapedStringAsBuffer = function(escapedString)
+{
+  return Name.fromEscapedString(escapedString).buf();
 };
 
 /**
@@ -10689,7 +10767,6 @@ SecurityException.prototype.name = "SecurityException";
 
 exports.SecurityException = SecurityException;
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -10763,7 +10840,6 @@ EncryptMode.DEFAULT = 1;
 EncryptMode.CFB_AES = 2;
 // EncryptMode.CBC_AES
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -10907,7 +10983,6 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
     (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11175,7 +11250,6 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
   throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11493,7 +11567,6 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
   throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11613,7 +11686,6 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11779,7 +11851,6 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
     return false ;
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -11801,7 +11872,7 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
 
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
-var Signature = require('../../signature.js').Signature;
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -12040,7 +12111,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     // Get a pointer to the clone which Data made.
     var signature = data.getSignature();
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
@@ -12059,7 +12130,7 @@ IdentityManager.prototype.signByCertificate = function
     var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
     // For temporary usage, we support RSA + SHA256 only, but will support more.
-    var signature = new Signature();
+    var signature = new Sha256WithRsaSignature();
 
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
@@ -12109,7 +12180,6 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
   return tmpName.getSubName(0, i).append(tmpName.getSubName
     (i + 1, tmpName.size() - i - 1));
 };/**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12156,7 +12226,6 @@ var ValidationRequest = function ValidationRequest
 
 exports.ValidationRequest = ValidationRequest;
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12266,7 +12335,6 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12374,7 +12442,6 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
   return new Name();
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12613,7 +12680,6 @@ SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
   return verifier.verify(keyPem, signatureBytes);
 };
 /**
- * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -13452,47 +13518,51 @@ var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * Create a new Signature with the optional values.
+ * Create a new Sha256WithRsaSignature object, possibly copying values from
+ * another object.
+ *
+ * @param {Sha256WithRsaSignature} value (optional) If value is a
+ * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
+ * is the default with unspecified values and the signature is unspecified.
  * @constructor
  */
-var Signature = function Signature(witnessOrSignatureObject, signature, digestAlgorithm)
+var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Signature) {
+  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator = new KeyLocator(witnessOrSignatureObject.keyLocator);
-    this.signature = witnessOrSignatureObject.signature;
+    this.keyLocator = new KeyLocator(value.keyLocator);
+    this.signature = value.signature;
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject.witness;
+    this.witness = value.witness;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = witnessOrSignatureObject.digestAlgorithm;
+    this.digestAlgorithm = value.digestAlgorithm;
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = signature;
+    this.signature = new Buffer(0);
     // witness is deprecated.
-    this.witness = witnessOrSignatureObject;
+    this.witness = null;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = digestAlgorithm;
+    this.digestAlgorithm = null;
   }
 };
 
-exports.Signature = Signature;
+exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
- * Create a new Signature which is a copy of this object.
- * @returns {Signature} A new object which is a copy of this object.
+ * Create a new Sha256WithRsaSignature which is a copy of this object.
+ * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
-Signature.prototype.clone = function()
+Sha256WithRsaSignature.prototype.clone = function()
 {
-  return new Signature(this);
+  return new Sha256WithRsaSignature(this);
 };
 
 /**
  * Get the key locator.
  * @returns {KeyLocator} The key locator.
  */
-Signature.prototype.getKeyLocator = function()
+Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
   return this.keyLocator;
 };
@@ -13501,7 +13571,7 @@ Signature.prototype.getKeyLocator = function()
  * Get the data packet's signature bytes.
  * @returns {Blob} The signature bytes. If not specified, the value isNull().
  */
-Signature.prototype.getSignature = function()
+Sha256WithRsaSignature.prototype.getSignature = function()
 {
   // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
   return new Blob(this.signature, false);
@@ -13511,7 +13581,7 @@ Signature.prototype.getSignature = function()
  * @deprecated Use getSignature. This method returns a Buffer which is the former
  * behavior of getSignature, and should only be used while updating your code.
  */
-Signature.prototype.getSignatureAsBuffer = function()
+Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
 {
   return this.signature;
 };
@@ -13520,7 +13590,7 @@ Signature.prototype.getSignatureAsBuffer = function()
  * Set the key locator to a copy of the given keyLocator.
  * @param {KeyLocator} keyLocator The KeyLocator to copy.
  */
-Signature.prototype.setKeyLocator = function(keyLocator)
+Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
   this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
                     new KeyLocator(keyLocator) : new KeyLocator();
@@ -13530,7 +13600,7 @@ Signature.prototype.setKeyLocator = function(keyLocator)
  * Set the data packet's signature bytes.
  * @param {Blob} signature
  */
-Signature.prototype.setSignature = function(signature)
+Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
   if (signature == null)
     this.signature = null;
@@ -13540,7 +13610,7 @@ Signature.prototype.setSignature = function(signature)
     this.signature = new Buffer(signature);
 };
 
-Signature.prototype.from_ndnb = function(decoder)
+Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
 
@@ -13563,7 +13633,7 @@ Signature.prototype.from_ndnb = function(decoder)
   decoder.readElementClose();
 };
 
-Signature.prototype.to_ndnb = function(encoder)
+Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 {
   if (!this.validate())
     throw new Error("Cannot encode: field values missing.");
@@ -13582,12 +13652,46 @@ Signature.prototype.to_ndnb = function(encoder)
   encoder.writeElementClose();
 };
 
-Signature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
-Signature.prototype.validate = function()
+Sha256WithRsaSignature.prototype.validate = function()
 {
   return null != this.signature;
 };
+
+/**
+ * Note: This Signature class is not the same as the base Signature class of
+ * the Common Client Libraries API. It is a deprecated name for
+ * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
+ * we may implement the CCL version of Signature.
+ * @deprecated Use new Sha256WithRsaSignature.
+ */
+var Signature = function Signature
+  (witnessOrSignatureObject, signature, digestAlgorithm)
+{
+  if (typeof witnessOrSignatureObject === 'object' &&
+      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
+    // Call the base copy constructor.
+    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
+  else {
+    // Call the base default constructor.
+    Sha256WithRsaSignature.call(this);
+
+    // Set the given fields (if supplied).
+    if (witnessOrSignatureObject != null)
+      // witness is deprecated.
+      this.witness = witnessOrSignatureObject;
+    if (signature != null)
+      this.signature = signature;
+    if (digestAlgorithm != null)
+      // digestAlgorithm is deprecated.
+      this.digestAlgorithm = digestAlgorithm;
+  }
+}
+
+Signature.prototype = new Sha256WithRsaSignature();
+
+exports.Signature = Signature;
 /**
  * This class represents an NDN Data object.
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -13615,7 +13719,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
-var Signature = require('./signature.js').Signature;
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
@@ -13662,7 +13766,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
   else
     this.content = content;
 
-  this.signature = new Signature();
+  this.signature = new Sha256WithRsaSignature();
 
   this.wireEncoding = SignedBlob();
 };
@@ -13752,8 +13856,8 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Signature ?
-    signature.clone() : new Signature();
+  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
+    signature.clone() : new Sha256WithRsaSignature();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = SignedBlob();
@@ -13976,6 +14080,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * Create a new Exclude.
@@ -14117,6 +14222,8 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 {
   if (typeof component == 'object' && component instanceof Name.Component)
     component = component.getValue().buf();
+  else if (typeof component === 'object' && component instanceof Blob)
+    component = component.buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -15093,7 +15200,7 @@ var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
-var Signature = require('../signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -15384,11 +15491,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
   decoder.readElementStartDTag(data.getElementLabel());
 
   if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
     data.getSignature().from_ndnb(decoder);
   }
   else
-    data.setSignature(new Signature());
+    data.setSignature(new Sha256WithRsaSignature());
 
   var signedPortionBeginOffset = decoder.offset;
 
@@ -15443,7 +15550,7 @@ var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Signature = require('../signature.js').Signature;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -15815,7 +15922,7 @@ Tlv0_1WireFormat.decodeKeyLocator = function
 /**
  * Encode the signature object in TLV, using the given keyLocator instead of the
  * locator in this object.
- * @param {Signature} signature The Signature object to encode.
+ * @param {Sha256WithRsaSignature} signature The Sha256WithRsaSignature object to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
@@ -15841,7 +15948,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
   // TODO: The library needs to handle other signature types than
   //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(Signature());
+      data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();
