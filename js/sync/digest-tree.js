@@ -103,7 +103,7 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
     /* Debug log outputs */
     // Is this the right way to create an object? new DigestTreeNode or DigestTree.Node?
     // TODO: Make sure this is the right way to create this object.
-    var temp = new DigestTreeNode(dataPrefix, sessionNo, sequenceNo);
+    var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
     // this.digestnode is a vector, seems that its equivalent is js array; 
     // vector.push_back(temp) interpreted as array.push(temp)
     this.digestnode.push(temp);

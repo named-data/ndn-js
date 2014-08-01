@@ -18,7 +18,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-// TODO: separate tests for different functions
+// TODO: separate tests for different functions; check several size() and length
 
 // TODO: the equivalent of function pointers, or are there no such things?
 // The point of naming it as 'argn'? just to correspond with boost::bind?
@@ -99,7 +99,16 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
   //var content_t = new SyncStateMsg({ss:content});
   var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
   
+  // broadcastSyncState not yet implemented
   this.broadcastSyncState(this.digest_tree.getRoot(), content);
+  
+  // New digest log entry judgment neglected here for now
+  
+  var interest = new Interest(this.applicationBroadcastPrefix);
+  interest.getName().append(this.digest_tree.getRoot());
+  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+  
+  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 }
 
 ChronoSync2013.prototype.getSequenceNo = function()
@@ -111,7 +120,9 @@ ChronoSync2013.prototype.getSequenceNo = function()
 
 ChronoSync2013.DigestLogEntry = function ChronoSync2013DisgestLogEntry(digest, data)
 {
-
+  this.digest = digest;
+  // Not sure if data still follows the intended semantics as in ndn-cpp
+  this.data = data;
 }
 
 ChronoSync2013.DigestLogEntry.prototype.getDigest = function()
@@ -128,7 +139,14 @@ ChronoSync2013.DigestLogEntry.prototype.getData = function()
 
 var ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest, transport)
 {
-
+  this.interest = interest;
+  this.transport = transport;
+  
+  // TODO: getNowMilliseconds is an ndn utility function, and the library it belongs to is not yet added
+  if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
+    this.timeoutMilliseconds = getNowMilliseconds() + this.interest.getInterestLifetimeMilliseconds();
+  else
+    this.timeoutMilliseconds = -1.0;
 }
 
 ChronoSync2013.PendingInterest.prototype.getInterest = function()
@@ -150,7 +168,7 @@ ChronoSync2013.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 
 ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
 {
-
+  
 }
 
 // ChronoSync2013::Update is not referenced by any functions, for now
@@ -254,6 +272,10 @@ ChronoSync2013.prototype.onData = function(inst, co)
   // Send the interests to fetch application data; this is what actually get executed
   console.log(content);
   
+  var syncStates = [];
+  
+  // Original logic for reporting UPDATE sync states
+  /*
   var sendlist = [];
   var sessionlist = [];
   var seqlist = [];
@@ -275,6 +297,14 @@ ChronoSync2013.prototype.onData = function(inst, co)
           seqlist.push(content[j].seqno.seq);
         }
       }
+    }
+  }
+  */
+  
+  for (var i = 0; i < content.length; i++) {
+    if (content[i].type == 0) {
+      // Constructor syntactical check
+      syncStates.push(new ChronoSync2013.SyncState(content[i].name, content[i].seqno.session, content[i].seqno.seq));
     }
   }
   
@@ -507,7 +537,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
 
 ChronoSync2013.prototype.contentCacheAdd = function(data)
 {
-
+  
 }
 
 ChronoSync2013.prototype.dummyOnData = function(interest, data)
