@@ -12117,6 +12117,8 @@ IdentityManager.prototype.signByCertificate = function
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
+    // Set an empty signature so that we can encode.
+    signature.setSignature(new Buffer(1));
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
@@ -13539,7 +13541,7 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = new Buffer(0);
+    this.signature = null;
     // witness is deprecated.
     this.witness = null;
     // digestAlgorithm is deprecated.
@@ -13656,7 +13658,7 @@ Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtoc
 
 Sha256WithRsaSignature.prototype.validate = function()
 {
-  return null != this.signature;
+  return this.getSignature().size() > 0;
 };
 
 /**
