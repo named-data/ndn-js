@@ -58,40 +58,40 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   // The same wonder of using bind applies here, too
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
-}
+};
 
 // SyncState class
 
-var ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
+ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
 {
   this.dataPrefixUri = dataPrefixUri;
   this.sessionNo = sessionNo;
   this.sequenceNo = sequenceNo;
-}
+};
 
 ChronoSync2013.SyncState.prototype.getDataPrefix = function()
 {
   return this.dataPrefixUri;
-}
+};
 
 ChronoSync2013.SyncState.prototype.getSessionNo = function()
 {
   return this.sessionNo;
-}
+};
 
 ChronoSync2013.SyncState.prototype.getSequenceNo = function()
 {
   return this.sequenceNo;
-}
+};
 
 ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 {
-  var index = this.digest_tree->find(dataPrefix, sessionNo);
+  var index = this.digest_tree.find(dataPrefix, sessionNo);
   if (index < 0) 
     return -1;
   else
-    return this.digest_tree->get(index).getSequenceNo();
-}
+    return this.digest_tree.get(index).getSequenceNo();
+};
 
 ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
@@ -109,12 +109,12 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
-}
+};
 
 ChronoSync2013.prototype.getSequenceNo = function()
 {
   return this.usrseq;
-}
+};
 
 // DigestLogEntry class
 
@@ -123,21 +123,21 @@ ChronoSync2013.DigestLogEntry = function ChronoSync2013DisgestLogEntry(digest, d
   this.digest = digest;
   // Not sure if data still follows the intended semantics as in ndn-cpp
   this.data = data;
-}
+};
 
 ChronoSync2013.DigestLogEntry.prototype.getDigest = function()
 {
   return this.digest;
-}
+};
 
 ChronoSync2013.DigestLogEntry.prototype.getData = function()
 {
   return this.data;
-}
+};
 
 // PendingInterest class
 
-var ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest, transport)
+ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest, transport)
 {
   this.interest = interest;
   this.transport = transport;
@@ -147,29 +147,29 @@ var ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(inte
     this.timeoutMilliseconds = getNowMilliseconds() + this.interest.getInterestLifetimeMilliseconds();
   else
     this.timeoutMilliseconds = -1.0;
-}
+};
 
 ChronoSync2013.PendingInterest.prototype.getInterest = function()
 {
   return this.interest;
-}
+};
 
 ChronoSync2013.PendingInterest.prototype.getTransport = function()
 {
   return this.transport;
-}
+};
 
 ChronoSync2013.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {
   return (this.timeoutTimeMilliseconds >= 0.0 && nowMilliseconds >= this.timeoutTimeMilliseconds);
-}
+};
 
 // Private methods for ChronoSync2013 class, TODO: fill implementation and comments into the skeleton.
 
 ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
 {
   
-}
+};
 
 // ChronoSync2013::Update is not referenced by any functions, for now
 ChronoSync2013.prototype.update = function(content)
@@ -179,17 +179,19 @@ ChronoSync2013.prototype.update = function(content)
       if (this.digest_tree.update(content[i].name, content[i].seqno.session, content[i].seqno.seq)) {
         if (this.applicationDataPrefixUri == content[i].name)
           this.usrseq = content[i].seqno.seq;
+      }
+    }
+  
+    if (this.logfind(this.digest_tree.getRoot()) == -1) {
+      var newlog = {digest:this.digest_tree.getRoot(), data:content};
+      this.digest_log.push(newlog);
+      return true;
+    }
+    else {
+      return false;
     }
   }
-  
-  if (this.logfind(this.digest_tree.getRoot()) == -1) {
-    var newlog = {digest:this.digest_tree.getRoot(), data:content};
-    this.digest_log.push(newlog);
-    return true;
-  }
-  else
-    return false;
-}
+};
 
 ChronoSync2013.prototype.logfind = function(digest)
 {
@@ -198,7 +200,7 @@ ChronoSync2013.prototype.logfind = function(digest)
       return i;
   }
   return -1;
-}
+};
 
 // registerPrefixId is not used in this function
 ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
@@ -234,7 +236,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
       }
     }
   }
-}
+};
 
 ChronoSync2013.prototype.onData = function(inst, co)
 {
@@ -329,7 +331,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   console.log("Syncinterest expressed:");
   console.log(n.toUri());
-}
+};
 
 ChronoSync2013.prototype.initialTimeout = function(interest)
 {
@@ -355,7 +357,7 @@ ChronoSync2013.prototype.initialTimeout = function(interest)
   
   console.log("Syncinterest expressed:");
   console.log(n.toUri());
-}
+};
 
 ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transport)
 {
@@ -378,7 +380,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
       }
     }
   }
-}
+};
 
 ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transport)
 {
@@ -425,7 +427,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
       console.log(e.toString());
     }
   }
-}
+};
 
 ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
 {
@@ -438,7 +440,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   
   console.log("Recovery Syncinterest expressed:"); 
   console.log(n.toUri());
-}
+};
 
 ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transport)
 {
@@ -449,7 +451,7 @@ ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transp
   }
   else
     this.sendRecovery(syncdigest_t);
-}
+};
 
 ChronoSync2013.prototype.syncTimeout = function(interest)
 {
@@ -467,7 +469,7 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
     console.log("Syncinterest expressed:");
     console.log(n.toUri());
   }           
-}
+};
 
 ChronoSync2013.prototype.initialOndata = function(content)
 {
@@ -533,14 +535,14 @@ ChronoSync2013.prototype.initialOndata = function(content)
       this.onInitialized();
     }
   }
-}
+};
 
 ChronoSync2013.prototype.contentCacheAdd = function(data)
 {
   
-}
+};
 
 ChronoSync2013.prototype.dummyOnData = function(interest, data)
 {
 
-}
+};

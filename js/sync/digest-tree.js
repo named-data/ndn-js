@@ -24,11 +24,11 @@ var crypto = require('crypto');
 var DigestTree = function DigestTree()
 {
   this.root = "00";
-}
+};
 
 // What is the meaning of a session?
 // The equivalent for embedded class definition; reference: name.js
-var DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
+DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
 {
   // In this context, this should mean DigestTree.Node instead
   this.dataPrefix = dataPrefix;
@@ -36,33 +36,33 @@ var DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_sessi
   this.seqno_session = seqno_session;
   
   this.recomputeDigest();
-}
+};
 
 DigestTree.Node.prototype.getDataPrefix = function()
 {
   return this.dataPrefix;
-}
+};
 
 DigestTree.Node.prototype.getSequenceNo = function()
 {
   return this.seqno_seq;
-}
+};
 
 DigestTree.Node.prototype.getSessionNo = function()
 {
   return this.seqno_session;
-}
+};
 
 DigestTree.Node.prototype.getDigest = function()
 {
   return this.digest;
-}
+};
 
 DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
 {
   this.seqno_seq = sequenceNo;
   this.recomputeDigest();
-}
+};
 
 // prototype functions serve as member functions, called by instances of a class 
 // (also an object, Javascript being a prototypical language)
@@ -70,7 +70,7 @@ DigestTree.Node.prototype.recomputeDigest = function()
 {
   // TODO: SHA-256 implementation and check out the original logic
   
-}
+};
 
 DigestTree.Node.int32ToLittleEndian = function(value, result)
 {
@@ -78,7 +78,7 @@ DigestTree.Node.int32ToLittleEndian = function(value, result)
     result[i] = value % 256;
     value = value / 256;
   }
-}
+};
 
 // Do the work of string and then sequence number compare
 DigestTree.Node.Compare = function(node1, node2)
@@ -87,7 +87,7 @@ DigestTree.Node.Compare = function(node1, node2)
   if (nameComparison != 0)
     return (nameComparison < 0);
   return (node1.seqno_session < node2.seqno_session);
-}
+};
 
 DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
@@ -110,7 +110,7 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
   }
   this.recomputeRoot();
   return true;
-}
+};
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
 {
@@ -120,22 +120,22 @@ DigestTree.prototype.find = function(dataPrefix, sessionNo)
       return i;
   }
   return -1;
-}
+};
 
 DigestTree.prototype.size = function()
 {
   return this.digestnode.size();
-}
+};
 
 DigestTree.prototype.get = function(i)
 {
   return this.digestnode[i];
-}
+};
 
 DigestTree.prototype.getRoot = function()
 {
   return this.root;
-}
+};
 
 DigestTree.prototype.recomputeRoot = function()
 {
@@ -145,7 +145,7 @@ DigestTree.prototype.recomputeRoot = function()
   var digest_root;
   // TODO: The equivalent of SHA256_Final
   
-}
+};
 
 // Not sure if this ascii representation works yet
 function fromHexChar(c)
@@ -158,7 +158,7 @@ function fromHexChar(c)
     return (c - 'A' + 10);
   else
     return -1;
-}
+};
 
 // This function should be tested, as the functions of hash related functions are unverified
 function SHA256_UpdateHex(context, hex)
@@ -171,9 +171,9 @@ function SHA256_UpdateHex(context, hex)
   // Default encoding for hash.update is 'binary'
   hash.update(data);
   context = hash.digest('hex');
-}
+};
 
 function strcmp(component1, component2)
 {
   return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
-}
+};
