@@ -1,0 +1,61 @@
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+
+<head>
+  <title>Test ChronoChat</title>
+
+  <script type="text/javascript" src="../../build/ndn.js"></script>
+  <!-- Protobuf related file, need to think how to make the lib independent of them -->
+  <script src="../../js/sync/Protobuf/Long.min.js"></script>
+  <script src="../../js/sync/Protobuf/ByteBuffer.min.js"></script>
+  <script src="../../js/sync/Protobuf/ProtoBuf.noparse.min.js"></script>
+  <!-- Sync files are not combined into ndn.js file yet -->
+  <script type="text/javascript" src="../../js/sync/chrono-sync2013.js"></script>
+  <script type="text/javascript" src="../../js/sync/digest-tree.js"></script>
+  <script type="text/javascript" src="../../js/sync/sync_state.js"></script>
+  <!-- ChronoChat related javascript -->
+  <script type="text/javascript" src="./test-chrono-chat.js"></script>
+  
+  <script type="text/javascript">
+    var face = new Face();
+
+    function onData(interest, data)
+    {
+      console.log("onData called.");
+      console.log("Host: " + face.connectionInfo.toString());
+      nameStr = escape(data.getName().toUri());
+      document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
+      document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
+      document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(data);
+    }
+
+    function onTimeout(interest)
+    {
+      console.log("onTimeout called. Re-expressing the interest.");
+      console.log("Host: " + face.connectionInfo.toString());
+      face.expressInterest(interest, onData, onTimeout);
+    }
+
+    function debugInterest() {
+      face.expressInterest(new Name(document.getElementById('interest').value), onData, onTimeout);
+    }
+  </script>
+  
+  
+  
+</head>
+<body>
+
+  <form>
+    Please Enter a chatroom name:<br />
+    <input id="interest" type="text" name="INTEREST" size="50" value="/" />
+  </form>
+
+  <button id="debugFetchBtn" onclick="debugInterest()">Debug fetch content</button>
+  <br>
+  <button id="initiateChatBtn" onclick="initiateChat()">Initiate chat</button>
+
+  <p id="content">Content: <br/></p>
+
+</body>
+</html>
