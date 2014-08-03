@@ -10603,7 +10603,7 @@ KeyLocator.prototype.setKeyName = function(name)
 /**
  * Set the key data to the given value. This is the digest bytes if getType() is
  * KeyLocatorType.KEY_LOCATOR_DIGEST.
- * @param {Buffer} keyData The array with the key data bytes.
+ * @param {Blob} keyData A Blob with the key data bytes.
  */
 KeyLocator.prototype.setKeyData = function(keyData)
 {
@@ -15704,6 +15704,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
