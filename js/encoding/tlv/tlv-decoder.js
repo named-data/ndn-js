@@ -39,7 +39,7 @@ exports.TlvDecoder = TlvDecoder;
 TlvDecoder.prototype.readVarNumber = function()
 {
   // Assume array values are in the range 0 to 255.
-  firstOctet = this.input[this.offset];
+  var firstOctet = this.input[this.offset];
   this.offset += 1;
   if (firstOctet < 253)
     return firstOctet;
