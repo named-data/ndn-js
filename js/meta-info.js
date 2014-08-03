@@ -74,6 +74,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     if (!skipSetFields)
       this.setFields();
   }
+
+  this.changeCount = 0;
 };
 
 exports.MetaInfo = MetaInfo;
@@ -130,6 +132,7 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 MetaInfo.prototype.setType = function(type)
 {
   this.type = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount;
 };
 
 /**
@@ -145,6 +148,7 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   else
     // Convert from milliseconds.
     this.freshnessSeconds = freshnessPeriod / 1000.0;
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
@@ -158,6 +162,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
     this.finalBlockID = finalBlockID.getValue().buf();
   else
     this.finalBlockID = new Buffer(finalBlockID);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFields = function()
@@ -182,6 +187,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -230,6 +236,7 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   }
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 /**
@@ -295,6 +302,15 @@ MetaInfo.prototype.validate = function()
   if (null == this.timestamp)
     return false;
   return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+MetaInfo.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 
 /**

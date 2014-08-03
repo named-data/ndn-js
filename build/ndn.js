@@ -5453,6 +5453,86 @@ DynamicBuffer.prototype.slice = function(begin, end)
   return this.array.slice(begin, end);
 };
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * A ChangeCounter keeps a target object whose change count is tracked by a
+ * local change count.  You can set to a new target which updates the local
+ * change count, and you can call checkChanged to check if the target (or one of
+ * the target's targets) has been changed. The target object must have a method
+ * getChangeCount.
+ *
+ * Create a new ChangeCounter to track the given target.  This sets the local
+ * change counter to target.getChangeCount().
+ * @param {object} target The target to track, as an object with the method
+ * getChangeCount().
+ * @constructor
+ */
+var ChangeCounter = function ChangeCounter(target)
+{
+  this.target = target;
+  this.changeCount = target.getChangeCount();
+};
+
+exports.ChangeCounter = ChangeCounter;
+
+/**
+ * Get the target object. If the target is changed, then checkChanged will
+ * detect it.
+ * @returns {object} The target, as an object with the method
+ * getChangeCount().
+ */
+ChangeCounter.prototype.get = function()
+{
+  return this.target;
+};
+
+/**
+ * Set the target to the given target. This sets the local change counter to
+ * target.getChangeCount().
+ * @param {object} target The target to track, as an object with the method
+ * getChangeCount().
+ */
+ChangeCounter.prototype.set = function(target)
+{
+  this.target = target;
+  this.changeCount = target.getChangeCount();
+};
+
+/**
+ * If the target's change count is different than the local change count, then 
+ * update the local change count and return true. Otherwise return false, 
+ * meaning that the target has not changed. This is useful since the target (or 
+ * one of the target's targets) may be changed and you need to find out.
+ * @returns {boolean} True if the change count has been updated, false if not.
+ */
+ChangeCounter.prototype.checkChanged = function()
+{
+  targetChangeCount = this.target.getChangeCount();
+  if (this.changeCount != targetChangeCount) {
+    this.changeCount = targetChangeCount;
+    return true;
+  }
+  else
+    return false;
+};
+/**
  * This class contains utilities to help parse the data
  *
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -9274,8 +9354,10 @@ var LOG = require('./log.js').Log.LOG;
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
 {
- this.PUBLISHER_ID_LEN = 512/8;
- this.publisherPublicKeyDigest = pkd;
+  this.PUBLISHER_ID_LEN = 512/8;
+  this.publisherPublicKeyDigest = pkd;
+
+  this.changeCount = 0;
 };
 
 exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
@@ -9297,6 +9379,7 @@ PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder)
 
     //this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
   }
+  ++this.changeCount;
 };
 
 PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
@@ -9314,6 +9397,15 @@ PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProt
 PublisherPublicKeyDigest.prototype.validate = function()
 {
     return null != this.publisherPublicKeyDigest;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherPublicKeyDigest.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents Publisher and PublisherType Objects
@@ -9368,6 +9460,8 @@ var PublisherID = function PublisherID()
   //TODO implement generate key
   //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
   this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
+
+  this.changeCount = 0;
 };
 
 exports.PublisherID = PublisherID;
@@ -9385,6 +9479,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
   this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
     throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+  ++this.changeCount;
 };
 
 PublisherID.prototype.to_ndnb = function(encoder)
@@ -9427,6 +9522,15 @@ PublisherID.prototype.getElementLabel = function()
 PublisherID.prototype.validate = function()
 {
   return null != id() && null != type();
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherID.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents a Name as an array of components where each is a byte array.
@@ -9482,6 +9586,8 @@ var Name = function Name(components)
     this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
+
+  this.changeCount = 0;
 };
 
 exports.Name = Name;
@@ -9732,6 +9838,7 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
+  ++this.changeCount;
 };
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
@@ -9744,6 +9851,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
@@ -9787,6 +9895,7 @@ Name.prototype.append = function(component)
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
 
+  ++this.changeCount;
   return this;
 };
 
@@ -9804,6 +9913,7 @@ Name.prototype.add = function(component)
 Name.prototype.clear = function()
 {
   this.components = [];
+  ++this.changeCount;
 };
 
 /**
@@ -10180,6 +10290,15 @@ Name.prototype.match = function(name)
   }
 
   return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Name.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents Key Objects
@@ -13255,6 +13374,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     if (!skipSetFields)
       this.setFields();
   }
+
+  this.changeCount = 0;
 };
 
 exports.MetaInfo = MetaInfo;
@@ -13311,6 +13432,7 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 MetaInfo.prototype.setType = function(type)
 {
   this.type = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount;
 };
 
 /**
@@ -13326,6 +13448,7 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   else
     // Convert from milliseconds.
     this.freshnessSeconds = freshnessPeriod / 1000.0;
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
@@ -13339,6 +13462,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
     this.finalBlockID = finalBlockID.getValue().buf();
   else
     this.finalBlockID = new Buffer(finalBlockID);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFields = function()
@@ -13363,6 +13487,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -13411,6 +13536,7 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   }
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 /**
@@ -13476,6 +13602,15 @@ MetaInfo.prototype.validate = function()
   if (null == this.timestamp)
     return false;
   return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+MetaInfo.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 
 /**
@@ -14097,6 +14232,8 @@ var Exclude = function Exclude(values)
     // Copy the exclude.
     this.values = values.values.slice(0);
   else if (values) {
+    // Set the changeCount now since append expects it.
+    this.changeCount = 0;
     for (var i = 0; i < values.length; ++i) {
       if (values[i] == Exclude.ANY)
         this.appendAny();
@@ -14104,6 +14241,8 @@ var Exclude = function Exclude(values)
         this.appendComponent(values[i]);
     }
   }
+
+  this.changeCount = 0;
 };
 
 exports.Exclude = Exclude;
@@ -14130,6 +14269,7 @@ Exclude.prototype.get = function(i) { return this.values[i]; };
 Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
+  ++this.changeCount;
   return this;
 };
 
@@ -14141,6 +14281,7 @@ Exclude.prototype.appendAny = function()
 Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
+  ++this.changeCount;
   return this;
 };
 
@@ -14149,6 +14290,7 @@ Exclude.prototype.appendComponent = function(component)
  */
 Exclude.prototype.clear = function()
 {
+  ++this.changeCount;
   this.values = [];
 };
 
@@ -14290,6 +14432,15 @@ Exclude.compareComponents = function(component1, component2)
     component2 = component2.getValue().buf();
 
   return Name.Component.compareBuffers(component1, component2);
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Exclude.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents Interest Objects
