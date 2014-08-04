@@ -9,7 +9,7 @@ The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
 
-See the file INSTALL for build and install instructions.
+See the file [INSTALL](https://github.com/named-data/ndn-js/blob/master/INSTALL) for build and install instructions.
 
 License
 -------
