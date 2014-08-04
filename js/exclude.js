@@ -39,6 +39,8 @@ var Exclude = function Exclude(values)
     // Copy the exclude.
     this.values = values.values.slice(0);
   else if (values) {
+    // Set the changeCount now since append expects it.
+    this.changeCount = 0;
     for (var i = 0; i < values.length; ++i) {
       if (values[i] == Exclude.ANY)
         this.appendAny();
@@ -46,6 +48,8 @@ var Exclude = function Exclude(values)
         this.appendComponent(values[i]);
     }
   }
+
+  this.changeCount = 0;
 };
 
 exports.Exclude = Exclude;
@@ -72,6 +76,7 @@ Exclude.prototype.get = function(i) { return this.values[i]; };
 Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
+  ++this.changeCount;
   return this;
 };
 
@@ -83,6 +88,7 @@ Exclude.prototype.appendAny = function()
 Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
+  ++this.changeCount;
   return this;
 };
 
@@ -91,6 +97,7 @@ Exclude.prototype.appendComponent = function(component)
  */
 Exclude.prototype.clear = function()
 {
+  ++this.changeCount;
   this.values = [];
 };
 
@@ -232,4 +239,13 @@ Exclude.compareComponents = function(component1, component2)
     component2 = component2.getValue().buf();
 
   return Name.Component.compareBuffers(component1, component2);
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Exclude.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };

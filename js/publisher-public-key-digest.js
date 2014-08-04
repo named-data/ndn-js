@@ -26,8 +26,10 @@ var LOG = require('./log.js').Log.LOG;
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
 {
- this.PUBLISHER_ID_LEN = 512/8;
- this.publisherPublicKeyDigest = pkd;
+  this.PUBLISHER_ID_LEN = 512/8;
+  this.publisherPublicKeyDigest = pkd;
+
+  this.changeCount = 0;
 };
 
 exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
@@ -49,6 +51,7 @@ PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder)
 
     //this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
   }
+  ++this.changeCount;
 };
 
 PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
@@ -66,4 +69,13 @@ PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProt
 PublisherPublicKeyDigest.prototype.validate = function()
 {
     return null != this.publisherPublicKeyDigest;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherPublicKeyDigest.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };

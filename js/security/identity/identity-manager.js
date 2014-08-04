@@ -265,6 +265,8 @@ IdentityManager.prototype.signByCertificate = function
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
+    // Set an empty signature so that we can encode.
+    signature.setSignature(new Buffer(1));
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 

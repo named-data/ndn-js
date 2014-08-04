@@ -51,6 +51,8 @@ var PublisherID = function PublisherID()
   //TODO implement generate key
   //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
   this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
+
+  this.changeCount = 0;
 };
 
 exports.PublisherID = PublisherID;
@@ -68,6 +70,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
   this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
     throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+  ++this.changeCount;
 };
 
 PublisherID.prototype.to_ndnb = function(encoder)
@@ -110,4 +113,13 @@ PublisherID.prototype.getElementLabel = function()
 PublisherID.prototype.validate = function()
 {
   return null != id() && null != type();
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherID.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };

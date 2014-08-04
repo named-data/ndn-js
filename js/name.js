@@ -52,6 +52,8 @@ var Name = function Name(components)
     this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
+
+  this.changeCount = 0;
 };
 
 exports.Name = Name;
@@ -302,6 +304,7 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
+  ++this.changeCount;
 };
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
@@ -314,6 +317,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
@@ -357,6 +361,7 @@ Name.prototype.append = function(component)
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
 
+  ++this.changeCount;
   return this;
 };
 
@@ -374,6 +379,7 @@ Name.prototype.add = function(component)
 Name.prototype.clear = function()
 {
   this.components = [];
+  ++this.changeCount;
 };
 
 /**
@@ -750,4 +756,13 @@ Name.prototype.match = function(name)
   }
 
   return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Name.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
