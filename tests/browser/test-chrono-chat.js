@@ -107,7 +107,9 @@ function initiateChat()
   // chatroom is the name inputted by the user
   var chatroom = "ndnchat";
   
-  var face = new Face({host:hostName});
+  // constructing Face with 'localhost' as host name results in websocket error, finding out why
+  //var face = new Face({host:hostName});
+  var face = new Face();
   
   var identityStorage = new MemoryIdentityStorage();
   var privateKeyStorage = new MemoryPrivateKeyStorage();

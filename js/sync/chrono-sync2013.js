@@ -18,7 +18,32 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-// TODO: separate tests for different functions; check several size() and length
+// JS import class
+var crypto = require('crypto');
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var Interest = require('./interest.js').Interest;
+var Data = require('./data.js').Data;
+var MetaInfo = require('./meta-info.js').MetaInfo;
+var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+var Tlv = require('./encoding/tlv/tlv.js').Tlv;
+var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var Key = require('./key.js').Key;
+var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
+var Closure = require('./closure.js').Closure;
+var UpcallInfo = require('./closure.js').UpcallInfo;
+var Transport = require('./transport/transport.js').Transport;
+var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
+var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
+var fs = require('fs');
+var LOG = require('./log.js').Log.LOG;
 
 // TODO: the equivalent of function pointers, or are there no such things?
 // The point of naming it as 'argn'? just to correspond with boost::bind?
@@ -48,7 +73,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   // Do I need prototype.bind for callback functions? Supposedly that I do
   //this.contentCache.registerPrefix(this.applicationBroadcastPrefix, this.onInterest.bind(this), this.onReceivedSyncState.bind(this));
-  // Jeff's logic in ndn-cpp seems to be: Calling on interest if registerPrefix failed? Very unlikely; TODO: double check
+  // Interesting, use our own onInterest as the onDataNotFound fallback; but the problem I'm having now, is the prefix registration for this failed.
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -97,7 +122,7 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
   //var content_t = new SyncStateMsg({ss:content});
-  var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
+  var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
   
   // broadcastSyncState not yet implemented
   this.broadcastSyncState(this.digest_tree.getRoot(), content);
@@ -207,6 +232,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
 {
   //search if the digest is already exist in the digest log
   console.log('Sync Interest received in callback.');
+  console.log(inst);
   console.log(inst.getName().toUri());
   
   // DataUtil is a part of ndn.js, which is not included in this file; its toString method removed; 
@@ -311,9 +337,10 @@ ChronoSync2013.prototype.onData = function(inst, co)
   }
   
   // The equivalent of syncStates seems to be the summary of the three lists mentioned above
-  // TODO: reasonable implementation of syncStates
+  // TODO: implementation of syncStates
   this.onReceivedSyncState(syncStates, isRecovery);
   
+  /*
   for (var i = 0; i < sendlist.length; i++) {
     var n = new Name(sendlist[i]+'/'+sessionlist[i]+'/'+seqlist[i]);
     var template = new Interest();
@@ -323,17 +350,21 @@ ChronoSync2013.prototype.onData = function(inst, co)
     console.log(n.toUri());
     console.log('Chat Interest expressed.');
   }
+  */
   
   var n = new Name(this.applicationBroadcastPrefix);
   var interest = new Interest(n);
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   
-  console.log("Syncinterest expressed:");
+  console.log("Sync interest expressed:");
   console.log(n.toUri());
 };
 
-ChronoSync2013.prototype.initialTimeout = function(interest)
+/**
+ * Interest variable not actually in use here
+ */
+ChronoSync2013.prototype.initialTimeOut = function(interest)
 {
   console.log("initial sync timeout");
   console.log("no other people");
@@ -344,16 +375,16 @@ ChronoSync2013.prototype.initialTimeout = function(interest)
   this.usrseq++;
   this.onInitialized();
   
-  var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
+  var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
   
   // this seems to achieve the function of update in ndn-cpp
   var newlog = {digest:this.digest_tree.root, data:content};
   this.digest_log.push(newlog);
   
   var n = new Name(this.applicationBroadcastPrefix);
-  var interest = new Interest(n);
-  n.setInterestLifetimeMilliseconds(this.sync_lifetime);
-  this.face.expressInterest(n, this.onData.bind(this), this.syncTimeout.bind(this));
+  var retryInterest = new Interest(n);
+  retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+  this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));
   
   console.log("Syncinterest expressed:");
   console.log(n.toUri());
@@ -364,7 +395,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
   if (this.logfind(syncdigest) != -1) {
     var content = [];
     for(var i = 0;i<this.digest_tree.digestnode.length;i++) {
-      content[i] = new SyncState({name:this.digest_tree.digestnode[i].prefix_name,type:'UPDATE',seqno:{seq:this.digest_tree.digestnode[i].seqno.seq,session:this.digest_tree.digestnode[i].seqno.session}});
+      content[i] = new ChronoSync2013.SyncState({name:this.digest_tree.digestnode[i].prefix_name,type:'UPDATE',seqno:{seq:this.digest_tree.digestnode[i].seqno.seq,session:this.digest_tree.digestnode[i].seqno.session}});
     }
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
@@ -411,7 +442,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   }
   
   for(var i = 0; i < data_name.length; i++) {
-    content[i] = new SyncState({name:data_name[i], type:'UPDATE', seqno:{seq:data_seq[i],session:data_ses[i]}});
+    content[i] = new ChronoSync2013.SyncState({name:data_name[i], type:'UPDATE', seqno:{seq:data_seq[i],session:data_ses[i]}});
   }
   if(content.length != 0) {
     var content_t = new SyncStateMsg({ss:content});
@@ -485,7 +516,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
       //if the user was an olde comer, after add the static log he need to increase his seqno by 1
-      var content_t = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:content[i].seqno.seq+1,session:this.session}})];
+      var content_t = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:content[i].seqno.seq+1,session:this.session}})];
       this.digest_tree.update(content_t,this);
       if (this.logfind(this.digest_tree.getRoot()) == -1) {
         var newlog = {digest:this.digest_tree.getRoot(), data:content_t};
@@ -500,10 +531,10 @@ ChronoSync2013.prototype.initialOndata = function(content)
   var content_t =[]
   if (this.usrseq >= 0) {
     //send the data packet with new seqno back
-    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}});
+    content_t[0] = new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}});
   }
   else
-    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:0,session:this.session}});
+    content_t[0] = new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:0,session:this.session}});
   
   var content_tt = new SyncStateMsg({ss:content_t});
   var str = new Uint8Array(content_tt.toArrayBuffer());
@@ -525,7 +556,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
     //the user haven't put himself in the digest tree
     console.log("initial state")
     this.usrseq++;
-    var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
+    var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
     this.digest_tree.update(content,this);
     if (this.logfind(this.digest_tree.root) == -1) {
       var newlog = {digest:this.digest_tree.root, data:content};

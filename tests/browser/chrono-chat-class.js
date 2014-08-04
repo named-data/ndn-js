@@ -9,7 +9,9 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   this.keyChain = keyChain;
   this.certificateName = certificateName;
   
-  this.chat_prefix = Name(hubPrefix).append(this.chatroom).append(this.getRandomString());
+  this.chat_prefix = (new Name(hubPrefix)).append(this.chatroom).append(this.getRandomString());
+  this.roster = [];
+  this.msgcache = [];
   
   var session = (new Date()).getTime();
   session = parseInt(session/1000);
@@ -20,9 +22,8 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
     console.log("input usrname and chatroom");
   }
   else {
-    console.log(screen_name+", welcome to chatroom "+chatroom+"!");
-    // the resetting of sync instance takes multiple parameters.
-    this.sync.reset();
+    console.log(this.screen_name + ", welcome to chatroom " + this.chatroom + "!");
+    this.sync = new ChronoSync2013(this.sendInterest.bind(this), this.initial.bind(this), this.chat_prefix, (new Name("/ndn/broadcast/ChronoChat-0.3")).append(this.chatroom), session, face, keyChain, certificateName, this.sync_lifetime, this.onRegisterFailed.bind(this));
     face.registerPrefix(this.chat_prefix, this.onInterest.bind(this), this.onRegisterFailed.bind(this));
   }
 };
@@ -85,8 +86,8 @@ ChronoChat.prototype.initial = function()
     var d = new Date();
     var t = d.getTime();
     
-    this.msgcache.push({seqno:sync.usrseq,msgtype:'JOIN',msg:'xxx',time:t});
-    while (this.msgcache.length>this.maxmsgcachelength)
+    this.msgcache.push({seqno:this.sync.usrseq,msgtype:'JOIN',msg:'xxx',time:t});
+    while (this.msgcache.length > this.maxmsgcachelength)
       this.msgcache.shift();
   }
 };

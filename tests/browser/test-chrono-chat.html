@@ -1,10 +1,13 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 <meta charset="UTF-8">
 
+<!-- For Peter's slides,
+     ChronoChat slides; discovery design, chronochat description, and WoT trust model -->
+
 <head>
   <title>Test ChronoChat</title>
 
-  <script type="text/javascript" src="../../build/ndn.js"></script>
+  <script type="text/javascript" src="../../build/ndn.js"></script>  
   <!-- Protobuf related file, need to think how to make the lib independent of them -->
   <script src="../../js/sync/Protobuf/Long.min.js"></script>
   <script src="../../js/sync/Protobuf/ByteBuffer.min.js"></script>
@@ -41,9 +44,6 @@
       face.expressInterest(new Name(document.getElementById('interest').value), onData, onTimeout);
     }
   </script>
-  
-  
-  
 </head>
 <body>
 
