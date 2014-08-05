@@ -48,7 +48,9 @@ function onRegisterFailed(prefix)
 }
 
 // Connect to the local forwarder with a Unix socket.
-var face = new Face(new UnixTransport());
+//var face = new Face();
+//var face = new Face(new UnixTransport());
+var face = new Face({host:"memoria.ndn.ucla.edu"});
 
 face.registerPrefix(new Name("/testecho"), onInterest, onRegisterFailed);
 console.log("Started...");

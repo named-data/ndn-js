@@ -21,6 +21,13 @@
 var DigestTree = require('./digest-tree.js').DigestTree;
 var Interest = require('../interest.js').Interest;
 var Name = require('../name.js').Name;
+var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
+
+// TODO: To actually use this part of the library, we require a SyncStateMsg declaration,
+// which exists in protobuf-js definition file. This could/should be made independent of
+// the library...
+var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
+//console.log("Imported results : " + SyncStateMsg);
 
 // TODO: the equivalent of function pointers, or are there no such things?
 // The point of naming it as 'argn'? just to correspond with boost::bind?
@@ -43,15 +50,13 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   // syntactical check
   this.digest_tree = new DigestTree();
-  this.contentCache = face;
+  this.contentCache = new MemoryContentCache(face);
 
   this.digest_log = new Array();
   this.digest_log.push({digest:"00",data:[]});
   
   // Do I need prototype.bind for callback functions? Supposedly that I do
-  //this.contentCache.registerPrefix(this.applicationBroadcastPrefix, this.onInterest.bind(this), this.onReceivedSyncState.bind(this));
-  // Interesting, use our own onInterest as the 'onDataNotFound' fallback; but the problem I'm having now, is the prefix registration for this failed.
-  // Still, using the field of 'onRegisterFailed' as 'onDataNotFound' does not make sense to me at all, trying to reason
+  // contentCache is a memoryContentCache, not an ordinary face.
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -213,8 +218,6 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
 {
   //search if the digest is already exist in the digest log
   console.log('Sync Interest received in callback.');
-  console.log(inst);
-  console.log(inst.getName().toUri());
   
   // DataUtil is a part of ndn.js, which is not included in this file; its toString method removed; 
   // and the logic is confusing; size vs length in here, double check the type of applicationBroadcastPrefix?
@@ -252,7 +255,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
-  var content_t = SyncStateMsg.decode(arr.buffer);
+  var content_t = Sync.SyncStateMsg.decode(arr.buffer);
   var content = content_t.ss;
   
   var isRecovery = false;
@@ -470,7 +473,8 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
 {
   console.log("Sync Interest time out.");
   console.log('Sync Interest name: ' + interest.getName().toUri());
-    
+
+  // The fifth(4) component should be replaced by some consts
   var component = (interest.getName().get(4).getValue().buf()).toString('binary');
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());

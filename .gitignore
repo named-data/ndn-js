@@ -17,4 +17,6 @@ tools/forwarder/firefox/modules/ndn-js.jsm
 # Emacs temp files
 *~
 
-
+# Downloaded protobuf files
+js/sync/node_modules/
+js/sync/Protobuf/

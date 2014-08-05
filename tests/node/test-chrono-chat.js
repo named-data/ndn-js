@@ -102,6 +102,8 @@ var Face = require('../..').Face;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Interest = require('../..').Interest;
+var Data = require('../..').Data;
+var SignedInfo = require('../..').SignedInfo;
 
 var MemoryIdentityStorage = require('../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../..').MemoryPrivateKeyStorage;
@@ -540,17 +542,29 @@ ChronoChat.CachedMessage.prototype.getTime = function()
   return this.time;
 };
 
+function getRandomNameString()
+{
+  var seed = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM';
+  var result = '';
+  for (var i = 0; i < 3; i++) {
+    var pos = Math.floor(Math.random() * seed.length);
+    result += seed[pos];
+  }
+  return result;
+};
+
 function initiateChat()
 {
-  var hostName = "localhost";
+  var hostName = "memoria.ndn.ucla.edu";
   var hubPrefix = "ndn/edu/ucla/remap";
   // screenName is the name inputted by the user
-  var screenName = "zhehao";
+  var screenName = getRandomNameString();
+  
   // chatroom is the name inputted by the user
   var chatroom = "ndnchat";
   
-  // constructing Face with 'localhost' as host name results in websocket error, finding out why
-  //var face = new Face({host:hostName});
+  // Weird, at one point, it works...
+  //var face = new Face({ host:hostName });
   var face = new Face(new UnixTransport());
   
   var identityStorage = new MemoryIdentityStorage();
