@@ -88,7 +88,7 @@ To use NDN-JS in a web page, one of two scripts must be included using a script 
 ndn.js is a combined library (and ndn-js.min.js is a compressed version of the combined library).
 See INSTALL for instructions on how to build these files.
 
-Or they can be downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
+Or they can be downloaded from the `build` directory:
 
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.js
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.min.js
