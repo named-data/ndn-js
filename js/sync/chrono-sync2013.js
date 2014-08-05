@@ -56,6 +56,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append("00");
+  
   interest.setInterestLifetimeMilliseconds(1000);
   interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
   
@@ -362,6 +363,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   this.digest_log.push(newlog);
   
   var n = new Name(this.applicationBroadcastPrefix);
+  n.append(this.digest_tree.getRoot());
   var retryInterest = new Interest(n);
   retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));
@@ -474,10 +476,10 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
     var n = new Name(interest.getName());
     var interest = new Interest(n);
     
-    n.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    this.face.expressInterest(n, this.onData.bind(this), this.syncTimeout.bind(this));
+    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
     
-    console.log("Syncinterest expressed:");
+    console.log("Sync interest expressed:");
     console.log(n.toUri());
   }           
 };
