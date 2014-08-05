@@ -18,32 +18,9 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-// JS import class
-var crypto = require('crypto');
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Interest = require('./interest.js').Interest;
-var Data = require('./data.js').Data;
-var MetaInfo = require('./meta-info.js').MetaInfo;
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
-var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-var Tlv = require('./encoding/tlv/tlv.js').Tlv;
-var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Key = require('./key.js').Key;
-var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Closure = require('./closure.js').Closure;
-var UpcallInfo = require('./closure.js').UpcallInfo;
-var Transport = require('./transport/transport.js').Transport;
-var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
-var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
-var fs = require('fs');
-var LOG = require('./log.js').Log.LOG;
+var DigestTree = require('./digest-tree.js').DigestTree;
+var Interest = require('../interest.js').Interest;
+var Name = require('../name.js').Name;
 
 // TODO: the equivalent of function pointers, or are there no such things?
 // The point of naming it as 'argn'? just to correspond with boost::bind?
@@ -73,7 +50,8 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   // Do I need prototype.bind for callback functions? Supposedly that I do
   //this.contentCache.registerPrefix(this.applicationBroadcastPrefix, this.onInterest.bind(this), this.onReceivedSyncState.bind(this));
-  // Interesting, use our own onInterest as the onDataNotFound fallback; but the problem I'm having now, is the prefix registration for this failed.
+  // Interesting, use our own onInterest as the 'onDataNotFound' fallback; but the problem I'm having now, is the prefix registration for this failed.
+  // Still, using the field of 'onRegisterFailed' as 'onDataNotFound' does not make sense to me at all, trying to reason
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -84,6 +62,8 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   // The same wonder of using bind applies here, too
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
+
+exports.ChronoSync2013 = ChronoSync2013;
 
 // SyncState class
 
@@ -386,7 +366,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));
   
-  console.log("Syncinterest expressed:");
+  console.log("Sync interest expressed:");
   console.log(n.toUri());
 };
 

@@ -26,6 +26,8 @@ var DigestTree = function DigestTree()
   this.root = "00";
 };
 
+exports.DigestTree = DigestTree;
+
 // What is the meaning of a session?
 // The equivalent for embedded class definition; reference: name.js
 DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
