@@ -97,3 +97,4 @@ var Sync = ProtoBuf.newBuilder().import({
 }).build("Sync");
 
 exports.SyncStateMsg = Sync.SyncStateMsg;
+exports.SyncState = Sync.SyncState;

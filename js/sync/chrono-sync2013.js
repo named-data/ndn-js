@@ -27,6 +27,7 @@ var MemoryContentCache = require('../util/memory-content-cache.js').MemoryConten
 // which exists in protobuf-js definition file. This could/should be made independent of
 // the library...
 var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
+var SyncState = require('./sync-state.js').SyncState;
 //console.log("Imported results : " + SyncStateMsg);
 
 // TODO: the equivalent of function pointers, or are there no such things?
@@ -48,7 +49,6 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.sync_lifetime = syncLifetime;
   this.userseq = -1;
   
-  // syntactical check
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
 
@@ -57,6 +57,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   // Do I need prototype.bind for callback functions? Supposedly that I do
   // contentCache is a memoryContentCache, not an ordinary face.
+  // Debug memoryContentCaches
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -71,8 +72,11 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
 
 exports.ChronoSync2013 = ChronoSync2013;
 
-// SyncState class
-
+// SyncState class: its declaration exists in ProtoBuf file.
+// This class could be re-enabled after we remove our reference to protobuf in this library
+// file. Its function/info should be the same for this class and protobuf definition,
+// calling methods may change after using this class.
+/*
 ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
 {
   this.dataPrefixUri = dataPrefixUri;
@@ -94,6 +98,7 @@ ChronoSync2013.SyncState.prototype.getSequenceNo = function()
 {
   return this.sequenceNo;
 };
+*/
 
 ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 {
@@ -108,7 +113,7 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
   //var content_t = new SyncStateMsg({ss:content});
-  var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
+  var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
   
   // broadcastSyncState not yet implemented
   this.broadcastSyncState(this.digest_tree.getRoot(), content);
@@ -182,7 +187,13 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
   
 };
 
-// ChronoSync2013::Update is not referenced by any functions, for now
+/**
+ * Update the digest tree with the messages in content. If the digest tree root is not in
+ * the digest log, also add a log entry with the content.
+ * @param {SyncStates[]} The sync state messages
+ * @return {bool} True if added a digest log entry (because the updated digest tree root
+ * was not in the log), false if didn't add a log entry.
+ */
 ChronoSync2013.prototype.update = function(content)
 {
   for (var i = 0; i < content.length; i++) {
@@ -221,9 +232,10 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
   
   // DataUtil is a part of ndn.js, which is not included in this file; its toString method removed; 
   // and the logic is confusing; size vs length in here, double check the type of applicationBroadcastPrefix?
-  var syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size() + 2).getValue().buf().toString('binary');
+  var syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
+  console.log(syncdigest);
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
-    syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size() + 1).getValue().buf().toString('binary');
+    syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
   }
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
     //Recovery interest or new comer interest
@@ -316,7 +328,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
   for (var i = 0; i < content.length; i++) {
     if (content[i].type == 0) {
       // Constructor syntactical check
-      syncStates.push(new ChronoSync2013.SyncState(content[i].name, content[i].seqno.session, content[i].seqno.seq));
+      syncStates.push(new SyncState(content[i].name, content[i].seqno.session, content[i].seqno.seq));
     }
   }
   
@@ -354,16 +366,25 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   console.log("no other people");
     
   // Digest tree initialization not yet implemented
+  // Interestingly, ndn-cpp does not have digest tree initial, wonder how it creates the
+  // first node of the local instance.
   //this.digest_tree.initial(this);
   
   this.usrseq++;
+  // usrseq should be 0 after the increment.
+  // chat::initial is passed in here, which is the heartbeat mechanism using timeouts
   this.onInitialized();
   
-  var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
-  
-  // this seems to achieve the function of update in ndn-cpp
-  var newlog = {digest:this.digest_tree.root, data:content};
-  this.digest_log.push(newlog);
+  // Content should be array of SyncStates.
+  var content = [new SyncState({ name:this.applicationDataPrefixUri,
+                                                type:'UPDATE',
+                                                seqno: {
+                                                  seq:this.usrseq,
+                                                  session:this.session
+                                                }
+                                              })];
+  // This update puts the local node into digest tree.
+  this.update(content);
   
   var n = new Name(this.applicationBroadcastPrefix);
   n.append(this.digest_tree.getRoot());
@@ -379,8 +400,17 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
 {
   if (this.logfind(syncdigest) != -1) {
     var content = [];
-    for(var i = 0;i<this.digest_tree.digestnode.length;i++) {
-      content[i] = new ChronoSync2013.SyncState({name:this.digest_tree.digestnode[i].prefix_name,type:'UPDATE',seqno:{seq:this.digest_tree.digestnode[i].seqno.seq,session:this.digest_tree.digestnode[i].seqno.session}});
+    // If nothing's found in log, do nothing.
+    console.log(" *** log found *** " + this.digest_tree.digestnode.length);
+    for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
+      content[i] = new SyncState({ name:this.digest_tree.digestnode[i].prefix_name,
+                                                  type:'UPDATE',
+                                                  seqno:{
+                                                    seq:this.digest_tree.digestnode[i].seqno.seq,
+                                                    session:this.digest_tree.digestnode[i].
+                                                    seqno.session
+                                                  }
+                                                });
     }
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
@@ -427,7 +457,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   }
   
   for(var i = 0; i < data_name.length; i++) {
-    content[i] = new ChronoSync2013.SyncState({name:data_name[i], type:'UPDATE', seqno:{seq:data_seq[i],session:data_ses[i]}});
+    content[i] = new SyncState({name:data_name[i], type:'UPDATE', seqno:{seq:data_seq[i],session:data_ses[i]}});
   }
   if(content.length != 0) {
     var content_t = new SyncStateMsg({ss:content});
@@ -502,7 +532,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
       //if the user was an olde comer, after add the static log he need to increase his seqno by 1
-      var content_t = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:content[i].seqno.seq+1,session:this.session}})];
+      var content_t = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:content[i].seqno.seq+1,session:this.session}})];
       this.digest_tree.update(content_t,this);
       if (this.logfind(this.digest_tree.getRoot()) == -1) {
         var newlog = {digest:this.digest_tree.getRoot(), data:content_t};
@@ -517,10 +547,10 @@ ChronoSync2013.prototype.initialOndata = function(content)
   var content_t =[]
   if (this.usrseq >= 0) {
     //send the data packet with new seqno back
-    content_t[0] = new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}});
+    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}});
   }
   else
-    content_t[0] = new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:0,session:this.session}});
+    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:0,session:this.session}});
   
   var content_tt = new SyncStateMsg({ss:content_t});
   var str = new Uint8Array(content_tt.toArrayBuffer());
@@ -542,7 +572,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
     //the user haven't put himself in the digest tree
     console.log("initial state")
     this.usrseq++;
-    var content = [new ChronoSync2013.SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
+    var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
     this.digest_tree.update(content,this);
     if (this.logfind(this.digest_tree.root) == -1) {
       var newlog = {digest:this.digest_tree.root, data:content};

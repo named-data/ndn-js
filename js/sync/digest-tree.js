@@ -24,6 +24,7 @@ var crypto = require('crypto');
 var DigestTree = function DigestTree()
 {
   this.root = "00";
+  this.digestnode = [];
 };
 
 exports.DigestTree = DigestTree;
@@ -91,10 +92,19 @@ DigestTree.Node.Compare = function(node1, node2)
   return (node1.seqno_session < node2.seqno_session);
 };
 
+/** 
+ * Update the digest tree and recompute the root digest. If the combination of dataPrefix
+ * and sessionNo already exists in the tree then update its sequenceNo (only if the given
+ * sequenceNo is newer), otherwise add a new node.
+ * @param {string} The name prefix.
+ * @param {int} The session number.
+ * @param {int} The sequence number.
+ * @return True if the digest tree is updated, false if not
+ */
 DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
   var n_index = this.find(dataPrefix, sessionNo);
-  /* Debug log outputs */
+  console.log("*** digest tree update ***");
   if (n_index >= 0) {
     if (this.digestnode[i].getSequenceNo() < sequenceNo)
       this.digestnode[i].setSequenceNo(sequenceNo);
@@ -104,19 +114,57 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
   else {
     /* Debug log outputs */
     // Is this the right way to create an object? new DigestTreeNode or DigestTree.Node?
-    // TODO: Make sure this is the right way to create this object.
     var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
-    // this.digestnode is a vector, seems that its equivalent is js array; 
-    // vector.push_back(temp) interpreted as array.push(temp)
+    console.log("The node item to be pushed : " + temp);
     this.digestnode.push(temp);
   }
   this.recomputeRoot();
   return true;
+  
+  /*
+      for(var i = 0;i<content.length;i++){
+    if(content[i].type ==0){
+        var n_index = this.find(content[i].name,content[i].seqno.session);
+        console.log(content[i].name,content[i].seqno.session);
+        console.log("n_index:"+n_index);
+            if( n_index != -1){
+        //only update the newer status
+            if(this.digestnode[n_index].seqno.seq<content[i].seqno.seq){
+                    if(self.chat_prefix == content[i].name){
+                self.usrseq = content[i].seqno.seq;
+                    }
+            this.digestnode[n_index].seqno ={seq:content[i].seqno.seq,session:content[i].seqno.session};
+            this.digestnode[n_index].prefix_name = content[i].name;
+            var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+                    md.updateHex(Int32ToHex(content[i].seqno.session)+Int32ToHex(content[i].seqno.seq));
+                var digest_seq = md.digest();
+                md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+                md.updateString(content[i].name);
+                var digest_name = md.digest();
+                md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+                md.updateHex(digest_name+digest_seq);
+
+            this.digestnode[n_index].digest =md.digest();
+                }
+        }
+            else{
+                this.newcomer(content[i].name,content[i].seqno,self);
+        }
+        }
+    }
+    var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+    for(var i = 0;i<this.digestnode.length;i++){
+    md.updateHex(this.digestnode[i].digest);
+    }
+    this.root = md.digest();
+    console.log("update root to: "+this.root);
+    usrdigest = this.root;
+  */
 };
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
 {
-  for (var i = 0; i < this.digestnode.size(); ++i) {
+  for (var i = 0; i < this.digestnode.length; ++i) {
     if (this.digestnode[i].getDataPrefix() == dataPrefix && 
         this.digestnode[i].getSessionNo() == sessionNo)
       return i;
