@@ -641,7 +641,7 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
 function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
-    if (DataUtils.arraysEqual(name.get(i).getValue().buf(), NdnfsFileComponent))
+    if (name.get(i).getValue().equals(NdnfsFileComponent))
       return i;
   }
 

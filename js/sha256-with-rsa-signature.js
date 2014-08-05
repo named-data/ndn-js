@@ -48,7 +48,7 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = new Buffer(0);
+    this.signature = null;
     // witness is deprecated.
     this.witness = null;
     // digestAlgorithm is deprecated.
@@ -165,7 +165,7 @@ Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtoc
 
 Sha256WithRsaSignature.prototype.validate = function()
 {
-  return null != this.signature;
+  return this.getSignature().size() > 0;
 };
 
 /**

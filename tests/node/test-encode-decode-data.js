@@ -20,6 +20,7 @@
 var Data = require('../..').Data;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
+var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
 var ContentType = require('../..').ContentType;
 var KeyType = require('../..').KeyType;
 var KeyLocatorType = require('../..').KeyLocatorType;
@@ -236,8 +237,8 @@ function dumpData(data)
     (data.getMetaInfo().getFinalBlockID().getValue().size() > 0 ?
      data.getMetaInfo().getFinalBlockID().getValue().toHex() : "<none>"));
 
-  // TODO: Check if data.getSignature() instanceof Sha256WithRsaSignature.
-  {
+  var signature = data.getSignature();
+  if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     console.log("signature.signature: " +
       (signature.getSignature().size() > 0 ?
