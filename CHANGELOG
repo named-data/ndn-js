@@ -24,6 +24,7 @@ Changes
 * http://redmine.named-data.net/issues/1704 Remove trailing whitespace
 * In Name.Component, added toSegment and toVersion.
 * In Face.expressInterest, return the pendingInterestId. Added Face.removePendingInterest.
+* In Face.registerPrefix, return the registeredPrefixId. Added Face.removeRegisteredPrefix.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1617 Second call to expressInterest gives "connection not established"

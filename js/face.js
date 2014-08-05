@@ -329,14 +329,28 @@ Face.extractEntriesForExpressedInterest = function(name)
 
 // For publishing data
 Face.registeredPrefixTable = new Array();
+Face.registeredPrefixRemoveRequests = new Array();
 
 /**
  * @constructor
  */
-var RegisteredPrefix = function RegisteredPrefix(prefix, closure)
+var RegisteredPrefix = function RegisteredPrefix(registeredPrefixId, prefix, closure)
 {
+  this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;        // String
   this.closure = closure;  // Closure
+};
+
+RegisteredPrefix.lastRegisteredPrefixId = 0;
+
+/**
+ * Get the next unique registered prefix ID.
+ * @returns {number} The next registered prefix ID.
+ */
+RegisteredPrefix.getNextRegisteredPrefixId = function()
+{
+  ++RegisteredPrefix.lastRegisteredPrefixId;
+  return RegisteredPrefix.lastRegisteredPrefixId;
 };
 
 /**
@@ -683,6 +697,8 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
  *   prefix is the prefix given to registerPrefix.
  * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.
  * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ * @returns {number} The registered prefix ID which can be used with
+ * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 {
@@ -693,10 +709,9 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
     if (arg3)
-      this.registerPrefixWithClosure(prefix, arg2, arg3);
+      return this.registerPrefixWithClosure(prefix, arg2, arg3);
     else
-      this.registerPrefixWithClosure(prefix, arg2);
-    return;
+      return this.registerPrefixWithClosure(prefix, arg2);
   }
 
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
@@ -704,8 +719,9 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   var onInterest = arg2;
   var onRegisterFailed = (arg3 ? arg3 : function() {});
   var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
-  this.registerPrefixWithClosure(prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-                                 intFlags, onRegisterFailed);
+  return this.registerPrefixWithClosure
+    (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
+     intFlags, onRegisterFailed);
 }
 
 /**
@@ -715,12 +731,18 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * @param {Name} prefix
  * @param {Closure} closure
  * @param {number} intFlags
- * @param {function} (optional) If called from the non-deprecated registerPrefix, call onRegisterFailed(prefix)
- * if registration fails.
+ * @param {function} onRegisterFailed (optional) If called from the
+ * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
+ * fails.
+ * @returns {number} The registered prefix ID which can be used with
+ * removeRegisteredPrefix.
  */
-Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, onRegisterFailed)
+Face.prototype.registerPrefixWithClosure = function
+  (prefix, closure, intFlags, onRegisterFailed)
 {
   intFlags = intFlags | 3;
+  
+  var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
     if (thisFace.ndndid == null) {
@@ -729,10 +751,12 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
       interest.setInterestLifetimeMilliseconds(4000);
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
-        (null, interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
+        (null, interest, new Face.FetchNdndidClosure
+         (thisFace, registeredPrefixId, prefix, closure, intFlags, onRegisterFailed));
     }
     else
-      thisFace.registerPrefixHelper(prefix, closure, flags, onRegisterFailed);
+      thisFace.registerPrefixHelper
+        (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
   };
 
   if (this.connectionInfo == null) {
@@ -743,18 +767,22 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
   }
   else
     onConnected();
+
+  return registeredPrefixId;
 };
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(prefix, callerClosure, flags).
+ *   registerPrefixHelper(registeredPrefixId, prefix, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags, onRegisterFailed)
+Face.FetchNdndidClosure = function FetchNdndidClosure
+  (face, registeredPrefixId, prefix, callerClosure, flags, onRegisterFailed)
 {
   // Inherit from Closure.
   Closure.call(this);
 
   this.face = face;
+  this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.callerClosure = callerClosure;
   this.flags = flags;
@@ -782,7 +810,8 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   if (LOG > 3) console.log(this.face.ndndid);
 
   this.face.registerPrefixHelper
-    (this.prefix, this.callerClosure, this.flags, this.onRegisterFailed);
+    (this.registeredPrefixId, this.prefix, this.callerClosure, this.flags,
+     this.onRegisterFailed);
 
   return Closure.RESULT_OK;
 };
@@ -827,11 +856,23 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 };
 
 /**
- * Do the work of registerPrefix once we know we are connected with a ndndid.
+ * Do the work of registerPrefix once we know we are connected with an ndndid.
  */
 Face.prototype.registerPrefixHelper = function
-  (prefix, closure, flags, onRegisterFailed)
+  (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
 {
+  var removeRequestIndex = -1;
+  if (removeRequestIndex != null)
+    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+      (registeredPrefixId);
+  if (removeRequestIndex >= 0) {
+    // removeRegisteredPrefix was called with the registeredPrefixId returned by
+    //   registerPrefix before we got here, so don't add a registeredPrefixTable
+    //   entry.
+    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    return;
+  }
+  
   var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
@@ -859,10 +900,43 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
+  Face.registeredPrefixTable.push
+    (new RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
     (null, interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+};
+
+/**
+ * Remove the registered prefix entry with the registeredPrefixId from the
+ * registered prefix table. This does not affect another registered prefix with
+ * a different registeredPrefixId, even if it has the same prefix name. If there
+ * is no entry with the registeredPrefixId, do nothing.
+ *
+ * @param {number} registeredPrefixId The ID returned from registerPrefix.
+ */
+Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
+{
+  // Go backwards through the list so we can erase entries.
+  // Remove all entries even though registeredPrefixId should be unique.
+  var count = 0;
+  for (var i = Face.registeredPrefixTable.length - 1; i >= 0; --i) {
+    var entry = Face.registeredPrefixTable[i];
+    if (entry.registeredPrefixId == registeredPrefixId) {
+      Face.registeredPrefixTable.splice(i, 1);
+      ++count;
+    }
+  }
+
+  if (count == 0) {
+    // The registeredPrefixId was not found. Perhaps this has been called before
+    //   the callback in registerPrefix can add to the registeredPrefixTable. Add
+    //   this removal request which will be checked before adding to the
+    //   registeredPrefixTable.
+    if (Face.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
+      // Not already requested, so add the request.
+      Face.registeredPrefixRemoveRequests.push(registeredPrefixId);
+  }
 };
 
 /**
