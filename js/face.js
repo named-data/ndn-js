@@ -268,15 +268,30 @@ Face.prototype.close = function()
 
 // For fetching data
 Face.PITTable = new Array();
+Face.PITTableRemoveRequests = new Array();
 
 /**
  * @constructor
  */
-var PITEntry = function PITEntry(interest, closure)
+var PITEntry = function PITEntry(pendingInterestId, interest, closure)
 {
+  this.pendingInterestId = pendingInterestId;
   this.interest = interest;  // Interest
   this.closure = closure;    // Closure
   this.timerID = -1;  // Timer ID
+};
+
+PITEntry.lastPendingInterestId = 0;
+
+/**
+ * Get the next unique pending interest ID.
+ *
+ * @returns {number} The next pending interest ID.
+ */
+PITEntry.getNextPendingInterestId = function()
+{
+  ++PITEntry.lastPendingInterestId;
+  return PITEntry.lastPendingInterestId;
 };
 
 /**
@@ -314,14 +329,28 @@ Face.extractEntriesForExpressedInterest = function(name)
 
 // For publishing data
 Face.registeredPrefixTable = new Array();
+Face.registeredPrefixRemoveRequests = new Array();
 
 /**
  * @constructor
  */
-var RegisteredPrefix = function RegisteredPrefix(prefix, closure)
+var RegisteredPrefix = function RegisteredPrefix(registeredPrefixId, prefix, closure)
 {
+  this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;        // String
   this.closure = closure;  // Closure
+};
+
+RegisteredPrefix.lastRegisteredPrefixId = 0;
+
+/**
+ * Get the next unique registered prefix ID.
+ * @returns {number} The next registered prefix ID.
+ */
+RegisteredPrefix.getNextRegisteredPrefixId = function()
+{
+  ++RegisteredPrefix.lastRegisteredPrefixId;
+  return RegisteredPrefix.lastRegisteredPrefixId;
 };
 
 /**
@@ -392,6 +421,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
+ * @returns {number} The pending interest ID which can be used with removePendingInterest.
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
@@ -417,8 +447,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     else
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
 
-    this.expressInterestWithClosure(interest, arg2);
-    return;
+    return this.expressInterestWithClosure(interest, arg2);
   }
 
   var interest;
@@ -462,8 +491,8 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 
   // Make a Closure from the callbacks so we can use expressInterestWithClosure.
   // TODO: Convert the PIT to use callbacks, not a closure.
-  this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
-}
+  return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
+};
 
 Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
   // Inherit from Closure.
@@ -495,19 +524,26 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  * @deprecated Use expressInterest with callback functions, not Closure.
  * @param {Interest} the interest, already processed with a template (if supplied).
  * @param {Closure} closure
+ * @returns {number} The pending interest ID which can be used with removePendingInterest.
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
+  var pendingInterestId = PITEntry.getNextPendingInterestId();
+
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
       console.log('ERROR: connectionInfo is NOT SET');
     else {
       var thisFace = this;
-      this.connectAndExecute(function() { thisFace.reconnectAndExpressInterest(interest, closure); });
+      this.connectAndExecute(function() {
+        thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+      });
     }
   }
   else
-    this.reconnectAndExpressInterest(interest, closure);
+    this.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+
+  return pendingInterestId;
 };
 
 /**
@@ -515,13 +551,13 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
  */
-Face.prototype.reconnectAndExpressInterest = function(interest, closure)
+Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
 {
   var thisFace = this;
-  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+  if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(interest, closure); });
+      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -547,9 +583,9 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(interest, closure); });
+        (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(interest, closure);
+      this.expressInterestHelper(pendingInterestId, interest, closure);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -560,42 +596,87 @@ Face.prototype.reconnectAndExpressInterest = function(interest, closure)
  * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
  *   this.transport.send to send the interest.
  */
-Face.prototype.expressInterestHelper = function(interest, closure)
+Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
 {
   var binaryInterest = interest.wireEncode();
   var thisFace = this;
   //TODO: check local content store first
   if (closure != null) {
-    var pitEntry = new PITEntry(interest, closure);
-    // TODO: This needs to be a single thread-safe transaction on a global object.
-    Face.PITTable.push(pitEntry);
-    closure.pitEntry = pitEntry;
+    var removeRequestIndex = -1;
+    if (removeRequestIndex != null)
+      removeRequestIndex = Face.PITTableRemoveRequests.indexOf(pendingInterestId);
+    if (removeRequestIndex >= 0)
+      // removePendingInterest was called with the pendingInterestId returned by
+      //   expressInterest before we got here, so don't add a PIT entry.
+      Face.PITTableRemoveRequests.splice(removeRequestIndex, 1);
+    else {
+      var pitEntry = new PITEntry(pendingInterestId, interest, closure);
+      // TODO: This needs to be a single thread-safe transaction on a global object.
+      Face.PITTable.push(pitEntry);
+      closure.pitEntry = pitEntry;
 
-    // Set interest timer.
-    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-    var timeoutCallback = function() {
-      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
+      // Set interest timer.
+      var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+      var timeoutCallback = function() {
+        if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-      // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
-      //   the interest because we don't want to match it in the mean time.
-      // TODO: Make this a thread-safe operation on the global PITTable.
-      var index = Face.PITTable.indexOf(pitEntry);
-      if (index >= 0)
-        Face.PITTable.splice(index, 1);
+        // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
+        //   the interest because we don't want to match it in the mean time.
+        // TODO: Make this a thread-safe operation on the global PITTable.
+        var index = Face.PITTable.indexOf(pitEntry);
+        if (index >= 0)
+          Face.PITTable.splice(index, 1);
 
-      // Raise closure callback
-      if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-        if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
-        pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-        Face.PITTable.push(pitEntry);
-        thisFace.transport.send(binaryInterest.buf());
-      }
-    };
+        // Raise closure callback
+        if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
+          if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
+          pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+          Face.PITTable.push(pitEntry);
+          thisFace.transport.send(binaryInterest.buf());
+        }
+      };
 
-    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+      pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+    }
   }
 
   this.transport.send(binaryInterest.buf());
+};
+
+/**
+ * Remove the pending interest entry with the pendingInterestId from the pending
+ * interest table. This does not affect another pending interest with a
+ * different pendingInterestId, even if it has the same interest name.
+ * If there is no entry with the pendingInterestId, do nothing.
+ * @param {number} pendingInterestId The ID returned from expressInterest.
+ */
+Face.prototype.removePendingInterest = function(pendingInterestId)
+{
+  if (pendingInterestId == null)
+    return;
+
+  // Go backwards through the list so we can erase entries.
+  // Remove all entries even though pendingInterestId should be unique.
+  var count = 0;
+  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
+    var entry = Face.PITTable[i];
+    if (entry.pendingInterestId == pendingInterestId) {
+      // Cancel the timeout timer.
+      clearTimeout(entry.timerID);
+
+      Face.PITTable.splice(i, 1);
+      ++count;
+    }
+  }
+
+  if (count == 0) {
+    // The pendingInterestId was not found. Perhaps this has been called before
+    //   the callback in expressInterest can add to the PIT. Add this
+    //   removal request which will be checked before adding to the PIT.
+    if (Face.PITTableRemoveRequests.indexOf(pendingInterestId) < 0)
+      // Not already requested, so add the request.
+      Face.PITTableRemoveRequests.push(pendingInterestId);
+  }
 };
 
 /**
@@ -616,6 +697,8 @@ Face.prototype.expressInterestHelper = function(interest, closure)
  *   prefix is the prefix given to registerPrefix.
  * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.
  * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ * @returns {number} The registered prefix ID which can be used with
+ * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 {
@@ -626,10 +709,9 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
     if (arg3)
-      this.registerPrefixWithClosure(prefix, arg2, arg3);
+      return this.registerPrefixWithClosure(prefix, arg2, arg3);
     else
-      this.registerPrefixWithClosure(prefix, arg2);
-    return;
+      return this.registerPrefixWithClosure(prefix, arg2);
   }
 
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
@@ -637,8 +719,9 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   var onInterest = arg2;
   var onRegisterFailed = (arg3 ? arg3 : function() {});
   var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
-  this.registerPrefixWithClosure(prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-                                 intFlags, onRegisterFailed);
+  return this.registerPrefixWithClosure
+    (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
+     intFlags, onRegisterFailed);
 }
 
 /**
@@ -648,12 +731,18 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * @param {Name} prefix
  * @param {Closure} closure
  * @param {number} intFlags
- * @param {function} (optional) If called from the non-deprecated registerPrefix, call onRegisterFailed(prefix)
- * if registration fails.
+ * @param {function} onRegisterFailed (optional) If called from the
+ * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
+ * fails.
+ * @returns {number} The registered prefix ID which can be used with
+ * removeRegisteredPrefix.
  */
-Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, onRegisterFailed)
+Face.prototype.registerPrefixWithClosure = function
+  (prefix, closure, intFlags, onRegisterFailed)
 {
   intFlags = intFlags | 3;
+
+  var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
     if (thisFace.ndndid == null) {
@@ -662,10 +751,12 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
       interest.setInterestLifetimeMilliseconds(4000);
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
-        (interest, new Face.FetchNdndidClosure(thisFace, prefix, closure, intFlags, onRegisterFailed));
+        (null, interest, new Face.FetchNdndidClosure
+         (thisFace, registeredPrefixId, prefix, closure, intFlags, onRegisterFailed));
     }
     else
-      thisFace.registerPrefixHelper(prefix, closure, flags, onRegisterFailed);
+      thisFace.registerPrefixHelper
+        (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
   };
 
   if (this.connectionInfo == null) {
@@ -676,18 +767,22 @@ Face.prototype.registerPrefixWithClosure = function(prefix, closure, intFlags, o
   }
   else
     onConnected();
+
+  return registeredPrefixId;
 };
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(prefix, callerClosure, flags).
+ *   registerPrefixHelper(registeredPrefixId, prefix, callerClosure, flags).
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure(face, prefix, callerClosure, flags, onRegisterFailed)
+Face.FetchNdndidClosure = function FetchNdndidClosure
+  (face, registeredPrefixId, prefix, callerClosure, flags, onRegisterFailed)
 {
   // Inherit from Closure.
   Closure.call(this);
 
   this.face = face;
+  this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.callerClosure = callerClosure;
   this.flags = flags;
@@ -715,7 +810,8 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
   if (LOG > 3) console.log(this.face.ndndid);
 
   this.face.registerPrefixHelper
-    (this.prefix, this.callerClosure, this.flags, this.onRegisterFailed);
+    (this.registeredPrefixId, this.prefix, this.callerClosure, this.flags,
+     this.onRegisterFailed);
 
   return Closure.RESULT_OK;
 };
@@ -760,11 +856,23 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 };
 
 /**
- * Do the work of registerPrefix once we know we are connected with a ndndid.
+ * Do the work of registerPrefix once we know we are connected with an ndndid.
  */
 Face.prototype.registerPrefixHelper = function
-  (prefix, closure, flags, onRegisterFailed)
+  (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
 {
+  var removeRequestIndex = -1;
+  if (removeRequestIndex != null)
+    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+      (registeredPrefixId);
+  if (removeRequestIndex >= 0) {
+    // removeRegisteredPrefix was called with the registeredPrefixId returned by
+    //   registerPrefix before we got here, so don't add a registeredPrefixTable
+    //   entry.
+    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    return;
+  }
+
   var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
@@ -792,10 +900,43 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  Face.registeredPrefixTable.push(new RegisteredPrefix(prefix, closure));
+  Face.registeredPrefixTable.push
+    (new RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
-    (interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+    (null, interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+};
+
+/**
+ * Remove the registered prefix entry with the registeredPrefixId from the
+ * registered prefix table. This does not affect another registered prefix with
+ * a different registeredPrefixId, even if it has the same prefix name. If there
+ * is no entry with the registeredPrefixId, do nothing.
+ *
+ * @param {number} registeredPrefixId The ID returned from registerPrefix.
+ */
+Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
+{
+  // Go backwards through the list so we can erase entries.
+  // Remove all entries even though registeredPrefixId should be unique.
+  var count = 0;
+  for (var i = Face.registeredPrefixTable.length - 1; i >= 0; --i) {
+    var entry = Face.registeredPrefixTable[i];
+    if (entry.registeredPrefixId == registeredPrefixId) {
+      Face.registeredPrefixTable.splice(i, 1);
+      ++count;
+    }
+  }
+
+  if (count == 0) {
+    // The registeredPrefixId was not found. Perhaps this has been called before
+    //   the callback in registerPrefix can add to the registeredPrefixTable. Add
+    //   this removal request which will be checked before adding to the
+    //   registeredPrefixTable.
+    if (Face.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
+      // Not already requested, so add the request.
+      Face.registeredPrefixRemoveRequests.push(registeredPrefixId);
+  }
 };
 
 /**
@@ -1011,7 +1152,7 @@ Face.prototype.connectAndExecute = function(onConnected)
       thisFace.connectAndExecute(onConnected);
   }, 3000);
 
-  this.reconnectAndExpressInterest(interest, new Face.ConnectClosure(this, onConnected, timerID));
+  this.reconnectAndExpressInterest(null, interest, new Face.ConnectClosure(this, onConnected, timerID));
 };
 
 /**

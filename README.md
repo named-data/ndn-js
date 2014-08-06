@@ -9,7 +9,7 @@ The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
 	http://ndn.ucla.edu/
 
-See the file INSTALL for build and install instructions.
+See the file [INSTALL](https://github.com/named-data/ndn-js/blob/master/INSTALL) for build and install instructions.
 
 License
 -------
@@ -88,10 +88,24 @@ To use NDN-JS in a web page, one of two scripts must be included using a script 
 ndn.js is a combined library (and ndn-js.min.js is a compressed version of the combined library).
 See INSTALL for instructions on how to build these files.
 
-Or they can be downloaded from the `downloads` branch (https://github.com/named-data/ndn-js/tree/downloads):
+Or they can be downloaded from the `build` directory:
 
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.js
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.min.js
+
+** Using via npm (Node.js or Browser via Browserify) **
+Though not yet published on npmjs.org, ndn-js can be used in your node or browser projects. Simply clone the git repository, and run
+
+    npm install path/to/ndn-js
+
+Then, in your app...
+
+    var ndn = require("ndn-js")
+
+    var name = new ndn.Name("some/name/in/uri/form")
+      , data = new ndn.Data()
+      , interest = new ndn.Interest()
+    // etc... All API functions are exposed through the ndn object
 
 ** Examples **
 

@@ -29,6 +29,13 @@
 //   rsa.js
 //   rsa2.js
 //
+var intShim = require('jsbn');
+var BigInteger = (intShim.BigInteger) ? intShim.BigInteger : intShim ; 
+var RSAKey = require('./rsapem-1.1.js').RSAKey;
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // keysize / pmstrlen
 //  512 /  128
@@ -397,3 +404,6 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey
+module.exports = exports;

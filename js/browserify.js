@@ -17,12 +17,17 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
+
 // Library namespace
 var ndn = ndn || {};
+ndn.Key = require("./key.js").Key
 
 var exports = ndn;
 
-var require = function(ignore) { return ndn; };
 
 // Factory method to create hasher objects
 exports.createHash = function(alg)
@@ -149,4 +154,5 @@ exports.toByteArray = function(str) {
   return result;
 };
 
+module.exports = exports
 // After this we include contrib/feross/buffer.js to define the Buffer class.

@@ -19,6 +19,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var cryptoJS = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -203,8 +204,7 @@ Data.prototype.sign = function(wireFormat)
     this.getSignature().setSignature(new Buffer(128));
     this.wireEncode(wireFormat);
   }
-
-  var rsa = require("crypto").createSign('RSA-SHA256');
+  var rsa = cryptoJS.createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
 
   var sig = new Buffer
@@ -221,7 +221,7 @@ Data.prototype.verify = function(/*Key*/ key)
     throw new Error('Cannot verify Data without a public key.');
 
   if (Data.verifyUsesString == null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
+    var hashResult = cryptoJS.createHash('sha256').digest();
     // If the has result is a string, we assume that this is a version of
     //   crypto where verify also uses a string signature.
     Data.verifyUsesString = (typeof hashResult === 'string');
@@ -230,7 +230,7 @@ Data.prototype.verify = function(/*Key*/ key)
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
-  var verifier = require('crypto').createVerify('RSA-SHA256');
+  var verifier = cryptoJS.createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ?
     DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();

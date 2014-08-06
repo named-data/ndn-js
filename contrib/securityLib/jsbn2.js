@@ -666,3 +666,7 @@ BigInteger.prototype.square = bnSquare;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+
+
+exports.BigInteger = BigInteger;
+module.exports = exports;

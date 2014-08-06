@@ -15,9 +15,15 @@
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on rsa.js and jsbn2.js
+var intShim = require("jsbn")
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
+var RSAKey = require('./rsa.js').RSAKey;
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
-
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
 function pkcs1unpad2(d,n) {
   var b = d.toByteArray();
@@ -257,3 +263,6 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
