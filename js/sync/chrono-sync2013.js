@@ -20,7 +20,9 @@
 
 var DigestTree = require('./digest-tree.js').DigestTree;
 var Interest = require('../interest.js').Interest;
+var Data = require('../data.js').Data;
 var Name = require('../name.js').Name;
+var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 
 // TODO: To actually use this part of the library, we require a SyncStateMsg declaration,
@@ -83,7 +85,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.keyChain = keyChain;
   this.certificateName = certificateName;
   this.sync_lifetime = syncLifetime;
-  this.userseq = -1;
+  this.usrseq = -1;
   
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
@@ -237,7 +239,7 @@ ChronoSync2013.prototype.update = function(content)
   for (var i = 0; i < content.length; i++) {
     if (content[i].type == 0) {
       console.log("*** " + content[i].name + " ***");
-      if (this.digest_tree.update(content[i].name, content[i].seqno.session, content[i].seqno.seq)) {
+      if (this.digest_tree.update(content[i].name, content[i].seqno.seq, content[i].seqno.session)) {
         if (this.applicationDataPrefixUri == content[i].name)
           this.usrseq = content[i].seqno.seq;
       }
@@ -299,7 +301,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
 ChronoSync2013.prototype.onData = function(inst, co)
 {
   console.log("Sync ContentObject received in callback");
-  console.log('name:'+co.getName().toUri());
+  console.log('name:' + co.getName().toUri());
   
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
@@ -405,7 +407,6 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   // usrseq should be 0 after the increment.
   // chat::initial is passed in here, which is the heartbeat mechanism using timeouts
   this.onInitialized();
-  
   var content = [new SyncState({ name:this.applicationDataPrefixUri,
                                  type:'UPDATE',
                                  seqno: {
@@ -423,7 +424,6 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
 
 ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transport)
 {
-  console.log("*** process recovery inst ***");
   // If nothing's found in log, do nothing.
   if (this.logfind(syncdigest) != -1) {
     var content = [];
@@ -437,16 +437,16 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                     }
                                  });
     }
-    console.log("*** Processing recovery interest ***");
+    
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
-      var co = new ContentObject(inst.getName(), str);
-      co.sign();
+      console.log(str);
+      var co = new Data(inst.getName());
+      co.setContent(new Blob(str, false));
+      this.keyChain.sign(co, this.certificateName);
       try {
         transport.send(co.wireEncode().buf());
-        console.log("send recovery data back");
-        console.log(inst.getName().toUri());
       } catch (e) {
         console.log(e.toString());
       }
@@ -488,9 +488,12 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   if(content.length != 0) {
     var content_t = new SyncStateMsg({ss:content});
     var str = new Uint8Array(content_t.toArrayBuffer());
-    var n = new Name(this.prefix+this.chatroom+'/'+syncdigest_t);
-    var co = new ContentObject(n, str);
-    co.sign();
+    var n = new Name(this.prefix)
+    n.append(this.chatroom).append(syncdigest_t);
+    
+    var co = new Data(n);
+    co.setContent(new Blob(str, false));
+    this.keyChain.sign(co, this.certificateName);
     try {
       transport.send(co.wireEncode().buf());
       console.log("Sync Data send");
@@ -511,7 +514,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   
-  console.log("Recovery Syncinterest expressed:"); 
+  console.log("Recovery sync interest expressed:"); 
   console.log(n.toUri());
 };
 
@@ -548,11 +551,17 @@ ChronoSync2013.prototype.initialOndata = function(content)
   console.log("*** initialOnData executed. ***");
   this.update(content, this);
     
-  var digest_t = this.digest_tree.root;
+  var digest_t = this.digest_tree.getRoot();
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
       //if the user was an olde comer, after add the static log he need to increase his seqno by 1
-      var content_t = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:content[i].seqno.seq+1,session:this.session}})];
+      var content_t = [new SyncState({ name:this.applicationDataPrefixUri,
+                                       type:'UPDATE',
+                                       seqno: {
+                                         seq:content[i].seqno.seq + 1,
+                                         session:this.session
+                                       }
+                                     })];
       this.digest_tree.update(content_t,this);
       if (this.logfind(this.digest_tree.getRoot()) == -1) {
         var newlog = {digest:this.digest_tree.getRoot(), data:content_t};
@@ -574,27 +583,32 @@ ChronoSync2013.prototype.initialOndata = function(content)
   
   var content_tt = new SyncStateMsg({ss:content_t});
   var str = new Uint8Array(content_tt.toArrayBuffer());
-  var n = new Name(this.prefix+this.chatroom+'/'+digest_t);
-  var co = new ContentObject(n, str);
+  var n = new Name(this.prefix);
+  n.append(this.chatroom).append(digest_t);
   
-  co.sign();
-  console.log("initial update data sending back");
-  console.log(n.toUri());
+  var co = new Data(n);
+  co.setContent(new Blob(str, false));
+  this.keyChain.sign(co, this.certificateName);
   
   // pokingData should be replaced
   try {
-    pokeData(co);
+    //pokeData(co);
   } catch (e) {
     console.log(e.toString());
   }
   
   if (this.digest_tree.find(this.applicationDataPrefixUri, this.session) == -1) {
     //the user haven't put himself in the digest tree
-    console.log("initial state")
     this.usrseq++;
-    var content = [new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}})];
-    this.digest_tree.update(content,this);
-    if (this.logfind(this.digest_tree.root) == -1) {
+    var content = [new SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: { 
+                                     seq:this.usrseq,
+                                     session:this.session
+                                   }
+                                 })];
+    this.digest_tree.update(content, this);
+    if (this.logfind(this.digest_tree.getRoot()) == -1) {
       var newlog = {digest:this.digest_tree.root, data:content};
       this.digest_log.push(newlog);
       
