@@ -1,6 +1,5 @@
 var ProtoBuf = require("protobufjs");
 
-
 var Sync = ProtoBuf.newBuilder().import({
     "package": "Sync",
     "messages": [

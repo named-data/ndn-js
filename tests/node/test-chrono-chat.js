@@ -561,7 +561,7 @@ function initiateChat()
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "ndnchat";
+  var chatroom = "what";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });

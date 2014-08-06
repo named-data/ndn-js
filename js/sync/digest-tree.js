@@ -18,8 +18,11 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-// For sha256 implementation; node.js syntax?
-var crypto = require('crypto');
+/**
+ * For now, KJUR and the referenced protobufjs are both locally installed Node.js packages
+ */
+var KJUR = require("jsrsasign");
+var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 var DigestTree = function DigestTree()
 {
@@ -30,7 +33,9 @@ var DigestTree = function DigestTree()
 exports.DigestTree = DigestTree;
 
 // What is the meaning of a session?
-// The equivalent for embedded class definition; reference: name.js
+// DigestTree.Node works with seqno_seq and seqno_session, without protobuf definition,
+// TODO: the corresponding chrono-sync2013 code is still dependent upon protobuf file.
+// How is a DigestTree.Node different from ChronoSync2013.SyncState?
 DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
 {
   // In this context, this should mean DigestTree.Node instead
@@ -67,21 +72,30 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
   this.recomputeDigest();
 };
 
-// prototype functions serve as member functions, called by instances of a class 
-// (also an object, Javascript being a prototypical language)
 DigestTree.Node.prototype.recomputeDigest = function()
 {
-  // TODO: SHA-256 implementation and check out the original logic
+  var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  md.updateHex(this.Int32ToHex(this.seqno_session)+this.Int32ToHex(this.seqno_seq));
+  var digest_seq = md.digest();
   
+  md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  md.updateString(this.dataPrefix);
+  var digest_name = md.digest();
+  md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  md.updateHex(digest_name + digest_seq);
+
+  this.digest = md.digest();
 };
 
-DigestTree.Node.int32ToLittleEndian = function(value, result)
-{
+//Covert Int32 number to hex string
+DigestTree.Node.prototype.Int32ToHex = function(value) {
+  var result = new Uint8Array(4);
   for (var i = 0; i < 4; i++) {
     result[i] = value % 256;
-    value = value / 256;
+    value = Math.floor(value / 256);
   }
-};
+  return DataUtils.toHex(result);
+}
 
 // Do the work of string and then sequence number compare
 DigestTree.Node.Compare = function(node1, node2)
@@ -104,7 +118,6 @@ DigestTree.Node.Compare = function(node1, node2)
 DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
   var n_index = this.find(dataPrefix, sessionNo);
-  console.log("*** digest tree update ***");
   if (n_index >= 0) {
     if (this.digestnode[i].getSequenceNo() < sequenceNo)
       this.digestnode[i].setSequenceNo(sequenceNo);
@@ -112,54 +125,11 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
       return false;
   }
   else {
-    /* Debug log outputs */
-    // Is this the right way to create an object? new DigestTreeNode or DigestTree.Node?
     var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
-    console.log("The node item to be pushed : " + temp);
     this.digestnode.push(temp);
   }
   this.recomputeRoot();
   return true;
-  
-  /*
-      for(var i = 0;i<content.length;i++){
-    if(content[i].type ==0){
-        var n_index = this.find(content[i].name,content[i].seqno.session);
-        console.log(content[i].name,content[i].seqno.session);
-        console.log("n_index:"+n_index);
-            if( n_index != -1){
-        //only update the newer status
-            if(this.digestnode[n_index].seqno.seq<content[i].seqno.seq){
-                    if(self.chat_prefix == content[i].name){
-                self.usrseq = content[i].seqno.seq;
-                    }
-            this.digestnode[n_index].seqno ={seq:content[i].seqno.seq,session:content[i].seqno.session};
-            this.digestnode[n_index].prefix_name = content[i].name;
-            var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-                    md.updateHex(Int32ToHex(content[i].seqno.session)+Int32ToHex(content[i].seqno.seq));
-                var digest_seq = md.digest();
-                md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-                md.updateString(content[i].name);
-                var digest_name = md.digest();
-                md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-                md.updateHex(digest_name+digest_seq);
-
-            this.digestnode[n_index].digest =md.digest();
-                }
-        }
-            else{
-                this.newcomer(content[i].name,content[i].seqno,self);
-        }
-        }
-    }
-    var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-    for(var i = 0;i<this.digestnode.length;i++){
-    md.updateHex(this.digestnode[i].digest);
-    }
-    this.root = md.digest();
-    console.log("update root to: "+this.root);
-    usrdigest = this.root;
-  */
 };
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
@@ -189,12 +159,14 @@ DigestTree.prototype.getRoot = function()
 
 DigestTree.prototype.recomputeRoot = function()
 {
-  var sha256;
-  for (var i = 0; i < this.digestnode.length; ++i)
-    SHA256_UpdateHex(sha256, this.digestnode[i].getDigest());
-  var digest_root;
-  // TODO: The equivalent of SHA256_Final
-  
+  var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  for(var i = 0; i < this.digestnode.length; i++){
+    md.updateHex(this.digestnode[i].digest);
+  }
+  this.root = md.digest();
+  console.log("update root to: "+this.root);
+  // The usage of this usrdigest?
+  usrdigest = this.root;
 };
 
 // Not sure if this ascii representation works yet
@@ -211,6 +183,7 @@ function fromHexChar(c)
 };
 
 // This function should be tested, as the functions of hash related functions are unverified
+/*
 function SHA256_UpdateHex(context, hex)
 {
   var data = [];
@@ -222,6 +195,7 @@ function SHA256_UpdateHex(context, hex)
   hash.update(data);
   context = hash.digest('hex');
 };
+*/
 
 function strcmp(component1, component2)
 {
