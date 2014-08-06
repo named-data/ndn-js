@@ -535,7 +535,7 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
       console.log('ERROR: connectionInfo is NOT SET');
     else {
       var thisFace = this;
-      this.connectAndExecute(function() { 
+      this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
       });
     }
@@ -557,7 +557,7 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -654,7 +654,7 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 {
   if (pendingInterestId == null)
     return;
-  
+
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though pendingInterestId should be unique.
   var count = 0;
@@ -741,7 +741,7 @@ Face.prototype.registerPrefixWithClosure = function
   (prefix, closure, intFlags, onRegisterFailed)
 {
   intFlags = intFlags | 3;
-  
+
   var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
@@ -872,7 +872,7 @@ Face.prototype.registerPrefixHelper = function
     Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
-  
+
   var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
