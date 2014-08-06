@@ -164,7 +164,7 @@ DigestTree.prototype.recomputeRoot = function()
     md.updateHex(this.digestnode[i].digest);
   }
   this.root = md.digest();
-  console.log("update root to: "+this.root);
+  console.log("update root to: " + this.root);
   // The usage of this usrdigest?
   usrdigest = this.root;
 };

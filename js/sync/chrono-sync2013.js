@@ -90,6 +90,9 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
   
+  // TODO: pendingInterestTable is an array of pendingInterests
+  this.pendingInterestTable = [];
+  
   // digest_log is an array of ChronoSync2013.DigestLogEntry
   this.digest_log = new Array();
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
@@ -145,15 +148,14 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
-  var content = [new SyncState({ name:this.applicationDataPrefixUri, 
+  var content = new SyncState({ name:this.applicationDataPrefixUri, 
                                  type:'UPDATE', 
                                  seqno:{
                                    seq:this.usrseq,
                                    session:this.session
                                   }
-                                })];
+                                });
   
-  // broadcastSyncState not yet implemented
   this.broadcastSyncState(this.digest_tree.getRoot(), content);
   
   // New digest log entry judgment neglected here for now
@@ -196,9 +198,8 @@ ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest
   this.interest = interest;
   this.transport = transport;
   
-  // TODO: getNowMilliseconds is an ndn utility function, and the library it belongs to is not yet added
   if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
-    this.timeoutMilliseconds = getNowMilliseconds() + this.interest.getInterestLifetimeMilliseconds();
+    this.timeoutMilliseconds = (new Date()).getTime() + this.interest.getInterestLifetimeMilliseconds();
   else
     this.timeoutMilliseconds = -1.0;
 };
@@ -218,11 +219,16 @@ ChronoSync2013.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
   return (this.timeoutTimeMilliseconds >= 0.0 && nowMilliseconds >= this.timeoutTimeMilliseconds);
 };
 
-// Private methods for ChronoSync2013 class, TODO: fill implementation and comments into the skeleton.
+// Private methods for ChronoSync2013 class, 
 
 ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
 {
-  
+  var array = new Uint8Array(syncMessage.toArrayBuffer());
+  var data = new Data(this.applicationBroadcastPrefix);
+  data.getName().append(digest);
+  data.setContent(new Blob(array, false));
+  this.keyChain.sign(data, this.certificateName);
+  this.contentCacheAdd(data);
 };
 
 /**
@@ -310,7 +316,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var isRecovery = false;
   
-  if(this.digest_tree.root == "00") {
+  if (this.digest_tree.getRoot() == "00") {
     isRecovery = true;
     //processing initial sync data
     this.initialOndata(content);
@@ -331,62 +337,26 @@ ChronoSync2013.prototype.onData = function(inst, co)
       isRecovery = true;
   }
   
-  // Send the interests to fetch application data; this is what actually get executed
-  console.log(content);
-  
   var syncStates = [];
-  
-  // Original logic for reporting UPDATE sync states
-  /*
-  var sendlist = [];
-  var sessionlist = [];
-  var seqlist = [];
-  
-  for( var j = 0; j < content.length; j++) {
-    if(content[j].type == 0){
-      var name_component = content[j].name.split('/');
-      var name_t = name_component[name_component.length-1];
-      var session = content[j].seqno.session;
-      if (name_t != screen_name) {
-        var index_n = sendlist.indexOf(content[j].name);
-        if(index_n != -1) {
-          sessionlist[index_n] = session;
-          seqlist[index_n] = content[j].seqno.seq;
-        }
-        else {
-          sendlist.push(content[j].name);
-          sessionlist.push(session);
-          seqlist.push(content[j].seqno.seq);
-        }
-      }
-    }
-  }
-  */
   
   for (var i = 0; i < content.length; i++) {
     if (content[i].type == 0) {
-      // Constructor syntactical check
-      syncStates.push(new SyncState(content[i].name, content[i].seqno_session, content[i].seqno_seq));
+      syncStates.push(new SyncState({ name:content[i].name,
+                                      type:'UPDATE',
+                                      seqno: {
+                                        seq:content[i].seqno.seq,
+                                        session:content[i].seqno.session
+                                      }
+                                    }));
     }
   }
   
-  // The equivalent of syncStates seems to be the summary of the three lists mentioned above
   // TODO: implementation of syncStates
   this.onReceivedSyncState(syncStates, isRecovery);
   
-  /*
-  for (var i = 0; i < sendlist.length; i++) {
-    var n = new Name(sendlist[i]+'/'+sessionlist[i]+'/'+seqlist[i]);
-    var template = new Interest();
-    template.setInterestLifetimeMilliseconds(sync_lifetime);
-    this.face.expressInterest(n, template, this.onData.bind(this), this.chatTimeout.bind(this));
-    
-    console.log(n.toUri());
-    console.log('Chat Interest expressed.');
-  }
-  */
-  
   var n = new Name(this.applicationBroadcastPrefix);
+  n.append(this.digest_tree.getRoot());
+  
   var interest = new Interest(n);
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
@@ -441,7 +411,6 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
-      console.log(str);
       var co = new Data(inst.getName());
       co.setContent(new Blob(str, false));
       this.keyChain.sign(co, this.certificateName);
@@ -549,12 +518,12 @@ ChronoSync2013.prototype.initialOndata = function(content)
 {
   //user is a new comer and receive data of all other people in the group
   console.log("*** initialOnData executed. ***");
-  this.update(content, this);
+  this.update(content);
     
   var digest_t = this.digest_tree.getRoot();
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
-      //if the user was an olde comer, after add the static log he need to increase his seqno by 1
+      //if the user was an old comer, after add the static log he need to increase his seqno by 1
       var content_t = [new SyncState({ name:this.applicationDataPrefixUri,
                                        type:'UPDATE',
                                        seqno: {
@@ -562,40 +531,35 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                          session:this.session
                                        }
                                      })];
-      this.digest_tree.update(content_t,this);
-      if (this.logfind(this.digest_tree.getRoot()) == -1) {
-        var newlog = {digest:this.digest_tree.getRoot(), data:content_t};
+      if (this.update(content_t)) {
+        var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content_t);
         this.digest_log.push(newlog);
-        
-        // Not sure if it's the right way to call a function pointer passed from constructor
         this.onInitialized();
       }
     }
   }
-
-  var content_t =[]
+  
+  var content_t;
   if (this.usrseq >= 0) {
     //send the data packet with new seqno back
-    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:this.usrseq,session:this.session}});
+    content_t = new SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: { 
+                                     seq:this.usrseq,
+                                     session:this.session
+                                   }
+                                 });
   }
   else
-    content_t[0] = new SyncState({name:this.applicationDataPrefixUri,type:'UPDATE',seqno:{seq:0,session:this.session}});
+    content_t = new SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: {
+                                     seq:0,
+                                     session:this.session
+                                   }
+                                 });
   
-  var content_tt = new SyncStateMsg({ss:content_t});
-  var str = new Uint8Array(content_tt.toArrayBuffer());
-  var n = new Name(this.prefix);
-  n.append(this.chatroom).append(digest_t);
-  
-  var co = new Data(n);
-  co.setContent(new Blob(str, false));
-  this.keyChain.sign(co, this.certificateName);
-  
-  // pokingData should be replaced
-  try {
-    //pokeData(co);
-  } catch (e) {
-    console.log(e.toString());
-  }
+  this.broadcastSyncState(digest_t, content_t);
   
   if (this.digest_tree.find(this.applicationDataPrefixUri, this.session) == -1) {
     //the user haven't put himself in the digest tree
@@ -607,12 +571,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                      session:this.session
                                    }
                                  })];
-    this.digest_tree.update(content, this);
-    if (this.logfind(this.digest_tree.getRoot()) == -1) {
-      var newlog = {digest:this.digest_tree.root, data:content};
-      this.digest_log.push(newlog);
-      
-      // Not sure if it's the right way to call a function pointer
+    if (this.update(content)) {
       this.onInitialized();
     }
   }
@@ -620,7 +579,24 @@ ChronoSync2013.prototype.initialOndata = function(content)
 
 ChronoSync2013.prototype.contentCacheAdd = function(data)
 {
+  this.contentCache.add(data);
   
+  var nowMilliseconds = (new Date()).getTime();
+  // this.pendingInterestTable not yet implemented
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; i--) {
+    if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
+      pendingInterestTable[i].erase(this.pendingInterestTable.begin() + i);
+      continue;
+    }
+    if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
+      try {
+        this.pendingInterestTable[i].getTransport().send(data.wireEncode().buf());
+      }
+      catch (e) {
+      }
+      this.pendingInterestTable.erase(this.pendingInterestTable.begin() + i);
+    }
+  }
 };
 
 ChronoSync2013.prototype.dummyOnData = function(interest, data)

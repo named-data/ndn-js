@@ -234,10 +234,8 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
   for (var j = 0; j < syncStates.length; j++) {
     // the judgment for syncStates type does not exist for ndn-cpp, figure out why
     if (syncStates[j].type == 0) {
-      // Probably should not be using this split method, use name components instead,
-      // as in ndn-cpp library
       var name_component = syncStates[j].name.split('/');
-      var name_t = name_component[name_component.length-1];
+      var name_t = name_component[name_component.length - 1];
       var session = syncStates[j].seqno.session;
       if (name_t != this.screen_name) {
         var index_n = sendlist.indexOf(syncStates[j].name);
