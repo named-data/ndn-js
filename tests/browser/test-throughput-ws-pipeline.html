@@ -120,8 +120,7 @@
         }
 
         // Use the segmentNumber to load multiple segments.
-        var segmentNumber = DataUtils.bigEndianToUnsignedInt
-                    (data.getName().get(-1).getValue().buf());
+        var segmentNumber = data.getName().get(-1).toSegment();
 
       // Process received data here...
       // Count content length
@@ -151,7 +150,7 @@
       // Record final seg# if present
       var finalSegmentNumber = null;
       if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-        finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+        finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
 
       // Check for out-of-order segment
       if (segmentNumber != this.snd_una) {

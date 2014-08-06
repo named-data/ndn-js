@@ -52,6 +52,8 @@ var Name = function Name(components)
     this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
+
+  this.changeCount = 0;
 };
 
 exports.Name = Name;
@@ -105,7 +107,7 @@ Name.Component.prototype.getValue = function()
  * @deprecated Use getValue. This method returns a Buffer which is the former
  * behavior of getValue, and should only be used while updating your code.
  */
-Name.prototype.getValueAsBuffer = function()
+Name.Component.prototype.getValueAsBuffer = function()
 {
   return this.value;
 };
@@ -118,7 +120,74 @@ Name.prototype.getValueAsBuffer = function()
 Name.Component.prototype.toEscapedString = function()
 {
   return Name.toEscapedString(this.value);
-}
+};
+
+/**
+ * Interpret this name component as a network-ordered number and return an integer.
+ * @returns {number} The integer number.
+ */
+Name.Component.prototype.toNumber = function()
+{
+  return DataUtils.bigEndianToUnsignedInt(this.value);
+};
+
+/**
+ * Interpret this name component as a network-ordered number with a marker and 
+ * return an integer.
+ * @param {number} marker The required first byte of the component.
+ * @returns {number} The integer number.
+ * @throws Error If the first byte of the component does not equal the marker.
+ */
+Name.Component.prototype.toNumberWithMarker = function(marker)
+{
+  if (this.value.length == 0 || this.value[0] != marker)
+    throw new Error("Name component does not begin with the expected marker");
+
+  return DataUtils.bigEndianToUnsignedInt(this.value.slice(1));
+};
+
+/**
+ * Interpret this name component as a segment number according to NDN name
+ * conventions (a network-ordered number where the first byte is the marker 0x00).
+ * @returns {number} The integer segment number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegment = function()
+{
+  return this.toNumberWithMarker(0x00);
+};
+
+/**
+ * Interpret this name component as a version number according to NDN name 
+ * conventions (a network-ordered number where the first byte is the marker 0xFD).  
+ * Note that this returns the exact number from the component without converting 
+ * it to a time representation.
+ * @returns {number} The integer version number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toVersion = function()
+{
+  return this.toNumberWithMarker(0xFD);
+};
+
+/**
+ * Create a component whose value is the marker appended with the 
+ * network-ordered encoding of the number. Note: if the number is zero, no bytes 
+ * are used for the number - the result will have only the marker.
+ * @param {number} number
+ * @param {number} marker
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumberWithMarker = function(number, marker)
+{
+  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
+  // Put the marker byte in front.
+  var value = new Buffer(bigEndian.length + 1);
+  value[0] = marker;
+  bigEndian.copy(value, 1);
+
+  return new Name.Component(value);
+};
 
 /**
  * Check if this is the same component as other.
@@ -128,7 +197,7 @@ Name.Component.prototype.toEscapedString = function()
 Name.Component.prototype.equals = function(other)
 {
   return DataUtils.arraysEqual(this.value, other.value);
-}
+};
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
@@ -142,7 +211,7 @@ Name.Component.prototype.equals = function(other)
 Name.Component.prototype.compare = function(other)
 {
   return Name.Component.compareBuffers(this.value, other.value);
-}
+};
 
 /**
  * Do the work of Name.Component.compare to compare the component buffers.
@@ -167,7 +236,7 @@ Name.Component.compareBuffers = function(component1, component2)
   }
 
   return 0;
-}
+};
 
 /**
  * @deprecated Use toUri.
@@ -214,7 +283,7 @@ Name.createNameArray = function(uri)
   for (var i = 0; i < array.length; ++i) {
     var value = Name.fromEscapedString(array[i]);
 
-    if (value == null) {
+    if (value.isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
@@ -235,7 +304,8 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
-}
+  ++this.changeCount;
+};
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
@@ -247,6 +317,7 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
@@ -290,6 +361,7 @@ Name.prototype.append = function(component)
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
 
+  ++this.changeCount;
   return this;
 };
 
@@ -307,6 +379,7 @@ Name.prototype.add = function(component)
 Name.prototype.clear = function()
 {
   this.components = [];
+  ++this.changeCount;
 };
 
 /**
@@ -341,14 +414,7 @@ Name.prototype.to_uri = function()
  */
 Name.prototype.appendSegment = function(segment)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0x00));
 };
 
 /**
@@ -360,14 +426,7 @@ Name.prototype.appendSegment = function(segment)
  */
 Name.prototype.appendVersion = function(version)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0xfD;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
 };
 
 /**
@@ -492,6 +551,46 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Compare this to the other Name using NDN canonical ordering.  If the first 
+ * components of each name are not equal, this returns -1 if the first comes 
+ * before the second using the NDN canonical ordering for name components, or 1 
+ * if it comes after. If they are equal, this compares the second components of 
+ * each name, etc.  If both names are the same up to the size of the shorter 
+ * name, this returns -1 if the first name is shorter than the second or 1 if it 
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
+ * is intuitive because all names with the prefix /a are next to each other.  
+ * But it may be also be counter-intuitive because /c comes before /bb according 
+ * to NDN canonical ordering since it is shorter.
+ * @param {Name} other The other Name to compare with.
+ * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.prototype.compare = function(other)
+{
+  for (var i = 0; i < this.size() && i < other.size(); ++i) {
+    var comparison = this.components[i].compare(other.components[i]);
+    if (comparison == 0)
+      // The components at this index are equal, so check the next components.
+      continue;
+
+    // Otherwise, the result is based on the components at this index.
+    return comparison;
+  }
+
+  // The components up to min(this.size(), other.size()) are equal, so the
+  // shorter name is less.
+  if (this.size() < other.size())
+    return -1;
+  else if (this.size() > other.size())
+    return 1;
+  else
+    return 0;
+};
+
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equals = function(name)
@@ -569,6 +668,8 @@ Name.toEscapedString = function(value)
 {
   if (typeof value == 'object' && value instanceof Name.Component)
     value = value.getValue().buf();
+  else if (typeof value === 'object' && value instanceof Blob)
+    value = value.buf();
 
   var result = "";
   var gotNonDot = false;
@@ -600,10 +701,11 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
- * @returns {Buffer} The byte array, or null which means to skip the component in the name.
+ * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
 {
@@ -614,13 +716,23 @@ Name.fromEscapedString = function(escapedString)
     if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
-      return null;
+      return new Blob();
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
+      return new Blob
+        (DataUtils.toNumbersFromString(value.substr(3, value.length - 3)), false);
   }
   else
-    return DataUtils.toNumbersFromString(value);
+    return new Blob(DataUtils.toNumbersFromString(value), false);
+};
+
+/**
+ * @deprecated Use fromEscapedString. This method returns a Buffer which is the former
+ * behavior of fromEscapedString, and should only be used while updating your code.
+ */
+Name.fromEscapedStringAsBuffer = function(escapedString)
+{
+  return Name.fromEscapedString(escapedString).buf();
 };
 
 /**
@@ -644,4 +756,13 @@ Name.prototype.match = function(name)
   }
 
   return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Name.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };

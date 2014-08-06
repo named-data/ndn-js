@@ -30,9 +30,6 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/content-channel.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
-// For now, keep the default wire format as Binary XML.
-WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
-
 function NdnProtocol() {
 }
 
@@ -208,8 +205,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     // If this.uriEndsWithSegmentNumber, then we leave segmentNumber null.
     var segmentNumber = null;
     if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName()))
-        segmentNumber = DataUtils.bigEndianToUnsignedInt
-            (data.getName().get(-1).getValue().buf());
+        segmentNumber = data.getName().get(-1).toSegment();
 
     if (!this.didOnStart) {
         // This is the first or only segment.
@@ -301,7 +297,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
     this.segmentStore.storeContent(segmentNumber, data);
 
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-        this.finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+        this.finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
 
     // The content was already put in the store.  Retrieve as much as possible.
     var entry;
@@ -645,7 +641,7 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
 function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
-    if (DataUtils.arraysEqual(name.get(i).getValue().buf(), NdnfsFileComponent))
+    if (name.get(i).getValue().equals(NdnfsFileComponent))
       return i;
   }
 

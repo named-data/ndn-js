@@ -152,7 +152,7 @@ KeyLocator.prototype.setKeyName = function(name)
 /**
  * Set the key data to the given value. This is the digest bytes if getType() is
  * KeyLocatorType.KEY_LOCATOR_DIGEST.
- * @param {Buffer} keyData The array with the key data bytes.
+ * @param {Blob} keyData A Blob with the key data bytes.
  */
 KeyLocator.prototype.setKeyData = function(keyData)
 {

@@ -26,7 +26,7 @@ var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEnco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
-var Signature = require('./signature.js').Signature;
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
@@ -73,7 +73,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
   else
     this.content = content;
 
-  this.signature = new Signature();
+  this.signature = new Sha256WithRsaSignature();
 
   this.wireEncoding = SignedBlob();
 };
@@ -163,8 +163,8 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Signature ?
-    signature.clone() : new Signature();
+  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
+    signature.clone() : new Sha256WithRsaSignature();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = SignedBlob();
