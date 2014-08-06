@@ -554,7 +554,7 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
 Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
 {
   var thisFace = this;
-  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+  if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
       (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
