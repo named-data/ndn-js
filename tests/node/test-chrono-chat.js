@@ -114,6 +114,8 @@ var KeyType = require('../..').KeyType;
 var ChronoSync2013 = require('../..').ChronoSync2013;
 var UnixTransport = require('../..').UnixTransport;
 
+var ChatMessage = require('./test-chrono-chat-protobuf.js').ChatMessage;
+
 var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certificateName)
 {
   this.screen_name = screenName;
@@ -128,6 +130,8 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   this.chat_prefix = (new Name(hubPrefix)).append(this.chatroom).append(this.getRandomString());
   this.roster = [];
   this.msgcache = [];
+  
+  console.log("*** The local chat prefix " + this.chat_prefix.toUri() + " ***");
   
   var session = (new Date()).getTime();
   session = parseInt(session/1000);
@@ -153,10 +157,9 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
  */
 ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
-  // TODO: check if this can be executed by the registerPrefix in ChronoSync2013 constructor.
   var content = {};
   // chat_prefix should really be saved as a name, not a URI string.
-  var chatPrefixSize = new Name(chat_prefix).size();
+  var chatPrefixSize = new Name(this.chat_prefix).size();
   var seq = parseInt(inst.getName().get(chatPrefixSize + 1).getValue().buf().toString('binary'));
   for (var i = this.msgcache.length - 1 ; i >= 0; i--) {
     if (this.msgcache[i].seqno == seq) {
@@ -192,8 +195,10 @@ ChronoChat.prototype.initial = function()
   // will call itself again after a timeout.
   
   // Here ndn-cpp's implementation differs a little from ChronoChat-js, finding out reasons
-  var timeout = new Interest("/timeout");
+  var timeout = new Interest(new Name("/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
+  
+  console.log("*** Chat initial expressed interest with name: " + timeout.getName().toUri() + " ***");
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
   
   if (this.roster.indexOf(this.usrname) == -1) {
@@ -257,6 +262,7 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
     var interest = new Interest(n);
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
     
+    console.log("*** Chat sendInterest expressed interest with name: " + interest.getName().toUri() + " ***");
     this.face.expressInterest(interest, this.onData.bind(this), this.chatTimeout.bind(this));
   }
 };
@@ -365,46 +371,6 @@ ChronoChat.prototype.chatTimeout = function(interest)
  */
 ChronoChat.prototype.heartbeat = function(interest)
 {
-  // based on ChronoChat-js's approach
-  /*
-  if (this.msgcache.length == 0){
-    var d = new Date();
-    var t = d.getTime();
-    this.msgcache.push({seqno:sync.usrseq, msgtype:"JOIN", msg:"xxx", time:t});
-  }
-  
-  sync.usrseq++;
-  var content = [new SyncState({name:chat_prefix,type:'UPDATE',seqno:{seq:sync.usrseq,session:session}})];
-  
-  var d = new Date();
-  var t = d.getTime();
-  this.msgcache.push({seqno:sync.usrseq,msgtype:"HELLO",msg:"xxx",time:t});
-  while (this.msgcache.length > this.maxmsgcachelength)
-    this.msgcache.shift();
-  var content_t = new SyncStateMsg({ss:content});
-  var str = new Uint8Array(content_t.toArrayBuffer());
-  var n = new Name(sync.prefix+chatroom+'/'+sync.digest_tree.root);
-  var co = new ContentObject(n, str);
-  co.sign();
-  try {
-    // poking is no longer enabled, should switch to memory content cache 
-    pokeData(co);
-  } catch (e) {
-    console.log(e.toString());
-  }
-  this.sync.digest_tree.update(content,sync);
-  if(sync.logfind(sync.digest_tree.root)==-1) {
-    console.log("heartbeat log add");
-    var newlog = {digest:sync.digest_tree.root, data:content};
-    sync.digest_log.push(newlog);
-    var n = new Name(sync.prefix+chatroom+'/'+sync.digest_tree.root);
-    var template = new Interest();
-    template.setInterestLifetimeMilliseconds(sync_lifetime);
-    face.expressInterest(n, template, sync.onData.bind(sync), sync.syncTimeout.bind(sync));                
-    console.log('Heartbeat Interest expressed.');
-    console.log(n.toUri());
-  } 
-  */
   // Based on ndn-cpp library approach
   if (this.msgcache.length == 0) {
     // Announcing join; should use enum variable
@@ -416,6 +382,8 @@ ChronoChat.prototype.heartbeat = function(interest)
   // Making a timeout interest for heartbeat...
   var timeout = new Interest("/timeout");
   timeout.setInterestLifetimeMilliseconds(60000);
+  
+  console.log("*** Chat heartbeat expressed interest with name: " + timeout.getName().toUri() + " ***");
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
 };
 
@@ -484,9 +452,10 @@ ChronoChat.prototype.messageCacheAppend = function(messageType, message)
 {
   var d = new Date();
   var t = d.getTime();
-  this.msgcache.push({seqno:this.sync.usrseq, msgtype:messageType, msg:message, time:t});
-  // ndn-cpp also has a remove mechanism, which removes those in the head when the length of cache is larger than max
-  // this.msgcache.erase() does not seem to be a standard method?
+  this.msgcache.push(new ChronoChat.CachedMessage(this.sync.usrseq, messageType, message, t));
+  while (this.msgcache.length > this.maxmsgcachelength) {
+    this.msgcache.shift();
+  }
 };
 
 // These are static functions; not sure if they should follow this pattern?
@@ -559,7 +528,7 @@ function initiateChat()
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "what";
+  var chatroom = "do";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });
