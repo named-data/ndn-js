@@ -128,6 +128,8 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   this.certificateName = certificateName;
   
   this.chat_prefix = (new Name(hubPrefix)).append(this.chatroom).append(this.getRandomString());
+  
+  
   this.roster = [];
   this.msgcache = [];
   
@@ -136,7 +138,7 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   var session = (new Date()).getTime();
   session = parseInt(session/1000);
   
-  usrname = this.screen_name + session;
+  this.usrname = this.screen_name + session;
   
   if (this.screen_name == "" || this.chatroom == "") {
     console.log("input usrname and chatroom");
@@ -158,22 +160,24 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
 ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
   var content = {};
+  console.log("*** Chat onInterest: received interest. " + inst.getName().toUri() + " ***");
   // chat_prefix should really be saved as a name, not a URI string.
   var chatPrefixSize = new Name(this.chat_prefix).size();
-  var seq = parseInt(inst.getName().get(chatPrefixSize + 1).getValue().buf().toString('binary'));
+  var seq = parseInt(inst.getName().get(chatPrefixSize + 1).toEscapedString());
   for (var i = this.msgcache.length - 1 ; i >= 0; i--) {
     if (this.msgcache[i].seqno == seq) {
       if(this.msgcache[i].msgtype != 'CHAT')
-        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, timestamp:this.msgcache[i].time/1000});
+        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, timestamp:parseInt(this.msgcache[i].time/1000)});
       else
-        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, data:this.msgcache[i].msg, timestamp:this.msgcache[i].time/1000});
+        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, data:this.msgcache[i].msg, timestamp:parseInt(this.msgcache[i].time/1000)});
         break;
     }
   }
   if (content.from != null) {
     var str = new Uint8Array(content.toArrayBuffer());
-    var co = new ContentObject(inst.getName(),str);
-    co.sign();
+    var co = new Data(inst.getName());
+    co.setContent(str);
+    this.keyChain.sign(co, this.certificateName);
     try {
       transport.send(co.wireEncode().buf());
       console.log(content);
@@ -280,15 +284,15 @@ ChronoChat.prototype.onData = function(inst, co)
   
   var temp = (new Date()).getTime();
   if (temp - content.timestamp * 1000 < 120000) {
-    var t = (new Date(content.timestamp*1000)).toLocaleTimeString();
+    var t = (new Date(content.timestamp * 1000)).toLocaleTimeString();
     var name = content.from;
     
     // chat_prefix should really be saved as a name, not a URI string.
     var chatPrefixSize = new Name(this.chat_prefix).size();
     var prefix = co.getName().getPrefix(chatPrefixSize).toUri();
     
-    var session = (co.getName().get(chatPrefixSize + 0).getValue().buf()).toString('binary');
-    var seqno = (co.getName().get(chatPrefixSize + 1).getValue().buf()).toString('binary');
+    var session = parseInt((co.getName().get(chatPrefixSize + 0)).toEscapedString());
+    var seqno = parseInt((co.getName().get(chatPrefixSize + 1)).toEscapedString());
     var l = 0;
     
     //update roster
@@ -524,11 +528,10 @@ function initiateChat()
 {
   var hostName = "memoria.ndn.ucla.edu";
   var hubPrefix = "ndn/edu/ucla/remap";
-  // screenName is the name inputted by the user
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "do";
+  var chatroom = "stream";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });
