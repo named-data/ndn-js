@@ -115,7 +115,7 @@ DigestTree.Node.Compare = function(node1, node2)
  * @param {int} The sequence number.
  * @return True if the digest tree is updated, false if not
  */
-DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
+DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
 {
   var n_index = this.find(dataPrefix, sessionNo);
   if (n_index >= 0) {
@@ -125,7 +125,7 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
       return false;
   }
   else {
-    var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
+    var temp = new DigestTree.Node(dataPrefix, sequenceNo, sessionNo);
     this.digestnode.push(temp);
   }
   this.recomputeRoot();

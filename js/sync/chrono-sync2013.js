@@ -249,7 +249,6 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
 ChronoSync2013.prototype.update = function(content)
 {
   for (var i = 0; i < content.length; i++) {
-    console.log("****** Update content name: " + content[i].name + " content type: " + content[i].type + " ******");
     if (content[i].type == 0) {
       if (this.digest_tree.update(content[i].name, content[i].seqno.seq, content[i].seqno.session)) {
         if (this.applicationDataPrefixUri == content[i].name)
@@ -407,6 +406,11 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     {
       console.log("****** Full log " + this.digest_log[i].digest + " ******");
     }
+    for (var i = 0; i < this.digest_tree.digestnode.length; i++)
+    {
+      console.log("****** Full tree " + this.digest_tree.digestnode[i].dataPrefix + " seqno_seq " + this.digest_tree.digestnode[i].seqno_seq + " seqno_session " + this.digest_tree.digestnode[i].seqno_session + " ******");
+    }
+    
     console.log("*** log found *** " + this.digest_tree.digestnode.length);
     
     // TODO: this suggests that everything in the log gets returned, 
