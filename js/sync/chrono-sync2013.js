@@ -249,28 +249,27 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
 ChronoSync2013.prototype.update = function(content)
 {
   for (var i = 0; i < content.length; i++) {
+    console.log("****** Update content name: " + content[i].name + " content type: " + content[i].type + " ******");
     if (content[i].type == 0) {
-      console.log("*** Update content name: " + content[i].name + " ***");
       if (this.digest_tree.update(content[i].name, content[i].seqno.seq, content[i].seqno.session)) {
         if (this.applicationDataPrefixUri == content[i].name)
           this.usrseq = content[i].seqno.seq;
       }
     }
-  
-    if (this.logfind(this.digest_tree.getRoot()) == -1) {
-      var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content);
-      this.digest_log.push(newlog);
-      return true;
-    }
-    else {
-      return false;
-    }
   }
+  
+  if (this.logfind(this.digest_tree.getRoot()) == -1) {
+    var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content);
+    this.digest_log.push(newlog);
+    return true;
+  }
+  else
+    return false;
 };
 
 ChronoSync2013.prototype.logfind = function(digest)
 {
-  for (var i = 0; i<this.digest_log.length; i++) {
+  for (var i = 0; i < this.digest_log.length; i++) {
     if(digest == this.digest_log[i].digest)
       return i;
   }
@@ -288,6 +287,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
   }
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
     //Recovery interest or new comer interest
+    console.log("****** Parameter passed to processRecoveryInst: " + syncdigest + " ******");
     this.processRecoveryInst(inst, syncdigest, transport);
   }
   else {
@@ -296,8 +296,13 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
       var content = [];
       if(index == -1) {
         var self = this;
-        //Wait 2 seconds to see whether there is any data packet coming back
-        setTimeout(function(){self.judgeRecovery(syncdigest, transport);},2000);
+        // Are we sure that using a "/timeout" interest is the best future call approach?
+        var timeout = new Interest(new Name("/timeout"));
+        timeout.setInterestLifetimeMilliseconds(2000);
+        // Passing parameters to callback function with given arguments
+        console.log("*** onInterest: recovery judgment interest sent with name." + timeout.getName().toUri() + " ***");
+        this.face.expressInterest(timeout, this.dummyOnData, this.judgeRecovery.bind(this, timeout, syncdigest, transport));
+        //setTimeout(function(){self.judgeRecovery(syncdigest, transport);},2000);
       }
       else {
         //common interest processing
@@ -307,6 +312,11 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
   }
 };
 
+/**
+ * Process sync/recovery data.
+ * @param {Interest}
+ * @param {Data}
+ */
 ChronoSync2013.prototype.onData = function(inst, co)
 {
   console.log("Sync ContentObject received in callback");
@@ -319,7 +329,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var isRecovery = false;
   
-  console.log("*** The content received: " + content[0].name + " ***");
+  console.log("****** Received content length: " + content.length + " ******");
   
   if (this.digest_tree.getRoot() == "00") {
     isRecovery = true;
@@ -393,7 +403,14 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
   // If nothing's found in log, do nothing.
   if (this.logfind(syncdigest) != -1) {
     var content = [];
-    console.log("*** log found ***" + this.digest_tree.digestnode.length);
+    for (var i = 0; i < this.digest_log.length; i++)
+    {
+      console.log("****** Full log " + this.digest_log[i].digest + " ******");
+    }
+    console.log("*** log found *** " + this.digest_tree.digestnode.length);
+    
+    // TODO: this suggests that everything in the log gets returned, 
+    // why not the data that comes after the converging point?
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
       content[i] = new SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
                                    type:'UPDATE',
@@ -402,8 +419,9 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                      session:this.digest_tree.digestnode[i].getSessionNo()
                                     }
                                  });
+      //console.log("*** recovery content trying to return: " + content[i] + " ***");
     }
-    
+    console.log("****** Length of syncstates: " + content.length + " ******");
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
@@ -453,7 +471,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   }
   
   for(var i = 0; i < data_name.length; i++) {
-    content[i] = new SyncState({ name:data[i],
+    content[i] = new SyncState({ name:data_name[i],
                                  type:'UPDATE',
                                  seqno: {
                                    seq:data_seq[i],
@@ -480,6 +498,10 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   }
 };
 
+/**
+ * Send recovery interset.
+ * @param {string} syncdigest_t
+ */
 ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
 {
   var n = new Name(this.applicationBroadcastPrefix);
@@ -489,15 +511,22 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
 
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-  console.log("*** Sync sendRecovery expressed interest with name: " + interest.getName().toUri() + " ***");
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   
-  console.log("Recovery sync interest expressed:"); 
-  console.log(n.toUri());
+  console.log("*** Recovery sync interest expressed: " + interest.getName().toUri() + " ***"); 
 };
 
+/*
+ * This is called by onInterest after a timeout to check if a recovery is needed.
+ * This method has an interest argument because we use it as the onTimeout for
+ * Face.expressInterest.
+ * @param {Interest}
+ * @param {string}
+ * @param {Transport}
+ */
 ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transport)
 {
+  console.log("*** judgeRecovery interest " + interest.getName().toUri() + " times out. Digest: " + syncdigest_t + " ***");
   var index = this.logfind(syncdigest_t);
   if (index != -1) {
     if (syncdigest_t != this.digest_tree.root)
@@ -609,5 +638,5 @@ ChronoSync2013.prototype.contentCacheAdd = function(data)
 
 ChronoSync2013.prototype.dummyOnData = function(interest, data)
 {
-
+  console.log("*** dummyOnData called. ***");
 };

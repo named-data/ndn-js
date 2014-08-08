@@ -180,7 +180,6 @@ ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPref
     this.keyChain.sign(co, this.certificateName);
     try {
       transport.send(co.wireEncode().buf());
-      console.log(content);
     } 
     catch (e) {
       console.log(e.toString());
@@ -384,7 +383,7 @@ ChronoChat.prototype.heartbeat = function(interest)
   this.messageCacheAppend("HELLO", "xxx");
   
   // Making a timeout interest for heartbeat...
-  var timeout = new Interest("/timeout");
+  var timeout = new Interest(new Name("/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
   
   console.log("*** Chat heartbeat expressed interest with name: " + timeout.getName().toUri() + " ***");
@@ -531,7 +530,7 @@ function initiateChat()
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "stream";
+  var chatroom = "woody";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });

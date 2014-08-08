@@ -119,8 +119,8 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
   var n_index = this.find(dataPrefix, sessionNo);
   if (n_index >= 0) {
-    if (this.digestnode[i].getSequenceNo() < sequenceNo)
-      this.digestnode[i].setSequenceNo(sequenceNo);
+    if (this.digestnode[n_index].getSequenceNo() < sequenceNo)
+      this.digestnode[n_index].setSequenceNo(sequenceNo);
     else
       return false;
   }
