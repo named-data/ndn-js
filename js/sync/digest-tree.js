@@ -19,6 +19,12 @@
  */
 
 /**
+ * For now, the sequence of parameters in DigestTree.update is different from ndn-cpp;
+ * Should use the same sequence of either (seq, ses) or (ses, seq) for all functions 
+ * concerning them.
+ */
+
+/**
  * For now, KJUR and the referenced protobufjs are both locally installed Node.js packages
  */
 var KJUR = require("jsrsasign");

@@ -29,13 +29,9 @@ var MemoryContentCache = require('../util/memory-content-cache.js').MemoryConten
 // which exists in protobuf-js definition file. This could/should be made independent of
 // the library...
 var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
-// TODO: Refractor SyncState to make this independent of protobuf definition,
-// resolve conflicts like seqno_session and seqno.session
-// content[i] should always be a ChronoSync2013.SyncState, not a ProtoBuf.SyncState
 var SyncState = require('./sync-state.js').SyncState;
-//console.log("Imported results : " + SyncStateMsg);
 
-// The point of naming it as 'argn'? just to correspond with boost::bind?g
+// The point of naming it as 'argn'? just to correspond with boost::bind?
 
 /**
  * Create a new ChronoSync2013 to communicate using the given face. Initialize
@@ -90,7 +86,6 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
   
-  // TODO: pendingInterestTable is an array of pendingInterests
   this.pendingInterestTable = [];
   
   // digest_log is an array of ChronoSync2013.DigestLogEntry
@@ -98,7 +93,6 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
   
   // contentCache is a memoryContentCache, not an ordinary face.
-  // TODO: onInterest error could have something to do with it...find out how it works
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -423,7 +417,6 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                      session:this.digest_tree.digestnode[i].getSessionNo()
                                     }
                                  });
-      //console.log("*** recovery content trying to return: " + content[i] + " ***");
     }
     console.log("****** Length of syncstates: " + content.length + " ******");
     if (content.length != 0) {
@@ -445,7 +438,6 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
  * Common interest processing, using digest log to find the difference after syncdigest_t
  * @return True if sent a data packet to satisfy the interest.
  */
-// TODO: debug this method
 ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transport)
 {
   var content = [];

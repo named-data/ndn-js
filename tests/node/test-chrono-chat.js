@@ -231,6 +231,7 @@ ChronoChat.prototype.dummyOnData = function()
  * @param {SyncStates[]} The array of sync states
  * @param {bool} if it's in recovery state
  */
+ // TODO: should it include its own prefix + sequenceNo + sessionNo? Remains to be found.
 ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
   this.isRecoverySyncState = isRecovery;
