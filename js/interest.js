@@ -420,7 +420,8 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeInterest(this);
+  var result = wireFormat.encodeInterest(this);
+  return result.encoding;
 };
 
 /**
