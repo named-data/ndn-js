@@ -8333,7 +8333,6 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
 /**
- * This class represents Interest Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -8364,7 +8363,14 @@ exports.WireFormat = WireFormat;
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest)
@@ -9854,17 +9860,45 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
   ++this.changeCount;
 };
 
-Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+/**
+ * Encode this name to the encoder.
+ * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
+Name.prototype.to_ndnb = function(encoder)
 {
   if (this.components == null)
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
   encoder.writeElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = encoder.offset;
+  var signedPortionEndOffset;
+
   var count = this.size();
-  for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
+  if (count == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else {
+    for (var i = 0; i < count; i++) {
+      if (i == count - 1)
+        // We will begin the final component.
+        signedPortionEndOffset = encoder.offset;
+
+      encoder.writeDTagElement
+        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
+    }
+  }
 
   encoder.writeElementClose();
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Name.prototype.getElementLabel = function()
@@ -14864,7 +14898,8 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeInterest(this);
+  var result = wireFormat.encodeInterest(this);
+  return result.encoding;
 };
 
 /**
@@ -15377,13 +15412,22 @@ BinaryXmlWireFormat.instance = null;
 /**
  * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeInterest(interest, encoder);
-  return new Blob(encoder.getReducedOstream(), false);
+  var offsets = BinaryXmlWireFormat.encodeInterest(interest, encoder);
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: offsets.signedPortionBeginOffset,
+           signedPortionEndOffset: offsets.signedPortionEndOffset };
 };
 
 /**
@@ -15467,12 +15511,19 @@ BinaryXmlWireFormat.get = function()
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.getName().to_ndnb(encoder);
+  var offsets = interest.getName().to_ndnb(encoder);
 
   if (null != interest.getMinSuffixComponents())
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
@@ -15512,6 +15563,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
 
   encoder.writeElementClose();
+  return offsets;
 };
 
 /**
@@ -15729,7 +15781,14 @@ Tlv0_1WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
@@ -15764,11 +15823,21 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
-  Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var tempOffsets = Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
 
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
 
-  return new Blob(encoder.getOutput(), false);
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -15889,15 +15958,44 @@ Tlv0_1WireFormat.get = function()
   return Tlv0_1WireFormat.instance;
 };
 
+/**
+ * Encode the name to the encoder.
+ * @param {Name} name The name to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
-  for (var i = name.size() - 1; i >= 0; --i)
+  var signedPortionEndOffsetFromBack;
+  for (var i = name.size() - 1; i >= 0; --i) {
     encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    if (i == name.size() - 1)
+      signedPortionEndOffsetFromBack = encoder.getLength();
+  }
 
+  var signedPortionBeginOffsetFromBack = encoder.getLength();
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
+
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset;
+  if (name.size() == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else
+    signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Tlv0_1WireFormat.decodeName = function(name, decoder)
@@ -17032,7 +17130,7 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
 Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
 {
   var thisFace = this;
-  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+  if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
       (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
