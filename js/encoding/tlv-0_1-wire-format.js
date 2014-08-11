@@ -63,7 +63,7 @@ Tlv0_1WireFormat.instance = null;
  */
 Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
-  var encoder = new TlvEncoder();
+  var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -215,6 +215,50 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
            signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
+ * Encode controlParameters as NDN-TLV and return the encoding.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  // TODO: Encode Strategy.
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  // TODO: Encode Uri.
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FaceID, controlParameters.getFaceId());
+  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**

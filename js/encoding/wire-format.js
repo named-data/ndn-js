@@ -91,6 +91,32 @@ WireFormat.prototype.decodeData = function(data, input)
 };
 
 /**
+ * Encode controlParameters and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  throw new Error("encodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlParameters and set the fields of the
+ * controlParameters object. Your derived class should override.
+ * @param {ControlParameters} controlParameters The ControlParameters object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Set the static default WireFormat used by default encoding and decoding
  * methods.
  * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
