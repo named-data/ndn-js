@@ -46,6 +46,9 @@ ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
 ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
 ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
 
+ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
+ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
+
 /**
  * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
  * @returns {number} An integer with the bits set.
@@ -88,6 +91,36 @@ ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlag
   this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
   this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
   this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
+};
+
+/**
+ * Get an integer with the bits set according to the NFD forwarding flags as
+ * used in the ControlParameters of the command interest.
+ * @returns {number} An integer with the bits set.
+ */
+ForwardingFlags.prototype.getNfdForwardingFlags = function()
+{
+  var result = 0;
+
+  if (this.childInherit)
+    result |= ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT;
+  if (this.capture)
+    result |= ForwardingFlags.NfdForwardingFlags_CAPTURE;
+
+  return result;
+};
+
+/**
+ * Set the flags according to the NFD forwarding flags as used in the
+ * ControlParameters of the command interest.
+ * @param {number} nfdForwardingFlags An integer with the bits set.
+ */
+ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
+{
+  this.childInherit =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
+  this.capture =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
 };
 
 /**
