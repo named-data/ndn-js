@@ -17,8 +17,6 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
-
 /**
  * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
  * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
@@ -39,6 +37,15 @@ var ForwardingFlags = function ForwardingFlags()
 
 exports.ForwardingFlags = ForwardingFlags;
 
+ForwardingFlags.ForwardingEntryFlags_ACTIVE         = 1;
+ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT  = 2;
+ForwardingFlags.ForwardingEntryFlags_ADVERTISE      = 4;
+ForwardingFlags.ForwardingEntryFlags_LAST           = 8;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE       = 16;
+ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
+ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
+
 /**
  * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
  * @returns {number} An integer with the bits set.
@@ -48,21 +55,21 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
   var result = 0;
 
   if (this.active)
-    result |= ForwardingEntry.ACTIVE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ACTIVE;
   if (this.childInherit)
-    result |= ForwardingEntry.CHILD_INHERIT;
+    result |= ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT;
   if (this.advertise)
-    result |= ForwardingEntry.ADVERTISE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ADVERTISE;
   if (this.last)
-    result |= ForwardingEntry.LAST;
+    result |= ForwardingFlags.ForwardingEntryFlags_LAST;
   if (this.capture)
-    result |= ForwardingEntry.CAPTURE;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE;
   if (this.local)
-    result |= ForwardingEntry.LOCAL;
+    result |= ForwardingFlags.ForwardingEntryFlags_LOCAL;
   if (this.tap)
-    result |= ForwardingEntry.TAP;
+    result |= ForwardingFlags.ForwardingEntryFlags_TAP;
   if (this.captureOk)
-    result |= ForwardingEntry.CAPTURE_OK;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK;
 
   return result;
 };
@@ -73,14 +80,14 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
  */
 ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
 {
-  this.active = ((forwardingEntryFlags & ForwardingEntry.ACTIVE) != 0);
-  this.childInherit = ((forwardingEntryFlags & ForwardingEntry.CHILD_INHERIT) != 0);
-  this.advertise = ((forwardingEntryFlags & ForwardingEntry.ADVERTISE) != 0);
-  this.last = ((forwardingEntryFlags & ForwardingEntry.LAST) != 0);
-  this.capture = ((forwardingEntryFlags & ForwardingEntry.CAPTURE) != 0);
-  this.local = ((forwardingEntryFlags & ForwardingEntry.LOCAL) != 0);
-  this.tap = ((forwardingEntryFlags & ForwardingEntry.TAP) != 0);
-  this.captureOk = ((forwardingEntryFlags & ForwardingEntry.CAPTURE_OK) != 0);
+  this.active = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ACTIVE) != 0);
+  this.childInherit = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT) != 0);
+  this.advertise = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ADVERTISE) != 0);
+  this.last = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LAST) != 0);
+  this.capture = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE) != 0);
+  this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
+  this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
+  this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
 };
 
 /**
