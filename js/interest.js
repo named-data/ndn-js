@@ -261,7 +261,7 @@ Interest.prototype.setName = function(name)
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
 
-  this.name = typeof name === 'object' && name instanceof Interest ?
+  this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
 };
 
