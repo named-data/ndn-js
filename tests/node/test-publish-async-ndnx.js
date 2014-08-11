@@ -150,13 +150,13 @@ Echo.prototype.onInterest = function(prefix, interest, transport)
     console.log(e.toString());
   }
   this.face.close();  // This will cause the script to quit.
-}
+};
 
-function onRegisterFailed(prefix)
+Echo.prototype.onRegisterFailed = function(prefix)
 {
   console.log("Register failed for prefix " + prefix.toUri());
   this.face.close();  // This will cause the script to quit.
-}
+};
 
 function main()
 {
