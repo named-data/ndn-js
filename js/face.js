@@ -695,8 +695,11 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
  * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ * @param {number} intFlags (optional) (only for the deprecated form of
+ * registerPrefix) The integer NDNx flags for finer control of which interests
+ * are forward to the application.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
@@ -708,21 +711,31 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
-    if (arg3)
-      return this.registerPrefixWithClosure(prefix, arg2, arg3);
+    if (arg3) {
+      var flags;
+      if (typeof flags === 'number') {
+        // Assume this deprecated form is only called for NDNx.
+        flags = new ForwardingFlags();
+        flags.setForwardingEntryFlags(arg3);
+      }
+      else
+        // Assume arg3 is already a ForwardingFlags.
+        flags = arg3;
+      return this.registerPrefixWithClosure(prefix, arg2, flags);
+    }
     else
-      return this.registerPrefixWithClosure(prefix, arg2);
+      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
   }
 
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
   var onInterest = arg2;
   var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
+  var flags = (arg4 ? arg4 : new ForwardingFlags());
   return this.registerPrefixWithClosure
     (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-     intFlags, onRegisterFailed);
-}
+     flags, onRegisterFailed);
+};
 
 /**
  * A private method to register the prefix with the host, receive the data and call
@@ -730,7 +743,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * @deprecated Use registerPrefix with callback functions, not Closure.
  * @param {Name} prefix
  * @param {Closure} closure
- * @param {number} intFlags
+ * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed (optional) If called from the
  * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
  * fails.
@@ -738,10 +751,8 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, intFlags, onRegisterFailed)
+  (prefix, closure, flags, onRegisterFailed)
 {
-  intFlags = intFlags | 3;
-  
   var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
@@ -752,7 +763,7 @@ Face.prototype.registerPrefixWithClosure = function
       if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
       thisFace.reconnectAndExpressInterest
         (null, interest, new Face.FetchNdndidClosure
-         (thisFace, registeredPrefixId, prefix, closure, intFlags, onRegisterFailed));
+         (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
     }
     else
       thisFace.registerPrefixHelper
@@ -785,7 +796,7 @@ Face.FetchNdndidClosure = function FetchNdndidClosure
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.callerClosure = callerClosure;
-  this.flags = flags;
+  this.flags = flags; // FOrwardingFlags
   this.onRegisterFailed = onRegisterFailed;
 };
 
@@ -815,6 +826,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   return Closure.RESULT_OK;
 };
+
 /**
  * This is a closure to receive the response Data packet from the register
  * prefix interest sent to the connected NDN hub. If this gets a bad response
@@ -857,6 +869,15 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
+ * @param {type} registeredPrefixId The
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
+ * could return it to the caller. If this is 0, then don't add to
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @returns {undefined}
  */
 Face.prototype.registerPrefixHelper = function
   (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
@@ -872,8 +893,10 @@ Face.prototype.registerPrefixHelper = function
     Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
-  
-  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
+
+  // A ForwardingEntry is only used with NDNx.
+  var fe = new ForwardingEntry
+    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   var encoder = new BinaryXMLEncoder();
