@@ -210,7 +210,8 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
+  data.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
@@ -257,6 +258,77 @@ Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+    (signature, encoder, signature.getKeyLocator());
+  
+  return new Blob(encoder.getOutput(), false);
+};
+
+// SignatureHolder is used by decodeSignatureInfoAndValue.
+Tlv0_1WireFormat.SignatureHolder = function Tlv0_1WireFormatSignatureHolder()
+{
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+{
+  this.signature = signature;
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ */
+Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
+  var signatureHolder = new Tlv0_1WireFormat.SignatureHolder();
+  var decoder = new TlvDecoder(signatureInfo);
+  Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+
+  decoder = TlvDecoder(signatureValue);
+  // TODO: The library needs to handle other signature types than
+  //   SignatureSha256WithRsa.
+  signatureHolder.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+
+  return signatureHolder.getSignature();
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
 };

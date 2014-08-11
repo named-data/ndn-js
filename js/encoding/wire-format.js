@@ -117,6 +117,47 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
 };
 
 /**
+ * Encode signature as a SignatureInfo and return the encoding. Your derived
+ * class should override.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  throw new Error("encodeSignatureInfo is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * Your derived class should override.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding. Your derived class should override.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Set the static default WireFormat used by default encoding and decoding
  * methods.
  * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
