@@ -25,6 +25,9 @@ Changes
 * In Name.Component, added toSegment and toVersion.
 * In Face.expressInterest, return the pendingInterestId. Added Face.removePendingInterest.
 * In Face.registerPrefix, return the registeredPrefixId. Added Face.removeRegisteredPrefix.
+* Added classes for the security API: KeyChain, MemoryIdentityStorage, MemoryPrivateKeyStorage, SelfVerifyPolicyManager.
+* In tests, make test-encode-decode-data use KeyChain to sign.
+* In tests/node, renamed publish.js to test-publish-async-ndnx.js and use KeyChain to sign.
 
 Bug fixes
 * http://redmine.named-data.net/issues/1617 Second call to expressInterest gives "connection not established"
