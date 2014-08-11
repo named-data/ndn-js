@@ -25,6 +25,7 @@ var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var ControlParameters = require('./control-parameters.js').ControlParameters;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
@@ -727,8 +728,27 @@ Face.prototype.setCommandCertificateName = function(certificateName)
 Face.prototype.makeCommandInterest = function(interest, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  this.commandInterestGenerator.generate
+  this.nodeMakeCommandInterest
     (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name.
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {KeyChain} keyChain The KeyChain for calling sign.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.
+ */
+Face.prototype.nodeMakeCommandInterest = function
+  (interest, keyChain, certificateName, wireFormat)
+{
+  this.commandInterestGenerator.generate
+    (interest, keyChain, certificateName, wireFormat);
 };
 
 /**
@@ -808,18 +828,28 @@ Face.prototype.registerPrefixWithClosure = function
   var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
-    if (thisFace.ndndid == null) {
-      // Fetch ndndid first, then register.
-      var interest = new Interest(Face.ndndIdFetcher);
-      interest.setInterestLifetimeMilliseconds(4000);
-      if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisFace.reconnectAndExpressInterest
-        (null, interest, new Face.FetchNdndidClosure
-         (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
+    // If we have an _ndndId, we know we already connected to NDNx.
+    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
+      // Assume we are connected to a legacy NDNx server.
+
+      if (thisFace.ndndid == null) {
+        // Fetch ndndid first, then register.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
+        thisFace.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
+      }
+      else
+        thisFace.registerPrefixHelper
+          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
     }
     else
-      thisFace.registerPrefixHelper
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
+      // The application set the KeyChain for signing NFD interests.
+      thisFace.nfdRegisterPrefix
+        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
+         thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -885,20 +915,50 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
  * or a timeout, call onRegisterFailed.
  */
 Face.RegisterResponseClosure = function RegisterResponseClosure
-  (prefix, onRegisterFailed)
+  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
 {
   // Inherit from Closure.
   Closure.call(this);
 
+  this.face = face;
   this.prefix = prefix;
+  this.callerClosure = callerClosure;
   this.onRegisterFailed = onRegisterFailed;
+  this.flags = flags;
+  this.wireFormat = wireFormat;
+  this.isNfdCommand = isNfdCommand;
 };
 
 Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    // We timed out waiting for the response.
+    if (this.isNfdCommand) {
+      // The application set the commandKeyChain, but we may be connected to NDNx.
+      if (this.face.ndndid == null) {
+        // Fetch ndndid first, then register.
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        this.face.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
+      }
+      else
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        this.face.registerPrefixHelper
+          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
+    }
+    else {
+      // An NDNx command was sent because there is no commandKeyChain, so we
+      //   can't try an NFD command. Or it was sent from this callback after
+      //   trying an NFD command. Fail.
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+    
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -906,16 +966,43 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
 
-  var expectedName = new Name("/ndnx/.../selfreg");
-  // Got a response. Do a quick check of expected name components.
-  if (upcallInfo.data.getName().size() < 4 ||
-      !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-      !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-    this.onRegisterFailed(this.prefix);
-    return;
+  if (this.isNfdCommand) {
+    // Decode responseData->getContent() and check for a success code.
+    // TODO: Move this into the TLV code.
+    var statusCode;
+    try {
+        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
+        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
+    }
+    catch (e) {
+        // Error decoding the ControlResponse.
+        if (this.onRegisterFailed)
+          this.onRegisterFailed(this.prefix);
+        return Closure.RESULT_OK;
+    }
+
+    // Status code 200 is "OK".
+    if (statusCode != 200) {
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+
+    // Otherwise, silently succeed.
+  }
+  else {
+    var expectedName = new Name("/ndnx/.../selfreg");
+    // Got a response. Do a quick check of expected name components.
+    if (upcallInfo.data.getName().size() < 4 ||
+        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
+        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
+      this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
+    }
+
+    // Otherwise, silently succeed.
   }
 
-  // Otherwise, silently succeed.
   return Closure.RESULT_OK;
 };
 
@@ -975,11 +1062,73 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  Face.registeredPrefixTable.push
-    (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+  if (registeredPrefixId != 0)
+    Face.registeredPrefixTable.push
+      (new RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+    (null, interest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
+};
+
+/**
+ * Do the work of registerPrefix to register with NFD.
+ * @param {number} registeredPrefixId The 
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it 
+ * could return it to the caller. If this is 0, then don't add to 
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @param {KeyChain} commandKeyChain
+ * @param {Name} commandCertificateName
+ */
+Face.prototype.nfdRegisterPrefix = function
+  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+   commandCertificateName)
+{
+  var removeRequestIndex = -1;
+  if (removeRequestIndex != null)
+    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+      (registeredPrefixId);
+  if (removeRequestIndex >= 0) {
+    // removeRegisteredPrefix was called with the registeredPrefixId returned by
+    //   registerPrefix before we got here, so don't add a registeredPrefixTable
+    //   entry.
+    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    return;
+  }
+
+  if (commandKeyChain == null)
+      throw new Error
+        ("registerPrefix: The command KeyChain has not been set. You must call setCommandSigningInfo.");
+  if (commandCertificateName.size() == 0)
+      throw new Error
+        ("registerPrefix: The command certificate name has not been set. You must call setCommandSigningInfo.");
+
+  var controlParameters = new ControlParameters();
+  controlParameters.setName(prefix);
+
+  var commandInterest = new Interest(new Name("/localhost/nfd/rib/register"));
+  // NFD only accepts TlvWireFormat packets.
+  commandInterest.getName().append
+    (controlParameters.wireEncode(TlvWireFormat.get()));
+  this.nodeMakeCommandInterest
+    (commandInterest, commandKeyChain, commandCertificateName,
+     TlvWireFormat.get());
+  // The interest is answered by the local host, so set a short timeout.
+  commandInterest.setInterestLifetimeMilliseconds(2000.0);
+
+  if (registeredPrefixId != 0)
+      // Save the onInterest callback and send the registration interest.
+      Face.registeredPrefixTable.push
+        (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+
+  this.reconnectAndExpressInterest
+    (null, commandInterest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags,
+      TlvWireFormat.get(), true));
 };
 
 /**
