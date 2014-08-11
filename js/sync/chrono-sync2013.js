@@ -28,6 +28,11 @@ var MemoryContentCache = require('../util/memory-content-cache.js').MemoryConten
 // TODO: To actually use this part of the library, we require a SyncStateMsg declaration,
 // which exists in protobuf-js definition file. This could/should be made independent of
 // the library...
+
+/**
+ * There are observed bugs in ChronoChat-JS implementation, like user may drop after 
+ * the connection's established for some time. Still observing the reasons why.
+ */
 var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
 var SyncState = require('./sync-state.js').SyncState;
 
@@ -108,6 +113,9 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
 
 exports.ChronoSync2013 = ChronoSync2013;
 
+// ndn-cpp's implementation is still based on the ProtoBuf definition of SyncState,
+// which means ChronoSync2013.SyncState is not actually being used, except in 
+// the declaration of function_ptr onReceivedSyncState
 ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
 {
   this.dataPrefixUri = dataPrefixUri;
@@ -139,23 +147,31 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
     return this.digest_tree.get(index).getSequenceNo();
 };
 
-// ndn-cpp's implementation is still based on the ProtoBuf definition of SyncState,
-// which means ChronoSync2013.SyncState is not actually being used.
+/**
+ * Increment the sequence number, create a sync message with the new sequence number, 
+ * and publish a data packet where the name is applicationBroadcastPrefix + root 
+ * digest of current digest tree. Then add the sync message to digest tree and digest
+ * log which creates a new root digest. Finally, express an interest for the next sync
+ * update with the name applicationBroadcastPrefix + the new root digest.
+ * After this, application should publish the content for the new sequence number.
+ * Get the new sequence number with getSequenceNo().
+ */
 ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
-  var content = new SyncState({ name:this.applicationDataPrefixUri, 
+  var content = [new SyncState({ name:this.applicationDataPrefixUri, 
                                  type:'UPDATE', 
                                  seqno:{
                                    seq:this.usrseq,
                                    session:this.session
                                   }
-                                });
+                                })];
   var content_t = new SyncStateMsg({ss:content});
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
   
-  // New digest log entry judgment neglected here for now
-  
+  if (!this.update(content))
+    console.log("* ChronoSync: update did not create a new digest log entry *");
+    
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append(this.digest_tree.getRoot());
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
@@ -163,6 +179,10 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
+/**
+ * Get the sequence number of the latest data published by this application instance.
+ * @return {int} the sequence number
+ */
 ChronoSync2013.prototype.getSequenceNo = function()
 {
   return this.usrseq;
@@ -189,6 +209,11 @@ ChronoSync2013.DigestLogEntry.prototype.getData = function()
 
 // PendingInterest class
 
+/**
+ * A PendingInterest holds an interest which onInterest received but could
+ * not satisfy. When we add a new data packet to this.contentCache, we will
+ * also check if it satisfies a pending interest.
+ */
 ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest, transport)
 {
   this.interest = interest;
@@ -269,6 +294,11 @@ ChronoSync2013.prototype.logfind = function(digest)
   return -1;
 };
 
+/**
+ * Process the sync interest from the applicationBroadcastPrefix. If we can't
+ * satisfy the interest, add it to the pendingInterestTable so that a future
+ * call to contentCacheAdd may satisfy it.
+ */
 ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
   //search if the digest is already exist in the digest log
@@ -338,6 +368,8 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var syncStates = [];
   
+  // For every piece of content received, even if its sequence might be older, 
+  // we still push them to syncStates and trying fetching in Chat::sendInterest?
   for (var i = 0; i < content.length; i++) {
     if (content[i].type == 0) {
       syncStates.push(new SyncState({ name:content[i].name,

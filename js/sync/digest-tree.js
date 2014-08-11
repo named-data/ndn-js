@@ -78,10 +78,62 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
   this.recomputeDigest();
 };
 
+// These conversion functions for hash.updateHex are not used in current implementation,
+// TODO: investigate interoperability, most likely our current method converts to big-endian.
+
+// The original one used in ChronoChat-js does a DataUtil.toHex(result)
+// which does not return the correct thing when testing with node.js 10.30
+// This method, combined with later generation process, is little-endian.
+DigestTree.Node.prototype.Int32ToHex = function(value) {
+  var result = new Uint8Array(4);
+  for (var i = 0; i < 4; i++) {
+    result[i] = value % 256;
+    value = Math.floor(value / 256);
+  }
+  return result;
+}
+
+// After some experiments, this seems to yield the correct result for hashing
+function bin2String(array) {
+  return String.fromCharCode.apply(String, array);
+}
+
+// This does not look like the best way to do it in JS, 
+// however, I still need to familiarize with alternatives.
+// And, actually the form of input is still different from Int32ToHex's output...
+function hexBufferToASCString(buffer)
+{
+  var result = [];
+  for (var i = 0; i < buffer.length; i++)
+  {
+    //console.log("pre " + i + " : " + buffer[i]);
+    if (buffer[i]>=0 && buffer[i]<=9)
+    {
+      result[i] = parseInt(buffer[i]) + 0x30;
+    }
+    else if (buffer[i]>=10 && buffer[i]<=16)
+    {
+      result[i] = parseInt(buffer[i]) + 0x41;
+    }
+    else
+    {
+      console.log("hex contains illegal number: " + buffer[i]);
+    }
+    //console.log(i + " : " + result[i]);
+  }
+  return bin2String(result);
+}
+
 DigestTree.Node.prototype.recomputeDigest = function()
 {
   var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-  md.updateHex(this.Int32ToHex(this.seqno_session)+this.Int32ToHex(this.seqno_seq));
+  
+  // This hex hashing issue is not yet fully resolved; 
+  // for now, we are converting the int directly (big endian), should not interoperate with ChronoChat-JS browser or ndn-cpp yet
+  // Could it be working differently for node and browser?
+  md.updateHex(this.seqno_session.toString(16));
+  md.updateHex(this.seqno_seq.toString(16));
+  
   var digest_seq = md.digest();
   
   md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
@@ -92,16 +144,6 @@ DigestTree.Node.prototype.recomputeDigest = function()
 
   this.digest = md.digest();
 };
-
-//Covert Int32 number to hex string
-DigestTree.Node.prototype.Int32ToHex = function(value) {
-  var result = new Uint8Array(4);
-  for (var i = 0; i < 4; i++) {
-    result[i] = value % 256;
-    value = Math.floor(value / 256);
-  }
-  return DataUtils.toHex(result);
-}
 
 // Do the work of string and then sequence number compare
 DigestTree.Node.Compare = function(node1, node2)
@@ -133,9 +175,33 @@ DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
   else {
     var temp = new DigestTree.Node(dataPrefix, sequenceNo, sessionNo);
     this.digestnode.push(temp);
+    // Insert it to the place where it should go would be faster, though in our case
+    // the difference in time should be minimal
+    this.sortNodes();
   }
   this.recomputeRoot();
   return true;
+};
+
+/**
+ * This function bubble-sorts the nodes in digestnode in lexi order.
+ * Called every time when there's an update of nodes (or removal of nodes, which does
+ * not seem to exist in current design/implementation).
+ * This function does not exist in the original ChronoChat-JS implementation, 
+ * and it's not strictly tested yet.
+ */
+DigestTree.prototype.sortNodes = function()
+{
+  var temp;
+  for (var i = this.digestnode.length; i > 0; i--) {
+    for (var j = 0; j < i - 1; j++) {
+      if (this.digestnode[j].getDataPrefix() > this.digestnode[j + 1].getDataPrefix()) {
+        temp = this.digestnode[j];
+        this.digestnode[j] = this.digestnode[j + 1];
+        this.digestnode[j + 1] = temp;
+      }
+    }
+  }
 };
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
@@ -153,6 +219,7 @@ DigestTree.prototype.size = function()
   return this.digestnode.size();
 };
 
+// Not really used
 DigestTree.prototype.get = function(i)
 {
   return this.digestnode[i];
@@ -166,13 +233,13 @@ DigestTree.prototype.getRoot = function()
 DigestTree.prototype.recomputeRoot = function()
 {
   var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-  for(var i = 0; i < this.digestnode.length; i++){
+  // The result of updateHex is related with the sequence of participants,
+  // I don't think that should be the case.
+  for (var i = 0; i < this.digestnode.length; i++) {
     md.updateHex(this.digestnode[i].digest);
   }
   this.root = md.digest();
   console.log("update root to: " + this.root);
-  // The usage of this usrdigest?
-  usrdigest = this.root;
 };
 
 // Not sure if this ascii representation works yet

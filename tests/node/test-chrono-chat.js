@@ -173,6 +173,7 @@ ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPref
         break;
     }
   }
+  
   if (content.from != null) {
     var str = new Uint8Array(content.toArrayBuffer());
     var co = new Data(inst.getName());
@@ -206,14 +207,8 @@ ChronoChat.prototype.initial = function()
   
   if (this.roster.indexOf(this.usrname) == -1) {
     this.roster.push(this.usrname);
-    
-    // Announce join locally
-    var d = new Date();
-    var t = d.getTime();
-    
-    this.msgcache.push({seqno:this.sync.usrseq,msgtype:'JOIN',msg:'xxx',time:t});
-    while (this.msgcache.length > this.maxmsgcachelength)
-      this.msgcache.shift();
+    console.log("*** Local member " + this.usrname + " joins. ***");
+    this.messageCacheAppend('JOIN', 'xxx');
   }
 };
 
@@ -221,9 +216,9 @@ ChronoChat.prototype.initial = function()
  * This onData is passed as onData for timeout interest in initial, which means it
  * should not be called under any circumstances.
  */
-ChronoChat.prototype.dummyOnData = function()
+ChronoChat.prototype.dummyOnData = function(inst, co)
 {
-
+  console.log("*** dummyOndata called, name: " + inst.getName().toUri() + " ***");
 };
 
 /**
@@ -232,6 +227,7 @@ ChronoChat.prototype.dummyOnData = function()
  * @param {bool} if it's in recovery state
  */
  // TODO: should it include its own prefix + sequenceNo + sessionNo? Remains to be found.
+ // TODO: should it send for the same thing over and over again?
 ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
   this.isRecoverySyncState = isRecovery;
@@ -281,6 +277,9 @@ ChronoChat.prototype.onData = function(inst, co)
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
   var content = ChatMessage.decode(arr.buffer);
+  // TODO: for now, join is retrieved for every interest sent, not sure if that's the way how it's supposed to work;
+  // And, for now chat sends interest periodically, don't think that's how it should work.
+  console.log("*** Chat onData received: ContentType " + content.type + " ContentData " + content.data + " ***");
   
   var temp = (new Date()).getTime();
   if (temp - content.timestamp * 1000 < 120000) {
@@ -303,7 +302,7 @@ ChronoChat.prototype.onData = function(inst, co)
         l++;
       else{
         if(name == name_t && session > session_t){
-          this.roster[l] = name+session;
+          this.roster[l] = name + session;
         }
         break;
       }
@@ -311,44 +310,28 @@ ChronoChat.prototype.onData = function(inst, co)
     
     if(l == this.roster.length) {
       this.roster.push(name + session);
-      
-      /*
-      document.getElementById('txt').innerHTML += '<div><b><grey>'+name+'-'+t+': Join'+'</grey></b><br /></div>';
-      var objDiv = document.getElementById("txt");      
-      objDiv.scrollTop = objDiv.scrollHeight;
-      document.getElementById('menu').innerHTML = '<p><b>Member</b></p><ul>';
-      for(var i = 0;i < this.roster.length; i++){
-        var name_t = this.roster[i].substring(0,this.roster[i].length-10);
-        document.getElementById('menu').innerHTML += '<li>'+name_t+'</li>';
-      }
-      document.getElementById('menu').innerHTML += '</ul>';
-      */
+      console.log("JOIN: " + name + session);
     }
-    var self = this;
-    setTimeout(function() {self.alive(seqno,name,session,prefix);},120000);
+    var timeout = new Interest(new Name("/timeout"));
+    timeout.setInterestLifetimeMilliseconds(120000);
+    this.face.expressInterest(timeout, this.dummyOnData, this.alive.bind(this, timeout, seqno, name, session, prefix));
     
-    if (content.type == 0 && sync.flag == 0 && content.from != screen_name){
+    if (content.type == 0 && this.isRecoverySyncState == false && content.from != this.screen_name){
       //display on the screen will not display old data
-      /*
-      var escaped_msg = $('<div/>').text(content.data).html();  // encode special html characters to avoid script injection
-      document.getElementById('txt').innerHTML +='<p><grey>'+ content.from+'-'+t+':</grey><br />'+escaped_msg+'</p>';
-      var objDiv = document.getElementById("txt");      
-      objDiv.scrollTop = objDiv.scrollHeight;
-      */
+      console.log("CHAT: '" + content.data + "' from '" + content.from + "'");
     }
     else if (content.type == 2) {
       //leave message
       var n = this.roster.indexOf(name + session);
       if(n != -1 && name != screen_name) {
         this.roster.splice(n,1);
-        document.getElementById('menu').innerHTML = '<p><b>Member</b></p><ul>';
         for(var i = 0; i<this.roster.length; i++) {
-          var name_t = this.roster[i].substring(0,this.roster[i].length-10);
+          var name_t = this.roster[i].substring(0,this.roster[i].length - 10);
           //document.getElementById('menu').innerHTML += '<li>'+name_t+'</li>';
         }
         //document.getElementById('menu').innerHTML += '</ul>';
         
-        var d = new Date(content.timestamp*1000);
+        var d = new Date(content.timestamp * 1000);
         var t = d.toLocaleTimeString();
         /*
         document.getElementById('txt').innerHTML += '<div><b><grey>'+name+'-'+t+': Leave</grey></b><br /></div>'
@@ -377,7 +360,7 @@ ChronoChat.prototype.heartbeat = function(interest)
 {
   // Based on ndn-cpp library approach
   if (this.msgcache.length == 0) {
-    // Announcing join; should use enum variable
+    // Is it possible that this gets executed?
     this.messageCacheAppend("JOIN", "xxx");
   }
   this.sync.publishNextSequenceNo();
@@ -416,18 +399,7 @@ ChronoChat.prototype.alive = function(interest, temp_seq, name, session, prefix)
       console.log(name+" leave");
       var d = new Date();
       var t = d.toLocaleTimeString();
-      // DOM handling
-      /*
-      document.getElementById('txt').innerHTML += '<div><b><grey>'+name+'-'+t+': Leave</grey></b><br /></div>'
-      var objDiv = document.getElementById("txt");      
-      objDiv.scrollTop = objDiv.scrollHeight;
-      document.getElementById('menu').innerHTML = '<p><b>Member</b></p><ul>';
-      for(var i = 0;i<this.roster.length;i++){
-        var name_t = this.roster[i].substring(0,this.roster[i].length-10);
-        document.getElementById('menu').innerHTML += '<li>'+name_t+'</li>';
-      }
-      document.getElementById('menu').innerHTML += '</ul>';
-      */
+      // records the time of leaving
     }
   }
 };
@@ -524,6 +496,7 @@ function getRandomNameString()
   return result;
 };
 
+// initiateChat() also sends random chat messages so that we don't need input from node JS
 function initiateChat()
 {
   var hostName = "memoria.ndn.ucla.edu";
@@ -531,7 +504,7 @@ function initiateChat()
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "minutes";
+  var chatroom = "defile";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });
@@ -549,7 +522,16 @@ function initiateChat()
   privateKeyStorage.setKeyPairForKeyName(keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
   
   var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
-  // Our js library does not need the event loop...
+  
+  // Send random test chat message
+  
+  setTimeout(
+    function(){
+      var chatMsg = getRandomNameString();
+      chronoChat.sendMessage(chatMsg);
+      console.log("Msg sent: " + chatMsg);
+    }, 2000);
 }
 
 initiateChat();
+
