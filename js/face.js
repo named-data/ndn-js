@@ -41,6 +41,7 @@ var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
+var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -164,6 +165,9 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
+  this.commandKeyChain = null;
+  this.commandCertificateName = new Name();
+  this.commandInterestGenerator = new CommandInterestGenerator();
 };
 
 exports.Face = Face;
@@ -677,6 +681,54 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
       // Not already requested, so add the request.
       Face.PITTableRemoveRequests.push(pendingInterestId);
   }
+};
+
+/**
+ * Set the KeyChain and certificate name used to sign command interests (e.g. 
+ * for registerPrefix).
+ * @param {KeyChain} keyChain The KeyChain object for signing interests, which 
+ * must remain valid for the life of this Face. You must create the KeyChain 
+ * object and pass it in. You can create a default KeyChain for your system with 
+ * the default KeyChain constructor.
+ * @param {Name} certificateName The certificate name for signing interests.
+ * This makes a copy of the Name. You can get the default certificate name with
+ * keyChain.getDefaultCertificateName() .
+ */
+Face.prototype.setCommandSigningInfo = function(keyChain, certificateName)
+{
+  this.commandKeyChain = keyChain;
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Set the certificate name used to sign command interest (e.g. for
+ * registerPrefix), using the KeyChain that was set with setCommandSigningInfo.
+ * @param {Name} certificateName The certificate name for signing interest. This 
+ * makes a copy of the Name.
+ */
+Face.prototype.setCommandCertificateName = function(certificateName)
+{
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name. 
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign 
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @note This method is an experimental feature. See the API docs for more
+ * detail at
+ * http://named-data.net/doc/ndn-ccl-api/face.html#face-makecommandinterest-method .
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.  If omitted,
+ * use WireFormat.getDefaultWireFormat().
+ */
+Face.prototype.makeCommandInterest = function(interest, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  this.commandInterestGenerator.generate
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
 };
 
 /**
