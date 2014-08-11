@@ -139,6 +139,7 @@ def build (bld):
                  "js/face-instance.js",
                  "js/forwarding-flags.js",
                  "js/forwarding-entry.js",
+                 "js/control-parameters.js",
                  "js/encoding/binary-xml-wire-format.js",
                  "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
