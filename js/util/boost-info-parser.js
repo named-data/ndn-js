@@ -1,8 +1,8 @@
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
-  * From PyNDN boost_info_parser by Adeola Bannis.
-*
+ * From PyNDN boost_info_parser by Adeola Bannis.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -82,7 +82,7 @@ BoostInfoTree.prototype.prettyPrint = function(indentLevel)
 BoostInfoTree.prototype.toString = function()
 {
   return this.prettyPrint();
-}
+};
 
 /**
  * Use treeName to find the array of BoostInfoTree in this.subTrees.
