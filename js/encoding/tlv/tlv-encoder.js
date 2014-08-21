@@ -107,22 +107,18 @@ TlvEncoder.prototype.writeTypeAndLength = function(type, length)
 };
 
 /**
- * Write the type, then the length of the encoded value then encode value as a
- * non-negative integer and write it to this.output just before this.length from
- * the back. Advance this.length.
- * @param {number} type The type of the TLV.
+ * Write value as a non-negative integer and write it to this.output just before
+ * this.length from the back. Advance this.length.
  * @param {number} value The non-negative integer to encode.
  */
-TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+TlvEncoder.prototype.writeNonNegativeInteger = function(value)
 {
   if (value < 0)
     throw new Error("TLV integer value may not be negative");
 
   // JavaScript doesn't distinguish int from float, so round.
-  value = Math.round(value)
+  value = Math.round(value);
 
-  // Write backwards.
-  var saveNBytes = this.length;
   if (value < 253) {
     this.length += 1;
     this.output.ensureLengthFromBack(this.length);
@@ -157,7 +153,20 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
     this.output.array[offset + 6] = (value >> 8) & 0xff;
     this.output.array[offset + 7] = value & 0xff;
   }
+};
 
+/**
+ * Write the type, then the length of the encoded value then encode value as a
+ * non-negative integer and write it to this.output just before this.length from
+ * the back. Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {number} value The non-negative integer to encode.
+ */
+TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+{
+  // Write backwards.
+  var saveNBytes = this.length;
+  this.writeNonNegativeInteger(value);
   this.writeTypeAndLength(type, this.length - saveNBytes);
 };
 

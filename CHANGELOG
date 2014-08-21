@@ -1,4 +1,4 @@
-Interim changes after NDN-JS v0.4 (2014-08-05)
+Interim changes after NDN-JS v0.4 (2014-08-11)
 ----------------------------------------------
 
 Changes
@@ -25,6 +25,12 @@ Changes
 * In Name.Component, added toSegment and toVersion.
 * In Face.expressInterest, return the pendingInterestId. Added Face.removePendingInterest.
 * In Face.registerPrefix, return the registeredPrefixId. Added Face.removeRegisteredPrefix.
+* Added classes for the security API: KeyChain, MemoryIdentityStorage, MemoryPrivateKeyStorage, SelfVerifyPolicyManager.
+* In tests, make test-encode-decode-data use KeyChain to sign.
+* In tests/node, renamed publish.js to test-publish-async-ndnx.js and use KeyChain to sign.
+* In Face, added setCommandSigningInfo and makeCommandInterest.
+* In Face, support NFD for registerPrefix if setCommandSigningInfo has been called.
+* In tests/node, added test-publish-async-nfd.js .
 
 Bug fixes
 * http://redmine.named-data.net/issues/1617 Second call to expressInterest gives "connection not established"

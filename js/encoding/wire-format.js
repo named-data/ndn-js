@@ -1,5 +1,4 @@
 /**
- * This class represents Interest Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -30,7 +29,14 @@ exports.WireFormat = WireFormat;
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest)
@@ -82,6 +88,73 @@ WireFormat.prototype.encodeData = function(data)
 WireFormat.prototype.decodeData = function(data, input)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode controlParameters and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  throw new Error("encodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlParameters and set the fields of the
+ * controlParameters object. Your derived class should override.
+ * @param {ControlParameters} controlParameters The ControlParameters object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding. Your derived
+ * class should override.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  throw new Error("encodeSignatureInfo is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * Your derived class should override.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding. Your derived class should override.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 /**
