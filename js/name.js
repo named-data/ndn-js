@@ -172,21 +172,18 @@ Name.Component.prototype.toVersion = function()
 
 /**
  * Create a component whose value is the marker appended with the 
- * network-ordered encoding of the number. Note: if the number is zero, no bytes 
- * are used for the number - the result will have only the marker.
+ * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
  * @returns {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
-  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
-  // Put the marker byte in front.
-  var value = new Buffer(bigEndian.length + 1);
-  value[0] = marker;
-  bigEndian.copy(value, 1);
-
-  return new Name.Component(value);
+  var encoder = new TlvEncoder(9);
+  // Encode backwards.
+  encoder.writeNonNegativeInteger(number);
+  encoder.writeNonNegativeInteger(marker);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
 };
 
 /**
@@ -794,3 +791,6 @@ Name.prototype.getChangeCount = function()
 {
   return this.changeCount;
 };
+
+// Put this require at the bottom to avoid circular references.
+var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
