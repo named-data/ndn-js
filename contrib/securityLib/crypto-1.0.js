@@ -29,7 +29,9 @@
  */
 
 var CryptoJS = require('./sha256.js').CryptoJS
-  , BigInteger = require('jsbn');
+  , intShim = require('jsbn');
+
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
 
 function parseBigInt(str,r) {
   return new BigInteger(str,r);
