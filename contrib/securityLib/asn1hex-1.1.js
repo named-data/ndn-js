@@ -22,8 +22,9 @@
 //
 // Depends on:
 //
-var BigInteger = require('jsbn')
+var intShim = require('jsbn')
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
 function parseBigInt(str,r) {
   return new BigInteger(str,r);
 }
