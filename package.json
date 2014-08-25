@@ -27,6 +27,7 @@
     "url": "https://github.com/named-data/ndn-js/issues"
   },
   "dependencies": {
-    "jsbn": "*"
+    "jsbn": "*",
+    "protobufjs": "*"
   }
 }
