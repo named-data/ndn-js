@@ -1,4 +1,4 @@
-Interim changes after NDN-JS v0.4 (2014-08-11)
+Interim changes after NDN-JS v0.4 (2014-08-25)
 ----------------------------------------------
 
 Changes
@@ -34,6 +34,7 @@ Changes
 
 Bug fixes
 * http://redmine.named-data.net/issues/1617 Second call to expressInterest gives "connection not established"
+* http://redmine.named-data.net/issues/1925 Should encode non-negative integers 253 through 255 as one byte.
 
 Deprecated
 * Deprecated the Signature class. Use new Sha256WithRsaSignature.
