@@ -119,7 +119,7 @@ TlvEncoder.prototype.writeNonNegativeInteger = function(value)
   // JavaScript doesn't distinguish int from float, so round.
   value = Math.round(value);
 
-  if (value < 253) {
+  if (value <= 0xff) {
     this.length += 1;
     this.output.ensureLengthFromBack(this.length);
     this.output.array[this.output.array.length - this.length] = value & 0xff;
