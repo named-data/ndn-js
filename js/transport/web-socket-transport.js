@@ -126,7 +126,8 @@ WebSocketTransport.prototype.connect = function
       console.log('INVALID ANSWER');
     }
     else if (result instanceof ArrayBuffer) {
-      var bytearray = new Buffer(result);
+      // The Buffer constructor expects an instantiated array.
+      var bytearray = new Buffer(new Uint8Array(result));
 
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
