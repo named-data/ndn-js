@@ -7333,6 +7333,24 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
+
+Tlv.ContentType_Default = 0;
+Tlv.ContentType_Link =    1;
+Tlv.ContentType_Key =     2;
+
+Tlv.NfdCommand_ControlResponse = 101;
+Tlv.NfdCommand_StatusCode =      102;
+Tlv.NfdCommand_StatusText =      103;
+
+Tlv.ControlParameters_ControlParameters =   104;
+Tlv.ControlParameters_FaceId =              105;
+Tlv.ControlParameters_Uri =                 114;
+Tlv.ControlParameters_LocalControlFeature = 110;
+Tlv.ControlParameters_Origin =              111;
+Tlv.ControlParameters_Cost =                106;
+Tlv.ControlParameters_Flags =               108;
+Tlv.ControlParameters_Strategy =            107;
+Tlv.ControlParameters_ExpirationPeriod =    109;
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -7442,22 +7460,18 @@ TlvEncoder.prototype.writeTypeAndLength = function(type, length)
 };
 
 /**
- * Write the type, then the length of the encoded value then encode value as a
- * non-negative integer and write it to this.output just before this.length from
- * the back. Advance this.length.
- * @param {number} type The type of the TLV.
+ * Write value as a non-negative integer and write it to this.output just before
+ * this.length from the back. Advance this.length.
  * @param {number} value The non-negative integer to encode.
  */
-TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+TlvEncoder.prototype.writeNonNegativeInteger = function(value)
 {
   if (value < 0)
     throw new Error("TLV integer value may not be negative");
 
   // JavaScript doesn't distinguish int from float, so round.
-  value = Math.round(value)
+  value = Math.round(value);
 
-  // Write backwards.
-  var saveNBytes = this.length;
   if (value < 253) {
     this.length += 1;
     this.output.ensureLengthFromBack(this.length);
@@ -7492,7 +7506,20 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
     this.output.array[offset + 6] = (value >> 8) & 0xff;
     this.output.array[offset + 7] = value & 0xff;
   }
+};
 
+/**
+ * Write the type, then the length of the encoded value then encode value as a
+ * non-negative integer and write it to this.output just before this.length from
+ * the back. Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {number} value The non-negative integer to encode.
+ */
+TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+{
+  // Write backwards.
+  var saveNBytes = this.length;
+  this.writeNonNegativeInteger(value);
   this.writeTypeAndLength(type, this.length - saveNBytes);
 };
 
@@ -8333,7 +8360,6 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
 /**
- * This class represents Interest Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -8364,7 +8390,14 @@ exports.WireFormat = WireFormat;
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest)
@@ -8416,6 +8449,73 @@ WireFormat.prototype.encodeData = function(data)
 WireFormat.prototype.decodeData = function(data, input)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode controlParameters and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  throw new Error("encodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlParameters and set the fields of the
+ * controlParameters object. Your derived class should override.
+ * @param {ControlParameters} controlParameters The ControlParameters object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding. Your derived
+ * class should override.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  throw new Error("encodeSignatureInfo is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * Your derived class should override.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding. Your derived class should override.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 /**
@@ -9854,17 +9954,45 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
   ++this.changeCount;
 };
 
-Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+/**
+ * Encode this name to the encoder.
+ * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
+Name.prototype.to_ndnb = function(encoder)
 {
   if (this.components == null)
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
   encoder.writeElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = encoder.offset;
+  var signedPortionEndOffset;
+
   var count = this.size();
-  for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
+  if (count == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else {
+    for (var i = 0; i < count; i++) {
+      if (i == count - 1)
+        // We will begin the final component.
+        signedPortionEndOffset = encoder.offset;
+
+      encoder.writeDTagElement
+        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
+    }
+  }
 
   encoder.writeElementClose();
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Name.prototype.getElementLabel = function()
@@ -12824,6 +12952,7 @@ var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
@@ -13086,7 +13215,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = Sha256WithRsaSignature();
+  var signature = new Sha256WithRsaSignature();
   signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
   signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
@@ -13097,7 +13226,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.toSignedBuffer(), certificateName);
+  var signedSignature = this.sign(encoding.buf(), certificateName);
 
   // Remove the empty signature and append the real one.
   var encoder = new TlvEncoder(256);
@@ -14705,7 +14834,7 @@ Interest.prototype.setName = function(name)
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
 
-  this.name = typeof name === 'object' && name instanceof Interest ?
+  this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
 };
 
@@ -14864,7 +14993,8 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeInterest(this);
+  var result = wireFormat.encodeInterest(this);
+  return result.encoding;
 };
 
 /**
@@ -15045,109 +15175,6 @@ FaceInstance.prototype.getElementLabel = function()
 };
 
 /**
- * This class represents Forwarding Entries
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var Name = require('./name.js').Name;
-
-/**
- * Create a new ForwardingEntry with the optional arguments.
- * @constructor
- * @param {String} action
- * @param {Name} prefixName
- * @param {PublisherPublicKeyDigest} ndndId
- * @param {number} faceID
- * @param {number} flags
- * @param {number} lifetime in seconds
- */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
-{
-  this.action = action;
-  this.prefixName = prefixName;
-  this.ndndID = ndndId;
-  this.faceID = faceID;
-  this.flags = flags;
-  this.lifetime = lifetime;
-};
-
-exports.ForwardingEntry = ForwardingEntry;
-
-ForwardingEntry.ACTIVE         = 1;
-ForwardingEntry.CHILD_INHERIT  = 2;
-ForwardingEntry.ADVERTISE      = 4;
-ForwardingEntry.LAST           = 8;
-ForwardingEntry.CAPTURE       = 16;
-ForwardingEntry.LOCAL         = 32;
-ForwardingEntry.TAP           = 64;
-ForwardingEntry.CAPTURE_OK   = 128;
-
-ForwardingEntry.prototype.from_ndnb = function(
-  //XMLDecoder
-  decoder)
-  //throws DecodingException
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-  if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
-  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
-    this.prefixName = new Name();
-    this.prefixName.from_ndnb(decoder) ;
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    this.NdndId = new PublisherPublicKeyDigest();
-    this.NdndId.from_ndnb(decoder);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-
-  decoder.readElementClose();
-};
-
-ForwardingEntry.prototype.to_ndnb = function(
-  //XMLEncoder
-  encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-  if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
-  if (null != this.prefixName)
-    this.prefixName.to_ndnb(encoder);
-  if (null != this.NdndId)
-    this.NdndId.to_ndnb(encoder);
-  if (null != this.faceID)
-    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
-  if (null != this.flags)
-    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
-  if (null != this.lifetime)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
-
-  encoder.writeElementClose();
-};
-
-ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
-/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -15165,8 +15192,6 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU General Public License is in the file COPYING.
  */
-
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 
 /**
  * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
@@ -15188,6 +15213,18 @@ var ForwardingFlags = function ForwardingFlags()
 
 exports.ForwardingFlags = ForwardingFlags;
 
+ForwardingFlags.ForwardingEntryFlags_ACTIVE         = 1;
+ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT  = 2;
+ForwardingFlags.ForwardingEntryFlags_ADVERTISE      = 4;
+ForwardingFlags.ForwardingEntryFlags_LAST           = 8;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE       = 16;
+ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
+ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
+
+ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
+ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
+
 /**
  * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
  * @returns {number} An integer with the bits set.
@@ -15197,21 +15234,21 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
   var result = 0;
 
   if (this.active)
-    result |= ForwardingEntry.ACTIVE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ACTIVE;
   if (this.childInherit)
-    result |= ForwardingEntry.CHILD_INHERIT;
+    result |= ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT;
   if (this.advertise)
-    result |= ForwardingEntry.ADVERTISE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ADVERTISE;
   if (this.last)
-    result |= ForwardingEntry.LAST;
+    result |= ForwardingFlags.ForwardingEntryFlags_LAST;
   if (this.capture)
-    result |= ForwardingEntry.CAPTURE;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE;
   if (this.local)
-    result |= ForwardingEntry.LOCAL;
+    result |= ForwardingFlags.ForwardingEntryFlags_LOCAL;
   if (this.tap)
-    result |= ForwardingEntry.TAP;
+    result |= ForwardingFlags.ForwardingEntryFlags_TAP;
   if (this.captureOk)
-    result |= ForwardingEntry.CAPTURE_OK;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK;
 
   return result;
 };
@@ -15222,14 +15259,44 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
  */
 ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
 {
-  this.active = ((forwardingEntryFlags & ForwardingEntry.ACTIVE) != 0);
-  this.childInherit = ((forwardingEntryFlags & ForwardingEntry.CHILD_INHERIT) != 0);
-  this.advertise = ((forwardingEntryFlags & ForwardingEntry.ADVERTISE) != 0);
-  this.last = ((forwardingEntryFlags & ForwardingEntry.LAST) != 0);
-  this.capture = ((forwardingEntryFlags & ForwardingEntry.CAPTURE) != 0);
-  this.local = ((forwardingEntryFlags & ForwardingEntry.LOCAL) != 0);
-  this.tap = ((forwardingEntryFlags & ForwardingEntry.TAP) != 0);
-  this.captureOk = ((forwardingEntryFlags & ForwardingEntry.CAPTURE_OK) != 0);
+  this.active = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ACTIVE) != 0);
+  this.childInherit = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT) != 0);
+  this.advertise = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ADVERTISE) != 0);
+  this.last = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LAST) != 0);
+  this.capture = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE) != 0);
+  this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
+  this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
+  this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
+};
+
+/**
+ * Get an integer with the bits set according to the NFD forwarding flags as
+ * used in the ControlParameters of the command interest.
+ * @returns {number} An integer with the bits set.
+ */
+ForwardingFlags.prototype.getNfdForwardingFlags = function()
+{
+  var result = 0;
+
+  if (this.childInherit)
+    result |= ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT;
+  if (this.capture)
+    result |= ForwardingFlags.NfdForwardingFlags_CAPTURE;
+
+  return result;
+};
+
+/**
+ * Set the flags according to the NFD forwarding flags as used in the
+ * ControlParameters of the command interest.
+ * @param {number} nfdForwardingFlags An integer with the bits set.
+ */
+ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
+{
+  this.childInherit =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
+  this.capture =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
 };
 
 /**
@@ -15328,6 +15395,303 @@ ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
  */
 ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
 /**
+ * This class represents Forwarding Entries
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var Name = require('./name.js').Name;
+
+/**
+ * Create a new ForwardingEntry with the optional arguments.
+ * @constructor
+ * @param {String} action
+ * @param {Name} prefixName
+ * @param {PublisherPublicKeyDigest} ndndId
+ * @param {number} faceID
+ * @param {number} flags
+ * @param {number} lifetime in seconds
+ */
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
+{
+  this.action = action;
+  this.prefixName = prefixName;
+  this.ndndID = ndndId;
+  this.faceID = faceID;
+  this.flags = flags;
+  this.lifetime = lifetime;
+};
+
+exports.ForwardingEntry = ForwardingEntry;
+
+ForwardingEntry.prototype.from_ndnb = function(
+  //XMLDecoder
+  decoder)
+  //throws DecodingException
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+  if (decoder.peekDTag(NDNProtocolDTags.Action))
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
+  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
+    this.prefixName = new Name();
+    this.prefixName.from_ndnb(decoder) ;
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+    this.NdndId = new PublisherPublicKeyDigest();
+    this.NdndId.from_ndnb(decoder);
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
+  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
+    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
+    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
+
+  decoder.readElementClose();
+};
+
+ForwardingEntry.prototype.to_ndnb = function(
+  //XMLEncoder
+  encoder)
+{
+  encoder.writeElementStartDTag(this.getElementLabel());
+  if (null != this.action && this.action.length != 0)
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
+  if (null != this.prefixName)
+    this.prefixName.to_ndnb(encoder);
+  if (null != this.NdndId)
+    this.NdndId.to_ndnb(encoder);
+  if (null != this.faceID)
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
+  if (null != this.flags)
+    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
+  if (null != this.lifetime)
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
+
+  encoder.writeElementClose();
+};
+
+ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
+var Name = require('./name.js').Name;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * A ControlParameters which holds a Name and other fields for a
+ * ControlParameters which is used, for example, in the command interest to
+ * register a prefix with a forwarder.
+ * @constructor
+ */
+var ControlParameters = function ControlParameters()
+{
+  this.name = new Name();
+  this.faceId = null;
+  // TODO: Add "Uri" string.
+  this.localControlFeature = null;
+  this.origin = null;
+  this.cost = null;
+  this.forwardingFlags = new ForwardingFlags();
+  // TODO: Add "Strategy" name.
+  this.expirationPeriod = null;
+};
+
+exports.ControlParameters = ControlParameters;
+
+/**
+ * Encode this ControlParameters for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+ControlParameters.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeControlParameters(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this
+ * ControlParameters.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+ControlParameters.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeControlParameters(this, decodeBuffer);
+};
+
+/**
+ * Get the name.
+ * @returns {Name} The name.
+ */
+ControlParameters.prototype.getName = function()
+{
+  return this.name;
+};
+
+/**
+ * Get the face ID.
+ * @returns {number} The face ID, or null if not specified.
+ */
+ControlParameters.prototype.getFaceId = function()
+{
+  return this.faceId;
+};
+
+/**
+ * Get the local control feature value.
+ * @returns {number} The local control feature value, or null if not specified.
+ */
+ControlParameters.prototype.getLocalControlFeature = function()
+{
+  return this.localControlFeature;
+};
+
+/**
+ * Get the origin value.
+ * @returns {number} The origin value, or null if not specified.
+ */
+ControlParameters.prototype.getOrigin = function()
+{
+  return this.origin;
+};
+
+/**
+ * Get the cost value.
+ * @returns {number} The cost value, or null if not specified.
+ */
+ControlParameters.prototype.getCost = function()
+{
+  return this.cost;
+};
+
+/**
+ * Get the ForwardingFlags object.
+ * @returns {ForwardingFlags} The ForwardingFlags object.
+ */
+ControlParameters.prototype.getForwardingFlags = function()
+{
+  return this.forwardingFlags;
+};
+
+/**
+ * Get the expiration period.
+ * @returns {number} The expiration period in milliseconds, or null if not specified.
+ */
+ControlParameters.prototype.getExpirationPeriod = function()
+{
+  return this.expirationPeriod;
+};
+
+/**
+ * Set the name to a copy of the given Name.
+ * @param {Name} name The new Name to copy.
+ */
+ControlParameters.prototype.setName = function(name)
+{
+  this.name = typeof name === 'object' && name instanceof Name ?
+              new Name(name) : new Name();
+};
+
+/**
+ * Set the Face ID.
+ * @param {number} faceId The new face ID, or null for not specified.
+ */
+ControlParameters.prototype.setFaceId = function(faceId)
+{
+  this.faceId = faceId;
+};
+
+/**
+ * Set the local control feature value.
+ * @param {number} localControlFeature The new local control feature value, or
+ * null for not specified.
+ */
+ControlParameters.prototype.setLocalControlFeature = function(localControlFeature)
+{
+  this.localControlFeature = localControlFeature;
+};
+
+/**
+ * Set the origin value.
+ * @param {number} origin The new origin value, or null for not specified.
+ */
+ControlParameters.prototype.setOrigin = function(origin)
+{
+  this.origin = origin;
+};
+
+/**
+ * Set the cost value.
+ * @param {number} cost The new cost value, or null for not specified.
+ */
+ControlParameters.prototype.setCost = function(cost)
+{
+  this.cost = cost;
+};
+
+/**
+ * Set the cost value.
+ * @param {number} forwardingFlags The new cost value, or null for not specified.
+ */
+ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
+{
+  this.forwardingFlags =
+    typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
+      new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+};
+
+/**
+ * Set the expiration period.
+ * @param {number} expirationPeriod The expiration period in milliseconds, or
+ * null for not specified.
+ */
+ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
+{
+  this.expirationPeriod = expirationPeriod;
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -15377,13 +15741,22 @@ BinaryXmlWireFormat.instance = null;
 /**
  * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeInterest(interest, encoder);
-  return new Blob(encoder.getReducedOstream(), false);
+  var offsets = BinaryXmlWireFormat.encodeInterest(interest, encoder);
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: offsets.signedPortionBeginOffset,
+           signedPortionEndOffset: offsets.signedPortionEndOffset };
 };
 
 /**
@@ -15467,12 +15840,19 @@ BinaryXmlWireFormat.get = function()
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.getName().to_ndnb(encoder);
+  var offsets = interest.getName().to_ndnb(encoder);
 
   if (null != interest.getMinSuffixComponents())
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
@@ -15512,6 +15892,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
 
   encoder.writeElementClose();
+  return offsets;
 };
 
 /**
@@ -15704,6 +16085,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -15729,11 +16111,18 @@ Tlv0_1WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
-  var encoder = new TlvEncoder();
+  var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -15764,11 +16153,21 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
-  Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var tempOffsets = Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
 
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
 
-  return new Blob(encoder.getOutput(), false);
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -15870,11 +16269,127 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
+  data.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
            signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
+ * Encode controlParameters as NDN-TLV and return the encoding.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  // TODO: Encode Strategy.
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  // TODO: Encode Uri.
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FaceID, controlParameters.getFaceId());
+  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+    (signature, encoder, signature.getKeyLocator());
+  
+  return new Blob(encoder.getOutput(), false);
+};
+
+// SignatureHolder is used by decodeSignatureInfoAndValue.
+Tlv0_1WireFormat.SignatureHolder = function Tlv0_1WireFormatSignatureHolder()
+{
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+{
+  this.signature = signature;
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ */
+Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
+  var signatureHolder = new Tlv0_1WireFormat.SignatureHolder();
+  var decoder = new TlvDecoder(signatureInfo);
+  Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+
+  decoder = TlvDecoder(signatureValue);
+  // TODO: The library needs to handle other signature types than
+  //   SignatureSha256WithRsa.
+  signatureHolder.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+
+  return signatureHolder.getSignature();
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
+
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**
@@ -15889,15 +16404,44 @@ Tlv0_1WireFormat.get = function()
   return Tlv0_1WireFormat.instance;
 };
 
+/**
+ * Encode the name to the encoder.
+ * @param {Name} name The name to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
-  for (var i = name.size() - 1; i >= 0; --i)
+  var signedPortionEndOffsetFromBack;
+  for (var i = name.size() - 1; i >= 0; --i) {
     encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    if (i == name.size() - 1)
+      signedPortionEndOffsetFromBack = encoder.getLength();
+  }
 
+  var signedPortionBeginOffsetFromBack = encoder.getLength();
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
+
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset;
+  if (name.size() == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else
+    signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Tlv0_1WireFormat.decodeName = function(name, decoder)
@@ -16477,6 +17021,86 @@ function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); 
  */
 function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+var Blob = require('./blob.js').Blob;
+
+/**
+ * A CommandInterestGenerator keeps track of a timestamp and generates command
+ * interests according to the NFD Signed Command Interests protocol:
+ * http://redmine.named-data.net/projects/nfd/wiki/Command_Interests
+ *
+ * Create a new CommandInterestGenerator and initialize the timestamp to now.
+ * @constructor
+ */
+var CommandInterestGenerator = function CommandInterestGenerator()
+{
+  this.lastTimestamp = Math.round(new Date().getTime());
+};
+
+exports.CommandInterestGenerator = CommandInterestGenerator;
+
+/**
+ * Append a timestamp component and a random value component to interest's name.
+ * This ensures that the timestamp is greater than the timestamp used in the
+ * previous call. Then use keyChain to sign the interest which appends a
+ * SignatureInfo component and a component with the signature bits. If the
+ * interest lifetime is not set, this sets it.
+ * @param {Interest} interest The interest whose name is append with components.
+ * @param {KeyChain} keyChain The KeyChain for calling sign.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * the SignatureInfo and to encode interest name for signing. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ */
+CommandInterestGenerator.prototype.generate = function
+  (interest, keyChain, certificateName, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var timestamp = Math.round(new Date().getTime());
+  while (timestamp <= this.lastTimestamp)
+    timestamp += 1.0;
+
+  // The timestamp is encoded as a TLV nonNegativeInteger.
+  var encoder = new TlvEncoder(8);
+  encoder.writeNonNegativeInteger(timestamp);
+  interest.getName().append(new Blob(encoder.getOutput(), false));
+
+  // The random value is a TLV nonNegativeInteger too, but we know it is 8
+  // bytes, so we don't need to call the nonNegativeInteger encoder.
+  interest.getName().append(new Blob(require("crypto").randomBytes(8), false));
+
+  keyChain.sign(interest, certificateName, wireFormat);
+
+  if (interest.getInterestLifetimeMilliseconds() == null ||
+      interest.getInterestLifetimeMilliseconds() < 0)
+    // The caller has not set the interest lifetime, so set it here.
+    interest.setInterestLifetimeMilliseconds(1000.0);
+
+  // We successfully signed the interest, so update the timestamp.
+  this.lastTimestamp = timestamp;
+};
+/**
  * This class represents the top-level object for communicating with an NDN host.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -16503,6 +17127,7 @@ var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var ControlParameters = require('./control-parameters.js').ControlParameters;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
@@ -16519,6 +17144,7 @@ var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
+var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -16642,6 +17268,9 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
+  this.commandKeyChain = null;
+  this.commandCertificateName = new Name();
+  this.commandInterestGenerator = new CommandInterestGenerator();
 };
 
 exports.Face = Face;
@@ -17032,10 +17661,10 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
 Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
 {
   var thisFace = this;
-  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+  if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -17158,6 +17787,73 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 };
 
 /**
+ * Set the KeyChain and certificate name used to sign command interests (e.g. 
+ * for registerPrefix).
+ * @param {KeyChain} keyChain The KeyChain object for signing interests, which 
+ * must remain valid for the life of this Face. You must create the KeyChain 
+ * object and pass it in. You can create a default KeyChain for your system with 
+ * the default KeyChain constructor.
+ * @param {Name} certificateName The certificate name for signing interests.
+ * This makes a copy of the Name. You can get the default certificate name with
+ * keyChain.getDefaultCertificateName() .
+ */
+Face.prototype.setCommandSigningInfo = function(keyChain, certificateName)
+{
+  this.commandKeyChain = keyChain;
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Set the certificate name used to sign command interest (e.g. for
+ * registerPrefix), using the KeyChain that was set with setCommandSigningInfo.
+ * @param {Name} certificateName The certificate name for signing interest. This 
+ * makes a copy of the Name.
+ */
+Face.prototype.setCommandCertificateName = function(certificateName)
+{
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name. 
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign 
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @note This method is an experimental feature. See the API docs for more
+ * detail at
+ * http://named-data.net/doc/ndn-ccl-api/face.html#face-makecommandinterest-method .
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.  If omitted,
+ * use WireFormat.getDefaultWireFormat().
+ */
+Face.prototype.makeCommandInterest = function(interest, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  this.nodeMakeCommandInterest
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name.
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {KeyChain} keyChain The KeyChain for calling sign.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.
+ */
+Face.prototype.nodeMakeCommandInterest = function
+  (interest, keyChain, certificateName, wireFormat)
+{
+  this.commandInterestGenerator.generate
+    (interest, keyChain, certificateName, wireFormat);
+};
+
+/**
  * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
  * This uses the form:
  * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
@@ -17173,8 +17869,11 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
  * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ * @param {number} intFlags (optional) (only for the deprecated form of
+ * registerPrefix) The integer NDNx flags for finer control of which interests
+ * are forward to the application.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
@@ -17186,21 +17885,31 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
-    if (arg3)
-      return this.registerPrefixWithClosure(prefix, arg2, arg3);
+    if (arg3) {
+      var flags;
+      if (typeof flags === 'number') {
+        // Assume this deprecated form is only called for NDNx.
+        flags = new ForwardingFlags();
+        flags.setForwardingEntryFlags(arg3);
+      }
+      else
+        // Assume arg3 is already a ForwardingFlags.
+        flags = arg3;
+      return this.registerPrefixWithClosure(prefix, arg2, flags);
+    }
     else
-      return this.registerPrefixWithClosure(prefix, arg2);
+      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
   }
 
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
   var onInterest = arg2;
   var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
+  var flags = (arg4 ? arg4 : new ForwardingFlags());
   return this.registerPrefixWithClosure
     (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-     intFlags, onRegisterFailed);
-}
+     flags, onRegisterFailed);
+};
 
 /**
  * A private method to register the prefix with the host, receive the data and call
@@ -17208,7 +17917,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * @deprecated Use registerPrefix with callback functions, not Closure.
  * @param {Name} prefix
  * @param {Closure} closure
- * @param {number} intFlags
+ * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed (optional) If called from the
  * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
  * fails.
@@ -17216,25 +17925,33 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, intFlags, onRegisterFailed)
+  (prefix, closure, flags, onRegisterFailed)
 {
-  intFlags = intFlags | 3;
-  
   var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
-    if (thisFace.ndndid == null) {
-      // Fetch ndndid first, then register.
-      var interest = new Interest(Face.ndndIdFetcher);
-      interest.setInterestLifetimeMilliseconds(4000);
-      if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisFace.reconnectAndExpressInterest
-        (null, interest, new Face.FetchNdndidClosure
-         (thisFace, registeredPrefixId, prefix, closure, intFlags, onRegisterFailed));
+    // If we have an _ndndId, we know we already connected to NDNx.
+    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
+      // Assume we are connected to a legacy NDNx server.
+
+      if (thisFace.ndndid == null) {
+        // Fetch ndndid first, then register.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
+        thisFace.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
+      }
+      else
+        thisFace.registerPrefixHelper
+          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
     }
     else
-      thisFace.registerPrefixHelper
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
+      // The application set the KeyChain for signing NFD interests.
+      thisFace.nfdRegisterPrefix
+        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
+         thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -17263,7 +17980,7 @@ Face.FetchNdndidClosure = function FetchNdndidClosure
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.callerClosure = callerClosure;
-  this.flags = flags;
+  this.flags = flags; // FOrwardingFlags
   this.onRegisterFailed = onRegisterFailed;
 };
 
@@ -17293,26 +18010,57 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   return Closure.RESULT_OK;
 };
+
 /**
  * This is a closure to receive the response Data packet from the register
  * prefix interest sent to the connected NDN hub. If this gets a bad response
  * or a timeout, call onRegisterFailed.
  */
 Face.RegisterResponseClosure = function RegisterResponseClosure
-  (prefix, onRegisterFailed)
+  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
 {
   // Inherit from Closure.
   Closure.call(this);
 
+  this.face = face;
   this.prefix = prefix;
+  this.callerClosure = callerClosure;
   this.onRegisterFailed = onRegisterFailed;
+  this.flags = flags;
+  this.wireFormat = wireFormat;
+  this.isNfdCommand = isNfdCommand;
 };
 
 Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    // We timed out waiting for the response.
+    if (this.isNfdCommand) {
+      // The application set the commandKeyChain, but we may be connected to NDNx.
+      if (this.face.ndndid == null) {
+        // Fetch ndndid first, then register.
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        this.face.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
+      }
+      else
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        this.face.registerPrefixHelper
+          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
+    }
+    else {
+      // An NDNx command was sent because there is no commandKeyChain, so we
+      //   can't try an NFD command. Or it was sent from this callback after
+      //   trying an NFD command. Fail.
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+    
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -17320,21 +18068,57 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
 
-  var expectedName = new Name("/ndnx/.../selfreg");
-  // Got a response. Do a quick check of expected name components.
-  if (upcallInfo.data.getName().size() < 4 ||
-      !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-      !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-    this.onRegisterFailed(this.prefix);
-    return;
+  if (this.isNfdCommand) {
+    // Decode responseData->getContent() and check for a success code.
+    // TODO: Move this into the TLV code.
+    var statusCode;
+    try {
+        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
+        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
+    }
+    catch (e) {
+        // Error decoding the ControlResponse.
+        if (this.onRegisterFailed)
+          this.onRegisterFailed(this.prefix);
+        return Closure.RESULT_OK;
+    }
+
+    // Status code 200 is "OK".
+    if (statusCode != 200) {
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+
+    // Otherwise, silently succeed.
+  }
+  else {
+    var expectedName = new Name("/ndnx/.../selfreg");
+    // Got a response. Do a quick check of expected name components.
+    if (upcallInfo.data.getName().size() < 4 ||
+        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
+        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
+      this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
+    }
+
+    // Otherwise, silently succeed.
   }
 
-  // Otherwise, silently succeed.
   return Closure.RESULT_OK;
 };
 
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
+ * @param {type} registeredPrefixId The
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
+ * could return it to the caller. If this is 0, then don't add to
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @returns {undefined}
  */
 Face.prototype.registerPrefixHelper = function
   (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
@@ -17350,8 +18134,10 @@ Face.prototype.registerPrefixHelper = function
     Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
-  
-  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
+
+  // A ForwardingEntry is only used with NDNx.
+  var fe = new ForwardingEntry
+    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   var encoder = new BinaryXMLEncoder();
@@ -17378,11 +18164,73 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  Face.registeredPrefixTable.push
-    (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+  if (registeredPrefixId != 0)
+    Face.registeredPrefixTable.push
+      (new RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+    (null, interest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
+};
+
+/**
+ * Do the work of registerPrefix to register with NFD.
+ * @param {number} registeredPrefixId The 
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it 
+ * could return it to the caller. If this is 0, then don't add to 
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @param {KeyChain} commandKeyChain
+ * @param {Name} commandCertificateName
+ */
+Face.prototype.nfdRegisterPrefix = function
+  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+   commandCertificateName)
+{
+  var removeRequestIndex = -1;
+  if (removeRequestIndex != null)
+    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+      (registeredPrefixId);
+  if (removeRequestIndex >= 0) {
+    // removeRegisteredPrefix was called with the registeredPrefixId returned by
+    //   registerPrefix before we got here, so don't add a registeredPrefixTable
+    //   entry.
+    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    return;
+  }
+
+  if (commandKeyChain == null)
+      throw new Error
+        ("registerPrefix: The command KeyChain has not been set. You must call setCommandSigningInfo.");
+  if (commandCertificateName.size() == 0)
+      throw new Error
+        ("registerPrefix: The command certificate name has not been set. You must call setCommandSigningInfo.");
+
+  var controlParameters = new ControlParameters();
+  controlParameters.setName(prefix);
+
+  var commandInterest = new Interest(new Name("/localhost/nfd/rib/register"));
+  // NFD only accepts TlvWireFormat packets.
+  commandInterest.getName().append
+    (controlParameters.wireEncode(TlvWireFormat.get()));
+  this.nodeMakeCommandInterest
+    (commandInterest, commandKeyChain, commandCertificateName,
+     TlvWireFormat.get());
+  // The interest is answered by the local host, so set a short timeout.
+  commandInterest.setInterestLifetimeMilliseconds(2000.0);
+
+  if (registeredPrefixId != 0)
+      // Save the onInterest callback and send the registration interest.
+      Face.registeredPrefixTable.push
+        (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+
+  this.reconnectAndExpressInterest
+    (null, commandInterest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags,
+      TlvWireFormat.get(), true));
 };
 
 /**

@@ -48,13 +48,22 @@ BinaryXmlWireFormat.instance = null;
 /**
  * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeInterest(interest, encoder);
-  return new Blob(encoder.getReducedOstream(), false);
+  var offsets = BinaryXmlWireFormat.encodeInterest(interest, encoder);
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: offsets.signedPortionBeginOffset,
+           signedPortionEndOffset: offsets.signedPortionEndOffset };
 };
 
 /**
@@ -138,12 +147,19 @@ BinaryXmlWireFormat.get = function()
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.getName().to_ndnb(encoder);
+  var offsets = interest.getName().to_ndnb(encoder);
 
   if (null != interest.getMinSuffixComponents())
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
@@ -183,6 +199,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
 
   encoder.writeElementClose();
+  return offsets;
 };
 
 /**

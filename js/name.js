@@ -147,8 +147,9 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
 };
 
 /**
- * Interpret this name component as a segment number according to NDN name
- * conventions (a network-ordered number where the first byte is the marker 0x00).
+ * Interpret this name component as a segment number according to NDN naming
+ * conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @returns {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -158,10 +159,10 @@ Name.Component.prototype.toSegment = function()
 };
 
 /**
- * Interpret this name component as a version number according to NDN name 
- * conventions (a network-ordered number where the first byte is the marker 0xFD).  
- * Note that this returns the exact number from the component without converting 
- * it to a time representation.
+ * Interpret this name component as a version number  according to NDN naming
+ * conventions for "Versioning" (marker 0xFD). Note that this returns
+ * the exact number from the component without converting it to a time
+ * representation.
  * @returns {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -172,21 +173,18 @@ Name.Component.prototype.toVersion = function()
 
 /**
  * Create a component whose value is the marker appended with the 
- * network-ordered encoding of the number. Note: if the number is zero, no bytes 
- * are used for the number - the result will have only the marker.
+ * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
  * @returns {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
-  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
-  // Put the marker byte in front.
-  var value = new Buffer(bigEndian.length + 1);
-  value[0] = marker;
-  bigEndian.copy(value, 1);
-
-  return new Name.Component(value);
+  var encoder = new TlvEncoder(9);
+  // Encode backwards.
+  encoder.writeNonNegativeInteger(number);
+  encoder.writeNonNegativeInteger(marker);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
 };
 
 /**
@@ -320,17 +318,45 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
   ++this.changeCount;
 };
 
-Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+/**
+ * Encode this name to the encoder.
+ * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
+Name.prototype.to_ndnb = function(encoder)
 {
   if (this.components == null)
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
   encoder.writeElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = encoder.offset;
+  var signedPortionEndOffset;
+
   var count = this.size();
-  for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
+  if (count == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else {
+    for (var i = 0; i < count; i++) {
+      if (i == count - 1)
+        // We will begin the final component.
+        signedPortionEndOffset = encoder.offset;
+
+      encoder.writeDTagElement
+        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
+    }
+  }
 
   encoder.writeElementClose();
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Name.prototype.getElementLabel = function()
@@ -408,7 +434,9 @@ Name.prototype.to_uri = function()
 };
 
 /**
- * Append a component with the encoded segment number.
+ * Append a component with the encoded segment number according to NDN
+ * naming conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
  * @returns {Name} This name so that you can chain calls to append.
  */
@@ -418,9 +446,10 @@ Name.prototype.appendSegment = function(segment)
 };
 
 /**
- * Append a component with the encoded version number.
- * Note that this encodes the exact value of version without converting from a
- * time representation.
+ * Append a component with the encoded version number according to NDN
+ * naming conventions for "Versioning" (marker 0xFD).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
  * @returns {Name} This name so that you can chain calls to append.
  */
@@ -766,3 +795,6 @@ Name.prototype.getChangeCount = function()
 {
   return this.changeCount;
 };
+
+// Put this require at the bottom to avoid circular references.
+var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;

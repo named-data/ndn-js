@@ -27,6 +27,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -52,11 +53,18 @@ Tlv0_1WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
-  var encoder = new TlvEncoder();
+  var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -87,11 +95,21 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
-  Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var tempOffsets = Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
 
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
 
-  return new Blob(encoder.getOutput(), false);
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -193,11 +211,127 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
+  data.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
            signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
+ * Encode controlParameters as NDN-TLV and return the encoding.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  // TODO: Encode Strategy.
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  // TODO: Encode Uri.
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FaceID, controlParameters.getFaceId());
+  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+    (signature, encoder, signature.getKeyLocator());
+  
+  return new Blob(encoder.getOutput(), false);
+};
+
+// SignatureHolder is used by decodeSignatureInfoAndValue.
+Tlv0_1WireFormat.SignatureHolder = function Tlv0_1WireFormatSignatureHolder()
+{
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+{
+  this.signature = signature;
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ */
+Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
+  var signatureHolder = new Tlv0_1WireFormat.SignatureHolder();
+  var decoder = new TlvDecoder(signatureInfo);
+  Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+
+  decoder = TlvDecoder(signatureValue);
+  // TODO: The library needs to handle other signature types than
+  //   SignatureSha256WithRsa.
+  signatureHolder.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+
+  return signatureHolder.getSignature();
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
+
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**
@@ -212,15 +346,44 @@ Tlv0_1WireFormat.get = function()
   return Tlv0_1WireFormat.instance;
 };
 
+/**
+ * Encode the name to the encoder.
+ * @param {Name} name The name to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
-  for (var i = name.size() - 1; i >= 0; --i)
+  var signedPortionEndOffsetFromBack;
+  for (var i = name.size() - 1; i >= 0; --i) {
     encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    if (i == name.size() - 1)
+      signedPortionEndOffsetFromBack = encoder.getLength();
+  }
 
+  var signedPortionBeginOffsetFromBack = encoder.getLength();
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
+
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset;
+  if (name.size() == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else
+    signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Tlv0_1WireFormat.decodeName = function(name, decoder)

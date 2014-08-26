@@ -18,6 +18,7 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var Name = require('./name.js').Name;
@@ -43,15 +44,6 @@ var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceI
 };
 
 exports.ForwardingEntry = ForwardingEntry;
-
-ForwardingEntry.ACTIVE         = 1;
-ForwardingEntry.CHILD_INHERIT  = 2;
-ForwardingEntry.ADVERTISE      = 4;
-ForwardingEntry.LAST           = 8;
-ForwardingEntry.CAPTURE       = 16;
-ForwardingEntry.LOCAL         = 32;
-ForwardingEntry.TAP           = 64;
-ForwardingEntry.CAPTURE_OK   = 128;
 
 ForwardingEntry.prototype.from_ndnb = function(
   //XMLDecoder

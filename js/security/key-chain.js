@@ -22,6 +22,7 @@ var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
@@ -284,7 +285,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = Sha256WithRsaSignature();
+  var signature = new Sha256WithRsaSignature();
   signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
   signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
@@ -295,7 +296,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.toSignedBuffer(), certificateName);
+  var signedSignature = this.sign(encoding.buf(), certificateName);
 
   // Remove the empty signature and append the real one.
   var encoder = new TlvEncoder(256);

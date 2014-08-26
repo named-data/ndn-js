@@ -68,3 +68,21 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
+
+Tlv.ContentType_Default = 0;
+Tlv.ContentType_Link =    1;
+Tlv.ContentType_Key =     2;
+
+Tlv.NfdCommand_ControlResponse = 101;
+Tlv.NfdCommand_StatusCode =      102;
+Tlv.NfdCommand_StatusText =      103;
+
+Tlv.ControlParameters_ControlParameters =   104;
+Tlv.ControlParameters_FaceId =              105;
+Tlv.ControlParameters_Uri =                 114;
+Tlv.ControlParameters_LocalControlFeature = 110;
+Tlv.ControlParameters_Origin =              111;
+Tlv.ControlParameters_Cost =                106;
+Tlv.ControlParameters_Flags =               108;
+Tlv.ControlParameters_Strategy =            107;
+Tlv.ControlParameters_ExpirationPeriod =    109;
