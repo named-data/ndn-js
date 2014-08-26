@@ -1,6 +1,6 @@
 /**
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Wentao Shang
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Ryan Bennett
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,1300 +17,13 @@
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-// Library namespace
-var ndn = ndn || {};
+// define a shim require function so that a node/browserify require calls dont cause errors when ndn-js is used via <script> tag
 
+var ndn = ndn || {}
 var exports = ndn;
 
-var require = function(ignore) { return ndn; };
-
-// Factory method to create hasher objects
-exports.createHash = function(alg)
-{
-  if (alg != 'sha256')
-    throw new Error('createHash: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-
-  obj.update = function(buf) {
-    this.md.updateHex(buf.toString('hex'));
-  };
-
-  obj.digest = function() {
-    return new Buffer(this.md.digest(), 'hex');
-  };
-
-  return obj;
-};
-
-// Factory method to create RSA signer objects
-exports.createSign = function(alg)
-{
-  if (alg != 'RSA-SHA256')
-    throw new Error('createSign: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.arr = [];
-
-  obj.update = function(buf) {
-    this.arr.push(buf);
-  };
-
-  obj.sign = function(keypem) {
-    var rsa = new RSAKey();
-    rsa.readPrivateKeyFromPEMString(keypem);
-    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
-    signer.initSign(rsa);
-    for (var i = 0; i < this.arr.length; ++i)
-      signer.updateHex(this.arr[i].toString('hex'));
-
-    return new Buffer(signer.sign(), 'hex');
-  };
-
-  return obj;
-};
-
-// Factory method to create RSA verifier objects
-exports.createVerify = function(alg)
-{
-  if (alg != 'RSA-SHA256')
-    throw new Error('createSign: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.arr = [];
-
-  obj.update = function(buf) {
-    this.arr.push(buf);
-  };
-
-  var getSubjectPublicKeyPosFromHex = function(hPub) {
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
-    if (a.length != 2)
-      return -1;
-    var pBitString = a[1];
-    if (hPub.substring(pBitString, pBitString + 2) != '03')
-      return -1;
-    var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
-    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
-      return -1;
-    return pBitStringV + 2;
-  };
-
-  var readPublicDER = function(pub_der) {
-    var hex = pub_der.toString('hex');
-    var p = getSubjectPublicKeyPosFromHex(hex);
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
-    if (a.length != 2)
-      return null;
-    var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
-    var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
-    var rsaKey = new RSAKey();
-    rsaKey.setPublic(hN, hE);
-    return rsaKey;
-  };
-
-  obj.verify = function(keypem, sig) {
-    var key = new ndn.Key();
-    key.fromPemString(keypem);
-
-    var rsa = readPublicDER(key.publicToDER());
-    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
-    signer.initVerifyByPublicKey(rsa);
-    for (var i = 0; i < this.arr.length; i++)
-      signer.updateHex(this.arr[i].toString('hex'));
-    var hSig = sig.toString('hex');
-    return signer.verify(hSig);
-  };
-
-  return obj;
-};
-
-exports.randomBytes = function(size)
-{
-  // TODO: Use a cryptographic random number generator.
-  var result = new Buffer(size);
-  for (var i = 0; i < size; ++i)
-    result[i] = Math.floor(Math.random() * 256);
-  return result;
-};
-
-// contrib/feross/buffer.js needs base64.toByteArray. Define it here so that
-// we don't have to include the entire base64 module.
-exports.toByteArray = function(str) {
-  var hex = b64tohex(str);
-  var result = [];
-  hex.replace(/(..)/g, function(ss) {
-    result.push(parseInt(ss, 16));
-  });
-  return result;
-};
-
-// After this we include contrib/feross/buffer.js to define the Buffer class.
-/**
- * The buffer module from node.js, for the browser.
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
- *
- * Copyright (C) 2013 Feross Aboukhadijeh, and other contributors.
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * @license  MIT
- */
-
-var base64 = require('base64-js')
-var ieee754 = require('ieee754')
-
-exports.Buffer = Buffer
-exports.SlowBuffer = Buffer
-exports.INSPECT_MAX_BYTES = 50
-Buffer.poolSize = 8192
-
-/**
- * If `Buffer._useTypedArrays`:
- *   === true    Use Uint8Array implementation (fastest)
- *   === false   Use Object implementation (compatible down to IE6)
- */
-Buffer._useTypedArrays = (function () {
-  // Detect if browser supports Typed Arrays. Supported browsers are IE 10+, Firefox 4+,
-  // Chrome 7+, Safari 5.1+, Opera 11.6+, iOS 4.2+. If the browser does not support adding
-  // properties to `Uint8Array` instances, then that's the same as no `Uint8Array` support
-  // because we need to be able to add all the node Buffer API methods. This is an issue
-  // in Firefox 4-29. Now fixed: https://bugzilla.mozilla.org/show_bug.cgi?id=695438
-  try {
-    var buf = new ArrayBuffer(0)
-    var arr = new Uint8Array(buf)
-    arr.foo = function () { return 42 }
-    return 42 === arr.foo() &&
-        typeof arr.subarray === 'function' // Chrome 9-10 lack `subarray`
-  } catch (e) {
-    return false
-  }
-})()
-
-/**
- * Class: Buffer
- * =============
- *
- * The Buffer constructor returns instances of `Uint8Array` that are augmented
- * with function properties for all the node `Buffer` API functions. We use
- * `Uint8Array` so that square bracket notation works as expected -- it returns
- * a single octet.
- *
- * By augmenting the instances, we can avoid modifying the `Uint8Array`
- * prototype.
- */
-function Buffer (subject, encoding, noZero) {
-  if (!(this instanceof Buffer))
-    return new Buffer(subject, encoding, noZero)
-
-  var type = typeof subject
-
-  // Workaround: node's base64 implementation allows for non-padded strings
-  // while base64-js does not.
-  if (encoding === 'base64' && type === 'string') {
-    subject = Buffer.stringtrim(subject)
-    while (subject.length % 4 !== 0) {
-      subject = subject + '='
-    }
-  }
-
-  // Find the length
-  var length
-  if (type === 'number')
-    length = Buffer.coerce(subject)
-  else if (type === 'string')
-    length = Buffer.byteLength(subject, encoding)
-  else if (type === 'object')
-    length = Buffer.coerce(subject.length) // assume that object is array-like
-  else
-    throw new Error('First argument needs to be a number, array or string.')
-
-  var buf
-  if (Buffer._useTypedArrays) {
-    // Preferred: Return an augmented `Uint8Array` instance for best performance
-    buf = Buffer._augment(new Uint8Array(length))
-  } else {
-    // Fallback: Return THIS instance of Buffer (created by `new`)
-    buf = this
-    buf.length = length
-    buf._isBuffer = true
-  }
-
-  var i
-  if (Buffer._useTypedArrays && typeof subject.byteLength === 'number') {
-    // Speed optimization -- use set if we're copying from a typed array
-    buf._set(subject)
-  } else if (Buffer.isArrayish(subject)) {
-    // Treat array-ish objects as a byte array
-    if (Buffer.isBuffer(subject)) {
-      for (i = 0; i < length; i++)
-        buf[i] = subject.readUInt8(i)
-    } else {
-      for (i = 0; i < length; i++)
-        buf[i] = ((subject[i] % 256) + 256) % 256
-    }
-  } else if (type === 'string') {
-    buf.write(subject, 0, encoding)
-  } else if (type === 'number' && !Buffer._useTypedArrays && !noZero) {
-    for (i = 0; i < length; i++) {
-      buf[i] = 0
-    }
-  }
-
-  return buf
-}
-
-// STATIC METHODS
-// ==============
-
-Buffer.isEncoding = function (encoding) {
-  switch (String(encoding).toLowerCase()) {
-    case 'hex':
-    case 'utf8':
-    case 'utf-8':
-    case 'ascii':
-    case 'binary':
-    case 'base64':
-    case 'raw':
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      return true
-    default:
-      return false
-  }
-}
-
-Buffer.isBuffer = function (b) {
-  return !!(b !== null && b !== undefined && b._isBuffer)
-}
-
-Buffer.byteLength = function (str, encoding) {
-  var ret
-  str = str.toString()
-  switch (encoding || 'utf8') {
-    case 'hex':
-      ret = str.length / 2
-      break
-    case 'utf8':
-    case 'utf-8':
-      ret = Buffer.utf8ToBytes(str).length
-      break
-    case 'ascii':
-    case 'binary':
-    case 'raw':
-      ret = str.length
-      break
-    case 'base64':
-      ret = Buffer.base64ToBytes(str).length
-      break
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      ret = str.length * 2
-      break
-    default:
-      throw new Error('Unknown encoding')
-  }
-  return ret
-}
-
-Buffer.concat = function (list, totalLength) {
-  Buffer.assert(Buffer.isArray(list), 'Usage: Buffer.concat(list[, length])')
-
-  if (list.length === 0) {
-    return new Buffer(0)
-  } else if (list.length === 1) {
-    return list[0]
-  }
-
-  var i
-  if (totalLength === undefined) {
-    totalLength = 0
-    for (i = 0; i < list.length; i++) {
-      totalLength += list[i].length
-    }
-  }
-
-  var buf = new Buffer(totalLength)
-  var pos = 0
-  for (i = 0; i < list.length; i++) {
-    var item = list[i]
-    item.copy(buf, pos)
-    pos += item.length
-  }
-  return buf
-}
-
-Buffer.compare = function (a, b) {
-  Buffer.assert(Buffer.isBuffer(a) && Buffer.isBuffer(b), 'Arguments must be Buffers')
-  var x = a.length
-  var y = b.length
-  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
-  if (i !== len) {
-    x = a[i]
-    y = b[i]
-  }
-  if (x < y) {
-    return -1
-  }
-  if (y < x) {
-    return 1
-  }
-  return 0
-}
-
-// BUFFER INSTANCE METHODS
-// =======================
-
-Buffer.hexWrite = function(buf, string, offset, length) {
-  offset = Number(offset) || 0
-  var remaining = buf.length - offset
-  if (!length) {
-    length = remaining
-  } else {
-    length = Number(length)
-    if (length > remaining) {
-      length = remaining
-    }
-  }
-
-  // must be an even number of digits
-  var strLen = string.length
-  Buffer.assert(strLen % 2 === 0, 'Invalid hex string')
-
-  if (length > strLen / 2) {
-    length = strLen / 2
-  }
-  for (var i = 0; i < length; i++) {
-    var b = parseInt(string.substr(i * 2, 2), 16)
-    Buffer.assert(!isNaN(b), 'Invalid hex string')
-    buf[offset + i] = b
-  }
-  return i
-}
-
-Buffer.utf8Write = function(buf, string, offset, length) {
-  var charsWritten = Buffer.blitBuffer(Buffer.utf8ToBytes(string), buf, offset, length)
-  return charsWritten
-}
-
-Buffer.asciiWrite = function(buf, string, offset, length) {
-  var charsWritten = Buffer.blitBuffer(Buffer.asciiToBytes(string), buf, offset, length)
-  return charsWritten
-}
-
-Buffer.binaryWrite = function(buf, string, offset, length) {
-  return Buffer.asciiWrite(buf, string, offset, length)
-}
-
-Buffer.base64Write = function(buf, string, offset, length) {
-  var charsWritten = Buffer.blitBuffer(Buffer.base64ToBytes(string), buf, offset, length)
-  return charsWritten
-}
-
-Buffer.utf16leWrite = function(buf, string, offset, length) {
-  var charsWritten = Buffer.blitBuffer(Buffer.utf16leToBytes(string), buf, offset, length)
-  return charsWritten
-}
-
-Buffer.prototype.write = function (string, offset, length, encoding) {
-  // Support both (string, offset, length, encoding)
-  // and the legacy (string, encoding, offset, length)
-  if (isFinite(offset)) {
-    if (!isFinite(length)) {
-      encoding = length
-      length = undefined
-    }
-  } else {  // legacy
-    var swap = encoding
-    encoding = offset
-    offset = length
-    length = swap
-  }
-
-  offset = Number(offset) || 0
-  var remaining = this.length - offset
-  if (!length) {
-    length = remaining
-  } else {
-    length = Number(length)
-    if (length > remaining) {
-      length = remaining
-    }
-  }
-  encoding = String(encoding || 'utf8').toLowerCase()
-
-  var ret
-  switch (encoding) {
-    case 'hex':
-      ret = Buffer.hexWrite(this, string, offset, length)
-      break
-    case 'utf8':
-    case 'utf-8':
-      ret = Buffer.utf8Write(this, string, offset, length)
-      break
-    case 'ascii':
-      ret = Buffer.asciiWrite(this, string, offset, length)
-      break
-    case 'binary':
-      ret = Buffer.binaryWrite(this, string, offset, length)
-      break
-    case 'base64':
-      ret = Buffer.base64Write(this, string, offset, length)
-      break
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      ret = Buffer.utf16leWrite(this, string, offset, length)
-      break
-    default:
-      throw new Error('Unknown encoding')
-  }
-  return ret
-}
-
-Buffer.prototype.toString = function (encoding, start, end) {
-  var self = this
-
-  encoding = String(encoding || 'utf8').toLowerCase()
-  start = Number(start) || 0
-  end = (end === undefined) ? self.length : Number(end)
-
-  // Fastpath empty strings
-  if (end === start)
-    return ''
-
-  var ret
-  switch (encoding) {
-    case 'hex':
-      ret = Buffer.hexSlice(self, start, end)
-      break
-    case 'utf8':
-    case 'utf-8':
-      ret = Buffer.utf8Slice(self, start, end)
-      break
-    case 'ascii':
-      ret = Buffer.asciiSlice(self, start, end)
-      break
-    case 'binary':
-      ret = Buffer.binarySlice(self, start, end)
-      break
-    case 'base64':
-      ret = Buffer.base64Slice(self, start, end)
-      break
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      ret = utf16leSlice(self, start, end)
-      break
-    default:
-      throw new Error('Unknown encoding')
-  }
-  return ret
-}
-
-Buffer.prototype.toJSON = function () {
-  return {
-    type: 'Buffer',
-    data: Array.prototype.slice.call(this._arr || this, 0)
-  }
-}
-
-Buffer.prototype.equals = function (b) {
-  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
-  return Buffer.compare(this, b) === 0
-}
-
-Buffer.prototype.compare = function (b) {
-  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
-  return Buffer.compare(this, b)
-}
-
-// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
-Buffer.prototype.copy = function (target, target_start, start, end) {
-  var source = this
-
-  if (!start) start = 0
-  if (!end && end !== 0) end = this.length
-  if (!target_start) target_start = 0
-
-  // Copy 0 bytes; we're done
-  if (end === start) return
-  if (target.length === 0 || source.length === 0) return
-
-  // Fatal error conditions
-  Buffer.assert(end >= start, 'sourceEnd < sourceStart')
-  Buffer.assert(target_start >= 0 && target_start < target.length,
-      'targetStart out of bounds')
-  Buffer.assert(start >= 0 && start < source.length, 'sourceStart out of bounds')
-  Buffer.assert(end >= 0 && end <= source.length, 'sourceEnd out of bounds')
-
-  // Are we oob?
-  if (end > this.length)
-    end = this.length
-  if (target.length - target_start < end - start)
-    end = target.length - target_start + start
-
-  var len = end - start
-
-  if (len < 100 || !Buffer._useTypedArrays) {
-    for (var i = 0; i < len; i++) {
-      target[i + target_start] = this[i + start]
-    }
-  } else {
-    target._set(this.subarray(start, start + len), target_start)
-  }
-}
-
-Buffer.base64Slice = function(buf, start, end) {
-  if (start === 0 && end === buf.length) {
-    return base64.fromByteArray(buf)
-  } else {
-    return base64.fromByteArray(buf.slice(start, end))
-  }
-}
-
-Buffer.utf8Slice = function(buf, start, end) {
-  var res = ''
-  var tmp = ''
-  end = Math.min(buf.length, end)
-
-  for (var i = start; i < end; i++) {
-    if (buf[i] <= 0x7F) {
-      res += Buffer.decodeUtf8Char(tmp) + String.fromCharCode(buf[i])
-      tmp = ''
-    } else {
-      tmp += '%' + buf[i].toString(16)
-    }
-  }
-
-  return res + Buffer.decodeUtf8Char(tmp)
-}
-
-Buffer.asciiSlice = function(buf, start, end) {
-  var ret = ''
-  end = Math.min(buf.length, end)
-
-  for (var i = start; i < end; i++) {
-    ret += String.fromCharCode(buf[i])
-  }
-  return ret
-}
-
-Buffer.binarySlice = function(buf, start, end) {
-  return Buffer.asciiSlice(buf, start, end)
-}
-
-Buffer.hexSlice = function(buf, start, end) {
-  var len = buf.length
-
-  if (!start || start < 0) start = 0
-  if (!end || end < 0 || end > len) end = len
-
-  var out = ''
-  for (var i = start; i < end; i++) {
-    out += Buffer.toHex(buf[i])
-  }
-  return out
-}
-
-function utf16leSlice (buf, start, end) {
-  var bytes = buf.slice(start, end)
-  var res = ''
-  for (var i = 0; i < bytes.length; i += 2) {
-    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
-  }
-  return res
-}
-
-Buffer.prototype.slice = function (start, end) {
-  var len = this.length
-  start = Buffer.clamp(start, len, 0)
-  end = Buffer.clamp(end, len, len)
-
-  if (Buffer._useTypedArrays) {
-    return Buffer._augment(this.subarray(start, end))
-  } else {
-    var sliceLen = end - start
-    var newBuf = new Buffer(sliceLen, undefined, true)
-    for (var i = 0; i < sliceLen; i++) {
-      newBuf[i] = this[i + start]
-    }
-    return newBuf
-  }
-}
-
-// `get` will be removed in Node 0.13+
-Buffer.prototype.get = function (offset) {
-  console.log('.get() is deprecated. Access using array indexes instead.')
-  return this.readUInt8(offset)
-}
-
-// `set` will be removed in Node 0.13+
-Buffer.prototype.set = function (v, offset) {
-  console.log('.set() is deprecated. Access using array indexes instead.')
-  return this.writeUInt8(v, offset)
-}
-
-Buffer.prototype.readUInt8 = function (offset, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
-  }
-
-  if (offset >= this.length)
-    return
-
-  return this[offset]
-}
-
-Buffer.readUInt16 = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  var val
-  if (littleEndian) {
-    val = buf[offset]
-    if (offset + 1 < len)
-      val |= buf[offset + 1] << 8
-  } else {
-    val = buf[offset] << 8
-    if (offset + 1 < len)
-      val |= buf[offset + 1]
-  }
-  return val
-}
-
-Buffer.prototype.readUInt16LE = function (offset, noAssert) {
-  return Buffer.readUInt16(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readUInt16BE = function (offset, noAssert) {
-  return Buffer.readUInt16(this, offset, false, noAssert)
-}
-
-Buffer.readUInt32 = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  var val
-  if (littleEndian) {
-    if (offset + 2 < len)
-      val = buf[offset + 2] << 16
-    if (offset + 1 < len)
-      val |= buf[offset + 1] << 8
-    val |= buf[offset]
-    if (offset + 3 < len)
-      val = val + (buf[offset + 3] << 24 >>> 0)
-  } else {
-    if (offset + 1 < len)
-      val = buf[offset + 1] << 16
-    if (offset + 2 < len)
-      val |= buf[offset + 2] << 8
-    if (offset + 3 < len)
-      val |= buf[offset + 3]
-    val = val + (buf[offset] << 24 >>> 0)
-  }
-  return val
-}
-
-Buffer.prototype.readUInt32LE = function (offset, noAssert) {
-  return Buffer.readUInt32(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readUInt32BE = function (offset, noAssert) {
-  return Buffer.readUInt32(this, offset, false, noAssert)
-}
-
-Buffer.prototype.readInt8 = function (offset, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(offset !== undefined && offset !== null,
-        'missing offset')
-    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
-  }
-
-  if (offset >= this.length)
-    return
-
-  var neg = this[offset] & 0x80
-  if (neg)
-    return (0xff - this[offset] + 1) * -1
-  else
-    return this[offset]
-}
-
-Buffer.readInt16 = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  var val = Buffer.readUInt16(buf, offset, littleEndian, true)
-  var neg = val & 0x8000
-  if (neg)
-    return (0xffff - val + 1) * -1
-  else
-    return val
-}
-
-Buffer.prototype.readInt16LE = function (offset, noAssert) {
-  return Buffer.readInt16(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readInt16BE = function (offset, noAssert) {
-  return Buffer.readInt16(this, offset, false, noAssert)
-}
-
-Buffer.readInt32 = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  var val = Buffer.readUInt32(buf, offset, littleEndian, true)
-  var neg = val & 0x80000000
-  if (neg)
-    return (0xffffffff - val + 1) * -1
-  else
-    return val
-}
-
-Buffer.prototype.readInt32LE = function (offset, noAssert) {
-  return Buffer.readInt32(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readInt32BE = function (offset, noAssert) {
-  return Buffer.readInt32(this, offset, false, noAssert)
-}
-
-Buffer.readFloat = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  return ieee754.read(buf, offset, littleEndian, 23, 4)
-}
-
-Buffer.prototype.readFloatLE = function (offset, noAssert) {
-  return Buffer.readFloat(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readFloatBE = function (offset, noAssert) {
-  return Buffer.readFloat(this, offset, false, noAssert)
-}
-
-Buffer.readDouble = function(buf, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset + 7 < buf.length, 'Trying to read beyond buffer length')
-  }
-
-  return ieee754.read(buf, offset, littleEndian, 52, 8)
-}
-
-Buffer.prototype.readDoubleLE = function (offset, noAssert) {
-  return Buffer.readDouble(this, offset, true, noAssert)
-}
-
-Buffer.prototype.readDoubleBE = function (offset, noAssert) {
-  return Buffer.readDouble(this, offset, false, noAssert)
-}
-
-Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset < this.length, 'trying to write beyond buffer length')
-    Buffer.verifuint(value, 0xff)
-  }
-
-  if (offset >= this.length) return
-
-  this[offset] = value
-  return offset + 1
-}
-
-Buffer.writeUInt16 = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 1 < buf.length, 'trying to write beyond buffer length')
-    Buffer.verifuint(value, 0xffff)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  for (var i = 0, j = Math.min(len - offset, 2); i < j; i++) {
-    buf[offset + i] =
-        (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
-            (littleEndian ? i : 1 - i) * 8
-  }
-  return offset + 2
-}
-
-Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
-  return Buffer.writeUInt16(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
-  return Buffer.writeUInt16(this, value, offset, false, noAssert)
-}
-
-Buffer.writeUInt32 = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 3 < buf.length, 'trying to write beyond buffer length')
-    Buffer.verifuint(value, 0xffffffff)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  for (var i = 0, j = Math.min(len - offset, 4); i < j; i++) {
-    buf[offset + i] =
-        (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
-  }
-  return offset + 4
-}
-
-Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
-  return Buffer.writeUInt32(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
-  return Buffer.writeUInt32(this, value, offset, false, noAssert)
-}
-
-Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset < this.length, 'Trying to write beyond buffer length')
-    Buffer.verifsint(value, 0x7f, -0x80)
-  }
-
-  if (offset >= this.length)
-    return
-
-  if (value >= 0)
-    this.writeUInt8(value, offset, noAssert)
-  else
-    this.writeUInt8(0xff + value + 1, offset, noAssert)
-  return offset + 1
-}
-
-Buffer.writeInt16 = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 1 < buf.length, 'Trying to write beyond buffer length')
-    Buffer.verifsint(value, 0x7fff, -0x8000)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  if (value >= 0)
-    Buffer.writeUInt16(buf, value, offset, littleEndian, noAssert)
-  else
-    Buffer.writeUInt16(buf, 0xffff + value + 1, offset, littleEndian, noAssert)
-  return offset + 2
-}
-
-Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
-  return Buffer.writeInt16(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
-  return Buffer.writeInt16(this, value, offset, false, noAssert)
-}
-
-Buffer.writeInt32 = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
-    Buffer.verifsint(value, 0x7fffffff, -0x80000000)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  if (value >= 0)
-    Buffer.writeUInt32(buf, value, offset, littleEndian, noAssert)
-  else
-    Buffer.writeUInt32(buf, 0xffffffff + value + 1, offset, littleEndian, noAssert)
-  return offset + 4
-}
-
-Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
-  return Buffer.writeInt32(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
-  return Buffer.writeInt32(this, value, offset, false, noAssert)
-}
-
-Buffer.writeFloat = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
-    Buffer.verifIEEE754(value, 3.4028234663852886e+38, -3.4028234663852886e+38)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  ieee754.write(buf, value, offset, littleEndian, 23, 4)
-  return offset + 4
-}
-
-Buffer.prototype.writeFloatLE = function (value, offset, noAssert) {
-  return Buffer.writeFloat(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
-  return Buffer.writeFloat(this, value, offset, false, noAssert)
-}
-
-Buffer.writeDouble = function(buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert) {
-    Buffer.assert(value !== undefined && value !== null, 'missing value')
-    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
-    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
-    Buffer.assert(offset + 7 < buf.length,
-        'Trying to write beyond buffer length')
-    Buffer.verifIEEE754(value, 1.7976931348623157E+308, -1.7976931348623157E+308)
-  }
-
-  var len = buf.length
-  if (offset >= len)
-    return
-
-  ieee754.write(buf, value, offset, littleEndian, 52, 8)
-  return offset + 8
-}
-
-Buffer.prototype.writeDoubleLE = function (value, offset, noAssert) {
-  return Buffer.writeDouble(this, value, offset, true, noAssert)
-}
-
-Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
-  return Buffer.writeDouble(this, value, offset, false, noAssert)
-}
-
-// fill(value, start=0, end=buffer.length)
-Buffer.prototype.fill = function (value, start, end) {
-  if (!value) value = 0
-  if (!start) start = 0
-  if (!end) end = this.length
-
-  Buffer.assert(end >= start, 'end < start')
-
-  // Fill 0 bytes; we're done
-  if (end === start) return
-  if (this.length === 0) return
-
-  Buffer.assert(start >= 0 && start < this.length, 'start out of bounds')
-  Buffer.assert(end >= 0 && end <= this.length, 'end out of bounds')
-
-  var i
-  if (typeof value === 'number') {
-    for (i = start; i < end; i++) {
-      this[i] = value
-    }
-  } else {
-    var bytes = Buffer.utf8ToBytes(value.toString())
-    var len = bytes.length
-    for (i = start; i < end; i++) {
-      this[i] = bytes[i % len]
-    }
-  }
-
-  return this
-}
-
-Buffer.prototype.inspect = function () {
-  var out = []
-  var len = this.length
-  for (var i = 0; i < len; i++) {
-    out[i] = Buffer.toHex(this[i])
-    if (i === exports.INSPECT_MAX_BYTES) {
-      out[i + 1] = '...'
-      break
-    }
-  }
-  return '<Buffer ' + out.join(' ') + '>'
-}
-
-/**
- * Creates a new `ArrayBuffer` with the *copied* memory of the buffer instance.
- * Added in Node 0.12. Only available in browsers that support ArrayBuffer.
- */
-Buffer.prototype.toArrayBuffer = function () {
-  if (typeof Uint8Array !== 'undefined') {
-    if (Buffer._useTypedArrays) {
-      return (new Buffer(this)).buffer
-    } else {
-      var buf = new Uint8Array(this.length)
-      for (var i = 0, len = buf.length; i < len; i += 1) {
-        buf[i] = this[i]
-      }
-      return buf.buffer
-    }
-  } else {
-    throw new Error('Buffer.toArrayBuffer not supported in this browser')
-  }
-}
-
-// HELPER FUNCTIONS
-// ================
-
-var BP = Buffer.prototype
-
-/**
- * Augment a Uint8Array *instance* (not the Uint8Array class!) with Buffer methods
- */
-Buffer._augment = function (arr) {
-  arr._isBuffer = true
-
-  // save reference to original Uint8Array get/set methods before overwriting
-  arr._get = arr.get
-  arr._set = arr.set
-
-  // deprecated, will be removed in node 0.13+
-  arr.get = BP.get
-  arr.set = BP.set
-
-  arr.write = BP.write
-  arr.toString = BP.toString
-  arr.toLocaleString = BP.toString
-  arr.toJSON = BP.toJSON
-  arr.equals = BP.equals
-  arr.compare = BP.compare
-  arr.copy = BP.copy
-  arr.slice = BP.slice
-  arr.readUInt8 = BP.readUInt8
-  arr.readUInt16LE = BP.readUInt16LE
-  arr.readUInt16BE = BP.readUInt16BE
-  arr.readUInt32LE = BP.readUInt32LE
-  arr.readUInt32BE = BP.readUInt32BE
-  arr.readInt8 = BP.readInt8
-  arr.readInt16LE = BP.readInt16LE
-  arr.readInt16BE = BP.readInt16BE
-  arr.readInt32LE = BP.readInt32LE
-  arr.readInt32BE = BP.readInt32BE
-  arr.readFloatLE = BP.readFloatLE
-  arr.readFloatBE = BP.readFloatBE
-  arr.readDoubleLE = BP.readDoubleLE
-  arr.readDoubleBE = BP.readDoubleBE
-  arr.writeUInt8 = BP.writeUInt8
-  arr.writeUInt16LE = BP.writeUInt16LE
-  arr.writeUInt16BE = BP.writeUInt16BE
-  arr.writeUInt32LE = BP.writeUInt32LE
-  arr.writeUInt32BE = BP.writeUInt32BE
-  arr.writeInt8 = BP.writeInt8
-  arr.writeInt16LE = BP.writeInt16LE
-  arr.writeInt16BE = BP.writeInt16BE
-  arr.writeInt32LE = BP.writeInt32LE
-  arr.writeInt32BE = BP.writeInt32BE
-  arr.writeFloatLE = BP.writeFloatLE
-  arr.writeFloatBE = BP.writeFloatBE
-  arr.writeDoubleLE = BP.writeDoubleLE
-  arr.writeDoubleBE = BP.writeDoubleBE
-  arr.fill = BP.fill
-  arr.inspect = BP.inspect
-  arr.toArrayBuffer = BP.toArrayBuffer
-
-  return arr
-}
-
-Buffer.stringtrim = function(str) {
-  if (str.trim) return str.trim()
-  return str.replace(/^\s+|\s+$/g, '')
-}
-
-// slice(start, end)
-Buffer.clamp = function(index, len, defaultValue) {
-  if (typeof index !== 'number') return defaultValue
-  index = ~~index;  // Coerce to integer.
-  if (index >= len) return len
-  if (index >= 0) return index
-  index += len
-  if (index >= 0) return index
-  return 0
-}
-
-Buffer.coerce = function(length) {
-  // Coerce length to a number (possibly NaN), round up
-  // in case it's fractional (e.g. 123.456) then do a
-  // double negate to coerce a NaN to 0. Easy, right?
-  length = ~~Math.ceil(+length)
-  return length < 0 ? 0 : length
-}
-
-Buffer.isArray = function(subject) {
-  return (Array.isArray || function (subject) {
-    return Object.prototype.toString.call(subject) === '[object Array]'
-  })(subject)
-}
-
-Buffer.isArrayish = function(subject) {
-  return Buffer.isArray(subject) || Buffer.isBuffer(subject) ||
-      subject && typeof subject === 'object' &&
-      typeof subject.length === 'number'
-}
-
-Buffer.toHex = function(n) {
-  if (n < 16) return '0' + n.toString(16)
-  return n.toString(16)
-}
-
-Buffer.utf8ToBytes = function(str) {
-  var byteArray = []
-  for (var i = 0; i < str.length; i++) {
-    var b = str.charCodeAt(i)
-    if (b <= 0x7F) {
-      byteArray.push(b)
-    } else {
-      var start = i
-      if (b >= 0xD800 && b <= 0xDFFF) i++
-      var h = encodeURIComponent(str.slice(start, i+1)).substr(1).split('%')
-      for (var j = 0; j < h.length; j++) {
-        byteArray.push(parseInt(h[j], 16))
-      }
-    }
-  }
-  return byteArray
-}
-
-Buffer.asciiToBytes = function(str) {
-  var byteArray = []
-  for (var i = 0; i < str.length; i++) {
-    // Node's code seems to be doing this and not & 0x7F..
-    byteArray.push(str.charCodeAt(i) & 0xFF)
-  }
-  return byteArray
-}
-
-Buffer.utf16leToBytes = function(str) {
-  var c, hi, lo
-  var byteArray = []
-  for (var i = 0; i < str.length; i++) {
-    c = str.charCodeAt(i)
-    hi = c >> 8
-    lo = c % 256
-    byteArray.push(lo)
-    byteArray.push(hi)
-  }
-
-  return byteArray
-}
-
-Buffer.base64ToBytes = function(str) {
-  return base64.toByteArray(str)
-}
-
-Buffer.blitBuffer = function(src, dst, offset, length) {
-  for (var i = 0; i < length; i++) {
-    if ((i + offset >= dst.length) || (i >= src.length))
-      break
-    dst[i + offset] = src[i]
-  }
-  return i
-}
-
-Buffer.decodeUtf8Char = function(str) {
-  try {
-    return decodeURIComponent(str)
-  } catch (err) {
-    return String.fromCharCode(0xFFFD) // UTF 8 invalid char
-  }
-}
-
-/*
- * We have to make sure that the value is a valid integer. This means that it
- * is non-negative. It has no fractional component and that it does not
- * exceed the maximum allowed value.
- */
-Buffer.verifuint = function(value, max) {
-  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
-  Buffer.assert(value >= 0, 'specified a negative value for writing an unsigned value')
-  Buffer.assert(value <= max, 'value is larger than maximum value for type')
-  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
-}
-
-Buffer.verifsint = function(value, max, min) {
-  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
-  Buffer.assert(value <= max, 'value larger than maximum allowed value')
-  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
-  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
-}
-
-Buffer.verifIEEE754 = function(value, max, min) {
-  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
-  Buffer.assert(value <= max, 'value larger than maximum allowed value')
-  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
-}
-
-Buffer.assert = function(test, message) {
-  if (!test) throw new Error(message || 'Failed assertion')
-}
+var module = {}
+function require(){return ndn;}
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -2032,6 +745,9 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
+
+exports.CryptoJS = CryptoJS;
+module.exports = exports;
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -2047,9 +763,10 @@ The above copyright notice and this permission notice shall be included in all c
 
 code.google.com/p/crypto-js/wiki/License
 */
+
+var C = require('./core.js').CryptoJS;
 (function (Math) {
     // Shortcuts
-    var C = CryptoJS;
     var C_lib = C.lib;
     var WordArray = C_lib.WordArray;
     var Hasher = C_lib.Hasher;
@@ -2226,6 +943,9 @@ code.google.com/p/crypto-js/wiki/License
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
+
+exports.CryptoJS = C;
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -2242,8 +962,13 @@ code.google.com/p/crypto-js/wiki/License
 // 
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
-var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-var b64pad="=";
+var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  , b64pad="="
+  , BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+function int2char(n) {
+  return BI_RM.charAt(n); 
+}
 
 function hex2b64(h) {
   var i;
@@ -2313,6 +1038,12 @@ function b64toBA(s) {
   }
   return a;
 }
+
+exports.b64tohex = b64tohex;
+exports.b64toBA  = b64toBA;
+exports.hex2b64  = hex2b64;
+
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -2330,7 +1061,9 @@ function b64toBA(s) {
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on jsbn.js and rng.js
+var intShim = require("jsbn");
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
 // Version 1.1: support utf-8 encoding in pkcs1pad2
 
 // convert a (hex) string to a bignum object
@@ -2450,7 +1183,7 @@ function oaep_pad(s, n, hash)
 }
 
 // "empty" RSA key constructor
-function RSAKey() {
+var RSAKey = function RSAKey() {
   this.n = null;
   this.e = 0;
   this.d = null;
@@ -2515,6 +1248,10 @@ RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
+
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -2533,6 +1270,14 @@ RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 
 // Depends on rsa.js and jsbn2.js
 
+var intShim = require("jsbn");
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
+var RSAKey = require('./rsa.js').RSAKey;
+
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
@@ -2774,6 +1519,9 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! crypto-1.0.4.js (c) 2013 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
@@ -2803,6 +1551,15 @@ RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
  * @since 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var CryptoJS = require('./sha256.js').CryptoJS
+  , intShim = require('jsbn');
+
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 /** 
  * kjur's class library name space
@@ -3468,6 +2225,8 @@ KJUR.crypto.Signature = function(params) {
     }
 };
 
+exports.KJUR = KJUR;
+module.exports = exports;
 /*! rsapem-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -3501,6 +2260,9 @@ KJUR.crypto.Signature = function(params) {
 //   removing PEM header, PEM footer and space characters including
 //   new lines from PEM formatted RSA private key string.
 //
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa2.js').RSAKey;
 
 /**
  * @fileOverview
@@ -3577,6 +2339,9 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
 RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN1HexString;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! rsasign-1.2.2.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -3608,6 +2373,13 @@ RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN
 //   rsa.js
 //   rsa2.js
 //
+var intShim = require('jsbn');
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+var RSAKey = require('./rsapem-1.1.js').RSAKey
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // keysize / pmstrlen
 //  512 /  128
@@ -3976,6 +2748,9 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! asn1hex-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -4000,7 +2775,12 @@ RSAKey.SALT_LEN_RECOVER = -2;
 //
 // Depends on:
 //
+var intShim = require('jsbn')
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte
@@ -4255,7 +3035,7 @@ function _asnhex_getDecendantHexVByNthList(h, currentIndex, nthList) {
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  * @since 1.1
  */
-function ASN1HEX() {
+var ASN1HEX = function ASN1HEX() {
   return ASN1HEX;
 }
 
@@ -4271,6 +3051,9 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;
 /*! x509-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 // 
@@ -4300,6 +3083,9 @@ ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
 //   base64.js
 //   rsa.js
 //   asn1hex.js
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js').RSAKey;
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
 
 /**
  * @fileOverview
@@ -4542,6 +3328,8 @@ X509.prototype.getSubjectString = _x509_getSubjectString;
 X509.prototype.getNotBefore = _x509_getNotBefore;
 X509.prototype.getNotAfter = _x509_getNotAfter;
 
+exports.X509 = X509;
+module.exports = exports;
 // Copyright (c) 2005  Tom Wu
 // All Rights Reserved.
 // 
@@ -4568,7 +3356,7 @@ var canary = 0xdeadbeefcafe;
 var j_lm = ((canary&0xffffff)==0xefcafe);
 
 // (public) Constructor
-function BigInteger(a,b,c) {
+var BigInteger = function BigInteger(a,b,c) {
   if(a != null)
     if("number" == typeof a) this.fromNumber(a,b,c);
     else if(b == null && "string" != typeof a) this.fromString(a,256);
@@ -5781,6 +4569,1537 @@ BigInteger.prototype.square = bnSquare;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+
+exports.BigInteger = BigInteger;
+module.exports = exports;
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Wentao Shang
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
+
+// Library namespace
+var ndn = ndn || {};
+ndn.Key = require("./key.js").Key
+
+var exports = ndn;
+
+
+// Factory method to create hasher objects
+exports.createHash = function(alg)
+{
+  if (alg != 'sha256')
+    throw new Error('createHash: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+
+  obj.update = function(buf) {
+    this.md.updateHex(buf.toString('hex'));
+  };
+
+  obj.digest = function() {
+    return new Buffer(this.md.digest(), 'hex');
+  };
+
+  return obj;
+};
+
+// Factory method to create RSA signer objects
+exports.createSign = function(alg)
+{
+  if (alg != 'RSA-SHA256')
+    throw new Error('createSign: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.arr = [];
+
+  obj.update = function(buf) {
+    this.arr.push(buf);
+  };
+
+  obj.sign = function(keypem) {
+    var rsa = new RSAKey();
+    rsa.readPrivateKeyFromPEMString(keypem);
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
+    signer.initSign(rsa);
+    for (var i = 0; i < this.arr.length; ++i)
+      signer.updateHex(this.arr[i].toString('hex'));
+
+    return new Buffer(signer.sign(), 'hex');
+  };
+
+  return obj;
+};
+
+// Factory method to create RSA verifier objects
+exports.createVerify = function(alg)
+{
+  if (alg != 'RSA-SHA256')
+    throw new Error('createSign: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.arr = [];
+
+  obj.update = function(buf) {
+    this.arr.push(buf);
+  };
+
+  var getSubjectPublicKeyPosFromHex = function(hPub) {
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
+    if (a.length != 2)
+      return -1;
+    var pBitString = a[1];
+    if (hPub.substring(pBitString, pBitString + 2) != '03')
+      return -1;
+    var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
+    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
+      return -1;
+    return pBitStringV + 2;
+  };
+
+  var readPublicDER = function(pub_der) {
+    var hex = pub_der.toString('hex');
+    var p = getSubjectPublicKeyPosFromHex(hex);
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
+    if (a.length != 2)
+      return null;
+    var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
+    var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
+    var rsaKey = new RSAKey();
+    rsaKey.setPublic(hN, hE);
+    return rsaKey;
+  };
+
+  obj.verify = function(keypem, sig) {
+    var key = new ndn.Key();
+    key.fromPemString(keypem);
+
+    var rsa = readPublicDER(key.publicToDER());
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
+    signer.initVerifyByPublicKey(rsa);
+    for (var i = 0; i < this.arr.length; i++)
+      signer.updateHex(this.arr[i].toString('hex'));
+    var hSig = sig.toString('hex');
+    return signer.verify(hSig);
+  };
+
+  return obj;
+};
+
+exports.randomBytes = function(size)
+{
+  // TODO: Use a cryptographic random number generator.
+  var result = new Buffer(size);
+  for (var i = 0; i < size; ++i)
+    result[i] = Math.floor(Math.random() * 256);
+  return result;
+};
+
+// contrib/feross/buffer.js needs base64.toByteArray. Define it here so that
+// we don't have to include the entire base64 module.
+exports.toByteArray = function(str) {
+  var hex = b64tohex(str);
+  var result = [];
+  hex.replace(/(..)/g, function(ss) {
+    result.push(parseInt(ss, 16));
+  });
+  return result;
+};
+
+module.exports = exports
+// After this we include contrib/feross/buffer.js to define the Buffer class.
+var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+var base64js = {};
+
+;(function (exports) {
+	'use strict';
+
+  var Arr = (typeof Uint8Array !== 'undefined')
+    ? Uint8Array
+    : Array
+
+	var PLUS   = '+'.charCodeAt(0)
+	var SLASH  = '/'.charCodeAt(0)
+	var NUMBER = '0'.charCodeAt(0)
+	var LOWER  = 'a'.charCodeAt(0)
+	var UPPER  = 'A'.charCodeAt(0)
+
+	function decode (elt) {
+		var code = elt.charCodeAt(0)
+		if (code === PLUS)
+			return 62 // '+'
+		if (code === SLASH)
+			return 63 // '/'
+		if (code < NUMBER)
+			return -1 //no match
+		if (code < NUMBER + 10)
+			return code - NUMBER + 26 + 26
+		if (code < UPPER + 26)
+			return code - UPPER
+		if (code < LOWER + 26)
+			return code - LOWER + 26
+	}
+
+	function b64ToByteArray (b64) {
+		var i, j, l, tmp, placeHolders, arr
+
+		if (b64.length % 4 > 0) {
+			throw new Error('Invalid string. Length must be a multiple of 4')
+		}
+
+		// the number of equal signs (place holders)
+		// if there are two placeholders, than the two characters before it
+		// represent one byte
+		// if there is only one, then the three characters before it represent 2 bytes
+		// this is just a cheap hack to not do indexOf twice
+		var len = b64.length
+		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
+
+		// base64 is 4/3 + up to two characters of the original data
+		arr = new Arr(b64.length * 3 / 4 - placeHolders)
+
+		// if there are placeholders, only get up to the last complete 4 chars
+		l = placeHolders > 0 ? b64.length - 4 : b64.length
+
+		var L = 0
+
+		function push (v) {
+			arr[L++] = v
+		}
+
+		for (i = 0, j = 0; i < l; i += 4, j += 3) {
+			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
+			push((tmp & 0xFF0000) >> 16)
+			push((tmp & 0xFF00) >> 8)
+			push(tmp & 0xFF)
+		}
+
+		if (placeHolders === 2) {
+			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
+			push(tmp & 0xFF)
+		} else if (placeHolders === 1) {
+			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
+			push((tmp >> 8) & 0xFF)
+			push(tmp & 0xFF)
+		}
+
+		return arr
+	}
+
+	function uint8ToBase64 (uint8) {
+		var i,
+			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
+			output = "",
+			temp, length
+
+		function encode (num) {
+			return lookup.charAt(num)
+		}
+
+		function tripletToBase64 (num) {
+			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
+		}
+
+		// go through the array every three bytes, we'll deal with trailing stuff later
+		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
+			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+			output += tripletToBase64(temp)
+		}
+
+		// pad the end with zeros, but make sure to not forget the extra bytes
+		switch (extraBytes) {
+			case 1:
+				temp = uint8[uint8.length - 1]
+				output += encode(temp >> 2)
+				output += encode((temp << 4) & 0x3F)
+				output += '=='
+				break
+			case 2:
+				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
+				output += encode(temp >> 10)
+				output += encode((temp >> 4) & 0x3F)
+				output += encode((temp << 2) & 0x3F)
+				output += '='
+				break
+		}
+
+		return output
+	}
+
+	exports.toByteArray = b64ToByteArray
+	exports.fromByteArray = uint8ToBase64
+})(base64js);
+var ieee = {};
+
+ieee.read = function(buffer, offset, isLE, mLen, nBytes) {
+  var e, m,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      nBits = -7,
+      i = isLE ? (nBytes - 1) : 0,
+      d = isLE ? -1 : 1,
+      s = buffer[offset + i];
+
+  i += d;
+
+  e = s & ((1 << (-nBits)) - 1);
+  s >>= (-nBits);
+  nBits += eLen;
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  m = e & ((1 << (-nBits)) - 1);
+  e >>= (-nBits);
+  nBits += mLen;
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  if (e === 0) {
+    e = 1 - eBias;
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity);
+  } else {
+    m = m + Math.pow(2, mLen);
+    e = e - eBias;
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+};
+
+ieee.write = function(buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
+      i = isLE ? 0 : (nBytes - 1),
+      d = isLE ? 1 : -1,
+      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+
+  value = Math.abs(value);
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0;
+    e = eMax;
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2);
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--;
+      c *= 2;
+    }
+    if (e + eBias >= 1) {
+      value += rt / c;
+    } else {
+      value += rt * Math.pow(2, 1 - eBias);
+    }
+    if (value * c >= 2) {
+      e++;
+      c /= 2;
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0;
+      e = eMax;
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen);
+      e = e + eBias;
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+      e = 0;
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+
+  e = (e << mLen) | m;
+  eLen += mLen;
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+
+  buffer[offset + i - d] |= s * 128;
+};
+
+exports.ieee = ieee;
+/**
+ * The buffer module from node.js, for the browser.
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ *
+ * Copyright (C) 2013 Feross Aboukhadijeh, and other contributors.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * @license  MIT
+ */
+
+var base64 = base64js;
+var ieee754 = require('./ieee754.js').ieee
+
+exports.Buffer = Buffer
+exports.SlowBuffer = Buffer
+exports.INSPECT_MAX_BYTES = 50
+Buffer.poolSize = 8192
+
+/**
+ * If `Buffer._useTypedArrays`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Use Object implementation (compatible down to IE6)
+ */
+Buffer._useTypedArrays = (function () {
+  // Detect if browser supports Typed Arrays. Supported browsers are IE 10+, Firefox 4+,
+  // Chrome 7+, Safari 5.1+, Opera 11.6+, iOS 4.2+. If the browser does not support adding
+  // properties to `Uint8Array` instances, then that's the same as no `Uint8Array` support
+  // because we need to be able to add all the node Buffer API methods. This is an issue
+  // in Firefox 4-29. Now fixed: https://bugzilla.mozilla.org/show_bug.cgi?id=695438
+  try {
+    var buf = new ArrayBuffer(0)
+    var arr = new Uint8Array(buf)
+    arr.foo = function () { return 42 }
+    return 42 === arr.foo() &&
+        typeof arr.subarray === 'function' // Chrome 9-10 lack `subarray`
+  } catch (e) {
+    return false
+  }
+})()
+
+/**
+ * Class: Buffer
+ * =============
+ *
+ * The Buffer constructor returns instances of `Uint8Array` that are augmented
+ * with function properties for all the node `Buffer` API functions. We use
+ * `Uint8Array` so that square bracket notation works as expected -- it returns
+ * a single octet.
+ *
+ * By augmenting the instances, we can avoid modifying the `Uint8Array`
+ * prototype.
+ */
+function Buffer (subject, encoding, noZero) {
+  if (!(this instanceof Buffer))
+    return new Buffer(subject, encoding, noZero)
+
+  var type = typeof subject
+
+  // Workaround: node's base64 implementation allows for non-padded strings
+  // while base64-js does not.
+  if (encoding === 'base64' && type === 'string') {
+    subject = Buffer.stringtrim(subject)
+    while (subject.length % 4 !== 0) {
+      subject = subject + '='
+    }
+  }
+
+  // Find the length
+  var length
+  if (type === 'number')
+    length = Buffer.coerce(subject)
+  else if (type === 'string')
+    length = Buffer.byteLength(subject, encoding)
+  else if (type === 'object')
+    length = Buffer.coerce(subject.length) // assume that object is array-like
+  else
+    throw new Error('First argument needs to be a number, array or string.')
+
+  var buf
+  if (Buffer._useTypedArrays) {
+    // Preferred: Return an augmented `Uint8Array` instance for best performance
+    buf = Buffer._augment(new Uint8Array(length))
+  } else {
+    // Fallback: Return THIS instance of Buffer (created by `new`)
+    buf = this
+    buf.length = length
+    buf._isBuffer = true
+  }
+
+  var i
+  if (Buffer._useTypedArrays && typeof subject.byteLength === 'number') {
+    // Speed optimization -- use set if we're copying from a typed array
+    buf._set(subject)
+  } else if (Buffer.isArrayish(subject)) {
+    // Treat array-ish objects as a byte array
+    if (Buffer.isBuffer(subject)) {
+      for (i = 0; i < length; i++)
+        buf[i] = subject.readUInt8(i)
+    } else {
+      for (i = 0; i < length; i++)
+        buf[i] = ((subject[i] % 256) + 256) % 256
+    }
+  } else if (type === 'string') {
+    buf.write(subject, 0, encoding)
+  } else if (type === 'number' && !Buffer._useTypedArrays && !noZero) {
+    for (i = 0; i < length; i++) {
+      buf[i] = 0
+    }
+  }
+
+  return buf
+}
+
+// STATIC METHODS
+// ==============
+
+Buffer.isEncoding = function (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'binary':
+    case 'base64':
+    case 'raw':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.isBuffer = function (b) {
+  return !!(b !== null && b !== undefined && b._isBuffer)
+}
+
+Buffer.byteLength = function (str, encoding) {
+  var ret
+  str = str.toString()
+  switch (encoding || 'utf8') {
+    case 'hex':
+      ret = str.length / 2
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8ToBytes(str).length
+      break
+    case 'ascii':
+    case 'binary':
+    case 'raw':
+      ret = str.length
+      break
+    case 'base64':
+      ret = Buffer.base64ToBytes(str).length
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = str.length * 2
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.concat = function (list, totalLength) {
+  Buffer.assert(Buffer.isArray(list), 'Usage: Buffer.concat(list[, length])')
+
+  if (list.length === 0) {
+    return new Buffer(0)
+  } else if (list.length === 1) {
+    return list[0]
+  }
+
+  var i
+  if (totalLength === undefined) {
+    totalLength = 0
+    for (i = 0; i < list.length; i++) {
+      totalLength += list[i].length
+    }
+  }
+
+  var buf = new Buffer(totalLength)
+  var pos = 0
+  for (i = 0; i < list.length; i++) {
+    var item = list[i]
+    item.copy(buf, pos)
+    pos += item.length
+  }
+  return buf
+}
+
+Buffer.compare = function (a, b) {
+  Buffer.assert(Buffer.isBuffer(a) && Buffer.isBuffer(b), 'Arguments must be Buffers')
+  var x = a.length
+  var y = b.length
+  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
+  if (i !== len) {
+    x = a[i]
+    y = b[i]
+  }
+  if (x < y) {
+    return -1
+  }
+  if (y < x) {
+    return 1
+  }
+  return 0
+}
+
+// BUFFER INSTANCE METHODS
+// =======================
+
+Buffer.hexWrite = function(buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  // must be an even number of digits
+  var strLen = string.length
+  Buffer.assert(strLen % 2 === 0, 'Invalid hex string')
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; i++) {
+    var b = parseInt(string.substr(i * 2, 2), 16)
+    Buffer.assert(!isNaN(b), 'Invalid hex string')
+    buf[offset + i] = b
+  }
+  return i
+}
+
+Buffer.utf8Write = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.utf8ToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.asciiWrite = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.asciiToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.binaryWrite = function(buf, string, offset, length) {
+  return Buffer.asciiWrite(buf, string, offset, length)
+}
+
+Buffer.base64Write = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.base64ToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.utf16leWrite = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.utf16leToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.prototype.write = function (string, offset, length, encoding) {
+  // Support both (string, offset, length, encoding)
+  // and the legacy (string, encoding, offset, length)
+  if (isFinite(offset)) {
+    if (!isFinite(length)) {
+      encoding = length
+      length = undefined
+    }
+  } else {  // legacy
+    var swap = encoding
+    encoding = offset
+    offset = length
+    length = swap
+  }
+
+  offset = Number(offset) || 0
+  var remaining = this.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+  encoding = String(encoding || 'utf8').toLowerCase()
+
+  var ret
+  switch (encoding) {
+    case 'hex':
+      ret = Buffer.hexWrite(this, string, offset, length)
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8Write(this, string, offset, length)
+      break
+    case 'ascii':
+      ret = Buffer.asciiWrite(this, string, offset, length)
+      break
+    case 'binary':
+      ret = Buffer.binaryWrite(this, string, offset, length)
+      break
+    case 'base64':
+      ret = Buffer.base64Write(this, string, offset, length)
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = Buffer.utf16leWrite(this, string, offset, length)
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.prototype.toString = function (encoding, start, end) {
+  var self = this
+
+  encoding = String(encoding || 'utf8').toLowerCase()
+  start = Number(start) || 0
+  end = (end === undefined) ? self.length : Number(end)
+
+  // Fastpath empty strings
+  if (end === start)
+    return ''
+
+  var ret
+  switch (encoding) {
+    case 'hex':
+      ret = Buffer.hexSlice(self, start, end)
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8Slice(self, start, end)
+      break
+    case 'ascii':
+      ret = Buffer.asciiSlice(self, start, end)
+      break
+    case 'binary':
+      ret = Buffer.binarySlice(self, start, end)
+      break
+    case 'base64':
+      ret = Buffer.base64Slice(self, start, end)
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = utf16leSlice(self, start, end)
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.prototype.toJSON = function () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+Buffer.prototype.equals = function (b) {
+  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.compare = function (b) {
+  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function (target, target_start, start, end) {
+  var source = this
+
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (!target_start) target_start = 0
+
+  // Copy 0 bytes; we're done
+  if (end === start) return
+  if (target.length === 0 || source.length === 0) return
+
+  // Fatal error conditions
+  Buffer.assert(end >= start, 'sourceEnd < sourceStart')
+  Buffer.assert(target_start >= 0 && target_start < target.length,
+      'targetStart out of bounds')
+  Buffer.assert(start >= 0 && start < source.length, 'sourceStart out of bounds')
+  Buffer.assert(end >= 0 && end <= source.length, 'sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length)
+    end = this.length
+  if (target.length - target_start < end - start)
+    end = target.length - target_start + start
+
+  var len = end - start
+
+  if (len < 100 || !Buffer._useTypedArrays) {
+    for (var i = 0; i < len; i++) {
+      target[i + target_start] = this[i + start]
+    }
+  } else {
+    target._set(this.subarray(start, start + len), target_start)
+  }
+}
+
+Buffer.base64Slice = function(buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+Buffer.utf8Slice = function(buf, start, end) {
+  var res = ''
+  var tmp = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; i++) {
+    if (buf[i] <= 0x7F) {
+      res += Buffer.decodeUtf8Char(tmp) + String.fromCharCode(buf[i])
+      tmp = ''
+    } else {
+      tmp += '%' + buf[i].toString(16)
+    }
+  }
+
+  return res + Buffer.decodeUtf8Char(tmp)
+}
+
+Buffer.asciiSlice = function(buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; i++) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+Buffer.binarySlice = function(buf, start, end) {
+  return Buffer.asciiSlice(buf, start, end)
+}
+
+Buffer.hexSlice = function(buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; i++) {
+    out += Buffer.toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
+  }
+  return res
+}
+
+Buffer.prototype.slice = function (start, end) {
+  var len = this.length
+  start = Buffer.clamp(start, len, 0)
+  end = Buffer.clamp(end, len, len)
+
+  if (Buffer._useTypedArrays) {
+    return Buffer._augment(this.subarray(start, end))
+  } else {
+    var sliceLen = end - start
+    var newBuf = new Buffer(sliceLen, undefined, true)
+    for (var i = 0; i < sliceLen; i++) {
+      newBuf[i] = this[i + start]
+    }
+    return newBuf
+  }
+}
+
+// `get` will be removed in Node 0.13+
+Buffer.prototype.get = function (offset) {
+  console.log('.get() is deprecated. Access using array indexes instead.')
+  return this.readUInt8(offset)
+}
+
+// `set` will be removed in Node 0.13+
+Buffer.prototype.set = function (v, offset) {
+  console.log('.set() is deprecated. Access using array indexes instead.')
+  return this.writeUInt8(v, offset)
+}
+
+Buffer.prototype.readUInt8 = function (offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
+  return this[offset]
+}
+
+Buffer.readUInt16 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    val = buf[offset]
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+  } else {
+    val = buf[offset] << 8
+    if (offset + 1 < len)
+      val |= buf[offset + 1]
+  }
+  return val
+}
+
+Buffer.prototype.readUInt16LE = function (offset, noAssert) {
+  return Buffer.readUInt16(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readUInt16BE = function (offset, noAssert) {
+  return Buffer.readUInt16(this, offset, false, noAssert)
+}
+
+Buffer.readUInt32 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    if (offset + 2 < len)
+      val = buf[offset + 2] << 16
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+    val |= buf[offset]
+    if (offset + 3 < len)
+      val = val + (buf[offset + 3] << 24 >>> 0)
+  } else {
+    if (offset + 1 < len)
+      val = buf[offset + 1] << 16
+    if (offset + 2 < len)
+      val |= buf[offset + 2] << 8
+    if (offset + 3 < len)
+      val |= buf[offset + 3]
+    val = val + (buf[offset] << 24 >>> 0)
+  }
+  return val
+}
+
+Buffer.prototype.readUInt32LE = function (offset, noAssert) {
+  return Buffer.readUInt32(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readUInt32BE = function (offset, noAssert) {
+  return Buffer.readUInt32(this, offset, false, noAssert)
+}
+
+Buffer.prototype.readInt8 = function (offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(offset !== undefined && offset !== null,
+        'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
+  var neg = this[offset] & 0x80
+  if (neg)
+    return (0xff - this[offset] + 1) * -1
+  else
+    return this[offset]
+}
+
+Buffer.readInt16 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = Buffer.readUInt16(buf, offset, littleEndian, true)
+  var neg = val & 0x8000
+  if (neg)
+    return (0xffff - val + 1) * -1
+  else
+    return val
+}
+
+Buffer.prototype.readInt16LE = function (offset, noAssert) {
+  return Buffer.readInt16(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readInt16BE = function (offset, noAssert) {
+  return Buffer.readInt16(this, offset, false, noAssert)
+}
+
+Buffer.readInt32 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = Buffer.readUInt32(buf, offset, littleEndian, true)
+  var neg = val & 0x80000000
+  if (neg)
+    return (0xffffffff - val + 1) * -1
+  else
+    return val
+}
+
+Buffer.prototype.readInt32LE = function (offset, noAssert) {
+  return Buffer.readInt32(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readInt32BE = function (offset, noAssert) {
+  return Buffer.readInt32(this, offset, false, noAssert)
+}
+
+Buffer.readFloat = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 23, 4)
+}
+
+Buffer.prototype.readFloatLE = function (offset, noAssert) {
+  return Buffer.readFloat(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readFloatBE = function (offset, noAssert) {
+  return Buffer.readFloat(this, offset, false, noAssert)
+}
+
+Buffer.readDouble = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset + 7 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 52, 8)
+}
+
+Buffer.prototype.readDoubleLE = function (offset, noAssert) {
+  return Buffer.readDouble(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readDoubleBE = function (offset, noAssert) {
+  return Buffer.readDouble(this, offset, false, noAssert)
+}
+
+Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xff)
+  }
+
+  if (offset >= this.length) return
+
+  this[offset] = value
+  return offset + 1
+}
+
+Buffer.writeUInt16 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xffff)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 2); i < j; i++) {
+    buf[offset + i] =
+        (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
+            (littleEndian ? i : 1 - i) * 8
+  }
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
+  return Buffer.writeUInt16(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
+  return Buffer.writeUInt16(this, value, offset, false, noAssert)
+}
+
+Buffer.writeUInt32 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xffffffff)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 4); i < j; i++) {
+    buf[offset + i] =
+        (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
+  }
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
+  return Buffer.writeUInt32(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
+  return Buffer.writeUInt32(this, value, offset, false, noAssert)
+}
+
+Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7f, -0x80)
+  }
+
+  if (offset >= this.length)
+    return
+
+  if (value >= 0)
+    this.writeUInt8(value, offset, noAssert)
+  else
+    this.writeUInt8(0xff + value + 1, offset, noAssert)
+  return offset + 1
+}
+
+Buffer.writeInt16 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7fff, -0x8000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    Buffer.writeUInt16(buf, value, offset, littleEndian, noAssert)
+  else
+    Buffer.writeUInt16(buf, 0xffff + value + 1, offset, littleEndian, noAssert)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
+  return Buffer.writeInt16(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
+  return Buffer.writeInt16(this, value, offset, false, noAssert)
+}
+
+Buffer.writeInt32 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7fffffff, -0x80000000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    Buffer.writeUInt32(buf, value, offset, littleEndian, noAssert)
+  else
+    Buffer.writeUInt32(buf, 0xffffffff + value + 1, offset, littleEndian, noAssert)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
+  return Buffer.writeInt32(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
+  return Buffer.writeInt32(this, value, offset, false, noAssert)
+}
+
+Buffer.writeFloat = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifIEEE754(value, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function (value, offset, noAssert) {
+  return Buffer.writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
+  return Buffer.writeFloat(this, value, offset, false, noAssert)
+}
+
+Buffer.writeDouble = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 7 < buf.length,
+        'Trying to write beyond buffer length')
+    Buffer.verifIEEE754(value, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function (value, offset, noAssert) {
+  return Buffer.writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
+  return Buffer.writeDouble(this, value, offset, false, noAssert)
+}
+
+// fill(value, start=0, end=buffer.length)
+Buffer.prototype.fill = function (value, start, end) {
+  if (!value) value = 0
+  if (!start) start = 0
+  if (!end) end = this.length
+
+  Buffer.assert(end >= start, 'end < start')
+
+  // Fill 0 bytes; we're done
+  if (end === start) return
+  if (this.length === 0) return
+
+  Buffer.assert(start >= 0 && start < this.length, 'start out of bounds')
+  Buffer.assert(end >= 0 && end <= this.length, 'end out of bounds')
+
+  var i
+  if (typeof value === 'number') {
+    for (i = start; i < end; i++) {
+      this[i] = value
+    }
+  } else {
+    var bytes = Buffer.utf8ToBytes(value.toString())
+    var len = bytes.length
+    for (i = start; i < end; i++) {
+      this[i] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+Buffer.prototype.inspect = function () {
+  var out = []
+  var len = this.length
+  for (var i = 0; i < len; i++) {
+    out[i] = Buffer.toHex(this[i])
+    if (i === exports.INSPECT_MAX_BYTES) {
+      out[i + 1] = '...'
+      break
+    }
+  }
+  return '<Buffer ' + out.join(' ') + '>'
+}
+
+/**
+ * Creates a new `ArrayBuffer` with the *copied* memory of the buffer instance.
+ * Added in Node 0.12. Only available in browsers that support ArrayBuffer.
+ */
+Buffer.prototype.toArrayBuffer = function () {
+  if (typeof Uint8Array !== 'undefined') {
+    if (Buffer._useTypedArrays) {
+      return (new Buffer(this)).buffer
+    } else {
+      var buf = new Uint8Array(this.length)
+      for (var i = 0, len = buf.length; i < len; i += 1) {
+        buf[i] = this[i]
+      }
+      return buf.buffer
+    }
+  } else {
+    throw new Error('Buffer.toArrayBuffer not supported in this browser')
+  }
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var BP = Buffer.prototype
+
+/**
+ * Augment a Uint8Array *instance* (not the Uint8Array class!) with Buffer methods
+ */
+Buffer._augment = function (arr) {
+  arr._isBuffer = true
+
+  // save reference to original Uint8Array get/set methods before overwriting
+  arr._get = arr.get
+  arr._set = arr.set
+
+  // deprecated, will be removed in node 0.13+
+  arr.get = BP.get
+  arr.set = BP.set
+
+  arr.write = BP.write
+  arr.toString = BP.toString
+  arr.toLocaleString = BP.toString
+  arr.toJSON = BP.toJSON
+  arr.equals = BP.equals
+  arr.compare = BP.compare
+  arr.copy = BP.copy
+  arr.slice = BP.slice
+  arr.readUInt8 = BP.readUInt8
+  arr.readUInt16LE = BP.readUInt16LE
+  arr.readUInt16BE = BP.readUInt16BE
+  arr.readUInt32LE = BP.readUInt32LE
+  arr.readUInt32BE = BP.readUInt32BE
+  arr.readInt8 = BP.readInt8
+  arr.readInt16LE = BP.readInt16LE
+  arr.readInt16BE = BP.readInt16BE
+  arr.readInt32LE = BP.readInt32LE
+  arr.readInt32BE = BP.readInt32BE
+  arr.readFloatLE = BP.readFloatLE
+  arr.readFloatBE = BP.readFloatBE
+  arr.readDoubleLE = BP.readDoubleLE
+  arr.readDoubleBE = BP.readDoubleBE
+  arr.writeUInt8 = BP.writeUInt8
+  arr.writeUInt16LE = BP.writeUInt16LE
+  arr.writeUInt16BE = BP.writeUInt16BE
+  arr.writeUInt32LE = BP.writeUInt32LE
+  arr.writeUInt32BE = BP.writeUInt32BE
+  arr.writeInt8 = BP.writeInt8
+  arr.writeInt16LE = BP.writeInt16LE
+  arr.writeInt16BE = BP.writeInt16BE
+  arr.writeInt32LE = BP.writeInt32LE
+  arr.writeInt32BE = BP.writeInt32BE
+  arr.writeFloatLE = BP.writeFloatLE
+  arr.writeFloatBE = BP.writeFloatBE
+  arr.writeDoubleLE = BP.writeDoubleLE
+  arr.writeDoubleBE = BP.writeDoubleBE
+  arr.fill = BP.fill
+  arr.inspect = BP.inspect
+  arr.toArrayBuffer = BP.toArrayBuffer
+
+  return arr
+}
+
+Buffer.stringtrim = function(str) {
+  if (str.trim) return str.trim()
+  return str.replace(/^\s+|\s+$/g, '')
+}
+
+// slice(start, end)
+Buffer.clamp = function(index, len, defaultValue) {
+  if (typeof index !== 'number') return defaultValue
+  index = ~~index;  // Coerce to integer.
+  if (index >= len) return len
+  if (index >= 0) return index
+  index += len
+  if (index >= 0) return index
+  return 0
+}
+
+Buffer.coerce = function(length) {
+  // Coerce length to a number (possibly NaN), round up
+  // in case it's fractional (e.g. 123.456) then do a
+  // double negate to coerce a NaN to 0. Easy, right?
+  length = ~~Math.ceil(+length)
+  return length < 0 ? 0 : length
+}
+
+Buffer.isArray = function(subject) {
+  return (Array.isArray || function (subject) {
+    return Object.prototype.toString.call(subject) === '[object Array]'
+  })(subject)
+}
+
+Buffer.isArrayish = function(subject) {
+  return Buffer.isArray(subject) || Buffer.isBuffer(subject) ||
+      subject && typeof subject === 'object' &&
+      typeof subject.length === 'number'
+}
+
+Buffer.toHex = function(n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+Buffer.utf8ToBytes = function(str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    var b = str.charCodeAt(i)
+    if (b <= 0x7F) {
+      byteArray.push(b)
+    } else {
+      var start = i
+      if (b >= 0xD800 && b <= 0xDFFF) i++
+      var h = encodeURIComponent(str.slice(start, i+1)).substr(1).split('%')
+      for (var j = 0; j < h.length; j++) {
+        byteArray.push(parseInt(h[j], 16))
+      }
+    }
+  }
+  return byteArray
+}
+
+Buffer.asciiToBytes = function(str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+Buffer.utf16leToBytes = function(str) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+Buffer.base64ToBytes = function(str) {
+  return base64.toByteArray(str)
+}
+
+Buffer.blitBuffer = function(src, dst, offset, length) {
+  for (var i = 0; i < length; i++) {
+    if ((i + offset >= dst.length) || (i >= src.length))
+      break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+Buffer.decodeUtf8Char = function(str) {
+  try {
+    return decodeURIComponent(str)
+  } catch (err) {
+    return String.fromCharCode(0xFFFD) // UTF 8 invalid char
+  }
+}
+
+/*
+ * We have to make sure that the value is a valid integer. This means that it
+ * is non-negative. It has no fractional component and that it does not
+ * exceed the maximum allowed value.
+ */
+Buffer.verifuint = function(value, max) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value >= 0, 'specified a negative value for writing an unsigned value')
+  Buffer.assert(value <= max, 'value is larger than maximum value for type')
+  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+Buffer.verifsint = function(value, max, min) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value <= max, 'value larger than maximum allowed value')
+  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
+  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+Buffer.verifIEEE754 = function(value, max, min) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value <= max, 'value larger than maximum allowed value')
+  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
+}
+
+Buffer.assert = function(test, message) {
+  if (!test) throw new Error(message || 'Failed assertion')
+}
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -6213,6 +6532,31 @@ Blob.prototype.toHex = function()
     return "";
   else
     return this.buffer.toString('hex');
+};
+
+/**
+ * Check if the value of this Blob equals the other blob.
+ * @param {Blob} other The other Blob to check.
+ * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * blob equal the bytes of the other.
+ */
+Blob.prototype.equals = function(other)
+{
+  if (this.isNull())
+    return other.isNull();
+  else if (other.isNull())
+    return false;
+  else {
+    if (this.buffer.length != other.buffer.length)
+      return false;
+
+    for (var i = 0; i < this.buffer.length; ++i) {
+      if (this.buffer[i] != other.buffer[i])
+        return false;
+    }
+
+    return true;
+  }
 };/**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -6445,6 +6789,86 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 DynamicBuffer.prototype.slice = function(begin, end)
 {
   return this.array.slice(begin, end);
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+/**
+ * A ChangeCounter keeps a target object whose change count is tracked by a
+ * local change count.  You can set to a new target which updates the local
+ * change count, and you can call checkChanged to check if the target (or one of
+ * the target's targets) has been changed. The target object must have a method
+ * getChangeCount.
+ *
+ * Create a new ChangeCounter to track the given target.  This sets the local
+ * change counter to target.getChangeCount().
+ * @param {object} target The target to track, as an object with the method
+ * getChangeCount().
+ * @constructor
+ */
+var ChangeCounter = function ChangeCounter(target)
+{
+  this.target = target;
+  this.changeCount = target.getChangeCount();
+};
+
+exports.ChangeCounter = ChangeCounter;
+
+/**
+ * Get the target object. If the target is changed, then checkChanged will
+ * detect it.
+ * @returns {object} The target, as an object with the method
+ * getChangeCount().
+ */
+ChangeCounter.prototype.get = function()
+{
+  return this.target;
+};
+
+/**
+ * Set the target to the given target. This sets the local change counter to
+ * target.getChangeCount().
+ * @param {object} target The target to track, as an object with the method
+ * getChangeCount().
+ */
+ChangeCounter.prototype.set = function(target)
+{
+  this.target = target;
+  this.changeCount = target.getChangeCount();
+};
+
+/**
+ * If the target's change count is different than the local change count, then 
+ * update the local change count and return true. Otherwise return false, 
+ * meaning that the target has not changed. This is useful since the target (or 
+ * one of the target's targets) may be changed and you need to find out.
+ * @returns {boolean} True if the change count has been updated, false if not.
+ */
+ChangeCounter.prototype.checkChanged = function()
+{
+  targetChangeCount = this.target.getChangeCount();
+  if (this.changeCount != targetChangeCount) {
+    this.changeCount = targetChangeCount;
+    return true;
+  }
+  else
+    return false;
 };
 /**
  * This class contains utilities to help parse the data
@@ -8247,6 +8671,24 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
+
+Tlv.ContentType_Default = 0;
+Tlv.ContentType_Link =    1;
+Tlv.ContentType_Key =     2;
+
+Tlv.NfdCommand_ControlResponse = 101;
+Tlv.NfdCommand_StatusCode =      102;
+Tlv.NfdCommand_StatusText =      103;
+
+Tlv.ControlParameters_ControlParameters =   104;
+Tlv.ControlParameters_FaceId =              105;
+Tlv.ControlParameters_Uri =                 114;
+Tlv.ControlParameters_LocalControlFeature = 110;
+Tlv.ControlParameters_Origin =              111;
+Tlv.ControlParameters_Cost =                106;
+Tlv.ControlParameters_Flags =               108;
+Tlv.ControlParameters_Strategy =            107;
+Tlv.ControlParameters_ExpirationPeriod =    109;
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -8356,23 +8798,19 @@ TlvEncoder.prototype.writeTypeAndLength = function(type, length)
 };
 
 /**
- * Write the type, then the length of the encoded value then encode value as a
- * non-negative integer and write it to this.output just before this.length from
- * the back. Advance this.length.
- * @param {number} type The type of the TLV.
+ * Write value as a non-negative integer and write it to this.output just before
+ * this.length from the back. Advance this.length.
  * @param {number} value The non-negative integer to encode.
  */
-TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+TlvEncoder.prototype.writeNonNegativeInteger = function(value)
 {
   if (value < 0)
     throw new Error("TLV integer value may not be negative");
 
   // JavaScript doesn't distinguish int from float, so round.
-  value = Math.round(value)
+  value = Math.round(value);
 
-  // Write backwards.
-  var saveNBytes = this.length;
-  if (value < 253) {
+  if (value <= 0xff) {
     this.length += 1;
     this.output.ensureLengthFromBack(this.length);
     this.output.array[this.output.array.length - this.length] = value & 0xff;
@@ -8406,7 +8844,20 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
     this.output.array[offset + 6] = (value >> 8) & 0xff;
     this.output.array[offset + 7] = value & 0xff;
   }
+};
 
+/**
+ * Write the type, then the length of the encoded value then encode value as a
+ * non-negative integer and write it to this.output just before this.length from
+ * the back. Advance this.length.
+ * @param {number} type The type of the TLV.
+ * @param {number} value The non-negative integer to encode.
+ */
+TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
+{
+  // Write backwards.
+  var saveNBytes = this.length;
+  this.writeNonNegativeInteger(value);
   this.writeTypeAndLength(type, this.length - saveNBytes);
 };
 
@@ -9075,8 +9526,8 @@ ProtobufTlv.establishField = function()
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     }
     catch (ex) {
-      // Using protobufjs in node.
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      // Using protobufjs in node or via browserify.
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
     }
   }
 }
@@ -9119,7 +9570,7 @@ ProtobufTlv.decode = function(message, descriptor, input)
     if (dcodeIO)
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     else
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
   }
 
   // If input is a blob, get its buf().
@@ -9247,7 +9698,6 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
 /**
- * This class represents Interest Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -9278,7 +9728,14 @@ exports.WireFormat = WireFormat;
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeInterest = function(interest)
@@ -9330,6 +9787,73 @@ WireFormat.prototype.encodeData = function(data)
 WireFormat.prototype.decodeData = function(data, input)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode controlParameters and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  throw new Error("encodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlParameters and set the fields of the
+ * controlParameters object. Your derived class should override.
+ * @param {ControlParameters} controlParameters The ControlParameters object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding. Your derived
+ * class should override.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  throw new Error("encodeSignatureInfo is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * Your derived class should override.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding. Your derived class should override.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
 
 /**
@@ -9536,8 +10060,7 @@ NameEnumeration.prototype.processData = function(data)
       // We don't expect a name without a segment number.  Treat it as a bad packet.
       this.onComponents(null);
     else {
-      var segmentNumber = DataUtils.bigEndianToUnsignedInt
-          (data.getName().get(-1).getValue().buf());
+      var segmentNumber = data.getName().get(-1).toSegment();
 
       // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
       var expectedSegmentNumber = this.contentParts.length;
@@ -9550,7 +10073,7 @@ NameEnumeration.prototype.processData = function(data)
         this.contentParts.push(data.getContent().buf());
 
         if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-          var finalSegmentNumber = DataUtils.bigEndianToUnsignedInt(data.getMetaInfo().getFinalBlockID().getValue().buf());
+          var finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
@@ -10047,7 +10570,8 @@ WebSocketTransport.prototype.connect = function
       console.log('INVALID ANSWER');
     }
     else if (result instanceof ArrayBuffer) {
-      var bytearray = new Buffer(result);
+      // The Buffer constructor expects an instantiated array.
+      var bytearray = new Buffer(new Uint8Array(result));
 
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
@@ -10146,7 +10670,7 @@ WebSocketTransport.prototype.close = function()
  */
 
 // The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
-exports.TcpTransport = ndn.WebSocketTransport;
+exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTransport;
 /**
  * Provide the callback closure for the async communication methods in the Face class.
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -10269,8 +10793,10 @@ var LOG = require('./log.js').Log.LOG;
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
 {
- this.PUBLISHER_ID_LEN = 512/8;
- this.publisherPublicKeyDigest = pkd;
+  this.PUBLISHER_ID_LEN = 512/8;
+  this.publisherPublicKeyDigest = pkd;
+
+  this.changeCount = 0;
 };
 
 exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
@@ -10292,6 +10818,7 @@ PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder)
 
     //this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
   }
+  ++this.changeCount;
 };
 
 PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
@@ -10309,6 +10836,15 @@ PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProt
 PublisherPublicKeyDigest.prototype.validate = function()
 {
     return null != this.publisherPublicKeyDigest;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherPublicKeyDigest.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents Publisher and PublisherType Objects
@@ -10363,6 +10899,8 @@ var PublisherID = function PublisherID()
   //TODO implement generate key
   //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
   this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
+
+  this.changeCount = 0;
 };
 
 exports.PublisherID = PublisherID;
@@ -10380,6 +10918,7 @@ PublisherID.prototype.from_ndnb = function(decoder)
   this.publisherID = decoder.readBinaryDTagElement(nextTag);
   if (null == this.publisherID)
     throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
+  ++this.changeCount;
 };
 
 PublisherID.prototype.to_ndnb = function(encoder)
@@ -10422,6 +10961,15 @@ PublisherID.prototype.getElementLabel = function()
 PublisherID.prototype.validate = function()
 {
   return null != id() && null != type();
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+PublisherID.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents a Name as an array of components where each is a byte array.
@@ -10477,6 +11025,8 @@ var Name = function Name(components)
     this.components = [];
   else
     if (LOG > 1) console.log("NO CONTENT NAME GIVEN");
+
+  this.changeCount = 0;
 };
 
 exports.Name = Name;
@@ -10530,7 +11080,7 @@ Name.Component.prototype.getValue = function()
  * @deprecated Use getValue. This method returns a Buffer which is the former
  * behavior of getValue, and should only be used while updating your code.
  */
-Name.prototype.getValueAsBuffer = function()
+Name.Component.prototype.getValueAsBuffer = function()
 {
   return this.value;
 };
@@ -10543,7 +11093,72 @@ Name.prototype.getValueAsBuffer = function()
 Name.Component.prototype.toEscapedString = function()
 {
   return Name.toEscapedString(this.value);
-}
+};
+
+/**
+ * Interpret this name component as a network-ordered number and return an integer.
+ * @returns {number} The integer number.
+ */
+Name.Component.prototype.toNumber = function()
+{
+  return DataUtils.bigEndianToUnsignedInt(this.value);
+};
+
+/**
+ * Interpret this name component as a network-ordered number with a marker and 
+ * return an integer.
+ * @param {number} marker The required first byte of the component.
+ * @returns {number} The integer number.
+ * @throws Error If the first byte of the component does not equal the marker.
+ */
+Name.Component.prototype.toNumberWithMarker = function(marker)
+{
+  if (this.value.length == 0 || this.value[0] != marker)
+    throw new Error("Name component does not begin with the expected marker");
+
+  return DataUtils.bigEndianToUnsignedInt(this.value.slice(1));
+};
+
+/**
+ * Interpret this name component as a segment number according to NDN naming
+ * conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns {number} The integer segment number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegment = function()
+{
+  return this.toNumberWithMarker(0x00);
+};
+
+/**
+ * Interpret this name component as a version number  according to NDN naming
+ * conventions for "Versioning" (marker 0xFD). Note that this returns
+ * the exact number from the component without converting it to a time
+ * representation.
+ * @returns {number} The integer version number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toVersion = function()
+{
+  return this.toNumberWithMarker(0xFD);
+};
+
+/**
+ * Create a component whose value is the marker appended with the 
+ * nonNegativeInteger encoding of the number.
+ * @param {number} number
+ * @param {number} marker
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumberWithMarker = function(number, marker)
+{
+  var encoder = new TlvEncoder(9);
+  // Encode backwards.
+  encoder.writeNonNegativeInteger(number);
+  encoder.writeNonNegativeInteger(marker);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
+};
 
 /**
  * Check if this is the same component as other.
@@ -10553,7 +11168,7 @@ Name.Component.prototype.toEscapedString = function()
 Name.Component.prototype.equals = function(other)
 {
   return DataUtils.arraysEqual(this.value, other.value);
-}
+};
 
 /**
  * Compare this to the other Component using NDN canonical ordering.
@@ -10567,7 +11182,7 @@ Name.Component.prototype.equals = function(other)
 Name.Component.prototype.compare = function(other)
 {
   return Name.Component.compareBuffers(this.value, other.value);
-}
+};
 
 /**
  * Do the work of Name.Component.compare to compare the component buffers.
@@ -10592,7 +11207,7 @@ Name.Component.compareBuffers = function(component1, component2)
   }
 
   return 0;
-}
+};
 
 /**
  * @deprecated Use toUri.
@@ -10639,7 +11254,7 @@ Name.createNameArray = function(uri)
   for (var i = 0; i < array.length; ++i) {
     var value = Name.fromEscapedString(array[i]);
 
-    if (value == null) {
+    if (value.isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
@@ -10660,7 +11275,8 @@ Name.createNameArray = function(uri)
 Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
-}
+  ++this.changeCount;
+};
 
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
@@ -10672,19 +11288,48 @@ Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
-Name.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+/**
+ * Encode this name to the encoder.
+ * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
+Name.prototype.to_ndnb = function(encoder)
 {
   if (this.components == null)
     throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
 
   encoder.writeElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = encoder.offset;
+  var signedPortionEndOffset;
+
   var count = this.size();
-  for (var i=0; i < count; i++)
-    encoder.writeDTagElement(NDNProtocolDTags.Component, this.components[i].getValue().buf());
+  if (count == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else {
+    for (var i = 0; i < count; i++) {
+      if (i == count - 1)
+        // We will begin the final component.
+        signedPortionEndOffset = encoder.offset;
+
+      encoder.writeDTagElement
+        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
+    }
+  }
 
   encoder.writeElementClose();
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Name.prototype.getElementLabel = function()
@@ -10715,6 +11360,7 @@ Name.prototype.append = function(component)
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
 
+  ++this.changeCount;
   return this;
 };
 
@@ -10732,6 +11378,7 @@ Name.prototype.add = function(component)
 Name.prototype.clear = function()
 {
   this.components = [];
+  ++this.changeCount;
 };
 
 /**
@@ -10760,39 +11407,28 @@ Name.prototype.to_uri = function()
 };
 
 /**
- * Append a component with the encoded segment number.
+ * Append a component with the encoded segment number according to NDN
+ * naming conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
  * @returns {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegment = function(segment)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(segment);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0x00));
 };
 
 /**
- * Append a component with the encoded version number.
- * Note that this encodes the exact value of version without converting from a
- * time representation.
+ * Append a component with the encoded version number according to NDN
+ * naming conventions for "Versioning" (marker 0xFD).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
  * @returns {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
-  var segmentNumberBigEndian = DataUtils.nonNegativeIntToBigEndian(version);
-  // Put a 0 byte in front.
-  var segmentNumberComponent = new Buffer(segmentNumberBigEndian.length + 1);
-  segmentNumberComponent[0] = 0xfD;
-  segmentNumberBigEndian.copy(segmentNumberComponent, 1);
-
-  this.components.push(new Name.Component(segmentNumberComponent));
-  return this;
+  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
 };
 
 /**
@@ -10917,6 +11553,46 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Compare this to the other Name using NDN canonical ordering.  If the first 
+ * components of each name are not equal, this returns -1 if the first comes 
+ * before the second using the NDN canonical ordering for name components, or 1 
+ * if it comes after. If they are equal, this compares the second components of 
+ * each name, etc.  If both names are the same up to the size of the shorter 
+ * name, this returns -1 if the first name is shorter than the second or 1 if it 
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
+ * is intuitive because all names with the prefix /a are next to each other.  
+ * But it may be also be counter-intuitive because /c comes before /bb according 
+ * to NDN canonical ordering since it is shorter.
+ * @param {Name} other The other Name to compare with.
+ * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering.
+ *
+ * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
+ */
+Name.prototype.compare = function(other)
+{
+  for (var i = 0; i < this.size() && i < other.size(); ++i) {
+    var comparison = this.components[i].compare(other.components[i]);
+    if (comparison == 0)
+      // The components at this index are equal, so check the next components.
+      continue;
+
+    // Otherwise, the result is based on the components at this index.
+    return comparison;
+  }
+
+  // The components up to min(this.size(), other.size()) are equal, so the
+  // shorter name is less.
+  if (this.size() < other.size())
+    return -1;
+  else if (this.size() > other.size())
+    return 1;
+  else
+    return 0;
+};
+
+/**
  * Return true if this Name has the same components as name.
  */
 Name.prototype.equals = function(name)
@@ -10994,6 +11670,8 @@ Name.toEscapedString = function(value)
 {
   if (typeof value == 'object' && value instanceof Name.Component)
     value = value.getValue().buf();
+  else if (typeof value === 'object' && value instanceof Blob)
+    value = value.buf();
 
   var result = "";
   var gotNonDot = false;
@@ -11025,10 +11703,11 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Return a Buffer byte array by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
- * @returns {Buffer} The byte array, or null which means to skip the component in the name.
+ * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
 {
@@ -11039,13 +11718,23 @@ Name.fromEscapedString = function(escapedString)
     if (value.length <= 2)
       // Zero, one or two periods is illegal.  Ignore this componenent to be
       //   consistent with the C implementation.
-      return null;
+      return new Blob();
     else
       // Remove 3 periods.
-      return DataUtils.toNumbersFromString(value.substr(3, value.length - 3));
+      return new Blob
+        (DataUtils.toNumbersFromString(value.substr(3, value.length - 3)), false);
   }
   else
-    return DataUtils.toNumbersFromString(value);
+    return new Blob(DataUtils.toNumbersFromString(value), false);
+};
+
+/**
+ * @deprecated Use fromEscapedString. This method returns a Buffer which is the former
+ * behavior of fromEscapedString, and should only be used while updating your code.
+ */
+Name.fromEscapedStringAsBuffer = function(escapedString)
+{
+  return Name.fromEscapedString(escapedString).buf();
 };
 
 /**
@@ -11070,6 +11759,18 @@ Name.prototype.match = function(name)
 
   return true;
 };
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Name.prototype.getChangeCount = function()
+{
+  return this.changeCount;
+};
+
+// Put this require at the bottom to avoid circular references.
+var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
 /**
  * This class represents Key Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -11373,7 +12074,7 @@ KeyLocator.prototype.setKeyName = function(name)
 /**
  * Set the key data to the given value. This is the digest bytes if getType() is
  * KeyLocatorType.KEY_LOCATOR_DIGEST.
- * @param {Buffer} keyData The array with the key data bytes.
+ * @param {Blob} keyData A Blob with the key data bytes.
  */
 KeyLocator.prototype.setKeyData = function(keyData)
 {
@@ -13006,6 +13707,8 @@ IdentityManager.prototype.signByCertificate = function
     signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
     signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
+    // Set an empty signature so that we can encode.
+    signature.setSignature(new Buffer(1));
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
@@ -13592,6 +14295,7 @@ var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
@@ -13854,7 +14558,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = Sha256WithRsaSignature();
+  var signature = new Sha256WithRsaSignature();
   signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
   signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
 
@@ -13865,7 +14569,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.toSignedBuffer(), certificateName);
+  var signedSignature = this.sign(encoding.buf(), certificateName);
 
   // Remove the empty signature and append the real one.
   var encoder = new TlvEncoder(256);
@@ -14142,6 +14846,8 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     if (!skipSetFields)
       this.setFields();
   }
+
+  this.changeCount = 0;
 };
 
 exports.MetaInfo = MetaInfo;
@@ -14198,6 +14904,7 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 MetaInfo.prototype.setType = function(type)
 {
   this.type = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount;
 };
 
 /**
@@ -14213,6 +14920,7 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   else
     // Convert from milliseconds.
     this.freshnessSeconds = freshnessPeriod / 1000.0;
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
@@ -14226,6 +14934,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
     this.finalBlockID = finalBlockID.getValue().buf();
   else
     this.finalBlockID = new Buffer(finalBlockID);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.setFields = function()
@@ -14250,6 +14959,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
+  ++this.changeCount;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -14298,6 +15008,7 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   }
 
   decoder.readElementClose();
+  ++this.changeCount;
 };
 
 /**
@@ -14366,6 +15077,15 @@ MetaInfo.prototype.validate = function()
 };
 
 /**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+MetaInfo.prototype.getChangeCount = function()
+{
+  return this.changeCount;
+};
+
+/**
  * @deprecated Use new MetaInfo.
  */
 var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID)
@@ -14428,7 +15148,7 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
   }
   else {
     this.keyLocator = new KeyLocator();
-    this.signature = new Buffer(0);
+    this.signature = null;
     // witness is deprecated.
     this.witness = null;
     // digestAlgorithm is deprecated.
@@ -14545,7 +15265,7 @@ Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtoc
 
 Sha256WithRsaSignature.prototype.validate = function()
 {
-  return null != this.signature;
+  return this.getSignature().size() > 0;
 };
 
 /**
@@ -14602,6 +15322,7 @@ exports.Signature = Signature;
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
+var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -14786,8 +15507,7 @@ Data.prototype.sign = function(wireFormat)
     this.getSignature().setSignature(new Buffer(128));
     this.wireEncode(wireFormat);
   }
-
-  var rsa = require("crypto").createSign('RSA-SHA256');
+  var rsa = Crypto.createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
 
   var sig = new Buffer
@@ -14804,7 +15524,7 @@ Data.prototype.verify = function(/*Key*/ key)
     throw new Error('Cannot verify Data without a public key.');
 
   if (Data.verifyUsesString == null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
+    var hashResult = Crypto.createHash('sha256').digest();
     // If the has result is a string, we assume that this is a version of
     //   crypto where verify also uses a string signature.
     Data.verifyUsesString = (typeof hashResult === 'string');
@@ -14813,7 +15533,7 @@ Data.prototype.verify = function(/*Key*/ key)
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
-  var verifier = require('crypto').createVerify('RSA-SHA256');
+  var verifier = Crypto.createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ?
     DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
@@ -14969,6 +15689,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * Create a new Exclude.
@@ -14983,6 +15704,8 @@ var Exclude = function Exclude(values)
     // Copy the exclude.
     this.values = values.values.slice(0);
   else if (values) {
+    // Set the changeCount now since append expects it.
+    this.changeCount = 0;
     for (var i = 0; i < values.length; ++i) {
       if (values[i] == Exclude.ANY)
         this.appendAny();
@@ -14990,6 +15713,8 @@ var Exclude = function Exclude(values)
         this.appendComponent(values[i]);
     }
   }
+
+  this.changeCount = 0;
 };
 
 exports.Exclude = Exclude;
@@ -15016,6 +15741,7 @@ Exclude.prototype.get = function(i) { return this.values[i]; };
 Exclude.prototype.appendAny = function()
 {
   this.values.push(Exclude.ANY);
+  ++this.changeCount;
   return this;
 };
 
@@ -15027,6 +15753,7 @@ Exclude.prototype.appendAny = function()
 Exclude.prototype.appendComponent = function(component)
 {
   this.values.push(new Name.Component(component));
+  ++this.changeCount;
   return this;
 };
 
@@ -15035,6 +15762,7 @@ Exclude.prototype.appendComponent = function(component)
  */
 Exclude.prototype.clear = function()
 {
+  ++this.changeCount;
   this.values = [];
 };
 
@@ -15110,6 +15838,8 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
 {
   if (typeof component == 'object' && component instanceof Name.Component)
     component = component.getValue().buf();
+  else if (typeof component === 'object' && component instanceof Blob)
+    component = component.buf();
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -15174,6 +15904,15 @@ Exclude.compareComponents = function(component1, component2)
     component2 = component2.getValue().buf();
 
   return Name.Component.compareBuffers(component1, component2);
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+Exclude.prototype.getChangeCount = function()
+{
+  return this.changeCount;
 };
 /**
  * This class represents Interest Objects
@@ -15438,7 +16177,7 @@ Interest.prototype.setName = function(name)
   // The object has changed, so the nonce is invalid.
   this.nonce = null;
 
-  this.name = typeof name === 'object' && name instanceof Interest ?
+  this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
 };
 
@@ -15597,7 +16336,8 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeInterest(this);
+  var result = wireFormat.encodeInterest(this);
+  return result.encoding;
 };
 
 /**
@@ -15778,109 +16518,6 @@ FaceInstance.prototype.getElementLabel = function()
 };
 
 /**
- * This class represents Forwarding Entries
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var Name = require('./name.js').Name;
-
-/**
- * Create a new ForwardingEntry with the optional arguments.
- * @constructor
- * @param {String} action
- * @param {Name} prefixName
- * @param {PublisherPublicKeyDigest} ndndId
- * @param {number} faceID
- * @param {number} flags
- * @param {number} lifetime in seconds
- */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
-{
-  this.action = action;
-  this.prefixName = prefixName;
-  this.ndndID = ndndId;
-  this.faceID = faceID;
-  this.flags = flags;
-  this.lifetime = lifetime;
-};
-
-exports.ForwardingEntry = ForwardingEntry;
-
-ForwardingEntry.ACTIVE         = 1;
-ForwardingEntry.CHILD_INHERIT  = 2;
-ForwardingEntry.ADVERTISE      = 4;
-ForwardingEntry.LAST           = 8;
-ForwardingEntry.CAPTURE       = 16;
-ForwardingEntry.LOCAL         = 32;
-ForwardingEntry.TAP           = 64;
-ForwardingEntry.CAPTURE_OK   = 128;
-
-ForwardingEntry.prototype.from_ndnb = function(
-  //XMLDecoder
-  decoder)
-  //throws DecodingException
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-  if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
-  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
-    this.prefixName = new Name();
-    this.prefixName.from_ndnb(decoder) ;
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    this.NdndId = new PublisherPublicKeyDigest();
-    this.NdndId.from_ndnb(decoder);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-
-  decoder.readElementClose();
-};
-
-ForwardingEntry.prototype.to_ndnb = function(
-  //XMLEncoder
-  encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-  if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
-  if (null != this.prefixName)
-    this.prefixName.to_ndnb(encoder);
-  if (null != this.NdndId)
-    this.NdndId.to_ndnb(encoder);
-  if (null != this.faceID)
-    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
-  if (null != this.flags)
-    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
-  if (null != this.lifetime)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
-
-  encoder.writeElementClose();
-};
-
-ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
-/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -15898,8 +16535,6 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU General Public License is in the file COPYING.
  */
-
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 
 /**
  * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
@@ -15921,6 +16556,18 @@ var ForwardingFlags = function ForwardingFlags()
 
 exports.ForwardingFlags = ForwardingFlags;
 
+ForwardingFlags.ForwardingEntryFlags_ACTIVE         = 1;
+ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT  = 2;
+ForwardingFlags.ForwardingEntryFlags_ADVERTISE      = 4;
+ForwardingFlags.ForwardingEntryFlags_LAST           = 8;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE       = 16;
+ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
+ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
+ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
+
+ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
+ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
+
 /**
  * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
  * @returns {number} An integer with the bits set.
@@ -15930,21 +16577,21 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
   var result = 0;
 
   if (this.active)
-    result |= ForwardingEntry.ACTIVE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ACTIVE;
   if (this.childInherit)
-    result |= ForwardingEntry.CHILD_INHERIT;
+    result |= ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT;
   if (this.advertise)
-    result |= ForwardingEntry.ADVERTISE;
+    result |= ForwardingFlags.ForwardingEntryFlags_ADVERTISE;
   if (this.last)
-    result |= ForwardingEntry.LAST;
+    result |= ForwardingFlags.ForwardingEntryFlags_LAST;
   if (this.capture)
-    result |= ForwardingEntry.CAPTURE;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE;
   if (this.local)
-    result |= ForwardingEntry.LOCAL;
+    result |= ForwardingFlags.ForwardingEntryFlags_LOCAL;
   if (this.tap)
-    result |= ForwardingEntry.TAP;
+    result |= ForwardingFlags.ForwardingEntryFlags_TAP;
   if (this.captureOk)
-    result |= ForwardingEntry.CAPTURE_OK;
+    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK;
 
   return result;
 };
@@ -15955,14 +16602,44 @@ ForwardingFlags.prototype.getForwardingEntryFlags = function()
  */
 ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
 {
-  this.active = ((forwardingEntryFlags & ForwardingEntry.ACTIVE) != 0);
-  this.childInherit = ((forwardingEntryFlags & ForwardingEntry.CHILD_INHERIT) != 0);
-  this.advertise = ((forwardingEntryFlags & ForwardingEntry.ADVERTISE) != 0);
-  this.last = ((forwardingEntryFlags & ForwardingEntry.LAST) != 0);
-  this.capture = ((forwardingEntryFlags & ForwardingEntry.CAPTURE) != 0);
-  this.local = ((forwardingEntryFlags & ForwardingEntry.LOCAL) != 0);
-  this.tap = ((forwardingEntryFlags & ForwardingEntry.TAP) != 0);
-  this.captureOk = ((forwardingEntryFlags & ForwardingEntry.CAPTURE_OK) != 0);
+  this.active = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ACTIVE) != 0);
+  this.childInherit = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT) != 0);
+  this.advertise = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ADVERTISE) != 0);
+  this.last = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LAST) != 0);
+  this.capture = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE) != 0);
+  this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
+  this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
+  this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
+};
+
+/**
+ * Get an integer with the bits set according to the NFD forwarding flags as
+ * used in the ControlParameters of the command interest.
+ * @returns {number} An integer with the bits set.
+ */
+ForwardingFlags.prototype.getNfdForwardingFlags = function()
+{
+  var result = 0;
+
+  if (this.childInherit)
+    result |= ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT;
+  if (this.capture)
+    result |= ForwardingFlags.NfdForwardingFlags_CAPTURE;
+
+  return result;
+};
+
+/**
+ * Set the flags according to the NFD forwarding flags as used in the
+ * ControlParameters of the command interest.
+ * @param {number} nfdForwardingFlags An integer with the bits set.
+ */
+ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
+{
+  this.childInherit =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT) != 0);
+  this.capture =
+    ((nfdForwardingFlags & ForwardingFlags.NfdForwardingFlags_CAPTURE) != 0);
 };
 
 /**
@@ -16061,6 +16738,303 @@ ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
  */
 ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
 /**
+ * This class represents Forwarding Entries
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var Name = require('./name.js').Name;
+
+/**
+ * Create a new ForwardingEntry with the optional arguments.
+ * @constructor
+ * @param {String} action
+ * @param {Name} prefixName
+ * @param {PublisherPublicKeyDigest} ndndId
+ * @param {number} faceID
+ * @param {number} flags
+ * @param {number} lifetime in seconds
+ */
+var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
+{
+  this.action = action;
+  this.prefixName = prefixName;
+  this.ndndID = ndndId;
+  this.faceID = faceID;
+  this.flags = flags;
+  this.lifetime = lifetime;
+};
+
+exports.ForwardingEntry = ForwardingEntry;
+
+ForwardingEntry.prototype.from_ndnb = function(
+  //XMLDecoder
+  decoder)
+  //throws DecodingException
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+  if (decoder.peekDTag(NDNProtocolDTags.Action))
+    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
+  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
+    this.prefixName = new Name();
+    this.prefixName.from_ndnb(decoder) ;
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+    this.NdndId = new PublisherPublicKeyDigest();
+    this.NdndId.from_ndnb(decoder);
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
+    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
+  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
+    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
+    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
+
+  decoder.readElementClose();
+};
+
+ForwardingEntry.prototype.to_ndnb = function(
+  //XMLEncoder
+  encoder)
+{
+  encoder.writeElementStartDTag(this.getElementLabel());
+  if (null != this.action && this.action.length != 0)
+    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
+  if (null != this.prefixName)
+    this.prefixName.to_ndnb(encoder);
+  if (null != this.NdndId)
+    this.NdndId.to_ndnb(encoder);
+  if (null != this.faceID)
+    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
+  if (null != this.flags)
+    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
+  if (null != this.lifetime)
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
+
+  encoder.writeElementClose();
+};
+
+ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
+var Name = require('./name.js').Name;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * A ControlParameters which holds a Name and other fields for a
+ * ControlParameters which is used, for example, in the command interest to
+ * register a prefix with a forwarder.
+ * @constructor
+ */
+var ControlParameters = function ControlParameters()
+{
+  this.name = new Name();
+  this.faceId = null;
+  // TODO: Add "Uri" string.
+  this.localControlFeature = null;
+  this.origin = null;
+  this.cost = null;
+  this.forwardingFlags = new ForwardingFlags();
+  // TODO: Add "Strategy" name.
+  this.expirationPeriod = null;
+};
+
+exports.ControlParameters = ControlParameters;
+
+/**
+ * Encode this ControlParameters for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+ControlParameters.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeControlParameters(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this
+ * ControlParameters.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+ControlParameters.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeControlParameters(this, decodeBuffer);
+};
+
+/**
+ * Get the name.
+ * @returns {Name} The name.
+ */
+ControlParameters.prototype.getName = function()
+{
+  return this.name;
+};
+
+/**
+ * Get the face ID.
+ * @returns {number} The face ID, or null if not specified.
+ */
+ControlParameters.prototype.getFaceId = function()
+{
+  return this.faceId;
+};
+
+/**
+ * Get the local control feature value.
+ * @returns {number} The local control feature value, or null if not specified.
+ */
+ControlParameters.prototype.getLocalControlFeature = function()
+{
+  return this.localControlFeature;
+};
+
+/**
+ * Get the origin value.
+ * @returns {number} The origin value, or null if not specified.
+ */
+ControlParameters.prototype.getOrigin = function()
+{
+  return this.origin;
+};
+
+/**
+ * Get the cost value.
+ * @returns {number} The cost value, or null if not specified.
+ */
+ControlParameters.prototype.getCost = function()
+{
+  return this.cost;
+};
+
+/**
+ * Get the ForwardingFlags object.
+ * @returns {ForwardingFlags} The ForwardingFlags object.
+ */
+ControlParameters.prototype.getForwardingFlags = function()
+{
+  return this.forwardingFlags;
+};
+
+/**
+ * Get the expiration period.
+ * @returns {number} The expiration period in milliseconds, or null if not specified.
+ */
+ControlParameters.prototype.getExpirationPeriod = function()
+{
+  return this.expirationPeriod;
+};
+
+/**
+ * Set the name to a copy of the given Name.
+ * @param {Name} name The new Name to copy.
+ */
+ControlParameters.prototype.setName = function(name)
+{
+  this.name = typeof name === 'object' && name instanceof Name ?
+              new Name(name) : new Name();
+};
+
+/**
+ * Set the Face ID.
+ * @param {number} faceId The new face ID, or null for not specified.
+ */
+ControlParameters.prototype.setFaceId = function(faceId)
+{
+  this.faceId = faceId;
+};
+
+/**
+ * Set the local control feature value.
+ * @param {number} localControlFeature The new local control feature value, or
+ * null for not specified.
+ */
+ControlParameters.prototype.setLocalControlFeature = function(localControlFeature)
+{
+  this.localControlFeature = localControlFeature;
+};
+
+/**
+ * Set the origin value.
+ * @param {number} origin The new origin value, or null for not specified.
+ */
+ControlParameters.prototype.setOrigin = function(origin)
+{
+  this.origin = origin;
+};
+
+/**
+ * Set the cost value.
+ * @param {number} cost The new cost value, or null for not specified.
+ */
+ControlParameters.prototype.setCost = function(cost)
+{
+  this.cost = cost;
+};
+
+/**
+ * Set the cost value.
+ * @param {number} forwardingFlags The new cost value, or null for not specified.
+ */
+ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
+{
+  this.forwardingFlags =
+    typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
+      new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+};
+
+/**
+ * Set the expiration period.
+ * @param {number} expirationPeriod The expiration period in milliseconds, or
+ * null for not specified.
+ */
+ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
+{
+  this.expirationPeriod = expirationPeriod;
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -16110,13 +17084,22 @@ BinaryXmlWireFormat.instance = null;
 /**
  * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new BinaryXMLEncoder();
-  BinaryXmlWireFormat.encodeInterest(interest, encoder);
-  return new Blob(encoder.getReducedOstream(), false);
+  var offsets = BinaryXmlWireFormat.encodeInterest(interest, encoder);
+  return { encoding: new Blob(encoder.getReducedOstream(), false),
+           signedPortionBeginOffset: offsets.signedPortionBeginOffset,
+           signedPortionEndOffset: offsets.signedPortionEndOffset };
 };
 
 /**
@@ -16200,12 +17183,19 @@ BinaryXmlWireFormat.get = function()
  * Encode the interest by calling the operations on the encoder.
  * @param {Interest} interest
  * @param {BinaryXMLEncoder} encoder
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
 {
   encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
 
-  interest.getName().to_ndnb(encoder);
+  var offsets = interest.getName().to_ndnb(encoder);
 
   if (null != interest.getMinSuffixComponents())
     encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
@@ -16245,6 +17235,7 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
     encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
 
   encoder.writeElementClose();
+  return offsets;
 };
 
 /**
@@ -16427,7 +17418,7 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
  * A copy of the GNU General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -16437,6 +17428,8 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
+var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -16461,11 +17454,18 @@ Tlv0_1WireFormat.instance = null;
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @returns {object} An associative array with fields
+ * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
+ * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
+ * the encoding of the beginning of the signed portion, and
+ * signedPortionEndOffset is the offset in the encoding of the end of the signed
+ * portion. The signed portion starts from the first name component and ends
+ * just before the final name component (which is assumed to be a signature for
+ * a signed interest).
  */
 Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 {
-  var encoder = new TlvEncoder();
+  var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -16476,7 +17476,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
   else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
@@ -16484,7 +17484,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 
     // Generate random bytes for remaining bytes in the nonce.
     for (var i = interest.getNonce().size(); i < 4; ++i)
-      nonce[i] = require("crypto").randomBytes(1)[0];
+      nonce[i] = Crypto.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
@@ -16496,11 +17496,21 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
   Tlv0_1WireFormat.encodeSelectors(interest, encoder);
-  Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var tempOffsets = Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  var signedPortionBeginOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionBeginOffset;
+  var signedPortionEndOffsetFromBack =
+    encoder.getLength() - tempOffsets.signedPortionEndOffset;
 
   encoder.writeTypeAndLength(Tlv.Interest, encoder.getLength() - saveLength);
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset =
+    encoder.getLength() - signedPortionEndOffsetFromBack;
 
-  return new Blob(encoder.getOutput(), false);
+  return { encoding: new Blob(encoder.getOutput(), false),
+           signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -16602,11 +17612,127 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
   var signedPortionEndOffset = decoder.getOffset();
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
-  data.getSignature().setSignature(decoder.readBlobTlv(Tlv.SignatureValue));
+  data.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
            signedPortionEndOffset: signedPortionEndOffset };
+};
+
+/**
+ * Encode controlParameters as NDN-TLV and return the encoding.
+ * @param {ControlParameters} controlParameters The ControlParameters object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  // TODO: Encode Strategy.
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  // TODO: Encode Uri.
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.FaceID, controlParameters.getFaceId());
+  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Encode signature as a SignatureInfo and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+    (signature, encoder, signature.getKeyLocator());
+  
+  return new Blob(encoder.getOutput(), false);
+};
+
+// SignatureHolder is used by decodeSignatureInfoAndValue.
+Tlv0_1WireFormat.SignatureHolder = function Tlv0_1WireFormatSignatureHolder()
+{
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+{
+  this.signature = signature;
+};
+
+Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Decode signatureInfo as a signature info and signatureValue as the related
+ * SignatureValue, and return a new object which is a subclass of Signature.
+ * @param {Buffer} signatureInfo The buffer with the signature info bytes to
+ * decode.
+ * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @returns {Signature} A new object which is a subclass of Signature.
+ */
+Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+  (signatureInfo, signatureValue)
+{
+  // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
+  var signatureHolder = new Tlv0_1WireFormat.SignatureHolder();
+  var decoder = new TlvDecoder(signatureInfo);
+  Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+
+  decoder = TlvDecoder(signatureValue);
+  // TODO: The library needs to handle other signature types than
+  //   SignatureSha256WithRsa.
+  signatureHolder.getSignature().setSignature
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+
+  return signatureHolder.getSignature();
+};
+
+/**
+ * Encode the signatureValue in the Signature object as a SignatureValue (the
+ * signature bits) and return the encoding.
+ * @param {Signature} signature An object of a subclass of Signature with the
+ * signature value to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
+{
+  var encoder = new TlvEncoder(256);
+  // TODO: This assumes it is a Sha256WithRsaSignature.
+  encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
+
+  return new Blob(encoder.getOutput(), false);
 };
 
 /**
@@ -16621,15 +17747,44 @@ Tlv0_1WireFormat.get = function()
   return Tlv0_1WireFormat.instance;
 };
 
+/**
+ * Encode the name to the encoder.
+ * @param {Name} name The name to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
-  for (var i = name.size() - 1; i >= 0; --i)
+  var signedPortionEndOffsetFromBack;
+  for (var i = name.size() - 1; i >= 0; --i) {
     encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    if (i == name.size() - 1)
+      signedPortionEndOffsetFromBack = encoder.getLength();
+  }
 
+  var signedPortionBeginOffsetFromBack = encoder.getLength();
   encoder.writeTypeAndLength(Tlv.Name, encoder.getLength() - saveLength);
+
+  var signedPortionBeginOffset =
+    encoder.getLength() - signedPortionBeginOffsetFromBack;
+  var signedPortionEndOffset;
+  if (name.size() == 0)
+    // There is no "final component", so set signedPortionEndOffset arbitrarily.
+    signedPortionEndOffset = signedPortionBeginOffset;
+  else
+    signedPortionEndOffset = encoder.getLength() - signedPortionEndOffsetFromBack;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 Tlv0_1WireFormat.decodeName = function(name, decoder)
@@ -17209,6 +18364,86 @@ function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); 
  */
 function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU General Public License is in the file COPYING.
+ */
+
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+var Blob = require('./blob.js').Blob;
+
+/**
+ * A CommandInterestGenerator keeps track of a timestamp and generates command
+ * interests according to the NFD Signed Command Interests protocol:
+ * http://redmine.named-data.net/projects/nfd/wiki/Command_Interests
+ *
+ * Create a new CommandInterestGenerator and initialize the timestamp to now.
+ * @constructor
+ */
+var CommandInterestGenerator = function CommandInterestGenerator()
+{
+  this.lastTimestamp = Math.round(new Date().getTime());
+};
+
+exports.CommandInterestGenerator = CommandInterestGenerator;
+
+/**
+ * Append a timestamp component and a random value component to interest's name.
+ * This ensures that the timestamp is greater than the timestamp used in the
+ * previous call. Then use keyChain to sign the interest which appends a
+ * SignatureInfo component and a component with the signature bits. If the
+ * interest lifetime is not set, this sets it.
+ * @param {Interest} interest The interest whose name is append with components.
+ * @param {KeyChain} keyChain The KeyChain for calling sign.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * the SignatureInfo and to encode interest name for signing. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ */
+CommandInterestGenerator.prototype.generate = function
+  (interest, keyChain, certificateName, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var timestamp = Math.round(new Date().getTime());
+  while (timestamp <= this.lastTimestamp)
+    timestamp += 1.0;
+
+  // The timestamp is encoded as a TLV nonNegativeInteger.
+  var encoder = new TlvEncoder(8);
+  encoder.writeNonNegativeInteger(timestamp);
+  interest.getName().append(new Blob(encoder.getOutput(), false));
+
+  // The random value is a TLV nonNegativeInteger too, but we know it is 8
+  // bytes, so we don't need to call the nonNegativeInteger encoder.
+  interest.getName().append(new Blob(require("crypto").randomBytes(8), false));
+
+  keyChain.sign(interest, certificateName, wireFormat);
+
+  if (interest.getInterestLifetimeMilliseconds() == null ||
+      interest.getInterestLifetimeMilliseconds() < 0)
+    // The caller has not set the interest lifetime, so set it here.
+    interest.setInterestLifetimeMilliseconds(1000.0);
+
+  // We successfully signed the interest, so update the timestamp.
+  this.lastTimestamp = timestamp;
+};
+/**
  * This class represents the top-level object for communicating with an NDN host.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -17235,6 +18470,7 @@ var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
+var ControlParameters = require('./control-parameters.js').ControlParameters;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
@@ -17251,6 +18487,7 @@ var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
+var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -17374,6 +18611,9 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
+  this.commandKeyChain = null;
+  this.commandCertificateName = new Name();
+  this.commandInterestGenerator = new CommandInterestGenerator();
 };
 
 exports.Face = Face;
@@ -17764,10 +19004,10 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
 Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
 {
   var thisFace = this;
-  if (!this.connectionInfo.equals(this.transport.connectionInfo)) {
+  if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -17890,6 +19130,73 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 };
 
 /**
+ * Set the KeyChain and certificate name used to sign command interests (e.g. 
+ * for registerPrefix).
+ * @param {KeyChain} keyChain The KeyChain object for signing interests, which 
+ * must remain valid for the life of this Face. You must create the KeyChain 
+ * object and pass it in. You can create a default KeyChain for your system with 
+ * the default KeyChain constructor.
+ * @param {Name} certificateName The certificate name for signing interests.
+ * This makes a copy of the Name. You can get the default certificate name with
+ * keyChain.getDefaultCertificateName() .
+ */
+Face.prototype.setCommandSigningInfo = function(keyChain, certificateName)
+{
+  this.commandKeyChain = keyChain;
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Set the certificate name used to sign command interest (e.g. for
+ * registerPrefix), using the KeyChain that was set with setCommandSigningInfo.
+ * @param {Name} certificateName The certificate name for signing interest. This 
+ * makes a copy of the Name.
+ */
+Face.prototype.setCommandCertificateName = function(certificateName)
+{
+  this.commandCertificateName = new Name(certificateName);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name. 
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign 
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @note This method is an experimental feature. See the API docs for more
+ * detail at
+ * http://named-data.net/doc/ndn-ccl-api/face.html#face-makecommandinterest-method .
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.  If omitted,
+ * use WireFormat.getDefaultWireFormat().
+ */
+Face.prototype.makeCommandInterest = function(interest, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  this.nodeMakeCommandInterest
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+};
+
+/**
+ * Append a timestamp component and a random value component to interest's name.
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign
+ * the interest. If the interest lifetime is not set, this sets it.
+ * @param {Interest} interest The interest whose name is appended with
+ * components.
+ * @param {KeyChain} keyChain The KeyChain for calling sign.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat A WireFormat object used to encode
+ * the SignatureInfo and to encode the interest name for signing.
+ */
+Face.prototype.nodeMakeCommandInterest = function
+  (interest, keyChain, certificateName, wireFormat)
+{
+  this.commandInterestGenerator.generate
+    (interest, keyChain, certificateName, wireFormat);
+};
+
+/**
  * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
  * This uses the form:
  * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
@@ -17905,8 +19212,11 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The flags for finer control of which interests are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
  * If omitted, use the default flags defined by the default ForwardingFlags constructor.
+ * @param {number} intFlags (optional) (only for the deprecated form of
+ * registerPrefix) The integer NDNx flags for finer control of which interests
+ * are forward to the application.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
@@ -17918,21 +19228,31 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
-    if (arg3)
-      return this.registerPrefixWithClosure(prefix, arg2, arg3);
+    if (arg3) {
+      var flags;
+      if (typeof flags === 'number') {
+        // Assume this deprecated form is only called for NDNx.
+        flags = new ForwardingFlags();
+        flags.setForwardingEntryFlags(arg3);
+      }
+      else
+        // Assume arg3 is already a ForwardingFlags.
+        flags = arg3;
+      return this.registerPrefixWithClosure(prefix, arg2, flags);
+    }
     else
-      return this.registerPrefixWithClosure(prefix, arg2);
+      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
   }
 
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
   // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
   var onInterest = arg2;
   var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var intFlags = (arg4 ? arg4.getForwardingEntryFlags() : new ForwardingFlags().getForwardingEntryFlags());
+  var flags = (arg4 ? arg4 : new ForwardingFlags());
   return this.registerPrefixWithClosure
     (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-     intFlags, onRegisterFailed);
-}
+     flags, onRegisterFailed);
+};
 
 /**
  * A private method to register the prefix with the host, receive the data and call
@@ -17940,7 +19260,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * @deprecated Use registerPrefix with callback functions, not Closure.
  * @param {Name} prefix
  * @param {Closure} closure
- * @param {number} intFlags
+ * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed (optional) If called from the
  * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
  * fails.
@@ -17948,25 +19268,33 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, intFlags, onRegisterFailed)
+  (prefix, closure, flags, onRegisterFailed)
 {
-  intFlags = intFlags | 3;
-  
   var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
-    if (thisFace.ndndid == null) {
-      // Fetch ndndid first, then register.
-      var interest = new Interest(Face.ndndIdFetcher);
-      interest.setInterestLifetimeMilliseconds(4000);
-      if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-      thisFace.reconnectAndExpressInterest
-        (null, interest, new Face.FetchNdndidClosure
-         (thisFace, registeredPrefixId, prefix, closure, intFlags, onRegisterFailed));
+    // If we have an _ndndId, we know we already connected to NDNx.
+    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
+      // Assume we are connected to a legacy NDNx server.
+
+      if (thisFace.ndndid == null) {
+        // Fetch ndndid first, then register.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
+        thisFace.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
+      }
+      else
+        thisFace.registerPrefixHelper
+          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
     }
     else
-      thisFace.registerPrefixHelper
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
+      // The application set the KeyChain for signing NFD interests.
+      thisFace.nfdRegisterPrefix
+        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
+         thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -17995,7 +19323,7 @@ Face.FetchNdndidClosure = function FetchNdndidClosure
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.callerClosure = callerClosure;
-  this.flags = flags;
+  this.flags = flags; // FOrwardingFlags
   this.onRegisterFailed = onRegisterFailed;
 };
 
@@ -18025,26 +19353,57 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   return Closure.RESULT_OK;
 };
+
 /**
  * This is a closure to receive the response Data packet from the register
  * prefix interest sent to the connected NDN hub. If this gets a bad response
  * or a timeout, call onRegisterFailed.
  */
 Face.RegisterResponseClosure = function RegisterResponseClosure
-  (prefix, onRegisterFailed)
+  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
 {
   // Inherit from Closure.
   Closure.call(this);
 
+  this.face = face;
   this.prefix = prefix;
+  this.callerClosure = callerClosure;
   this.onRegisterFailed = onRegisterFailed;
+  this.flags = flags;
+  this.wireFormat = wireFormat;
+  this.isNfdCommand = isNfdCommand;
 };
 
 Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    // We timed out waiting for the response.
+    if (this.isNfdCommand) {
+      // The application set the commandKeyChain, but we may be connected to NDNx.
+      if (this.face.ndndid == null) {
+        // Fetch ndndid first, then register.
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        var interest = new Interest(Face.ndndIdFetcher);
+        interest.setInterestLifetimeMilliseconds(4000);
+        this.face.reconnectAndExpressInterest
+          (null, interest, new Face.FetchNdndidClosure
+           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
+      }
+      else
+        // Pass 0 for registeredPrefixId since the entry was already added to
+        //   registeredPrefixTable_ on the first try.
+        this.face.registerPrefixHelper
+          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
+    }
+    else {
+      // An NDNx command was sent because there is no commandKeyChain, so we
+      //   can't try an NFD command. Or it was sent from this callback after
+      //   trying an NFD command. Fail.
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+    
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -18052,21 +19411,57 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
     // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
 
-  var expectedName = new Name("/ndnx/.../selfreg");
-  // Got a response. Do a quick check of expected name components.
-  if (upcallInfo.data.getName().size() < 4 ||
-      !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-      !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-    this.onRegisterFailed(this.prefix);
-    return;
+  if (this.isNfdCommand) {
+    // Decode responseData->getContent() and check for a success code.
+    // TODO: Move this into the TLV code.
+    var statusCode;
+    try {
+        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
+        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
+    }
+    catch (e) {
+        // Error decoding the ControlResponse.
+        if (this.onRegisterFailed)
+          this.onRegisterFailed(this.prefix);
+        return Closure.RESULT_OK;
+    }
+
+    // Status code 200 is "OK".
+    if (statusCode != 200) {
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+    }
+
+    // Otherwise, silently succeed.
+  }
+  else {
+    var expectedName = new Name("/ndnx/.../selfreg");
+    // Got a response. Do a quick check of expected name components.
+    if (upcallInfo.data.getName().size() < 4 ||
+        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
+        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
+      this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
+    }
+
+    // Otherwise, silently succeed.
   }
 
-  // Otherwise, silently succeed.
   return Closure.RESULT_OK;
 };
 
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
+ * @param {type} registeredPrefixId The
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
+ * could return it to the caller. If this is 0, then don't add to
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @returns {undefined}
  */
 Face.prototype.registerPrefixHelper = function
   (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
@@ -18082,8 +19477,10 @@ Face.prototype.registerPrefixHelper = function
     Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
-  
-  var fe = new ForwardingEntry('selfreg', prefix, null, null, flags, null);
+
+  // A ForwardingEntry is only used with NDNx.
+  var fe = new ForwardingEntry
+    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
 
   // Always encode as BinaryXml until we support TLV for ForwardingEntry.
   var encoder = new BinaryXMLEncoder();
@@ -18110,11 +19507,73 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  Face.registeredPrefixTable.push
-    (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+  if (registeredPrefixId != 0)
+    Face.registeredPrefixTable.push
+      (new RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure(prefix, onRegisterFailed));
+    (null, interest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
+};
+
+/**
+ * Do the work of registerPrefix to register with NFD.
+ * @param {number} registeredPrefixId The 
+ * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it 
+ * could return it to the caller. If this is 0, then don't add to 
+ * registeredPrefixTable (assuming it has already been done).
+ * @param {Name} prefix
+ * @param {Closure} closure
+ * @param {ForwardingFlags} flags
+ * @param {function} onRegisterFailed
+ * @param {KeyChain} commandKeyChain
+ * @param {Name} commandCertificateName
+ */
+Face.prototype.nfdRegisterPrefix = function
+  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+   commandCertificateName)
+{
+  var removeRequestIndex = -1;
+  if (removeRequestIndex != null)
+    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+      (registeredPrefixId);
+  if (removeRequestIndex >= 0) {
+    // removeRegisteredPrefix was called with the registeredPrefixId returned by
+    //   registerPrefix before we got here, so don't add a registeredPrefixTable
+    //   entry.
+    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    return;
+  }
+
+  if (commandKeyChain == null)
+      throw new Error
+        ("registerPrefix: The command KeyChain has not been set. You must call setCommandSigningInfo.");
+  if (commandCertificateName.size() == 0)
+      throw new Error
+        ("registerPrefix: The command certificate name has not been set. You must call setCommandSigningInfo.");
+
+  var controlParameters = new ControlParameters();
+  controlParameters.setName(prefix);
+
+  var commandInterest = new Interest(new Name("/localhost/nfd/rib/register"));
+  // NFD only accepts TlvWireFormat packets.
+  commandInterest.getName().append
+    (controlParameters.wireEncode(TlvWireFormat.get()));
+  this.nodeMakeCommandInterest
+    (commandInterest, commandKeyChain, commandCertificateName,
+     TlvWireFormat.get());
+  // The interest is answered by the local host, so set a short timeout.
+  commandInterest.setInterestLifetimeMilliseconds(2000.0);
+
+  if (registeredPrefixId != 0)
+      // Save the onInterest callback and send the registration interest.
+      Face.registeredPrefixTable.push
+        (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+
+  this.reconnectAndExpressInterest
+    (null, commandInterest, new Face.RegisterResponseClosure
+     (this, prefix, closure, onRegisterFailed, flags,
+      TlvWireFormat.get(), true));
 };
 
 /**
