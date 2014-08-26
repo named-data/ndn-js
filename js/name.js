@@ -159,6 +159,18 @@ Name.Component.prototype.toSegment = function()
 };
 
 /**
+ * Interpret this name component as a segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The integer segment byte offset.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegmentOffset = function()
+{
+  return this.toNumberWithMarker(0xFB);
+};
+
+/**
  * Interpret this name component as a version number  according to NDN naming
  * conventions for "Versioning" (marker 0xFD). Note that this returns
  * the exact number from the component without converting it to a time
@@ -169,6 +181,31 @@ Name.Component.prototype.toSegment = function()
 Name.Component.prototype.toVersion = function()
 {
   return this.toNumberWithMarker(0xFD);
+};
+
+/**
+ * Interpret this name component as a timestamp  according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * 1 January 1970) not counting leap seconds.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toTimestamp = function()
+{
+  return this.toNumberWithMarker(0xFC);
+};
+
+/**
+ * Interpret this name component as a sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The integer sequence number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSequenceNumber = function()
+{
+  return this.toNumberWithMarker(0xFE);
 };
 
 /**
@@ -446,6 +483,18 @@ Name.prototype.appendSegment = function(segment)
 };
 
 /**
+ * Append a component with the encoded segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param segmentOffset The segment byte offset.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendSegmentOffset = function(segmentOffset)
+{
+  return this.append(Name.Component.fromNumberWithMarker(segmentOffset, 0xFB));
+};
+
+/**
  * Append a component with the encoded version number according to NDN
  * naming conventions for "Versioning" (marker 0xFD).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
@@ -455,7 +504,32 @@ Name.prototype.appendSegment = function(segment)
  */
 Name.prototype.appendVersion = function(version)
 {
-  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
+  return this.append(Name.Component.fromNumberWithMarker(version, 0xFD));
+};
+
+/**
+ * Append a component with the encoded timestamp according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param timestamp The number of microseconds since the UNIX epoch (Thursday,
+ * 1 January 1970) not counting leap seconds.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendTimestamp = function(timestamp)
+{
+  return this.append(Name.Component.fromNumberWithMarker(timestamp, 0xFC));
+};
+
+/**
+ * Append a component with the encoded sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param sequenceNumber The sequence number.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendSequenceNumber = function(sequenceNumber)
+{
+  return this.append(Name.Component.fromNumberWithMarker(sequenceNumber, 0xFE));
 };
 
 /**
