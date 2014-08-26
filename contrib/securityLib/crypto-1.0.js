@@ -28,6 +28,15 @@
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
+var CryptoJS = require('./sha256.js').CryptoJS
+  , intShim = require('jsbn');
+
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
+
 /** 
  * kjur's class library name space
  * @name KJUR
@@ -692,3 +701,5 @@ KJUR.crypto.Signature = function(params) {
     }
 };
 
+exports.KJUR = KJUR;
+module.exports = exports;
