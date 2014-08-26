@@ -22,7 +22,7 @@
      "./js/transport/tcp-transport.js": "./js/browserify-tcp-transport.js"
   },
   "author": "UCLA",
-  "license": "GPL",
+  "license": "LGPL-3.0+",
   "bugs": {
     "url": "https://github.com/named-data/ndn-js/issues"
   },
