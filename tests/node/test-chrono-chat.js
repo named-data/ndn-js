@@ -499,12 +499,12 @@ function getRandomNameString()
 // initiateChat() also sends random chat messages so that we don't need input from node JS
 function initiateChat()
 {
-  var hostName = "memoria.ndn.ucla.edu";
+  var hostName = "localhost";
   var hubPrefix = "ndn/edu/ucla/remap";
   var screenName = getRandomNameString();
   
   // chatroom is the name inputted by the user
-  var chatroom = "defile";
+  var chatroom = "ndnchat";
   
   // Weird, at one point, it works...
   //var face = new Face({ host:hostName });
