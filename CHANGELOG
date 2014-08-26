@@ -1,4 +1,4 @@
-Interim changes after NDN-JS v0.4 (2014-08-25)
+Interim changes after NDN-JS v0.4 (2014-08-26)
 ----------------------------------------------
 
 Changes
@@ -32,6 +32,7 @@ Changes
 * In tests/node, renamed publish.js to test-publish-async-ndnx.js and use KeyChain to sign.
 * In Face, added setCommandSigningInfo and makeCommandInterest.
 * In Face, support NFD for registerPrefix if setCommandSigningInfo has been called.
+* https://github.com/named-data/ndn-js/pull/41 Changes from Ryan Bennett to use the feross Buffer wrapper to support npm.
 * In tests/node, added test-publish-async-nfd.js .
 
 Bug fixes
