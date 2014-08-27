@@ -208,6 +208,19 @@ Name.Component.prototype.toSequenceNumber = function()
 };
 
 /**
+ * Create a component whose value is the nonNegativeInteger encoding of the
+ * number.
+ * @param {number} number
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumber = function(number)
+{
+  var encoder = new TlvEncoder(8);
+  encoder.writeNonNegativeInteger(number);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
+};
+
+/**
  * Create a component whose value is the marker appended with the 
  * nonNegativeInteger encoding of the number.
  * @param {number} number
