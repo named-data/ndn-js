@@ -1,5 +1,5 @@
-Interim changes after NDN-JS v0.4 (2014-08-26)
-----------------------------------------------
+NDN-JS v0.5 (2014-08-27)
+------------------------
 
 Changes
 * Renamed Signature class to Sha256WithRsaSignature. The deprecated Signature
