@@ -78,11 +78,10 @@ Name.Component = function NameComponent(value)
   }
   else if (Buffer.isBuffer(value))
     this.value = new Buffer(value);
-  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
-    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
-    this.value = new Buffer(new ArrayBuffer(value.byteLength));
-    this.value.set(new Buffer(value));
-  }
+  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer)
+    // Make a copy.  Turn the value into a Uint8Array since the Buffer
+    //   constructor doesn't take an ArrayBuffer.
+    this.value = new Buffer(new Uint8Array(value));
   else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
