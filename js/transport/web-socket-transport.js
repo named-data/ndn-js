@@ -20,6 +20,7 @@
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 var Transport = require('./transport.js').Transport;
+var Face;
 
 /**
  * @constructor
@@ -46,6 +47,10 @@ var WebSocketTransport = function WebSocketTransport()
 
 WebSocketTransport.prototype = new Transport();
 WebSocketTransport.prototype.name = "WebSocketTransport";
+
+WebSocketTransport.importFace = function(face){
+  Face = face;
+};
 
 exports.WebSocketTransport = WebSocketTransport;
 

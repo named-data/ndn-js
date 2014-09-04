@@ -178,6 +178,8 @@ Face.OPEN_REQUESTED = 1;  // requested to connect but onopen is not called.
 Face.OPENED = 2;  // connection to the forwarder opened
 Face.CLOSED = 3;  // connection to the forwarder closed
 
+TcpTransport.importFace(Face);
+
 /**
  * If the forwarder's Unix socket file path exists, then return the file path.
  * Otherwise return an empty string. This uses Node.js blocking file system
