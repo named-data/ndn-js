@@ -24,9 +24,7 @@
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils()
-{
-};
+var DataUtils = {};
 
 exports.DataUtils = DataUtils;
 
