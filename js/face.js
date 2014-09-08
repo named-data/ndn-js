@@ -432,6 +432,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
   // There are several overloaded versions of expressInterest, each shown inline below.
 
+  var interest;
   // expressInterest(Name name, Closure closure);                      // deprecated
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
@@ -455,7 +456,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     return this.expressInterestWithClosure(interest, arg2);
   }
 
-  var interest;
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
