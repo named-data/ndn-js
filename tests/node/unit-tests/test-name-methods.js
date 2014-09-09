@@ -26,6 +26,16 @@ var Blob = require('../../..').Blob;
 var expectedURI;
 var comp2;
 
+describe('TestNameComponentMethods', function() {
+  it('Unicode', function() {
+    var comp1 = new Name.Component("entr\u00E9e");
+    var expected = "entr%C3%A9e";
+    assert.equal(comp1.toEscapedString(), expected, "Unicode URI not decoded correctly");
+  });
+
+  // Many more component methods to be tested!
+});
+
 describe('TestNameMethods', function() {
   beforeEach(function() {
     expectedURI = "/entr%C3%A9e/..../%00%01%02%03";
