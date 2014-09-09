@@ -49,7 +49,7 @@ exports.ContentType = ContentType;
  * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields)
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
 {
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -69,7 +69,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // Integer
-    this.finalBlockID = finalBlockID; //byte array
+    this.finalBlockID = finalBlockId; //byte array
 
     if (!skipSetFields)
       this.setFields();
@@ -109,15 +109,23 @@ MetaInfo.prototype.getFreshnessPeriod = function()
  * @returns {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
-MetaInfo.prototype.getFinalBlockID = function()
+MetaInfo.prototype.getFinalBlockId = function()
 {
   // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
   return new Name.Component(new Blob(this.finalBlockID, true));
 };
 
 /**
- * @deprecated Use getFinalBlockID. This method returns a Buffer which is the former
- * behavior of getFinalBlockID, and should only be used while updating your code.
+ * @deprecated Use getFinalBlockId.
+ */
+MetaInfo.prototype.getFinalBlockID = function()
+{
+  return this.getFinalBlockId();
+};
+
+/**
+ * @deprecated Use getFinalBlockId. This method returns a Buffer which is the former
+ * behavior of getFinalBlockId, and should only be used while updating your code.
  */
 MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 {
@@ -151,18 +159,26 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   ++this.changeCount;
 };
 
-MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
+MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
   // TODO: finalBlockID should be a Name.Component, not Buffer.
-  if (finalBlockID == null)
+  if (finalBlockId == null)
     this.finalBlockID = null;
-  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Blob)
-    this.finalBlockID = finalBlockID.buf();
-  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
-    this.finalBlockID = finalBlockID.getValue().buf();
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
+    this.finalBlockID = finalBlockId.buf();
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
+    this.finalBlockID = finalBlockId.getValue().buf();
   else
-    this.finalBlockID = new Buffer(finalBlockID);
+    this.finalBlockID = new Buffer(finalBlockId);
   ++this.changeCount;
+};
+
+/**
+ * @deprecated Use setFinalBlockId.
+ */
+MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
+{
+  this.setFinalBlockId(finalBlockId);
 };
 
 MetaInfo.prototype.setFields = function()
@@ -316,10 +332,10 @@ MetaInfo.prototype.getChangeCount = function()
 /**
  * @deprecated Use new MetaInfo.
  */
-var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID)
+var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
 {
   // Call the base constructor.
-  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID);
+  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
 }
 
 // Set skipSetFields true since we only need the prototype functions.

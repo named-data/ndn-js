@@ -1,3 +1,12 @@
+Interim changes since NDN-JS v0.5 (2014-09-09)
+----------------------------------------------
+
+Changes
+* In MetaInfo, added get/setFinalBlockId (replaces the deprecated get/setFinalBlockID).
+
+Deprecated
+* In MetaInfo, deprecated get/setFinalBlockID. Use get/setFinalBlockId.
+
 NDN-JS v0.5 (2014-08-27)
 ------------------------
 
