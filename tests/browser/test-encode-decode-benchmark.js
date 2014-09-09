@@ -101,7 +101,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       // timestamp is deprecated.
       data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
       data.getMetaInfo().setFreshnessPeriod(30000);
-      data.getMetaInfo().setFinalBlockID(finalBlockId);
+      data.getMetaInfo().setFinalBlockId(finalBlockId);
     }
 
     var keyLocator = new KeyLocator();

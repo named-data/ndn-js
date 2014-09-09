@@ -81,8 +81,8 @@ NameEnumeration.prototype.processData = function(data)
         // Save the content and check if we are finished.
         this.contentParts.push(data.getContent().buf());
 
-        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-          var finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+          var finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));

@@ -190,8 +190,8 @@ function dumpData(data)
     data.getMetaInfo().getFreshnessPeriod() >= 0 ? 
       data.getMetaInfo().getFreshnessPeriod() : "<none>"));
   result.push(dump("metaInfo.finalBlockID:",
-    data.getMetaInfo().getFinalBlockID().getValue().size() > 0 ?
-      data.getMetaInfo().getFinalBlockID().toEscapedString() : "<none>"));
+    data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+      data.getMetaInfo().getFinalBlockId().toEscapedString() : "<none>"));
   var signature = data.getSignature();
   if (signature instanceof Sha256WithRsaSignature) {
     result.push(dump("signature.signature:",
@@ -286,7 +286,7 @@ function createFreshData()
   var freshData = new Data(new Name("/ndn/abc"));
   freshData.setContent(new Blob("SUCCESS!"));
   freshData.getMetaInfo().setFreshnessPeriod(5000);
-  freshData.getMetaInfo().setFinalBlockID(new Name("/%00%09").get(0));
+  freshData.getMetaInfo().setFinalBlockId(new Name("/%00%09").get(0));
 
   return freshData;
 }

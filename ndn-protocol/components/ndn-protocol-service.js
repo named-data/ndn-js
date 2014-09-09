@@ -296,8 +296,8 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
 
     this.segmentStore.storeContent(segmentNumber, data);
 
-    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-        this.finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
+    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0)
+        this.finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
 
     // The content was already put in the store.  Retrieve as much as possible.
     var entry;

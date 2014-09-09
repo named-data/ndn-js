@@ -149,8 +149,8 @@
 
       // Record final seg# if present
       var finalSegmentNumber = null;
-      if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-        finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
+      if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0)
+        finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
 
       // Check for out-of-order segment
       if (segmentNumber != this.snd_una) {

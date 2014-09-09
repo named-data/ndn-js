@@ -607,7 +607,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
+  var finalBlockIdBuf = metaInfo.getFinalBlockId().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
@@ -645,11 +645,11 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockID(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
-    metaInfo.setFinalBlockID(null);
+    metaInfo.setFinalBlockId(null);
 
   decoder.finishNestedTlvs(endOffset);
 };
