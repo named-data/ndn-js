@@ -233,7 +233,7 @@ function dumpData(data)
   console.log("metaInfo.freshnessPeriod (milliseconds): " +
     (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
       "" + data.getMetaInfo().getFreshnessPeriod() : "<none>"));
-  console.log("metaInfo.finalBlockID: " +
+  console.log("metaInfo.finalBlockId: " +
     (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
      data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
 

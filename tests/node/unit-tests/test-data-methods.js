@@ -189,7 +189,7 @@ function dumpData(data)
   result.push(dump("metaInfo.freshnessPeriod (milliseconds):",
     data.getMetaInfo().getFreshnessPeriod() >= 0 ? 
       data.getMetaInfo().getFreshnessPeriod() : "<none>"));
-  result.push(dump("metaInfo.finalBlockID:",
+  result.push(dump("metaInfo.finalBlockId:",
     data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
       data.getMetaInfo().getFinalBlockId().toEscapedString() : "<none>"));
   var signature = data.getSignature();
@@ -217,7 +217,7 @@ var initialDump = ['name: /ndn/abc',
   'content (raw): SUCCESS!',
   'content (hex): 5355434345535321',
   'metaInfo.freshnessPeriod (milliseconds): 5000',
-  'metaInfo.finalBlockID: %00%09',
+  'metaInfo.finalBlockId: %00%09',
   'signature.signature: 1a03c39c4fc55c36a2e79cee52fe45a7e10cfb95acb49bccb6a0c34aaa45bfbfdf0b51d5a48bf2ab45971c24d8e2c28a4d4012d77701eb7435f14dddd0f3a69ab7a4f17fa78434d7082552808b6c4293041e071f4f764318f2f8511a56afe6a931cb6c1c0aa40110fcc866ce2e9c0b2d7fb464a0ee2282c834f79af551122a84',
   'signature.keyLocator: KeyName: /testname/KEY/DSK-123/ID-CERT'];
 
