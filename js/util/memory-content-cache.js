@@ -260,7 +260,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} true if this interest is stale, otherwise false.
+ * @returns {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
