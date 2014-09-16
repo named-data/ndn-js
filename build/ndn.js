@@ -10,11 +10,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 // define a shim require function so that a node/browserify require calls dont cause errors when ndn-js is used via <script> tag
@@ -4584,11 +4584,11 @@ module.exports = exports;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
@@ -6112,11 +6112,11 @@ Buffer.assert = function(test, message) {
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -6146,11 +6146,11 @@ Log.LOG = 0;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 
@@ -6315,11 +6315,11 @@ exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var LOG = require('../log.js').Log.LOG;
@@ -6359,11 +6359,11 @@ NDNTime.prototype.getJavascriptDate = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Closure = require('../closure.js').Closure;
@@ -6433,11 +6433,11 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -6569,11 +6569,11 @@ Blob.prototype.equals = function(other)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./blob.js').Blob;
@@ -6678,11 +6678,11 @@ SignedBlob.prototype.getSignedPortionEndOffset = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -6802,11 +6802,11 @@ DynamicBuffer.prototype.slice = function(begin, end)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -6885,11 +6885,11 @@ ChangeCounter.prototype.checkChanged = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -7201,11 +7201,11 @@ DataUtils.shuffle = function(array)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -7239,11 +7239,11 @@ exports.DecodingException = DecodingException;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var LOG = require('../log.js').Log.LOG;
@@ -7685,11 +7685,11 @@ BinaryXMLEncoder.prototype.getReducedOstream = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -8410,11 +8410,11 @@ BinaryXMLDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
@@ -8613,11 +8613,11 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -8701,11 +8701,11 @@ Tlv.ControlParameters_ExpirationPeriod =    109;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
@@ -8928,11 +8928,11 @@ TlvEncoder.prototype.getOutput = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DecodingException = require('../decoding-exception.js').DecodingException;
@@ -9265,11 +9265,11 @@ TlvDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
@@ -9486,11 +9486,11 @@ TlvStructureDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -9709,11 +9709,11 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -9892,11 +9892,11 @@ var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -10001,11 +10001,11 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
@@ -10152,11 +10152,11 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../name.js').Name;
@@ -10420,11 +10420,11 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -10454,11 +10454,11 @@ Transport.ConnectionInfo = function TransportConnectionInfo()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
@@ -10662,11 +10662,11 @@ WebSocketTransport.prototype.close = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 // The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
@@ -10687,11 +10687,11 @@ exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTran
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -10778,11 +10778,11 @@ exports.UpcallInfo = UpcallInfo;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -10859,11 +10859,11 @@ PublisherPublicKeyDigest.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -10984,11 +10984,11 @@ PublisherID.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -11870,11 +11870,11 @@ var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -12020,11 +12020,11 @@ Key.createFromPEM = function(obj)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -12330,11 +12330,11 @@ KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Key = require('../key.js').Key;
@@ -12417,11 +12417,11 @@ exports.globalKeyManager = globalKeyManager;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -12455,11 +12455,11 @@ exports.SecurityException = SecurityException;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -12528,11 +12528,11 @@ EncryptMode.CFB_AES = 2;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -12620,11 +12620,11 @@ PublicKey.prototype.getKeyDer = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var IdentityCertificate = function IdentityCertificate()
@@ -12671,11 +12671,11 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -12938,11 +12938,11 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Data = require('../../data.js').Data;
@@ -13255,11 +13255,11 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -13374,11 +13374,11 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('../../util/blob.js').Blob;
@@ -13539,11 +13539,11 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -13870,11 +13870,11 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -13916,11 +13916,11 @@ exports.ValidationRequest = ValidationRequest;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -14025,11 +14025,11 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -14132,11 +14132,11 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -14370,11 +14370,11 @@ SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../name.js').Name;
@@ -14870,11 +14870,11 @@ KeyChain.prototype.onCertificateInterestTimeout = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -15198,11 +15198,11 @@ exports.SignedInfo = SignedInfo;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -15401,11 +15401,11 @@ exports.Signature = Signature;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Crypto = require("./crypto.js");
@@ -15763,11 +15763,11 @@ exports.ContentObject = ContentObject;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('./name.js').Name;
@@ -16014,11 +16014,11 @@ Exclude.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -16491,11 +16491,11 @@ Interest.prototype.decode = function(input, wireFormat)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -16615,11 +16615,11 @@ FaceInstance.prototype.getElementLabel = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -16836,11 +16836,11 @@ ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = valu
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
@@ -16930,11 +16930,11 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
@@ -17132,11 +17132,11 @@ ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('../util/blob.js').Blob;
@@ -17497,11 +17497,11 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Crypto = require('../crypto.js');
@@ -18152,11 +18152,11 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var WireFormat = require('./wire-format.js').WireFormat;
@@ -18211,11 +18211,11 @@ WireFormat.setDefaultWireFormat(TlvWireFormat.get());
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -18461,11 +18461,11 @@ function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
@@ -18542,11 +18542,11 @@ CommandInterestGenerator.prototype.generate = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var crypto = require('crypto');
