@@ -169,6 +169,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandKeyChain = null;
   this.commandCertificateName = new Name();
   this.commandInterestGenerator = new CommandInterestGenerator();
+  this.timeoutPrefix = new Name("/local/timeout");
 };
 
 exports.Face = Face;
@@ -645,7 +646,9 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
     }
   }
 
-  this.transport.send(binaryInterest.buf());
+  // Special case: For timeoutPrefix we don't actually send the interest.
+  if (!this.timeoutPrefix.match(interest.getName()))
+    this.transport.send(binaryInterest.buf());
 };
 
 /**
