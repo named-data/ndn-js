@@ -64,17 +64,21 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
     this.offset += 2;
   }
   else if (firstOctet == 254) {
-    result = ((this.input[this.offset] << 24) +
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    result = (Math.abs(this.input[this.offset] << 24) +
           (this.input[this.offset + 1] << 16) +
           (this.input[this.offset + 2] << 8) +
            this.input[this.offset + 3]);
     this.offset += 4;
   }
   else {
-    result = ((this.input[this.offset] << 56) +
-          (this.input[this.offset + 1] << 48) +
-          (this.input[this.offset + 2] << 40) +
-          (this.input[this.offset + 3] << 32) +
+    // Get the high byte first because JavaScript << is restricted to 32 bits.
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    var highByte = Math.abs(this.input[this.offset] << 24) +
+                           (this.input[this.offset + 1] << 16) +
+                           (this.input[this.offset + 2] << 8) +
+                            this.input[this.offset + 3];
+    result = (highByte * 0x100000000 +
           (this.input[this.offset + 4] << 24) +
           (this.input[this.offset + 5] << 16) +
           (this.input[this.offset + 6] << 8) +
@@ -199,19 +203,23 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
     result = ((this.input[this.offset] << 8) +
            this.input[this.offset + 1]);
   else if (length == 4)
-    result = ((this.input[this.offset] << 24) +
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    result = (Math.abs(this.input[this.offset] << 24) +
           (this.input[this.offset + 1] << 16) +
           (this.input[this.offset + 2] << 8) +
            this.input[this.offset + 3]);
-  else if (length == 8)
-    result = ((this.input[this.offset] << 56) +
-          (this.input[this.offset + 1] << 48) +
-          (this.input[this.offset + 2] << 40) +
-          (this.input[this.offset + 3] << 32) +
-          (this.input[this.offset + 4] << 24) +
+  else if (length == 8) {
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    var highByte = Math.abs(this.input[this.offset] << 24) +
+                       (this.input[this.offset + 1] << 16) +
+                       (this.input[this.offset + 2] << 8) +
+                        this.input[this.offset + 3];
+    result = (highByte * 0x100000000 +
+          Math.abs(this.input[this.offset + 4] << 24) +
           (this.input[this.offset + 5] << 16) +
           (this.input[this.offset + 6] << 8) +
            this.input[this.offset + 7]);
+  }
   else
     throw new DecodingException("Invalid length for a TLV nonNegativeInteger");
 
