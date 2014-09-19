@@ -7,6 +7,9 @@ Changes
 Deprecated
 * In MetaInfo, deprecated get/setFinalBlockID. Use get/setFinalBlockId.
 
+Bug fixes
+* http://redmine.named-data.net/issues/1986 TLV encode/decode of large nonNegativeInteger.
+
 NDN-JS v0.5 (2014-08-27)
 ------------------------
 
