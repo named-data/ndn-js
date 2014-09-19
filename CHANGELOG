@@ -3,6 +3,7 @@ Interim changes since NDN-JS v0.5 (2014-09-09)
 
 Changes
 * In MetaInfo, added get/setFinalBlockId (replaces the deprecated get/setFinalBlockID).
+* In unit tests, added test-name-conventions.
 
 Deprecated
 * In MetaInfo, deprecated get/setFinalBlockID. Use get/setFinalBlockId.
