@@ -300,7 +300,8 @@ DataUtils.nonNegativeIntToBigEndian = function(value)
   while (value != 0) {
     ++i;
     result[size - i] = value & 0xff;
-    value >>= 8;
+    // Divide by 0x100 and floor instead of shift by 8 because >> is restricted to 32 bits.
+    value = Math.floor(value / 0x100);
   }
   return result.slice(size - i, size);
 };
