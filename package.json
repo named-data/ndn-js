@@ -1,5 +1,5 @@
 {
-  "name": "ndn-lib",
+  "name": "ndn-js",
   "version": "0.5.0",
   "description": "NDN-JS:  A javascript client library for Named Data Networking --------------------------------------------------------------",
   "main": "index.js",
