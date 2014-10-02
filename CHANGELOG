@@ -1,5 +1,18 @@
-Interim changes after NDN-JS v0.4 (2014-08-25)
+Interim changes since NDN-JS v0.5 (2014-09-09)
 ----------------------------------------------
+
+Changes
+* In MetaInfo, added get/setFinalBlockId (replaces the deprecated get/setFinalBlockID).
+* In unit tests, added test-name-conventions.
+
+Deprecated
+* In MetaInfo, deprecated get/setFinalBlockID. Use get/setFinalBlockId.
+
+Bug fixes
+* http://redmine.named-data.net/issues/1986 TLV encode/decode of large nonNegativeInteger.
+
+NDN-JS v0.5 (2014-08-27)
+------------------------
 
 Changes
 * Renamed Signature class to Sha256WithRsaSignature. The deprecated Signature
@@ -25,6 +38,8 @@ Changes
 * In Name.Component, added toSegment and toVersion.
 * In Name.appendSegment and appendVersion, encode the number as nonNegativeInteger which is always 1, 2, 4 or 8 bytes.
   This means that appendSegment(0) now encodes as %00%00 instead of just %00.
+* In Name, added appendSegmentOffset, appendTimestamp and appendSequenceNumber.
+* In Name.Component, added toSegmentOffset, toTimestamp and toSequenceNumber.
 * In Face.expressInterest, return the pendingInterestId. Added Face.removePendingInterest.
 * In Face.registerPrefix, return the registeredPrefixId. Added Face.removeRegisteredPrefix.
 * Added classes for the security API: KeyChain, MemoryIdentityStorage, MemoryPrivateKeyStorage, SelfVerifyPolicyManager.
@@ -32,6 +47,7 @@ Changes
 * In tests/node, renamed publish.js to test-publish-async-ndnx.js and use KeyChain to sign.
 * In Face, added setCommandSigningInfo and makeCommandInterest.
 * In Face, support NFD for registerPrefix if setCommandSigningInfo has been called.
+* https://github.com/named-data/ndn-js/pull/41 Changes from Ryan Bennett to use the feross Buffer wrapper to support npm.
 * In tests/node, added test-publish-async-nfd.js .
 
 Bug fixes

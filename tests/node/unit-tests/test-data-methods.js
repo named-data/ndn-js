@@ -1,22 +1,22 @@
-/**                                                                                                            
- * Copyright (C) 2014 Regents of the University of California.                                                 
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>                                                              
- * From PyNDN unit-tests by Adeola Bannis.                                                                    
- *                                                                                                             
- * This program is free software: you can redistribute it and/or modify                                        
- * it under the terms of the GNU Lesser General Public License as published by                                 
- * the Free Software Foundation, either version 3 of the License, or                                           
- * (at your option) any later version, with the additional exemption that                                      
- * compiling, linking, and/or using OpenSSL is allowed.                                                        
- *                                                                                                             
- * This program is distributed in the hope that it will be useful,                                             
- * but WITHOUT ANY WARRANTY; without even the implied warranty of                                              
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                               
- * GNU General Public License for more details.                                                                
- *                                                                                                             
- * You should have received a copy of the GNU General Public License                                           
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.                                       
- * A copy of the GNU General Public License is in the file COPYING.                                            
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From PyNDN unit-tests by Adeola Bannis.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version, with the additional exemption that
+ * compiling, linking, and/or using OpenSSL is allowed.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var assert = require("assert");
@@ -187,11 +187,11 @@ function dumpData(data)
       (data.getMetaInfo().getType() == ContentType.KEY ? "KEY" : "unknown")));
   }
   result.push(dump("metaInfo.freshnessPeriod (milliseconds):",
-    data.getMetaInfo().getFreshnessPeriod() >= 0 ? 
+    data.getMetaInfo().getFreshnessPeriod() >= 0 ?
       data.getMetaInfo().getFreshnessPeriod() : "<none>"));
-  result.push(dump("metaInfo.finalBlockID:",
-    data.getMetaInfo().getFinalBlockID().getValue().size() > 0 ?
-      data.getMetaInfo().getFinalBlockID().toEscapedString() : "<none>"));
+  result.push(dump("metaInfo.finalBlockId:",
+    data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+      data.getMetaInfo().getFinalBlockId().toEscapedString() : "<none>"));
   var signature = data.getSignature();
   if (signature instanceof Sha256WithRsaSignature) {
     result.push(dump("signature.signature:",
@@ -217,7 +217,7 @@ var initialDump = ['name: /ndn/abc',
   'content (raw): SUCCESS!',
   'content (hex): 5355434345535321',
   'metaInfo.freshnessPeriod (milliseconds): 5000',
-  'metaInfo.finalBlockID: %00%09',
+  'metaInfo.finalBlockId: %00%09',
   'signature.signature: 1a03c39c4fc55c36a2e79cee52fe45a7e10cfb95acb49bccb6a0c34aaa45bfbfdf0b51d5a48bf2ab45971c24d8e2c28a4d4012d77701eb7435f14dddd0f3a69ab7a4f17fa78434d7082552808b6c4293041e071f4f764318f2f8511a56afe6a931cb6c1c0aa40110fcc866ce2e9c0b2d7fb464a0ee2282c834f79af551122a84',
   'signature.keyLocator: KeyName: /testname/KEY/DSK-123/ID-CERT'];
 
@@ -286,7 +286,7 @@ function createFreshData()
   var freshData = new Data(new Name("/ndn/abc"));
   freshData.setContent(new Blob("SUCCESS!"));
   freshData.getMetaInfo().setFreshnessPeriod(5000);
-  freshData.getMetaInfo().setFinalBlockID(new Name("/%00%09").get(0));
+  freshData.getMetaInfo().setFinalBlockId(new Name("/%00%09").get(0));
 
   return freshData;
 }

@@ -10,14 +10,14 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -75,7 +75,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
   else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
@@ -83,7 +83,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 
     // Generate random bytes for remaining bytes in the nonce.
     for (var i = interest.getNonce().size(); i < 4; ++i)
-      nonce[i] = require("crypto").randomBytes(1)[0];
+      nonce[i] = Crypto.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
@@ -607,7 +607,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
+  var finalBlockIdBuf = metaInfo.getFinalBlockId().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
@@ -645,11 +645,11 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockID(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
-    metaInfo.setFinalBlockID(null);
+    metaInfo.setFinalBlockId(null);
 
   decoder.finishNestedTlvs(endOffset);
 };

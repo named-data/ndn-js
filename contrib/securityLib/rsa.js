@@ -15,7 +15,9 @@
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on jsbn.js and rng.js
+var intShim = require("jsbn");
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
 // Version 1.1: support utf-8 encoding in pkcs1pad2
 
 // convert a (hex) string to a bignum object
@@ -135,7 +137,7 @@ function oaep_pad(s, n, hash)
 }
 
 // "empty" RSA key constructor
-function RSAKey() {
+var RSAKey = function RSAKey() {
   this.n = null;
   this.e = 0;
   this.d = null;
@@ -200,3 +202,7 @@ RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
+
+
+exports.RSAKey = RSAKey;
+module.exports = exports;

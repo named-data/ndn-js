@@ -10,14 +10,15 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+var Tlv = require('./tlv.js').Tlv;
 
 /**
  * Create a new TlvEncoder with an initialCapacity for the encoding buffer.
@@ -82,10 +83,11 @@ TlvEncoder.prototype.writeVarNumber = function(varNumber)
     this.output.ensureLengthFromBack(this.length);
     var offset = this.output.array.length - this.length;
     this.output.array[offset] = 255;
-    this.output.array[offset + 1] = (varNumber >> 56) & 0xff;
-    this.output.array[offset + 2] = (varNumber >> 48) & 0xff;
-    this.output.array[offset + 3] = (varNumber >> 40) & 0xff;
-    this.output.array[offset + 4] = (varNumber >> 32) & 0xff;
+    var highBytes = Tlv.getHighBytes(varNumber);
+    this.output.array[offset + 1] = (highBytes >> 24) & 0xff;
+    this.output.array[offset + 2] = (highBytes >> 16) & 0xff;
+    this.output.array[offset + 3] = (highBytes >> 8)  & 0xff;
+    this.output.array[offset + 4] = (highBytes)       & 0xff;
     this.output.array[offset + 5] = (varNumber >> 24) & 0xff;
     this.output.array[offset + 6] = (varNumber >> 16) & 0xff;
     this.output.array[offset + 7] = (varNumber >> 8) & 0xff;
@@ -144,10 +146,11 @@ TlvEncoder.prototype.writeNonNegativeInteger = function(value)
     this.length += 8;
     this.output.ensureLengthFromBack(this.length);
     var offset = this.output.array.length - this.length;
-    this.output.array[offset]     = (value >> 56) & 0xff;
-    this.output.array[offset + 1] = (value >> 48) & 0xff;
-    this.output.array[offset + 2] = (value >> 40) & 0xff;
-    this.output.array[offset + 3] = (value >> 32) & 0xff;
+    var highBytes = Tlv.getHighBytes(value);
+    this.output.array[offset]     = (highBytes >> 24) & 0xff;
+    this.output.array[offset + 1] = (highBytes >> 16) & 0xff;
+    this.output.array[offset + 2] = (highBytes >> 8)  & 0xff;
+    this.output.array[offset + 3] = (highBytes)       & 0xff;
     this.output.array[offset + 4] = (value >> 24) & 0xff;
     this.output.array[offset + 5] = (value >> 16) & 0xff;
     this.output.array[offset + 6] = (value >> 8) & 0xff;

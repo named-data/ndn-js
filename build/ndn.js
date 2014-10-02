@@ -1,6 +1,6 @@
 /**
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Wentao Shang
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Ryan Bennett
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -10,288 +10,20 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-// Library namespace
-var ndn = ndn || {};
+// define a shim require function so that a node/browserify require calls dont cause errors when ndn-js is used via <script> tag
 
+var ndn = ndn || {}
 var exports = ndn;
 
-var require = function(ignore) { return ndn; };
-
-// Factory method to create node.js compatible buffer objects
-var Buffer = function Buffer(data, format)
-{
-  var obj;
-
-  if (typeof data == 'number')
-    obj = new Uint8Array(data);
-  else if (typeof data == 'string') {
-    if (format == null || format == 'utf8') {
-      var utf8 = Buffer.str2rstr_utf8(data);
-      obj = new Uint8Array(utf8.length);
-      for (var i = 0; i < utf8.length; i++)
-        obj[i] = utf8.charCodeAt(i);
-    }
-    else if (format == 'binary') {
-      obj = new Uint8Array(data.length);
-      for (var i = 0; i < data.length; i++)
-        obj[i] = data.charCodeAt(i);
-    }
-    else if (format == 'hex') {
-      obj = new Uint8Array(Math.floor(data.length / 2));
-      var i = 0;
-      data.replace(/(..)/g, function(ss) {
-        obj[i++] = parseInt(ss, 16);
-      });
-    }
-    else if (format == 'base64') {
-      var hex = b64tohex(data);
-      obj = new Uint8Array(Math.floor(hex.length / 2));
-      var i = 0;
-      hex.replace(/(..)/g, function(ss) {
-        obj[i++] = parseInt(ss, 16);
-      });
-    }
-    else
-      throw new Error('Buffer: unknown encoding format ' + format);
-  }
-  else if (typeof data == 'object' && data instanceof Uint8Array || Buffer.isBuffer(data)) {
-    // The second argument is a boolean for "copy", default true.
-    if (format == false)
-      obj = data.subarray(0);
-    else
-      obj = new Uint8Array(data);
-  }
-  else if (typeof data == 'object' && data instanceof ArrayBuffer)
-    // Copy.
-    obj = new Uint8Array(data);
-  else if (typeof data == 'object')
-    // Assume component is a byte array.  We can't check instanceof Array because
-    //   this doesn't work in JavaScript if the array comes from a different module.
-    obj = new Uint8Array(data);
-  else
-    throw new Error('Buffer: unknown data type.');
-
-  try {
-    obj.__proto__ = Buffer.prototype;
-  } catch(ex) {
-    throw new Error("Buffer: Set obj.__proto__ exception: " + ex);
-  }
-
-  obj.__proto__.toString = function(encoding) {
-    if (encoding == null || encoding == 'binary') {
-      var ret = "";
-      for (var i = 0; i < this.length; i++)
-        ret += String.fromCharCode(this[i]);
-      return ret;
-    }
-
-    var ret = "";
-    for (var i = 0; i < this.length; i++)
-      ret += (this[i] < 16 ? "0" : "") + this[i].toString(16);
-
-    if (encoding == 'hex')
-      return ret;
-    else if (encoding == 'base64')
-      return hex2b64(ret);
-    else
-      throw new Error('Buffer.toString: unknown encoding format ' + encoding);
-  };
-
-  obj.__proto__.slice = function(begin, end) {
-    if (end !== undefined)
-      return new Buffer(this.subarray(begin, end), false);
-    else
-      return new Buffer(this.subarray(begin), false);
-  };
-
-  obj.__proto__.copy = function(target, targetStart) {
-    if (targetStart !== undefined)
-      target.set(this, targetStart);
-    else
-      target.set(this);
-  };
-
-  return obj;
-};
-
-Buffer.prototype = Uint8Array.prototype;
-
-Buffer.isBuffer = function(obj)
-{
-  return typeof obj === 'object' && obj instanceof Buffer;
-};
-
-Buffer.concat = function(arrays)
-{
-  var totalLength = 0;
-  for (var i = 0; i < arrays.length; ++i)
-    totalLength += arrays[i].length;
-
-  var result = new Buffer(totalLength);
-  var offset = 0;
-  for (var i = 0; i < arrays.length; ++i) {
-    result.set(arrays[i], offset);
-    offset += arrays[i].length;
-  }
-  return result;
-};
-
-Buffer.str2rstr_utf8 = function(input)
-{
-  var output = "";
-  var i = -1;
-  var x, y;
-
-  while (++i < input.length)
-  {
-    // Decode utf-16 surrogate pairs
-    x = input.charCodeAt(i);
-    y = i + 1 < input.length ? input.charCodeAt(i + 1) : 0;
-    if (0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
-    {
-      x = 0x10000 + ((x & 0x03FF) << 10) + (y & 0x03FF);
-      i++;
-    }
-
-    // Encode output as utf-8
-    if (x <= 0x7F)
-      output += String.fromCharCode(x);
-    else if (x <= 0x7FF)
-      output += String.fromCharCode(0xC0 | ((x >>> 6 ) & 0x1F),
-                                    0x80 | ( x         & 0x3F));
-    else if (x <= 0xFFFF)
-      output += String.fromCharCode(0xE0 | ((x >>> 12) & 0x0F),
-                                    0x80 | ((x >>> 6 ) & 0x3F),
-                                    0x80 | ( x         & 0x3F));
-    else if (x <= 0x1FFFFF)
-      output += String.fromCharCode(0xF0 | ((x >>> 18) & 0x07),
-                                    0x80 | ((x >>> 12) & 0x3F),
-                                    0x80 | ((x >>> 6 ) & 0x3F),
-                                    0x80 | ( x         & 0x3F));
-  }
-  return output;
-};
-
-// Factory method to create hasher objects
-exports.createHash = function(alg)
-{
-  if (alg != 'sha256')
-    throw new Error('createHash: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-
-  obj.update = function(buf) {
-    this.md.updateHex(buf.toString('hex'));
-  };
-
-  obj.digest = function() {
-    return new Buffer(this.md.digest(), 'hex');
-  };
-
-  return obj;
-};
-
-// Factory method to create RSA signer objects
-exports.createSign = function(alg)
-{
-  if (alg != 'RSA-SHA256')
-    throw new Error('createSign: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.arr = [];
-
-  obj.update = function(buf) {
-    this.arr.push(buf);
-  };
-
-  obj.sign = function(keypem) {
-    var rsa = new RSAKey();
-    rsa.readPrivateKeyFromPEMString(keypem);
-    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
-    signer.initSign(rsa);
-    for (var i = 0; i < this.arr.length; ++i)
-      signer.updateHex(this.arr[i].toString('hex'));
-
-    return new Buffer(signer.sign(), 'hex');
-  };
-
-  return obj;
-};
-
-// Factory method to create RSA verifier objects
-exports.createVerify = function(alg)
-{
-  if (alg != 'RSA-SHA256')
-    throw new Error('createSign: unsupported algorithm.');
-
-  var obj = {};
-
-  obj.arr = [];
-
-  obj.update = function(buf) {
-    this.arr.push(buf);
-  };
-
-  var getSubjectPublicKeyPosFromHex = function(hPub) {
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
-    if (a.length != 2)
-      return -1;
-    var pBitString = a[1];
-    if (hPub.substring(pBitString, pBitString + 2) != '03')
-      return -1;
-    var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
-    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
-      return -1;
-    return pBitStringV + 2;
-  };
-
-  var readPublicDER = function(pub_der) {
-    var hex = pub_der.toString('hex');
-    var p = getSubjectPublicKeyPosFromHex(hex);
-    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
-    if (a.length != 2)
-      return null;
-    var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
-    var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
-    var rsaKey = new RSAKey();
-    rsaKey.setPublic(hN, hE);
-    return rsaKey;
-  };
-
-  obj.verify = function(keypem, sig) {
-    var key = new ndn.Key();
-    key.fromPemString(keypem);
-
-    var rsa = readPublicDER(key.publicToDER());
-    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
-    signer.initVerifyByPublicKey(rsa);
-    for (var i = 0; i < this.arr.length; i++)
-      signer.updateHex(this.arr[i].toString('hex'));
-    var hSig = sig.toString('hex');
-    return signer.verify(hSig);
-  };
-
-  return obj;
-};
-
-exports.randomBytes = function(size)
-{
-  // TODO: Use a cryptographic random number generator.
-  var result = new Buffer(size);
-  for (var i = 0; i < size; ++i)
-    result[i] = Math.floor(Math.random() * 256);
-  return result;
-};
+var module = {}
+function require(){return ndn;}
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1013,6 +745,9 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
+
+exports.CryptoJS = CryptoJS;
+module.exports = exports;
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1028,9 +763,10 @@ The above copyright notice and this permission notice shall be included in all c
 
 code.google.com/p/crypto-js/wiki/License
 */
+
+var C = require('./core.js').CryptoJS;
 (function (Math) {
     // Shortcuts
-    var C = CryptoJS;
     var C_lib = C.lib;
     var WordArray = C_lib.WordArray;
     var Hasher = C_lib.Hasher;
@@ -1207,6 +943,9 @@ code.google.com/p/crypto-js/wiki/License
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
+
+exports.CryptoJS = C;
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -1223,8 +962,13 @@ code.google.com/p/crypto-js/wiki/License
 // 
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
-var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-var b64pad="=";
+var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  , b64pad="="
+  , BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+function int2char(n) {
+  return BI_RM.charAt(n); 
+}
 
 function hex2b64(h) {
   var i;
@@ -1294,6 +1038,12 @@ function b64toBA(s) {
   }
   return a;
 }
+
+exports.b64tohex = b64tohex;
+exports.b64toBA  = b64toBA;
+exports.hex2b64  = hex2b64;
+
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -1311,7 +1061,9 @@ function b64toBA(s) {
 // See "jrsasig-THIRDPARTYLICENSE.txt" for details.
 
 // Depends on jsbn.js and rng.js
+var intShim = require("jsbn");
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
 // Version 1.1: support utf-8 encoding in pkcs1pad2
 
 // convert a (hex) string to a bignum object
@@ -1431,7 +1183,7 @@ function oaep_pad(s, n, hash)
 }
 
 // "empty" RSA key constructor
-function RSAKey() {
+var RSAKey = function RSAKey() {
   this.n = null;
   this.e = 0;
   this.d = null;
@@ -1496,6 +1248,10 @@ RSAKey.prototype.setPublic = RSASetPublic;
 RSAKey.prototype.encrypt = RSAEncrypt;
 RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
+
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 // Copyright (c) 2003-2009  Tom Wu
 // All Rights Reserved.
 // 
@@ -1514,6 +1270,14 @@ RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 
 // Depends on rsa.js and jsbn2.js
 
+var intShim = require("jsbn");
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
+var RSAKey = require('./rsa.js').RSAKey;
+
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
@@ -1755,6 +1519,9 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! crypto-1.0.4.js (c) 2013 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
@@ -1784,6 +1551,15 @@ RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
  * @since 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var CryptoJS = require('./sha256.js').CryptoJS
+  , intShim = require('jsbn');
+
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 /** 
  * kjur's class library name space
@@ -2449,6 +2225,8 @@ KJUR.crypto.Signature = function(params) {
     }
 };
 
+exports.KJUR = KJUR;
+module.exports = exports;
 /*! rsapem-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -2482,6 +2260,9 @@ KJUR.crypto.Signature = function(params) {
 //   removing PEM header, PEM footer and space characters including
 //   new lines from PEM formatted RSA private key string.
 //
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa2.js').RSAKey;
 
 /**
  * @fileOverview
@@ -2558,6 +2339,9 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
 RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN1HexString;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! rsasign-1.2.2.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -2589,6 +2373,13 @@ RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN
 //   rsa.js
 //   rsa2.js
 //
+var intShim = require('jsbn');
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+var RSAKey = require('./rsapem-1.1.js').RSAKey
+
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 
 // keysize / pmstrlen
 //  512 /  128
@@ -2957,6 +2748,9 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! asn1hex-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -2981,7 +2775,12 @@ RSAKey.SALT_LEN_RECOVER = -2;
 //
 // Depends on:
 //
+var intShim = require('jsbn')
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte
@@ -3236,7 +3035,7 @@ function _asnhex_getDecendantHexVByNthList(h, currentIndex, nthList) {
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  * @since 1.1
  */
-function ASN1HEX() {
+var ASN1HEX = function ASN1HEX() {
   return ASN1HEX;
 }
 
@@ -3252,6 +3051,9 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;
 /*! x509-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 // 
@@ -3281,6 +3083,9 @@ ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
 //   base64.js
 //   rsa.js
 //   asn1hex.js
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js').RSAKey;
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
 
 /**
  * @fileOverview
@@ -3523,6 +3328,8 @@ X509.prototype.getSubjectString = _x509_getSubjectString;
 X509.prototype.getNotBefore = _x509_getNotBefore;
 X509.prototype.getNotAfter = _x509_getNotAfter;
 
+exports.X509 = X509;
+module.exports = exports;
 // Copyright (c) 2005  Tom Wu
 // All Rights Reserved.
 // 
@@ -3549,7 +3356,7 @@ var canary = 0xdeadbeefcafe;
 var j_lm = ((canary&0xffffff)==0xefcafe);
 
 // (public) Constructor
-function BigInteger(a,b,c) {
+var BigInteger = function BigInteger(a,b,c) {
   if(a != null)
     if("number" == typeof a) this.fromNumber(a,b,c);
     else if(b == null && "string" != typeof a) this.fromString(a,256);
@@ -4762,6 +4569,1537 @@ BigInteger.prototype.square = bnSquare;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+
+exports.BigInteger = BigInteger;
+module.exports = exports;
+/**
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Wentao Shang
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
+
+// Library namespace
+var ndn = ndn || {};
+ndn.Key = require("./key.js").Key
+
+var exports = ndn;
+
+
+// Factory method to create hasher objects
+exports.createHash = function(alg)
+{
+  if (alg != 'sha256')
+    throw new Error('createHash: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+
+  obj.update = function(buf) {
+    this.md.updateHex(buf.toString('hex'));
+  };
+
+  obj.digest = function() {
+    return new Buffer(this.md.digest(), 'hex');
+  };
+
+  return obj;
+};
+
+// Factory method to create RSA signer objects
+exports.createSign = function(alg)
+{
+  if (alg != 'RSA-SHA256')
+    throw new Error('createSign: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.arr = [];
+
+  obj.update = function(buf) {
+    this.arr.push(buf);
+  };
+
+  obj.sign = function(keypem) {
+    var rsa = new RSAKey();
+    rsa.readPrivateKeyFromPEMString(keypem);
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
+    signer.initSign(rsa);
+    for (var i = 0; i < this.arr.length; ++i)
+      signer.updateHex(this.arr[i].toString('hex'));
+
+    return new Buffer(signer.sign(), 'hex');
+  };
+
+  return obj;
+};
+
+// Factory method to create RSA verifier objects
+exports.createVerify = function(alg)
+{
+  if (alg != 'RSA-SHA256')
+    throw new Error('createSign: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.arr = [];
+
+  obj.update = function(buf) {
+    this.arr.push(buf);
+  };
+
+  var getSubjectPublicKeyPosFromHex = function(hPub) {
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hPub, 0);
+    if (a.length != 2)
+      return -1;
+    var pBitString = a[1];
+    if (hPub.substring(pBitString, pBitString + 2) != '03')
+      return -1;
+    var pBitStringV = ASN1HEX.getStartPosOfV_AtObj(hPub, pBitString);
+    if (hPub.substring(pBitStringV, pBitStringV + 2) != '00')
+      return -1;
+    return pBitStringV + 2;
+  };
+
+  var readPublicDER = function(pub_der) {
+    var hex = pub_der.toString('hex');
+    var p = getSubjectPublicKeyPosFromHex(hex);
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(hex, p);
+    if (a.length != 2)
+      return null;
+    var hN = ASN1HEX.getHexOfV_AtObj(hex, a[0]);
+    var hE = ASN1HEX.getHexOfV_AtObj(hex, a[1]);
+    var rsaKey = new RSAKey();
+    rsaKey.setPublic(hN, hE);
+    return rsaKey;
+  };
+
+  obj.verify = function(keypem, sig) {
+    var key = new ndn.Key();
+    key.fromPemString(keypem);
+
+    var rsa = readPublicDER(key.publicToDER());
+    var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
+    signer.initVerifyByPublicKey(rsa);
+    for (var i = 0; i < this.arr.length; i++)
+      signer.updateHex(this.arr[i].toString('hex'));
+    var hSig = sig.toString('hex');
+    return signer.verify(hSig);
+  };
+
+  return obj;
+};
+
+exports.randomBytes = function(size)
+{
+  // TODO: Use a cryptographic random number generator.
+  var result = new Buffer(size);
+  for (var i = 0; i < size; ++i)
+    result[i] = Math.floor(Math.random() * 256);
+  return result;
+};
+
+// contrib/feross/buffer.js needs base64.toByteArray. Define it here so that
+// we don't have to include the entire base64 module.
+exports.toByteArray = function(str) {
+  var hex = b64tohex(str);
+  var result = [];
+  hex.replace(/(..)/g, function(ss) {
+    result.push(parseInt(ss, 16));
+  });
+  return result;
+};
+
+module.exports = exports
+// After this we include contrib/feross/buffer.js to define the Buffer class.
+var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+var base64js = {};
+
+;(function (exports) {
+	'use strict';
+
+  var Arr = (typeof Uint8Array !== 'undefined')
+    ? Uint8Array
+    : Array
+
+	var PLUS   = '+'.charCodeAt(0)
+	var SLASH  = '/'.charCodeAt(0)
+	var NUMBER = '0'.charCodeAt(0)
+	var LOWER  = 'a'.charCodeAt(0)
+	var UPPER  = 'A'.charCodeAt(0)
+
+	function decode (elt) {
+		var code = elt.charCodeAt(0)
+		if (code === PLUS)
+			return 62 // '+'
+		if (code === SLASH)
+			return 63 // '/'
+		if (code < NUMBER)
+			return -1 //no match
+		if (code < NUMBER + 10)
+			return code - NUMBER + 26 + 26
+		if (code < UPPER + 26)
+			return code - UPPER
+		if (code < LOWER + 26)
+			return code - LOWER + 26
+	}
+
+	function b64ToByteArray (b64) {
+		var i, j, l, tmp, placeHolders, arr
+
+		if (b64.length % 4 > 0) {
+			throw new Error('Invalid string. Length must be a multiple of 4')
+		}
+
+		// the number of equal signs (place holders)
+		// if there are two placeholders, than the two characters before it
+		// represent one byte
+		// if there is only one, then the three characters before it represent 2 bytes
+		// this is just a cheap hack to not do indexOf twice
+		var len = b64.length
+		placeHolders = '=' === b64.charAt(len - 2) ? 2 : '=' === b64.charAt(len - 1) ? 1 : 0
+
+		// base64 is 4/3 + up to two characters of the original data
+		arr = new Arr(b64.length * 3 / 4 - placeHolders)
+
+		// if there are placeholders, only get up to the last complete 4 chars
+		l = placeHolders > 0 ? b64.length - 4 : b64.length
+
+		var L = 0
+
+		function push (v) {
+			arr[L++] = v
+		}
+
+		for (i = 0, j = 0; i < l; i += 4, j += 3) {
+			tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
+			push((tmp & 0xFF0000) >> 16)
+			push((tmp & 0xFF00) >> 8)
+			push(tmp & 0xFF)
+		}
+
+		if (placeHolders === 2) {
+			tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
+			push(tmp & 0xFF)
+		} else if (placeHolders === 1) {
+			tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
+			push((tmp >> 8) & 0xFF)
+			push(tmp & 0xFF)
+		}
+
+		return arr
+	}
+
+	function uint8ToBase64 (uint8) {
+		var i,
+			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
+			output = "",
+			temp, length
+
+		function encode (num) {
+			return lookup.charAt(num)
+		}
+
+		function tripletToBase64 (num) {
+			return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
+		}
+
+		// go through the array every three bytes, we'll deal with trailing stuff later
+		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
+			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+			output += tripletToBase64(temp)
+		}
+
+		// pad the end with zeros, but make sure to not forget the extra bytes
+		switch (extraBytes) {
+			case 1:
+				temp = uint8[uint8.length - 1]
+				output += encode(temp >> 2)
+				output += encode((temp << 4) & 0x3F)
+				output += '=='
+				break
+			case 2:
+				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
+				output += encode(temp >> 10)
+				output += encode((temp >> 4) & 0x3F)
+				output += encode((temp << 2) & 0x3F)
+				output += '='
+				break
+		}
+
+		return output
+	}
+
+	exports.toByteArray = b64ToByteArray
+	exports.fromByteArray = uint8ToBase64
+})(base64js);
+var ieee = {};
+
+ieee.read = function(buffer, offset, isLE, mLen, nBytes) {
+  var e, m,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      nBits = -7,
+      i = isLE ? (nBytes - 1) : 0,
+      d = isLE ? -1 : 1,
+      s = buffer[offset + i];
+
+  i += d;
+
+  e = s & ((1 << (-nBits)) - 1);
+  s >>= (-nBits);
+  nBits += eLen;
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  m = e & ((1 << (-nBits)) - 1);
+  e >>= (-nBits);
+  nBits += mLen;
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8);
+
+  if (e === 0) {
+    e = 1 - eBias;
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity);
+  } else {
+    m = m + Math.pow(2, mLen);
+    e = e - eBias;
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+};
+
+ieee.write = function(buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c,
+      eLen = nBytes * 8 - mLen - 1,
+      eMax = (1 << eLen) - 1,
+      eBias = eMax >> 1,
+      rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0),
+      i = isLE ? 0 : (nBytes - 1),
+      d = isLE ? 1 : -1,
+      s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0;
+
+  value = Math.abs(value);
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0;
+    e = eMax;
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2);
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--;
+      c *= 2;
+    }
+    if (e + eBias >= 1) {
+      value += rt / c;
+    } else {
+      value += rt * Math.pow(2, 1 - eBias);
+    }
+    if (value * c >= 2) {
+      e++;
+      c /= 2;
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0;
+      e = eMax;
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen);
+      e = e + eBias;
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+      e = 0;
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8);
+
+  e = (e << mLen) | m;
+  eLen += mLen;
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8);
+
+  buffer[offset + i - d] |= s * 128;
+};
+
+exports.ieee = ieee;
+/**
+ * The buffer module from node.js, for the browser.
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ *
+ * Copyright (C) 2013 Feross Aboukhadijeh, and other contributors.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * @license  MIT
+ */
+
+var base64 = base64js;
+var ieee754 = require('./ieee754.js').ieee
+
+exports.Buffer = Buffer
+exports.SlowBuffer = Buffer
+exports.INSPECT_MAX_BYTES = 50
+Buffer.poolSize = 8192
+
+/**
+ * If `Buffer._useTypedArrays`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Use Object implementation (compatible down to IE6)
+ */
+Buffer._useTypedArrays = (function () {
+  // Detect if browser supports Typed Arrays. Supported browsers are IE 10+, Firefox 4+,
+  // Chrome 7+, Safari 5.1+, Opera 11.6+, iOS 4.2+. If the browser does not support adding
+  // properties to `Uint8Array` instances, then that's the same as no `Uint8Array` support
+  // because we need to be able to add all the node Buffer API methods. This is an issue
+  // in Firefox 4-29. Now fixed: https://bugzilla.mozilla.org/show_bug.cgi?id=695438
+  try {
+    var buf = new ArrayBuffer(0)
+    var arr = new Uint8Array(buf)
+    arr.foo = function () { return 42 }
+    return 42 === arr.foo() &&
+        typeof arr.subarray === 'function' // Chrome 9-10 lack `subarray`
+  } catch (e) {
+    return false
+  }
+})()
+
+/**
+ * Class: Buffer
+ * =============
+ *
+ * The Buffer constructor returns instances of `Uint8Array` that are augmented
+ * with function properties for all the node `Buffer` API functions. We use
+ * `Uint8Array` so that square bracket notation works as expected -- it returns
+ * a single octet.
+ *
+ * By augmenting the instances, we can avoid modifying the `Uint8Array`
+ * prototype.
+ */
+function Buffer (subject, encoding, noZero) {
+  if (!(this instanceof Buffer))
+    return new Buffer(subject, encoding, noZero)
+
+  var type = typeof subject
+
+  // Workaround: node's base64 implementation allows for non-padded strings
+  // while base64-js does not.
+  if (encoding === 'base64' && type === 'string') {
+    subject = Buffer.stringtrim(subject)
+    while (subject.length % 4 !== 0) {
+      subject = subject + '='
+    }
+  }
+
+  // Find the length
+  var length
+  if (type === 'number')
+    length = Buffer.coerce(subject)
+  else if (type === 'string')
+    length = Buffer.byteLength(subject, encoding)
+  else if (type === 'object')
+    length = Buffer.coerce(subject.length) // assume that object is array-like
+  else
+    throw new Error('First argument needs to be a number, array or string.')
+
+  var buf
+  if (Buffer._useTypedArrays) {
+    // Preferred: Return an augmented `Uint8Array` instance for best performance
+    buf = Buffer._augment(new Uint8Array(length))
+  } else {
+    // Fallback: Return THIS instance of Buffer (created by `new`)
+    buf = this
+    buf.length = length
+    buf._isBuffer = true
+  }
+
+  var i
+  if (Buffer._useTypedArrays && typeof subject.byteLength === 'number') {
+    // Speed optimization -- use set if we're copying from a typed array
+    buf._set(subject)
+  } else if (Buffer.isArrayish(subject)) {
+    // Treat array-ish objects as a byte array
+    if (Buffer.isBuffer(subject)) {
+      for (i = 0; i < length; i++)
+        buf[i] = subject.readUInt8(i)
+    } else {
+      for (i = 0; i < length; i++)
+        buf[i] = ((subject[i] % 256) + 256) % 256
+    }
+  } else if (type === 'string') {
+    buf.write(subject, 0, encoding)
+  } else if (type === 'number' && !Buffer._useTypedArrays && !noZero) {
+    for (i = 0; i < length; i++) {
+      buf[i] = 0
+    }
+  }
+
+  return buf
+}
+
+// STATIC METHODS
+// ==============
+
+Buffer.isEncoding = function (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'binary':
+    case 'base64':
+    case 'raw':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.isBuffer = function (b) {
+  return !!(b !== null && b !== undefined && b._isBuffer)
+}
+
+Buffer.byteLength = function (str, encoding) {
+  var ret
+  str = str.toString()
+  switch (encoding || 'utf8') {
+    case 'hex':
+      ret = str.length / 2
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8ToBytes(str).length
+      break
+    case 'ascii':
+    case 'binary':
+    case 'raw':
+      ret = str.length
+      break
+    case 'base64':
+      ret = Buffer.base64ToBytes(str).length
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = str.length * 2
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.concat = function (list, totalLength) {
+  Buffer.assert(Buffer.isArray(list), 'Usage: Buffer.concat(list[, length])')
+
+  if (list.length === 0) {
+    return new Buffer(0)
+  } else if (list.length === 1) {
+    return list[0]
+  }
+
+  var i
+  if (totalLength === undefined) {
+    totalLength = 0
+    for (i = 0; i < list.length; i++) {
+      totalLength += list[i].length
+    }
+  }
+
+  var buf = new Buffer(totalLength)
+  var pos = 0
+  for (i = 0; i < list.length; i++) {
+    var item = list[i]
+    item.copy(buf, pos)
+    pos += item.length
+  }
+  return buf
+}
+
+Buffer.compare = function (a, b) {
+  Buffer.assert(Buffer.isBuffer(a) && Buffer.isBuffer(b), 'Arguments must be Buffers')
+  var x = a.length
+  var y = b.length
+  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
+  if (i !== len) {
+    x = a[i]
+    y = b[i]
+  }
+  if (x < y) {
+    return -1
+  }
+  if (y < x) {
+    return 1
+  }
+  return 0
+}
+
+// BUFFER INSTANCE METHODS
+// =======================
+
+Buffer.hexWrite = function(buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  // must be an even number of digits
+  var strLen = string.length
+  Buffer.assert(strLen % 2 === 0, 'Invalid hex string')
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; i++) {
+    var b = parseInt(string.substr(i * 2, 2), 16)
+    Buffer.assert(!isNaN(b), 'Invalid hex string')
+    buf[offset + i] = b
+  }
+  return i
+}
+
+Buffer.utf8Write = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.utf8ToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.asciiWrite = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.asciiToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.binaryWrite = function(buf, string, offset, length) {
+  return Buffer.asciiWrite(buf, string, offset, length)
+}
+
+Buffer.base64Write = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.base64ToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.utf16leWrite = function(buf, string, offset, length) {
+  var charsWritten = Buffer.blitBuffer(Buffer.utf16leToBytes(string), buf, offset, length)
+  return charsWritten
+}
+
+Buffer.prototype.write = function (string, offset, length, encoding) {
+  // Support both (string, offset, length, encoding)
+  // and the legacy (string, encoding, offset, length)
+  if (isFinite(offset)) {
+    if (!isFinite(length)) {
+      encoding = length
+      length = undefined
+    }
+  } else {  // legacy
+    var swap = encoding
+    encoding = offset
+    offset = length
+    length = swap
+  }
+
+  offset = Number(offset) || 0
+  var remaining = this.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+  encoding = String(encoding || 'utf8').toLowerCase()
+
+  var ret
+  switch (encoding) {
+    case 'hex':
+      ret = Buffer.hexWrite(this, string, offset, length)
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8Write(this, string, offset, length)
+      break
+    case 'ascii':
+      ret = Buffer.asciiWrite(this, string, offset, length)
+      break
+    case 'binary':
+      ret = Buffer.binaryWrite(this, string, offset, length)
+      break
+    case 'base64':
+      ret = Buffer.base64Write(this, string, offset, length)
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = Buffer.utf16leWrite(this, string, offset, length)
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.prototype.toString = function (encoding, start, end) {
+  var self = this
+
+  encoding = String(encoding || 'utf8').toLowerCase()
+  start = Number(start) || 0
+  end = (end === undefined) ? self.length : Number(end)
+
+  // Fastpath empty strings
+  if (end === start)
+    return ''
+
+  var ret
+  switch (encoding) {
+    case 'hex':
+      ret = Buffer.hexSlice(self, start, end)
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = Buffer.utf8Slice(self, start, end)
+      break
+    case 'ascii':
+      ret = Buffer.asciiSlice(self, start, end)
+      break
+    case 'binary':
+      ret = Buffer.binarySlice(self, start, end)
+      break
+    case 'base64':
+      ret = Buffer.base64Slice(self, start, end)
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = utf16leSlice(self, start, end)
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.prototype.toJSON = function () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+Buffer.prototype.equals = function (b) {
+  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.compare = function (b) {
+  Buffer.assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function (target, target_start, start, end) {
+  var source = this
+
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (!target_start) target_start = 0
+
+  // Copy 0 bytes; we're done
+  if (end === start) return
+  if (target.length === 0 || source.length === 0) return
+
+  // Fatal error conditions
+  Buffer.assert(end >= start, 'sourceEnd < sourceStart')
+  Buffer.assert(target_start >= 0 && target_start < target.length,
+      'targetStart out of bounds')
+  Buffer.assert(start >= 0 && start < source.length, 'sourceStart out of bounds')
+  Buffer.assert(end >= 0 && end <= source.length, 'sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length)
+    end = this.length
+  if (target.length - target_start < end - start)
+    end = target.length - target_start + start
+
+  var len = end - start
+
+  if (len < 100 || !Buffer._useTypedArrays) {
+    for (var i = 0; i < len; i++) {
+      target[i + target_start] = this[i + start]
+    }
+  } else {
+    target._set(this.subarray(start, start + len), target_start)
+  }
+}
+
+Buffer.base64Slice = function(buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+Buffer.utf8Slice = function(buf, start, end) {
+  var res = ''
+  var tmp = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; i++) {
+    if (buf[i] <= 0x7F) {
+      res += Buffer.decodeUtf8Char(tmp) + String.fromCharCode(buf[i])
+      tmp = ''
+    } else {
+      tmp += '%' + buf[i].toString(16)
+    }
+  }
+
+  return res + Buffer.decodeUtf8Char(tmp)
+}
+
+Buffer.asciiSlice = function(buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; i++) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+Buffer.binarySlice = function(buf, start, end) {
+  return Buffer.asciiSlice(buf, start, end)
+}
+
+Buffer.hexSlice = function(buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; i++) {
+    out += Buffer.toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256)
+  }
+  return res
+}
+
+Buffer.prototype.slice = function (start, end) {
+  var len = this.length
+  start = Buffer.clamp(start, len, 0)
+  end = Buffer.clamp(end, len, len)
+
+  if (Buffer._useTypedArrays) {
+    return Buffer._augment(this.subarray(start, end))
+  } else {
+    var sliceLen = end - start
+    var newBuf = new Buffer(sliceLen, undefined, true)
+    for (var i = 0; i < sliceLen; i++) {
+      newBuf[i] = this[i + start]
+    }
+    return newBuf
+  }
+}
+
+// `get` will be removed in Node 0.13+
+Buffer.prototype.get = function (offset) {
+  console.log('.get() is deprecated. Access using array indexes instead.')
+  return this.readUInt8(offset)
+}
+
+// `set` will be removed in Node 0.13+
+Buffer.prototype.set = function (v, offset) {
+  console.log('.set() is deprecated. Access using array indexes instead.')
+  return this.writeUInt8(v, offset)
+}
+
+Buffer.prototype.readUInt8 = function (offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
+  return this[offset]
+}
+
+Buffer.readUInt16 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    val = buf[offset]
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+  } else {
+    val = buf[offset] << 8
+    if (offset + 1 < len)
+      val |= buf[offset + 1]
+  }
+  return val
+}
+
+Buffer.prototype.readUInt16LE = function (offset, noAssert) {
+  return Buffer.readUInt16(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readUInt16BE = function (offset, noAssert) {
+  return Buffer.readUInt16(this, offset, false, noAssert)
+}
+
+Buffer.readUInt32 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    if (offset + 2 < len)
+      val = buf[offset + 2] << 16
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+    val |= buf[offset]
+    if (offset + 3 < len)
+      val = val + (buf[offset + 3] << 24 >>> 0)
+  } else {
+    if (offset + 1 < len)
+      val = buf[offset + 1] << 16
+    if (offset + 2 < len)
+      val |= buf[offset + 2] << 8
+    if (offset + 3 < len)
+      val |= buf[offset + 3]
+    val = val + (buf[offset] << 24 >>> 0)
+  }
+  return val
+}
+
+Buffer.prototype.readUInt32LE = function (offset, noAssert) {
+  return Buffer.readUInt32(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readUInt32BE = function (offset, noAssert) {
+  return Buffer.readUInt32(this, offset, false, noAssert)
+}
+
+Buffer.prototype.readInt8 = function (offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(offset !== undefined && offset !== null,
+        'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
+  var neg = this[offset] & 0x80
+  if (neg)
+    return (0xff - this[offset] + 1) * -1
+  else
+    return this[offset]
+}
+
+Buffer.readInt16 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = Buffer.readUInt16(buf, offset, littleEndian, true)
+  var neg = val & 0x8000
+  if (neg)
+    return (0xffff - val + 1) * -1
+  else
+    return val
+}
+
+Buffer.prototype.readInt16LE = function (offset, noAssert) {
+  return Buffer.readInt16(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readInt16BE = function (offset, noAssert) {
+  return Buffer.readInt16(this, offset, false, noAssert)
+}
+
+Buffer.readInt32 = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = Buffer.readUInt32(buf, offset, littleEndian, true)
+  var neg = val & 0x80000000
+  if (neg)
+    return (0xffffffff - val + 1) * -1
+  else
+    return val
+}
+
+Buffer.prototype.readInt32LE = function (offset, noAssert) {
+  return Buffer.readInt32(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readInt32BE = function (offset, noAssert) {
+  return Buffer.readInt32(this, offset, false, noAssert)
+}
+
+Buffer.readFloat = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 23, 4)
+}
+
+Buffer.prototype.readFloatLE = function (offset, noAssert) {
+  return Buffer.readFloat(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readFloatBE = function (offset, noAssert) {
+  return Buffer.readFloat(this, offset, false, noAssert)
+}
+
+Buffer.readDouble = function(buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset + 7 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 52, 8)
+}
+
+Buffer.prototype.readDoubleLE = function (offset, noAssert) {
+  return Buffer.readDouble(this, offset, true, noAssert)
+}
+
+Buffer.prototype.readDoubleBE = function (offset, noAssert) {
+  return Buffer.readDouble(this, offset, false, noAssert)
+}
+
+Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xff)
+  }
+
+  if (offset >= this.length) return
+
+  this[offset] = value
+  return offset + 1
+}
+
+Buffer.writeUInt16 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xffff)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 2); i < j; i++) {
+    buf[offset + i] =
+        (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
+            (littleEndian ? i : 1 - i) * 8
+  }
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
+  return Buffer.writeUInt16(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
+  return Buffer.writeUInt16(this, value, offset, false, noAssert)
+}
+
+Buffer.writeUInt32 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'trying to write beyond buffer length')
+    Buffer.verifuint(value, 0xffffffff)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 4); i < j; i++) {
+    buf[offset + i] =
+        (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
+  }
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
+  return Buffer.writeUInt32(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
+  return Buffer.writeUInt32(this, value, offset, false, noAssert)
+}
+
+Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset < this.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7f, -0x80)
+  }
+
+  if (offset >= this.length)
+    return
+
+  if (value >= 0)
+    this.writeUInt8(value, offset, noAssert)
+  else
+    this.writeUInt8(0xff + value + 1, offset, noAssert)
+  return offset + 1
+}
+
+Buffer.writeInt16 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 1 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7fff, -0x8000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    Buffer.writeUInt16(buf, value, offset, littleEndian, noAssert)
+  else
+    Buffer.writeUInt16(buf, 0xffff + value + 1, offset, littleEndian, noAssert)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
+  return Buffer.writeInt16(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
+  return Buffer.writeInt16(this, value, offset, false, noAssert)
+}
+
+Buffer.writeInt32 = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifsint(value, 0x7fffffff, -0x80000000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    Buffer.writeUInt32(buf, value, offset, littleEndian, noAssert)
+  else
+    Buffer.writeUInt32(buf, 0xffffffff + value + 1, offset, littleEndian, noAssert)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
+  return Buffer.writeInt32(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
+  return Buffer.writeInt32(this, value, offset, false, noAssert)
+}
+
+Buffer.writeFloat = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    Buffer.verifIEEE754(value, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function (value, offset, noAssert) {
+  return Buffer.writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
+  return Buffer.writeFloat(this, value, offset, false, noAssert)
+}
+
+Buffer.writeDouble = function(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    Buffer.assert(value !== undefined && value !== null, 'missing value')
+    Buffer.assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    Buffer.assert(offset !== undefined && offset !== null, 'missing offset')
+    Buffer.assert(offset + 7 < buf.length,
+        'Trying to write beyond buffer length')
+    Buffer.verifIEEE754(value, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function (value, offset, noAssert) {
+  return Buffer.writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
+  return Buffer.writeDouble(this, value, offset, false, noAssert)
+}
+
+// fill(value, start=0, end=buffer.length)
+Buffer.prototype.fill = function (value, start, end) {
+  if (!value) value = 0
+  if (!start) start = 0
+  if (!end) end = this.length
+
+  Buffer.assert(end >= start, 'end < start')
+
+  // Fill 0 bytes; we're done
+  if (end === start) return
+  if (this.length === 0) return
+
+  Buffer.assert(start >= 0 && start < this.length, 'start out of bounds')
+  Buffer.assert(end >= 0 && end <= this.length, 'end out of bounds')
+
+  var i
+  if (typeof value === 'number') {
+    for (i = start; i < end; i++) {
+      this[i] = value
+    }
+  } else {
+    var bytes = Buffer.utf8ToBytes(value.toString())
+    var len = bytes.length
+    for (i = start; i < end; i++) {
+      this[i] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+Buffer.prototype.inspect = function () {
+  var out = []
+  var len = this.length
+  for (var i = 0; i < len; i++) {
+    out[i] = Buffer.toHex(this[i])
+    if (i === exports.INSPECT_MAX_BYTES) {
+      out[i + 1] = '...'
+      break
+    }
+  }
+  return '<Buffer ' + out.join(' ') + '>'
+}
+
+/**
+ * Creates a new `ArrayBuffer` with the *copied* memory of the buffer instance.
+ * Added in Node 0.12. Only available in browsers that support ArrayBuffer.
+ */
+Buffer.prototype.toArrayBuffer = function () {
+  if (typeof Uint8Array !== 'undefined') {
+    if (Buffer._useTypedArrays) {
+      return (new Buffer(this)).buffer
+    } else {
+      var buf = new Uint8Array(this.length)
+      for (var i = 0, len = buf.length; i < len; i += 1) {
+        buf[i] = this[i]
+      }
+      return buf.buffer
+    }
+  } else {
+    throw new Error('Buffer.toArrayBuffer not supported in this browser')
+  }
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var BP = Buffer.prototype
+
+/**
+ * Augment a Uint8Array *instance* (not the Uint8Array class!) with Buffer methods
+ */
+Buffer._augment = function (arr) {
+  arr._isBuffer = true
+
+  // save reference to original Uint8Array get/set methods before overwriting
+  arr._get = arr.get
+  arr._set = arr.set
+
+  // deprecated, will be removed in node 0.13+
+  arr.get = BP.get
+  arr.set = BP.set
+
+  arr.write = BP.write
+  arr.toString = BP.toString
+  arr.toLocaleString = BP.toString
+  arr.toJSON = BP.toJSON
+  arr.equals = BP.equals
+  arr.compare = BP.compare
+  arr.copy = BP.copy
+  arr.slice = BP.slice
+  arr.readUInt8 = BP.readUInt8
+  arr.readUInt16LE = BP.readUInt16LE
+  arr.readUInt16BE = BP.readUInt16BE
+  arr.readUInt32LE = BP.readUInt32LE
+  arr.readUInt32BE = BP.readUInt32BE
+  arr.readInt8 = BP.readInt8
+  arr.readInt16LE = BP.readInt16LE
+  arr.readInt16BE = BP.readInt16BE
+  arr.readInt32LE = BP.readInt32LE
+  arr.readInt32BE = BP.readInt32BE
+  arr.readFloatLE = BP.readFloatLE
+  arr.readFloatBE = BP.readFloatBE
+  arr.readDoubleLE = BP.readDoubleLE
+  arr.readDoubleBE = BP.readDoubleBE
+  arr.writeUInt8 = BP.writeUInt8
+  arr.writeUInt16LE = BP.writeUInt16LE
+  arr.writeUInt16BE = BP.writeUInt16BE
+  arr.writeUInt32LE = BP.writeUInt32LE
+  arr.writeUInt32BE = BP.writeUInt32BE
+  arr.writeInt8 = BP.writeInt8
+  arr.writeInt16LE = BP.writeInt16LE
+  arr.writeInt16BE = BP.writeInt16BE
+  arr.writeInt32LE = BP.writeInt32LE
+  arr.writeInt32BE = BP.writeInt32BE
+  arr.writeFloatLE = BP.writeFloatLE
+  arr.writeFloatBE = BP.writeFloatBE
+  arr.writeDoubleLE = BP.writeDoubleLE
+  arr.writeDoubleBE = BP.writeDoubleBE
+  arr.fill = BP.fill
+  arr.inspect = BP.inspect
+  arr.toArrayBuffer = BP.toArrayBuffer
+
+  return arr
+}
+
+Buffer.stringtrim = function(str) {
+  if (str.trim) return str.trim()
+  return str.replace(/^\s+|\s+$/g, '')
+}
+
+// slice(start, end)
+Buffer.clamp = function(index, len, defaultValue) {
+  if (typeof index !== 'number') return defaultValue
+  index = ~~index;  // Coerce to integer.
+  if (index >= len) return len
+  if (index >= 0) return index
+  index += len
+  if (index >= 0) return index
+  return 0
+}
+
+Buffer.coerce = function(length) {
+  // Coerce length to a number (possibly NaN), round up
+  // in case it's fractional (e.g. 123.456) then do a
+  // double negate to coerce a NaN to 0. Easy, right?
+  length = ~~Math.ceil(+length)
+  return length < 0 ? 0 : length
+}
+
+Buffer.isArray = function(subject) {
+  return (Array.isArray || function (subject) {
+    return Object.prototype.toString.call(subject) === '[object Array]'
+  })(subject)
+}
+
+Buffer.isArrayish = function(subject) {
+  return Buffer.isArray(subject) || Buffer.isBuffer(subject) ||
+      subject && typeof subject === 'object' &&
+      typeof subject.length === 'number'
+}
+
+Buffer.toHex = function(n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+Buffer.utf8ToBytes = function(str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    var b = str.charCodeAt(i)
+    if (b <= 0x7F) {
+      byteArray.push(b)
+    } else {
+      var start = i
+      if (b >= 0xD800 && b <= 0xDFFF) i++
+      var h = encodeURIComponent(str.slice(start, i+1)).substr(1).split('%')
+      for (var j = 0; j < h.length; j++) {
+        byteArray.push(parseInt(h[j], 16))
+      }
+    }
+  }
+  return byteArray
+}
+
+Buffer.asciiToBytes = function(str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+Buffer.utf16leToBytes = function(str) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; i++) {
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+Buffer.base64ToBytes = function(str) {
+  return base64.toByteArray(str)
+}
+
+Buffer.blitBuffer = function(src, dst, offset, length) {
+  for (var i = 0; i < length; i++) {
+    if ((i + offset >= dst.length) || (i >= src.length))
+      break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+Buffer.decodeUtf8Char = function(str) {
+  try {
+    return decodeURIComponent(str)
+  } catch (err) {
+    return String.fromCharCode(0xFFFD) // UTF 8 invalid char
+  }
+}
+
+/*
+ * We have to make sure that the value is a valid integer. This means that it
+ * is non-negative. It has no fractional component and that it does not
+ * exceed the maximum allowed value.
+ */
+Buffer.verifuint = function(value, max) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value >= 0, 'specified a negative value for writing an unsigned value')
+  Buffer.assert(value <= max, 'value is larger than maximum value for type')
+  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+Buffer.verifsint = function(value, max, min) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value <= max, 'value larger than maximum allowed value')
+  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
+  Buffer.assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+Buffer.verifIEEE754 = function(value, max, min) {
+  Buffer.assert(typeof value === 'number', 'cannot write a non-number as a number')
+  Buffer.assert(value <= max, 'value larger than maximum allowed value')
+  Buffer.assert(value >= min, 'value smaller than minimum allowed value')
+}
+
+Buffer.assert = function(test, message) {
+  if (!test) throw new Error(message || 'Failed assertion')
+}
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -4774,11 +6112,11 @@ BigInteger.prototype.square = bnSquare;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -4808,11 +6146,11 @@ Log.LOG = 0;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 
@@ -4977,11 +6315,11 @@ exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var LOG = require('../log.js').Log.LOG;
@@ -5021,11 +6359,11 @@ NDNTime.prototype.getJavascriptDate = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Closure = require('../closure.js').Closure;
@@ -5095,11 +6433,11 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -5219,7 +6557,8 @@ Blob.prototype.equals = function(other)
 
     return true;
   }
-};/**
+};
+/**
  * Copyright (C) 2013 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -5231,11 +6570,11 @@ Blob.prototype.equals = function(other)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./blob.js').Blob;
@@ -5340,11 +6679,11 @@ SignedBlob.prototype.getSignedPortionEndOffset = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -5464,11 +6803,11 @@ DynamicBuffer.prototype.slice = function(begin, end)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -5547,11 +6886,11 @@ ChangeCounter.prototype.checkChanged = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -5863,11 +7202,11 @@ DataUtils.shuffle = function(array)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -5901,11 +7240,11 @@ exports.DecodingException = DecodingException;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var LOG = require('../log.js').Log.LOG;
@@ -6347,11 +7686,11 @@ BinaryXMLEncoder.prototype.getReducedOstream = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -7072,11 +8411,11 @@ BinaryXMLDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
@@ -7275,11 +8614,11 @@ BinaryXMLStructureDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -7363,11 +8702,11 @@ Tlv.ControlParameters_ExpirationPeriod =    109;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
@@ -7472,7 +8811,7 @@ TlvEncoder.prototype.writeNonNegativeInteger = function(value)
   // JavaScript doesn't distinguish int from float, so round.
   value = Math.round(value);
 
-  if (value < 253) {
+  if (value <= 0xff) {
     this.length += 1;
     this.output.ensureLengthFromBack(this.length);
     this.output.array[this.output.array.length - this.length] = value & 0xff;
@@ -7590,11 +8929,11 @@ TlvEncoder.prototype.getOutput = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DecodingException = require('../decoding-exception.js').DecodingException;
@@ -7927,11 +9266,11 @@ TlvDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
@@ -8148,11 +9487,11 @@ TlvStructureDecoder.prototype.seek = function(offset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -8188,8 +9527,8 @@ ProtobufTlv.establishField = function()
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     }
     catch (ex) {
-      // Using protobufjs in node.
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      // Using protobufjs in node or via browserify.
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
     }
   }
 }
@@ -8232,7 +9571,7 @@ ProtobufTlv.decode = function(message, descriptor, input)
     if (dcodeIO)
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     else
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
   }
 
   // If input is a blob, get its buf().
@@ -8371,11 +9710,11 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -8554,11 +9893,11 @@ var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -8663,11 +10002,11 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('../encoding/data-utils.js').DataUtils;
@@ -8734,8 +10073,8 @@ NameEnumeration.prototype.processData = function(data)
         // Save the content and check if we are finished.
         this.contentParts.push(data.getContent().buf());
 
-        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-          var finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+          var finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
           if (segmentNumber == finalSegmentNumber) {
             // We are finished.  Parse and return the result.
             this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
@@ -8814,11 +10153,11 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../name.js').Name;
@@ -9064,7 +10403,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} true if this interest is stale, otherwise false.
+ * @returns {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
@@ -9082,11 +10421,11 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -9104,7 +10443,8 @@ exports.Transport = Transport;
  */
 Transport.ConnectionInfo = function TransportConnectionInfo()
 {
-};/**
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Wentao Shang
  *
@@ -9116,11 +10456,11 @@ Transport.ConnectionInfo = function TransportConnectionInfo()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
@@ -9232,7 +10572,8 @@ WebSocketTransport.prototype.connect = function
       console.log('INVALID ANSWER');
     }
     else if (result instanceof ArrayBuffer) {
-      var bytearray = new Buffer(result);
+      // The Buffer constructor expects an instantiated array.
+      var bytearray = new Buffer(new Uint8Array(result));
 
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
@@ -9323,15 +10664,15 @@ WebSocketTransport.prototype.close = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 // The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
-exports.TcpTransport = ndn.WebSocketTransport;
+exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTransport;
 /**
  * Provide the callback closure for the async communication methods in the Face class.
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -9348,11 +10689,11 @@ exports.TcpTransport = ndn.WebSocketTransport;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -9439,11 +10780,11 @@ exports.UpcallInfo = UpcallInfo;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -9520,11 +10861,11 @@ PublisherPublicKeyDigest.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -9645,11 +10986,11 @@ PublisherID.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -9712,11 +11053,10 @@ Name.Component = function NameComponent(value)
   }
   else if (Buffer.isBuffer(value))
     this.value = new Buffer(value);
-  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer) {
-    // Make a copy.  Don't use ArrayBuffer.slice since it isn't always supported.
-    this.value = new Buffer(new ArrayBuffer(value.byteLength));
-    this.value.set(new Buffer(value));
-  }
+  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer)
+    // Make a copy.  Turn the value into a Uint8Array since the Buffer
+    //   constructor doesn't take an ArrayBuffer.
+    this.value = new Buffer(new Uint8Array(value));
   else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
@@ -9781,8 +11121,9 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
 };
 
 /**
- * Interpret this name component as a segment number according to NDN name
- * conventions (a network-ordered number where the first byte is the marker 0x00).
+ * Interpret this name component as a segment number according to NDN naming
+ * conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @returns {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -9792,10 +11133,22 @@ Name.Component.prototype.toSegment = function()
 };
 
 /**
- * Interpret this name component as a version number according to NDN name 
- * conventions (a network-ordered number where the first byte is the marker 0xFD).  
- * Note that this returns the exact number from the component without converting 
- * it to a time representation.
+ * Interpret this name component as a segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The integer segment byte offset.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSegmentOffset = function()
+{
+  return this.toNumberWithMarker(0xFB);
+};
+
+/**
+ * Interpret this name component as a version number  according to NDN naming
+ * conventions for "Versioning" (marker 0xFD). Note that this returns
+ * the exact number from the component without converting it to a time
+ * representation.
  * @returns {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -9805,22 +11158,57 @@ Name.Component.prototype.toVersion = function()
 };
 
 /**
+ * Interpret this name component as a timestamp  according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * 1 January 1970) not counting leap seconds.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toTimestamp = function()
+{
+  return this.toNumberWithMarker(0xFC);
+};
+
+/**
+ * Interpret this name component as a sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns The integer sequence number.
+ * @throws Error If the first byte of the component is not the expected marker.
+ */
+Name.Component.prototype.toSequenceNumber = function()
+{
+  return this.toNumberWithMarker(0xFE);
+};
+
+/**
+ * Create a component whose value is the nonNegativeInteger encoding of the
+ * number.
+ * @param {number} number
+ * @returns {Name.Component}
+ */
+Name.Component.fromNumber = function(number)
+{
+  var encoder = new TlvEncoder(8);
+  encoder.writeNonNegativeInteger(number);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
+};
+
+/**
  * Create a component whose value is the marker appended with the 
- * network-ordered encoding of the number. Note: if the number is zero, no bytes 
- * are used for the number - the result will have only the marker.
+ * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
  * @returns {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
-  var bigEndian = DataUtils.nonNegativeIntToBigEndian(number);
-  // Put the marker byte in front.
-  var value = new Buffer(bigEndian.length + 1);
-  value[0] = marker;
-  bigEndian.copy(value, 1);
-
-  return new Name.Component(value);
+  var encoder = new TlvEncoder(9);
+  // Encode backwards.
+  encoder.writeNonNegativeInteger(number);
+  encoder.writeNonNegativeInteger(marker);
+  return new Name.Component(new Blob(encoder.getOutput(), false));
 };
 
 /**
@@ -10070,7 +11458,9 @@ Name.prototype.to_uri = function()
 };
 
 /**
- * Append a component with the encoded segment number.
+ * Append a component with the encoded segment number according to NDN
+ * naming conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
  * @returns {Name} This name so that you can chain calls to append.
  */
@@ -10080,15 +11470,53 @@ Name.prototype.appendSegment = function(segment)
 };
 
 /**
- * Append a component with the encoded version number.
- * Note that this encodes the exact value of version without converting from a
- * time representation.
+ * Append a component with the encoded segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param segmentOffset The segment byte offset.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendSegmentOffset = function(segmentOffset)
+{
+  return this.append(Name.Component.fromNumberWithMarker(segmentOffset, 0xFB));
+};
+
+/**
+ * Append a component with the encoded version number according to NDN
+ * naming conventions for "Versioning" (marker 0xFD).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
  * @returns {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
-  return this.append(Name.Component.fromNumberWithMarker(segment, 0xFD));
+  return this.append(Name.Component.fromNumberWithMarker(version, 0xFD));
+};
+
+/**
+ * Append a component with the encoded timestamp according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param timestamp The number of microseconds since the UNIX epoch (Thursday,
+ * 1 January 1970) not counting leap seconds.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendTimestamp = function(timestamp)
+{
+  return this.append(Name.Component.fromNumberWithMarker(timestamp, 0xFC));
+};
+
+/**
+ * Append a component with the encoded sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @param sequenceNumber The sequence number.
+ * @returns This name so that you can chain calls to append.
+ */
+Name.prototype.appendSequenceNumber = function(sequenceNumber)
+{
+  return this.append(Name.Component.fromNumberWithMarker(sequenceNumber, 0xFE));
 };
 
 /**
@@ -10428,6 +11856,9 @@ Name.prototype.getChangeCount = function()
 {
   return this.changeCount;
 };
+
+// Put this require at the bottom to avoid circular references.
+var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
 /**
  * This class represents Key Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -10441,11 +11872,11 @@ Name.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -10591,11 +12022,11 @@ Key.createFromPEM = function(obj)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -10901,11 +12332,11 @@ KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Key = require('../key.js').Key;
@@ -10988,11 +12419,11 @@ exports.globalKeyManager = globalKeyManager;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -11026,11 +12457,11 @@ exports.SecurityException = SecurityException;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -11099,11 +12530,11 @@ EncryptMode.CFB_AES = 2;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -11191,11 +12622,11 @@ PublicKey.prototype.getKeyDer = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var IdentityCertificate = function IdentityCertificate()
@@ -11242,11 +12673,11 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -11509,11 +12940,11 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Data = require('../../data.js').Data;
@@ -11826,11 +13257,11 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -11945,11 +13376,11 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('../../util/blob.js').Blob;
@@ -12110,11 +13541,11 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -12428,7 +13859,8 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append(tmpName.getSubName
     (i + 1, tmpName.size() - i - 1));
-};/**
+};
+/**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
@@ -12441,11 +13873,11 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -12487,11 +13919,11 @@ exports.ValidationRequest = ValidationRequest;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -12596,11 +14028,11 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -12703,11 +14135,11 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../../name.js').Name;
@@ -12941,11 +14373,11 @@ SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../name.js').Name;
@@ -13441,11 +14873,11 @@ KeyChain.prototype.onCertificateInterestTimeout = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -13478,7 +14910,7 @@ exports.ContentType = ContentType;
  * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID, skipSetFields)
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
 {
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -13498,7 +14930,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // Integer
-    this.finalBlockID = finalBlockID; //byte array
+    this.finalBlockID = finalBlockId; //byte array
 
     if (!skipSetFields)
       this.setFields();
@@ -13538,15 +14970,23 @@ MetaInfo.prototype.getFreshnessPeriod = function()
  * @returns {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
-MetaInfo.prototype.getFinalBlockID = function()
+MetaInfo.prototype.getFinalBlockId = function()
 {
   // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
   return new Name.Component(new Blob(this.finalBlockID, true));
 };
 
 /**
- * @deprecated Use getFinalBlockID. This method returns a Buffer which is the former
- * behavior of getFinalBlockID, and should only be used while updating your code.
+ * @deprecated Use getFinalBlockId.
+ */
+MetaInfo.prototype.getFinalBlockID = function()
+{
+  return this.getFinalBlockId();
+};
+
+/**
+ * @deprecated Use getFinalBlockId. This method returns a Buffer which is the former
+ * behavior of getFinalBlockId, and should only be used while updating your code.
  */
 MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 {
@@ -13580,18 +15020,26 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   ++this.changeCount;
 };
 
-MetaInfo.prototype.setFinalBlockID = function(finalBlockID)
+MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
   // TODO: finalBlockID should be a Name.Component, not Buffer.
-  if (finalBlockID == null)
+  if (finalBlockId == null)
     this.finalBlockID = null;
-  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Blob)
-    this.finalBlockID = finalBlockID.buf();
-  else if (typeof finalBlockID === 'object' && finalBlockID instanceof Name.Component)
-    this.finalBlockID = finalBlockID.getValue().buf();
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
+    this.finalBlockID = finalBlockId.buf();
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
+    this.finalBlockID = finalBlockId.getValue().buf();
   else
-    this.finalBlockID = new Buffer(finalBlockID);
+    this.finalBlockID = new Buffer(finalBlockId);
   ++this.changeCount;
+};
+
+/**
+ * @deprecated Use setFinalBlockId.
+ */
+MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
+{
+  this.setFinalBlockId(finalBlockId);
 };
 
 MetaInfo.prototype.setFields = function()
@@ -13745,10 +15193,10 @@ MetaInfo.prototype.getChangeCount = function()
 /**
  * @deprecated Use new MetaInfo.
  */
-var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID)
+var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
 {
   // Call the base constructor.
-  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockID);
+  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
 }
 
 // Set skipSetFields true since we only need the prototype functions.
@@ -13769,11 +15217,11 @@ exports.SignedInfo = SignedInfo;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -13972,13 +15420,14 @@ exports.Signature = Signature;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
@@ -14163,8 +15612,7 @@ Data.prototype.sign = function(wireFormat)
     this.getSignature().setSignature(new Buffer(128));
     this.wireEncode(wireFormat);
   }
-
-  var rsa = require("crypto").createSign('RSA-SHA256');
+  var rsa = Crypto.createSign('RSA-SHA256');
   rsa.update(this.wireEncoding.signedBuf());
 
   var sig = new Buffer
@@ -14181,7 +15629,7 @@ Data.prototype.verify = function(/*Key*/ key)
     throw new Error('Cannot verify Data without a public key.');
 
   if (Data.verifyUsesString == null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
+    var hashResult = Crypto.createHash('sha256').digest();
     // If the has result is a string, we assume that this is a version of
     //   crypto where verify also uses a string signature.
     Data.verifyUsesString = (typeof hashResult === 'string');
@@ -14190,7 +15638,7 @@ Data.prototype.verify = function(/*Key*/ key)
   if (this.wireEncoding == null || this.wireEncoding.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
-  var verifier = require('crypto').createVerify('RSA-SHA256');
+  var verifier = Crypto.createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding.signedBuf());
   var signatureBytes = Data.verifyUsesString ?
     DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
@@ -14334,11 +15782,11 @@ exports.ContentObject = ContentObject;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('./name.js').Name;
@@ -14585,11 +16033,11 @@ Exclude.prototype.getChangeCount = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
@@ -15062,11 +16510,11 @@ Interest.prototype.decode = function(input, wireFormat)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -15186,11 +16634,11 @@ FaceInstance.prototype.getElementLabel = function()
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -15407,11 +16855,11 @@ ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = valu
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
@@ -15501,11 +16949,11 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
@@ -15703,11 +17151,11 @@ ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('../util/blob.js').Blob;
@@ -16068,14 +17516,14 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -16133,7 +17581,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
     // This is the most common case. Generate a nonce.
-    encoder.writeBlobTlv(Tlv.Nonce, require("crypto").randomBytes(4));
+    encoder.writeBlobTlv(Tlv.Nonce, Crypto.randomBytes(4));
   else if (interest.getNonce().size() < 4) {
     var nonce = Buffer(4);
     // Copy existing nonce bytes.
@@ -16141,7 +17589,7 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
 
     // Generate random bytes for remaining bytes in the nonce.
     for (var i = interest.getNonce().size(); i < 4; ++i)
-      nonce[i] = require("crypto").randomBytes(1)[0];
+      nonce[i] = Crypto.randomBytes(1)[0];
 
     encoder.writeBlobTlv(Tlv.Nonce, nonce);
   }
@@ -16665,7 +18113,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  var finalBlockIdBuf = metaInfo.getFinalBlockID().getValue().buf();
+  var finalBlockIdBuf = metaInfo.getFinalBlockId().getValue().buf();
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
@@ -16703,11 +18151,11 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockID(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
-    metaInfo.setFinalBlockID(null);
+    metaInfo.setFinalBlockId(null);
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -16723,11 +18171,11 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var WireFormat = require('./wire-format.js').WireFormat;
@@ -16782,11 +18230,11 @@ WireFormat.setDefaultWireFormat(TlvWireFormat.get());
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
@@ -16968,8 +18416,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
 
       output+= "<br />";
     }
-    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0) {
-      output += "FinalBlockID: "+ data.getMetaInfo().getFinalBlockID().getValue().toHex();
+    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+      output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
@@ -17032,11 +18480,11 @@ function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
@@ -17113,11 +18561,11 @@ CommandInterestGenerator.prototype.generate = function
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var crypto = require('crypto');
@@ -17271,6 +18719,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandKeyChain = null;
   this.commandCertificateName = new Name();
   this.commandInterestGenerator = new CommandInterestGenerator();
+  this.timeoutPrefix = new Name("/local/timeout");
 };
 
 exports.Face = Face;
@@ -17534,6 +18983,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
   // There are several overloaded versions of expressInterest, each shown inline below.
 
+  var interest;
   // expressInterest(Name name, Closure closure);                      // deprecated
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
@@ -17557,7 +19007,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     return this.expressInterestWithClosure(interest, arg2);
   }
 
-  var interest;
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
@@ -17747,7 +19196,9 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
     }
   }
 
-  this.transport.send(binaryInterest.buf());
+  // Special case: For timeoutPrefix we don't actually send the interest.
+  if (!this.timeoutPrefix.match(interest.getName()))
+    this.transport.send(binaryInterest.buf());
 };
 
 /**

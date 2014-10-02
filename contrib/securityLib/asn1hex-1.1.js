@@ -22,7 +22,12 @@
 //
 // Depends on:
 //
+var intShim = require('jsbn')
 
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+function parseBigInt(str,r) {
+  return new BigInteger(str,r);
+}
 // MEMO:
 //   f('3082025b02...', 2) ... 82025b ... 3bytes
 //   f('020100', 2) ... 01 ... 1byte
@@ -277,7 +282,7 @@ function _asnhex_getDecendantHexVByNthList(h, currentIndex, nthList) {
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  * @since 1.1
  */
-function ASN1HEX() {
+var ASN1HEX = function ASN1HEX() {
   return ASN1HEX;
 }
 
@@ -293,3 +298,6 @@ ASN1HEX.getNthChildIndex_AtObj = _asnhex_getNthChildIndex_AtObj;
 ASN1HEX.getDecendantIndexByNthList = _asnhex_getDecendantIndexByNthList;
 ASN1HEX.getDecendantHexVByNthList = _asnhex_getDecendantHexVByNthList;
 ASN1HEX.getDecendantHexTLVByNthList = _asnhex_getDecendantHexTLVByNthList;
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;

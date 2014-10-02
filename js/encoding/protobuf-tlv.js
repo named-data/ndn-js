@@ -10,11 +10,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -50,8 +50,8 @@ ProtobufTlv.establishField = function()
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     }
     catch (ex) {
-      // Using protobufjs in node.
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      // Using protobufjs in node or via browserify.
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
     }
   }
 }
@@ -94,7 +94,7 @@ ProtobufTlv.decode = function(message, descriptor, input)
     if (dcodeIO)
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     else
-      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
+      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
   }
 
   // If input is a blob, get its buf().

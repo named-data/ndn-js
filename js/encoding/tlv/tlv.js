@@ -10,11 +10,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 /**
@@ -86,3 +86,19 @@ Tlv.ControlParameters_Cost =                106;
 Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
+
+/**
+ * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
+ * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
+ * restricted to 32 bits.
+ * (This could be a general function, but we define it here so that the
+ * Tlv encoder/decoder is self-contained.)
+ * @param {number} x
+ * @returns {number}
+ */
+Tlv.getHighBytes = function(x)
+{
+  // Don't use floor because we expect the caller to use & and >> on the result
+  // which already strip off the fraction.
+  return (x - (x % 0x100000000)) / 0x100000000;
+};
