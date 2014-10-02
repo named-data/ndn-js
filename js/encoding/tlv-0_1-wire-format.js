@@ -117,13 +117,20 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  Tlv0_1WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_1WireFormat.decodeName(interest.getName(), decoder);
   if (decoder.peekType(Tlv.Selectors, endOffset))
     Tlv0_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
@@ -137,6 +144,7 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
   interest.setNonce(nonce);
 
   decoder.finishNestedTlvs(endOffset);
+  return offsets;
 };
 
 /**
@@ -386,15 +394,37 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
            signedPortionEndOffset: signedPortionEndOffset };
 };
 
+/**
+ * Clear the name, decode a Name from the decoder and set the fields of the name
+ * object.
+ * @param {Name} name The name object whose fields are updated.
+ * @param {TlvDecoder} decoder The decoder with the input.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.decodeName = function(name, decoder)
 {
   name.clear();
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Name);
-  while (decoder.getOffset() < endOffset)
-      name.append(decoder.readBlobTlv(Tlv.NameComponent));
+  var signedPortionBeginOffset = decoder.getOffset();
+  // In case there are no components, set signedPortionEndOffset arbitrarily.
+  var signedPortionEndOffset = signedPortionBeginOffset;
+
+  while (decoder.getOffset() < endOffset) {
+    signedPortionEndOffset = decoder.getOffset();
+    name.append(decoder.readBlobTlv(Tlv.NameComponent));
+  }
 
   decoder.finishNestedTlvs(endOffset);
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
