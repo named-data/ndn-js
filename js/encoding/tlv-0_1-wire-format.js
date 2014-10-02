@@ -317,7 +317,7 @@ Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
   var decoder = new TlvDecoder(signatureInfo);
   Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
-  decoder = TlvDecoder(signatureValue);
+  decoder = new TlvDecoder(signatureValue);
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
   signatureHolder.getSignature().setSignature
