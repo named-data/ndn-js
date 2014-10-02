@@ -357,14 +357,22 @@ Name.prototype.set = function(uri)
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = decoder.getOffset();
+  // In case there are no components, set signedPortionEndOffset arbitrarily.
+  var signedPortionEndOffset = signedPortionBeginOffset;
 
   this.components = [];
 
-  while (decoder.peekDTag(NDNProtocolDTags.Component))
+  while (decoder.peekDTag(NDNProtocolDTags.Component)) {
+    signedPortionEndOffset = decoder.getOffset();
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
+  }
 
   decoder.readElementClose();
   ++this.changeCount;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
