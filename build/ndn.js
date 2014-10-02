@@ -7149,7 +7149,8 @@ DataUtils.bigEndianToUnsignedInt = function(bytes)
 {
   var result = 0;
   for (var i = 0; i < bytes.length; ++i) {
-    result <<= 8;
+    // Multiply by 0x100 instead of shift by 8 because << is restricted to 32 bits.
+    result *= 0x100;
     result += bytes[i];
   }
   return result;
@@ -7172,7 +7173,8 @@ DataUtils.nonNegativeIntToBigEndian = function(value)
   while (value != 0) {
     ++i;
     result[size - i] = value & 0xff;
-    value >>= 8;
+    // Divide by 0x100 and floor instead of shift by 8 because >> is restricted to 32 bits.
+    value = Math.floor(value / 0x100);
   }
   return result.slice(size - i, size);
 };
@@ -8690,6 +8692,22 @@ Tlv.ControlParameters_Cost =                106;
 Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
+
+/**
+ * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
+ * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
+ * restricted to 32 bits.
+ * (This could be a general function, but we define it here so that the
+ * Tlv encoder/decoder is self-contained.)
+ * @param {number} x
+ * @returns {number}
+ */
+Tlv.getHighBytes = function(x)
+{
+  // Don't use floor because we expect the caller to use & and >> on the result
+  // which already strip off the fraction.
+  return (x - (x % 0x100000000)) / 0x100000000;
+};
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -8710,6 +8728,7 @@ Tlv.ControlParameters_ExpirationPeriod =    109;
  */
 
 var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+var Tlv = require('./tlv.js').Tlv;
 
 /**
  * Create a new TlvEncoder with an initialCapacity for the encoding buffer.
@@ -8774,10 +8793,11 @@ TlvEncoder.prototype.writeVarNumber = function(varNumber)
     this.output.ensureLengthFromBack(this.length);
     var offset = this.output.array.length - this.length;
     this.output.array[offset] = 255;
-    this.output.array[offset + 1] = (varNumber >> 56) & 0xff;
-    this.output.array[offset + 2] = (varNumber >> 48) & 0xff;
-    this.output.array[offset + 3] = (varNumber >> 40) & 0xff;
-    this.output.array[offset + 4] = (varNumber >> 32) & 0xff;
+    var highBytes = Tlv.getHighBytes(varNumber);
+    this.output.array[offset + 1] = (highBytes >> 24) & 0xff;
+    this.output.array[offset + 2] = (highBytes >> 16) & 0xff;
+    this.output.array[offset + 3] = (highBytes >> 8)  & 0xff;
+    this.output.array[offset + 4] = (highBytes)       & 0xff;
     this.output.array[offset + 5] = (varNumber >> 24) & 0xff;
     this.output.array[offset + 6] = (varNumber >> 16) & 0xff;
     this.output.array[offset + 7] = (varNumber >> 8) & 0xff;
@@ -8836,10 +8856,11 @@ TlvEncoder.prototype.writeNonNegativeInteger = function(value)
     this.length += 8;
     this.output.ensureLengthFromBack(this.length);
     var offset = this.output.array.length - this.length;
-    this.output.array[offset]     = (value >> 56) & 0xff;
-    this.output.array[offset + 1] = (value >> 48) & 0xff;
-    this.output.array[offset + 2] = (value >> 40) & 0xff;
-    this.output.array[offset + 3] = (value >> 32) & 0xff;
+    var highBytes = Tlv.getHighBytes(value);
+    this.output.array[offset]     = (highBytes >> 24) & 0xff;
+    this.output.array[offset + 1] = (highBytes >> 16) & 0xff;
+    this.output.array[offset + 2] = (highBytes >> 8)  & 0xff;
+    this.output.array[offset + 3] = (highBytes)       & 0xff;
     this.output.array[offset + 4] = (value >> 24) & 0xff;
     this.output.array[offset + 5] = (value >> 16) & 0xff;
     this.output.array[offset + 6] = (value >> 8) & 0xff;
@@ -8983,17 +9004,21 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
     this.offset += 2;
   }
   else if (firstOctet == 254) {
-    result = ((this.input[this.offset] << 24) +
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    result = (Math.abs(this.input[this.offset] << 24) +
           (this.input[this.offset + 1] << 16) +
           (this.input[this.offset + 2] << 8) +
            this.input[this.offset + 3]);
     this.offset += 4;
   }
   else {
-    result = ((this.input[this.offset] << 56) +
-          (this.input[this.offset + 1] << 48) +
-          (this.input[this.offset + 2] << 40) +
-          (this.input[this.offset + 3] << 32) +
+    // Get the high byte first because JavaScript << is restricted to 32 bits.
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    var highByte = Math.abs(this.input[this.offset] << 24) +
+                           (this.input[this.offset + 1] << 16) +
+                           (this.input[this.offset + 2] << 8) +
+                            this.input[this.offset + 3];
+    result = (highByte * 0x100000000 +
           (this.input[this.offset + 4] << 24) +
           (this.input[this.offset + 5] << 16) +
           (this.input[this.offset + 6] << 8) +
@@ -9118,19 +9143,23 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
     result = ((this.input[this.offset] << 8) +
            this.input[this.offset + 1]);
   else if (length == 4)
-    result = ((this.input[this.offset] << 24) +
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    result = (Math.abs(this.input[this.offset] << 24) +
           (this.input[this.offset + 1] << 16) +
           (this.input[this.offset + 2] << 8) +
            this.input[this.offset + 3]);
-  else if (length == 8)
-    result = ((this.input[this.offset] << 56) +
-          (this.input[this.offset + 1] << 48) +
-          (this.input[this.offset + 2] << 40) +
-          (this.input[this.offset + 3] << 32) +
-          (this.input[this.offset + 4] << 24) +
+  else if (length == 8) {
+    // Use abs because << 24 can set the high bit of the 32-bit int making it negative.
+    var highByte = Math.abs(this.input[this.offset] << 24) +
+                       (this.input[this.offset + 1] << 16) +
+                       (this.input[this.offset + 2] << 8) +
+                        this.input[this.offset + 3];
+    result = (highByte * 0x100000000 +
+          Math.abs(this.input[this.offset + 4] << 24) +
           (this.input[this.offset + 5] << 16) +
           (this.input[this.offset + 6] << 8) +
            this.input[this.offset + 7]);
+  }
   else
     throw new DecodingException("Invalid length for a TLV nonNegativeInteger");
 
@@ -9749,6 +9778,13 @@ WireFormat.prototype.encodeInterest = function(interest)
  * Your derived class should override.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeInterest = function(interest, input)
@@ -11332,14 +11368,22 @@ Name.prototype.set = function(uri)
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = decoder.getOffset();
+  // In case there are no components, set signedPortionEndOffset arbitrarily.
+  var signedPortionEndOffset = signedPortionBeginOffset;
 
   this.components = [];
 
-  while (decoder.peekDTag(NDNProtocolDTags.Component))
+  while (decoder.peekDTag(NDNProtocolDTags.Component)) {
+    signedPortionEndOffset = decoder.getOffset();
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
+  }
 
   decoder.readElementClose();
   ++this.changeCount;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -11529,13 +11573,18 @@ Name.prototype.addSegment = function(number)
 
 /**
  * Get a new name, constructed as a subset of components.
- * @param {number} iStartComponent The index if the first component to get.
+ * @param {number} iStartComponent The index if the first component to get. If
+ * iStartComponent is -N then return return components starting from
+ * name.size() - N.
  * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
  * return components starting at iStartComponent until the end of the name.
  * @returns {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
+  if (iStartComponent < 0)
+    iStartComponent = this.components.length - (-iStartComponent);
+
   if (nComponents == undefined)
     nComponents = this.components.length - iStartComponent;
 
@@ -14143,6 +14192,7 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  */
 
 var Name = require('../../name.js').Name;
+var Interest = require('../../interest.js').Interest;
 var Data = require('../../data.js').Data;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
@@ -14658,7 +14708,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.buf(), certificateName);
+  var signedSignature = this.sign(encoding.signedBuf(), certificateName);
 
   // Remove the empty signature and append the real one.
   var encoder = new TlvEncoder(256);
@@ -14766,14 +14816,39 @@ KeyChain.prototype.verifyData = function
  * information to check the signature.
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
- * onVerified(data).
+ * onVerified(interest).
  * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * onVerifyFailed(interest).
  */
 KeyChain.prototype.verifyInterest = function
   (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
 {
-  throw new Error("KeyChain.verifyInterest is not implemented");
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (this.policyManager.requireVerify(interest)) {
+    var nextStep = this.policyManager.checkVerificationPolicy
+      (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
+    if (nextStep != null) {
+      /*
+      var thisKeyChain = this;
+      this.face.expressInterest
+        (nextStep.interest,
+         function(callbackInterest, callbackData) {
+           thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
+         },
+         function(callbackInterest) {
+           thisKeyChain.onCertificateInterestTimeout
+             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
+         });
+      */
+     throw new SecurityException(new Error
+        ("verifyInterest: ValidationRequest not implemented yet"));
+    }
+  }
+  else if (this.policyManager.skipVerifyAndTrust(interest))
+    onVerified(interest);
+  else
+    onVerifyFailed(interest);
 };
 
 /*****************************************
@@ -15483,7 +15558,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
 
   this.signature = new Sha256WithRsaSignature();
 
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
 };
 
 exports.Data = Data;
@@ -15545,7 +15620,7 @@ Data.prototype.setName = function(name)
     new Name(name) : new Name();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -15560,7 +15635,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
     new MetaInfo(metaInfo) : new MetaInfo();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -15575,7 +15650,7 @@ Data.prototype.setSignature = function(signature)
     signature.clone() : new Sha256WithRsaSignature();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -15594,7 +15669,7 @@ Data.prototype.setContent = function(content)
     this.content = new Buffer(content);
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -16041,6 +16116,7 @@ Exclude.prototype.getChangeCount = function()
  */
 
 var Blob = require('./util/blob.js').Blob;
+var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
@@ -16105,6 +16181,8 @@ var Interest = function Interest
       // Copy and make sure it is a Buffer.
       this.nonce = new Buffer(nonce);
   }
+
+  this.wireEncoding = new SignedBlob();
 };
 
 exports.Interest = Interest;
@@ -16279,8 +16357,9 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 
 Interest.prototype.setName = function(name)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
@@ -16288,16 +16367,18 @@ Interest.prototype.setName = function(name)
 
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.minSuffixComponents = minSuffixComponents;
 };
 
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.maxSuffixComponents = maxSuffixComponents;
 };
@@ -16310,8 +16391,9 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
@@ -16319,8 +16401,9 @@ Interest.prototype.setExclude = function(exclude)
 
 Interest.prototype.setChildSelector = function(childSelector)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.childSelector = childSelector;
 };
@@ -16330,8 +16413,9 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.answerOriginKind = answerOriginKind;
 };
@@ -16342,8 +16426,9 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   if (this.answerOriginKind == null || this.answerOriginKind < 0) {
     // It is is already the default where MustBeFresh is true.
@@ -16363,16 +16448,18 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 
 Interest.prototype.setScope = function(scope)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.scope = scope;
 };
 
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.interestLifetime = interestLifetimeMilliseconds;
 };
@@ -16383,6 +16470,9 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+
   if (nonce) {
     if (typeof nonce === 'object' && nonce instanceof Blob)
       this.nonce = nonce.buf();
@@ -16436,13 +16526,17 @@ Interest.prototype.toUri = function()
  * Encode this Interest for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeInterest(this);
-  return result.encoding;
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  this.wireEncoding = new SignedBlob
+    (result.encoding, result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
+  return this.wireEncoding;
 };
 
 /**
@@ -16457,7 +16551,13 @@ Interest.prototype.wireDecode = function(input, wireFormat)
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
-  wireFormat.decodeInterest(this, decodeBuffer);
+  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  // In the Blob constructor, set copy true, but if input is already a Blob, it
+  //   won't copy.
+  this.wireEncoding = new SignedBlob
+    (new Blob(input, true), result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom
@@ -17211,6 +17311,13 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
  * Decode input as a Binary XML interest and set the fields of the interest object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 {
@@ -17347,13 +17454,20 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
  * Use the decoder to place the result in interest.
  * @param {Interest} interest
  * @param {BinaryXMLDecoder} decoder
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
 {
   decoder.readElementStartDTag(NDNProtocolDTags.Interest);
 
   interest.setName(new Name());
-  interest.getName().from_ndnb(decoder);
+  var offsets = interest.getName().from_ndnb(decoder);
 
   if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
     interest.setMinSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents));
@@ -17417,6 +17531,7 @@ BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
     interest.setNonce(null);
 
   decoder.readElementClose();
+  return offsets;
 };
 
 /**
@@ -17623,13 +17738,20 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
  */
 Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  Tlv0_1WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_1WireFormat.decodeName(interest.getName(), decoder);
   if (decoder.peekType(Tlv.Selectors, endOffset))
     Tlv0_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
@@ -17643,6 +17765,7 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
   interest.setNonce(nonce);
 
   decoder.finishNestedTlvs(endOffset);
+  return offsets;
 };
 
 /**
@@ -17815,7 +17938,7 @@ Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
   var decoder = new TlvDecoder(signatureInfo);
   Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
-  decoder = TlvDecoder(signatureValue);
+  decoder = new TlvDecoder(signatureValue);
   // TODO: The library needs to handle other signature types than
   //   SignatureSha256WithRsa.
   signatureHolder.getSignature().setSignature
@@ -17892,15 +18015,37 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
            signedPortionEndOffset: signedPortionEndOffset };
 };
 
+/**
+ * Clear the name, decode a Name from the decoder and set the fields of the name
+ * object.
+ * @param {Name} name The name object whose fields are updated.
+ * @param {TlvDecoder} decoder The decoder with the input.
+ * @returns {object} An associative array with fields
+ * (signedPortionBeginOffset, signedPortionEndOffset) where
+ * signedPortionBeginOffset is the offset in the encoding of the beginning of
+ * the signed portion, and signedPortionEndOffset is the offset in the encoding
+ * of the end of the signed portion. The signed portion starts from the first
+ * name component and ends just before the final name component (which is
+ * assumed to be a signature for a signed interest).
+ */
 Tlv0_1WireFormat.decodeName = function(name, decoder)
 {
   name.clear();
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Name);
-  while (decoder.getOffset() < endOffset)
-      name.append(decoder.readBlobTlv(Tlv.NameComponent));
+  var signedPortionBeginOffset = decoder.getOffset();
+  // In case there are no components, set signedPortionEndOffset arbitrarily.
+  var signedPortionEndOffset = signedPortionBeginOffset;
+
+  while (decoder.getOffset() < endOffset) {
+    signedPortionEndOffset = decoder.getOffset();
+    name.append(decoder.readBlobTlv(Tlv.NameComponent));
+  }
 
   decoder.finishNestedTlvs(endOffset);
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -18576,6 +18721,7 @@ var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
