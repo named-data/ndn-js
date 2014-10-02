@@ -75,7 +75,7 @@ var Data = function Data(name, metaInfoOrContent, arg3)
 
   this.signature = new Sha256WithRsaSignature();
 
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
 };
 
 exports.Data = Data;
@@ -137,7 +137,7 @@ Data.prototype.setName = function(name)
     new Name(name) : new Name();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -152,7 +152,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
     new MetaInfo(metaInfo) : new MetaInfo();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -167,7 +167,7 @@ Data.prototype.setSignature = function(signature)
     signature.clone() : new Sha256WithRsaSignature();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
@@ -186,7 +186,7 @@ Data.prototype.setContent = function(content)
     this.content = new Buffer(content);
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = SignedBlob();
+  this.wireEncoding = new SignedBlob();
   return this;
 };
 
