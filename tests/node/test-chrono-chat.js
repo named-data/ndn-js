@@ -548,11 +548,10 @@ function initiateChat()
   privateKeyStorage.setKeyPairForKeyName(keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
   
   face.setCommandSigningInfo(keyChain, certificateName);
-  
+
   var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
  
-  // Send random test chat message
-  
+  // Send random test chat message at a fixed interval
   var num = 0;
   setInterval(
     function(){

@@ -302,7 +302,6 @@ ChronoSync2013.prototype.logfind = function(digest)
 ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
   //search if the digest is already exist in the digest log
-  //console.log("*** Sync Interest received: " + inst.getName().toUri() + " ***");
   
   var syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
@@ -314,12 +313,6 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
     this.processRecoveryInst(inst, syncdigest, transport);
   }
   else {
-    // Note: the cpp test pushes it to pendingInterestTable...
-    // But will the table's entries ever get answered? 
-    // For the case of recovery, I don't think it will: it can only get answered by new contentCacheAdd(), which comes from NextSequenceNumber
-    // But a sync interest that's received cannot be querying for the next sequence of this instance, unless they are always querying for the next; which should be confirmed not
-    // Okay, the point of PIT is not for the next seq of certain instances, it's for the outstanding interest of steady state...
-    // which is the reason why cpp does not lag, the judge recovery isn't done when this outstanding interest brings back SyncState, which is used for updating local sequence number, and fetching application data...
     this.pendingInterestTable.push(new ChronoSync2013.PendingInterest(inst, transport));
     
     if (syncdigest != this.digest_tree.getRoot()) {

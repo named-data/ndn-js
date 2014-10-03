@@ -78,17 +78,12 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
   this.recomputeDigest();
 };
 
-// These conversion functions for hash.updateHex are not used in current implementation,
-// TODO: investigate interoperability, most likely our current method converts to big-endian.
-
-// The original one used in ChronoChat-js does a DataUtil.toHex(result)
-// which does not return the correct thing when testing with node.js 10.30
-// This method, combined with later generation process, is little-endian.
+// This works as digest-tree.cpp's int32ToLittleEndian
 DigestTree.Node.prototype.Int32ToHex = function(value) {
-  var result = new Uint8Array(4);
-  for (var i = 0; i < 4; i++) {
-    result[i] = value % 256;
-    value = Math.floor(value / 256);
+  var result = new Uint8Array(8);
+  for (var i = 0; i < 8; i++) {
+    result[i] = value % 16;
+    value = Math.floor(value / 16);
   }
   return result;
 }
@@ -98,28 +93,19 @@ function bin2String(array) {
   return String.fromCharCode.apply(String, array);
 }
 
-// This does not look like the best way to do it in JS, 
-// however, I still need to familiarize with alternatives.
-// And, actually the form of input is still different from Int32ToHex's output...
 function hexBufferToASCString(buffer)
 {
   var result = [];
-  for (var i = 0; i < buffer.length; i++)
-  {
-    //console.log("pre " + i + " : " + buffer[i]);
-    if (buffer[i]>=0 && buffer[i]<=9)
-    {
+  for (var i = 0; i < buffer.length; i++) {
+    if (buffer[i]>=0 && buffer[i]<=9) {
       result[i] = parseInt(buffer[i]) + 0x30;
     }
-    else if (buffer[i]>=10 && buffer[i]<=16)
-    {
-      result[i] = parseInt(buffer[i]) + 0x41;
+    else if (buffer[i]>=10 && buffer[i]<=16) {
+      result[i] = parseInt(buffer[i]) + 0x41 - 10;
     }
-    else
-    {
+    else {
       console.log("hex contains illegal number: " + buffer[i]);
     }
-    //console.log(i + " : " + result[i]);
   }
   return bin2String(result);
 }
@@ -128,17 +114,14 @@ DigestTree.Node.prototype.recomputeDigest = function()
 {
   var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
   
-  // This hex hashing issue is not yet fully resolved; 
-  // for now, we are converting the int directly (big endian), should not interoperate with ChronoChat-JS browser or ndn-cpp yet
-  // Could it be working differently for node and browser?
-  md.updateHex(this.seqno_session.toString(16));
-  md.updateHex(this.seqno_seq.toString(16));
-  
+  md.updateHex(hexBufferToASCString(this.Int32ToHex(this.seqno_session)));
+  md.updateHex(hexBufferToASCString(this.Int32ToHex(this.seqno_seq)));
   var digest_seq = md.digest();
   
   md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
   md.updateString(this.dataPrefix);
   var digest_name = md.digest();
+  
   md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
   md.updateHex(digest_name + digest_seq);
 
@@ -254,21 +237,6 @@ function fromHexChar(c)
   else
     return -1;
 };
-
-// This function should be tested, as the functions of hash related functions are unverified
-/*
-function SHA256_UpdateHex(context, hex)
-{
-  var data = [];
-  for (var i = 0; i < data.length; ++i)
-    data[i] = 16 * fromHexChar(hex[2 * i]) + fromHexChar(hex[2 * i + 1]);
-  // Update hash for given ascii hex
-  var hash = crypto.createHash('sha256');
-  // Default encoding for hash.update is 'binary'
-  hash.update(data);
-  context = hash.digest('hex');
-};
-*/
 
 function strcmp(component1, component2)
 {
