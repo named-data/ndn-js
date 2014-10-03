@@ -26,6 +26,7 @@ var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;

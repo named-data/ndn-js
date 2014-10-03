@@ -19,6 +19,7 @@
  */
 
 var Name = require('../../name.js').Name;
+var Interest = require('../../interest.js').Interest;
 var Data = require('../../data.js').Data;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;

@@ -357,14 +357,22 @@ Name.prototype.set = function(uri)
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
+  var signedPortionBeginOffset = decoder.getOffset();
+  // In case there are no components, set signedPortionEndOffset arbitrarily.
+  var signedPortionEndOffset = signedPortionBeginOffset;
 
   this.components = [];
 
-  while (decoder.peekDTag(NDNProtocolDTags.Component))
+  while (decoder.peekDTag(NDNProtocolDTags.Component)) {
+    signedPortionEndOffset = decoder.getOffset();
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
+  }
 
   decoder.readElementClose();
   ++this.changeCount;
+
+  return { signedPortionBeginOffset: signedPortionBeginOffset,
+           signedPortionEndOffset: signedPortionEndOffset };
 };
 
 /**
@@ -554,13 +562,18 @@ Name.prototype.addSegment = function(number)
 
 /**
  * Get a new name, constructed as a subset of components.
- * @param {number} iStartComponent The index if the first component to get.
+ * @param {number} iStartComponent The index if the first component to get. If
+ * iStartComponent is -N then return return components starting from
+ * name.size() - N.
  * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
  * return components starting at iStartComponent until the end of the name.
  * @returns {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
+  if (iStartComponent < 0)
+    iStartComponent = this.components.length - (-iStartComponent);
+
   if (nComponents == undefined)
     nComponents = this.components.length - iStartComponent;
 

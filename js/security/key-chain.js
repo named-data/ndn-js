@@ -296,7 +296,7 @@ KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.buf(), certificateName);
+  var signedSignature = this.sign(encoding.signedBuf(), certificateName);
 
   // Remove the empty signature and append the real one.
   var encoder = new TlvEncoder(256);
@@ -404,14 +404,39 @@ KeyChain.prototype.verifyData = function
  * information to check the signature.
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
- * onVerified(data).
+ * onVerified(interest).
  * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * onVerifyFailed(interest).
  */
 KeyChain.prototype.verifyInterest = function
   (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
 {
-  throw new Error("KeyChain.verifyInterest is not implemented");
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (this.policyManager.requireVerify(interest)) {
+    var nextStep = this.policyManager.checkVerificationPolicy
+      (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
+    if (nextStep != null) {
+      /*
+      var thisKeyChain = this;
+      this.face.expressInterest
+        (nextStep.interest,
+         function(callbackInterest, callbackData) {
+           thisKeyChain.onCertificateData(callbackInterest, callbackData, nextStep);
+         },
+         function(callbackInterest) {
+           thisKeyChain.onCertificateInterestTimeout
+             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
+         });
+      */
+     throw new SecurityException(new Error
+        ("verifyInterest: ValidationRequest not implemented yet"));
+    }
+  }
+  else if (this.policyManager.skipVerifyAndTrust(interest))
+    onVerified(interest);
+  else
+    onVerifyFailed(interest);
 };
 
 /*****************************************
