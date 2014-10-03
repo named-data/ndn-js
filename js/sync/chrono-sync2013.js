@@ -107,7 +107,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
   
   // The same wonder of using bind applies here, too
-  console.log("*** Sync constructor expressed interest with name: " + interest.getName().toUri() + " ***");
+  //console.log("*** Sync constructor expressed interest with name: " + interest.getName().toUri() + " ***");
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
 
@@ -170,7 +170,7 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
   
   if (!this.update(content))
-    console.log("* ChronoSync: update did not create a new digest log entry *");
+    console.log("Warning: ChronoSync: update did not create a new digest log entry");
     
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append(this.digest_tree.getRoot());
@@ -302,7 +302,7 @@ ChronoSync2013.prototype.logfind = function(digest)
 ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
   //search if the digest is already exist in the digest log
-  console.log("*** Sync Interest received: " + inst.getName().toUri() + " ***");
+  //console.log("*** Sync Interest received: " + inst.getName().toUri() + " ***");
   
   var syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
@@ -310,10 +310,18 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
   }
   if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
     //Recovery interest or new comer interest
-    console.log("****** Parameter passed to processRecoveryInst: " + syncdigest + " ******");
+    //console.log("****** Parameter passed to processRecoveryInst: " + syncdigest + " ******");
     this.processRecoveryInst(inst, syncdigest, transport);
   }
   else {
+    // Note: the cpp test pushes it to pendingInterestTable...
+    // But will the table's entries ever get answered? 
+    // For the case of recovery, I don't think it will: it can only get answered by new contentCacheAdd(), which comes from NextSequenceNumber
+    // But a sync interest that's received cannot be querying for the next sequence of this instance, unless they are always querying for the next; which should be confirmed not
+    // Okay, the point of PIT is not for the next seq of certain instances, it's for the outstanding interest of steady state...
+    // which is the reason why cpp does not lag, the judge recovery isn't done when this outstanding interest brings back SyncState, which is used for updating local sequence number, and fetching application data...
+    this.pendingInterestTable.push(new ChronoSync2013.PendingInterest(inst, transport));
+    
     if (syncdigest != this.digest_tree.getRoot()) {
       var index = this.logfind(syncdigest);
       var content = [];
@@ -322,10 +330,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
         // Are we sure that using a "/timeout" interest is the best future call approach?
         var timeout = new Interest(new Name("/timeout"));
         timeout.setInterestLifetimeMilliseconds(2000);
-        // Passing parameters to callback function with given arguments
-        console.log("*** onInterest: recovery judgment interest sent with name." + timeout.getName().toUri() + " ***");
         this.face.expressInterest(timeout, this.dummyOnData, this.judgeRecovery.bind(this, timeout, syncdigest, transport));
-        //setTimeout(function(){self.judgeRecovery(syncdigest, transport);},2000);
       }
       else {
         //common interest processing
@@ -342,17 +347,12 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
  */
 ChronoSync2013.prototype.onData = function(inst, co)
 {
-  console.log("*** The data name: " + co.getName().toUri() + " ***");
-  
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
   var content_t = SyncStateMsg.decode(arr.buffer);
   var content = content_t.ss;
   
   var isRecovery = false;
-  
-  console.log("****** Received content ******");
-  console.log(content);
   
   if (this.digest_tree.getRoot() == "00") {
     isRecovery = true;
@@ -397,7 +397,6 @@ ChronoSync2013.prototype.onData = function(inst, co)
 	var interest = new Interest(n);
 	interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-	console.log("*** Sync onData expressed interest with name: " + interest.getName().toUri() + " ***");
 	this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   }
 };
@@ -407,7 +406,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
  */
 ChronoSync2013.prototype.initialTimeOut = function(interest)
 {
-  console.log("initial sync timeout");
+  //console.log("initial sync timeout");
   console.log("no other people");
     
   this.usrseq++;
@@ -427,7 +426,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   var retryInterest = new Interest(n);
   retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-  console.log("*** Sync initialTimeout expressed interest with name: " + retryInterest.getName().toUri() + " ***");
+  //console.log("*** Sync initialTimeout expressed interest with name: " + retryInterest.getName().toUri() + " ***");
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));  
 };
 
@@ -436,6 +435,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
   // If nothing's found in log, do nothing.
   if (this.logfind(syncdigest) != -1) {
     var content = [];
+    /*
     for (var i = 0; i < this.digest_log.length; i++)
     {
       console.log("****** Full log " + this.digest_log[i].digest + " ******");
@@ -446,7 +446,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     }
     
     console.log("*** log found *** " + this.digest_tree.digestnode.length);
-    
+    */
     // TODO: this suggests that newest nodes in the digest tree gets returned, 
     // why not the data that comes after the converging point?
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
@@ -458,8 +458,9 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                     }
                                  });
     }
-    console.log("****** processRecovery interest replies with SyncStates ******");
-    console.log(content);
+    
+    //console.log("****** processRecovery interest replies with SyncStates ******");
+    //console.log(content);
     
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
@@ -528,8 +529,8 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
     this.keyChain.sign(co, this.certificateName);
     try {
       transport.send(co.wireEncode().buf());
-      console.log("Sync Data send");
-      console.log(n.toUri());
+      //console.log("Sync Data send");
+      //console.log(n.toUri());
     } catch (e) {
       console.log(e.toString());
     }
@@ -551,7 +552,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   
-  console.log("*** Recovery sync interest expressed: " + interest.getName().toUri() + " ***"); 
+  //console.log("*** Recovery sync interest expressed: " + interest.getName().toUri() + " ***"); 
 };
 
 /*
@@ -564,7 +565,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
  */
 ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transport)
 {
-  console.log("*** judgeRecovery interest " + interest.getName().toUri() + " times out. Digest: " + syncdigest_t + " ***");
+  //console.log("*** judgeRecovery interest " + interest.getName().toUri() + " times out. Digest: " + syncdigest_t + " ***");
   var index = this.logfind(syncdigest_t);
   if (index != -1) {
     if (syncdigest_t != this.digest_tree.root)
@@ -576,7 +577,7 @@ ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transp
 
 ChronoSync2013.prototype.syncTimeout = function(interest)
 {
-  console.log("*** Sync interest times out ***");
+  //console.log("*** Sync interest times out ***");
   // The fifth(4) component should be replaced by some consts
   var component = interest.getName().get(4).toEscapedString();
   if (component == this.digest_tree.root) {
@@ -584,7 +585,7 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
     var interest = new Interest(n);
     
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    console.log("*** Sync syncTimeout expressed interest with name: " + interest.getName().toUri() + " ***");
+    //console.log("*** Sync syncTimeout expressed interest with name: " + interest.getName().toUri() + " ***");
     this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   }           
 };
@@ -592,7 +593,7 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
 ChronoSync2013.prototype.initialOndata = function(content)
 {
   //user is a new comer and receive data of all other people in the group
-  console.log("*** initialOnData executed. ***");
+  //console.log("*** initialOnData executed. ***");
   this.update(content);
     
   var digest_t = this.digest_tree.getRoot();
@@ -660,7 +661,7 @@ ChronoSync2013.prototype.contentCacheAdd = function(data)
   
   for (var i = this.pendingInterestTable.length - 1; i >= 0; i--) {
     if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
-      pendingInterestTable[i].erase(this.pendingInterestTable.begin() + i);
+      this.pendingInterestTable.splice(i,1);
       continue;
     }
     if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
@@ -669,7 +670,7 @@ ChronoSync2013.prototype.contentCacheAdd = function(data)
       }
       catch (e) {
       }
-      this.pendingInterestTable.erase(this.pendingInterestTable.begin() + i);
+      this.pendingInterestTable.splice(i,1);
     }
   }
 };

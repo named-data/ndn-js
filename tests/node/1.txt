@@ -1,0 +1,3 @@
+Using { filePath: /var/run/nfd.sock }
+IMX, welcome to chatroom ndnchat!
+Msg sent: IMX0

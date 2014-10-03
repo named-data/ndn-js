@@ -239,7 +239,7 @@ DigestTree.prototype.recomputeRoot = function()
     md.updateHex(this.digestnode[i].digest);
   }
   this.root = md.digest();
-  console.log("update root to: " + this.root);
+  //console.log("update root to: " + this.root);
 };
 
 // Not sure if this ascii representation works yet
