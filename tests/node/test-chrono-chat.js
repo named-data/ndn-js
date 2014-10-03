@@ -129,7 +129,6 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   
   this.chat_prefix = (new Name(hubPrefix)).append(this.chatroom).append(this.getRandomString());
   
-  
   this.roster = [];
   this.msgcache = [];
   
@@ -237,24 +236,48 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
   var seqlist = [];
   
   for (var j = 0; j < syncStates.length; j++) {
-    // the judgment for syncStates type does not exist for ndn-cpp, figure out why
-    if (syncStates[j].type == 0) {
-      var name_component = syncStates[j].name.split('/');
-      var name_t = name_component[name_component.length - 1];
-      var session = syncStates[j].seqno.session;
-      if (name_t != this.screen_name) {
-        var index_n = sendlist.indexOf(syncStates[j].name);
-        if(index_n != -1) {
-          sessionlist[index_n] = session;
-          seqlist[index_n] = syncStates[j].seqno.seq;
-        }
-        else {
-          sendlist.push(syncStates[j].name);
-          sessionlist.push(session);
-          seqlist.push(syncStates[j].seqno.seq);
-        }
-      }
-    } 
+	var name_component = syncStates[j].name.split('/');
+	var name_t = name_component[name_component.length - 1];
+	var session = syncStates[j].seqno.session;
+	
+	// Note: application data prefix gets stored in digest tree, 
+	// it does not make sense to compare it against screen_name.
+	// Potentially same problem in ndn-cpp's test.
+	if (this.chat_prefix.toUri() != syncStates[j].name) {
+	  var index_n = sendlist.indexOf(syncStates[j].name);
+	  
+	  // Note: This only sends interest for the latest piece of chat message of another participant
+	  // Should it be: all the chat messages whose sequences are larger than my locally stored seqnum?
+	  // However, here the update's already called; the sequence number is updated.
+	  // Should the sequence number be updated based on what sequence is received in application data, 
+	  // instead of synchronization data?
+	  if(index_n != -1) {
+		// With current code, I don't think this branch will ever get executed.
+		console.log("*********** Prove me wrong ***********");
+		sessionlist[index_n] = session;
+		seqlist[index_n] = syncStates[j].seqno.seq;
+	  }
+	  else {
+		// Note: This 'if' expresses interest for every sequence number higher than what's stored locally.
+		// This did not exist in ndn-cpp's test, or ChronoChat-v2
+		// In the case of ChronoChat-v2, it was causing same msgs getting fetched twice; and potentially messages lost when publishing too fast;
+		
+		var index_n = this.sync.digest_tree.find(syncStates[j].name, session);
+		var startSeq = 0;
+		var stopSeq = syncStates[j].seqno.seq; 
+		
+		if (index_n != -1) {
+		  startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
+		}
+		console.log(startSeq, stopSeq);
+		
+		for (var k = startSeq; k < stopSeq + 1; k ++) {
+			sendlist.push(syncStates[j].name);
+			sessionlist.push(session);
+			seqlist.push(k);
+		}
+	  }
+	}
   }
   
   for (var i = 0; i < sendlist.length; i++) {
@@ -521,15 +544,18 @@ function initiateChat()
   identityStorage.addKey(keyName, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
   privateKeyStorage.setKeyPairForKeyName(keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
   
-  var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
+  face.setCommandSigningInfo(keyChain, certificateName);
   
+  var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
+ 
   // Send random test chat message
   
-  setTimeout(
+  var num = 0;
+  setInterval(
     function(){
-      var chatMsg = getRandomNameString();
-      chronoChat.sendMessage(chatMsg);
-      console.log("Msg sent: " + chatMsg);
+      chronoChat.sendMessage(screenName + num);
+      console.log("Msg sent: " + screenName + num);
+      num ++;
     }, 2000);
 }
 

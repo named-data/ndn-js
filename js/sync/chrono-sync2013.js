@@ -342,7 +342,6 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
  */
 ChronoSync2013.prototype.onData = function(inst, co)
 {
-  console.log("Sync ContentObject received in callback");
   console.log("*** The data name: " + co.getName().toUri() + " ***");
   
   var arr = new Uint8Array(co.getContent().size());
@@ -352,14 +351,20 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var isRecovery = false;
   
-  console.log("****** Received content length: " + content.length + " ******");
+  console.log("****** Received content ******");
+  console.log(content);
   
   if (this.digest_tree.getRoot() == "00") {
     isRecovery = true;
     this.initialOndata(content);
   }
   else {
-    this.update(content);
+    // Note: if, for some reasons, packet out-of-order or whatever, this update did not 
+    // update anything, then the same message gets fetched again, and the same broadcast interest goes out again.
+    // It has the potential of creating loop, which is confirmed in my tests.
+    // This case without judgment here should be analyzed...
+    // And this update should really come after the onReceivedSyncState, because you may want to access sequence number in onReceivedSyncState
+    //var updated = this.update(content);
     if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2)
       isRecovery = false;
     else
@@ -367,31 +372,34 @@ ChronoSync2013.prototype.onData = function(inst, co)
   }
   
   var syncStates = [];
-  
+
   // For every piece of content received, even if its sequence might be older, 
   // we still push them to syncStates and trying fetching in Chat::sendInterest?
   for (var i = 0; i < content.length; i++) {
-    if (content[i].type == 0) {
-      syncStates.push(new SyncState({ name:content[i].name,
-                                      type:'UPDATE',
-                                      seqno: {
-                                        seq:content[i].seqno.seq,
-                                        session:content[i].seqno.session
-                                      }
-                                    }));
-    }
+	if (content[i].type == 0) {
+	  syncStates.push(new SyncState({ name:content[i].name,
+									  type:'UPDATE',
+									  seqno: {
+										seq:content[i].seqno.seq,
+										session:content[i].seqno.session
+									  }
+									}));
+	}
   }
-  
+
   this.onReceivedSyncState(syncStates, isRecovery);
+  var updated = this.update(content);
   
-  var n = new Name(this.applicationBroadcastPrefix);
-  n.append(this.digest_tree.getRoot());
+  if (updated) {
+	var n = new Name(this.applicationBroadcastPrefix);
+	n.append(this.digest_tree.getRoot());
   
-  var interest = new Interest(n);
-  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+	var interest = new Interest(n);
+	interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-  console.log("*** Sync onData expressed interest with name: " + interest.getName().toUri() + " ***");
-  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+	console.log("*** Sync onData expressed interest with name: " + interest.getName().toUri() + " ***");
+	this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+  }
 };
 
 /**
@@ -439,7 +447,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     
     console.log("*** log found *** " + this.digest_tree.digestnode.length);
     
-    // TODO: this suggests that everything in the log gets returned, 
+    // TODO: this suggests that newest nodes in the digest tree gets returned, 
     // why not the data that comes after the converging point?
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
       content[i] = new SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
@@ -450,7 +458,9 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                     }
                                  });
     }
-    console.log("****** Length of syncstates: " + content.length + " ******");
+    console.log("****** processRecovery interest replies with SyncStates ******");
+    console.log(content);
+    
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
