@@ -194,14 +194,9 @@ ChronoChat.prototype.onRegisterFailed = function()
 
 ChronoChat.prototype.initial = function()
 {
-  // Set the heartbeat timeout using the Interest timeout mechanism. heartbeat() function
-  // will call itself again after a timeout.
-  
-  // Here ndn-cpp's implementation differs a little from ChronoChat-js, finding out reasons
   var timeout = new Interest(new Name("/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
   
-  //console.log("*** Chat initial expressed interest with name: " + timeout.getName().toUri() + " ***");
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
   
   if (this.roster.indexOf(this.usrname) == -1) {
@@ -225,8 +220,6 @@ ChronoChat.prototype.dummyOnData = function(inst, co)
  * @param {SyncStates[]} The array of sync states
  * @param {bool} if it's in recovery state
  */
- // TODO: should it include its own prefix + sequenceNo + sessionNo? Remains to be found.
- // TODO: should it send for the same thing over and over again?
 ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
   this.isRecoverySyncState = isRecovery;
@@ -246,22 +239,13 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 	if (this.chat_prefix.toUri() != syncStates[j].name) {
 	  var index_n = sendlist.indexOf(syncStates[j].name);
 	  
-	  // Note: This only sends interest for the latest piece of chat message of another participant
-	  // Should it be: all the chat messages whose sequences are larger than my locally stored seqnum?
-	  // However, here the update's already called; the sequence number is updated.
-	  // Should the sequence number be updated based on what sequence is received in application data, 
-	  // instead of synchronization data?
 	  if(index_n != -1) {
-		// With current code, I don't think this branch will ever get executed.
+		// With current code, this branch will not get executed.
 		console.log("*********** Prove me wrong ***********");
 		sessionlist[index_n] = session;
 		seqlist[index_n] = syncStates[j].seqno.seq;
 	  }
 	  else {
-		// Note: This 'if' expresses interest for every sequence number higher than what's stored locally.
-		// This did not exist in ndn-cpp's test, or ChronoChat-v2
-		// In the case of ChronoChat-v2, it was causing same msgs getting fetched twice; and potentially messages lost when publishing too fast;
-		
 		var index_n = this.sync.digest_tree.find(syncStates[j].name, session);
 		var startSeq = 0;
 		var stopSeq = syncStates[j].seqno.seq; 
@@ -269,7 +253,6 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 		if (index_n != -1) {
 		  startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
 		}
-		//console.log(startSeq, stopSeq);
 		
 		for (var k = startSeq; k < stopSeq + 1; k ++) {
 			sendlist.push(syncStates[j].name);
@@ -285,7 +268,6 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
     var interest = new Interest(n);
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
     
-    //console.log("*** Chat sendInterest expressed interest with name: " + interest.getName().toUri() + " ***");
     this.face.expressInterest(interest, this.onData.bind(this), this.chatTimeout.bind(this));
   }
 };
@@ -300,16 +282,13 @@ ChronoChat.prototype.onData = function(inst, co)
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
   var content = ChatMessage.decode(arr.buffer);
-  // TODO: for now, join is retrieved for every interest sent, not sure if that's the way how it's supposed to work;
-  // And, for now chat sends interest periodically, don't think that's how it should work.
-  //console.log("*** Chat onData received: ContentType " + content.type + " ContentData " + content.data + " ***");
   
   var temp = (new Date()).getTime();
   if (temp - content.timestamp * 1000 < 120000) {
     var t = (new Date(content.timestamp * 1000)).toLocaleTimeString();
     var name = content.from;
     
-    // chat_prefix should really be saved as a name, not a URI string.
+    // chat_prefix should be saved as a name, not a URI string.
     var chatPrefixSize = new Name(this.chat_prefix).size();
     var prefix = co.getName().getPrefix(chatPrefixSize).toUri();
     
@@ -341,9 +320,9 @@ ChronoChat.prototype.onData = function(inst, co)
     
     //if (content.type == 0 && this.isRecoverySyncState == false && content.from != this.screen_name){
       // Note: the original logic does not display old data; 
-      // what if an ordinary application data interest gets answered after entering recovery state?
+      // But what if an ordinary application data interest gets answered after entering recovery state?
     if (content.type == 0 && content.from != this.screen_name){
-      console.log("CHAT: '" + content.data + "' from '" + content.from + "'");
+      console.log(content.from + ": " + content.data);
     }
     else if (content.type == 2) {
       //leave message
@@ -352,17 +331,10 @@ ChronoChat.prototype.onData = function(inst, co)
         this.roster.splice(n,1);
         for(var i = 0; i<this.roster.length; i++) {
           var name_t = this.roster[i].substring(0,this.roster[i].length - 10);
-          //document.getElementById('menu').innerHTML += '<li>'+name_t+'</li>';
         }
-        //document.getElementById('menu').innerHTML += '</ul>';
         
         var d = new Date(content.timestamp * 1000);
         var t = d.toLocaleTimeString();
-        /*
-        document.getElementById('txt').innerHTML += '<div><b><grey>'+name+'-'+t+': Leave</grey></b><br /></div>'
-        var objDiv = document.getElementById("txt");      
-        objDiv.scrollTop = objDiv.scrollHeight;
-        */
       }
     }
   }
@@ -460,9 +432,6 @@ ChronoChat.prototype.messageCacheAppend = function(messageType, message)
   }
 };
 
-// These are static functions; not sure if they should follow this pattern?
-// Or should I remove prototype?
-
 ChronoChat.prototype.onRegisterFailed = function()
 {
 
@@ -532,8 +501,6 @@ function initiateChat()
   // chatroom is the name inputted by the user
   var chatroom = "ndnchat";
   
-  // Weird, at one point, it works...
-  //var face = new Face({ host:hostName });
   var face = new Face(new UnixTransport());
   
   var identityStorage = new MemoryIdentityStorage();
@@ -555,8 +522,9 @@ function initiateChat()
   var num = 0;
   setInterval(
     function(){
-      chronoChat.sendMessage(screenName + num);
-      console.log("Msg sent: " + screenName + num);
+      var chatMsg = screenName + num;
+      chronoChat.sendMessage(chatMsg);
+      console.log(screenName + ": " + chatMsg);
       num ++;
     }, 2000);
 }

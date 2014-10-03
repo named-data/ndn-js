@@ -25,18 +25,11 @@ var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 
-// TODO: To actually use this part of the library, we require a SyncStateMsg declaration,
-// which exists in protobuf-js definition file. This could/should be made independent of
-// the library...
+// TODO: To use this, we require a SyncStateMsg declaration, 
+// which exists in protobuf-js definition file.
 
-/**
- * There are observed bugs in ChronoChat-JS implementation, like user may drop after 
- * the connection's established for some time. Still observing the reasons why.
- */
 var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
 var SyncState = require('./sync-state.js').SyncState;
-
-// The point of naming it as 'argn'? just to correspond with boost::bind?
 
 /**
  * Create a new ChronoSync2013 to communicate using the given face. Initialize
@@ -93,11 +86,9 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   this.pendingInterestTable = [];
   
-  // digest_log is an array of ChronoSync2013.DigestLogEntry
   this.digest_log = new Array();
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
   
-  // contentCache is a memoryContentCache, not an ordinary face.
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -106,37 +97,10 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   interest.setInterestLifetimeMilliseconds(1000);
   interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
   
-  // The same wonder of using bind applies here, too
-  //console.log("*** Sync constructor expressed interest with name: " + interest.getName().toUri() + " ***");
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
 
 exports.ChronoSync2013 = ChronoSync2013;
-
-// ndn-cpp's implementation is still based on the ProtoBuf definition of SyncState,
-// which means ChronoSync2013.SyncState is not actually being used, except in 
-// the declaration of function_ptr onReceivedSyncState
-ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
-{
-  this.dataPrefixUri = dataPrefixUri;
-  this.sessionNo = sessionNo;
-  this.sequenceNo = sequenceNo;
-};
-
-ChronoSync2013.SyncState.prototype.getDataPrefix = function()
-{
-  return this.dataPrefixUri;
-};
-
-ChronoSync2013.SyncState.prototype.getSessionNo = function()
-{
-  return this.sessionNo;
-};
-
-ChronoSync2013.SyncState.prototype.getSequenceNo = function()
-{
-  return this.sequenceNo;
-};
 
 ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 {
@@ -193,7 +157,6 @@ ChronoSync2013.prototype.getSequenceNo = function()
 ChronoSync2013.DigestLogEntry = function ChronoSync2013DisgestLogEntry(digest, data)
 {
   this.digest = digest;
-  // Not sure if data still follows the intended semantics as in ndn-cpp
   this.data = data;
 };
 
@@ -352,12 +315,9 @@ ChronoSync2013.prototype.onData = function(inst, co)
     this.initialOndata(content);
   }
   else {
-    // Note: if, for some reasons, packet out-of-order or whatever, this update did not 
-    // update anything, then the same message gets fetched again, and the same broadcast interest goes out again.
-    // It has the potential of creating loop, which is confirmed in my tests.
-    // This case without judgment here should be analyzed...
-    // And this update should really come after the onReceivedSyncState, because you may want to access sequence number in onReceivedSyncState
-    //var updated = this.update(content);
+    // Note: if, for some reasons, this update did not update anything, 
+    // then the same message gets fetched again, and the same broadcast interest goes out again.
+    // It has the potential of creating loop, which existed in my tests.
     if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2)
       isRecovery = false;
     else
@@ -366,8 +326,6 @@ ChronoSync2013.prototype.onData = function(inst, co)
   
   var syncStates = [];
 
-  // For every piece of content received, even if its sequence might be older, 
-  // we still push them to syncStates and trying fetching in Chat::sendInterest?
   for (var i = 0; i < content.length; i++) {
 	if (content[i].type == 0) {
 	  syncStates.push(new SyncState({ name:content[i].name,
@@ -399,12 +357,9 @@ ChronoSync2013.prototype.onData = function(inst, co)
  */
 ChronoSync2013.prototype.initialTimeOut = function(interest)
 {
-  //console.log("initial sync timeout");
   console.log("no other people");
     
   this.usrseq++;
-  // usrseq should be 0 after the increment.
-  // chat::initial is passed in here, which is the heartbeat mechanism using timeouts
   this.onInitialized();
   var content = [new SyncState({ name:this.applicationDataPrefixUri,
                                  type:'UPDATE',
@@ -412,36 +367,21 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
                                    seq:this.usrseq,
                                    session:this.session
                                  }
-                               })];  // This update puts the local node into digest tree.
+                               })];
   this.update(content);
   var n = new Name(this.applicationBroadcastPrefix);
   n.append(this.digest_tree.getRoot());
   var retryInterest = new Interest(n);
   retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-  //console.log("*** Sync initialTimeout expressed interest with name: " + retryInterest.getName().toUri() + " ***");
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));  
 };
 
 ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transport)
 {
-  // If nothing's found in log, do nothing.
   if (this.logfind(syncdigest) != -1) {
     var content = [];
-    /*
-    for (var i = 0; i < this.digest_log.length; i++)
-    {
-      console.log("****** Full log " + this.digest_log[i].digest + " ******");
-    }
-    for (var i = 0; i < this.digest_tree.digestnode.length; i++)
-    {
-      console.log("****** Full tree " + this.digest_tree.digestnode[i].dataPrefix + " seqno_seq " + this.digest_tree.digestnode[i].seqno_seq + " seqno_session " + this.digest_tree.digestnode[i].seqno_session + " ******");
-    }
     
-    console.log("*** log found *** " + this.digest_tree.digestnode.length);
-    */
-    // TODO: this suggests that newest nodes in the digest tree gets returned, 
-    // why not the data that comes after the converging point?
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
       content[i] = new SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
                                    type:'UPDATE',
@@ -451,9 +391,6 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
                                     }
                                  });
     }
-    
-    //console.log("****** processRecovery interest replies with SyncStates ******");
-    //console.log(content);
     
     if (content.length != 0) {
       var content_t = new SyncStateMsg({ss:content});
@@ -522,9 +459,8 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
     this.keyChain.sign(co, this.certificateName);
     try {
       transport.send(co.wireEncode().buf());
-      //console.log("Sync Data send");
-      //console.log(n.toUri());
-    } catch (e) {
+    }
+    catch (e) {
       console.log(e.toString());
     }
   }
@@ -544,8 +480,6 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
-  
-  //console.log("*** Recovery sync interest expressed: " + interest.getName().toUri() + " ***"); 
 };
 
 /*
@@ -570,23 +504,18 @@ ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transp
 
 ChronoSync2013.prototype.syncTimeout = function(interest)
 {
-  //console.log("*** Sync interest times out ***");
-  // The fifth(4) component should be replaced by some consts
   var component = interest.getName().get(4).toEscapedString();
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
     var interest = new Interest(n);
     
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    //console.log("*** Sync syncTimeout expressed interest with name: " + interest.getName().toUri() + " ***");
     this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   }           
 };
 
 ChronoSync2013.prototype.initialOndata = function(content)
 {
-  //user is a new comer and receive data of all other people in the group
-  //console.log("*** initialOnData executed. ***");
   this.update(content);
     
   var digest_t = this.digest_tree.getRoot();
