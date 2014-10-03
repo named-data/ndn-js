@@ -110,6 +110,10 @@ function hexBufferToASCString(buffer)
   return bin2String(result);
 }
 
+/**
+ * TODO: This recompute digest does not yield the same result for seqno_session and seqno_seq as ndn-cpp's recomputeDigest
+ * Revising.
+ */
 DigestTree.Node.prototype.recomputeDigest = function()
 {
   var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
@@ -170,8 +174,7 @@ DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
  * This function bubble-sorts the nodes in digestnode in lexi order.
  * Called every time when there's an update of nodes (or removal of nodes, which does
  * not seem to exist in current design/implementation).
- * This function does not exist in the original ChronoChat-JS implementation, 
- * and it's not strictly tested yet.
+ * This function does exist in the original ChronoChat-JS implementation.
  */
 DigestTree.prototype.sortNodes = function()
 {
