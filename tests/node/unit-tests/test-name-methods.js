@@ -60,14 +60,6 @@ describe('TestNameMethods', function() {
     assert.ok(comp2.equals(component2), 'Component at index 2 is incorrect');
   });
 
-  it('Prefix', function() {
-    var name = new Name(expectedURI);
-    var name2 = name.getPrefix(2);
-    assert.equal(name2.size(), 2, 'Name prefix has ' + name2.size() + ' components instead of 2');
-    for (var i = 0; i < 2; ++i)
-      assert.ok(name.get(i).getValue().equals(name2.get(i).getValue()));
-  });
-
   it('Append', function() {
     // could possibly split this into different tests
     var uri = "/localhost/user/folders/files/%00%0F";
@@ -84,6 +76,17 @@ describe('TestNameMethods', function() {
     assert.equal(name2.toUri(), name.toUri(), 'Name constructed with append has wrong URI');
   });
 
+  it('Prefix', function() {
+    var name = new Name("/edu/cmu/andrew/user/3498478");
+    var name2 = name.getPrefix(2);
+    assert.equal(name2.size(), 2, 'Name prefix has ' + name2.size() + ' components instead of 2');
+    for (var i = 0; i < 2; ++i)
+      assert.ok(name.get(i).getValue().equals(name2.get(i).getValue()));
+
+    var prefix2 = name.getPrefix(100);
+    assert.ok(prefix2.equals(name), "Prefix with more components than original should stop at end of original name");
+  });
+
   it('Subname', function() {
     var name = new Name("/edu/cmu/andrew/user/3498478");
     var subName1 = name.getSubName(0);
@@ -97,8 +100,14 @@ describe('TestNameMethods', function() {
     var subName4 = name.getSubName(0, 100);
     assert.ok(name.equals(subName4), 'Subname with more components than original should stop at end of original name');
 
-    var subName5 = name.getSubName(7, 9);
+    var subName5 = name.getSubName(7, 2);
     assert.ok(new Name().equals(subName5), 'Subname beginning after end of name should be empty');
+
+    var subName6 = name.getSubName(-1,7);
+    assert.ok(subName6.equals(new Name("/3498478")), "Negative subname with more components than original should stop at end of original name");
+
+    var subName7 = name.getSubName(-5,5);
+    assert.ok(subName7.equals(name), "Subname from (-length) should match original name");
   });
 
   it('Clear', function() {
