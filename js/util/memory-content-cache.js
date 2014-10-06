@@ -45,7 +45,8 @@ var MemoryContentCache = function MemoryContentCache
   this.nextCleanupTime = new Date().getTime() + cleanupIntervalMilliseconds;
 
   this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri().
- *                                        The value is an OnInterest function. */
+                                          The value is an OnInterest function. */
+  this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
   //StaleTimeContent::Compare contentCompare_;
@@ -73,12 +74,29 @@ MemoryContentCache.prototype.registerPrefix = function
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var thisMemoryContentCache = this;
-  this.face.registerPrefix
+  var registeredPrefixId = this.face.registerPrefix
     (prefix,
      function(prefix, interest, transport)
        { thisMemoryContentCache.onInterest(prefix, interest, transport); },
      onRegisterFailed, flags, wireFormat);
+  this.registeredPrefixIdList.push(registeredPrefixId);
 };
+
+/**
+ * Call Face.removeRegisteredPrefix for all the prefixes given to the
+ * registerPrefix method on this MemoryContentCache object so that it will not
+ * receive interests any more. You can call this if you want to "shut down"
+ * this MemoryContentCache while your application is still running.
+ */
+MemoryContentCache.prototype.unregisterAll = function()
+{
+  for (var i = 0; i < this.registeredPrefixIdList.length; ++i)
+    this.face.removeRegisteredPrefix(this.registeredPrefixIdList[i]);
+  this.registeredPrefixIdList = [];
+
+  // Also clear each onDataNotFoundForPrefix given to registerPrefix.
+  this.onDataNotFoundForPrefix = {};
+}
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
