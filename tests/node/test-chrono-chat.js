@@ -130,7 +130,10 @@ var KeyChain = require('../..').KeyChain;
 var IdentityManager = require('../..').IdentityManager;
 var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
 var KeyType = require('../..').KeyType;
+/* Temporarily require directly until ChronoSync2013 is changed to dynamically load protobufjs.
 var ChronoSync2013 = require('../..').ChronoSync2013;
+*/
+var ChronoSync2013 = require('../../js/sync/chrono-sync2013').ChronoSync2013;
 var UnixTransport = require('../..').UnixTransport;
 
 var ChatMessage = require('./test-chrono-chat-protobuf.js').ChatMessage;
