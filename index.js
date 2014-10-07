@@ -46,4 +46,3 @@ exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-poli
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
-exports.DigestTree = require('./js/sync/digest-tree.js').DigestTree;
