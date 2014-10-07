@@ -17,4 +17,10 @@ tools/forwarder/firefox/modules/ndn-js.jsm
 # Emacs temp files
 *~
 
+# Downloaded protobuf/jsrsasign files
+js/sync/node_modules/
+js/sync/Protobuf/
+js/sync/jsrsasign/
 
+# Temporary test files
+js/sync/hash-test.js

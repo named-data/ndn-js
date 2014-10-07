@@ -1,0 +1,86 @@
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+<!--
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Zhehao Wang
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+-->
+
+<!-- For Peter's slides,
+     ChronoChat slides; discovery design, chronochat description, and WoT trust model -->
+
+<!-- ndn-js does not talk to the OS X file system, (browser does not have access to that, 
+     but node should be able to do that), which means I should not be able to register
+     prefix for nfd in a browser test -->
+
+<!-- What does the web-socket proxy do? What is it compatible with? -->
+
+<head>
+  <title>Test ChronoChat</title>
+
+  <script type="text/javascript" src="../../build/ndn.js"></script>  
+  <!-- Protobuf related file, need to think how to make the lib independent of them -->
+  <script src="../../js/sync/Protobuf/Long.min.js"></script>
+  <script src="../../js/sync/Protobuf/ByteBuffer.min.js"></script>
+  <script src="../../js/sync/Protobuf/ProtoBuf.noparse.min.js"></script>
+  <!-- Sync files are not combined into ndn.js file yet -->
+  <script type="text/javascript" src="../../js/sync/chrono-sync2013.js"></script>
+  <script type="text/javascript" src="../../js/sync/digest-tree.js"></script>
+  <script type="text/javascript" src="../../js/sync/sync_state.js"></script>
+  <!-- ChronoChat related javascript -->
+  <script type="text/javascript" src="./chrono-chat-class.js"></script>
+  <script type="text/javascript" src="./test-chrono-chat.js"></script>
+  
+  <script type="text/javascript">
+    var face = new Face();
+
+    function onData(interest, data)
+    {
+      console.log("onData called.");
+      console.log("Host: " + face.connectionInfo.toString());
+      nameStr = escape(data.getName().toUri());
+      document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
+      document.getElementById('content').innerHTML += "<p>Content buffer length: " + data.getContent().size() + "</p>";
+      document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(data);
+    }
+
+    function onTimeout(interest)
+    {
+      console.log("onTimeout called. Re-expressing the interest.");
+      console.log("Host: " + face.connectionInfo.toString());
+      face.expressInterest(interest, onData, onTimeout);
+    }
+
+    function debugInterest() {
+      face.expressInterest(new Name(document.getElementById('interest').value), onData, onTimeout);
+    }
+  </script>
+</head>
+<body>
+
+  <form>
+    Please Enter a chatroom name:<br />
+    <input id="interest" type="text" name="INTEREST" size="50" value="/" />
+  </form>
+
+  <button id="debugFetchBtn" onclick="debugInterest()">Debug fetch content</button>
+  <br>
+  <button id="initiateChatBtn" onclick="initiateChat()">Initiate chat</button>
+
+  <p id="content">Content: <br/></p>
+
+</body>
+</html>

@@ -44,3 +44,5 @@ exports.PolicyManager = require('./js/security/policy/policy-manager.js').Policy
 exports.NoVerifyPolicyManager = require('./js/security/policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-policy-manager.js').SelfVerifyPolicyManager;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
+
+exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
