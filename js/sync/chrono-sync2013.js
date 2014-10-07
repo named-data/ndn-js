@@ -337,7 +337,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
 									}));
 	}
   }
-
+  
   this.onReceivedSyncState(syncStates, isRecovery);
   var updated = this.update(content);
   

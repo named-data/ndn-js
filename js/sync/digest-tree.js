@@ -23,11 +23,7 @@
  * Should use the same sequence of either (seq, ses) or (ses, seq) for all functions 
  * concerning them.
  */
-
-/**
- * For now, KJUR and the referenced protobufjs are both locally installed Node.js packages
- */
-var KJUR = require("jsrsasign");
+var crypto = require("crypto");
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 var DigestTree = function DigestTree()
@@ -40,8 +36,6 @@ exports.DigestTree = DigestTree;
 
 // What is the meaning of a session?
 // DigestTree.Node works with seqno_seq and seqno_session, without protobuf definition,
-// TODO: the corresponding chrono-sync2013 code is still dependent upon protobuf file.
-// How is a DigestTree.Node different from ChronoSync2013.SyncState?
 DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
 {
   // In this context, this should mean DigestTree.Node instead
@@ -116,20 +110,24 @@ function hexBufferToASCString(buffer)
  */
 DigestTree.Node.prototype.recomputeDigest = function()
 {
-  var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  var seqHash = new crypto.createHash('sha256');
   
-  md.updateHex(hexBufferToASCString(this.Int32ToHex(this.seqno_session)));
-  md.updateHex(hexBufferToASCString(this.Int32ToHex(this.seqno_seq)));
-  var digest_seq = md.digest();
+  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_session)));
+  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_seq)));
   
-  md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-  md.updateString(this.dataPrefix);
-  var digest_name = md.digest();
+  var digest_seq = seqHash.digest('hex');
+  //console.log(digest_seq);
   
-  md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
-  md.updateHex(digest_name + digest_seq);
+  var nameHash = new crypto.createHash('sha256');
+  nameHash.update(this.dataPrefix);
+  var digest_name = nameHash.digest('hex');
+  //console.log(digest_name);
+  
+  var hash = new crypto.createHash('sha256');
+  hash.update(digest_name + digest_seq);
 
-  this.digest = md.digest();
+  this.digest = hash.digest('hex');
+  //console.log(this.digest);
 };
 
 // Do the work of string and then sequence number compare
@@ -218,17 +216,15 @@ DigestTree.prototype.getRoot = function()
 
 DigestTree.prototype.recomputeRoot = function()
 {
-  var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "cryptojs"});
+  var md = new crypto.createHash('sha256');
   // The result of updateHex is related with the sequence of participants,
   // I don't think that should be the case.
   for (var i = 0; i < this.digestnode.length; i++) {
-    md.updateHex(this.digestnode[i].digest);
+    md.update(this.digestnode[i].digest);
   }
-  this.root = md.digest();
-  //console.log("update root to: " + this.root);
+  this.root = md.digest('hex');
 };
 
-// Not sure if this ascii representation works yet
 function fromHexChar(c)
 {
   if (c >= '0' && c <= '9')
