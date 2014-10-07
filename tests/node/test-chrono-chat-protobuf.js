@@ -1,4 +1,4 @@
-var ProtoBuf = require("../../js/sync/node_modules/protobufjs");
+var ProtoBuf = require("protobufjs");
 
 var SyncDemo = ProtoBuf.newBuilder().import({
     "package": "SyncDemo",
