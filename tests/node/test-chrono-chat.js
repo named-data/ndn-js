@@ -130,13 +130,8 @@ var KeyChain = require('../..').KeyChain;
 var IdentityManager = require('../..').IdentityManager;
 var SelfVerifyPolicyManager = require('../..').SelfVerifyPolicyManager;
 var KeyType = require('../..').KeyType;
-/* Temporarily require directly until ChronoSync2013 is changed to dynamically load protobufjs.
 var ChronoSync2013 = require('../..').ChronoSync2013;
-*/
-var ChronoSync2013 = require('../../js/sync/chrono-sync2013').ChronoSync2013;
 var UnixTransport = require('../..').UnixTransport;
-
-var ChatMessage = require('./test-chrono-chat-protobuf.js').ChatMessage;
 
 var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certificateName)
 {
@@ -160,7 +155,8 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   session = parseInt(session/1000);
   
   this.usrname = this.screen_name + session;
-  
+  this.ChatMessage = require('./test-chrono-chat-protobuf.js').ChatMessage;
+
   if (this.screen_name == "" || this.chatroom == "") {
     console.log("input usrname and chatroom");
   }
@@ -188,9 +184,9 @@ ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPref
   for (var i = this.msgcache.length - 1 ; i >= 0; i--) {
     if (this.msgcache[i].seqno == seq) {
       if(this.msgcache[i].msgtype != 'CHAT')
-        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, timestamp:parseInt(this.msgcache[i].time/1000)});
+        content = new this.ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, timestamp:parseInt(this.msgcache[i].time/1000)});
       else
-        content = new ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, data:this.msgcache[i].msg, timestamp:parseInt(this.msgcache[i].time/1000)});
+        content = new this.ChatMessage({from:this.screen_name, to:this.chatroom, type:this.msgcache[i].msgtype, data:this.msgcache[i].msg, timestamp:parseInt(this.msgcache[i].time/1000)});
       break;
     }
   }
@@ -251,33 +247,33 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
   var seqlist = [];
   
   for (var j = 0; j < syncStates.length; j++) {
-	var name_component = syncStates[j].name.split('/');
+	var name_component = syncStates[j].getDataPrefix().split('/');
 	var name_t = name_component[name_component.length - 1];
-	var session = syncStates[j].seqno.session;
+	var session = syncStates[j].getSessionNo();
 	
 	// Note: application data prefix gets stored in digest tree, 
 	// it does not make sense to compare it against screen_name.
 	// Potentially same problem in ndn-cpp's test.
-	if (this.chat_prefix.toUri() != syncStates[j].name) {
-	  var index_n = sendlist.indexOf(syncStates[j].name);
+	if (this.chat_prefix.toUri() != syncStates[j].getDataPrefix()) {
+	  var index_n = sendlist.indexOf(syncStates[j].getDataPrefix());
 	  
 	  if(index_n != -1) {
 		// With current code, this branch will not get executed.
 		console.log("*********** Prove me wrong ***********");
 		sessionlist[index_n] = session;
-		seqlist[index_n] = syncStates[j].seqno.seq;
+		seqlist[index_n] = syncStates[j].getSequenceNo();
 	  }
 	  else {
-		var index_n = this.sync.digest_tree.find(syncStates[j].name, session);
+		var index_n = this.sync.digest_tree.find(syncStates[j].getDataPrefix(), session);
 		var startSeq = 0;
-		var stopSeq = syncStates[j].seqno.seq; 
+		var stopSeq = syncStates[j].getSequenceNo(); 
 		
 		if (index_n != -1) {
 		  startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
 		}
 		
 		for (var k = startSeq; k < stopSeq + 1; k ++) {
-			sendlist.push(syncStates[j].name);
+			sendlist.push(syncStates[j].getDataPrefix());
 			sessionlist.push(session);
 			seqlist.push(k);
 		}
@@ -303,7 +299,7 @@ ChronoChat.prototype.onData = function(inst, co)
 {
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
-  var content = ChatMessage.decode(arr.buffer);
+  var content = this.ChatMessage.decode(arr.buffer);
   
   var temp = (new Date()).getTime();
   if (temp - content.timestamp * 1000 < 120000) {

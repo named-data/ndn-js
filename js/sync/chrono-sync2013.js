@@ -25,12 +25,6 @@ var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 
-// TODO: To use this, we require a SyncStateMsg declaration, 
-// which exists in protobuf-js definition file.
-
-var SyncStateMsg = require('./sync-state.js').SyncStateMsg;
-var SyncState = require('./sync-state.js').SyncState;
-
 /**
  * Create a new ChronoSync2013 to communicate using the given face. Initialize
  * the digest log with a digest of "00" and and empty content. Register the
@@ -97,6 +91,9 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   interest.setInterestLifetimeMilliseconds(1000);
   interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
   
+  this.SyncStateMsg = require('./sync-state.js').SyncStateMsg;
+  this.SyncState = require('./sync-state.js').SyncState;
+  
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
 
@@ -123,14 +120,14 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
-  var content = [new SyncState({ name:this.applicationDataPrefixUri, 
+  var content = [new this.SyncState({ name:this.applicationDataPrefixUri, 
                                  type:'UPDATE', 
                                  seqno:{
                                    seq:this.usrseq,
                                    session:this.session
                                   }
                                 })];
-  var content_t = new SyncStateMsg({ss:content});
+  var content_t = new this.SyncStateMsg({ss:content});
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
   
   if (!this.update(content))
@@ -202,6 +199,49 @@ ChronoSync2013.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {
   return (this.timeoutTimeMilliseconds >= 0.0 && nowMilliseconds >= this.timeoutTimeMilliseconds);
 };
+
+// SyncState class
+/**
+ * A SyncState holds the values of a sync state message which is passed to the
+ * onReceivedSyncState callback which was given to the ChronoSyn2013
+ * constructor. Note: this has the same info as the Protobuf class
+ * Sync::SyncState, but we make a separate class so that we don't need the
+ * Protobuf definition in the ChronoSync API.
+ */
+ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
+{
+  this.dataPrefixUri_ = dataPrefixUri;
+  this.sessionNo_ = sessionNo;
+  this.sequenceNo_ = sequenceNo;
+};
+
+/**
+ * Get the application data prefix for this sync state message.
+ * @return The application data prefix as a Name URI string.
+ */
+ChronoSync2013.SyncState.prototype.getDataPrefix = function() 
+{
+  return this.dataPrefixUri_; 
+}
+
+/**
+ * Get the session number associated with the application data prefix for
+ * this sync state message.
+ * @return The session number.
+ */
+ChronoSync2013.SyncState.prototype.getSessionNo = function()
+{ 
+  return this.sessionNo_; 
+}
+
+/**
+ * Get the sequence number for this sync state message.
+ * @return The sequence number.
+ */
+ChronoSync2013.SyncState.prototype.getSequenceNo = function()
+{ 
+  return this.sequenceNo_; 
+}
 
 // Private methods for ChronoSync2013 class, 
 /**
@@ -305,7 +345,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
 {
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
-  var content_t = SyncStateMsg.decode(arr.buffer);
+  var content_t = this.SyncStateMsg.decode(arr.buffer);
   var content = content_t.ss;
   
   var isRecovery = false;
@@ -328,16 +368,12 @@ ChronoSync2013.prototype.onData = function(inst, co)
 
   for (var i = 0; i < content.length; i++) {
 	if (content[i].type == 0) {
-	  syncStates.push(new SyncState({ name:content[i].name,
-									  type:'UPDATE',
-									  seqno: {
-										seq:content[i].seqno.seq,
-										session:content[i].seqno.session
-									  }
-									}));
+	  syncStates.push(new ChronoSync2013.SyncState
+	    (content[i].name, content[i].seqno.session, content[i].seqno.seq));
 	}
   }
   
+  // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
   this.onReceivedSyncState(syncStates, isRecovery);
   var updated = this.update(content);
   
@@ -361,7 +397,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
     
   this.usrseq++;
   this.onInitialized();
-  var content = [new SyncState({ name:this.applicationDataPrefixUri,
+  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                  type:'UPDATE',
                                  seqno: {
                                    seq:this.usrseq,
@@ -383,7 +419,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     var content = [];
     
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
-      content[i] = new SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
+      content[i] = new this.SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
                                    type:'UPDATE',
                                    seqno:{
                                      seq:this.digest_tree.digestnode[i].getSequenceNo(),
@@ -393,7 +429,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     }
     
     if (content.length != 0) {
-      var content_t = new SyncStateMsg({ss:content});
+      var content_t = new this.SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
       var co = new Data(inst.getName());
       co.setContent(new Blob(str, false));
@@ -440,7 +476,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
   }
   
   for(var i = 0; i < data_name.length; i++) {
-    content[i] = new SyncState({ name:data_name[i],
+    content[i] = new this.SyncState({ name:data_name[i],
                                  type:'UPDATE',
                                  seqno: {
                                    seq:data_seq[i],
@@ -449,7 +485,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
                                });
   }
   if (content.length != 0) {
-    var content_t = new SyncStateMsg({ss:content});
+    var content_t = new this.SyncStateMsg({ss:content});
     var str = new Uint8Array(content_t.toArrayBuffer());
     var n = new Name(this.prefix)
     n.append(this.chatroom).append(syncdigest_t);
@@ -522,7 +558,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
       //if the user was an old comer, after add the static log he need to increase his seqno by 1
-      var content_t = [new SyncState({ name:this.applicationDataPrefixUri,
+      var content_t = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                        type:'UPDATE',
                                        seqno: {
                                          seq:content[i].seqno.seq + 1,
@@ -540,7 +576,7 @@ ChronoSync2013.prototype.initialOndata = function(content)
   var content_t;
   if (this.usrseq >= 0) {
     //send the data packet with new seqno back
-    content_t = new SyncState({ name:this.applicationDataPrefixUri,
+    content_t = new this.SyncState({ name:this.applicationDataPrefixUri,
                                    type:'UPDATE',
                                    seqno: { 
                                      seq:this.usrseq,
@@ -549,20 +585,20 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                  });
   }
   else
-    content_t = new SyncState({ name:this.applicationDataPrefixUri,
+    content_t = new this.SyncState({ name:this.applicationDataPrefixUri,
                                    type:'UPDATE',
                                    seqno: {
                                      seq:0,
                                      session:this.session
                                    }
                                  });
-  var content_tt = new SyncStateMsg({ss:content_t});
+  var content_tt = new this.SyncStateMsg({ss:content_t});
   this.broadcastSyncState(digest_t, content_tt);
   
   if (this.digest_tree.find(this.applicationDataPrefixUri, this.session) == -1) {
     //the user haven't put himself in the digest tree
     this.usrseq++;
-    var content = [new SyncState({ name:this.applicationDataPrefixUri,
+    var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                    type:'UPDATE',
                                    seqno: { 
                                      seq:this.usrseq,
