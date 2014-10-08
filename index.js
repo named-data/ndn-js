@@ -45,6 +45,4 @@ exports.NoVerifyPolicyManager = require('./js/security/policy/no-verify-policy-m
 exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-policy-manager.js').SelfVerifyPolicyManager;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
 
-/* Temporarily remove until ChronoSync2013 is changed to dynamically load protobufjs.
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
-*/
