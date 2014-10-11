@@ -138,6 +138,7 @@ DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
   return true;
 };
 
+// Need to confirm this sort works with the insertion in ndn-cpp.
 DigestTree.prototype.sortNodes = function()
 {
   var temp;
