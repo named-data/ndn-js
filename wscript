@@ -6,7 +6,7 @@ APPNAME='ndnjs'
 YUICOMPRESSOR_URL="http://github.com/downloads/yui/yuicompressor/"
 YUICOMPRESSOR_NAME="yuicompressor-2.4.7"
 
-CLOSURE_COMPILER="http://closure-compiler.googlecode.com/files/compiler-20121212.zip"
+CLOSURE_COMPILER="http://dl.google.com/closure-compiler/compiler-20140407.zip"
 
 from waflib import Task, TaskGen, Utils, Logs
 import urllib, subprocess, os, shutil
