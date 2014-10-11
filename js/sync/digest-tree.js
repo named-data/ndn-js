@@ -132,20 +132,12 @@ DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
   else {
     var temp = new DigestTree.Node(dataPrefix, sequenceNo, sessionNo);
     this.digestnode.push(temp);
-    // Insert it to the place where it should go would be faster, though in our case
-    // the difference in time should be minimal
-    this.sortNodes();
+    this.digestnode.sort(this.sortNodes);
   }
   this.recomputeRoot();
   return true;
 };
 
-/**
- * This function bubble-sorts the nodes in digestnode in lexi order.
- * Called every time when there's an update of nodes (or removal of nodes, which does
- * not seem to exist in current design/implementation).
- * This function does exist in the original ChronoChat-JS implementation.
- */
 DigestTree.prototype.sortNodes = function()
 {
   var temp;
@@ -159,6 +151,20 @@ DigestTree.prototype.sortNodes = function()
     }
   }
 };
+
+DigestTree.prototype.sortNodes = function (node1, node2)
+{
+  if (node1.getDataPrefix() == node2.getDataPrefix() && 
+     node1.getSessionNo() == node2.getSessionNo())
+	return 0;
+  
+  if ((node1.getDataPrefix() > node2.getDataPrefix()) || 
+     ((node1.getDataPrefix() == node2.getDataPrefix()) && 
+     (node1.getSessionNo() >node2.getSessionNo())))
+    return 1;
+  else
+    return -1;
+}
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
 {
