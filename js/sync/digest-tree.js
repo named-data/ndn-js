@@ -72,62 +72,34 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
   this.recomputeDigest();
 };
 
-// This works as digest-tree.cpp's int32ToLittleEndian
-DigestTree.Node.prototype.Int32ToHex = function(value) {
-  var result = new Uint8Array(8);
-  for (var i = 0; i < 8; i++) {
-    result[i] = value % 16;
-    value = Math.floor(value / 16);
+// Using Node.JS buffer, as documented here http://nodejs.org/api/buffer.html.
+DigestTree.Node.prototype.Int32ToBuffer = function(value) {
+  var result = new Buffer(4);
+  for (var i = 0; i < 4; i++) {
+	result[i] = value % 256;
+	value = Math.floor(value / 256);
   }
   return result;
 }
 
-// After some experiments, this seems to yield the correct result for hashing
-function bin2String(array) {
-  return String.fromCharCode.apply(String, array);
-}
-
-function hexBufferToASCString(buffer)
-{
-  var result = [];
-  for (var i = 0; i < buffer.length; i++) {
-    if (buffer[i]>=0 && buffer[i]<=9) {
-      result[i] = parseInt(buffer[i]) + 0x30;
-    }
-    else if (buffer[i]>=10 && buffer[i]<=16) {
-      result[i] = parseInt(buffer[i]) + 0x41 - 10;
-    }
-    else {
-      console.log("hex contains illegal number: " + buffer[i]);
-    }
-  }
-  return bin2String(result);
-}
-
-/**
- * TODO: This recompute digest does not yield the same result for seqno_session and seqno_seq as ndn-cpp's recomputeDigest
- * Revising.
- */
 DigestTree.Node.prototype.recomputeDigest = function()
 {
   var seqHash = new crypto.createHash('sha256');
   
-  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_session)));
-  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_seq)));
+  seqHash.update(this.Int32ToBuffer(this.seqno_session));
+  seqHash.update(this.Int32ToBuffer(this.seqno_seq));
   
-  var digest_seq = seqHash.digest('hex');
-  //console.log(digest_seq);
+  var digest_seq = seqHash.digest();
   
   var nameHash = new crypto.createHash('sha256');
   nameHash.update(this.dataPrefix);
-  var digest_name = nameHash.digest('hex');
-  //console.log(digest_name);
+  var digest_name = nameHash.digest();
   
   var hash = new crypto.createHash('sha256');
-  hash.update(digest_name + digest_seq);
+  hash.update(digest_name);
+  hash.update(digest_seq);
 
   this.digest = hash.digest('hex');
-  //console.log(this.digest);
 };
 
 // Do the work of string and then sequence number compare

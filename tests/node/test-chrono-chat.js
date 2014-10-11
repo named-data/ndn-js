@@ -177,7 +177,7 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
 ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
 {
   var content = {};
-  //console.log("*** Chat onInterest: received interest. " + inst.getName().toUri() + " ***");
+  
   // chat_prefix should really be saved as a name, not a URI string.
   var chatPrefixSize = new Name(this.chat_prefix).size();
   var seq = parseInt(inst.getName().get(chatPrefixSize + 1).toEscapedString());
@@ -535,7 +535,7 @@ function initiateChat()
   face.setCommandSigningInfo(keyChain, certificateName);
 
   var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
- 
+  
   // Send random test chat message at a fixed interval
   var num = 0;
   setInterval(
