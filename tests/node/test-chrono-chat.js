@@ -345,7 +345,7 @@ ChronoChat.prototype.onData = function(interest, co)
     else if (content.type == 2) {
       //leave message
       var n = this.roster.indexOf(name + session);
-      if(n != -1 && name != screen_name) {
+      if(n != -1 && name != this.screen_name) {
         this.roster.splice(n,1);
         for(var i = 0; i<this.roster.length; i++) {
           var name_t = this.roster[i].substring(0,this.roster[i].length - 10);
