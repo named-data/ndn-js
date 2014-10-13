@@ -174,13 +174,13 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
  * @param {Transport} The transport
  * @param {uint64_t} registerPrefixId 
  */
-ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
+ChronoChat.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
 {
   var content = {};
-  //console.log("*** Chat onInterest: received interest. " + inst.getName().toUri() + " ***");
+  
   // chat_prefix should really be saved as a name, not a URI string.
   var chatPrefixSize = new Name(this.chat_prefix).size();
-  var seq = parseInt(inst.getName().get(chatPrefixSize + 1).toEscapedString());
+  var seq = parseInt(interest.getName().get(chatPrefixSize + 1).toEscapedString());
   for (var i = this.msgcache.length - 1 ; i >= 0; i--) {
     if (this.msgcache[i].seqno == seq) {
       if(this.msgcache[i].msgtype != 'CHAT')
@@ -193,7 +193,7 @@ ChronoChat.prototype.onInterest = function(prefix, inst, transport, registerPref
   
   if (content.from != null) {
     var str = new Uint8Array(content.toArrayBuffer());
-    var co = new Data(inst.getName());
+    var co = new Data(interest.getName());
     co.setContent(str);
     this.keyChain.sign(co, this.certificateName);
     try {
@@ -228,9 +228,9 @@ ChronoChat.prototype.initial = function()
  * This onData is passed as onData for timeout interest in initial, which means it
  * should not be called under any circumstances.
  */
-ChronoChat.prototype.dummyOnData = function(inst, co)
+ChronoChat.prototype.dummyOnData = function(interest, co)
 {
-  console.log("*** dummyOndata called, name: " + inst.getName().toUri() + " ***");
+  console.log("*** dummyOndata called, name: " + interest.getName().toUri() + " ***");
 };
 
 /**
@@ -292,10 +292,10 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 
 /**
  * Process the incoming data
- * @param {Interest} inst
+ * @param {Interest} interest
  * @param {Data} co
  */
-ChronoChat.prototype.onData = function(inst, co)
+ChronoChat.prototype.onData = function(interest, co)
 {
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
@@ -535,7 +535,7 @@ function initiateChat()
   face.setCommandSigningInfo(keyChain, certificateName);
 
   var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
- 
+  
   // Send random test chat message at a fixed interval
   var num = 0;
   setInterval(

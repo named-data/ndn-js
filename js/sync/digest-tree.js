@@ -72,62 +72,34 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
   this.recomputeDigest();
 };
 
-// This works as digest-tree.cpp's int32ToLittleEndian
-DigestTree.Node.prototype.Int32ToHex = function(value) {
-  var result = new Uint8Array(8);
-  for (var i = 0; i < 8; i++) {
-    result[i] = value % 16;
-    value = Math.floor(value / 16);
+// Using Node.JS buffer, as documented here http://nodejs.org/api/buffer.html.
+DigestTree.Node.prototype.Int32ToBuffer = function(value) {
+  var result = new Buffer(4);
+  for (var i = 0; i < 4; i++) {
+	result[i] = value % 256;
+	value = Math.floor(value / 256);
   }
   return result;
 }
 
-// After some experiments, this seems to yield the correct result for hashing
-function bin2String(array) {
-  return String.fromCharCode.apply(String, array);
-}
-
-function hexBufferToASCString(buffer)
-{
-  var result = [];
-  for (var i = 0; i < buffer.length; i++) {
-    if (buffer[i]>=0 && buffer[i]<=9) {
-      result[i] = parseInt(buffer[i]) + 0x30;
-    }
-    else if (buffer[i]>=10 && buffer[i]<=16) {
-      result[i] = parseInt(buffer[i]) + 0x41 - 10;
-    }
-    else {
-      console.log("hex contains illegal number: " + buffer[i]);
-    }
-  }
-  return bin2String(result);
-}
-
-/**
- * TODO: This recompute digest does not yield the same result for seqno_session and seqno_seq as ndn-cpp's recomputeDigest
- * Revising.
- */
 DigestTree.Node.prototype.recomputeDigest = function()
 {
   var seqHash = new crypto.createHash('sha256');
   
-  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_session)));
-  seqHash.update(hexBufferToASCString(this.Int32ToHex(this.seqno_seq)));
+  seqHash.update(this.Int32ToBuffer(this.seqno_session));
+  seqHash.update(this.Int32ToBuffer(this.seqno_seq));
   
-  var digest_seq = seqHash.digest('hex');
-  //console.log(digest_seq);
+  var digest_seq = seqHash.digest();
   
   var nameHash = new crypto.createHash('sha256');
   nameHash.update(this.dataPrefix);
-  var digest_name = nameHash.digest('hex');
-  //console.log(digest_name);
+  var digest_name = nameHash.digest();
   
   var hash = new crypto.createHash('sha256');
-  hash.update(digest_name + digest_seq);
+  hash.update(digest_name);
+  hash.update(digest_seq);
 
   this.digest = hash.digest('hex');
-  //console.log(this.digest);
 };
 
 // Do the work of string and then sequence number compare
@@ -160,20 +132,13 @@ DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
   else {
     var temp = new DigestTree.Node(dataPrefix, sequenceNo, sessionNo);
     this.digestnode.push(temp);
-    // Insert it to the place where it should go would be faster, though in our case
-    // the difference in time should be minimal
-    this.sortNodes();
+    this.digestnode.sort(this.sortNodes);
   }
   this.recomputeRoot();
   return true;
 };
 
-/**
- * This function bubble-sorts the nodes in digestnode in lexi order.
- * Called every time when there's an update of nodes (or removal of nodes, which does
- * not seem to exist in current design/implementation).
- * This function does exist in the original ChronoChat-JS implementation.
- */
+// Need to confirm this sort works with the insertion in ndn-cpp.
 DigestTree.prototype.sortNodes = function()
 {
   var temp;
@@ -187,6 +152,20 @@ DigestTree.prototype.sortNodes = function()
     }
   }
 };
+
+DigestTree.prototype.sortNodes = function (node1, node2)
+{
+  if (node1.getDataPrefix() == node2.getDataPrefix() && 
+     node1.getSessionNo() == node2.getSessionNo())
+	return 0;
+  
+  if ((node1.getDataPrefix() > node2.getDataPrefix()) || 
+     ((node1.getDataPrefix() == node2.getDataPrefix()) && 
+     (node1.getSessionNo() >node2.getSessionNo())))
+    return 1;
+  else
+    return -1;
+}
 
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
 {

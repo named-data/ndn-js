@@ -302,21 +302,19 @@ ChronoSync2013.prototype.logfind = function(digest)
  * satisfy the interest, add it to the pendingInterestTable so that a future
  * call to contentCacheAdd may satisfy it.
  */
-ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, registerPrefixId)
+ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
 {
   //search if the digest is already exist in the digest log
   
-  var syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
-  if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
-    syncdigest = inst.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
+  var syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
+  if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
+    syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
   }
-  if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
-    //Recovery interest or new comer interest
-    //console.log("****** Parameter passed to processRecoveryInst: " + syncdigest + " ******");
-    this.processRecoveryInst(inst, syncdigest, transport);
+  if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
+    this.processRecoveryInst(interest, syncdigest, transport);
   }
   else {
-    this.pendingInterestTable.push(new ChronoSync2013.PendingInterest(inst, transport));
+    this.pendingInterestTable.push(new ChronoSync2013.PendingInterest(interest, transport));
     
     if (syncdigest != this.digest_tree.getRoot()) {
       var index = this.logfind(syncdigest);
@@ -341,7 +339,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, inst, transport, register
  * @param {Interest}
  * @param {Data}
  */
-ChronoSync2013.prototype.onData = function(inst, co)
+ChronoSync2013.prototype.onData = function(interest, co)
 {
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
@@ -358,7 +356,7 @@ ChronoSync2013.prototype.onData = function(inst, co)
     // Note: if, for some reasons, this update did not update anything, 
     // then the same message gets fetched again, and the same broadcast interest goes out again.
     // It has the potential of creating loop, which existed in my tests.
-    if (inst.getName().size() == this.applicationBroadcastPrefix.size() + 2)
+    if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
       isRecovery = false;
     else
       isRecovery = true;
@@ -413,7 +411,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));  
 };
 
-ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transport)
+ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, transport)
 {
   if (this.logfind(syncdigest) != -1) {
     var content = [];
@@ -431,7 +429,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(inst, syncdigest, transp
     if (content.length != 0) {
       var content_t = new this.SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
-      var co = new Data(inst.getName());
+      var co = new Data(interest.getName());
       co.setContent(new Blob(str, false));
       this.keyChain.sign(co, this.certificateName);
       try {
@@ -543,10 +541,10 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
   var component = interest.getName().get(4).toEscapedString();
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
-    var interest = new Interest(n);
+    var newInterest = new Interest(n);
     
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+    this.face.expressInterest(newInterest, this.onData.bind(this), this.syncTimeout.bind(this));
   }           
 };
 
