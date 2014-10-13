@@ -199,7 +199,7 @@ DigestTree.prototype.recomputeRoot = function()
   // The result of updateHex is related with the sequence of participants,
   // I don't think that should be the case.
   for (var i = 0; i < this.digestnode.length; i++) {
-    md.update(this.digestnode[i].digest);
+    md.update(new Buffer(this.digestnode[i].digest, 'hex'));
   }
   this.root = md.digest('hex');
 };
