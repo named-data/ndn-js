@@ -47,6 +47,29 @@ BinaryXmlWireFormat.instance = null;
 
 /**
  * Encode interest as Binary XML and return the encoding.
+ * @param {Name} interest The Name to encode.
+ * @returns {Blobl} A Blob containing the encoding.
+ */
+BinaryXmlWireFormat.prototype.encodeName = function(name)
+{
+  var encoder = new BinaryXMLEncoder();
+  name.to_ndnb(encoder);
+  return new Blob(encoder.getReducedOstream(), false);
+};
+
+/**
+ * Decode input as a Binary XML name and set the fields of the Name object.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+BinaryXmlWireFormat.prototype.decodeName = function(name, input)
+{
+  var decoder = new BinaryXMLDecoder(input);
+  name.from_ndnb(decoder);
+};
+
+/**
+ * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
  * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
@@ -81,7 +104,7 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new BinaryXMLDecoder(input);
-  BinaryXmlWireFormat.decodeInterest(interest, decoder);
+  return BinaryXmlWireFormat.decodeInterest(interest, decoder);
 };
 
 /**

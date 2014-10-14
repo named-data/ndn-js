@@ -51,6 +51,29 @@ exports.Tlv0_1WireFormat = Tlv0_1WireFormat;
 Tlv0_1WireFormat.instance = null;
 
 /**
+ * Encode interest as NDN-TLV and return the encoding.
+ * @param {Name} interest The Name to encode.
+ * @returns {Blobl} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeName = function(name)
+{
+  var encoder = new TlvEncoder();
+  Tlv0_1WireFormat.encodeName(name, encoder);
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as a NDN-TLV name and set the fields of the Name object.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1WireFormat.prototype.decodeName = function(name, input)
+{
+  var decoder = new TlvDecoder(input);
+  Tlv0_1WireFormat.decodeName(name, decoder);
+};
+
+/**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
  * @returns {object} An associative array with fields

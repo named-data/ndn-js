@@ -27,6 +27,29 @@ var WireFormat = function WireFormat() {
 exports.WireFormat = WireFormat;
 
 /**
+ * Encode name and return the encoding.  Your derived class should override.
+ * @param {Name} name The Name to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeName = function(name)
+{
+  throw new Error("encodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a name and set the fields of the Name object.
+ * Your derived class should override.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeName = function(name, input)
+{
+  throw new Error("decodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
  * @returns {object} An associative array with fields
