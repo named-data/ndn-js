@@ -46,6 +46,8 @@ var TcpTransport = function TcpTransport()
 TcpTransport.prototype = new Transport();
 TcpTransport.prototype.name = "TcpTransport";
 
+TcpTransport.importFace = function(){};
+
 exports.TcpTransport = TcpTransport;
 
 /**
