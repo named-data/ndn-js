@@ -6897,9 +6897,7 @@ ChangeCounter.prototype.checkChanged = function()
  * A DataUtils has static methods for converting data.
  * @constructor
  */
-var DataUtils = function DataUtils()
-{
-};
+var DataUtils = {};
 
 exports.DataUtils = DataUtils;
 
@@ -10224,7 +10222,8 @@ var MemoryContentCache = function MemoryContentCache
   this.nextCleanupTime = new Date().getTime() + cleanupIntervalMilliseconds;
 
   this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri().
- *                                        The value is an OnInterest function. */
+                                          The value is an OnInterest function. */
+  this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
   //StaleTimeContent::Compare contentCompare_;
@@ -10252,12 +10251,29 @@ MemoryContentCache.prototype.registerPrefix = function
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var thisMemoryContentCache = this;
-  this.face.registerPrefix
+  var registeredPrefixId = this.face.registerPrefix
     (prefix,
      function(prefix, interest, transport)
        { thisMemoryContentCache.onInterest(prefix, interest, transport); },
      onRegisterFailed, flags, wireFormat);
+  this.registeredPrefixIdList.push(registeredPrefixId);
 };
+
+/**
+ * Call Face.removeRegisteredPrefix for all the prefixes given to the
+ * registerPrefix method on this MemoryContentCache object so that it will not
+ * receive interests any more. You can call this if you want to "shut down"
+ * this MemoryContentCache while your application is still running.
+ */
+MemoryContentCache.prototype.unregisterAll = function()
+{
+  for (var i = 0; i < this.registeredPrefixIdList.length; ++i)
+    this.face.removeRegisteredPrefix(this.registeredPrefixIdList[i]);
+  this.registeredPrefixIdList = [];
+
+  // Also clear each onDataNotFoundForPrefix given to registerPrefix.
+  this.onDataNotFoundForPrefix = {};
+}
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
@@ -10502,6 +10518,7 @@ Transport.ConnectionInfo = function TransportConnectionInfo()
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 var Transport = require('./transport.js').Transport;
+var Face;
 
 /**
  * @constructor
@@ -10528,6 +10545,10 @@ var WebSocketTransport = function WebSocketTransport()
 
 WebSocketTransport.prototype = new Transport();
 WebSocketTransport.prototype.name = "WebSocketTransport";
+
+WebSocketTransport.importFace = function(face){
+  Face = face;
+};
 
 exports.WebSocketTransport = WebSocketTransport;
 
@@ -18874,6 +18895,8 @@ Face.UNOPEN = 0;  // the Face is created but not opened yet
 Face.OPEN_REQUESTED = 1;  // requested to connect but onopen is not called.
 Face.OPENED = 2;  // connection to the forwarder opened
 Face.CLOSED = 3;  // connection to the forwarder closed
+
+TcpTransport.importFace(Face);
 
 /**
  * If the forwarder's Unix socket file path exists, then return the file path.
