@@ -1,10 +1,11 @@
-Interim changes since NDN-JS v0.5 (2014-10-13)
+Interim changes since NDN-JS v0.5 (2014-10-14)
 ----------------------------------------------
 
 Changes
 * In MetaInfo, added get/setFinalBlockId (replaces the deprecated get/setFinalBlockID).
 * In KeyChain, added verifyInterest.
 * In MemoryContentCache, added unregisterAll.
+* In Name, added wireEncode and wireDecode.
 * Added class sync/ChronoSync2013. See http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html
 * In tests/node, added test-chrono-chat.
 * In tests/node, added test-encode-decode-interest including sign/verify.

@@ -9754,6 +9754,29 @@ var WireFormat = function WireFormat() {
 exports.WireFormat = WireFormat;
 
 /**
+ * Encode name and return the encoding.  Your derived class should override.
+ * @param {Name} name The Name to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeName = function(name)
+{
+  throw new Error("encodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a name and set the fields of the Name object.
+ * Your derived class should override.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeName = function(name, input)
+{
+  throw new Error("decodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
  * @returns {object} An associative array with fields
@@ -11389,14 +11412,14 @@ Name.prototype.set = function(uri)
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = decoder.getOffset();
+  var signedPortionBeginOffset = decoder.offset;
   // In case there are no components, set signedPortionEndOffset arbitrarily.
   var signedPortionEndOffset = signedPortionBeginOffset;
 
   this.components = [];
 
   while (decoder.peekDTag(NDNProtocolDTags.Component)) {
-    signedPortionEndOffset = decoder.getOffset();
+    signedPortionEndOffset = decoder.offset;
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
   }
 
@@ -11711,6 +11734,33 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Encode this Name for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+Name.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeName(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Name.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Name.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeName(this, decodeBuffer);
+};
+
+/**
  * Compare this to the other Name using NDN canonical ordering.  If the first 
  * components of each name are not equal, this returns -1 if the first comes 
  * before the second using the NDN canonical ordering for name components, or 1 
@@ -11927,8 +11977,9 @@ Name.prototype.getChangeCount = function()
   return this.changeCount;
 };
 
-// Put this require at the bottom to avoid circular references.
+// Put these requires at the bottom to avoid circular references.
 var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 /**
  * This class represents Key Objects
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -17309,6 +17360,29 @@ BinaryXmlWireFormat.instance = null;
 
 /**
  * Encode interest as Binary XML and return the encoding.
+ * @param {Name} interest The Name to encode.
+ * @returns {Blobl} A Blob containing the encoding.
+ */
+BinaryXmlWireFormat.prototype.encodeName = function(name)
+{
+  var encoder = new BinaryXMLEncoder();
+  name.to_ndnb(encoder);
+  return new Blob(encoder.getReducedOstream(), false);
+};
+
+/**
+ * Decode input as a Binary XML name and set the fields of the Name object.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+BinaryXmlWireFormat.prototype.decodeName = function(name, input)
+{
+  var decoder = new BinaryXMLDecoder(input);
+  name.from_ndnb(decoder);
+};
+
+/**
+ * Encode interest as Binary XML and return the encoding.
  * @param {Interest} interest The Interest to encode.
  * @returns {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
@@ -17343,7 +17417,7 @@ BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
 BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new BinaryXMLDecoder(input);
-  BinaryXmlWireFormat.decodeInterest(interest, decoder);
+  return BinaryXmlWireFormat.decodeInterest(interest, decoder);
 };
 
 /**
@@ -17691,6 +17765,29 @@ exports.Tlv0_1WireFormat = Tlv0_1WireFormat;
 
 // Default object.
 Tlv0_1WireFormat.instance = null;
+
+/**
+ * Encode interest as NDN-TLV and return the encoding.
+ * @param {Name} interest The Name to encode.
+ * @returns {Blobl} A Blob containing the encoding.
+ */
+Tlv0_1WireFormat.prototype.encodeName = function(name)
+{
+  var encoder = new TlvEncoder();
+  Tlv0_1WireFormat.encodeName(name, encoder);
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as a NDN-TLV name and set the fields of the Name object.
+ * @param {Name} name The Name object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1WireFormat.prototype.decodeName = function(name, input)
+{
+  var decoder = new TlvDecoder(input);
+  Tlv0_1WireFormat.decodeName(name, decoder);
+};
 
 /**
  * Encode the interest using NDN-TLV and return a Buffer.

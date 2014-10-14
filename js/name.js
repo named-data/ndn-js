@@ -357,14 +357,14 @@ Name.prototype.set = function(uri)
 Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = decoder.getOffset();
+  var signedPortionBeginOffset = decoder.offset;
   // In case there are no components, set signedPortionEndOffset arbitrarily.
   var signedPortionEndOffset = signedPortionBeginOffset;
 
   this.components = [];
 
   while (decoder.peekDTag(NDNProtocolDTags.Component)) {
-    signedPortionEndOffset = decoder.getOffset();
+    signedPortionEndOffset = decoder.offset;
     this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
   }
 
@@ -679,6 +679,33 @@ Name.prototype.indexOfFileName = function()
 };
 
 /**
+ * Encode this Name for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+Name.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeName(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this Name.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Name.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeName(this, decodeBuffer);
+};
+
+/**
  * Compare this to the other Name using NDN canonical ordering.  If the first 
  * components of each name are not equal, this returns -1 if the first comes 
  * before the second using the NDN canonical ordering for name components, or 1 
@@ -895,5 +922,6 @@ Name.prototype.getChangeCount = function()
   return this.changeCount;
 };
 
-// Put this require at the bottom to avoid circular references.
+// Put these requires at the bottom to avoid circular references.
 var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
