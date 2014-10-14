@@ -10,11 +10,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Name = require('../name.js').Name;
@@ -45,7 +45,8 @@ var MemoryContentCache = function MemoryContentCache
   this.nextCleanupTime = new Date().getTime() + cleanupIntervalMilliseconds;
 
   this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri().
- *                                        The value is an OnInterest function. */
+                                          The value is an OnInterest function. */
+  this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
   //StaleTimeContent::Compare contentCompare_;
@@ -73,12 +74,29 @@ MemoryContentCache.prototype.registerPrefix = function
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var thisMemoryContentCache = this;
-  this.face.registerPrefix
+  var registeredPrefixId = this.face.registerPrefix
     (prefix,
      function(prefix, interest, transport)
        { thisMemoryContentCache.onInterest(prefix, interest, transport); },
      onRegisterFailed, flags, wireFormat);
+  this.registeredPrefixIdList.push(registeredPrefixId);
 };
+
+/**
+ * Call Face.removeRegisteredPrefix for all the prefixes given to the
+ * registerPrefix method on this MemoryContentCache object so that it will not
+ * receive interests any more. You can call this if you want to "shut down"
+ * this MemoryContentCache while your application is still running.
+ */
+MemoryContentCache.prototype.unregisterAll = function()
+{
+  for (var i = 0; i < this.registeredPrefixIdList.length; ++i)
+    this.face.removeRegisteredPrefix(this.registeredPrefixIdList[i]);
+  this.registeredPrefixIdList = [];
+
+  // Also clear each onDataNotFoundForPrefix given to registerPrefix.
+  this.onDataNotFoundForPrefix = {};
+}
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
@@ -260,7 +278,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} true if this interest is stale, otherwise false.
+ * @returns {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {

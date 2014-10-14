@@ -12,11 +12,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
 -->
 <html xmlns = "http://www.w3.org/1999/xhtml">
 <meta charset="UTF-8">
@@ -114,8 +114,8 @@
         }
 
         var finalSegmentNumber = null;
-        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockID().getValue().size() > 0)
-            finalSegmentNumber = data.getMetaInfo().getFinalBlockID().toSegment();
+        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0)
+            finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
 
         if (finalSegmentNumber == null || segmentNumber != finalSegmentNumber) {
             // Make a name for the next segment and get it.

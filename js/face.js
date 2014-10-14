@@ -11,11 +11,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var crypto = require('crypto');
@@ -26,6 +26,7 @@ var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
@@ -169,6 +170,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandKeyChain = null;
   this.commandCertificateName = new Name();
   this.commandInterestGenerator = new CommandInterestGenerator();
+  this.timeoutPrefix = new Name("/local/timeout");
 };
 
 exports.Face = Face;
@@ -434,6 +436,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
   // There are several overloaded versions of expressInterest, each shown inline below.
 
+  var interest;
   // expressInterest(Name name, Closure closure);                      // deprecated
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
@@ -457,7 +460,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     return this.expressInterestWithClosure(interest, arg2);
   }
 
-  var interest;
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
@@ -647,7 +649,9 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
     }
   }
 
-  this.transport.send(binaryInterest.buf());
+  // Special case: For timeoutPrefix we don't actually send the interest.
+  if (!this.timeoutPrefix.match(interest.getName()))
+    this.transport.send(binaryInterest.buf());
 };
 
 /**

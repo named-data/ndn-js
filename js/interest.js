@@ -12,14 +12,15 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Blob = require('./util/blob.js').Blob;
+var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
@@ -84,6 +85,8 @@ var Interest = function Interest
       // Copy and make sure it is a Buffer.
       this.nonce = new Buffer(nonce);
   }
+
+  this.wireEncoding = new SignedBlob();
 };
 
 exports.Interest = Interest;
@@ -258,8 +261,9 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 
 Interest.prototype.setName = function(name)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
@@ -267,16 +271,18 @@ Interest.prototype.setName = function(name)
 
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.minSuffixComponents = minSuffixComponents;
 };
 
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.maxSuffixComponents = maxSuffixComponents;
 };
@@ -289,8 +295,9 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
@@ -298,8 +305,9 @@ Interest.prototype.setExclude = function(exclude)
 
 Interest.prototype.setChildSelector = function(childSelector)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.childSelector = childSelector;
 };
@@ -309,8 +317,9 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.answerOriginKind = answerOriginKind;
 };
@@ -321,8 +330,9 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   if (this.answerOriginKind == null || this.answerOriginKind < 0) {
     // It is is already the default where MustBeFresh is true.
@@ -342,16 +352,18 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 
 Interest.prototype.setScope = function(scope)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.scope = scope;
 };
 
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
-  // The object has changed, so the nonce is invalid.
+  // The object has changed, so the nonce and wireEncoding are invalid.
   this.nonce = null;
+  this.wireEncoding = new SignedBlob();
 
   this.interestLifetime = interestLifetimeMilliseconds;
 };
@@ -362,6 +374,9 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+
   if (nonce) {
     if (typeof nonce === 'object' && nonce instanceof Blob)
       this.nonce = nonce.buf();
@@ -415,13 +430,17 @@ Interest.prototype.toUri = function()
  * Encode this Interest for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeInterest(this);
-  return result.encoding;
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  this.wireEncoding = new SignedBlob
+    (result.encoding, result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
+  return this.wireEncoding;
 };
 
 /**
@@ -436,7 +455,13 @@ Interest.prototype.wireDecode = function(input, wireFormat)
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
-  wireFormat.decodeInterest(this, decodeBuffer);
+  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  // In the Blob constructor, set copy true, but if input is already a Blob, it
+  //   won't copy.
+  this.wireEncoding = new SignedBlob
+    (new Blob(input, true), result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom

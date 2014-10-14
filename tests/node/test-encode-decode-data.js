@@ -10,11 +10,11 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU General Public License is in the file COPYING.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var Data = require('../..').Data;
@@ -233,9 +233,9 @@ function dumpData(data)
   console.log("metaInfo.freshnessPeriod (milliseconds): " +
     (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
       "" + data.getMetaInfo().getFreshnessPeriod() : "<none>"));
-  console.log("metaInfo.finalBlockID: " +
-    (data.getMetaInfo().getFinalBlockID().getValue().size() > 0 ?
-     data.getMetaInfo().getFinalBlockID().getValue().toHex() : "<none>"));
+  console.log("metaInfo.finalBlockId: " +
+    (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+     data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
 
   var signature = data.getSignature();
   if (signature instanceof Sha256WithRsaSignature) {
@@ -282,7 +282,7 @@ function main()
   var freshData = new Data(new Name("/ndn/abc"));
   freshData.setContent(new Blob("SUCCESS!"));
   freshData.getMetaInfo().setFreshnessPeriod(5000);
-  freshData.getMetaInfo().setFinalBlockID(new Name("/%00%09").get(0));
+  freshData.getMetaInfo().setFinalBlockId(new Name("/%00%09").get(0));
 
   var identityStorage = new MemoryIdentityStorage();
   var privateKeyStorage = new MemoryPrivateKeyStorage();

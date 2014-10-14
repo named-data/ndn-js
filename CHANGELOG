@@ -1,3 +1,21 @@
+Interim changes since NDN-JS v0.5 (2014-10-13)
+----------------------------------------------
+
+Changes
+* In MetaInfo, added get/setFinalBlockId (replaces the deprecated get/setFinalBlockID).
+* In KeyChain, added verifyInterest.
+* In MemoryContentCache, added unregisterAll.
+* Added class sync/ChronoSync2013. See http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html
+* In tests/node, added test-chrono-chat.
+* In tests/node, added test-encode-decode-interest including sign/verify.
+* In unit tests, added test-name-conventions.
+
+Deprecated
+* In MetaInfo, deprecated get/setFinalBlockID. Use get/setFinalBlockId.
+
+Bug fixes
+* http://redmine.named-data.net/issues/1986 TLV encode/decode of large nonNegativeInteger.
+
 NDN-JS v0.5 (2014-08-27)
 ------------------------
 

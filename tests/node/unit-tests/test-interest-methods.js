@@ -1,22 +1,22 @@
-/**                                                                                                            
- * Copyright (C) 2014 Regents of the University of California.                                                 
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>                                                              
- * From PyNDN unit-tests by Adeola Bannis.                                                                    
- *                                                                                                             
- * This program is free software: you can redistribute it and/or modify                                        
- * it under the terms of the GNU Lesser General Public License as published by                                 
- * the Free Software Foundation, either version 3 of the License, or                                           
- * (at your option) any later version, with the additional exemption that                                      
- * compiling, linking, and/or using OpenSSL is allowed.                                                        
- *                                                                                                             
- * This program is distributed in the hope that it will be useful,                                             
- * but WITHOUT ANY WARRANTY; without even the implied warranty of                                              
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                               
- * GNU General Public License for more details.                                                                
- *                                                                                                             
- * You should have received a copy of the GNU General Public License                                           
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.                                       
- * A copy of the GNU General Public License is in the file COPYING.                                            
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From PyNDN unit-tests by Adeola Bannis.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version, with the additional exemption that
+ * compiling, linking, and/or using OpenSSL is allowed.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var assert = require("assert");
@@ -96,7 +96,7 @@ function dumpInterest(interest)
   result.push(dump("mustBeFresh:", interest.getMustBeFresh()));
   result.push(dump("nonce:", interest.getNonce().size() == 0 ?
     "<none>" : interest.getNonce().toHex()));
-  result.push(dump("scope:", interest.getScope() == null ? 
+  result.push(dump("scope:", interest.getScope() == null ?
     "<none>" : interest.getScope()));
   result.push(dump("lifetimeMilliseconds:",
     interest.getInterestLifetimeMilliseconds() == null ?

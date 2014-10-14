@@ -16,6 +16,7 @@ While the combined file ndn.js is useful for debugging, a more efficient way to 
 is to used the combined, compressed library build/ndn.min.js.
 While we try to keep a built version in that directory for convenience, it
 may fall out of sync with the library, so we recommend building it as follows if possible.
+To build ndn.min.js, Java must be installed.
 
 To create a combined and compressed versions of NDN-JS scripts:
 
@@ -50,7 +51,8 @@ Tools > Add-ons.  In the "gear" or "wrench" menu, click Install Add-on From File
 ndn-protocol.xpi.  (In Firefox for Android, type file: in the address bar and click the
 downloaded ndn-protocol.xpi.)  Restart Firefox.
 
-If you want to build ndn-protocol.xpi, first build the compressed version of NDN.js
+If you want to build ndn-protocol.xpi, first build ndn.min.js, the compressed version of NDN.js.
+To build ndn.min.js, Java must be installed.
 
     ./waf configure
     ./waf

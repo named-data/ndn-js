@@ -1,22 +1,22 @@
-/**                                                                                                            
- * Copyright (C) 2014 Regents of the University of California.                                                 
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>                                                              
- * From PyNDN unit-tests by Adeola Bannis.                                                                    
- *                                                                                                             
- * This program is free software: you can redistribute it and/or modify                                        
- * it under the terms of the GNU Lesser General Public License as published by                                 
- * the Free Software Foundation, either version 3 of the License, or                                           
- * (at your option) any later version, with the additional exemption that                                      
- * compiling, linking, and/or using OpenSSL is allowed.                                                        
- *                                                                                                             
- * This program is distributed in the hope that it will be useful,                                             
- * but WITHOUT ANY WARRANTY; without even the implied warranty of                                              
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                               
- * GNU General Public License for more details.                                                                
- *                                                                                                             
- * You should have received a copy of the GNU General Public License                                           
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.                                       
- * A copy of the GNU General Public License is in the file COPYING.                                            
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From PyNDN unit-tests by Adeola Bannis.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version, with the additional exemption that
+ * compiling, linking, and/or using OpenSSL is allowed.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
 var assert = require("assert");
@@ -25,6 +25,16 @@ var Blob = require('../../..').Blob;
 
 var expectedURI;
 var comp2;
+
+describe('TestNameComponentMethods', function() {
+  it('Unicode', function() {
+    var comp1 = new Name.Component("entr\u00E9e");
+    var expected = "entr%C3%A9e";
+    assert.equal(comp1.toEscapedString(), expected, "Unicode URI not decoded correctly");
+  });
+
+  // Many more component methods to be tested!
+});
 
 describe('TestNameMethods', function() {
   beforeEach(function() {
@@ -50,14 +60,6 @@ describe('TestNameMethods', function() {
     assert.ok(comp2.equals(component2), 'Component at index 2 is incorrect');
   });
 
-  it('Prefix', function() {
-    var name = new Name(expectedURI);
-    var name2 = name.getPrefix(2);
-    assert.equal(name2.size(), 2, 'Name prefix has ' + name2.size() + ' components instead of 2');
-    for (var i = 0; i < 2; ++i)
-      assert.ok(name.get(i).getValue().equals(name2.get(i).getValue()));
-  });
-
   it('Append', function() {
     // could possibly split this into different tests
     var uri = "/localhost/user/folders/files/%00%0F";
@@ -74,6 +76,17 @@ describe('TestNameMethods', function() {
     assert.equal(name2.toUri(), name.toUri(), 'Name constructed with append has wrong URI');
   });
 
+  it('Prefix', function() {
+    var name = new Name("/edu/cmu/andrew/user/3498478");
+    var name2 = name.getPrefix(2);
+    assert.equal(name2.size(), 2, 'Name prefix has ' + name2.size() + ' components instead of 2');
+    for (var i = 0; i < 2; ++i)
+      assert.ok(name.get(i).getValue().equals(name2.get(i).getValue()));
+
+    var prefix2 = name.getPrefix(100);
+    assert.ok(prefix2.equals(name), "Prefix with more components than original should stop at end of original name");
+  });
+
   it('Subname', function() {
     var name = new Name("/edu/cmu/andrew/user/3498478");
     var subName1 = name.getSubName(0);
@@ -87,8 +100,14 @@ describe('TestNameMethods', function() {
     var subName4 = name.getSubName(0, 100);
     assert.ok(name.equals(subName4), 'Subname with more components than original should stop at end of original name');
 
-    var subName5 = name.getSubName(7, 9);
+    var subName5 = name.getSubName(7, 2);
     assert.ok(new Name().equals(subName5), 'Subname beginning after end of name should be empty');
+
+    var subName6 = name.getSubName(-1,7);
+    assert.ok(subName6.equals(new Name("/3498478")), "Negative subname with more components than original should stop at end of original name");
+
+    var subName7 = name.getSubName(-5,5);
+    assert.ok(subName7.equals(name), "Subname from (-length) should match original name");
   });
 
   it('Clear', function() {
@@ -101,7 +120,7 @@ describe('TestNameMethods', function() {
     var names = [ new Name("/a/b/d"), new Name("/c"), new Name("/c/a"), new Name("/bb"), new Name("/a/b/cc")];
     var expectedOrder = ["/a/b/d", "/a/b/cc", "/c", "/c/a", "/bb"];
     names.sort(function(a, b) { return a.compare(b); });
-    
+
     var sortedURIs = [];
     for (var i = 0; i < names.length; ++i)
       sortedURIs.push(names[i].toUri());
