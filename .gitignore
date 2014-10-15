@@ -22,5 +22,8 @@ js/sync/node_modules/
 js/sync/Protobuf/
 js/sync/jsrsasign/
 
+# NPM file
+npm-debug.log
+
 # Temporary test files
 js/sync/hash-test.js
