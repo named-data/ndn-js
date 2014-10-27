@@ -195,8 +195,7 @@ IdentityManager.prototype.addCertificateAsDefault = function(certificate)
  */
 IdentityManager.prototype.getCertificate = function(certificateName)
 {
-  return new IdentityCertificate
-    (this.identityStorage.getCertificate(certificateName, false));
+  return this.identityStorage.getCertificate(certificateName, false);
 };
 
 /**
@@ -206,8 +205,7 @@ IdentityManager.prototype.getCertificate = function(certificateName)
  */
 IdentityManager.prototype.getAnyCertificate = function(certificateName)
 {
-  return new IdentityCertificate
-    (this.identityStorage.getCertificate(certificateName, true));
+  return this.identityStorage.getCertificate(certificateName, true);
 };
 
 /**

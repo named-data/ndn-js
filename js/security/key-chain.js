@@ -164,7 +164,7 @@ KeyChain.prototype.setDefaultCertificateForKey = function(certificate)
 /**
  * Get a certificate with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {Certificate} The requested certificate which is valid.
+ * @returns {IdentityCertificate} The requested certificate which is valid.
  */
 KeyChain.prototype.getCertificate = function(certificateName)
 {

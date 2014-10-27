@@ -174,7 +174,7 @@ IdentityStorage.prototype.addCertificate = function(certificate)
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny (optional) If false, only a valid certificate will
  * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
- * @returns {Data} The requested certificate.  If not found, return a shared_ptr
+ * @returns {IdentityCertificate} The requested certificate.  If not found, return a shared_ptr
  * with a null pointer.
  */
 IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
