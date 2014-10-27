@@ -174,7 +174,7 @@ KeyChain.prototype.getCertificate = function(certificateName)
 /**
  * Get a certificate even if the certificate is not valid anymore.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {Certificate} The requested certificate.
+ * @returns {IdentityCertificate} The requested certificate.
  */
 KeyChain.prototype.getAnyCertificate = function(certificateName)
 {
