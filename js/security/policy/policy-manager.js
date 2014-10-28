@@ -18,6 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+
 /**
  * A PolicyManager is an abstract base class to represent the policy for
  * verifying data packets. You must create an object of a subclass.
@@ -106,4 +108,44 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
+};
+
+// The first time verifySha256WithRsaSignature is called, it sets this to
+// determine if a signature buffer needs to be converted to a string for the
+// crypto verifier.
+PolicyManager.verifyUsesString = null;
+
+/**
+ * Verify the RSA signature on the SignedBlob using the given public key.
+ * TODO: Move this general verification code to a more central location.
+ * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * signature.
+ * @returns true if the signature verifies, false if not.
+ */
+PolicyManager.verifySha256WithRsaSignature = function
+  (signature, signedBlob, publicKeyDer)
+{
+  if (PolicyManager.verifyUsesString === null) {
+    var hashResult = require("crypto").createHash('sha256').digest();
+    // If the hash result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    PolicyManager.verifyUsesString = (typeof hashResult === 'string');
+  }
+
+  // The crypto verifier requires a PEM-encoded public key.
+  var keyBase64 = publicKeyDer.buf().toString('base64');
+  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+  for (var i = 0; i < keyBase64.length; i += 64)
+    keyPem += (keyBase64.substr(i, 64) + "\n");
+  keyPem += "-----END PUBLIC KEY-----";
+
+  var verifier = require('crypto').createVerify('RSA-SHA256');
+  verifier.update(signedBlob.signedBuf());
+  var signatureBytes = PolicyManager.verifyUsesString ?
+    DataUtils.toString(signature.getSignature().buf()) :
+    signature.getSignature().buf();
+  return verifier.verify(keyPem, signatureBytes);
 };

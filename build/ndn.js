@@ -12957,7 +12957,7 @@ IdentityStorage.prototype.addCertificate = function(certificate)
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny (optional) If false, only a valid certificate will
  * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
- * @returns {Data} The requested certificate.  If not found, return a shared_ptr
+ * @returns {IdentityCertificate} The requested certificate.  If not found, return a shared_ptr
  * with a null pointer.
  */
 IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
@@ -13272,7 +13272,7 @@ MemoryIdentityStorage.prototype.addCertificate = function(certificate)
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny (optional) If false, only a valid certificate will
  * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
- * @returns {Data} The requested certificate.  If not found, return null.
+ * @returns {IdentityCertificate} The requested certificate.  If not found, return null.
  */
 MemoryIdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
 {
@@ -13281,9 +13281,9 @@ MemoryIdentityStorage.prototype.getCertificate = function(certificateName, allow
     // Not found.  Silently return null.
     return null;
 
-  var data = new Data();
-  data.wireDecode(this.certificateStore[certificateNameUri]);
-  return data;
+  var certificiate = new IdentityCertificate();
+  certificiate.wireDecode(this.certificateStore[certificateNameUri]);
+  return certificiate;
 };
 
 /*****************************************
@@ -13846,8 +13846,7 @@ IdentityManager.prototype.addCertificateAsDefault = function(certificate)
  */
 IdentityManager.prototype.getCertificate = function(certificateName)
 {
-  return new IdentityCertificate
-    (this.identityStorage.getCertificate(certificateName, false));
+  return this.identityStorage.getCertificate(certificateName, false);
 };
 
 /**
@@ -13857,8 +13856,7 @@ IdentityManager.prototype.getCertificate = function(certificateName)
  */
 IdentityManager.prototype.getAnyCertificate = function(certificateName)
 {
-  return new IdentityCertificate
-    (this.identityStorage.getCertificate(certificateName, true));
+  return this.identityStorage.getCertificate(certificateName, true);
 };
 
 /**
@@ -14047,6 +14045,8 @@ exports.ValidationRequest = ValidationRequest;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+
 /**
  * A PolicyManager is an abstract base class to represent the policy for
  * verifying data packets. You must create an object of a subclass.
@@ -14135,6 +14135,46 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
+};
+
+// The first time verifySha256WithRsaSignature is called, it sets this to
+// determine if a signature buffer needs to be converted to a string for the
+// crypto verifier.
+PolicyManager.verifyUsesString = null;
+
+/**
+ * Verify the RSA signature on the SignedBlob using the given public key.
+ * TODO: Move this general verification code to a more central location.
+ * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * signature.
+ * @returns true if the signature verifies, false if not.
+ */
+PolicyManager.verifySha256WithRsaSignature = function
+  (signature, signedBlob, publicKeyDer)
+{
+  if (PolicyManager.verifyUsesString === null) {
+    var hashResult = require("crypto").createHash('sha256').digest();
+    // If the hash result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    PolicyManager.verifyUsesString = (typeof hashResult === 'string');
+  }
+
+  // The crypto verifier requires a PEM-encoded public key.
+  var keyBase64 = publicKeyDer.buf().toString('base64');
+  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+  for (var i = 0; i < keyBase64.length; i += 64)
+    keyPem += (keyBase64.substr(i, 64) + "\n");
+  keyPem += "-----END PUBLIC KEY-----";
+
+  var verifier = require('crypto').createVerify('RSA-SHA256');
+  verifier.update(signedBlob.signedBuf());
+  var signatureBytes = PolicyManager.verifyUsesString ?
+    DataUtils.toString(signature.getSignature().buf()) :
+    signature.getSignature().buf();
+  return verifier.verify(keyPem, signatureBytes);
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -14266,7 +14306,6 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 var Name = require('../../name.js').Name;
 var Interest = require('../../interest.js').Interest;
 var Data = require('../../data.js').Data;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -14424,7 +14463,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
 
   if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
-    return SelfVerifyPolicyManager.verifySha256WithRsaSignature
+    return PolicyManager.verifySha256WithRsaSignature
       (signature, signedBlob, signature.getKeyLocator().getKeyData());
   else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null) {
@@ -14436,51 +14475,12 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
       // Can't find the public key with the name.
       return false;
 
-    return SelfVerifyPolicyManager.verifySha256WithRsaSignature
+    return PolicyManager.verifySha256WithRsaSignature
       (signature, signedBlob, publicKeyDer);
   }
   else
     // Can't find a key to verify.
     return false;
-};
-
-// The first time verify is called, it sets this to determine if a signature
-//   buffer needs to be converted to a string for the crypto verifier.
-SelfVerifyPolicyManager.verifyUsesString = null;
-
-/**
- * Verify the RSA signature on the SignedBlob using the given public key.
- * TODO: Move this general verification code to a more central location.
- * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
- * verify.
- * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
- * signature.
- * @returns true if the signature verifies, false if not.
- */
-SelfVerifyPolicyManager.verifySha256WithRsaSignature = function
-  (signature, signedBlob, publicKeyDer)
-{
-  if (SelfVerifyPolicyManager.verifyUsesString === null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
-    // If the hash result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    SelfVerifyPolicyManager.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  // The crypto verifier requires a PEM-encoded public key.
-  var keyBase64 = publicKeyDer.buf().toString('base64');
-  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END PUBLIC KEY-----";
-
-  var verifier = require('crypto').createVerify('RSA-SHA256');
-  verifier.update(signedBlob.signedBuf());
-  var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(signature.getSignature().buf()) :
-    signature.getSignature().buf();
-  return verifier.verify(keyPem, signatureBytes);
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -14648,7 +14648,7 @@ KeyChain.prototype.setDefaultCertificateForKey = function(certificate)
 /**
  * Get a certificate with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {Certificate} The requested certificate which is valid.
+ * @returns {IdentityCertificate} The requested certificate which is valid.
  */
 KeyChain.prototype.getCertificate = function(certificateName)
 {
@@ -14658,7 +14658,7 @@ KeyChain.prototype.getCertificate = function(certificateName)
 /**
  * Get a certificate even if the certificate is not valid anymore.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {Certificate} The requested certificate.
+ * @returns {IdentityCertificate} The requested certificate.
  */
 KeyChain.prototype.getAnyCertificate = function(certificateName)
 {
