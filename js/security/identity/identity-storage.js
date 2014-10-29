@@ -265,3 +265,34 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 {
   throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
+
+/*****************************************
+ *            Delete Methods             *
+ *****************************************/
+
+/**
+ * Delete a certificate.
+ * @param {Name} certificateName The certificate name.
+ */
+IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
+{
+  throw new Error("IdentityStorage.deleteCertificateInfo is not implemented");
+};
+
+/**
+ * Delete a public key and related certificates.
+ * @param {Name} keyName The key name.
+ */
+IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
+{
+  throw new Error("IdentityStorage.deletePublicKeyInfo is not implemented");
+};
+
+/**
+ * Delete an identity and related public keys and certificates.
+ * @param {Name} identity The identity name.
+ */
+IdentityStorage.prototype.deleteIdentityInfo = function(identity)
+{
+  throw new Error("IdentityStorage.deleteIdentityInfo is not implemented");
+};

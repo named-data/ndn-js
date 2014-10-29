@@ -315,3 +315,34 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
 {
   throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
+
+/*****************************************
+ *            Delete Methods             *
+ *****************************************/
+
+/**
+ * Delete a certificate.
+ * @param {Name} certificateName The certificate name.
+ */
+MemoryIdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
+{
+  throw new Error("MemoryIdentityStorage.deleteCertificateInfo is not implemented");
+};
+
+/**
+ * Delete a public key and related certificates.
+ * @param {Name} keyName The key name.
+ */
+MemoryIdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
+{
+  throw new Error("MemoryIdentityStorage.deletePublicKeyInfo is not implemented");
+};
+
+/**
+ * Delete an identity and related public keys and certificates.
+ * @param {Name} identity The identity name.
+ */
+MemoryIdentityStorage.prototype.deleteIdentityInfo = function(identity)
+{
+  throw new Error("MemoryIdentityStorage.deleteIdentityInfo is not implemented");
+};
