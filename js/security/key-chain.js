@@ -417,7 +417,6 @@ KeyChain.prototype.verifyInterest = function
     var nextStep = this.policyManager.checkVerificationPolicy
       (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
     if (nextStep != null) {
-      /*
       var thisKeyChain = this;
       this.face.expressInterest
         (nextStep.interest,
@@ -426,11 +425,8 @@ KeyChain.prototype.verifyInterest = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
+             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
          });
-      */
-     throw new SecurityException(new Error
-        ("verifyInterest: ValidationRequest not implemented yet"));
     }
   }
   else if (this.policyManager.skipVerifyAndTrust(interest))
@@ -504,7 +500,7 @@ KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 };
 
 KeyChain.prototype.onCertificateInterestTimeout = function
-  (interest, retry, onVerifyFailed, data, nextStep)
+  (interest, retry, onVerifyFailed, originalDataOrInterest, nextStep)
 {
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
@@ -516,9 +512,9 @@ KeyChain.prototype.onCertificateInterestTimeout = function
        },
        function(callbackInterest) {
          thisKeyChain.onCertificateInterestTimeout
-           (callbackInterest, retry - 1, onVerifyFailed, data, nextStep);
+           (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
        });
   }
   else
-    onVerifyFailed(data);
+    onVerifyFailed(originalDataOrInterest);
 };
