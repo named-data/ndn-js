@@ -167,6 +167,18 @@ ChronoSync2013.DigestLogEntry.prototype.getData = function()
   return this.data;
 };
 
+/**
+ * Unregister callbacks so that this does not respond to interests anymore.
+ * If you will dispose this ChronoSync2013 object while your application is
+ * still running, you should call shutdown() first.  After calling this, you
+ * should not call publishNextSequenceNo() again since the behavior will be
+ * undefined.
+ */
+ChronoSync2013.prototype.shutdown = function()
+{
+  this.contentCache.unregisterAll();
+};
+
 // PendingInterest class
 
 /**
