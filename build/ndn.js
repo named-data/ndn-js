@@ -13048,6 +13048,37 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 {
   throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
 };
+
+/*****************************************
+ *            Delete Methods             *
+ *****************************************/
+
+/**
+ * Delete a certificate.
+ * @param {Name} certificateName The certificate name.
+ */
+IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
+{
+  throw new Error("IdentityStorage.deleteCertificateInfo is not implemented");
+};
+
+/**
+ * Delete a public key and related certificates.
+ * @param {Name} keyName The key name.
+ */
+IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
+{
+  throw new Error("IdentityStorage.deletePublicKeyInfo is not implemented");
+};
+
+/**
+ * Delete an identity and related public keys and certificates.
+ * @param {Name} identity The identity name.
+ */
+IdentityStorage.prototype.deleteIdentityInfo = function(identity)
+{
+  throw new Error("IdentityStorage.deleteIdentityInfo is not implemented");
+};
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -13364,6 +13395,37 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
   (keyName, certificateName)
 {
   throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
+};
+
+/*****************************************
+ *            Delete Methods             *
+ *****************************************/
+
+/**
+ * Delete a certificate.
+ * @param {Name} certificateName The certificate name.
+ */
+MemoryIdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
+{
+  throw new Error("MemoryIdentityStorage.deleteCertificateInfo is not implemented");
+};
+
+/**
+ * Delete a public key and related certificates.
+ * @param {Name} keyName The key name.
+ */
+MemoryIdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
+{
+  throw new Error("MemoryIdentityStorage.deletePublicKeyInfo is not implemented");
+};
+
+/**
+ * Delete an identity and related public keys and certificates.
+ * @param {Name} identity The identity name.
+ */
+MemoryIdentityStorage.prototype.deleteIdentityInfo = function(identity)
+{
+  throw new Error("MemoryIdentityStorage.deleteIdentityInfo is not implemented");
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -14901,7 +14963,6 @@ KeyChain.prototype.verifyInterest = function
     var nextStep = this.policyManager.checkVerificationPolicy
       (interest, stepCount, onVerified, onVerifyFailed, wireFormat);
     if (nextStep != null) {
-      /*
       var thisKeyChain = this;
       this.face.expressInterest
         (nextStep.interest,
@@ -14910,11 +14971,8 @@ KeyChain.prototype.verifyInterest = function
          },
          function(callbackInterest) {
            thisKeyChain.onCertificateInterestTimeout
-             (callbackInterest, nextStep.retry, onVerifyFailed, interest, nextStep);
+             (callbackInterest, nextStep.retry, onVerifyFailed, data, nextStep);
          });
-      */
-     throw new SecurityException(new Error
-        ("verifyInterest: ValidationRequest not implemented yet"));
     }
   }
   else if (this.policyManager.skipVerifyAndTrust(interest))
@@ -14988,7 +15046,7 @@ KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 };
 
 KeyChain.prototype.onCertificateInterestTimeout = function
-  (interest, retry, onVerifyFailed, data, nextStep)
+  (interest, retry, onVerifyFailed, originalDataOrInterest, nextStep)
 {
   if (retry > 0) {
     // Issue the same expressInterest as in verifyData except decrement retry.
@@ -15000,11 +15058,11 @@ KeyChain.prototype.onCertificateInterestTimeout = function
        },
        function(callbackInterest) {
          thisKeyChain.onCertificateInterestTimeout
-           (callbackInterest, retry - 1, onVerifyFailed, data, nextStep);
+           (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
        });
   }
   else
-    onVerifyFailed(data);
+    onVerifyFailed(originalDataOrInterest);
 };
 /**
  * This class represents an NDN Data MetaInfo object.
