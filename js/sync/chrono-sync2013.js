@@ -84,6 +84,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
   
   this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
+  this.enabled = true;
   
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append("00");
@@ -176,6 +177,7 @@ ChronoSync2013.DigestLogEntry.prototype.getData = function()
  */
 ChronoSync2013.prototype.shutdown = function()
 {
+  this.enabled = false;
   this.contentCache.unregisterAll();
 };
 
@@ -316,6 +318,10 @@ ChronoSync2013.prototype.logfind = function(digest)
  */
 ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
 {
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
   //search if the digest is already exist in the digest log
   
   var syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
@@ -353,6 +359,10 @@ ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, regi
  */
 ChronoSync2013.prototype.onData = function(interest, co)
 {
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
   var content_t = this.SyncStateMsg.decode(arr.buffer);
@@ -403,6 +413,10 @@ ChronoSync2013.prototype.onData = function(interest, co)
  */
 ChronoSync2013.prototype.initialTimeOut = function(interest)
 {
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
   console.log("no other people");
     
   this.usrseq++;
@@ -550,6 +564,10 @@ ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transp
 
 ChronoSync2013.prototype.syncTimeout = function(interest)
 {
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
   var component = interest.getName().get(4).toEscapedString();
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
