@@ -59,6 +59,7 @@ DynamicBuffer.prototype.ensureLength = function(length)
  * Copy the value to this.array at offset, reallocating if necessary.
  * @param {Buffer} value The buffer to copy.
  * @param {number} offset The offset in the buffer to start copying into.
+ * @returns {number} The new offset which is offset + value.length.
  */
 DynamicBuffer.prototype.copy = function(value, offset)
 {
@@ -69,6 +70,8 @@ DynamicBuffer.prototype.copy = function(value, offset)
   else
     // Need to make value a Buffer to copy.
     new Buffer(value).copy(this.array, offset);
+
+  return offset + value.length;
 };
 
 /**
