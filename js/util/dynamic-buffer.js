@@ -116,10 +116,13 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 /**
  * Return this.array.slice(begin, end);
  * @param {number} begin The begin index for the slice.
- * @param {number} end The end index for the slice.
+ * @param {number} end (optional) The end index for the slice.
  * @returns {Buffer} The buffer slice.
  */
 DynamicBuffer.prototype.slice = function(begin, end)
 {
-  return this.array.slice(begin, end);
+  if (end == undefined)
+    return this.array.slice(begin);
+  else
+    return this.array.slice(begin, end);
 };
