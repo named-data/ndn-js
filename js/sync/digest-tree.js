@@ -84,18 +84,18 @@ DigestTree.Node.prototype.Int32ToBuffer = function(value) {
 
 DigestTree.Node.prototype.recomputeDigest = function()
 {
-  var seqHash = new crypto.createHash('sha256');
+  var seqHash = crypto.createHash('sha256');
   
   seqHash.update(this.Int32ToBuffer(this.seqno_session));
   seqHash.update(this.Int32ToBuffer(this.seqno_seq));
   
   var digest_seq = seqHash.digest();
   
-  var nameHash = new crypto.createHash('sha256');
+  var nameHash = crypto.createHash('sha256');
   nameHash.update(this.dataPrefix);
   var digest_name = nameHash.digest();
   
-  var hash = new crypto.createHash('sha256');
+  var hash = crypto.createHash('sha256');
   hash.update(digest_name);
   hash.update(digest_seq);
 
@@ -195,7 +195,7 @@ DigestTree.prototype.getRoot = function()
 
 DigestTree.prototype.recomputeRoot = function()
 {
-  var md = new crypto.createHash('sha256');
+  var md = crypto.createHash('sha256');
   // The result of updateHex is related with the sequence of participants,
   // I don't think that should be the case.
   for (var i = 0; i < this.digestnode.length; i++) {
