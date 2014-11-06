@@ -18,8 +18,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var SecurityException = require('../security-exception.js').SecurityException;
 var KeyType = require('../security-types.js').KeyType;
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
  * A PublicKey holds an encoded public key for use by the security library.
@@ -41,7 +43,7 @@ exports.PublicKey = PublicKey;
  */
 PublicKey.prototype.toDer = function()
 {
-  throw new Error("PublicKey.toDer is not implemented");
+  return DerNode.parse(this.keyDer.buf());
 };
 
 /**
@@ -57,20 +59,9 @@ PublicKey.fromDer = function(keyType, keyDer)
   }
   else
     throw new SecurityException(new Error
-      ("PublicKey::fromDer: Unrecognized keyType"));
+      ("PublicKey.fromDer: Unrecognized keyType"));
 
   return new PublicKey(keyType, keyDer);
-};
-
-/**
- * 
- * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
- * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
- * @returns {Blob} The digest value.
- */
-PublicKey.prototype.getDigest = function(digestAlgorithm)
-{
-  throw new Error("PublicKey.getDigest is not implemented");
 };
 
 /**
@@ -80,6 +71,26 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 PublicKey.prototype.getKeyType = function()
 {
   return this.keyType;
+};
+
+/**
+ * Get the digest of the public key.
+ * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
+ * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
+ * @returns {Blob} The digest value.
+ */
+PublicKey.prototype.getDigest = function(digestAlgorithm)
+{
+  if (digestAlgorithm == undefined)
+    digestAlgorithm = DigestAlgorithm.SHA256;
+  
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    var hash = crypto.createHash('sha256');
+    hash.update(this.keyDer.buf());
+    return new Blob(hash.digest());
+  }
+  else
+    throw new SecurityException(new Error("Wrong format!"));
 };
 
 /**
