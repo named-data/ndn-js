@@ -18,7 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DerNode = require('../../../encoding/der/der-node.js').DerNode;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
  * A CertificateExtension represents the Extension entry in a certificate.
