@@ -728,7 +728,7 @@ DerNode.DerGeneralizedTime.prototype.toVal = function()
   var timeStr = this.payload.slice(0, this.payloadPosition).toString();
   return Date.UTC
     (parseInt(timeStr.substr(0, 4)),
-     parseInt(timeStr.substr(4, 2)),
+     parseInt(timeStr.substr(4, 2) - 1),
      parseInt(timeStr.substr(6, 2)),
      parseInt(timeStr.substr(8, 2)),
      parseInt(timeStr.substr(10, 2)),
