@@ -176,11 +176,14 @@ DerNode.prototype.payloadAppend = function(buffer)
  * Parse the data from the input buffer recursively and return the root as an
  * object of a subclass of DerNode.
  * @param {type} inputBuf The input buffer to read from.
- * @param {type} startIdx The offset into the buffer.
+ * @param {type} startIdx (optional) The offset into the buffer. If omitted, use 0.
  * @returns {DerNode} An object of a subclass of DerNode.
  */
 DerNode.parse = function(inputBuf, startIdx)
 {
+  if (startIdx == undefined)
+    startIdx = 0;
+  
   var idx = startIdx;
   var nodeType = inputBuf[idx] & 0xff;
   // Don't increment idx. We're just peeking.
@@ -250,7 +253,7 @@ DerNode.DerStructure.prototype.getSize = function()
     this.childChanged = false;
   }
 
-  this.encodeHeader(size);
+  this.encodeHeader(this.size);
   return this.size + this.header.length;
 };
 
