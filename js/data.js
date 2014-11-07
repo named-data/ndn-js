@@ -42,40 +42,54 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {MetaInfo} metaInfo
  * @param {Buffer} content
  */
-var Data = function Data(name, metaInfoOrContent, arg3)
+var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 {
-  if (typeof name === 'string')
-    this.name = new Name(name);
-  else
-    this.name = typeof name === 'object' && name instanceof Name ?
-       new Name(name) : new Name();
+  if (nameOrData instanceof Data) {
+    // The copy constructor.
+    var data = nameOrData;
 
-  var metaInfo;
-  var content;
-  if (typeof metaInfoOrContent === 'object' &&
-      metaInfoOrContent instanceof MetaInfo) {
-    metaInfo = metaInfoOrContent;
-    content = arg3;
+    this.name = new Name(data.getName());
+    // Use signedInfo instead of metaInfo for backward compatibility.
+    this.signedInfo = new MetaInfo(data.signedInfo);
+    this.signature = data.signature.clone();
+    // TODO: When content is store as Blob, we don't need to copy.
+    this.content = new Buffer(data.content);
+    this.wireEncoding = data.wireEncoding;
   }
   else {
-    metaInfo = null;
-    content = metaInfoOrContent;
-  }
+    var name = nameOrData;
+    if (typeof name === 'string')
+      this.name = new Name(name);
+    else
+      this.name = typeof name === 'object' && name instanceof Name ?
+         new Name(name) : new Name();
 
-  // Use signedInfo instead of metaInfo for backward compatibility.
-  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-       new MetaInfo(metaInfo) : new MetaInfo();
+    var metaInfo;
+    var content;
+    if (typeof metaInfoOrContent === 'object' &&
+        metaInfoOrContent instanceof MetaInfo) {
+      metaInfo = metaInfoOrContent;
+      content = arg3;
+    }
+    else {
+      metaInfo = null;
+      content = metaInfoOrContent;
+    }
 
-  if (typeof content === 'string')
-    this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content === 'object' && content instanceof Blob)
-    this.content = content.buf();
-  else
-    this.content = content;
+    // Use signedInfo instead of metaInfo for backward compatibility.
+    this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+         new MetaInfo(metaInfo) : new MetaInfo();
 
-  this.signature = new Sha256WithRsaSignature();
+    if (typeof content === 'string')
+      this.content = DataUtils.toNumbersFromString(content);
+    else if (typeof content === 'object' && content instanceof Blob)
+      this.content = content.buf();
+    else
+      this.content = content;
 
-  this.wireEncoding = new SignedBlob();
+    this.signature = new Sha256WithRsaSignature();
+    this.wireEncoding = new SignedBlob();
+  }  
 };
 
 exports.Data = Data;
