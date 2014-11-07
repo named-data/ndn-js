@@ -18,6 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Blob = require('../../util/blob.js').Blob;
+var OID = require('../../encoding/oid.js').OID;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
@@ -31,10 +33,10 @@ var CertificateSubjectDescription = function CertificateSubjectDescription
   (oid, value)
 {
   if (typeof oid === 'string')
-    this.extensionId = new OID(oid);
+    this.oid = new OID(oid);
   else
     // Assume oid is already an OID.
-    this.extensionId = oid;
+    this.oid = oid;
 
   this.value = value;
 };
