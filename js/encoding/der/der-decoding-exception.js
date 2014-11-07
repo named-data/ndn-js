@@ -31,6 +31,6 @@ function DerDecodingException(error)
       this[prop] = error[prop];
 }
 DerDecodingException.prototype = new Error();
-DerDecodingException.prototype.name = "DecodingException";
+DerDecodingException.prototype.name = "DerDecodingException";
 
 exports.DerDecodingException = DerDecodingException;
