@@ -18,11 +18,64 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var IdentityCertificate = function IdentityCertificate()
+var Data = require('../../data.js').Data;
+var Name = require('../../name.js').Name;
+var SecurityException = require('../../security//security-exception.js').SecurityException;
+var Certificate = require('./certificate.js').Certificate;
+
+var IdentityCertificate = function IdentityCertificate(data)
 {
+  // Call the base constructor.
+  if (data != undefined)
+    // This works if data is Data or IdentityCertificate.
+    Certificate.call(this, data);
+  else
+    Certificate.call(this);
+
+  this.publicKeyName = new Name();
+
+  if (data instanceof IdentityCertificate) {
+    // The copy constructor.
+    this.publicKeyName = new Name(data.publicKeyName);
+  }
+  else if (data instanceof Data) {
+    if (!IdentityCertificate.isCorrectName(data.getName()))
+      throw new SecurityException(new Error("Wrong Identity Certificate Name!"));
+
+    this.setPublicKeyName();
+  }
 };
+IdentityCertificate.prototype = new Certificate();
+IdentityCertificate.prototype.name = "IdentityCertificate";
 
 exports.IdentityCertificate = IdentityCertificate;
+
+/**
+ * Override the base class method to check that the name is a valid identity 
+ * certificate name.
+ * @param {Name} name The identity certificate name which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+IdentityCertificate.prototype.setName = function(name)
+{
+  if (!IdentityCertificate.isCorrectName(name))
+    throw new SecurityException(new Error("Wrong Identity Certificate Name!"));
+
+  // Call the super class method.
+  Certificate.prototype.setName.call(this, name);
+  this.setPublicKeyName();
+  return this;
+};
+
+IdentityCertificate.prototype.getPublicKeyName = function()
+{
+  return this.publicKeyName;
+};
+
+IdentityCertificate.isIdentityCertificate = function(certificate)
+{
+  return IdentityCertificate.isCorrectName(certificate.getName());
+};
 
 /**
  * Get the public key name from the full certificate name.
@@ -48,4 +101,36 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append
     (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+};
+
+IdentityCertificate.isCorrectName = function(name)
+{
+  var i = name.size() - 1;
+
+  var idString = "ID-CERT";
+  for (; i >= 0; i--) {
+    if (name.get(i).toEscapedString() == idString)
+      break;
+  }
+
+  if (i < 0)
+    return false;
+
+  var keyIdx = 0;
+  var keyString = "KEY";
+  for (; keyIdx < name.size(); keyIdx++) {
+    if(name.get(keyIdx).toEscapedString() == keyString)
+      break;
+  }
+
+  if (keyIdx >= name.size())
+    return false;
+
+  return true;
+};
+
+IdentityCertificate.prototype.setPublicKeyName = function()
+{
+  this.publicKeyName = IdentityCertificate.certificateNameToPublicKeyName
+    (this.getName());
 };
