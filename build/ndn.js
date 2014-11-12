@@ -6727,6 +6727,7 @@ DynamicBuffer.prototype.ensureLength = function(length)
  * Copy the value to this.array at offset, reallocating if necessary.
  * @param {Buffer} value The buffer to copy.
  * @param {number} offset The offset in the buffer to start copying into.
+ * @returns {number} The new offset which is offset + value.length.
  */
 DynamicBuffer.prototype.copy = function(value, offset)
 {
@@ -6737,6 +6738,8 @@ DynamicBuffer.prototype.copy = function(value, offset)
   else
     // Need to make value a Buffer to copy.
     new Buffer(value).copy(this.array, offset);
+
+  return offset + value.length;
 };
 
 /**
@@ -6784,12 +6787,15 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
 /**
  * Return this.array.slice(begin, end);
  * @param {number} begin The begin index for the slice.
- * @param {number} end The end index for the slice.
+ * @param {number} end (optional) The end index for the slice.
  * @returns {Buffer} The buffer slice.
  */
 DynamicBuffer.prototype.slice = function(begin, end)
 {
-  return this.array.slice(begin, end);
+  if (end == undefined)
+    return this.array.slice(begin);
+  else
+    return this.array.slice(begin, end);
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -9726,6 +9732,77 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     throw new Error("ProtobufTlv.decode: Unknown field type");
 };
 /**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var OID = function OID(oid)
+{
+  if (typeof oid === 'string') {
+    var splitString = oid.split(".");
+    this.oid = [];
+    for (var i = 0; i < splitString.length; ++i)
+      this.oid.push(parseInt(splitString[i]));
+  }
+  else
+    // Assume oid is an array of int.  Make a copy.
+    this.oid = oid.slice(0, oid.length);
+};
+
+exports.OID = OID;
+
+OID.prototype.getIntegerList = function()
+{
+  return this.oid;
+};
+
+OID.prototype.setIntegerList = function(oid)
+{
+  // Make a copy.
+  this.oid = oid.slice(0, oid.length);
+};
+
+OID.prototype.toString = function()
+{
+  var result = "";
+  for (var i = 0; i < this.oid.length; ++i) {
+    if (i !== 0)
+      result += ".";
+    result += this.oid[i];
+  }
+
+  return result;
+};
+
+OID.prototype.equals = function(other)
+{
+  if (!(other instanceof OID))
+    return false;
+  if (this.oid.length !== other.oid.length)
+    return false;
+
+  for (var i = 0; i < this.oid.length; ++i) {
+    if (this.oid[i] != other.oid[i])
+      return false;
+  }
+  return true;
+};
+/**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -10046,6 +10123,873 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
         return;
     }
   }
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * Create a new DerDecodingException wrapping the given error object.
+ * Call with: throw new DerDecodingException(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+function DerDecodingException(error)
+{
+  this.message = error.message;
+  // Copy lineNumber, etc. from where new Error was called.
+  for (var prop in error)
+      this[prop] = error[prop];
+}
+DerDecodingException.prototype = new Error();
+DerDecodingException.prototype.name = "DerDecodingException";
+
+exports.DerDecodingException = DerDecodingException;
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * Create a new DerEncodingException wrapping the given error object.
+ * Call with: throw new DerEncodingException(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+function DerEncodingException(error)
+{
+  this.message = error.message;
+  // Copy lineNumber, etc. from where new Error was called.
+  for (var prop in error)
+      this[prop] = error[prop];
+}
+DerEncodingException.prototype = new Error();
+DerEncodingException.prototype.name = "DerEncodingException";
+
+exports.DerEncodingException = DerEncodingException;
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From PyNDN der.py by Adeola Bannis <thecodemaiden@gmail.com>.
+ * @author: Originally from code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * The NodeType enum defines the known DER node types.
+ */
+var NodeType = function NodeType()
+{
+}
+
+exports.NodeType = NodeType;
+
+NodeType.Eoc = 0;
+NodeType.Boolean = 1;
+NodeType.Integer = 2;
+NodeType.BitString = 3;
+NodeType.OctetString = 4;
+NodeType.Null = 5;
+NodeType.ObjectIdentifier = 6;
+NodeType.ObjectDescriptor = 7;
+NodeType.External = 40;
+NodeType.Real = 9;
+NodeType.Enumerated = 10;
+NodeType.EmbeddedPdv = 43;
+NodeType.Utf8String = 12;
+NodeType.RelativeOid = 13;
+NodeType.Sequence = 48;
+NodeType.Set = 49;
+NodeType.NumericString = 18;
+NodeType.PrintableString = 19;
+NodeType.T61String = 20;
+NodeType.VideoTexString = 21;
+NodeType.Ia5String = 22;
+NodeType.UtcTime = 23;
+NodeType.GeneralizedTime = 24;
+NodeType.GraphicString = 25;
+NodeType.VisibleString = 26;
+NodeType.GeneralString = 27;
+NodeType.UniversalString = 28;
+NodeType.CharacterString = 29;
+NodeType.BmpString = 30;
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From PyNDN der_node.py by Adeola Bannis <thecodemaiden@gmail.com>.
+ * @author: Originally from code in ndn-cxx by Yingdi Yu <yingdi@cs.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+var Blob = require('../../util/blob.js').Blob;
+var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException;
+var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException;
+var NodeType = require('./node-type.js').NodeType;
+
+/**
+ * DerNode implements the DER node types used in encoding/decoding DER-formatted
+ * data.
+ *
+ * Create a generic DER node with the given nodeType. This is a private
+ * constructor used by one of the public DerNode subclasses defined below.
+ * @param {number} nodeType One of the defined DER NodeType constants.
+ */
+var DerNode = function DerNode(nodeType)
+{
+  this.nodeType = nodeType;
+
+  this.parent = null;
+  this.header = new Buffer(0);
+  this.payload = new DynamicBuffer(0);
+  this.payloadPosition = 0;
+};
+
+exports.DerNode = DerNode;
+
+DerNode.prototype.getSize = function()
+{
+  return this.header.length + this.payloadPosition;
+};
+
+/**
+ * Encode the given size and update the header.
+ * @param {number} size
+ */
+DerNode.prototype.encodeHeader = function(size)
+{
+  var buffer = new DynamicBuffer(10);
+  var bufferPosition = 0;
+  buffer.array[bufferPosition++] = this.nodeType;
+  if (size < 0)
+    // We don't expect this to happen since this is an internal method and
+    // always called with the non-negative size() of some buffer.
+    throw new Error("encodeHeader: DER object has negative length");
+  else if (size <= 127)
+    buffer.array[bufferPosition++] = size & 0xff;
+  else {
+    var tempBuf = new DynamicBuffer(10);
+    // We encode backwards from the back.
+
+    var val = size;
+    var n = 0;
+    while (val != 0) {
+      ++n;
+      tempBuf.ensureLengthFromBack(n);
+      tempBuf.array[tempBuf.array.length - n] = val & 0xff;
+      val >>= 8;
+    }
+    var nTempBufBytes = n + 1;
+    tempBuf.ensureLengthFromBack(nTempBufBytes);
+    tempBuf.array[tempBuf.array.length - nTempBufBytes] = ((1<<7) | n) & 0xff;
+
+    buffer.copy(tempBuf.slice(tempBuf.array.length - nTempBufBytes), bufferPosition);
+    bufferPosition += nTempBufBytes;
+  }
+
+  this.header = buffer.slice(0, bufferPosition);
+};
+
+/**
+ * Extract the header from an input buffer and return the size.
+ * @param {Buffer} inputBuf The input buffer to read from.
+ * @param {number} startIdx The offset into the buffer.
+ * @returns {number} The parsed size in the header.
+ */
+DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
+{
+  var idx = startIdx;
+
+  var nodeType = inputBuf[idx] & 0xff;
+  idx += 1;
+
+  this.nodeType = nodeType;
+
+  var sizeLen = inputBuf[idx] & 0xff;
+  idx += 1;
+
+  var header = new DynamicBuffer(10);
+  var headerPosition = 0;
+  header.array[headerPosition++] = nodeType;
+  header.array[headerPosition++] = sizeLen;
+
+  var size = sizeLen;
+  var isLongFormat = (sizeLen & (1 << 7)) != 0;
+  if (isLongFormat) {
+    var lenCount = sizeLen & ((1<<7) - 1);
+    size = 0;
+    while (lenCount > 0) {
+      var b = inputBuf[idx];
+      idx += 1;
+      header.ensureLength(headerPosition + 1);
+      header.array[headerPosition++] = b;
+      size = 256 * size + (b & 0xff);
+      lenCount -= 1;
+    }
+  }
+
+  this.header = header.slice(0, headerPosition);
+  return size;
+};
+
+/**
+ * Get the raw data encoding for this node.
+ * @returns {Blob} The raw data encoding.
+ */
+DerNode.prototype.encode = function()
+{
+  var buffer = new Buffer(this.getSize());
+
+  this.header.copy(buffer);
+  this.payload.slice(0, this.payloadPosition).copy(buffer, this.header.length);
+
+  return new Blob(buffer, false);
+};
+
+/**
+ * Decode and store the data from an input buffer.
+ * @param {Buffer} inputBuf The input buffer to read from. This reads from
+ * startIdx (regardless of the buffer's position) and does not change the
+ * position.
+ * @param {number} startIdx The offset into the buffer.
+ */
+DerNode.prototype.decode = function(inputBuf, startIdx)
+{
+  var idx = startIdx;
+  var payloadSize = this.decodeHeader(inputBuf, idx);
+  var skipBytes = this.header.length;
+  if (payloadSize > 0) {
+    idx += skipBytes;
+    this.payloadAppend(inputBuf.slice(idx, idx + payloadSize));
+  }
+};
+
+/**
+ * Copy buffer to this.payload at this.payloadPosition and update
+ * this.payloadPosition.
+ * @param {Buffer} buffer The buffer to copy.
+ */
+DerNode.prototype.payloadAppend = function(buffer)
+{
+  this.payloadPosition = this.payload.copy(buffer, this.payloadPosition);
+}
+
+/**
+ * Parse the data from the input buffer recursively and return the root as an
+ * object of a subclass of DerNode.
+ * @param {type} inputBuf The input buffer to read from.
+ * @param {type} startIdx (optional) The offset into the buffer. If omitted, use 0.
+ * @returns {DerNode} An object of a subclass of DerNode.
+ */
+DerNode.parse = function(inputBuf, startIdx)
+{
+  if (startIdx == undefined)
+    startIdx = 0;
+  
+  var idx = startIdx;
+  var nodeType = inputBuf[idx] & 0xff;
+  // Don't increment idx. We're just peeking.
+
+  var newNode;
+  if (nodeType === NodeType.Boolean)
+    newNode = new DerNode.DerBoolean();
+  else if (nodeType === NodeType.Integer)
+    newNode = new DerNode.DerInteger();
+  else if (nodeType === NodeType.BitString)
+    newNode = new DerNode.DerBitString();
+  else if (nodeType === NodeType.OctetString)
+    newNode = new DerNode.DerOctetString();
+  else if (nodeType === NodeType.Null)
+    newNode = new DerNode.DerNull();
+  else if (nodeType === NodeType.ObjectIdentifier)
+    newNode = new DerNode.DerOid();
+  else if (nodeType === NodeType.Sequence)
+    newNode = new DerNode.DerSequence();
+  else if (nodeType === NodeType.PrintableString)
+    newNode = new DerNode.DerPrintableString();
+  else if (nodeType === NodeType.GeneralizedTime)
+    newNode = new DerNode.DerGeneralizedTime();
+  else
+    throw new DerDecodingException(new Error("Unimplemented DER type " + nodeType));
+
+  newNode.decode(inputBuf, idx);
+  return newNode;
+};
+
+/**
+ * Convert the encoded data to a standard representation. Overridden by some
+ * subclasses (e.g. DerBoolean).
+ * @returns {Blob} The encoded data as a Blob.
+ */
+DerNode.prototype.toVal = function()
+{
+  return this.encode();
+};
+
+/**
+ * A DerStructure extends DerNode to hold other DerNodes.
+ * Create a DerStructure with the given nodeType. This is a private
+ * constructor. To create an object, use DerSequence.
+ * @param {number} nodeType One of the defined DER NodeType constants.
+ */
+DerNode.DerStructure = function DerStructure(nodeType)
+{
+  // Call the base constructor.
+  DerNode.call(this, nodeType);
+
+  this.childChanged = false;
+  this.nodeList = []; // Of DerNode.
+  this.size = 0;
+};
+DerNode.DerStructure.prototype = new DerNode();
+DerNode.DerStructure.prototype.name = "DerStructure";
+
+/**
+ * Get the total length of the encoding, including children.
+ * @returns {number} The total (header + payload) length.
+ */
+DerNode.DerStructure.prototype.getSize = function()
+{
+  if (this.childChanged) {
+    this.updateSize();
+    this.childChanged = false;
+  }
+
+  this.encodeHeader(this.size);
+  return this.size + this.header.length;
+};
+
+/**
+ * Get the children of this node.
+ * @returns {Array<DerNode>} The children as an array of DerNode.
+ */
+DerNode.DerStructure.prototype.getChildren = function()
+{
+  return this.nodeList;
+};
+
+DerNode.DerStructure.prototype.updateSize = function()
+{
+  var newSize = 0;
+
+  for (var i = 0; i < this.nodeList.length; ++i) {
+    var n = this.nodeList[i];
+    newSize += n.getSize();
+  }
+
+  this.size = newSize;
+  this.childChanged = false;
+};
+
+/**
+ * Add a child to this node.
+ * @param {DerNode} node The child node to add.
+ * @param {boolean} (optional) notifyParent Set to true to cause any containing
+ * nodes to update their size.  If omitted, use false.
+ */
+DerNode.DerStructure.prototype.addChild = function(node, notifyParent)
+{
+  node.parent = this;
+  this.nodeList.push(node);
+
+  if (notifyParent) {
+    if (this.parent != null)
+      this.parent.setChildChanged();
+  }
+
+  this.childChanged = true;
+};
+
+/**
+ * Mark the child list as dirty, so that we update size when necessary.
+ */
+DerNode.DerStructure.prototype.setChildChanged = function()
+{
+  if (this.parent != null)
+    this.parent.setChildChanged();
+  this.childChanged = true;
+};
+
+/**
+ * Override the base encode to return raw data encoding for this node and its 
+ * children.
+ * @returns {Blob} The raw data encoding.
+ */
+DerNode.DerStructure.prototype.encode = function()
+{
+  var buffer = new DynamicBuffer(10);
+  var bufferPosition = 0;
+  this.updateSize();
+  this.encodeHeader(this.size);
+  bufferPosition = buffer.copy(this.header, bufferPosition);
+
+  for (var i = 0; i < this.nodeList.length; ++i) {
+    var n = this.nodeList[i];
+    var encodedChild = n.encode();
+    bufferPosition = buffer.copy(encodedChild.buf(), bufferPosition);
+  }
+
+  return new Blob(buffer.slice(0, bufferPosition), false);
+};
+
+/**
+ * Override the base decode to decode and store the data from an input
+ * buffer. Recursively populates child nodes.
+ * @param {Buffer} inputBuf The input buffer to read from.
+ * @param {number} startIdx The offset into the buffer.
+ */
+DerNode.DerStructure.prototype.decode = function(inputBuf, startIdx)
+{
+  var idx = startIdx;
+  this.size = this.decodeHeader(inputBuf, idx);
+  idx += this.header.length;
+
+  var accSize = 0;
+  while (accSize < this.size) {
+    var node = DerNode.parse(inputBuf, idx);
+    idx += node.getSize();
+    accSize += node.getSize();
+    this.addChild(node, false);
+  }
+};
+
+////////
+// Now for all the node types...
+////////
+
+/**
+ * A DerByteString extends DerNode to handle byte strings.
+ * Create a DerByteString with the given inputData and nodeType. This is a
+ * private constructor used by one of the public subclasses such as
+ * DerOctetString or DerPrintableString.
+ * @param {Buffer} inputData An input buffer containing the string to encode.
+ * @param {number} nodeType One of the defined DER NodeType constants.
+ */
+DerNode.DerByteString = function DerByteString(inputData, nodeType)
+{
+  // Call the base constructor.
+  DerNode.call(this, nodeType);
+
+  if (inputData != null) {
+    this.payloadAppend(inputData);
+    this.encodeHeader(inputData.length);
+  }
+};
+DerNode.DerByteString.prototype = new DerNode();
+DerNode.DerByteString.prototype.name = "DerByteString";
+
+/**
+ * Override to return just the byte string.
+ * @returns {Blob} The byte string as a copy of the payload buffer.
+ */
+DerNode.DerByteString.prototype.toVal = function()
+{
+  // Make a copy since this.payload can change.
+  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+};
+
+/**
+ * DerBoolean extends DerNode to encode a boolean value.
+ * Create a new DerBoolean for the value.
+ * @param {boolean} value The value to encode.
+ */
+DerNode.DerBoolean = function DerBoolean(value)
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.Boolean);
+
+  if (value != undefined) {
+    var val = value ? 0xff : 0x00;
+    this.payload.ensureLength(this.payloadPosition + 1);
+    this.payload.array[this.payloadPosition++] = val;
+    this.encodeHeader(1);
+  }
+};
+DerNode.DerBoolean.prototype = new DerNode();
+DerNode.DerBoolean.prototype.name = "DerBoolean";
+
+DerNode.DerBoolean.prototype.toVal = function()
+{
+  var val = this.payload.array[0];
+  return val != 0x00;
+};
+
+/**
+ * DerInteger extends DerNode to encode an integer value.
+ * Create a new DerInteger for the value.
+ * @param {number} integer The value to encode.
+ */
+DerNode.DerInteger = function DerInteger(integer)
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.Integer);
+
+  if (integer != undefined) {
+    // JavaScript doesn't distinguish int from float, so round.
+    integer = Math.round(integer);
+
+    // Convert the integer to bytes the easy/slow way.
+    var temp = new DynamicBuffer(10);
+    // We encode backwards from the back.
+    var length = 0;
+    while (integer > 0) {
+      ++length;
+      temp.ensureLengthFromBack(length);
+      temp.array[temp.array.length - length] = integer & 0xff;
+      integer >>= 8;
+    }
+
+    this.payloadAppend(temp.slice(temp.array.length - length));
+    this.encodeHeader(this.payloadPosition);
+  }
+};
+DerNode.DerInteger.prototype = new DerNode();
+DerNode.DerInteger.prototype.name = "DerInteger";
+
+/**
+ * A DerBitString extends DerNode to handle a bit string.
+ * Create a DerBitString with the given padding and inputBuf.
+ * @param {Buffer} inputBuf An input buffer containing the bit octets to encode.
+ * @param {number} paddingLen The number of bits of padding at the end of the bit
+ * string.  Should be less than 8.
+ */
+DerNode.DerBitString = function DerBitString(inputBuf, paddingLen)
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.BitString);
+
+  if (inputBuf != undefined) {
+    this.payload.ensureLength(this.payloadPosition + 1);
+    this.payload.array[this.payloadPosition++] = paddingLen & 0xff;
+    this.payloadAppend(inputBuf);
+    this.encodeHeader(this.payloadPosition);
+  }
+};
+DerNode.DerBitString.prototype = new DerNode();
+DerNode.DerBitString.prototype.name = "DerBitString";
+
+/**
+ * DerOctetString extends DerByteString to encode a string of bytes.
+ * Create a new DerOctetString for the inputData.
+ * @param {type} inputData An input buffer containing the string to encode.
+ */
+DerNode.DerOctetString = function DerOctetString(inputData)
+{
+  // Call the base constructor.
+  DerNode.DerByteString.call(this, inputData, NodeType.OctetString);
+};
+DerNode.DerOctetString.prototype = new DerNode.DerByteString();
+DerNode.DerOctetString.prototype.name = "DerOctetString";
+
+/**
+ * A DerNull extends DerNode to encode a null value.
+ * Create a DerNull.
+ */
+DerNode.DerNull = function DerNull()
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.Null);
+  this.encodeHeader(0);
+};
+DerNode.DerNull.prototype = new DerNode();
+DerNode.DerNull.prototype.name = "DerNull";
+
+/**
+ * A DerOid extends DerNode to represent an object identifier.
+ * Create a DerOid with the given object identifier. The object identifier
+ * string must begin with 0,1, or 2 and must contain at least 2 digits.
+ * @param {string|OID} oid The OID string or OID object to encode.
+ */
+DerNode.DerOid = function DerOid(oid)
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.ObjectIdentifier);
+
+  if (oid != undefined) {
+    if (typeof oid === 'string') {
+      var splitString = oid.split(".");
+      var parts = [];
+      for (var i = 0; i < splitString.length; ++i)
+        parts.push(parseInt(splitString[i]));
+
+      this.prepareEncoding(parts);
+    }
+    else
+      // Assume oid is of type OID.
+      this.prepareEncoding(oid.getIntegerList());
+  }
+};
+DerNode.DerOid.prototype = new DerNode();
+DerNode.DerOid.prototype.name = "DerOid";
+
+/**
+ * Encode a sequence of integers into an OID object and set the payload.
+ * @param {Array<number>} value The array of integers.
+ */
+DerNode.DerOid.prototype.prepareEncoding = function(value)
+{
+  var firstNumber;
+  if (value.length == 0)
+    throw new DerEncodingException(new Error("No integer in OID"));
+  else {
+    if (value[0] >= 0 && value[0] <= 2)
+      firstNumber = value[0] * 40;
+    else
+      throw new DerEncodingException(new Error("First integer in OID is out of range"));
+  }
+
+  if (value.length >= 2) {
+    if (value[1] >= 0 && value[1] <= 39)
+      firstNumber += value[1];
+    else
+      throw new DerEncodingException(new Error("Second integer in OID is out of range"));
+  }
+
+  var encodedBuffer = new DynamicBuffer(10);
+  var encodedBufferPosition = 0;
+  encodedBufferPosition = encodedBuffer.copy
+    (DerNode.DerOid.encode128(firstNumber), encodedBufferPosition);
+
+  if (value.length > 2) {
+    for (var i = 2; i < value.length; ++i)
+      encodedBufferPosition = encodedBuffer.copy
+        (DerNode.DerOid.encode128(value[i]), encodedBufferPosition);
+  }
+
+  this.encodeHeader(encodedBufferPosition);
+  this.payloadAppend(encodedBuffer.slice(0, encodedBufferPosition));
+};
+
+/**
+ * Compute the encoding for one part of an OID, where values greater than 128
+ * must be encoded as multiple bytes.
+ * @param {number} value A component of an OID.
+ * @returns {Buffer} The encoded buffer.
+ */
+DerNode.DerOid.encode128 = function(value)
+{
+  var mask = (1 << 7) - 1;
+  var outBytes = new DynamicBuffer(10);
+  var outBytesLength = 0;
+  // We encode backwards from the back.
+
+  if (value < 128) {
+    ++outBytesLength;
+    outBytes.array[outBytes.array.length - outBytesLength] = value & mask;
+  }
+  else {
+    ++outBytesLength;
+    outBytes.array[outBytes.array.length - outBytesLength] = value & mask;
+    value >>= 7;
+
+    while (value != 0) {
+      ++outBytesLength;
+      outBytes.ensureLengthFromBack(outBytesLength);
+      outBytes.array[outBytes.array.length - outBytesLength] =
+        (value & mask) | (1 << 7);
+      value >>= 7;
+    }
+  }
+
+  return outBytes.slice(outBytes.array.length - outBytesLength);
+};
+
+/**
+ * Convert an encoded component of the encoded OID to the original integer.
+ * @param {number} offset The offset into this node's payload.
+ * @param {Array<number>} skip Set skip[0] to the number of payload bytes to skip.
+ * @returns {number} The original integer.
+ */
+DerNode.DerOid.prototype.decode128 = function(offset, skip)
+{
+  var flagMask = 0x80;
+  var result = 0;
+  var oldOffset = offset;
+
+  while ((this.payload.array[offset] & flagMask) != 0) {
+    result = 128 * result + (this.payload.array[offset] & 0xff) - 128;
+    offset += 1;
+  }
+
+  result = result * 128 + (this.payload.array[offset] & 0xff);
+
+  skip[0] = offset - oldOffset + 1;
+  return result;
+};
+
+/**
+ * Override to return the string representation of the OID.
+ * @returns {string} The string representation of the OID.
+ */
+DerNode.DerOid.prototype.toVal = function()
+{
+  var offset = 0;
+  var components = []; // of number.
+
+  while (offset < this.payloadPosition) {
+    var skip = [0];
+    var nextVal = this.decode128(offset, skip);
+    offset += skip[0];
+    components.push(nextVal);
+  }
+
+  // For some odd reason, the first digits are represented in one byte.
+  var firstByte = components[0];
+  var firstDigit = Math.floor(firstByte / 40);
+  var secondDigit = firstByte % 40;
+
+  var result = firstDigit + "." + secondDigit;
+  for (var i = 1; i < components.length; ++i)
+    result += "." + components[i];
+
+  return result;
+};
+
+/**
+ * A DerSequence extends DerStructure to contains an ordered sequence of other
+ * nodes.
+ * Create a DerSequence.
+ */
+DerNode.DerSequence = function DerSequence()
+{
+  // Call the base constructor.
+  DerNode.DerStructure.call(this, NodeType.Sequence);
+};
+DerNode.DerSequence.prototype = new DerNode.DerStructure();
+DerNode.DerSequence.prototype.name = "DerSequence";
+
+/**
+ * A DerPrintableString extends DerByteString to handle a a printable string. No
+ * escaping or other modification is done to the string.
+ * Create a DerPrintableString with the given inputData.
+ * @param {Buffer} inputData An input buffer containing the string to encode.
+ */
+DerNode.DerPrintableString = function DerPrintableString(inputData)
+{
+  // Call the base constructor.
+  DerNode.DerByteString.call(this, inputData, NodeType.PrintableString);
+};
+DerNode.DerPrintableString.prototype = new DerNode.DerByteString();
+DerNode.DerPrintableString.prototype.name = "DerPrintableString";
+
+/**
+ * A DerGeneralizedTime extends DerNode to represent a date and time, with
+ * millisecond accuracy.
+ * Create a DerGeneralizedTime with the given milliseconds since 1970.
+ * @param {number} msSince1970 The timestamp as milliseconds since Jan 1, 1970.
+ */
+DerNode.DerGeneralizedTime = function DerGeneralizedTime(msSince1970)
+{
+  // Call the base constructor.
+  DerNode.call(this, NodeType.GeneralizedTime);
+
+  if (msSince1970 != undefined) {
+    var derTime = DerNode.DerGeneralizedTime.toDerTimeString(msSince1970);
+    // Use Blob to convert to a Buffer.
+    this.payloadAppend(new Blob(derTime).buf());
+    this.encodeHeader(this.payloadPosition);
+  }
+};
+DerNode.DerGeneralizedTime.prototype = new DerNode();
+DerNode.DerGeneralizedTime.prototype.name = "DerGeneralizedTime";
+
+/**
+ * Convert a UNIX timestamp to the internal string representation.
+ * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
+ * @returns {string} The string representation.
+ */
+DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
+{
+  var utcTime = new Date(Math.round(msSince1970));
+  return utcTime.getUTCFullYear() +
+         DerNode.DerGeneralizedTime.to2DigitString(utcTime.getUTCMonth() + 1) +
+         DerNode.DerGeneralizedTime.to2DigitString(utcTime.getUTCDate()) +
+         DerNode.DerGeneralizedTime.to2DigitString(utcTime.getUTCHours()) +
+         DerNode.DerGeneralizedTime.to2DigitString(utcTime.getUTCMinutes()) +
+         DerNode.DerGeneralizedTime.to2DigitString(utcTime.getUTCSeconds()) +
+         "Z";
+};
+
+/**
+ * A private method to zero pad an integer to 2 digits.
+ * @param {number} x The number to pad.  Assume it is a non-negative integer.
+ * @returns {string} The padded string.
+ */
+DerNode.DerGeneralizedTime.to2DigitString = function(x)
+{
+  var result = x.toString();
+  return result.length === 1 ? "0" + result : result;
+};
+
+/**
+ * Override to return the milliseconds since 1970.
+ * @returns {number} The timestamp value as milliseconds since 1970.
+ */
+DerNode.DerGeneralizedTime.prototype.toVal = function()
+{
+  var timeStr = this.payload.slice(0, this.payloadPosition).toString();
+  return Date.UTC
+    (parseInt(timeStr.substr(0, 4)),
+     parseInt(timeStr.substr(4, 2) - 1),
+     parseInt(timeStr.substr(6, 2)),
+     parseInt(timeStr.substr(8, 2)),
+     parseInt(timeStr.substr(10, 2)),
+     parseInt(timeStr.substr(12, 2)));
 };
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
@@ -12529,6 +13473,929 @@ KeyManager.prototype.getKey = function()
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
 /**
+ * This class represents an NDN Data MetaInfo object.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var Blob = require('./util/blob.js').Blob;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var KeyLocator = require('./key-locator.js').KeyLocator;
+var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
+var Name = require('./name.js').Name;
+var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
+var NDNTime = require('./util/ndn-time.js').NDNTime;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var LOG = require('./log.js').Log.LOG;
+
+var ContentType = {
+  BLOB:0,
+  // ContentType DATA is deprecated.  Use ContentType.BLOB .
+  DATA:0,
+  LINK:1,
+  KEY: 2,
+  // ContentType ENCR, GONE and NACK are not supported in NDN-TLV encoding and are deprecated.
+  ENCR:3,
+  GONE:4,
+  NACK:5
+};
+
+exports.ContentType = ContentType;
+
+/**
+ * Create a new MetaInfo with the optional values.
+ * @constructor
+ */
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
+{
+  if (typeof publisherOrMetaInfo === 'object' &&
+      publisherOrMetaInfo instanceof MetaInfo) {
+    // Copy values.
+    var metaInfo = publisherOrMetaInfo;
+    this.publisher = metaInfo.publisher;
+    this.timestamp = metaInfo.timestamp;
+    this.type = metaInfo.type;
+    this.locator = metaInfo.locator == null ?
+      new KeyLocator() : new KeyLocator(metaInfo.locator);
+    this.freshnessSeconds = metaInfo.freshnessSeconds;
+    this.finalBlockID = metaInfo.finalBlockID;
+  }
+  else {
+    this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
+    this.timestamp = timestamp; // NDN Time
+    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
+    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
+    this.freshnessSeconds = freshnessSeconds; // Integer
+    this.finalBlockID = finalBlockId; //byte array
+
+    if (!skipSetFields)
+      this.setFields();
+  }
+
+  this.changeCount = 0;
+};
+
+exports.MetaInfo = MetaInfo;
+
+/**
+ * Get the content type.
+ * @returns {number} The content type as an int from ContentType.
+ */
+MetaInfo.prototype.getType = function()
+{
+  return this.type;
+};
+
+/**
+ * Get the freshness period.
+ * @returns {number} The freshness period in milliseconds, or null if not
+ * specified.
+ */
+MetaInfo.prototype.getFreshnessPeriod = function()
+{
+  // Use attribute freshnessSeconds for backwards compatibility.
+  if (this.freshnessSeconds == null || this.freshnessSeconds < 0)
+    return null;
+  else
+    // Convert to milliseconds.
+    return this.freshnessSeconds * 1000.0;
+};
+
+/**
+ * Get the final block ID.
+ * @returns {Name.Component} The final block ID as a Name.Component. If the
+ * Name.Component getValue().size() is 0, then the final block ID is not specified.
+ */
+MetaInfo.prototype.getFinalBlockId = function()
+{
+  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
+  return new Name.Component(new Blob(this.finalBlockID, true));
+};
+
+/**
+ * @deprecated Use getFinalBlockId.
+ */
+MetaInfo.prototype.getFinalBlockID = function()
+{
+  return this.getFinalBlockId();
+};
+
+/**
+ * @deprecated Use getFinalBlockId. This method returns a Buffer which is the former
+ * behavior of getFinalBlockId, and should only be used while updating your code.
+ */
+MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
+{
+  return this.finalBlockID;
+};
+
+/**
+ * Set the content type.
+ * @param {number} type The content type as an int from ContentType.  If null,
+ * this uses ContentType.BLOB.
+ */
+MetaInfo.prototype.setType = function(type)
+{
+  this.type = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount;
+};
+
+/**
+ * Set the freshness period.
+ * @param {type} freshnessPeriod The freshness period in milliseconds, or null
+ * for not specified.
+ */
+MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
+{
+  // Use attribute freshnessSeconds for backwards compatibility.
+  if (freshnessPeriod == null || freshnessPeriod < 0)
+    this.freshnessSeconds = null;
+  else
+    // Convert from milliseconds.
+    this.freshnessSeconds = freshnessPeriod / 1000.0;
+  ++this.changeCount;
+};
+
+MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
+{
+  // TODO: finalBlockID should be a Name.Component, not Buffer.
+  if (finalBlockId == null)
+    this.finalBlockID = null;
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
+    this.finalBlockID = finalBlockId.buf();
+  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
+    this.finalBlockID = finalBlockId.getValue().buf();
+  else
+    this.finalBlockID = new Buffer(finalBlockId);
+  ++this.changeCount;
+};
+
+/**
+ * @deprecated Use setFinalBlockId.
+ */
+MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
+{
+  this.setFinalBlockId(finalBlockId);
+};
+
+MetaInfo.prototype.setFields = function()
+{
+  var key = globalKeyManager.getKey();
+  this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
+
+  var d = new Date();
+
+  var time = d.getTime();
+
+  this.timestamp = new NDNTime(time);
+
+  if (LOG > 4) console.log('TIME msec is');
+
+  if (LOG > 4) console.log(this.timestamp.msec);
+
+  //DATA
+  this.type = ContentType.BLOB;
+
+  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
+  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
+
+  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
+  ++this.changeCount;
+};
+
+MetaInfo.prototype.from_ndnb = function(decoder)
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+
+  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
+    if (LOG > 4) console.log('DECODING PUBLISHER KEY');
+    this.publisher = new PublisherPublicKeyDigest();
+    this.publisher.from_ndnb(decoder);
+  }
+
+  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
+    if (LOG > 4) console.log('DECODING TIMESTAMP');
+    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
+  }
+
+  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
+    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
+
+    if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
+
+    this.type = binType;
+
+    //TODO Implement type of Key Reading
+    if (null == this.type)
+      throw new Error("Cannot parse signedInfo type: bytes.");
+  }
+  else
+    this.type = ContentType.DATA; // default
+
+  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
+    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
+    if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
+  }
+
+  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
+    if (LOG > 4) console.log('DECODING FINAL BLOCKID');
+    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
+  }
+
+  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
+    if (LOG > 4) console.log('DECODING KEY LOCATOR');
+    this.locator = new KeyLocator();
+    this.locator.from_ndnb(decoder);
+  }
+
+  decoder.readElementClose();
+  ++this.changeCount;
+};
+
+/**
+ * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
+ * locator in this object.
+ * @param {BinaryXMLEncoder} encoder The encoder.
+ * @param {KeyLocator} keyLocator The key locator to use (from
+ * Data.getSignatureOrMetaInfoKeyLocator).
+ */
+MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
+  if (!this.validate())
+    throw new Error("Cannot encode : field values missing.");
+
+  encoder.writeElementStartDTag(this.getElementLabel());
+
+  if (null != this.publisher) {
+    // We have a publisherPublicKeyDigest, so use it.
+    if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
+    this.publisher.to_ndnb(encoder);
+  }
+  else {
+    if (null != keyLocator &&
+        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
+        !keyLocator.getKeyData().isNull() &&
+        keyLocator.getKeyData().size() > 0)
+      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
+      //   publisherPublicKeyDigest.
+      encoder.writeDTagElement
+        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
+  }
+
+  if (null != this.timestamp)
+    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
+
+  if (null != this.type && this.type != 0)
+    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
+
+  if (null != this.freshnessSeconds)
+    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
+
+  if (null != this.finalBlockID)
+    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
+
+  if (null != keyLocator)
+    keyLocator.to_ndnb(encoder);
+
+  encoder.writeElementClose();
+};
+
+MetaInfo.prototype.valueToType = function()
+{
+  return null;
+};
+
+MetaInfo.prototype.getElementLabel = function() {
+  return NDNProtocolDTags.SignedInfo;
+};
+
+MetaInfo.prototype.validate = function()
+{
+  // We don't do partial matches any more, even though encoder/decoder
+  // is still pretty generous.
+  if (null == this.timestamp)
+    return false;
+  return true;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+MetaInfo.prototype.getChangeCount = function()
+{
+  return this.changeCount;
+};
+
+/**
+ * @deprecated Use new MetaInfo.
+ */
+var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
+{
+  // Call the base constructor.
+  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
+}
+
+// Set skipSetFields true since we only need the prototype functions.
+SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
+
+exports.SignedInfo = SignedInfo;
+/**
+ * This class represents an NDN Data Signature object.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('./util/blob.js').Blob;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var KeyLocator = require('./key-locator.js').KeyLocator;
+var LOG = require('./log.js').Log.LOG;
+
+/**
+ * Create a new Sha256WithRsaSignature object, possibly copying values from
+ * another object.
+ *
+ * @param {Sha256WithRsaSignature} value (optional) If value is a
+ * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
+ * is the default with unspecified values and the signature is unspecified.
+ * @constructor
+ */
+var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
+{
+  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
+    // Copy the values.
+    this.keyLocator = new KeyLocator(value.keyLocator);
+    this.signature = value.signature;
+    // witness is deprecated.
+    this.witness = value.witness;
+    // digestAlgorithm is deprecated.
+    this.digestAlgorithm = value.digestAlgorithm;
+  }
+  else {
+    this.keyLocator = new KeyLocator();
+    this.signature = null;
+    // witness is deprecated.
+    this.witness = null;
+    // digestAlgorithm is deprecated.
+    this.digestAlgorithm = null;
+  }
+};
+
+exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
+
+/**
+ * Create a new Sha256WithRsaSignature which is a copy of this object.
+ * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
+ */
+Sha256WithRsaSignature.prototype.clone = function()
+{
+  return new Sha256WithRsaSignature(this);
+};
+
+/**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator.
+ */
+Sha256WithRsaSignature.prototype.getKeyLocator = function()
+{
+  return this.keyLocator;
+};
+
+/**
+ * Get the data packet's signature bytes.
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ */
+Sha256WithRsaSignature.prototype.getSignature = function()
+{
+  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
+  return new Blob(this.signature, false);
+};
+
+/**
+ * @deprecated Use getSignature. This method returns a Buffer which is the former
+ * behavior of getSignature, and should only be used while updating your code.
+ */
+Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
+{
+  return this.signature;
+};
+
+/**
+ * Set the key locator to a copy of the given keyLocator.
+ * @param {KeyLocator} keyLocator The KeyLocator to copy.
+ */
+Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+                    new KeyLocator(keyLocator) : new KeyLocator();
+};
+
+/**
+ * Set the data packet's signature bytes.
+ * @param {Blob} signature
+ */
+Sha256WithRsaSignature.prototype.setSignature = function(signature)
+{
+  if (signature == null)
+    this.signature = null;
+  else if (typeof signature === 'object' && signature instanceof Blob)
+    this.signature = new Buffer(signature.buf());
+  else
+    this.signature = new Buffer(signature);
+};
+
+Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
+{
+  decoder.readElementStartDTag(this.getElementLabel());
+
+  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
+
+  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
+    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
+    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm);
+  }
+  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
+    if (LOG > 4) console.log('WITNESS FOUND');
+    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness);
+  }
+
+  //FORCE TO READ A SIGNATURE
+
+  if (LOG > 4) console.log('SIGNATURE FOUND');
+  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
+
+  decoder.readElementClose();
+};
+
+Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
+{
+  if (!this.validate())
+    throw new Error("Cannot encode: field values missing.");
+
+  encoder.writeElementStartDTag(this.getElementLabel());
+
+  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
+    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
+
+  if (null != this.witness)
+    // needs to handle null witness
+    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
+
+  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+
+  encoder.writeElementClose();
+};
+
+Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+
+Sha256WithRsaSignature.prototype.validate = function()
+{
+  return this.getSignature().size() > 0;
+};
+
+/**
+ * Note: This Signature class is not the same as the base Signature class of
+ * the Common Client Libraries API. It is a deprecated name for
+ * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
+ * we may implement the CCL version of Signature.
+ * @deprecated Use new Sha256WithRsaSignature.
+ */
+var Signature = function Signature
+  (witnessOrSignatureObject, signature, digestAlgorithm)
+{
+  if (typeof witnessOrSignatureObject === 'object' &&
+      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
+    // Call the base copy constructor.
+    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
+  else {
+    // Call the base default constructor.
+    Sha256WithRsaSignature.call(this);
+
+    // Set the given fields (if supplied).
+    if (witnessOrSignatureObject != null)
+      // witness is deprecated.
+      this.witness = witnessOrSignatureObject;
+    if (signature != null)
+      this.signature = signature;
+    if (digestAlgorithm != null)
+      // digestAlgorithm is deprecated.
+      this.digestAlgorithm = digestAlgorithm;
+  }
+}
+
+Signature.prototype = new Sha256WithRsaSignature();
+
+exports.Signature = Signature;
+/**
+ * This class represents an NDN Data object.
+ * Copyright (C) 2013-2014 Regents of the University of California.
+ * @author: Meki Cheraoui
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Crypto = require("./crypto.js");
+var Blob = require('./util/blob.js').Blob;
+var SignedBlob = require('./util/signed-blob.js').SignedBlob;
+var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
+var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
+var DataUtils = require('./encoding/data-utils.js').DataUtils;
+var Name = require('./name.js').Name;
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var MetaInfo = require('./meta-info.js').MetaInfo;
+var KeyLocator = require('./key-locator.js').KeyLocator;
+var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * Create a new Data with the optional values.  There are 2 forms of constructor:
+ * new Data([name] [, content]);
+ * new Data(name, metaInfo [, content]);
+ *
+ * @constructor
+ * @param {Name} name
+ * @param {MetaInfo} metaInfo
+ * @param {Buffer} content
+ */
+var Data = function Data(nameOrData, metaInfoOrContent, arg3)
+{
+  if (nameOrData instanceof Data) {
+    // The copy constructor.
+    var data = nameOrData;
+
+    this.name = new Name(data.getName());
+    // Use signedInfo instead of metaInfo for backward compatibility.
+    this.signedInfo = new MetaInfo(data.signedInfo);
+    this.signature = data.signature.clone();
+    // TODO: When content is store as Blob, we don't need to copy.
+    this.content = new Buffer(data.content);
+    this.wireEncoding = data.wireEncoding;
+  }
+  else {
+    var name = nameOrData;
+    if (typeof name === 'string')
+      this.name = new Name(name);
+    else
+      this.name = typeof name === 'object' && name instanceof Name ?
+         new Name(name) : new Name();
+
+    var metaInfo;
+    var content;
+    if (typeof metaInfoOrContent === 'object' &&
+        metaInfoOrContent instanceof MetaInfo) {
+      metaInfo = metaInfoOrContent;
+      content = arg3;
+    }
+    else {
+      metaInfo = null;
+      content = metaInfoOrContent;
+    }
+
+    // Use signedInfo instead of metaInfo for backward compatibility.
+    this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+         new MetaInfo(metaInfo) : new MetaInfo();
+
+    if (typeof content === 'string')
+      this.content = DataUtils.toNumbersFromString(content);
+    else if (typeof content === 'object' && content instanceof Blob)
+      this.content = content.buf();
+    else
+      this.content = content;
+
+    this.signature = new Sha256WithRsaSignature();
+    this.wireEncoding = new SignedBlob();
+  }  
+};
+
+exports.Data = Data;
+
+/**
+ * Get the data packet's name.
+ * @returns {Name} The name.
+ */
+Data.prototype.getName = function()
+{
+  return this.name;
+};
+
+/**
+ * Get the data packet's meta info.
+ * @returns {MetaInfo} The meta info.
+ */
+Data.prototype.getMetaInfo = function()
+{
+  return this.signedInfo;
+};
+
+/**
+ * Get the data packet's signature object.
+ * @returns {Signature} The signature object.
+ */
+Data.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Get the data packet's content.
+ * @returns {Blob} The data packet content as a Blob.
+ */
+Data.prototype.getContent = function()
+{
+  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
+  return new Blob(this.content, false);
+};
+
+/**
+ * @deprecated Use getContent. This method returns a Buffer which is the former
+ * behavior of getContent, and should only be used while updating your code.
+ */
+Data.prototype.getContentAsBuffer = function()
+{
+  return this.content;
+};
+
+/**
+ * Set name to a copy of the given Name.
+ * @param {Name} name The Name which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setName = function(name)
+{
+  this.name = typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+  return this;
+};
+
+/**
+ * Set metaInfo to a copy of the given MetaInfo.
+ * @param {MetaInfo} metaInfo The MetaInfo which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setMetaInfo = function(metaInfo)
+{
+  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+    new MetaInfo(metaInfo) : new MetaInfo();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+  return this;
+};
+
+/**
+ * Set the signature to a copy of the given signature.
+ * @param {Signature} signature The signature object which is cloned.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setSignature = function(signature)
+{
+  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
+    signature.clone() : new Sha256WithRsaSignature();
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+  return this;
+};
+
+/**
+ * Set the content to the given value.
+ * @param {type} content The array this is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+Data.prototype.setContent = function(content)
+{
+  if (typeof content === 'string')
+    this.content = DataUtils.toNumbersFromString(content);
+  else if (typeof content === 'object' && content instanceof Blob)
+    this.content = content.buf();
+  else
+    this.content = new Buffer(content);
+
+  // The object has changed, so the wireEncoding is invalid.
+  this.wireEncoding = new SignedBlob();
+  return this;
+};
+
+Data.prototype.sign = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
+      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
+    this.getMetaInfo().setFields();
+
+  if (this.wireEncoding == null || this.wireEncoding.isNull()) {
+    // Need to encode to set wireEncoding.
+    // Set an initial empty signature so that we can encode.
+    this.getSignature().setSignature(new Buffer(128));
+    this.wireEncode(wireFormat);
+  }
+  var rsa = Crypto.createSign('RSA-SHA256');
+  rsa.update(this.wireEncoding.signedBuf());
+
+  var sig = new Buffer
+    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
+  this.signature.setSignature(sig);
+};
+
+// The first time verify is called, it sets this to determine if a signature
+//   buffer needs to be converted to a string for the crypto verifier.
+Data.verifyUsesString = null;
+Data.prototype.verify = function(/*Key*/ key)
+{
+  if (key == null || key.publicKeyPem == null)
+    throw new Error('Cannot verify Data without a public key.');
+
+  if (Data.verifyUsesString == null) {
+    var hashResult = Crypto.createHash('sha256').digest();
+    // If the has result is a string, we assume that this is a version of
+    //   crypto where verify also uses a string signature.
+    Data.verifyUsesString = (typeof hashResult === 'string');
+  }
+
+  if (this.wireEncoding == null || this.wireEncoding.isNull())
+    // Need to encode to set wireEncoding.
+    this.wireEncode();
+  var verifier = Crypto.createVerify('RSA-SHA256');
+  verifier.update(this.wireEncoding.signedBuf());
+  var signatureBytes = Data.verifyUsesString ?
+    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
+  return verifier.verify(key.publicKeyPem, signatureBytes);
+};
+
+Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
+
+/**
+ * Encode this Data for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ */
+Data.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  var result = wireFormat.encodeData(this);
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  this.wireEncoding = new SignedBlob
+    (result.encoding, result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
+  return this.wireEncoding;
+};
+
+/**
+ * Decode the input using a particular wire format and update this Data.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Data.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  var result = wireFormat.decodeData(this, decodeBuffer);
+  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
+  // In the Blob constructor, set copy true, but if input is already a Blob, it
+  //   won't copy.
+  this.wireEncoding = new SignedBlob
+    (new Blob(input, true), result.signedPortionBeginOffset,
+     result.signedPortionEndOffset);
+};
+
+/**
+ * If getSignature() has a key locator, return it.  Otherwise, use
+ * the key locator from getMetaInfo() for backward compatibility and print
+ * a warning to console.log that the key locator has moved to the Signature
+ * object.  If neither has a key locator, return an empty key locator.
+ * When we stop supporting the key locator in MetaInfo, this function is not
+ * necessary and we will just use the key locator in the Signature.
+ * @returns {KeyLocator} The key locator to use.
+ */
+Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
+{
+  if (this.signature != null && this.signature.getKeyLocator() != null &&
+      this.signature.getKeyLocator().getType() != null &&
+      this.signature.getKeyLocator().getType() >= 0)
+    // The application is using the key locator in the correct object.
+    return this.signature.getKeyLocator();
+
+  if (this.signedInfo != null && this.signedInfo.locator != null &&
+      this.signedInfo.locator.getType() != null &&
+      this.signedInfo.locator.getType() >= 0) {
+    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
+    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
+    return this.signedInfo.locator;
+  }
+
+  // Return the empty key locator from the Signature object if possible.
+  if (this.signature != null && this.signature.getKeyLocator() != null)
+    return this.signature.getKeyLocator();
+  else
+    return new KeyLocator();
+}
+
+// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
+var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.decodeData.
+ */
+Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
+{
+  BinaryXmlWireFormat.decodeData(this, decoder);
+};
+
+/**
+ * @deprecated Use BinaryXmlWireFormat.encodeData.
+ */
+Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
+{
+  BinaryXmlWireFormat.encodeData(this, encoder);
+};
+
+/**
+ * @deprecated Use wireEncode.  If you need binary XML, use
+ * wireEncode(BinaryXmlWireFormat.get()).
+ */
+Data.prototype.encode = function(wireFormat)
+{
+  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
+  return wireFormat.encodeData(this).buf();
+};
+
+/**
+ * @deprecated Use wireDecode.  If you need binary XML, use
+ * wireDecode(input, BinaryXmlWireFormat.get()).
+ */
+Data.prototype.decode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
+  wireFormat.decodeData(this, input);
+};
+
+/**
+ * @deprecated Use new Data.
+ */
+var ContentObject = function ContentObject(name, signedInfo, content)
+{
+  // Call the base constructor.
+  Data.call(this, name, signedInfo, content);
+}
+
+ContentObject.prototype = new Data();
+
+exports.ContentObject = ContentObject;
+/**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -12658,8 +14525,10 @@ EncryptMode.CFB_AES = 2;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var SecurityException = require('../security-exception.js').SecurityException;
 var KeyType = require('../security-types.js').KeyType;
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
  * A PublicKey holds an encoded public key for use by the security library.
@@ -12681,7 +14550,7 @@ exports.PublicKey = PublicKey;
  */
 PublicKey.prototype.toDer = function()
 {
-  throw new Error("PublicKey.toDer is not implemented");
+  return DerNode.parse(this.keyDer.buf());
 };
 
 /**
@@ -12697,20 +14566,9 @@ PublicKey.fromDer = function(keyType, keyDer)
   }
   else
     throw new SecurityException(new Error
-      ("PublicKey::fromDer: Unrecognized keyType"));
+      ("PublicKey.fromDer: Unrecognized keyType"));
 
   return new PublicKey(keyType, keyDer);
-};
-
-/**
- * 
- * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
- * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
- * @returns {Blob} The digest value.
- */
-PublicKey.prototype.getDigest = function(digestAlgorithm)
-{
-  throw new Error("PublicKey.getDigest is not implemented");
 };
 
 /**
@@ -12720,6 +14578,26 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 PublicKey.prototype.getKeyType = function()
 {
   return this.keyType;
+};
+
+/**
+ * Get the digest of the public key.
+ * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
+ * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
+ * @returns {Blob} The digest value.
+ */
+PublicKey.prototype.getDigest = function(digestAlgorithm)
+{
+  if (digestAlgorithm == undefined)
+    digestAlgorithm = DigestAlgorithm.SHA256;
+  
+  if (digestAlgorithm == DigestAlgorithm.SHA256) {
+    var hash = crypto.createHash('sha256');
+    hash.update(this.keyDer.buf());
+    return new Blob(hash.digest());
+  }
+  else
+    throw new SecurityException(new Error("Wrong format!"));
 };
 
 /**
@@ -12750,11 +14628,518 @@ PublicKey.prototype.getKeyDer = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var IdentityCertificate = function IdentityCertificate()
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+
+/**
+ * A CertificateExtension represents the Extension entry in a certificate.
+ * Create a new CertificateExtension.
+ * @param {string|OID} oid The oid of subject description entry.
+ * @param {boolean} isCritical If true, the extension must be handled.
+ * @param {Blob} value The extension value.
+ */
+var CertificateExtension = function CertificateExtension(oid, isCritical, value)
 {
+  if (typeof oid === 'string')
+    this.extensionId = new OID(oid);
+  else
+    // Assume oid is already an OID.
+    this.extensionId = oid;
+
+  this.isCritical = isCritical;
+  this.extensionValue = value;
 };
 
+exports.CertificateExtension = CertificateExtension;
+
+/**
+ * Encode the object into a DER syntax tree.
+ * @returns {DerNode} The encoded DER syntax tree.
+ */
+CertificateExtension.prototype.toDer = function()
+{
+  var root = new DerNode.DerSequence();
+
+  var extensionId = new DerNode.DerOid(this.extensionId);
+  var isCritical = new DerNode.DerBoolean(this.isCritical);
+  var extensionValue = new DerNode.DerOctetString(this.extensionValue.buf());
+
+  root.addChild(extensionId);
+  root.addChild(isCritical);
+  root.addChild(extensionValue);
+
+  root.getSize();
+
+  return root;
+};
+
+CertificateExtension.prototype.toDerBlob = function()
+{
+  return this.toDer().encode();
+};
+
+CertificateExtension.prototype.getOid = function()
+{
+  return this.extensionId;
+};
+
+CertificateExtension.prototype.getIsCritical = function()
+{
+  return this.isCritical;
+};
+
+CertificateExtension.prototype.getValue = function()
+{
+  return this.extensionValue;
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('../../util/blob.js').Blob;
+var OID = require('../../encoding/oid.js').OID;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+
+/**
+ * A CertificateSubjectDescription represents the SubjectDescription entry in a
+ * Certificate.
+ * Create a new CertificateSubjectDescription.
+ * @param {string|OID} oid The oid of the subject description entry.
+ * @param {string} value The value of the subject description entry.
+ */
+var CertificateSubjectDescription = function CertificateSubjectDescription
+  (oid, value)
+{
+  if (typeof oid === 'string')
+    this.oid = new OID(oid);
+  else
+    // Assume oid is already an OID.
+    this.oid = oid;
+
+  this.value = value;
+};
+
+exports.CertificateSubjectDescription = CertificateSubjectDescription;
+
+/**
+ * Encode the object into a DER syntax tree.
+ * @returns {DerNode} The encoded DER syntax tree.
+ */
+CertificateSubjectDescription.prototype.toDer = function()
+{
+  var root = new DerNode.DerSequence();
+
+  var oid = new DerNode.DerOid(this.oid);
+  // Use Blob to convert the String to a ByteBuffer.
+  var value = new DerNode.DerPrintableString(new Blob(this.value).buf());
+
+  root.addChild(oid);
+  root.addChild(value);
+
+  return root;
+};
+
+CertificateSubjectDescription.prototype.getOidString = function()
+{
+  return this.oid.toString();
+};
+
+CertificateSubjectDescription.prototype.getValue = function()
+{
+  return this.value;
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Data = require('../../data.js').Data;
+var ContentType = require('../../meta-info.js').ContentType;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var KeyType = require('../../security/security-types.js').KeyType;
+var PublicKey = require('./public-key.js').PublicKey;
+var CertificateSubjectDescription = require('./certificate-subject-description.js').CertificateSubjectDescription;
+var CertificateExtension = require('./certificate-extension.js').CertificateExtension;
+
+/**
+ * Create a Certificate from the content in the data packet (if not omitted).
+ * @param {Data} data (optional) The data packet with the content to decode.
+ * If omitted, create a Certificate with default values and the Data content
+ * is empty.
+ */
+var Certificate = function Certificate(data)
+{
+  // Call the base constructor.
+  if (data != undefined)
+    Data.call(this, data);
+  else
+    Data.call(this);
+
+  this.subjectDescriptionList = [];  // of CertificateSubjectDescription
+  this.extensionList = [];           // of CertificateExtension
+  this.notBefore = Number.MAX_VALUE; // MillisecondsSince1970
+  this.notAfter = -Number.MAX_VALUE; // MillisecondsSince1970
+  this.key = new PublicKey();
+
+  if (data != undefined)
+    this.decode();
+};
+Certificate.prototype = new Data();
+Certificate.prototype.name = "Certificate";
+
+exports.Certificate = Certificate;
+
+/**
+ * Encode the contents of the certificate in DER format and set the Content
+ * and MetaInfo fields.
+ */
+Certificate.prototype.encode = function()
+{
+  var root = this.toDer();
+  this.setContent(root.encode());
+  this.getMetaInfo().setType(ContentType.KEY);
+};
+
+/**
+ * Add a subject description.
+ * @param {CertificateSubjectDescription} description The description to be added.
+ */
+Certificate.prototype.addSubjectDescription = function(description)
+{
+  this.subjectDescriptionList.push(description);
+};
+
+/**
+ * Get the subject description list.
+ * @returns {Array<CertificateSubjectDescription>} The subject description list.
+ */
+Certificate.prototype.getSubjectDescriptionList = function()
+{
+  return this.subjectDescriptionList;
+};
+
+/**
+ * Add a certificate extension.
+ * @param {CertificateSubjectDescription} extension The extension to be added.
+ */
+Certificate.prototype.addExtension = function(extension)
+{
+  this.extensionList.push(extension);
+};
+
+/**
+ * Get the certificate extension list.
+ * @returns {Array<CertificateExtension>} The extension list.
+ */
+Certificate.prototype.getExtensionList = function()
+{
+  return this.extensionList;
+};
+
+Certificate.prototype.setNotBefore = function(notBefore)
+{
+  this.notBefore = notBefore;
+};
+
+Certificate.prototype.getNotBefore = function()
+{
+  return this.notBefore;
+};
+
+Certificate.prototype.setNotAfter = function(notAfter)
+{
+  this.notAfter = notAfter;
+};
+
+Certificate.prototype.getNotAfter = function()
+{
+  return this.notAfter;
+};
+
+Certificate.prototype.setPublicKeyInfo = function(key)
+{
+  this.key = key;
+};
+
+Certificate.prototype.getPublicKeyInfo = function()
+{
+  return this.key;
+};
+
+/**
+ * Check if the certificate is valid.
+ * @returns {Boolean} True if the current time is earlier than notBefore.
+ */
+Certificate.prototype.isTooEarly = function()
+{
+  var now = new Date().getTime();
+  return now < this.notBefore;
+};
+
+/**
+ * Check if the certificate is valid.
+ * @returns {Boolean} True if the current time is later than notAfter.
+ */
+Certificate.prototype.isTooLate = function()
+{
+  var now = new Date().getTime();
+  return now > this.notAfter;
+};
+
+/**
+ * Encode the certificate fields in DER format.
+ * @returns {DerSequence} The DER encoded contents of the certificate.
+ */
+Certificate.prototype.toDer = function()
+{
+  var root = new DerNode.DerSequence();
+  var validity = new DerNode.DerSequence();
+  var notBefore = new DerNode.DerGeneralizedTime(this.notBefore);
+  var notAfter = new DerNode.DerGeneralizedTime(this.notAfter);
+
+  validity.addChild(notBefore);
+  validity.addChild(notAfter);
+
+  root.addChild(validity);
+
+  var subjectList = new DerNode.DerSequence();
+  for (var i = 0; i < this.subjectDescriptionList.length; ++i)
+    subjectList.addChild(this.subjectDescriptionList[i].toDer());
+
+  root.addChild(subjectList);
+  root.addChild(this.key.toDer());
+
+  if (this.extensionList.length > 0) {
+    var extensionList = new DerNode.DerSequence();
+    for (var i = 0; i < this.extensionList.length; ++i)
+      subjectList.addChild(this.extensionList[i].toDer());
+    root.addChild(extensionList);
+  }
+
+  return root;
+};
+
+/**
+ * Populate the fields by the decoding DER data from the Content.
+ */
+Certificate.prototype.decode = function()
+{
+  var root = DerNode.parse(this.getContent().buf());
+
+  // We need to ensure that there are:
+  //   validity (notBefore, notAfter)
+  //   subject list
+  //   public key
+  //   (optional) extension list
+
+  var rootChildren = root.getChildren();
+  // 1st: validity info
+  var validityChildren = rootChildren[0].getChildren();
+  this.notBefore = validityChildren[0].toVal();
+  this.notAfter = validityChildren[1].toVal();
+
+  // 2nd: subjectList
+  var subjectChildren = rootChildren[1].getChildren();
+  for (var i = 0; i < subjectChildren.length; ++i) {
+    var sd = subjectChildren[i];
+    var descriptionChildren = sd.getChildren();
+    var oidStr = descriptionChildren[0].toVal();
+    var value = descriptionChildren[1].toVal().buf().toString('binary');
+
+    this.addSubjectDescription(new CertificateSubjectDescription(oidStr, value));
+  }
+
+  // 3rd: public key
+  var publicKeyInfo = rootChildren[2].encode();
+  // TODO: Handle key types other than RSA.
+  this.key =  new PublicKey(KeyType.RSA, publicKeyInfo);
+
+  if (rootChildren.length > 3) {
+    var extensionChildren = rootChildren[3].getChildren();
+    for (var i = 0; i < extensionChildren.size(); ++i) {
+      var extInfo = extensionChildren[i];
+
+      var children = extInfo.getChildren();
+      var oidStr = children[0].toVal();
+      var isCritical = children[1].toVal();
+      var value = children[2].encode();
+      this.addExtension(new CertificateExtension(oidStr, isCritical, value));
+    }
+  }
+};
+
+Certificate.prototype.toString = function()
+{
+  var s = "Certificate name:\n";
+  s += "  " + this.getName().toUri() + "\n";
+  s += "Validity:\n";
+
+  var notBeforeStr = Certificate.toIsoString(Math.round(this.notBefore));
+  var notAfterStr = Certificate.toIsoString(Math.round(this.notAfter));
+
+  s += "  NotBefore: " + notBeforeStr + "\n";
+  s += "  NotAfter: " + notAfterStr + "\n";
+  for (var i = 0; i < this.subjectDescriptionList.length; ++i) {
+    var sd = this.subjectDescriptionList[i];
+    s += "Subject Description:\n";
+    s += "  " + sd.getOidString() + ": " + sd.getValue() + "\n";
+  }
+
+  s += "Public key bits:\n";
+  var keyDer = this.key.getKeyDer();
+  var encodedKey = keyDer.buf().toString('base64');
+  for (var i = 0; i < encodedKey.length; i += 64)
+    s += encodedKey.substring(i, Math.min(i + 64, encodedKey.length)) + "\n";
+
+  if (this.extensionList.length > 0) {
+    s += "Extensions:\n";
+    for (var i = 0; i < this.extensionList.length; ++i) {
+      var ext = this.extensionList[i];
+      s += "  OID: " + ext.getOid() + "\n";
+      s += "  Is critical: " + (ext.getIsCritical() ? 'Y' : 'N') + "\n";
+
+      s += "  Value: " + ext.getValue().toHex() + "\n" ;
+    }
+  }
+
+  return s;
+};
+
+/**
+ * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
+ * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
+ * @returns {string} The string representation.
+ */
+Certificate.toIsoString = function(msSince1970)
+{
+  var utcTime = new Date(Math.round(msSince1970));
+  return utcTime.getUTCFullYear() +
+         Certificate.to2DigitString(utcTime.getUTCMonth() + 1) +
+         Certificate.to2DigitString(utcTime.getUTCDate()) +
+         "T" +
+         Certificate.to2DigitString(utcTime.getUTCHours()) +
+         Certificate.to2DigitString(utcTime.getUTCMinutes()) +
+         Certificate.to2DigitString(utcTime.getUTCSeconds());
+};
+
+/**
+ * A private method to zero pad an integer to 2 digits.
+ * @param {number} x The number to pad.  Assume it is a non-negative integer.
+ * @returns {string} The padded string.
+ */
+Certificate.to2DigitString = function(x)
+{
+  var result = x.toString();
+  return result.length === 1 ? "0" + result : result;
+};
+/**
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Data = require('../../data.js').Data;
+var Name = require('../../name.js').Name;
+var SecurityException = require('../../security//security-exception.js').SecurityException;
+var Certificate = require('./certificate.js').Certificate;
+
+var IdentityCertificate = function IdentityCertificate(data)
+{
+  // Call the base constructor.
+  if (data != undefined)
+    // This works if data is Data or IdentityCertificate.
+    Certificate.call(this, data);
+  else
+    Certificate.call(this);
+
+  this.publicKeyName = new Name();
+
+  if (data instanceof IdentityCertificate) {
+    // The copy constructor.
+    this.publicKeyName = new Name(data.publicKeyName);
+  }
+  else if (data instanceof Data) {
+    if (!IdentityCertificate.isCorrectName(data.getName()))
+      throw new SecurityException(new Error("Wrong Identity Certificate Name!"));
+
+    this.setPublicKeyName();
+  }
+};
+IdentityCertificate.prototype = new Certificate();
+IdentityCertificate.prototype.name = "IdentityCertificate";
+
 exports.IdentityCertificate = IdentityCertificate;
+
+/**
+ * Override the base class method to check that the name is a valid identity 
+ * certificate name.
+ * @param {Name} name The identity certificate name which is copied.
+ * @returns {Data} This Data so that you can chain calls to update values.
+ */
+IdentityCertificate.prototype.setName = function(name)
+{
+  if (!IdentityCertificate.isCorrectName(name))
+    throw new SecurityException(new Error("Wrong Identity Certificate Name!"));
+
+  // Call the super class method.
+  Certificate.prototype.setName.call(this, name);
+  this.setPublicKeyName();
+  return this;
+};
+
+IdentityCertificate.prototype.getPublicKeyName = function()
+{
+  return this.publicKeyName;
+};
+
+IdentityCertificate.isIdentityCertificate = function(certificate)
+{
+  return IdentityCertificate.isCorrectName(certificate.getName());
+};
 
 /**
  * Get the public key name from the full certificate name.
@@ -12780,6 +15165,38 @@ IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append
     (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+};
+
+IdentityCertificate.isCorrectName = function(name)
+{
+  var i = name.size() - 1;
+
+  var idString = "ID-CERT";
+  for (; i >= 0; i--) {
+    if (name.get(i).toEscapedString() == idString)
+      break;
+  }
+
+  if (i < 0)
+    return false;
+
+  var keyIdx = 0;
+  var keyString = "KEY";
+  for (; keyIdx < name.size(); keyIdx++) {
+    if(name.get(keyIdx).toEscapedString() == keyString)
+      break;
+  }
+
+  if (keyIdx >= name.size())
+    return false;
+
+  return true;
+};
+
+IdentityCertificate.prototype.setPublicKeyName = function()
+{
+  this.publicKeyName = IdentityCertificate.certificateNameToPublicKeyName
+    (this.getName());
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -15064,915 +17481,6 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   else
     onVerifyFailed(originalDataOrInterest);
 };
-/**
- * This class represents an NDN Data MetaInfo object.
- * Copyright (C) 2014 Regents of the University of California.
- * @author: Meki Cheraoui
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var Blob = require('./util/blob.js').Blob;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var KeyLocator = require('./key-locator.js').KeyLocator;
-var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var Name = require('./name.js').Name;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var NDNTime = require('./util/ndn-time.js').NDNTime;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
-var LOG = require('./log.js').Log.LOG;
-
-var ContentType = {
-  BLOB:0,
-  // ContentType DATA is deprecated.  Use ContentType.BLOB .
-  DATA:0,
-  LINK:1,
-  KEY: 2,
-  // ContentType ENCR, GONE and NACK are not supported in NDN-TLV encoding and are deprecated.
-  ENCR:3,
-  GONE:4,
-  NACK:5
-};
-
-exports.ContentType = ContentType;
-
-/**
- * Create a new MetaInfo with the optional values.
- * @constructor
- */
-var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
-{
-  if (typeof publisherOrMetaInfo === 'object' &&
-      publisherOrMetaInfo instanceof MetaInfo) {
-    // Copy values.
-    var metaInfo = publisherOrMetaInfo;
-    this.publisher = metaInfo.publisher;
-    this.timestamp = metaInfo.timestamp;
-    this.type = metaInfo.type;
-    this.locator = metaInfo.locator == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator);
-    this.freshnessSeconds = metaInfo.freshnessSeconds;
-    this.finalBlockID = metaInfo.finalBlockID;
-  }
-  else {
-    this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
-    this.timestamp = timestamp; // NDN Time
-    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
-    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
-    this.freshnessSeconds = freshnessSeconds; // Integer
-    this.finalBlockID = finalBlockId; //byte array
-
-    if (!skipSetFields)
-      this.setFields();
-  }
-
-  this.changeCount = 0;
-};
-
-exports.MetaInfo = MetaInfo;
-
-/**
- * Get the content type.
- * @returns {number} The content type as an int from ContentType.
- */
-MetaInfo.prototype.getType = function()
-{
-  return this.type;
-};
-
-/**
- * Get the freshness period.
- * @returns {number} The freshness period in milliseconds, or null if not
- * specified.
- */
-MetaInfo.prototype.getFreshnessPeriod = function()
-{
-  // Use attribute freshnessSeconds for backwards compatibility.
-  if (this.freshnessSeconds == null || this.freshnessSeconds < 0)
-    return null;
-  else
-    // Convert to milliseconds.
-    return this.freshnessSeconds * 1000.0;
-};
-
-/**
- * Get the final block ID.
- * @returns {Name.Component} The final block ID as a Name.Component. If the
- * Name.Component getValue().size() is 0, then the final block ID is not specified.
- */
-MetaInfo.prototype.getFinalBlockId = function()
-{
-  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
-  return new Name.Component(new Blob(this.finalBlockID, true));
-};
-
-/**
- * @deprecated Use getFinalBlockId.
- */
-MetaInfo.prototype.getFinalBlockID = function()
-{
-  return this.getFinalBlockId();
-};
-
-/**
- * @deprecated Use getFinalBlockId. This method returns a Buffer which is the former
- * behavior of getFinalBlockId, and should only be used while updating your code.
- */
-MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
-{
-  return this.finalBlockID;
-};
-
-/**
- * Set the content type.
- * @param {number} type The content type as an int from ContentType.  If null,
- * this uses ContentType.BLOB.
- */
-MetaInfo.prototype.setType = function(type)
-{
-  this.type = type == null || type < 0 ? ContentType.BLOB : type;
-  ++this.changeCount;
-};
-
-/**
- * Set the freshness period.
- * @param {type} freshnessPeriod The freshness period in milliseconds, or null
- * for not specified.
- */
-MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
-{
-  // Use attribute freshnessSeconds for backwards compatibility.
-  if (freshnessPeriod == null || freshnessPeriod < 0)
-    this.freshnessSeconds = null;
-  else
-    // Convert from milliseconds.
-    this.freshnessSeconds = freshnessPeriod / 1000.0;
-  ++this.changeCount;
-};
-
-MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
-{
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  if (finalBlockId == null)
-    this.finalBlockID = null;
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
-    this.finalBlockID = finalBlockId.buf();
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
-    this.finalBlockID = finalBlockId.getValue().buf();
-  else
-    this.finalBlockID = new Buffer(finalBlockId);
-  ++this.changeCount;
-};
-
-/**
- * @deprecated Use setFinalBlockId.
- */
-MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
-{
-  this.setFinalBlockId(finalBlockId);
-};
-
-MetaInfo.prototype.setFields = function()
-{
-  var key = globalKeyManager.getKey();
-  this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
-
-  var d = new Date();
-
-  var time = d.getTime();
-
-  this.timestamp = new NDNTime(time);
-
-  if (LOG > 4) console.log('TIME msec is');
-
-  if (LOG > 4) console.log(this.timestamp.msec);
-
-  //DATA
-  this.type = ContentType.BLOB;
-
-  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
-  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
-
-  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
-  ++this.changeCount;
-};
-
-MetaInfo.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    if (LOG > 4) console.log('DECODING PUBLISHER KEY');
-    this.publisher = new PublisherPublicKeyDigest();
-    this.publisher.from_ndnb(decoder);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
-    if (LOG > 4) console.log('DECODING TIMESTAMP');
-    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
-    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
-
-    if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
-
-    this.type = binType;
-
-    //TODO Implement type of Key Reading
-    if (null == this.type)
-      throw new Error("Cannot parse signedInfo type: bytes.");
-  }
-  else
-    this.type = ContentType.DATA; // default
-
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
-    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-    if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
-    if (LOG > 4) console.log('DECODING FINAL BLOCKID');
-    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
-    if (LOG > 4) console.log('DECODING KEY LOCATOR');
-    this.locator = new KeyLocator();
-    this.locator.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-  ++this.changeCount;
-};
-
-/**
- * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
- * locator in this object.
- * @param {BinaryXMLEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator).
- */
-MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.publisher) {
-    // We have a publisherPublicKeyDigest, so use it.
-    if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
-    this.publisher.to_ndnb(encoder);
-  }
-  else {
-    if (null != keyLocator &&
-        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-        !keyLocator.getKeyData().isNull() &&
-        keyLocator.getKeyData().size() > 0)
-      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
-      //   publisherPublicKeyDigest.
-      encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
-  }
-
-  if (null != this.timestamp)
-    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
-
-  if (null != this.type && this.type != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
-
-  if (null != this.freshnessSeconds)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-
-  if (null != this.finalBlockID)
-    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
-
-  if (null != keyLocator)
-    keyLocator.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-MetaInfo.prototype.valueToType = function()
-{
-  return null;
-};
-
-MetaInfo.prototype.getElementLabel = function() {
-  return NDNProtocolDTags.SignedInfo;
-};
-
-MetaInfo.prototype.validate = function()
-{
-  // We don't do partial matches any more, even though encoder/decoder
-  // is still pretty generous.
-  if (null == this.timestamp)
-    return false;
-  return true;
-};
-
-/**
- * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
- */
-MetaInfo.prototype.getChangeCount = function()
-{
-  return this.changeCount;
-};
-
-/**
- * @deprecated Use new MetaInfo.
- */
-var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
-{
-  // Call the base constructor.
-  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
-}
-
-// Set skipSetFields true since we only need the prototype functions.
-SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
-
-exports.SignedInfo = SignedInfo;
-/**
- * This class represents an NDN Data Signature object.
- * Copyright (C) 2014 Regents of the University of California.
- * @author: Meki Cheraoui
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var Blob = require('./util/blob.js').Blob;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var KeyLocator = require('./key-locator.js').KeyLocator;
-var LOG = require('./log.js').Log.LOG;
-
-/**
- * Create a new Sha256WithRsaSignature object, possibly copying values from
- * another object.
- *
- * @param {Sha256WithRsaSignature} value (optional) If value is a
- * Sha256WithRsaSignature, copy its values.  If value is omitted, the keyLocator
- * is the default with unspecified values and the signature is unspecified.
- * @constructor
- */
-var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
-{
-  if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
-    // Copy the values.
-    this.keyLocator = new KeyLocator(value.keyLocator);
-    this.signature = value.signature;
-    // witness is deprecated.
-    this.witness = value.witness;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm = value.digestAlgorithm;
-  }
-  else {
-    this.keyLocator = new KeyLocator();
-    this.signature = null;
-    // witness is deprecated.
-    this.witness = null;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm = null;
-  }
-};
-
-exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
-
-/**
- * Create a new Sha256WithRsaSignature which is a copy of this object.
- * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
- */
-Sha256WithRsaSignature.prototype.clone = function()
-{
-  return new Sha256WithRsaSignature(this);
-};
-
-/**
- * Get the key locator.
- * @returns {KeyLocator} The key locator.
- */
-Sha256WithRsaSignature.prototype.getKeyLocator = function()
-{
-  return this.keyLocator;
-};
-
-/**
- * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
- */
-Sha256WithRsaSignature.prototype.getSignature = function()
-{
-  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
-  return new Blob(this.signature, false);
-};
-
-/**
- * @deprecated Use getSignature. This method returns a Buffer which is the former
- * behavior of getSignature, and should only be used while updating your code.
- */
-Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
-{
-  return this.signature;
-};
-
-/**
- * Set the key locator to a copy of the given keyLocator.
- * @param {KeyLocator} keyLocator The KeyLocator to copy.
- */
-Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
-{
-  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
-                    new KeyLocator(keyLocator) : new KeyLocator();
-};
-
-/**
- * Set the data packet's signature bytes.
- * @param {Blob} signature
- */
-Sha256WithRsaSignature.prototype.setSignature = function(signature)
-{
-  if (signature == null)
-    this.signature = null;
-  else if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = new Buffer(signature.buf());
-  else
-    this.signature = new Buffer(signature);
-};
-
-Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
-
-  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
-    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
-    if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness);
-  }
-
-  //FORCE TO READ A SIGNATURE
-
-  if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
-
-  decoder.readElementClose();
-};
-
-Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
-{
-  if (!this.validate())
-    throw new Error("Cannot encode: field values missing.");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-
-  if (null != this.witness)
-    // needs to handle null witness
-    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
-
-  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
-
-  encoder.writeElementClose();
-};
-
-Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
-Sha256WithRsaSignature.prototype.validate = function()
-{
-  return this.getSignature().size() > 0;
-};
-
-/**
- * Note: This Signature class is not the same as the base Signature class of
- * the Common Client Libraries API. It is a deprecated name for
- * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
- * we may implement the CCL version of Signature.
- * @deprecated Use new Sha256WithRsaSignature.
- */
-var Signature = function Signature
-  (witnessOrSignatureObject, signature, digestAlgorithm)
-{
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
-    // Call the base copy constructor.
-    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
-  else {
-    // Call the base default constructor.
-    Sha256WithRsaSignature.call(this);
-
-    // Set the given fields (if supplied).
-    if (witnessOrSignatureObject != null)
-      // witness is deprecated.
-      this.witness = witnessOrSignatureObject;
-    if (signature != null)
-      this.signature = signature;
-    if (digestAlgorithm != null)
-      // digestAlgorithm is deprecated.
-      this.digestAlgorithm = digestAlgorithm;
-  }
-}
-
-Signature.prototype = new Sha256WithRsaSignature();
-
-exports.Signature = Signature;
-/**
- * This class represents an NDN Data object.
- * Copyright (C) 2013-2014 Regents of the University of California.
- * @author: Meki Cheraoui
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var Crypto = require("./crypto.js");
-var Blob = require('./util/blob.js').Blob;
-var SignedBlob = require('./util/signed-blob.js').SignedBlob;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var MetaInfo = require('./meta-info.js').MetaInfo;
-var KeyLocator = require('./key-locator.js').KeyLocator;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-
-/**
- * Create a new Data with the optional values.  There are 2 forms of constructor:
- * new Data([name] [, content]);
- * new Data(name, metaInfo [, content]);
- *
- * @constructor
- * @param {Name} name
- * @param {MetaInfo} metaInfo
- * @param {Buffer} content
- */
-var Data = function Data(name, metaInfoOrContent, arg3)
-{
-  if (typeof name === 'string')
-    this.name = new Name(name);
-  else
-    this.name = typeof name === 'object' && name instanceof Name ?
-       new Name(name) : new Name();
-
-  var metaInfo;
-  var content;
-  if (typeof metaInfoOrContent === 'object' &&
-      metaInfoOrContent instanceof MetaInfo) {
-    metaInfo = metaInfoOrContent;
-    content = arg3;
-  }
-  else {
-    metaInfo = null;
-    content = metaInfoOrContent;
-  }
-
-  // Use signedInfo instead of metaInfo for backward compatibility.
-  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-       new MetaInfo(metaInfo) : new MetaInfo();
-
-  if (typeof content === 'string')
-    this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content === 'object' && content instanceof Blob)
-    this.content = content.buf();
-  else
-    this.content = content;
-
-  this.signature = new Sha256WithRsaSignature();
-
-  this.wireEncoding = new SignedBlob();
-};
-
-exports.Data = Data;
-
-/**
- * Get the data packet's name.
- * @returns {Name} The name.
- */
-Data.prototype.getName = function()
-{
-  return this.name;
-};
-
-/**
- * Get the data packet's meta info.
- * @returns {MetaInfo} The meta info.
- */
-Data.prototype.getMetaInfo = function()
-{
-  return this.signedInfo;
-};
-
-/**
- * Get the data packet's signature object.
- * @returns {Signature} The signature object.
- */
-Data.prototype.getSignature = function()
-{
-  return this.signature;
-};
-
-/**
- * Get the data packet's content.
- * @returns {Blob} The data packet content as a Blob.
- */
-Data.prototype.getContent = function()
-{
-  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
-  return new Blob(this.content, false);
-};
-
-/**
- * @deprecated Use getContent. This method returns a Buffer which is the former
- * behavior of getContent, and should only be used while updating your code.
- */
-Data.prototype.getContentAsBuffer = function()
-{
-  return this.content;
-};
-
-/**
- * Set name to a copy of the given Name.
- * @param {Name} name The Name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
- */
-Data.prototype.setName = function(name)
-{
-  this.name = typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
-  return this;
-};
-
-/**
- * Set metaInfo to a copy of the given MetaInfo.
- * @param {MetaInfo} metaInfo The MetaInfo which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
- */
-Data.prototype.setMetaInfo = function(metaInfo)
-{
-  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-    new MetaInfo(metaInfo) : new MetaInfo();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
-  return this;
-};
-
-/**
- * Set the signature to a copy of the given signature.
- * @param {Signature} signature The signature object which is cloned.
- * @returns {Data} This Data so that you can chain calls to update values.
- */
-Data.prototype.setSignature = function(signature)
-{
-  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
-    signature.clone() : new Sha256WithRsaSignature();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
-  return this;
-};
-
-/**
- * Set the content to the given value.
- * @param {type} content The array this is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
- */
-Data.prototype.setContent = function(content)
-{
-  if (typeof content === 'string')
-    this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content === 'object' && content instanceof Blob)
-    this.content = content.buf();
-  else
-    this.content = new Buffer(content);
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
-  return this;
-};
-
-Data.prototype.sign = function(wireFormat)
-{
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
-      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
-    this.getMetaInfo().setFields();
-
-  if (this.wireEncoding == null || this.wireEncoding.isNull()) {
-    // Need to encode to set wireEncoding.
-    // Set an initial empty signature so that we can encode.
-    this.getSignature().setSignature(new Buffer(128));
-    this.wireEncode(wireFormat);
-  }
-  var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(this.wireEncoding.signedBuf());
-
-  var sig = new Buffer
-    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.setSignature(sig);
-};
-
-// The first time verify is called, it sets this to determine if a signature
-//   buffer needs to be converted to a string for the crypto verifier.
-Data.verifyUsesString = null;
-Data.prototype.verify = function(/*Key*/ key)
-{
-  if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify Data without a public key.');
-
-  if (Data.verifyUsesString == null) {
-    var hashResult = Crypto.createHash('sha256').digest();
-    // If the has result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    Data.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  if (this.wireEncoding == null || this.wireEncoding.isNull())
-    // Need to encode to set wireEncoding.
-    this.wireEncode();
-  var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncoding.signedBuf());
-  var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
-  return verifier.verify(key.publicKeyPem, signatureBytes);
-};
-
-Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
-
-/**
- * Encode this Data for a particular wire format.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
- */
-Data.prototype.wireEncode = function(wireFormat)
-{
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  var result = wireFormat.encodeData(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding = new SignedBlob
-    (result.encoding, result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
-  return this.wireEncoding;
-};
-
-/**
- * Decode the input using a particular wire format and update this Data.
- * @param {Blob|Buffer} input The buffer with the bytes to decode.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
- * this object. If omitted, use WireFormat.getDefaultWireFormat().
- */
-Data.prototype.wireDecode = function(input, wireFormat)
-{
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  var result = wireFormat.decodeData(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
-};
-
-/**
- * If getSignature() has a key locator, return it.  Otherwise, use
- * the key locator from getMetaInfo() for backward compatibility and print
- * a warning to console.log that the key locator has moved to the Signature
- * object.  If neither has a key locator, return an empty key locator.
- * When we stop supporting the key locator in MetaInfo, this function is not
- * necessary and we will just use the key locator in the Signature.
- * @returns {KeyLocator} The key locator to use.
- */
-Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
-{
-  if (this.signature != null && this.signature.getKeyLocator() != null &&
-      this.signature.getKeyLocator().getType() != null &&
-      this.signature.getKeyLocator().getType() >= 0)
-    // The application is using the key locator in the correct object.
-    return this.signature.getKeyLocator();
-
-  if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.getType() != null &&
-      this.signedInfo.locator.getType() >= 0) {
-    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
-    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.signedInfo.locator;
-  }
-
-  // Return the empty key locator from the Signature object if possible.
-  if (this.signature != null && this.signature.getKeyLocator() != null)
-    return this.signature.getKeyLocator();
-  else
-    return new KeyLocator();
-}
-
-// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeData.
- */
-Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeData(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeData.
- */
-Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeData(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Data.prototype.encode = function(wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Data.prototype.decode = function(input, wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  wireFormat.decodeData(this, input);
-};
-
-/**
- * @deprecated Use new Data.
- */
-var ContentObject = function ContentObject(name, signedInfo, content)
-{
-  // Call the base constructor.
-  Data.call(this, name, signedInfo, content);
-}
-
-ContentObject.prototype = new Data();
-
-exports.ContentObject = ContentObject;
 /**
  * This class represents an Interest Exclude.
  * Copyright (C) 2014 Regents of the University of California.
