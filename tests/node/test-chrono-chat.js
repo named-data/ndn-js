@@ -307,11 +307,10 @@ ChronoChat.prototype.onData = function(interest, co)
     var name = content.from;
     
     // chat_prefix should be saved as a name, not a URI string.
-    var chatPrefixSize = new Name(this.chat_prefix).size();
-    var prefix = co.getName().getPrefix(chatPrefixSize).toUri();
+    var prefix = co.getName().getPrefix(-2).toUri();
     
-    var session = parseInt((co.getName().get(chatPrefixSize + 0)).toEscapedString());
-    var seqno = parseInt((co.getName().get(chatPrefixSize + 1)).toEscapedString());
+    var session = parseInt((co.getName().get(-2)).toEscapedString());
+    var seqno = parseInt((co.getName().get(-1)).toEscapedString());
     var l = 0;
     
     //update roster
