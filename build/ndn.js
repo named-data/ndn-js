@@ -10218,43 +10218,43 @@ exports.DerEncodingException = DerEncodingException;
  */
 
 /**
- * The NodeType enum defines the known DER node types.
+ * The DerNodeType enum defines the known DER node types.
  */
-var NodeType = function NodeType()
+var DerNodeType = function DerNodeType()
 {
 }
 
-exports.NodeType = NodeType;
+exports.DerNodeType = DerNodeType;
 
-NodeType.Eoc = 0;
-NodeType.Boolean = 1;
-NodeType.Integer = 2;
-NodeType.BitString = 3;
-NodeType.OctetString = 4;
-NodeType.Null = 5;
-NodeType.ObjectIdentifier = 6;
-NodeType.ObjectDescriptor = 7;
-NodeType.External = 40;
-NodeType.Real = 9;
-NodeType.Enumerated = 10;
-NodeType.EmbeddedPdv = 43;
-NodeType.Utf8String = 12;
-NodeType.RelativeOid = 13;
-NodeType.Sequence = 48;
-NodeType.Set = 49;
-NodeType.NumericString = 18;
-NodeType.PrintableString = 19;
-NodeType.T61String = 20;
-NodeType.VideoTexString = 21;
-NodeType.Ia5String = 22;
-NodeType.UtcTime = 23;
-NodeType.GeneralizedTime = 24;
-NodeType.GraphicString = 25;
-NodeType.VisibleString = 26;
-NodeType.GeneralString = 27;
-NodeType.UniversalString = 28;
-NodeType.CharacterString = 29;
-NodeType.BmpString = 30;
+DerNodeType.Eoc = 0;
+DerNodeType.Boolean = 1;
+DerNodeType.Integer = 2;
+DerNodeType.BitString = 3;
+DerNodeType.OctetString = 4;
+DerNodeType.Null = 5;
+DerNodeType.ObjectIdentifier = 6;
+DerNodeType.ObjectDescriptor = 7;
+DerNodeType.External = 40;
+DerNodeType.Real = 9;
+DerNodeType.Enumerated = 10;
+DerNodeType.EmbeddedPdv = 43;
+DerNodeType.Utf8String = 12;
+DerNodeType.RelativeOid = 13;
+DerNodeType.Sequence = 48;
+DerNodeType.Set = 49;
+DerNodeType.NumericString = 18;
+DerNodeType.PrintableString = 19;
+DerNodeType.T61String = 20;
+DerNodeType.VideoTexString = 21;
+DerNodeType.Ia5String = 22;
+DerNodeType.UtcTime = 23;
+DerNodeType.GeneralizedTime = 24;
+DerNodeType.GraphicString = 25;
+DerNodeType.VisibleString = 26;
+DerNodeType.GeneralString = 27;
+DerNodeType.UniversalString = 28;
+DerNodeType.CharacterString = 29;
+DerNodeType.BmpString = 30;
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -10280,7 +10280,7 @@ var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException;
 var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException;
-var NodeType = require('./node-type.js').NodeType;
+var DerNodeType = require('./der-node-type.js').DerNodeType;
 
 /**
  * DerNode implements the DER node types used in encoding/decoding DER-formatted
@@ -10288,7 +10288,7 @@ var NodeType = require('./node-type.js').NodeType;
  *
  * Create a generic DER node with the given nodeType. This is a private
  * constructor used by one of the public DerNode subclasses defined below.
- * @param {number} nodeType One of the defined DER NodeType constants.
+ * @param {number} nodeType One of the defined DER DerNodeType constants.
  */
 var DerNode = function DerNode(nodeType)
 {
@@ -10446,23 +10446,23 @@ DerNode.parse = function(inputBuf, startIdx)
   // Don't increment idx. We're just peeking.
 
   var newNode;
-  if (nodeType === NodeType.Boolean)
+  if (nodeType === DerNodeType.Boolean)
     newNode = new DerNode.DerBoolean();
-  else if (nodeType === NodeType.Integer)
+  else if (nodeType === DerNodeType.Integer)
     newNode = new DerNode.DerInteger();
-  else if (nodeType === NodeType.BitString)
+  else if (nodeType === DerNodeType.BitString)
     newNode = new DerNode.DerBitString();
-  else if (nodeType === NodeType.OctetString)
+  else if (nodeType === DerNodeType.OctetString)
     newNode = new DerNode.DerOctetString();
-  else if (nodeType === NodeType.Null)
+  else if (nodeType === DerNodeType.Null)
     newNode = new DerNode.DerNull();
-  else if (nodeType === NodeType.ObjectIdentifier)
+  else if (nodeType === DerNodeType.ObjectIdentifier)
     newNode = new DerNode.DerOid();
-  else if (nodeType === NodeType.Sequence)
+  else if (nodeType === DerNodeType.Sequence)
     newNode = new DerNode.DerSequence();
-  else if (nodeType === NodeType.PrintableString)
+  else if (nodeType === DerNodeType.PrintableString)
     newNode = new DerNode.DerPrintableString();
-  else if (nodeType === NodeType.GeneralizedTime)
+  else if (nodeType === DerNodeType.GeneralizedTime)
     newNode = new DerNode.DerGeneralizedTime();
   else
     throw new DerDecodingException(new Error("Unimplemented DER type " + nodeType));
@@ -10485,7 +10485,7 @@ DerNode.prototype.toVal = function()
  * A DerStructure extends DerNode to hold other DerNodes.
  * Create a DerStructure with the given nodeType. This is a private
  * constructor. To create an object, use DerSequence.
- * @param {number} nodeType One of the defined DER NodeType constants.
+ * @param {number} nodeType One of the defined DER DerNodeType constants.
  */
 DerNode.DerStructure = function DerStructure(nodeType)
 {
@@ -10618,7 +10618,7 @@ DerNode.DerStructure.prototype.decode = function(inputBuf, startIdx)
  * private constructor used by one of the public subclasses such as
  * DerOctetString or DerPrintableString.
  * @param {Buffer} inputData An input buffer containing the string to encode.
- * @param {number} nodeType One of the defined DER NodeType constants.
+ * @param {number} nodeType One of the defined DER DerNodeType constants.
  */
 DerNode.DerByteString = function DerByteString(inputData, nodeType)
 {
@@ -10651,7 +10651,7 @@ DerNode.DerByteString.prototype.toVal = function()
 DerNode.DerBoolean = function DerBoolean(value)
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.Boolean);
+  DerNode.call(this, DerNodeType.Boolean);
 
   if (value != undefined) {
     var val = value ? 0xff : 0x00;
@@ -10677,7 +10677,7 @@ DerNode.DerBoolean.prototype.toVal = function()
 DerNode.DerInteger = function DerInteger(integer)
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.Integer);
+  DerNode.call(this, DerNodeType.Integer);
 
   if (integer != undefined) {
     // JavaScript doesn't distinguish int from float, so round.
@@ -10711,7 +10711,7 @@ DerNode.DerInteger.prototype.name = "DerInteger";
 DerNode.DerBitString = function DerBitString(inputBuf, paddingLen)
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.BitString);
+  DerNode.call(this, DerNodeType.BitString);
 
   if (inputBuf != undefined) {
     this.payload.ensureLength(this.payloadPosition + 1);
@@ -10731,7 +10731,7 @@ DerNode.DerBitString.prototype.name = "DerBitString";
 DerNode.DerOctetString = function DerOctetString(inputData)
 {
   // Call the base constructor.
-  DerNode.DerByteString.call(this, inputData, NodeType.OctetString);
+  DerNode.DerByteString.call(this, inputData, DerNodeType.OctetString);
 };
 DerNode.DerOctetString.prototype = new DerNode.DerByteString();
 DerNode.DerOctetString.prototype.name = "DerOctetString";
@@ -10743,7 +10743,7 @@ DerNode.DerOctetString.prototype.name = "DerOctetString";
 DerNode.DerNull = function DerNull()
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.Null);
+  DerNode.call(this, DerNodeType.Null);
   this.encodeHeader(0);
 };
 DerNode.DerNull.prototype = new DerNode();
@@ -10758,7 +10758,7 @@ DerNode.DerNull.prototype.name = "DerNull";
 DerNode.DerOid = function DerOid(oid)
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.ObjectIdentifier);
+  DerNode.call(this, DerNodeType.ObjectIdentifier);
 
   if (oid != undefined) {
     if (typeof oid === 'string') {
@@ -10908,7 +10908,7 @@ DerNode.DerOid.prototype.toVal = function()
 DerNode.DerSequence = function DerSequence()
 {
   // Call the base constructor.
-  DerNode.DerStructure.call(this, NodeType.Sequence);
+  DerNode.DerStructure.call(this, DerNodeType.Sequence);
 };
 DerNode.DerSequence.prototype = new DerNode.DerStructure();
 DerNode.DerSequence.prototype.name = "DerSequence";
@@ -10922,7 +10922,7 @@ DerNode.DerSequence.prototype.name = "DerSequence";
 DerNode.DerPrintableString = function DerPrintableString(inputData)
 {
   // Call the base constructor.
-  DerNode.DerByteString.call(this, inputData, NodeType.PrintableString);
+  DerNode.DerByteString.call(this, inputData, DerNodeType.PrintableString);
 };
 DerNode.DerPrintableString.prototype = new DerNode.DerByteString();
 DerNode.DerPrintableString.prototype.name = "DerPrintableString";
@@ -10936,7 +10936,7 @@ DerNode.DerPrintableString.prototype.name = "DerPrintableString";
 DerNode.DerGeneralizedTime = function DerGeneralizedTime(msSince1970)
 {
   // Call the base constructor.
-  DerNode.call(this, NodeType.GeneralizedTime);
+  DerNode.call(this, DerNodeType.GeneralizedTime);
 
   if (msSince1970 != undefined) {
     var derTime = DerNode.DerGeneralizedTime.toDerTimeString(msSince1970);

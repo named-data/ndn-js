@@ -112,7 +112,7 @@ def build (bld):
                  "js/encoding/element-reader.js",
                  "js/encoding/der/der-decoding-exception.js",
                  "js/encoding/der/der-encoding-exception.js",
-                 "js/encoding/der/node-type.js",
+                 "js/encoding/der/der-node-type.js",
                  "js/encoding/der/der-node.js",
                  "js/util/name-enumeration.js",
                  "js/util/memory-content-cache.js",

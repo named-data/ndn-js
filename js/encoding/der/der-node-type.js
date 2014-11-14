@@ -20,40 +20,40 @@
  */
 
 /**
- * The NodeType enum defines the known DER node types.
+ * The DerNodeType enum defines the known DER node types.
  */
-var NodeType = function NodeType()
+var DerNodeType = function DerNodeType()
 {
 }
 
-exports.NodeType = NodeType;
+exports.DerNodeType = DerNodeType;
 
-NodeType.Eoc = 0;
-NodeType.Boolean = 1;
-NodeType.Integer = 2;
-NodeType.BitString = 3;
-NodeType.OctetString = 4;
-NodeType.Null = 5;
-NodeType.ObjectIdentifier = 6;
-NodeType.ObjectDescriptor = 7;
-NodeType.External = 40;
-NodeType.Real = 9;
-NodeType.Enumerated = 10;
-NodeType.EmbeddedPdv = 43;
-NodeType.Utf8String = 12;
-NodeType.RelativeOid = 13;
-NodeType.Sequence = 48;
-NodeType.Set = 49;
-NodeType.NumericString = 18;
-NodeType.PrintableString = 19;
-NodeType.T61String = 20;
-NodeType.VideoTexString = 21;
-NodeType.Ia5String = 22;
-NodeType.UtcTime = 23;
-NodeType.GeneralizedTime = 24;
-NodeType.GraphicString = 25;
-NodeType.VisibleString = 26;
-NodeType.GeneralString = 27;
-NodeType.UniversalString = 28;
-NodeType.CharacterString = 29;
-NodeType.BmpString = 30;
+DerNodeType.Eoc = 0;
+DerNodeType.Boolean = 1;
+DerNodeType.Integer = 2;
+DerNodeType.BitString = 3;
+DerNodeType.OctetString = 4;
+DerNodeType.Null = 5;
+DerNodeType.ObjectIdentifier = 6;
+DerNodeType.ObjectDescriptor = 7;
+DerNodeType.External = 40;
+DerNodeType.Real = 9;
+DerNodeType.Enumerated = 10;
+DerNodeType.EmbeddedPdv = 43;
+DerNodeType.Utf8String = 12;
+DerNodeType.RelativeOid = 13;
+DerNodeType.Sequence = 48;
+DerNodeType.Set = 49;
+DerNodeType.NumericString = 18;
+DerNodeType.PrintableString = 19;
+DerNodeType.T61String = 20;
+DerNodeType.VideoTexString = 21;
+DerNodeType.Ia5String = 22;
+DerNodeType.UtcTime = 23;
+DerNodeType.GeneralizedTime = 24;
+DerNodeType.GraphicString = 25;
+DerNodeType.VisibleString = 26;
+DerNodeType.GeneralString = 27;
+DerNodeType.UniversalString = 28;
+DerNodeType.CharacterString = 29;
+DerNodeType.BmpString = 30;
