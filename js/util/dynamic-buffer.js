@@ -102,7 +102,7 @@ DynamicBuffer.prototype.ensureLengthFromBack = function(length)
  * offsetFromBack bytes, then copy value into the array starting
  * offsetFromBack bytes from the back of the array.
  * @param {Buffer} value The buffer to copy.
- * @param {offsetFromBack} offset The offset from the back of the array to start
+ * @param {number} offsetFromBack The offset from the back of the array to start
  * copying.
  */
 DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
