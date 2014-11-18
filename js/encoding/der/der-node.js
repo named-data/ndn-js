@@ -184,8 +184,7 @@ DerNode.parse = function(inputBuf, startIdx)
   if (startIdx == undefined)
     startIdx = 0;
   
-  var idx = startIdx;
-  var nodeType = inputBuf[idx] & 0xff;
+  var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
   var newNode;
@@ -210,7 +209,7 @@ DerNode.parse = function(inputBuf, startIdx)
   else
     throw new DerDecodingException(new Error("Unimplemented DER type " + nodeType));
 
-  newNode.decode(inputBuf, idx);
+  newNode.decode(inputBuf, startIdx);
   return newNode;
 };
 
