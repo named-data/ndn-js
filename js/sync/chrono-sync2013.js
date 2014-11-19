@@ -26,6 +26,13 @@ var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 
 /**
+ * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
+ * 2013 paper "Let's ChronoSync: Decentralized Dataset State Synchronization in
+ * Named Data Networking". http://named-data.net/publications/chronosync .
+ * @note The support for ChronoSync is experimental and the API is not finalized.
+ * See the API docs for more detail at
+ * http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html .
+ * 
  * Create a new ChronoSync2013 to communicate using the given face. Initialize
  * the digest log with a digest of "00" and and empty content. Register the
  * applicationBroadcastPrefix to receive interests for sync state messages and
