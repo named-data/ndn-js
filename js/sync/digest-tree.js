@@ -18,11 +18,6 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-/**
- * For now, the sequence of parameters in DigestTree.update is different from ndn-cpp;
- * Should use the same sequence of either (seq, ses) or (ses, seq) for all functions 
- * concerning them.
- */
 var crypto = require("crypto");
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
@@ -34,14 +29,15 @@ var DigestTree = function DigestTree()
 
 exports.DigestTree = DigestTree;
 
-// What is the meaning of a session?
+// The meaning of a session is explained here:
+// http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html
 // DigestTree.Node works with seqno_seq and seqno_session, without protobuf definition,
-DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_seq, seqno_session)
+DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_session, seqno_seq)
 {
   // In this context, this should mean DigestTree.Node instead
   this.dataPrefix = dataPrefix;
-  this.seqno_seq = seqno_seq;
   this.seqno_session = seqno_session;
+  this.seqno_seq = seqno_seq;
   
   this.recomputeDigest();
 };
@@ -51,14 +47,14 @@ DigestTree.Node.prototype.getDataPrefix = function()
   return this.dataPrefix;
 };
 
-DigestTree.Node.prototype.getSequenceNo = function()
-{
-  return this.seqno_seq;
-};
-
 DigestTree.Node.prototype.getSessionNo = function()
 {
   return this.seqno_session;
+};
+
+DigestTree.Node.prototype.getSequenceNo = function()
+{
+  return this.seqno_seq;
 };
 
 DigestTree.Node.prototype.getDigest = function()
@@ -130,7 +126,7 @@ DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
       return false;
   }
   else {
-    var temp = new DigestTree.Node(dataPrefix, sequenceNo, sessionNo);
+    var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
     this.digestnode.push(temp);
     this.digestnode.sort(this.sortNodes);
   }
