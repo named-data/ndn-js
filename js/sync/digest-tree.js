@@ -116,11 +116,11 @@ DigestTree.Node.Compare = function(node1, node2)
  * and sessionNo already exists in the tree then update its sequenceNo (only if the given
  * sequenceNo is newer), otherwise add a new node.
  * @param {string} The name prefix.
- * @param {int} The session number.
- * @param {int} The sequence number.
+ * @param {int} sessionNo The session number.
+ * @param {int} sequenceNo The sequence number.
  * @return True if the digest tree is updated, false if not
  */
-DigestTree.prototype.update = function(dataPrefix, sequenceNo, sessionNo)
+DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
   var n_index = this.find(dataPrefix, sessionNo);
   if (n_index >= 0) {

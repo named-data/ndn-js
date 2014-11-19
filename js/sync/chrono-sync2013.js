@@ -286,7 +286,7 @@ ChronoSync2013.prototype.update = function(content)
 {
   for (var i = 0; i < content.length; i++) {
     if (content[i].type == 0) {
-      if (this.digest_tree.update(content[i].name, content[i].seqno.seq, content[i].seqno.session)) {
+      if (this.digest_tree.update(content[i].name, content[i].seqno.session, content[i].seqno.seq)) {
         if (this.applicationDataPrefixUri == content[i].name)
           this.usrseq = content[i].seqno.seq;
       }
