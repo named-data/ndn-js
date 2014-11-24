@@ -67,6 +67,20 @@ IdentityCertificate.prototype.setName = function(name)
   return this;
 };
 
+/**
+ * Override to call the base class wireDecode then update the public key name.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+IdentityCertificate.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  Certificate.prototype.wireDecode.call(this, input, wireFormat);
+  this.setPublicKeyName();
+};
+
 IdentityCertificate.prototype.getPublicKeyName = function()
 {
   return this.publicKeyName;
@@ -134,3 +148,4 @@ IdentityCertificate.prototype.setPublicKeyName = function()
   this.publicKeyName = IdentityCertificate.certificateNameToPublicKeyName
     (this.getName());
 };
+
