@@ -20,6 +20,7 @@
 
 var Data = require('../../data.js').Data;
 var ContentType = require('../../meta-info.js').ContentType;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var KeyType = require('../../security/security-types.js').KeyType;
 var PublicKey = require('./public-key.js').PublicKey;
@@ -231,6 +232,21 @@ Certificate.prototype.decode = function()
       this.addExtension(new CertificateExtension(oidStr, isCritical, value));
     }
   }
+};
+
+/**
+ * Override to call the base class wireDecode then populate the certificate
+ * fields.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Certificate.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  
+  Data.prototype.wireDecode.call(this, input, wireFormat);
+  this.decode();
 };
 
 Certificate.prototype.toString = function()
