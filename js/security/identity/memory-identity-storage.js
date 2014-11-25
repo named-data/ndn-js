@@ -100,7 +100,8 @@ MemoryIdentityStorage.prototype.doesKeyExist = function(keyName)
 };
 
 /**
- * Add a public key to the identity storage.
+ * Add a public key to the identity storage. Also call addIdentity to ensure
+ * that the identityName for the key exists.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -110,8 +111,7 @@ MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer
 {
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
-  if (!this.doesIdentityExist(identityName))
-    this.addIdentity(identityName);
+  this.addIdentity(identityName);
 
   if (this.doesKeyExist(keyName))
     throw new SecurityException(new Error

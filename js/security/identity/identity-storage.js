@@ -98,7 +98,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 };
 
 /**
- * Add a public key to the identity storage.
+ * Add a public key to the identity storage. Also call addIdentity to ensure
+ * that the identityName for the key exists.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
