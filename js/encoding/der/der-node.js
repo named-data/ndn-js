@@ -429,11 +429,15 @@ DerNode.DerInteger = function DerInteger(integer)
     var temp = new DynamicBuffer(10);
     // We encode backwards from the back.
     var length = 0;
-    while (integer > 0) {
+    while (true) {
       ++length;
       temp.ensureLengthFromBack(length);
       temp.array[temp.array.length - length] = integer & 0xff;
       integer >>= 8;
+
+      if (integer <= 0)
+        // We check for 0 at the end so we encode one byte if it is 0.
+        break;
     }
 
     this.payloadAppend(temp.slice(temp.array.length - length));
