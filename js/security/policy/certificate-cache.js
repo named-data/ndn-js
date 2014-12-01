@@ -71,3 +71,11 @@ CertificateCache.prototype.getCertificate = function(certificateName)
   cert.wireDecode(certData);
   return cert;
 };
+
+/**
+ * Clear all certificates from the store.
+ */
+CertificateCache.prototype.reset = function()
+{
+  this.cache = {};
+};
