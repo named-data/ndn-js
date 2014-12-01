@@ -117,7 +117,6 @@ PolicyManager.verifyUsesString = null;
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * TODO: Move this general verification code to a more central location.
  * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
