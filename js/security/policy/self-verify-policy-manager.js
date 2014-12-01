@@ -87,9 +87,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * @param {number} stepCount The number of verification steps that have been
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
- * onVerified(data).
+ * onVerified(dataOrInterest).
  * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * onVerifyFailed(dataOrInterest).
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
  * certificate chain.
