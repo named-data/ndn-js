@@ -22,25 +22,69 @@ var fs = require('fs');
 
 var BoostInfoTree = function BoostInfoTree(value, parent)
 {
+  // subtrees is an array of {key: treeName, value: subtreeList} where
+  // treeName is a string and subtreeList is an array of BoostInfoTree.
+  this.subtrees = [];
   this.value = value;
   this.parent = parent;
-  // subTrees is an array of {key: treeName, value: subTreeList} where
-  // treeName is a string and subTreeList is an array of BoostInfoTree.
-  this.subTrees = [];
+
   this.lastChild = null;
 };
 
+/**
+ * Insert a BoostInfoTree as a sub-tree with the given name.
+ * @param {string} treeName The name of the new sub-tree.
+ * @param {BoostInfoTree} newTree The sub-tree to add.
+ */
+BoostInfoTree.prototype.addSubtree = function(treeName, newTree)
+{
+  if (this.subtrees[treeName] !== undefined)
+      this.subtrees[treeName].push(newTree);
+  else
+      this.subtrees[treeName] = [newTree];
+  newTree.parent = this;
+  this.lastChild = newTree;
+};
+
+/**
+ * Create a new BoostInfo and insert it as a sub-tree with the given name.
+ * @param {string} treeName The name of the new sub-tree.
+ * @param {string} value The value associated with the new sub-tree.
+ * @returns {BoostInfoTree} The created sub-tree.
+ */
 BoostInfoTree.prototype.createSubtree = function(treeName, value)
 {
   var newTree = new BoostInfoTree(value, this);
+  this.addSubtree(treeName, newTree);
+  return newTree;
+};
 
-  var subTreeList = this.find(treeName);
-  if (subTreeList !== null)
-    this.subTreeList.push(newTree);
-  else
-    this.subTrees.push({key: treeName, value: [newTree]});
+/**
+ * Look up using the key and return a list of the subtrees.
+ * @param {string} key The key which may be a path separated with '/'.
+ * @returns {Array<BoostInfoTree>} A new array with pointers to the subtrees.
+ */
+BoostInfoTree.prototype.get = function(key)
+{
+  // Strip beginning '/'.
+  key = key.replace(/^\/+/, "");
+  if (key.length === 0)
+    return [this];
+  var path = key.split('/');
 
-  this.lastChild = newTree;
+  var subtrees = this.subtrees[path[0]];
+  if (subtrees === undefined)
+    return [];
+  if (path.length === 1)
+    return subtrees.slice(0);
+
+  var newPath = path.slice(1).join('/');
+  var foundVals = [];
+  for (var i = 0; i < subtrees.length; ++i) {
+    var t = subtrees[i];
+    foundVals.concat(t.get(newPath));
+  }
+  return foundVals;
 };
 
 BoostInfoTree.prototype.getValue = function() { return this.value; };
@@ -62,14 +106,14 @@ BoostInfoTree.prototype.prettyPrint = function(indentLevel)
     s += "\n";
   }
 
-  if (this.subTrees.length > 0) {
+  if (this.subtrees.length > 0) {
     if (this.parent)
       s += prefix + "{\n";
     var nextLevel = Array(indentLevel + 2 + 1).join(' ');
-    for (var i = 0; i < this.subTrees.length; ++i) {
-      for (var iSubTree = 0; iSubTree < this.subTrees[i].value.length; ++iSubTree)
-        s += nextLevel + this.subTrees[i].key + " " +
-             this.subTrees[i].value[iSubTree].prettyPrint(indentLevel + 2);
+    for (var i = 0; i < this.subtrees.length; ++i) {
+      for (var iSubTree = 0; iSubTree < this.subtrees[i].value.length; ++iSubTree)
+        s += nextLevel + this.subtrees[i].key + " " +
+             this.subtrees[i].value[iSubTree].prettyPrint(indentLevel + 2);
     }
 
     if (this.parent)
@@ -85,15 +129,15 @@ BoostInfoTree.prototype.toString = function()
 };
 
 /**
- * Use treeName to find the array of BoostInfoTree in this.subTrees.
- * @param {string} treeName The key in this.subTrees to search for.
+ * Use treeName to find the array of BoostInfoTree in this.subtrees.
+ * @param {string} treeName The key in this.subtrees to search for.
  * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
 {
-  for (var i = 0; i < this.subTrees.length; ++i) {
-    if (this.subTrees[i].key == treeName)
-      return this.subTrees[i].value;
+  for (var i = 0; i < this.subtrees.length; ++i) {
+    if (this.subtrees[i].key == treeName)
+      return this.subtrees[i].value;
   }
 
   return null;
@@ -105,6 +149,7 @@ var BoostInfoParser = function BoostInfoParser()
 };
 
 exports.BoostInfoParser = BoostInfoParser;
+exports.BoostInfoTree = BoostInfoTree; // debug
 
 BoostInfoParser.prototype.read = function(fileName)
 {
