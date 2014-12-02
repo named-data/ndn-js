@@ -24,6 +24,7 @@ var BoostInfoTree = function BoostInfoTree(value, parent)
 {
   // subtrees is an array of {key: treeName, value: subtreeList} where
   // treeName is a string and subtreeList is an array of BoostInfoTree.
+  // We can't use a dictionary because we want the keys to be in order.
   this.subtrees = [];
   this.value = value;
   this.parent = parent;
@@ -38,10 +39,12 @@ var BoostInfoTree = function BoostInfoTree(value, parent)
  */
 BoostInfoTree.prototype.addSubtree = function(treeName, newTree)
 {
-  if (this.subtrees[treeName] !== undefined)
-      this.subtrees[treeName].push(newTree);
+  var subtreeList = this.find(treeName);
+  if (subtreeList !== null)
+    subtreeList.push(newTree);
   else
-      this.subtrees[treeName] = [newTree];
+    this.subtrees.push({key: treeName, value: [newTree]});
+
   newTree.parent = this;
   this.lastChild = newTree;
 };
@@ -72,19 +75,34 @@ BoostInfoTree.prototype.get = function(key)
     return [this];
   var path = key.split('/');
 
-  var subtrees = this.subtrees[path[0]];
-  if (subtrees === undefined)
+  var subtrees = this.find(path[0]);
+  if (subtrees === null)
     return [];
-  if (path.length === 1)
+  if (path.length == 1)
     return subtrees.slice(0);
 
   var newPath = path.slice(1).join('/');
   var foundVals = [];
   for (var i = 0; i < subtrees.length; ++i) {
     var t = subtrees[i];
-    foundVals.concat(t.get(newPath));
+    var partial = t.get(newPath);
+    foundVals = foundVals.concat(partial);
   }
   return foundVals;
+};
+
+/**
+ * Look up using the key and return string value of the first subtree.
+ * @param {string} key The key which may be a path separated with '/'.
+ * @returns {string} The string value or null if not found.
+ */
+BoostInfoTree.prototype.getFirstValue = function(key)
+{
+  var list = this.get(key);
+  if (list.length >= 1)
+    return list[0].value;
+  else
+    return null;
 };
 
 BoostInfoTree.prototype.getValue = function() { return this.value; };
