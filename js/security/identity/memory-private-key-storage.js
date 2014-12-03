@@ -98,14 +98,26 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
 };
 
 /**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+{
+  var keyUri = keyName.toUri();
+
+  delete this.publicKeyStore[keyUri];
+  delete this.privateKeyStore[keyUri];
+};
+
+/**
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @returns {PublicKey} The public key.
  */
 MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
 {
-  var keyNameUri = keyName.toUri();
-  var publicKey = this.publicKeyStore[keyNameUri];
+  var keyUri = keyName.toUri();
+  var publicKey = this.publicKeyStore[keyUri];
   if (publicKey === undefined)
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));

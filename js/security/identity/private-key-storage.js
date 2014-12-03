@@ -43,6 +43,15 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, keyType, keySize
 };
 
 /**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+{
+  throw new Error("PrivateKeyStorage.deleteKeyPair is not implemented");
+};
+
+/**
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @returns {PublicKey} The public key.
