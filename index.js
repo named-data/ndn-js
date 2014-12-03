@@ -41,6 +41,7 @@ exports.MemoryPrivateKeyStorage = require('./js/security/identity/memory-private
 exports.IdentityManager = require('./js/security/identity/identity-manager.js').IdentityManager;
 exports.ValidationRequest = require('./js/security/policy/validation-request.js').ValidationRequest;
 exports.PolicyManager = require('./js/security/policy/policy-manager.js').PolicyManager;
+exports.ConfigPolicyManager = require('./js/security/policy/config-policy-manager.js').ConfigPolicyManager;
 exports.NoVerifyPolicyManager = require('./js/security/policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-policy-manager.js').SelfVerifyPolicyManager;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
