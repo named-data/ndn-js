@@ -58,6 +58,16 @@ IdentityManager.prototype.createIdentity = function(identityName)
 };
 
 /**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
+ */
+IdentityManager.prototype.setDefaultIdentity = function(identityName)
+{
+  this.identityStorage.setDefaultIdentity(identityName);
+};
+
+/**
  * Get the default identity.
  * @returns {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
