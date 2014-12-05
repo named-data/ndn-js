@@ -285,7 +285,7 @@ Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
   // TODO: Encode Uri.
 
   encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.FaceID, controlParameters.getFaceId());
+    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
   Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
