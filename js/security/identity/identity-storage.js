@@ -69,9 +69,14 @@ IdentityStorage.prototype.revokeIdentity = function()
  */
 IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
 {
-  var ti = new Date().getTime();
-  // Get the number of seconds.
-  var seconds = "" + Math.floor(ti / 1000.0);
+  var timestamp = Math.floor(new Date().getTime() / 1000.0);
+  while (timestamp <= IdentityStorage.lastTimestamp)
+    // Make the timestamp unique.
+    timestamp += 1;
+  IdentityStorage.lastTimestamp = timestamp;
+
+  // Get the number of seconds as a string.
+  var seconds = "" + timestamp;
 
   var keyIdStr;
   if (useKsk)
@@ -297,3 +302,6 @@ IdentityStorage.prototype.deleteIdentityInfo = function(identity)
 {
   throw new Error("IdentityStorage.deleteIdentityInfo is not implemented");
 };
+
+// Track the lastTimestamp so that each timestamp is unique.
+IdentityStorage.lastTimestamp = Math.floor(new Date().getTime() / 1000.0);
