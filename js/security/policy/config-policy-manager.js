@@ -59,10 +59,10 @@ var PolicyManager = require('./policy-manager.js').PolicyManager;
  * @param {number} searchDepth (optional) The maximum number of links to follow
  * when verifying a certificate chain. If omitted, use a default.
  * @param {number} graceInterval (optional) The window of time difference
- * (in seconds) allowed between the timestamp of the first interest signed with
- * a new public key and the validation time. If omitted, use a default.
+ * (in milliseconds) allowed between the timestamp of the first interest signed with
+ * a new public key and the validation time. If omitted, use a default value.
  * @param {number} keyTimestampTtl (optional) How long a public key's last-used
- * timestamp is kept in the store. If omitted, use a default.
+ * timestamp is kept in the store (milliseconds). If omitted, use a default value.
  * @param {number} maxTrackedKeys The maximum number of public key use
  * timestamps to track. If omitted, use a default.
  */
@@ -253,7 +253,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // filling the cache with bad keys.
   if (dataOrInterest instanceof Interest) {
     var keyName = foundCert.getPublicKeyName();
-    var timestamp = dataOrInterest.getName().get(-4).toNumber() / 1000;
+    var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
     if (!this.interestTimestampIsFresh(keyName, timestamp)) {
       onVerifyFailed(dataOrInterest);
@@ -315,8 +315,9 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
           }
         }
       }
-      
-      this.refreshManager.addDirectory(dirName, refreshPeriod);
+
+      // Convert refreshPeriod from seconds to milliseconds.
+      this.refreshManager.addDirectory(dirName, refreshPeriod * 1000);
       continue;
     }
     else if (typeName == "any") {
@@ -720,6 +721,7 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificate = functio
   return this.certificateCache.getCertificate(certificateName);
 };
 
+// refershPeriod in milliseconds.
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.addDirectory = function
   (directoryName, refreshPeriod)
 {
