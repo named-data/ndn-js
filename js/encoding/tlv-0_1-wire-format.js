@@ -286,7 +286,8 @@ Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
-  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+  if (controlParameters.getName().size() > 0)
+    Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
