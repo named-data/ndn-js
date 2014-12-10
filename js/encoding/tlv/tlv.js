@@ -68,6 +68,7 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
+Tlv.SignatureType_SignatureSha256WithEcdsa = 3;
 
 Tlv.ContentType_Default = 0;
 Tlv.ContentType_Link =    1;
