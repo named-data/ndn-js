@@ -24,6 +24,7 @@ var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha25
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -264,36 +265,30 @@ IdentityManager.prototype.signByCertificate = function
 
   if (target instanceof Data) {
     var data = target;
-    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+    var digestAlgorithm = [0];
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
 
-    // For temporary usage, we support RSA + SHA256 only, but will support more.
-    data.setSignature(new Sha256WithRsaSignature());
-    // Get a pointer to the clone which Data made.
-    var signature = data.getSignature();
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-    // Set an empty signature so that we can encode.
-    signature.setSignature(new Buffer(1));
+    data.setSignature(signature);
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
-    signature.setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName));
+    data.getSignature().setSignature(this.privateKeyStorage.sign
+      (encoding.signedBuf(), 
+       IdentityManager.certificateNameToPublicKeyName(certificateName),
+       digestAlgorithm[0]));
 
     // Encode again to include the signature.
     data.wireEncode(wireFormat);
   }
   else {
-    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+    var digestAlgorithm = [0];
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
 
-    // For temporary usage, we support RSA + SHA256 only, but will support more.
-    var signature = new Sha256WithRsaSignature();
-
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-    signature.setSignature(this.privateKeyStorage.sign(target, keyName));
+    signature.setSignature(this.privateKeyStorage.sign
+      (target, IdentityManager.certificateNameToPublicKeyName(certificateName),
+       digestAlgorithm[0]));
 
     return signature;
   }
@@ -337,4 +332,28 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append(tmpName.getSubName
     (i + 1, tmpName.size() - i - 1));
+};
+
+/**
+ * Return a new Signature object based on the signature algorithm of the public
+ * key with keyName (derived from certificateName).
+ * @param {Name} certificateName The certificate name.
+ * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
+ * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
+ * @returns {Signature} A new object of the correct subclass of Signature.
+ */
+IdentityManager.prototype.makeSignatureByCertificate = function
+  (certificateName, digestAlgorithm)
+{
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
+
+  // For temporary usage, we support RSA + SHA256 only, but will support more.
+  var signature = new Sha256WithRsaSignature();
+  digestAlgorithm[0] = DigestAlgorithm.SHA256;
+  
+  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+  return signature;
 };
