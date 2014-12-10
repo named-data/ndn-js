@@ -263,47 +263,12 @@ KeyChain.prototype.getPolicyManager = function()
 KeyChain.prototype.sign = function(target, certificateName, wireFormat)
 {
   if (target instanceof Interest)
-    this.signInterest(target, certificateName, wireFormat);
+    this.identityManager.signInterestByCertificate
+      (target, certificateName, wireFormat);
   else if (target instanceof Data)
     this.identityManager.signByCertificate(target, certificateName, wireFormat);
   else
     return this.identityManager.signByCertificate(target, certificateName);
-};
-
-/**
- * Append a SignatureInfo to the Interest name, sign the name components and
- * append a final name component with the signature bits.
- * @param {Interest} interest The Interest object to be signed. This appends
- * name components of SignatureInfo and the signature bits.
- * @param {Name} certificateName The certificate name of the key to use for
- * signing.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- */
-KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat)
-{
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = new Sha256WithRsaSignature();
-  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-  // Append the encoded SignatureInfo.
-  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
-
-  // Append an empty signature so that the "signedPortion" is correct.
-  interest.getName().append(new Name.Component());
-  // Encode once to get the signed portion.
-  var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.signedBuf(), certificateName);
-
-  // Remove the empty signature and append the real one.
-  var encoder = new TlvEncoder(256);
-  encoder.writeBlobTlv
-    (Tlv.SignatureValue, signedSignature.getSignature().buf());
-  interest.setName(interest.getName().getPrefix(-1).append
-    (wireFormat.encodeSignatureValue(signedSignature)));
 };
 
 /**
