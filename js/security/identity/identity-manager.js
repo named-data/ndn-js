@@ -309,10 +309,9 @@ IdentityManager.prototype.signInterestByCertificate = function
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = new Sha256WithRsaSignature();
-  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+  var digestAlgorithm = [0];
+  var signature = this.makeSignatureByCertificate
+    (certificateName, digestAlgorithm);
 
   // Append the encoded SignatureInfo.
   interest.getName().append(wireFormat.encodeSignatureInfo(signature));
@@ -321,12 +320,14 @@ IdentityManager.prototype.signInterestByCertificate = function
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.signByCertificate
-    (encoding.signedBuf(), certificateName);
+  signature.setSignature(this.privateKeyStorage.sign
+    (encoding.signedBuf(),
+     IdentityManager.certificateNameToPublicKeyName(certificateName),
+     digestAlgorithm[0]));
 
   // Remove the empty signature and append the real one.
   interest.setName(interest.getName().getPrefix(-1).append
-    (wireFormat.encodeSignatureValue(signedSignature)));
+    (wireFormat.encodeSignatureValue(signature)));
 };
 
 /**
