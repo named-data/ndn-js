@@ -29,7 +29,7 @@ var IdentityCertificate = require('../certificate/identity-certificate.js').Iden
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser;
 var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher;
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
-var ValidationRequest = require('./Validation-request.js').ValidationRequest;
+var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
