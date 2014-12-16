@@ -224,6 +224,28 @@ DerNode.prototype.toVal = function()
 };
 
 /**
+ * Check that index is in bounds for the children list, return children[index].
+ * @param {Array<DerNode>} children The list of DerNode, usually returned by
+ * another call to getChildren.
+ * @param {number} index The index of the children.
+ * @return {DerNode.DerSequence} children[index].
+ * @throws DerDecodingException if index is out of bounds or if children[index]
+ * is not a DerSequence.
+ */
+DerNode.getSequence = function(children, index)
+{
+  if (index < 0 || index >= children.length)
+    throw new DerDecodingException(new Error
+      ("getSequence: Child index is out of bounds"));
+
+  if (!(children[index] instanceof DerNode.DerSequence))
+    throw new DerDecodingException(new Error
+      ("getSequence: Child DerNode is not a DerSequence"));
+
+  return children[index];
+};
+
+/**
  * A DerStructure extends DerNode to hold other DerNodes.
  * Create a DerStructure with the given nodeType. This is a private
  * constructor. To create an object, use DerSequence.

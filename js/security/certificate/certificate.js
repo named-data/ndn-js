@@ -200,14 +200,14 @@ Certificate.prototype.decode = function()
 
   var rootChildren = root.getChildren();
   // 1st: validity info
-  var validityChildren = rootChildren[0].getChildren();
+  var validityChildren = DerNode.getSequence(rootChildren, 0).getChildren();
   this.notBefore = validityChildren[0].toVal();
   this.notAfter = validityChildren[1].toVal();
 
   // 2nd: subjectList
-  var subjectChildren = rootChildren[1].getChildren();
+  var subjectChildren = DerNode.getSequence(rootChildren, 1).getChildren();
   for (var i = 0; i < subjectChildren.length; ++i) {
-    var sd = subjectChildren[i];
+    var sd = DerNode.getSequence(subjectChildren, i);
     var descriptionChildren = sd.getChildren();
     var oidStr = descriptionChildren[0].toVal();
     var value = descriptionChildren[1].toVal().buf().toString('binary');
@@ -221,9 +221,9 @@ Certificate.prototype.decode = function()
   this.key =  new PublicKey(KeyType.RSA, publicKeyInfo);
 
   if (rootChildren.length > 3) {
-    var extensionChildren = rootChildren[3].getChildren();
+    var extensionChildren = DerNode.getSequence(rootChildren, 3).getChildren();
     for (var i = 0; i < extensionChildren.size(); ++i) {
-      var extInfo = extensionChildren[i];
+      var extInfo = DerNode.getSequence(extensionChildren, i);
 
       var children = extInfo.getChildren();
       var oidStr = children[0].toVal();
