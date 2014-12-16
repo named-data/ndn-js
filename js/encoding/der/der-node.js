@@ -224,6 +224,19 @@ DerNode.prototype.toVal = function()
 };
 
 /**
+ * If this object is a DerNode.DerSequence, get the children of this node.
+ * Otherwise, throw an exception. (DerSequence overrides to implement this
+ * method.)
+ * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @throws DerDecodingException if this object is not a DerSequence.
+ */
+DerNode.prototype.getChildren = function()
+{
+  throw new DerDecodingException(new Error
+    ("getChildren: This DerNode is not DerSequence"));
+};
+
+/**
  * Check that index is in bounds for the children list, return children[index].
  * @param {Array<DerNode>} children The list of DerNode, usually returned by
  * another call to getChildren.
