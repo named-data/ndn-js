@@ -132,7 +132,7 @@ describe('TestDerEncodeDecode', function() {
     cert.setNotAfter(1388100174000);
 
     cert.addSubjectDescription(new CertificateSubjectDescription(TEST_OID, "TEST NAME"));
-    cert.setPublicKeyInfo(new PublicKey(KeyType.RSA, new Blob(PUBLIC_KEY, false)));
+    cert.setPublicKeyInfo(new PublicKey(new Blob(PUBLIC_KEY, false)));
 
     toyCert = cert;
   });

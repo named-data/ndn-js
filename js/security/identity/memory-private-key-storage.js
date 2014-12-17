@@ -59,8 +59,8 @@ exports.MemoryPrivateKeyStorage = MemoryPrivateKeyStorage;
 MemoryPrivateKeyStorage.prototype.setPublicKeyForKeyName = function
   (keyName, keyType, publicKeyDer)
 {
-  this.publicKeyStore[keyName.toUri()] = PublicKey.fromDer(
-    keyType, new Blob(publicKeyDer, true));
+  this.publicKeyStore[keyName.toUri()] = new PublicKey
+    (new Blob(publicKeyDer, true));
 };
 
 /**

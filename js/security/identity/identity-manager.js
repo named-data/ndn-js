@@ -141,9 +141,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
  */
 IdentityManager.prototype.getPublicKey = function(keyName)
 {
-  return PublicKey.fromDer
-    (this.identityStorage.getKeyType(keyName),
-     this.identityStorage.getKey(keyName));
+  return PublicKey(this.identityStorage.getKey(keyName));
 };
 
 // TODO: Add two versions of createIdentityCertificate.

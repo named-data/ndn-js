@@ -217,8 +217,7 @@ Certificate.prototype.decode = function()
 
   // 3rd: public key
   var publicKeyInfo = rootChildren[2].encode();
-  // TODO: Handle key types other than RSA.
-  this.key =  new PublicKey(KeyType.RSA, publicKeyInfo);
+  this.key =  new PublicKey(publicKeyInfo);
 
   if (rootChildren.length > 3) {
     var extensionChildren = DerNode.getSequence(rootChildren, 3).getChildren();
