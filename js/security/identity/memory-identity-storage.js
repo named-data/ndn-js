@@ -138,22 +138,6 @@ MemoryIdentityStorage.prototype.getKey = function(keyName)
 };
 
 /**
- * Get the KeyType of the public key with the given keyName.
- * @param {Name} keyName The name of the requested public key.
- * @returns {number} The KeyType, for example KEY_TYPE_RSA.
- */
-MemoryIdentityStorage.prototype.getKeyType = function(keyName)
-{
-  var keyNameUri = keyName.toUri();
-  var entry = this.keyStore[keyNameUri];
-  if (entry === undefined)
-    throw new SecurityException(new Error
-      ("Cannot get public key type because the keyName doesn't exist"));
-
-  return entry.keyType;
-};
-
-/**
  * Activate a key.  If a key is marked as inactive, its private part will not be
  * used in packet signing.
  * @param {Name} keyName name of the key

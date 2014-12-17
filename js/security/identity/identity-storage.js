@@ -126,16 +126,6 @@ IdentityStorage.prototype.getKey = function(keyName)
 };
 
 /**
- * Get the KeyType of the public key with the given keyName.
- * @param {Name} keyName The name of the requested public key.
- * @returns {number} The KeyType, for example KEY_TYPE_RSA.
- */
-IdentityStorage.prototype.getKeyType = function(keyName)
-{
-  throw new Error("IdentityStorage.getKeyType is not implemented");
-};
-
-/**
  * Activate a key.  If a key is marked as inactive, its private part will not be
  * used in packet signing.
  * @param {Name} keyName name of the key
