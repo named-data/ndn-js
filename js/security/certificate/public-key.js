@@ -18,21 +18,52 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Blob = require('../../util/blob.js').Blob;
+var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var SecurityException = require('../security-exception.js').SecurityException;
+var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException;
 var KeyType = require('../security-types.js').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
- * A PublicKey holds an encoded public key for use by the security library.
- * Create a new PublicKey with the given values.
- * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
- * @param {Blob} keyDer The blob of the PublicKeyInfo in terms of DER.
+ * Create a new PublicKey by decoding the keyDer. Set the key type from the
+ * decoding.
+ * @param {Blob} keyDer The blob of the SubjectPublicKeyInfo DER.
+ * @throws {UnrecognizedKeyFormatException} if can't decode the key DER.
  */
-var PublicKey = function PublicKey(keyType, keyDer)
+var PublicKey = function PublicKey(keyDer)
 {
-  this.keyType = keyType;
+  if (!keyDer) {
+    this.keyDer = new Blob();
+    this.keyType = null;
+    return;
+  }
+  
   this.keyDer = keyDer;
+
+  // Get the public key OID.
+  var oidString = null;
+  try {
+    var parsedNode = DerNode.parse(keyDer.buf(), 0);
+    var rootChildren = parsedNode.getChildren();
+    var algorithmIdChildren = DerNode.getSequence(rootChildren, 0).getChildren();
+    oidString = algorithmIdChildren[0].toVal();
+  }
+  catch (ex) {
+    throw new UnrecognizedKeyFormatException(new Error
+      ("PublicKey.decodeKeyType: Error decoding the public key" + ex.message));
+  }
+
+  // Verify that the we can decode.
+  if (oidString == PublicKey.RSA_ENCRYPTION_OID) {
+    this.keyType = KeyType.RSA;
+    // TODO: Check RSA decoding.
+  }
+  else if (oidString == PublicKey.EC_ENCRYPTION_OID) {
+    this.keyType = KeyType.EC;
+    // TODO: Check EC decoding.
+  }
 };
 
 exports.PublicKey = PublicKey;
@@ -44,24 +75,6 @@ exports.PublicKey = PublicKey;
 PublicKey.prototype.toDer = function()
 {
   return DerNode.parse(this.keyDer.buf());
-};
-
-/**
- * Decode the public key from the DER blob.
- * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
- * @param {Blob} keyDer The DER blob.
- * @returns {PublicKey} The decoded public key.
- */
-PublicKey.fromDer = function(keyType, keyDer)
-{
-  if (keyType == KeyType.RSA) {
-    // TODO: Make sure we can decode the public key DER.
-  }
-  else
-    throw new SecurityException(new Error
-      ("PublicKey.fromDer: Unrecognized keyType"));
-
-  return new PublicKey(keyType, keyDer);
 };
 
 /**
@@ -101,3 +114,6 @@ PublicKey.prototype.getKeyDer = function()
 {
   return this.keyDer;
 };
+
+PublicKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+PublicKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
