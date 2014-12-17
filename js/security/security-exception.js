@@ -26,12 +26,34 @@
  */
 function SecurityException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
-      this[prop] = error[prop];
+  if (error) {
+    this.message = error.message;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+        this[prop] = error[prop];
+  }
 }
 SecurityException.prototype = new Error();
 SecurityException.prototype.name = "SecurityException";
 
 exports.SecurityException = SecurityException;
+
+function UnrecognizedKeyFormatException(error)
+{
+  // Call the base constructor.
+  SecurityException.call(this, error);
+}
+UnrecognizedKeyFormatException.prototype = new SecurityException();
+UnrecognizedKeyFormatException.prototype.name = "UnrecognizedKeyFormatException";
+
+exports.UnrecognizedKeyFormatException = UnrecognizedKeyFormatException;
+
+function UnrecognizedDigestAlgorithmException(error)
+{
+  // Call the base constructor.
+  SecurityException.call(this, error);
+}
+UnrecognizedDigestAlgorithmException.prototype = new SecurityException();
+UnrecognizedDigestAlgorithmException.prototype.name = "UnrecognizedDigestAlgorithmException";
+
+exports.UnrecognizedDigestAlgorithmException = UnrecognizedDigestAlgorithmException;
