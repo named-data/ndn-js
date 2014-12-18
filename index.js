@@ -20,6 +20,7 @@ exports.PublisherPublicKeyDigest = require('./js/publisher-public-key-digest.js'
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
 exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
+exports.Tlv0_1_1WireFormat = require('./js/encoding/tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 exports.TcpTransport = require('./js/transport/tcp-transport.js').TcpTransport;
 exports.UnixTransport = require('./js/transport/unix-transport.js').UnixTransport;
 exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;

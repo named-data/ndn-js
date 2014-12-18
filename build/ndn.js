@@ -6770,7 +6770,7 @@ DynamicBuffer.prototype.ensureLengthFromBack = function(length)
  * offsetFromBack bytes, then copy value into the array starting
  * offsetFromBack bytes from the back of the array.
  * @param {Buffer} value The buffer to copy.
- * @param {offsetFromBack} offset The offset from the back of the array to start
+ * @param {number} offsetFromBack The offset from the back of the array to start
  * copying.
  */
 DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
@@ -8678,6 +8678,7 @@ Tlv.StatusText =       140;
 
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
+Tlv.SignatureType_SignatureSha256WithEcdsa = 3;
 
 Tlv.ContentType_Default = 0;
 Tlv.ContentType_Link =    1;
@@ -10441,8 +10442,7 @@ DerNode.parse = function(inputBuf, startIdx)
   if (startIdx == undefined)
     startIdx = 0;
   
-  var idx = startIdx;
-  var nodeType = inputBuf[idx] & 0xff;
+  var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
   var newNode;
@@ -10467,7 +10467,7 @@ DerNode.parse = function(inputBuf, startIdx)
   else
     throw new DerDecodingException(new Error("Unimplemented DER type " + nodeType));
 
-  newNode.decode(inputBuf, idx);
+  newNode.decode(inputBuf, startIdx);
   return newNode;
 };
 
@@ -10479,6 +10479,41 @@ DerNode.parse = function(inputBuf, startIdx)
 DerNode.prototype.toVal = function()
 {
   return this.encode();
+};
+
+/**
+ * If this object is a DerNode.DerSequence, get the children of this node.
+ * Otherwise, throw an exception. (DerSequence overrides to implement this
+ * method.)
+ * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @throws DerDecodingException if this object is not a DerSequence.
+ */
+DerNode.prototype.getChildren = function()
+{
+  throw new DerDecodingException(new Error
+    ("getChildren: This DerNode is not DerSequence"));
+};
+
+/**
+ * Check that index is in bounds for the children list, return children[index].
+ * @param {Array<DerNode>} children The list of DerNode, usually returned by
+ * another call to getChildren.
+ * @param {number} index The index of the children.
+ * @return {DerNode.DerSequence} children[index].
+ * @throws DerDecodingException if index is out of bounds or if children[index]
+ * is not a DerSequence.
+ */
+DerNode.getSequence = function(children, index)
+{
+  if (index < 0 || index >= children.length)
+    throw new DerDecodingException(new Error
+      ("getSequence: Child index is out of bounds"));
+
+  if (!(children[index] instanceof DerNode.DerSequence))
+    throw new DerDecodingException(new Error
+      ("getSequence: Child DerNode is not a DerSequence"));
+
+  return children[index];
 };
 
 /**
@@ -10687,11 +10722,15 @@ DerNode.DerInteger = function DerInteger(integer)
     var temp = new DynamicBuffer(10);
     // We encode backwards from the back.
     var length = 0;
-    while (integer > 0) {
+    while (true) {
       ++length;
       temp.ensureLengthFromBack(length);
       temp.array[temp.array.length - length] = integer & 0xff;
       integer >>= 8;
+
+      if (integer <= 0)
+        // We check for 0 at the end so we encode one byte if it is 0.
+        break;
     }
 
     this.payloadAppend(temp.slice(temp.array.length - length));
@@ -14423,15 +14462,37 @@ exports.ContentObject = ContentObject;
  */
 function SecurityException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
-      this[prop] = error[prop];
+  if (error) {
+    this.message = error.message;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+        this[prop] = error[prop];
+  }
 }
 SecurityException.prototype = new Error();
 SecurityException.prototype.name = "SecurityException";
 
 exports.SecurityException = SecurityException;
+
+function UnrecognizedKeyFormatException(error)
+{
+  // Call the base constructor.
+  SecurityException.call(this, error);
+}
+UnrecognizedKeyFormatException.prototype = new SecurityException();
+UnrecognizedKeyFormatException.prototype.name = "UnrecognizedKeyFormatException";
+
+exports.UnrecognizedKeyFormatException = UnrecognizedKeyFormatException;
+
+function UnrecognizedDigestAlgorithmException(error)
+{
+  // Call the base constructor.
+  SecurityException.call(this, error);
+}
+UnrecognizedDigestAlgorithmException.prototype = new SecurityException();
+UnrecognizedDigestAlgorithmException.prototype.name = "UnrecognizedDigestAlgorithmException";
+
+exports.UnrecognizedDigestAlgorithmException = UnrecognizedDigestAlgorithmException;
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -14525,21 +14586,52 @@ EncryptMode.CFB_AES = 2;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Blob = require('../../util/blob.js').Blob;
+var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var SecurityException = require('../security-exception.js').SecurityException;
+var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException;
 var KeyType = require('../security-types.js').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
- * A PublicKey holds an encoded public key for use by the security library.
- * Create a new PublicKey with the given values.
- * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
- * @param {Blob} keyDer The blob of the PublicKeyInfo in terms of DER.
+ * Create a new PublicKey by decoding the keyDer. Set the key type from the
+ * decoding.
+ * @param {Blob} keyDer The blob of the SubjectPublicKeyInfo DER.
+ * @throws {UnrecognizedKeyFormatException} if can't decode the key DER.
  */
-var PublicKey = function PublicKey(keyType, keyDer)
+var PublicKey = function PublicKey(keyDer)
 {
-  this.keyType = keyType;
+  if (!keyDer) {
+    this.keyDer = new Blob();
+    this.keyType = null;
+    return;
+  }
+  
   this.keyDer = keyDer;
+
+  // Get the public key OID.
+  var oidString = null;
+  try {
+    var parsedNode = DerNode.parse(keyDer.buf(), 0);
+    var rootChildren = parsedNode.getChildren();
+    var algorithmIdChildren = DerNode.getSequence(rootChildren, 0).getChildren();
+    oidString = algorithmIdChildren[0].toVal();
+  }
+  catch (ex) {
+    throw new UnrecognizedKeyFormatException(new Error
+      ("PublicKey.decodeKeyType: Error decoding the public key" + ex.message));
+  }
+
+  // Verify that the we can decode.
+  if (oidString == PublicKey.RSA_ENCRYPTION_OID) {
+    this.keyType = KeyType.RSA;
+    // TODO: Check RSA decoding.
+  }
+  else if (oidString == PublicKey.EC_ENCRYPTION_OID) {
+    this.keyType = KeyType.EC;
+    // TODO: Check EC decoding.
+  }
 };
 
 exports.PublicKey = PublicKey;
@@ -14551,24 +14643,6 @@ exports.PublicKey = PublicKey;
 PublicKey.prototype.toDer = function()
 {
   return DerNode.parse(this.keyDer.buf());
-};
-
-/**
- * Decode the public key from the DER blob.
- * @param {number} keyType The integer from KeyType, such as KeyType.RSA.
- * @param {Blob} keyDer The DER blob.
- * @returns {PublicKey} The decoded public key.
- */
-PublicKey.fromDer = function(keyType, keyDer)
-{
-  if (keyType == KeyType.RSA) {
-    // TODO: Make sure we can decode the public key DER.
-  }
-  else
-    throw new SecurityException(new Error
-      ("PublicKey.fromDer: Unrecognized keyType"));
-
-  return new PublicKey(keyType, keyDer);
 };
 
 /**
@@ -14608,6 +14682,9 @@ PublicKey.prototype.getKeyDer = function()
 {
   return this.keyDer;
 };
+
+PublicKey.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+PublicKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -14785,6 +14862,7 @@ CertificateSubjectDescription.prototype.getValue = function()
 
 var Data = require('../../data.js').Data;
 var ContentType = require('../../meta-info.js').ContentType;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var KeyType = require('../../security/security-types.js').KeyType;
 var PublicKey = require('./public-key.js').PublicKey;
@@ -14964,14 +15042,14 @@ Certificate.prototype.decode = function()
 
   var rootChildren = root.getChildren();
   // 1st: validity info
-  var validityChildren = rootChildren[0].getChildren();
+  var validityChildren = DerNode.getSequence(rootChildren, 0).getChildren();
   this.notBefore = validityChildren[0].toVal();
   this.notAfter = validityChildren[1].toVal();
 
   // 2nd: subjectList
-  var subjectChildren = rootChildren[1].getChildren();
+  var subjectChildren = DerNode.getSequence(rootChildren, 1).getChildren();
   for (var i = 0; i < subjectChildren.length; ++i) {
-    var sd = subjectChildren[i];
+    var sd = DerNode.getSequence(subjectChildren, i);
     var descriptionChildren = sd.getChildren();
     var oidStr = descriptionChildren[0].toVal();
     var value = descriptionChildren[1].toVal().buf().toString('binary');
@@ -14981,13 +15059,12 @@ Certificate.prototype.decode = function()
 
   // 3rd: public key
   var publicKeyInfo = rootChildren[2].encode();
-  // TODO: Handle key types other than RSA.
-  this.key =  new PublicKey(KeyType.RSA, publicKeyInfo);
+  this.key =  new PublicKey(publicKeyInfo);
 
   if (rootChildren.length > 3) {
-    var extensionChildren = rootChildren[3].getChildren();
+    var extensionChildren = DerNode.getSequence(rootChildren, 3).getChildren();
     for (var i = 0; i < extensionChildren.size(); ++i) {
-      var extInfo = extensionChildren[i];
+      var extInfo = DerNode.getSequence(extensionChildren, i);
 
       var children = extInfo.getChildren();
       var oidStr = children[0].toVal();
@@ -14996,6 +15073,21 @@ Certificate.prototype.decode = function()
       this.addExtension(new CertificateExtension(oidStr, isCritical, value));
     }
   }
+};
+
+/**
+ * Override to call the base class wireDecode then populate the certificate
+ * fields.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Certificate.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  
+  Data.prototype.wireDecode.call(this, input, wireFormat);
+  this.decode();
 };
 
 Certificate.prototype.toString = function()
@@ -15131,6 +15223,20 @@ IdentityCertificate.prototype.setName = function(name)
   return this;
 };
 
+/**
+ * Override to call the base class wireDecode then update the public key name.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+IdentityCertificate.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  Certificate.prototype.wireDecode.call(this, input, wireFormat);
+  this.setPublicKeyName();
+};
+
 IdentityCertificate.prototype.getPublicKeyName = function()
 {
   return this.publicKeyName;
@@ -15198,6 +15304,7 @@ IdentityCertificate.prototype.setPublicKeyName = function()
   this.publicKeyName = IdentityCertificate.certificateNameToPublicKeyName
     (this.getName());
 };
+
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -15244,7 +15351,7 @@ IdentityStorage.prototype.doesIdentityExist = function(identityName)
 };
 
 /**
- * Add a new identity. An exception will be thrown if the identity already exists.
+ * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
  */
 IdentityStorage.prototype.addIdentity = function(identityName)
@@ -15269,9 +15376,14 @@ IdentityStorage.prototype.revokeIdentity = function()
  */
 IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
 {
-  var ti = new Date().getTime();
-  // Get the number of seconds.
-  var seconds = "" + Math.floor(ti / 1000.0);
+  var timestamp = Math.floor(new Date().getTime() / 1000.0);
+  while (timestamp <= IdentityStorage.lastTimestamp)
+    // Make the timestamp unique.
+    timestamp += 1;
+  IdentityStorage.lastTimestamp = timestamp;
+
+  // Get the number of seconds as a string.
+  var seconds = "" + timestamp;
 
   var keyIdStr;
   if (useKsk)
@@ -15298,7 +15410,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 };
 
 /**
- * Add a public key to the identity storage.
+ * Add a public key to the identity storage. Also call addIdentity to ensure
+ * that the identityName for the key exists.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -15317,16 +15430,6 @@ IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
 IdentityStorage.prototype.getKey = function(keyName)
 {
   throw new Error("IdentityStorage.getKey is not implemented");
-};
-
-/**
- * Get the KeyType of the public key with the given keyName.
- * @param {Name} keyName The name of the requested public key.
- * @returns {number} The KeyType, for example KEY_TYPE_RSA.
- */
-IdentityStorage.prototype.getKeyType = function(keyName)
-{
-  throw new Error("IdentityStorage.getKeyType is not implemented");
 };
 
 /**
@@ -15496,6 +15599,9 @@ IdentityStorage.prototype.deleteIdentityInfo = function(identity)
 {
   throw new Error("IdentityStorage.deleteIdentityInfo is not implemented");
 };
+
+// Track the lastTimestamp so that each timestamp is unique.
+IdentityStorage.lastTimestamp = Math.floor(new Date().getTime() / 1000.0);
 /**
  * Copyright (C) 2014 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -15566,15 +15672,14 @@ MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 };
 
 /**
- * Add a new identity. An exception will be thrown if the identity already exists.
+ * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
  */
 MemoryIdentityStorage.prototype.addIdentity = function(identityName)
 {
   var identityUri = identityName.toUri();
   if (this.identityStore.indexOf(identityUri) >= 0)
-      throw new SecurityException(new Error
-        ("Identity already exists: " + identityUri));
+    return;
 
   this.identityStore.push(identityUri);
 };
@@ -15599,7 +15704,8 @@ MemoryIdentityStorage.prototype.doesKeyExist = function(keyName)
 };
 
 /**
- * Add a public key to the identity storage.
+ * Add a public key to the identity storage. Also call addIdentity to ensure
+ * that the identityName for the key exists.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -15609,8 +15715,7 @@ MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer
 {
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
-  if (!this.doesIdentityExist(identityName))
-    this.addIdentity(identityName);
+  this.addIdentity(identityName);
 
   if (this.doesKeyExist(keyName))
     throw new SecurityException(new Error
@@ -15634,22 +15739,6 @@ MemoryIdentityStorage.prototype.getKey = function(keyName)
     return new Blob();
 
   return entry.keyDer;
-};
-
-/**
- * Get the KeyType of the public key with the given keyName.
- * @param {Name} keyName The name of the requested public key.
- * @returns {number} The KeyType, for example KEY_TYPE_RSA.
- */
-MemoryIdentityStorage.prototype.getKeyType = function(keyName)
-{
-  var keyNameUri = keyName.toUri();
-  var entry = this.keyStore[keyNameUri];
-  if (entry === undefined)
-    throw new SecurityException(new Error
-      ("Cannot get public key type because the keyName doesn't exist"));
-
-  return entry.keyType;
 };
 
 /**
@@ -15889,6 +15978,15 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, keyType, keySize
 };
 
 /**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+{
+  throw new Error("PrivateKeyStorage.deleteKeyPair is not implemented");
+};
+
+/**
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @returns {PublicKey} The public key.
@@ -16024,8 +16122,8 @@ exports.MemoryPrivateKeyStorage = MemoryPrivateKeyStorage;
 MemoryPrivateKeyStorage.prototype.setPublicKeyForKeyName = function
   (keyName, keyType, publicKeyDer)
 {
-  this.publicKeyStore[keyName.toUri()] = PublicKey.fromDer(
-    keyType, new Blob(publicKeyDer, true));
+  this.publicKeyStore[keyName.toUri()] = new PublicKey
+    (new Blob(publicKeyDer, true));
 };
 
 /**
@@ -16063,14 +16161,26 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
 };
 
 /**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+{
+  var keyUri = keyName.toUri();
+
+  delete this.publicKeyStore[keyUri];
+  delete this.privateKeyStore[keyUri];
+};
+
+/**
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @returns {PublicKey} The public key.
  */
 MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
 {
-  var keyNameUri = keyName.toUri();
-  var publicKey = this.publicKeyStore[keyNameUri];
+  var keyUri = keyName.toUri();
+  var publicKey = this.publicKeyStore[keyUri];
   if (publicKey === undefined)
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
@@ -16154,6 +16264,8 @@ var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha25
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
+var KeyType = require('../security-types.js').KeyType;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -16185,6 +16297,16 @@ exports.IdentityManager = IdentityManager;
 IdentityManager.prototype.createIdentity = function(identityName)
 {
   throw new Error("IdentityManager.createIdentity is not implemented");
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
+ */
+IdentityManager.prototype.setDefaultIdentity = function(identityName)
+{
+  this.identityStorage.setDefaultIdentity(identityName);
 };
 
 /**
@@ -16260,9 +16382,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
  */
 IdentityManager.prototype.getPublicKey = function(keyName)
 {
-  return PublicKey.fromDer
-    (this.identityStorage.getKeyType(keyName),
-     this.identityStorage.getKey(keyName));
+  return PublicKey(this.identityStorage.getKey(keyName));
 };
 
 // TODO: Add two versions of createIdentityCertificate.
@@ -16384,39 +16504,69 @@ IdentityManager.prototype.signByCertificate = function
 
   if (target instanceof Data) {
     var data = target;
-    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+    var digestAlgorithm = [0];
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
 
-    // For temporary usage, we support RSA + SHA256 only, but will support more.
-    data.setSignature(new Sha256WithRsaSignature());
-    // Get a pointer to the clone which Data made.
-    var signature = data.getSignature();
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-    // Set an empty signature so that we can encode.
-    signature.setSignature(new Buffer(1));
+    data.setSignature(signature);
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
-    signature.setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName));
+    data.getSignature().setSignature(this.privateKeyStorage.sign
+      (encoding.signedBuf(), 
+       IdentityManager.certificateNameToPublicKeyName(certificateName),
+       digestAlgorithm[0]));
 
     // Encode again to include the signature.
     data.wireEncode(wireFormat);
   }
   else {
-    var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+    var digestAlgorithm = [0];
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
 
-    // For temporary usage, we support RSA + SHA256 only, but will support more.
-    var signature = new Sha256WithRsaSignature();
-
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-    signature.setSignature(this.privateKeyStorage.sign(target, keyName));
+    signature.setSignature(this.privateKeyStorage.sign
+      (target, IdentityManager.certificateNameToPublicKeyName(certificateName),
+       digestAlgorithm[0]));
 
     return signature;
   }
+};
+
+/**
+ * Append a SignatureInfo to the Interest name, sign the name components and
+ * append a final name component with the signature bits.
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+IdentityManager.prototype.signInterestByCertificate = function
+  (interest, certificateName, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var digestAlgorithm = [0];
+  var signature = this.makeSignatureByCertificate
+    (certificateName, digestAlgorithm);
+
+  // Append the encoded SignatureInfo.
+  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+  // Append an empty signature so that the "signedPortion" is correct.
+  interest.getName().append(new Name.Component());
+  // Encode once to get the signed portion.
+  var encoding = interest.wireEncode(wireFormat);
+  signature.setSignature(this.privateKeyStorage.sign
+    (encoding.signedBuf(),
+     IdentityManager.certificateNameToPublicKeyName(certificateName),
+     digestAlgorithm[0]));
+
+  // Remove the empty signature and append the real one.
+  interest.setName(interest.getName().getPrefix(-1).append
+    (wireFormat.encodeSignatureValue(signature)));
 };
 
 /**
@@ -16457,6 +16607,34 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
 
   return tmpName.getSubName(0, i).append(tmpName.getSubName
     (i + 1, tmpName.size() - i - 1));
+};
+
+/**
+ * Return a new Signature object based on the signature algorithm of the public
+ * key with keyName (derived from certificateName).
+ * @param {Name} certificateName The certificate name.
+ * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
+ * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
+ * @returns {Signature} A new object of the correct subclass of Signature.
+ */
+IdentityManager.prototype.makeSignatureByCertificate = function
+  (certificateName, digestAlgorithm)
+{
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
+  var keyType = publicKey.getKeyType();
+
+  if (keyType == KeyType.RSA) {
+    var signature = new Sha256WithRsaSignature();
+    digestAlgorithm[0] = DigestAlgorithm.SHA256;
+
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+    return signature;
+  }
+  else
+    throw new SecurityException(new Error("Key type is not recognized"));
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -16575,9 +16753,9 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * @param {number} stepCount The number of verification steps that have been
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
- * onVerified(data).
+ * onVerified(dataOrInterest).
  * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * onVerifyFailed(dataOrInterest).
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
@@ -16623,7 +16801,6 @@ PolicyManager.verifyUsesString = null;
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * TODO: Move this general verification code to a more central location.
  * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
@@ -16851,9 +17028,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * @param {number} stepCount The number of verification steps that have been
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
- * onVerified(data).
+ * onVerified(dataOrInterest).
  * @param {function} onVerifyFailed If the signature check fails, this calls
- * onVerifyFailed(data).
+ * onVerifyFailed(dataOrInterest).
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
  * certificate chain.
@@ -17226,47 +17403,12 @@ KeyChain.prototype.getPolicyManager = function()
 KeyChain.prototype.sign = function(target, certificateName, wireFormat)
 {
   if (target instanceof Interest)
-    this.signInterest(target, certificateName, wireFormat);
+    this.identityManager.signInterestByCertificate
+      (target, certificateName, wireFormat);
   else if (target instanceof Data)
     this.identityManager.signByCertificate(target, certificateName, wireFormat);
   else
     return this.identityManager.signByCertificate(target, certificateName);
-};
-
-/**
- * Append a SignatureInfo to the Interest name, sign the name components and
- * append a final name component with the signature bits.
- * @param {Interest} interest The Interest object to be signed. This appends
- * name components of SignatureInfo and the signature bits.
- * @param {Name} certificateName The certificate name of the key to use for
- * signing.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
- * the input. If omitted, use WireFormat getDefaultWireFormat().
- */
-KeyChain.prototype.signInterest = function(interest, certificateName, wireFormat)
-{
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  // TODO: Handle signature algorithms other than Sha256WithRsa.
-  var signature = new Sha256WithRsaSignature();
-  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-
-  // Append the encoded SignatureInfo.
-  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
-
-  // Append an empty signature so that the "signedPortion" is correct.
-  interest.getName().append(new Name.Component());
-  // Encode once to get the signed portion.
-  var encoding = interest.wireEncode(wireFormat);
-  var signedSignature = this.sign(encoding.signedBuf(), certificateName);
-
-  // Remove the empty signature and append the real one.
-  var encoder = new TlvEncoder(256);
-  encoder.writeBlobTlv
-    (Tlv.SignatureValue, signedSignature.getSignature().buf());
-  interest.setName(interest.getName().getPrefix(-1).append
-    (wireFormat.encodeSignatureValue(signedSignature)));
 };
 
 /**
@@ -19314,33 +19456,33 @@ var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').Publ
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
- * A Tlv0_1WireFormat implements the WireFormat interface for encoding and
- * decoding with the NDN-TLV wire format, version 0.1a2.
+ * A Tlv0_1_1WireFormat implements the WireFormat interface for encoding and
+ * decoding with the NDN-TLV wire format, version 0.1.1.
  * @constructor
  */
-var Tlv0_1WireFormat = function Tlv0_1WireFormat()
+var Tlv0_1_1WireFormat = function Tlv0_1_1WireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
 
-Tlv0_1WireFormat.prototype = new WireFormat();
-Tlv0_1WireFormat.prototype.name = "Tlv0_1WireFormat";
+Tlv0_1_1WireFormat.prototype = new WireFormat();
+Tlv0_1_1WireFormat.prototype.name = "Tlv0_1_1WireFormat";
 
-exports.Tlv0_1WireFormat = Tlv0_1WireFormat;
+exports.Tlv0_1_1WireFormat = Tlv0_1_1WireFormat;
 
 // Default object.
-Tlv0_1WireFormat.instance = null;
+Tlv0_1_1WireFormat.instance = null;
 
 /**
  * Encode interest as NDN-TLV and return the encoding.
  * @param {Name} interest The Name to encode.
  * @returns {Blobl} A Blob containing the encoding.
  */
-Tlv0_1WireFormat.prototype.encodeName = function(name)
+Tlv0_1_1WireFormat.prototype.encodeName = function(name)
 {
   var encoder = new TlvEncoder();
-  Tlv0_1WireFormat.encodeName(name, encoder);
+  Tlv0_1_1WireFormat.encodeName(name, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -19349,10 +19491,10 @@ Tlv0_1WireFormat.prototype.encodeName = function(name)
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1WireFormat.prototype.decodeName = function(name, input)
+Tlv0_1_1WireFormat.prototype.decodeName = function(name, input)
 {
   var decoder = new TlvDecoder(input);
-  Tlv0_1WireFormat.decodeName(name, decoder);
+  Tlv0_1_1WireFormat.decodeName(name, decoder);
 };
 
 /**
@@ -19367,7 +19509,7 @@ Tlv0_1WireFormat.prototype.decodeName = function(name, input)
  * just before the final name component (which is assumed to be a signature for
  * a signed interest).
  */
-Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
+Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -19399,8 +19541,8 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
     // Truncate.
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
-  Tlv0_1WireFormat.encodeSelectors(interest, encoder);
-  var tempOffsets = Tlv0_1WireFormat.encodeName(interest.getName(), encoder);
+  Tlv0_1_1WireFormat.encodeSelectors(interest, encoder);
+  var tempOffsets = Tlv0_1_1WireFormat.encodeName(interest.getName(), encoder);
   var signedPortionBeginOffsetFromBack =
     encoder.getLength() - tempOffsets.signedPortionBeginOffset;
   var signedPortionEndOffsetFromBack =
@@ -19430,14 +19572,14 @@ Tlv0_1WireFormat.prototype.encodeInterest = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
+Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_1WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_1_1WireFormat.decodeName(interest.getName(), decoder);
   if (decoder.peekType(Tlv.Selectors, endOffset))
-    Tlv0_1WireFormat.decodeSelectors(interest, decoder);
+    Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setScope(decoder.readOptionalNonNegativeIntegerTlv
@@ -19462,7 +19604,7 @@ Tlv0_1WireFormat.prototype.decodeInterest = function(interest, input)
  * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-Tlv0_1WireFormat.prototype.encodeData = function(data)
+Tlv0_1_1WireFormat.prototype.encodeData = function(data)
 {
   var encoder = new TlvEncoder(1500);
   var saveLength = encoder.getLength();
@@ -19475,11 +19617,11 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
-  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
-  Tlv0_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
-  Tlv0_1WireFormat.encodeName(data.getName(), encoder);
+  Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
+  Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
 
   encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
@@ -19503,17 +19645,17 @@ Tlv0_1WireFormat.prototype.encodeData = function(data)
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_1WireFormat.prototype.decodeData = function(data, input)
+Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
   var signedPortionBeginOffset = decoder.getOffset();
 
-  Tlv0_1WireFormat.decodeName(data.getName(), decoder);
-  Tlv0_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
+  Tlv0_1_1WireFormat.decodeName(data.getName(), decoder);
+  Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
-  Tlv0_1WireFormat.decodeSignatureInfo(data, decoder);
+  Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
   if (data.getSignature() != null &&
       data.getSignature().getKeyLocator() != null &&
       data.getMetaInfo() != null)
@@ -19538,7 +19680,7 @@ Tlv0_1WireFormat.prototype.decodeData = function(data, input)
  * encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -19567,8 +19709,9 @@ Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
   // TODO: Encode Uri.
 
   encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.FaceID, controlParameters.getFaceId());
-  Tlv0_1WireFormat.encodeName(controlParameters.getName(), encoder);
+    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
+  if (controlParameters.getName().size() > 0)
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
@@ -19581,27 +19724,27 @@ Tlv0_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
   // TODO: This assumes it is a Sha256WithRsaSignature.
-  Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
     (signature, encoder, signature.getKeyLocator());
   
   return new Blob(encoder.getOutput(), false);
 };
 
 // SignatureHolder is used by decodeSignatureInfoAndValue.
-Tlv0_1WireFormat.SignatureHolder = function Tlv0_1WireFormatSignatureHolder()
+Tlv0_1_1WireFormat.SignatureHolder = function Tlv0_1_1WireFormatSignatureHolder()
 {
 };
 
-Tlv0_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+Tlv0_1_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
 {
   this.signature = signature;
 };
 
-Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
+Tlv0_1_1WireFormat.SignatureHolder.prototype.getSignature = function()
 {
   return this.signature;
 };
@@ -19614,13 +19757,13 @@ Tlv0_1WireFormat.SignatureHolder.prototype.getSignature = function()
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
  * @returns {Signature} A new object which is a subclass of Signature.
  */
-Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
   (signatureInfo, signatureValue)
 {
   // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
-  var signatureHolder = new Tlv0_1WireFormat.SignatureHolder();
+  var signatureHolder = new Tlv0_1_1WireFormat.SignatureHolder();
   var decoder = new TlvDecoder(signatureInfo);
-  Tlv0_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+  Tlv0_1_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
   decoder = new TlvDecoder(signatureValue);
   // TODO: The library needs to handle other signature types than
@@ -19638,7 +19781,7 @@ Tlv0_1WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature value to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
+Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
   // TODO: This assumes it is a Sha256WithRsaSignature.
@@ -19650,13 +19793,13 @@ Tlv0_1WireFormat.prototype.encodeSignatureValue = function(signature)
 /**
  * Get a singleton instance of a Tlv1_0a2WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @returns {Tlv0_1WireFormat} The singleton instance.
+ * @returns {Tlv0_1_1WireFormat} The singleton instance.
  */
-Tlv0_1WireFormat.get = function()
+Tlv0_1_1WireFormat.get = function()
 {
-  if (Tlv0_1WireFormat.instance === null)
-    Tlv0_1WireFormat.instance = new Tlv0_1WireFormat();
-  return Tlv0_1WireFormat.instance;
+  if (Tlv0_1_1WireFormat.instance === null)
+    Tlv0_1_1WireFormat.instance = new Tlv0_1_1WireFormat();
+  return Tlv0_1_1WireFormat.instance;
 };
 
 /**
@@ -19671,7 +19814,7 @@ Tlv0_1WireFormat.get = function()
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1WireFormat.encodeName = function(name, encoder)
+Tlv0_1_1WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -19712,7 +19855,7 @@ Tlv0_1WireFormat.encodeName = function(name, encoder)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1WireFormat.decodeName = function(name, decoder)
+Tlv0_1_1WireFormat.decodeName = function(name, decoder)
 {
   name.clear();
 
@@ -19736,7 +19879,7 @@ Tlv0_1WireFormat.decodeName = function(name, decoder)
  * Encode the interest selectors.  If no selectors are written, do not output a
  * Selectors TLV.
  */
-Tlv0_1WireFormat.encodeSelectors = function(interest, encoder)
+Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -19746,10 +19889,10 @@ Tlv0_1WireFormat.encodeSelectors = function(interest, encoder)
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
-    Tlv0_1WireFormat.encodeExclude(interest.getExclude(), encoder);
+    Tlv0_1_1WireFormat.encodeExclude(interest.getExclude(), encoder);
 
   if (interest.getKeyLocator().getType() != null)
-    Tlv0_1WireFormat.encodeKeyLocator
+    Tlv0_1_1WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
   else {
     // There is no keyLocator. If there is a publisherPublicKeyDigest, then
@@ -19776,7 +19919,7 @@ Tlv0_1WireFormat.encodeSelectors = function(interest, encoder)
     encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
 };
 
-Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
+Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.Selectors);
 
@@ -19788,7 +19931,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
   // Initially set publisherPublicKeyDigest to none.
   interest.publisherPublicKeyDigest = null;
   if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset)) {
-    Tlv0_1WireFormat.decodeKeyLocator
+    Tlv0_1_1WireFormat.decodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
     if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
       // For backwards compatibility, also set the publisherPublicKeyDigest.
@@ -19801,7 +19944,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
     interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
-    Tlv0_1WireFormat.decodeExclude(interest.getExclude(), decoder);
+    Tlv0_1_1WireFormat.decodeExclude(interest.getExclude(), decoder);
   else
     interest.getExclude().clear();
 
@@ -19812,7 +19955,7 @@ Tlv0_1WireFormat.decodeSelectors = function(interest, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
+Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -19830,7 +19973,7 @@ Tlv0_1WireFormat.encodeExclude = function(exclude, encoder)
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
 
-Tlv0_1WireFormat.decodeExclude = function(exclude, decoder)
+Tlv0_1_1WireFormat.decodeExclude = function(exclude, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
 
@@ -19848,14 +19991,14 @@ Tlv0_1WireFormat.decodeExclude = function(exclude, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
+Tlv0_1_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (keyLocator.getType() != null) {
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
-      Tlv0_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+      Tlv0_1_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
              keyLocator.getKeyData().size() > 0)
       encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
@@ -19866,7 +20009,7 @@ Tlv0_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
   encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
-Tlv0_1WireFormat.decodeKeyLocator = function
+Tlv0_1_1WireFormat.decodeKeyLocator = function
   (expectedType, keyLocator, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(expectedType);
@@ -19880,7 +20023,7 @@ Tlv0_1WireFormat.decodeKeyLocator = function
   if (decoder.peekType(Tlv.Name, endOffset)) {
     // KeyLocator is a Name.
     keyLocator.setType(KeyLocatorType.KEYNAME);
-    Tlv0_1WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+    Tlv0_1_1WireFormat.decodeName(keyLocator.getKeyName(), decoder);
   }
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
@@ -19902,20 +20045,20 @@ Tlv0_1WireFormat.decodeKeyLocator = function
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
  */
-Tlv0_1WireFormat.encodeSignatureSha256WithRsaValue = function
+Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue = function
   (signature, encoder, keyLocator)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  Tlv0_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+  Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
   encoder.writeNonNegativeIntegerTlv
     (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
 
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
+Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
@@ -19927,7 +20070,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
       var signatureInfo = data.getSignature();
-      Tlv0_1WireFormat.decodeKeyLocator
+      Tlv0_1_1WireFormat.decodeKeyLocator
         (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else
@@ -19937,7 +20080,7 @@ Tlv0_1WireFormat.decodeSignatureInfo = function(data, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
+Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -19967,7 +20110,7 @@ Tlv0_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
+Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
@@ -20008,7 +20151,7 @@ Tlv0_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
  */
 
 var WireFormat = require('./wire-format.js').WireFormat;
-var Tlv0_1WireFormat = require('./tlv-0_1-wire-format.js').Tlv0_1WireFormat;
+var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -20017,11 +20160,11 @@ var Tlv0_1WireFormat = require('./tlv-0_1-wire-format.js').Tlv0_1WireFormat;
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_1WireFormat.
-  Tlv0_1WireFormat.call(this);
+  // Inherit from Tlv0_1_1WireFormat.
+  Tlv0_1_1WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_1WireFormat();
+TlvWireFormat.prototype = new Tlv0_1_1WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;

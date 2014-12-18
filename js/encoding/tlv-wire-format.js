@@ -18,7 +18,7 @@
  */
 
 var WireFormat = require('./wire-format.js').WireFormat;
-var Tlv0_1WireFormat = require('./tlv-0_1-wire-format.js').Tlv0_1WireFormat;
+var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -27,11 +27,11 @@ var Tlv0_1WireFormat = require('./tlv-0_1-wire-format.js').Tlv0_1WireFormat;
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_1WireFormat.
-  Tlv0_1WireFormat.call(this);
+  // Inherit from Tlv0_1_1WireFormat.
+  Tlv0_1_1WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_1WireFormat();
+TlvWireFormat.prototype = new Tlv0_1_1WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;
