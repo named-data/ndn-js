@@ -19,6 +19,8 @@
  */
 
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var SecurityException = require('../security-exception.js').SecurityException;
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 
 /**
  * A PolicyManager is an abstract base class to represent the policy for
@@ -116,8 +118,32 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
 PolicyManager.verifyUsesString = null;
 
 /**
+ * Check the type of signature and use the publicKeyDer to verify the
+ * signedBlob using the appropriate signature algorithm.
+ * @param signature {Signature} An object of a subclass of Signature, e.g.
+ * Sha256WithRsaSignature.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * signature.
+ * @returns true if the signature verifies, false if not.
+ * @throws {SecurityException} if the signature type is not recognized or if
+ * publicKeyDer can't be decoded.
+ */
+PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
+{
+  if (signature instanceof Sha256WithRsaSignature)
+    return PolicyManager.verifySha256WithRsaSignature
+        (signature.getSignature(), signedBlob, publicKeyDer);
+  else
+    // We don't expect this to happen.
+    throw new SecurityException
+      ("PolicyManager.verify: Signature type is unknown");
+};
+
+/**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Signature} The signature bits.
+ * @param signature {Blob} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
