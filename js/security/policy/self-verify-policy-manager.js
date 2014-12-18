@@ -176,8 +176,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
   if (publicKeyDer.isNull())
     return false;
 
-  return PolicyManager.verifySha256WithRsaSignature
-    (signatureInfo.getSignature(), signedBlob, publicKeyDer);
+  return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
 };
 
 /**
