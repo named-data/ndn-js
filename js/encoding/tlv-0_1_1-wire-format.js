@@ -186,14 +186,12 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
-  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureInfo_
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
@@ -304,7 +302,7 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
   // TODO: This assumes it is a Sha256WithRsaSignature.
-  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureInfo_
     (signature, encoder, signature.getKeyLocator());
   
   return new Blob(encoder.getOutput(), false);
@@ -614,23 +612,27 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
 };
 
 /**
- * Encode the signature object in TLV, using the given keyLocator instead of the
+ * An internal method to encode signature as the appropriate form of
+ * SignatureInfo in NDN-TLV. Use the given keyLocator instead of the
  * locator in this object.
- * @param {Sha256WithRsaSignature} signature The Sha256WithRsaSignature object to encode.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
  */
-Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue = function
-  (signature, encoder, keyLocator)
+Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
-  encoder.writeNonNegativeIntegerTlv
-    (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
-
+  if (signature instanceof Sha256WithRsaSignature) {
+    Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
+  }
+  else
+    throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
+    
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
