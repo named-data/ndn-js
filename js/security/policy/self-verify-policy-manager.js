@@ -21,7 +21,9 @@
 var Name = require('../../name.js').Name;
 var Interest = require('../../interest.js').Interest;
 var Data = require('../../data.js').Data;
+var Blob = require('../../util/blob.js').Blob;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
@@ -169,31 +171,34 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  */
 SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
 {
-  var signature = signatureInfo;
-  /*
-  if (!signature)
-    throw new SecurityException(new Error
-      ("SelfVerifyPolicyManager: Signature is not Sha256WithRsaSignature.");
-  */
+  var publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
+    (signatureInfo));
+  if (publicKeyDer.isNull())
+    return false;
 
-  if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
+  return PolicyManager.verifySha256WithRsaSignature
+    (signatureInfo.getSignature(), signedBlob, publicKeyDer);
+};
+
+/**
+ * Return the public key DER in the KeyLocator (if available) or look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available). If the public key can't be found, return and empty Blob.
+ * @param {KeyLocator} keyLocator The KeyLocator.
+ * @returns {Blob} The public key DER or an empty Blob if not found.
+ */
+SelfVerifyPolicyManager.prototype.getPublicKeyDer = function(keyLocator)
+{
+  if (keyLocator.getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, signature.getKeyLocator().getKeyData());
-  else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
-           this.identityStorage != null) {
+    return keyLocator.getKeyData();
+  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+           this.identityStorage != null)
     // Assume the key name is a certificate name.
-    var publicKeyDer = this.identityStorage.getKey
+    return this.identityStorage.getKey
       (IdentityCertificate.certificateNameToPublicKeyName
-       (signature.getKeyLocator().getKeyName()));
-    if (publicKeyDer.isNull())
-      // Can't find the public key with the name.
-      return false;
-
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer);
-  }
+       (keyLocator.getKeyName()));
   else
     // Can't find a key to verify.
-    return false;
+    return new Blob();
 };
