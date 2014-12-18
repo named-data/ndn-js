@@ -688,7 +688,7 @@ ConfigPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
       return false;
 
     return PolicyManager.verifySha256WithRsaSignature
-      (signature, signedBlob, publicKeyDer);
+      (signature.getSignature(), signedBlob, publicKeyDer);
   }
   else
     // Can't find a key to verify.

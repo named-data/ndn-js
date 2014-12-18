@@ -179,7 +179,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
   if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
     return PolicyManager.verifySha256WithRsaSignature
-      (signature, signedBlob, signature.getKeyLocator().getKeyData());
+      (signature.getSignature(), signedBlob, signature.getKeyLocator().getKeyData());
   else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null) {
     // Assume the key name is a certificate name.
@@ -191,7 +191,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
       return false;
 
     return PolicyManager.verifySha256WithRsaSignature
-      (signature, signedBlob, publicKeyDer);
+      (signature.getSignature(), signedBlob, publicKeyDer);
   }
   else
     // Can't find a key to verify.

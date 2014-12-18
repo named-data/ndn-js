@@ -16801,7 +16801,7 @@ PolicyManager.verifyUsesString = null;
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
+ * @param signature {Signature} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
@@ -16828,8 +16828,7 @@ PolicyManager.verifySha256WithRsaSignature = function
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(signedBlob.signedBuf());
   var signatureBytes = PolicyManager.verifyUsesString ?
-    DataUtils.toString(signature.getSignature().buf()) :
-    signature.getSignature().buf();
+    DataUtils.toString(signature.buf()) : signature.buf();
   return verifier.verify(keyPem, signatureBytes);
 };
 /**
@@ -17120,7 +17119,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
   if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
     return PolicyManager.verifySha256WithRsaSignature
-      (signature, signedBlob, signature.getKeyLocator().getKeyData());
+      (signature.getSignature(), signedBlob, signature.getKeyLocator().getKeyData());
   else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null) {
     // Assume the key name is a certificate name.
@@ -17132,7 +17131,7 @@ SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
       return false;
 
     return PolicyManager.verifySha256WithRsaSignature
-      (signature, signedBlob, publicKeyDer);
+      (signature.getSignature(), signedBlob, publicKeyDer);
   }
   else
     // Can't find a key to verify.
@@ -19610,14 +19609,12 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
   //   the key locator from the MetaInfo to the Signauture object.
-  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureInfo_
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
@@ -19664,8 +19661,6 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
     data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   data.getSignature().setSignature
     (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
@@ -19727,8 +19722,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  // TODO: This assumes it is a Sha256WithRsaSignature.
-  Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue
+  Tlv0_1_1WireFormat.encodeSignatureInfo_
     (signature, encoder, signature.getKeyLocator());
   
   return new Blob(encoder.getOutput(), false);
@@ -19766,8 +19760,6 @@ Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
   Tlv0_1_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
   decoder = new TlvDecoder(signatureValue);
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   signatureHolder.getSignature().setSignature
     (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
@@ -19784,7 +19776,6 @@ Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
 Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  // TODO: This assumes it is a Sha256WithRsaSignature.
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
@@ -20038,23 +20029,27 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
 };
 
 /**
- * Encode the signature object in TLV, using the given keyLocator instead of the
+ * An internal method to encode signature as the appropriate form of
+ * SignatureInfo in NDN-TLV. Use the given keyLocator instead of the
  * locator in this object.
- * @param {Sha256WithRsaSignature} signature The Sha256WithRsaSignature object to encode.
+ * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
  * Data.getSignatureOrMetaInfoKeyLocator).
  */
-Tlv0_1_1WireFormat.encodeSignatureSha256WithRsaValue = function
-  (signature, encoder, keyLocator)
+Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
-  Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
-  encoder.writeNonNegativeIntegerTlv
-    (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
-
+  if (signature instanceof Sha256WithRsaSignature) {
+    Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
+  }
+  else
+    throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
+    
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
@@ -20063,8 +20058,6 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
   var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
-  // TODO: The library needs to handle other signature types than
-  //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
       data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object

@@ -117,7 +117,7 @@ PolicyManager.verifyUsesString = null;
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Sha256WithRsaSignature} The Sha256WithRsaSignature.
+ * @param signature {Signature} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
@@ -144,7 +144,6 @@ PolicyManager.verifySha256WithRsaSignature = function
   var verifier = require('crypto').createVerify('RSA-SHA256');
   verifier.update(signedBlob.signedBuf());
   var signatureBytes = PolicyManager.verifyUsesString ?
-    DataUtils.toString(signature.getSignature().buf()) :
-    signature.getSignature().buf();
+    DataUtils.toString(signature.buf()) : signature.buf();
   return verifier.verify(keyPem, signatureBytes);
 };
