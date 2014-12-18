@@ -22,8 +22,8 @@
 var fs = require('fs');
 var Name = require('../../name.js').Name;
 var Interest = require('../../interest.js').Interest;
+var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var Blob = require('../../util/blob.js').Blob;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser;
@@ -189,7 +189,17 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
-  var signatureName = signature.getKeyLocator().getKeyName();
+  var keyLocator = null;
+  try {
+    keyLocator = KeyLocator.getFromSignature(signature);
+  }
+  catch (ex) {
+    // No key locator -> fail.
+    onVerifyFailed(dataOrInterest);
+    return null;
+  }
+
+  var signatureName = keyLocator.getKeyName();
   // No key name in KeyLocator -> fail.
   if (signatureName.size() == 0) {
     onVerifyFailed(dataOrInterest);
@@ -668,14 +678,12 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  */
 ConfigPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
 {
-  var signature = signatureInfo;
-  if (!(signature instanceof Sha256WithRsaSignature))
-    throw new SecurityException
-      ("ConfigPolicyManager: Signature is not Sha256WithRsaSignature.");
+  // We have already checked once that there is a key locator.
+  var keyLocator = KeyLocator.getFromSignature(signatureInfo);
 
-  if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME) {
+  if (keyLocator.getType() == KeyLocatorType.KEYNAME) {
     // Assume the key name is a certificate name.
-    var signatureName = signature.getKeyLocator().getKeyName();
+    var signatureName = keyLocator.getKeyName();
     var certificate = this.refreshManager.getCertificate(signatureName);
     if (certificate == null)
       certificate = this.certificateCache.getCertificate(signatureName);
@@ -687,8 +695,7 @@ ConfigPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
       // Can't find the public key with the name.
       return false;
 
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer);
+    return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
   }
   else
     // Can't find a key to verify.
