@@ -238,8 +238,6 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
     data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   data.getSignature().setSignature
     (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
@@ -301,7 +299,6 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  // TODO: This assumes it is a Sha256WithRsaSignature.
   Tlv0_1_1WireFormat.encodeSignatureInfo_
     (signature, encoder, signature.getKeyLocator());
   
@@ -340,8 +337,6 @@ Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
   Tlv0_1_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
   decoder = new TlvDecoder(signatureValue);
-  // TODO: The library needs to handle other signature types than
-  //   SignatureSha256WithRsa.
   signatureHolder.getSignature().setSignature
     (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
 
@@ -358,7 +353,6 @@ Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
 Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  // TODO: This assumes it is a Sha256WithRsaSignature.
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
@@ -641,8 +635,6 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
   var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
-  // TODO: The library needs to handle other signature types than
-  //     SignatureSha256WithRsa.
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
       data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
