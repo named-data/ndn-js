@@ -237,22 +237,26 @@ function dumpData(data)
     (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
      data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
 
+  var keyLocator = null;
   var signature = data.getSignature();
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
-    console.log("signature.signature: " +
+    console.log("Sha256WithRsa signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
-    if (signature.getKeyLocator().getType() == KeyLocatorType.NONE)
+    keyLocator = signature.getKeyLocator();
+  }
+  if (keyLocator !== null) {
+    if (keyLocator.getType() == KeyLocatorType.NONE)
       console.log("signature.keyLocator: <none>");
-    else if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
-      console.log("signature.keyLocator: Key: " + signature.getKeyLocator().getKeyData().toHex());
-    else if (signature.getKeyLocator().getType() == KeyLocatorType.CERTIFICATE)
-      console.log("signature.keyLocator: Certificate: " + signature.getKeyLocator().getKeyData().toHex());
-    else if (signature.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
-      console.log("signature.keyLocator: KeyLocatorDigest: " + signature.getKeyLocator().getKeyData().toHex());
-    else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
-      console.log("signature.keyLocator: KeyName: " + signature.getKeyLocator().getKeyName().toUri());
+    else if (keyLocator.getType() == KeyLocatorType.KEY)
+      console.log("signature.keyLocator: Key: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.CERTIFICATE)
+      console.log("signature.keyLocator: Certificate: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      console.log("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      console.log("signature.keyLocator: KeyName: " + keyLocator.getKeyName().toUri());
     else
       console.log("signature.keyLocator: <unrecognized ndn_KeyLocatorType>");
   }
