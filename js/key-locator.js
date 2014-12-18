@@ -183,6 +183,22 @@ KeyLocator.prototype.clear = function()
   this.certificate = null;
 };
 
+/**
+ * If the signature is a type that has a KeyLocator, then return it. Otherwise
+ * throw an error.
+ * @param {Signature} signature An object of a subclass of Signature.
+ * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * doesn't have a KeyLocator.
+ */
+KeyLocator.getFromSignature = function(signature)
+{
+  if (signature instanceof Sha256WithRsaSignature)
+    return signature.getKeyLocator();
+  else
+    throw new Error
+      ("KeyLocator.getFromSignature: Signature type does not have a KeyLocator");
+}
+
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
   decoder.readElementStartDTag(this.getElementLabel());
@@ -310,3 +326,5 @@ KeyName.prototype.to_ndnb = function(encoder)
 
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
+// Put this last to avoid a require loop.
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
