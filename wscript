@@ -154,6 +154,7 @@ def build (bld):
                  "js/control-parameters.js",
                  "js/encoding/binary-xml-wire-format.js",
                  "js/encoding/tlv-0_1_1-wire-format.js",
+                 "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
                  "js/encoding/encoding-utils.js",
                  "js/util/command-interest-generator.js",
