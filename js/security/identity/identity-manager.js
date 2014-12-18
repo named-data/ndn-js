@@ -25,6 +25,7 @@ var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
+var KeyType = require('../security-types.js').KeyType;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -381,13 +382,17 @@ IdentityManager.prototype.makeSignatureByCertificate = function
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
   var publicKey = this.privateKeyStorage.getPublicKey(keyName);
+  var keyType = publicKey.getKeyType();
 
-  // For temporary usage, we support RSA + SHA256 only, but will support more.
-  var signature = new Sha256WithRsaSignature();
-  digestAlgorithm[0] = DigestAlgorithm.SHA256;
-  
-  signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-  signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+  if (keyType == KeyType.RSA) {
+    var signature = new Sha256WithRsaSignature();
+    digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-  return signature;
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+
+    return signature;
+  }
+  else
+    throw new SecurityException(new Error("Key type is not recognized"));
 };
