@@ -64,7 +64,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
  */
 MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 {
-  return this.identityStore[identityName.toUri()] !== undefined;
+  return this.identityStore.indexOf(identityName.toUri()) !== -1;
 };
 
 /**
@@ -268,9 +268,8 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyNa
  */
 MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 {
-  var identityUri = identityName.toUri();
-  if (this.identityStore[identityUri] !== undefined)
-    this.defaultIdentity = identityUri;
+  if (this.doesIdentityExist(identityName))
+    this.defaultIdentity = identityName.toUri();
   else
     // The identity doesn't exist, so clear the default.
     this.defaultIdentity = "";
