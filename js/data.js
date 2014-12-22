@@ -177,8 +177,10 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
-    signature.clone() : new Sha256WithRsaSignature();
+  if (signature == null)
+    this.signature = new Sha256WithRsaSignature();
+  else
+    this.signature =  signature.clone();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = new SignedBlob();
