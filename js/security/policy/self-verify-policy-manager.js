@@ -171,11 +171,14 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  */
 SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
 {
-  var publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
-    (signatureInfo));
-  if (publicKeyDer.isNull())
-    return false;
-
+  var publicKeyDer;
+  if (KeyLocator.canGetFromSignature(signatureInfo)) {
+    publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
+      (signatureInfo));
+    if (publicKeyDer.isNull())
+      return false;
+  }
+  
   return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
 };
 
