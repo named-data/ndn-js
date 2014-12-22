@@ -100,7 +100,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
     var hash = crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
-    return new Blob(hash.digest());
+    return new Blob(hash.digest(), false);
   }
   else
     throw new SecurityException(new Error("Wrong format!"));
