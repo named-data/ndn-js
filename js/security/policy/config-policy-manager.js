@@ -189,6 +189,12 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     return null;
   }
 
+  if (!KeyLocator.canGetFromSignature(signature)) {
+    // We only support signature types with key locators.
+    onVerifyFailed(dataOrInterest);
+    return null;
+  }
+
   var keyLocator = null;
   try {
     keyLocator = KeyLocator.getFromSignature(signature);
@@ -243,13 +249,13 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     foundCert = this.certificateCache.getCertificate(signatureName);
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
-    var thisManager = this
+    var thisManager = this;
     var onCertificateDownloadComplete = function(data) {
       var certificate = new IdentityCertificate(data);
       thisManager.certificateCache.insertCertificate(certificate);
       thisManager.checkVerificationPolicy
         (dataOrInterest, stepCount + 1, onVerified, onVerifyFailed);
-    }
+    };
 
     var nextStep = new ValidationRequest
       (certificateInterest, onCertificateDownloadComplete, onVerifyFailed,
