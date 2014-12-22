@@ -21,6 +21,7 @@ var Data = require('../..').Data;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
+var DigestSha256Signature = require('../..').DigestSha256Signature;
 var ContentType = require('../..').ContentType;
 var KeyType = require('../..').KeyType;
 var KeyLocatorType = require('../..').KeyLocatorType;
@@ -245,6 +246,12 @@ function dumpData(data)
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof DigestSha256Signature) {
+    var signature = data.getSignature();
+    console.log("DigestSha256 signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
     if (keyLocator.getType() == KeyLocatorType.NONE)
