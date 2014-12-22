@@ -328,6 +328,24 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
 };
 
 /**
+ * Sign the target using DigestSha256.
+ * @param {Data|Interest} target If this is a Data object, wire encode for
+ * signing, digest it and set its SignatureInfo to a DigestSha256, updating its
+ * signature and wireEncoding. If this is an Interest object, wire encode for
+ * signing, append a SignatureInfo for DigestSha256 to the Interest name, digest
+ * the name components and append a final name component with the signature bits.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.prototype.signWithSha256 = function(target, wireFormat)
+{
+  if (target instanceof Interest)
+    this.identityManager.signInterestWithSha256(target, wireFormat);
+  else
+    this.identityManager.signWithSha256(target, wireFormat);
+};
+
+/**
  * Check the signature on the Data object and call either onVerify or 
  * onVerifyFailed. We use callback functions because verify may fetch
  * information to check the signature.

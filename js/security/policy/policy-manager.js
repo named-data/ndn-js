@@ -20,6 +20,7 @@
 
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 
 /**

@@ -20,6 +20,7 @@
 
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
@@ -323,6 +324,64 @@ IdentityManager.prototype.signInterestByCertificate = function
     (encoding.signedBuf(),
      IdentityManager.certificateNameToPublicKeyName(certificateName),
      digestAlgorithm[0]));
+
+  // Remove the empty signature and append the real one.
+  interest.setName(interest.getName().getPrefix(-1).append
+    (wireFormat.encodeSignatureValue(signature)));
+};
+
+/**
+ * Wire encode the Data object, digest it and set its SignatureInfo to a
+ * DigestSha256.
+ * @param {Data} data The Data object to be signed. This updates its signature
+ * and wireEncoding.
+ * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
+ * WireFormat.getDefaultWireFormat() if omitted.
+ */
+IdentityManager.prototype.signWithSha256 = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  data.setSignature(new DigestSha256Signature());
+  // Encode once to get the signed portion.
+  var encoding = data.wireEncode(wireFormat);
+
+  // Digest and set the signature.
+  var hash = crypto.createHash('sha256');
+  hash.update(encoding.signedBuf());
+  data.getSignature().setSignature(new Blob(hash.digest(), false));
+
+  // Encode again to include the signature.
+  data.wireEncode(wireFormat);
+};
+
+/**
+ * Append a SignatureInfo for DigestSha256 to the Interest name, digest the
+   * name components and append a final name component with the signature bits
+   * (which is the digest).
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var signature = new DigestSha256Signature();
+
+  // Append the encoded SignatureInfo.
+  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+  // Append an empty signature so that the "signedPortion" is correct.
+  interest.getName().append(new Name.Component());
+  // Encode once to get the signed portion.
+  var encoding = interest.wireEncode(wireFormat);
+
+  // Digest and set the signature.
+  var hash = crypto.createHash('sha256');
+  hash.update(encoding.signedBuf());
+  signature.setSignature(new Blob(hash.digest(), false));
 
   // Remove the empty signature and append the real one.
   interest.setName(interest.getName().getPrefix(-1).append
