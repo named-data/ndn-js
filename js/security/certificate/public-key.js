@@ -18,6 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;

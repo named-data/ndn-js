@@ -18,8 +18,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
+var Blob = require('../../util/blob.js').Blob;
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;

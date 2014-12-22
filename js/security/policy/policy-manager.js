@@ -18,6 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
