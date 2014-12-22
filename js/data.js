@@ -304,6 +304,10 @@ Data.prototype.wireDecode = function(input, wireFormat)
  */
 Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
 {
+  if (!KeyLocator.canGetFromSignature(this.getSignature()))
+    // The signature type doesn't support KeyLocator.
+    return new KeyLocator();
+  
   if (this.signature != null && this.signature.getKeyLocator() != null &&
       this.signature.getKeyLocator().getType() != null &&
       this.signature.getKeyLocator().getType() >= 0)
@@ -323,7 +327,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   else
     return new KeyLocator();
-}
+};
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
