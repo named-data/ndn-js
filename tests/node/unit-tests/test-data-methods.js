@@ -275,6 +275,11 @@ CredentialStorage.prototype.signData = function(data, certificateName)
   this.keyChain.sign(data, certificateName);
 };
 
+CredentialStorage.prototype.signDataWithSha256 = function(data)
+{
+  this.keyChain.signWithSha256(data);
+};
+
 CredentialStorage.prototype.verifyData = function
   (data, verifiedCallback, failedCallback)
 {
@@ -335,13 +340,28 @@ describe('TestDataMethods', function() {
     assert.ok(dataDumpsEqual(freshDump, initialDump), 'Freshly created data does not match original dump');
   });
 
-  it('CopyFields', function() {
+  it('Verify', function() {
     // We create simple callbacks to count calls since we're not interested in
     //   the effect of the callbacks themselves.
     var failedCallCount = 0;
     var verifiedCallCount = 0;
 
     credentials.signData(freshData);
+
+    credentials.verifyData
+      (freshData, function() { ++verifiedCallCount; },
+       function() { ++failedCallCount; });
+    assert.equal(failedCallCount, 0, 'Signature verification failed');
+    assert.equal(verifiedCallCount, 1, 'Verification callback was not used.');
+  });
+
+  it('VerifyDigestSha256', function() {
+    // We create simple callbacks to count calls since we're not interested in
+    //   the effect of the callbacks themselves.
+    var failedCallCount = 0;
+    var verifiedCallCount = 0;
+
+    credentials.signDataWithSha256(freshData);
 
     credentials.verifyData
       (freshData, function() { ++verifiedCallCount; },
