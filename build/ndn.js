@@ -15784,7 +15784,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
  */
 MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 {
-  return this.identityStore[identityName.toUri()] !== undefined;
+  return this.identityStore.indexOf(identityName.toUri()) !== -1;
 };
 
 /**
@@ -15988,9 +15988,8 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyNa
  */
 MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 {
-  var identityUri = identityName.toUri();
-  if (this.identityStore[identityUri] !== undefined)
-    this.defaultIdentity = identityUri;
+  if (this.doesIdentityExist(identityName))
+    this.defaultIdentity = identityName.toUri();
   else
     // The identity doesn't exist, so clear the default.
     this.defaultIdentity = "";
@@ -19700,6 +19699,7 @@ var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
+var KeyLocator = require('../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
@@ -19866,7 +19866,8 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
   // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
-  //   the key locator from the MetaInfo to the Signauture object.
+  //   the key locator from the MetaInfo to the Signauture object. (Note that
+  //   getSignatureOrMetaInfoKeyLocator checks canGetFromSignature.)
   Tlv0_1_1WireFormat.encodeSignatureInfo_
     (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
@@ -19975,8 +19976,12 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_
-    (signature, encoder, signature.getKeyLocator());
+  
+  // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
+  var keyLocator = null;
+  if (KeyLocator.canGetFromSignature(signature))
+    keyLocator = KeyLocator.getFromSignature(signature);
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
   
   return new Blob(encoder.getOutput(), false);
 };
@@ -20288,7 +20293,8 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator).
+ * Data.getSignatureOrMetaInfoKeyLocator). This may be null if the signature
+ * does not support a KeyLocator.
  */
 Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
 {
