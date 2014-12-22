@@ -27,6 +27,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
@@ -624,6 +625,9 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocato
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof DigestSha256Signature)
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
   else
     throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
     
@@ -643,6 +647,8 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
       Tlv0_1_1WireFormat.decodeKeyLocator
         (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
+  else if (signatureType == Tlv.SignatureType_DigestSha256)
+      data.setSignature(new DigestSha256Signature());
   else
       throw new DecodingException
        ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
