@@ -177,8 +177,10 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
-    signature.clone() : new Sha256WithRsaSignature();
+  if (signature == null)
+    this.signature = new Sha256WithRsaSignature();
+  else
+    this.signature =  signature.clone();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = new SignedBlob();
@@ -302,6 +304,10 @@ Data.prototype.wireDecode = function(input, wireFormat)
  */
 Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
 {
+  if (!KeyLocator.canGetFromSignature(this.getSignature()))
+    // The signature type doesn't support KeyLocator.
+    return new KeyLocator();
+  
   if (this.signature != null && this.signature.getKeyLocator() != null &&
       this.signature.getKeyLocator().getType() != null &&
       this.signature.getKeyLocator().getType() >= 0)
@@ -321,7 +327,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   else
     return new KeyLocator();
-}
+};
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;

@@ -13297,6 +13297,38 @@ KeyLocator.prototype.clear = function()
   this.certificate = null;
 };
 
+/**
+ * If the signature is a type that has a KeyLocator (so that
+ * getFromSignature will succeed), return true.
+ * Note: This is a static method of KeyLocator instead of a method of
+ * Signature so that the Signature base class does not need to be overloaded
+ * with all the different kinds of information that various signature
+ * algorithms may use.
+ * @param {Signature} signature An object of a subclass of Signature.
+ * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * otherwise false.
+ */
+KeyLocator.canGetFromSignature = function(signature)
+{
+  return signature instanceof Sha256WithRsaSignature;
+}
+
+/**
+ * If the signature is a type that has a KeyLocator, then return it. Otherwise
+ * throw an error.
+ * @param {Signature} signature An object of a subclass of Signature.
+ * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * doesn't have a KeyLocator.
+ */
+KeyLocator.getFromSignature = function(signature)
+{
+  if (signature instanceof Sha256WithRsaSignature)
+    return signature.getKeyLocator();
+  else
+    throw new Error
+      ("KeyLocator.getFromSignature: Signature type does not have a KeyLocator");
+}
+
 KeyLocator.prototype.from_ndnb = function(decoder) {
 
   decoder.readElementStartDTag(this.getElementLabel());
@@ -13424,6 +13456,8 @@ KeyName.prototype.to_ndnb = function(encoder)
 
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
+// Put this last to avoid a require loop.
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 /**
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -14059,6 +14093,81 @@ Signature.prototype = new Sha256WithRsaSignature();
 
 exports.Signature = Signature;
 /**
+ * This class represents an NDN Data Signature object.
+ * Copyright (C) 2014 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('./util/blob.js').Blob;
+
+/**
+ * A DigestSha256Signature extends Signature and holds the signature bits (which
+ * are only the SHA256 digest) and an empty SignatureInfo for a data packet or
+ * signed interest.
+ *
+ * Create a new DigestSha256Signature object, possibly copying values from
+ * another object.
+ *
+ * @param {DigestSha256Signature} value (optional) If value is a
+ * DigestSha256Signature, copy its values.  If value is omitted, the signature
+ * is unspecified.
+ * @constructor
+ */
+var DigestSha256Signature = function DigestSha256Signature(value)
+{
+  if (typeof value === 'object' && value instanceof DigestSha256Signature)
+    // Copy the values.
+    this.signature = value.signature;
+  else
+    this.signature = new Blob();
+};
+
+exports.DigestSha256Signature = DigestSha256Signature;
+
+/**
+ * Create a new DigestSha256Signature which is a copy of this object.
+ * @returns {DigestSha256Signature} A new object which is a copy of this object.
+ */
+DigestSha256Signature.prototype.clone = function()
+{
+  return new DigestSha256Signature(this);
+};
+
+/**
+ * Get the signature bytes (which are only the digest).
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ */
+DigestSha256Signature.prototype.getSignature = function()
+{
+  return this.signature;
+};
+
+/**
+ * Set the signature bytes to the given value.
+ * @param {Blob} signature
+ */
+DigestSha256Signature.prototype.setSignature = function(signature)
+{
+  if (typeof signature === 'object' && signature instanceof Blob)
+    this.signature = signature;
+  else
+    this.signature = new Blob(signature);
+};
+/**
  * This class represents an NDN Data object.
  * Copyright (C) 2013-2014 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -14237,8 +14346,10 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature = typeof signature === 'object' && signature instanceof Sha256WithRsaSignature ?
-    signature.clone() : new Sha256WithRsaSignature();
+  if (signature == null)
+    this.signature = new Sha256WithRsaSignature();
+  else
+    this.signature =  signature.clone();
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding = new SignedBlob();
@@ -14362,6 +14473,10 @@ Data.prototype.wireDecode = function(input, wireFormat)
  */
 Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
 {
+  if (!KeyLocator.canGetFromSignature(this.getSignature()))
+    // The signature type doesn't support KeyLocator.
+    return new KeyLocator();
+  
   if (this.signature != null && this.signature.getKeyLocator() != null &&
       this.signature.getKeyLocator().getType() != null &&
       this.signature.getKeyLocator().getType() >= 0)
@@ -14381,7 +14496,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     return this.signature.getKeyLocator();
   else
     return new KeyLocator();
-}
+};
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
@@ -14586,6 +14701,7 @@ EncryptMode.CFB_AES = 2;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -14668,7 +14784,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
     var hash = crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
-    return new Blob(hash.digest());
+    return new Blob(hash.digest(), false);
   }
   else
     throw new SecurityException(new Error("Wrong format!"));
@@ -16258,8 +16374,11 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
+var Blob = require('../../util/blob.js').Blob;
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
@@ -16570,6 +16689,64 @@ IdentityManager.prototype.signInterestByCertificate = function
 };
 
 /**
+ * Wire encode the Data object, digest it and set its SignatureInfo to a
+ * DigestSha256.
+ * @param {Data} data The Data object to be signed. This updates its signature
+ * and wireEncoding.
+ * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
+ * WireFormat.getDefaultWireFormat() if omitted.
+ */
+IdentityManager.prototype.signWithSha256 = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  data.setSignature(new DigestSha256Signature());
+  // Encode once to get the signed portion.
+  var encoding = data.wireEncode(wireFormat);
+
+  // Digest and set the signature.
+  var hash = crypto.createHash('sha256');
+  hash.update(encoding.signedBuf());
+  data.getSignature().setSignature(new Blob(hash.digest(), false));
+
+  // Encode again to include the signature.
+  data.wireEncode(wireFormat);
+};
+
+/**
+ * Append a SignatureInfo for DigestSha256 to the Interest name, digest the
+   * name components and append a final name component with the signature bits
+   * (which is the digest).
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var signature = new DigestSha256Signature();
+
+  // Append the encoded SignatureInfo.
+  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+  // Append an empty signature so that the "signedPortion" is correct.
+  interest.getName().append(new Name.Component());
+  // Encode once to get the signed portion.
+  var encoding = interest.wireEncode(wireFormat);
+
+  // Digest and set the signature.
+  var hash = crypto.createHash('sha256');
+  hash.update(encoding.signedBuf());
+  signature.setSignature(new Blob(hash.digest(), false));
+
+  // Remove the empty signature and append the real one.
+  interest.setName(interest.getName().getPrefix(-1).append
+    (wireFormat.encodeSignatureValue(signature)));
+};
+
+/**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
  * @returns {IdentityCertificate} The generated certificate.
@@ -16702,7 +16879,12 @@ exports.ValidationRequest = ValidationRequest;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
+var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var SecurityException = require('../security-exception.js').SecurityException;
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 
 /**
  * A PolicyManager is an abstract base class to represent the policy for
@@ -16800,8 +16982,35 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
 PolicyManager.verifyUsesString = null;
 
 /**
+ * Check the type of signature and use the publicKeyDer to verify the
+ * signedBlob using the appropriate signature algorithm.
+ * @param signature {Signature} An object of a subclass of Signature, e.g.
+ * Sha256WithRsaSignature.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * signature.
+ * @returns true if the signature verifies, false if not.
+ * @throws {SecurityException} if the signature type is not recognized or if
+ * publicKeyDer can't be decoded.
+ */
+PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
+{
+  if (signature instanceof Sha256WithRsaSignature)
+    return PolicyManager.verifySha256WithRsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer);
+  else if (signature instanceof DigestSha256Signature)
+    return PolicyManager.verifyDigestSha256Signature
+      (signature.getSignature(), signedBlob);
+  else
+    // We don't expect this to happen.
+    throw new SecurityException
+      ("PolicyManager.verify: Signature type is unknown");
+};
+
+/**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Signature} The signature bits.
+ * @param signature {Blob} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
@@ -16830,6 +17039,24 @@ PolicyManager.verifySha256WithRsaSignature = function
   var signatureBytes = PolicyManager.verifyUsesString ?
     DataUtils.toString(signature.buf()) : signature.buf();
   return verifier.verify(keyPem, signatureBytes);
+};
+
+/**
+ * Verify the DigestSha256 signature on the SignedBlob by verifying that the
+ * digest of SignedBlob equals the signature.
+ * @param signature {Blob} The signature bits.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @returns true if the signature verifies, false if not.
+ */
+PolicyManager.verifyDigestSha256Signature = function(signature, signedBlob)
+{
+  // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
+  var hash = crypto.createHash('sha256');
+  hash.update(signedBlob.signedBuf());
+  var signedPortionDigest = new Blob(hash.digest(), false);
+
+  return signedPortionDigest.equals(signature);
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -16961,7 +17188,9 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 var Name = require('../../name.js').Name;
 var Interest = require('../../interest.js').Interest;
 var Data = require('../../data.js').Data;
+var Blob = require('../../util/blob.js').Blob;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
@@ -17109,33 +17338,38 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  */
 SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
 {
-  var signature = signatureInfo;
-  /*
-  if (!signature)
-    throw new SecurityException(new Error
-      ("SelfVerifyPolicyManager: Signature is not Sha256WithRsaSignature.");
-  */
-
-  if (signature.getKeyLocator().getType() == KeyLocatorType.KEY)
-    // Use the public key DER directly.
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, signature.getKeyLocator().getKeyData());
-  else if (signature.getKeyLocator().getType() == KeyLocatorType.KEYNAME &&
-           this.identityStorage != null) {
-    // Assume the key name is a certificate name.
-    var publicKeyDer = this.identityStorage.getKey
-      (IdentityCertificate.certificateNameToPublicKeyName
-       (signature.getKeyLocator().getKeyName()));
+  var publicKeyDer;
+  if (KeyLocator.canGetFromSignature(signatureInfo)) {
+    publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
+      (signatureInfo));
     if (publicKeyDer.isNull())
-      // Can't find the public key with the name.
       return false;
-
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer);
   }
+  
+  return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
+};
+
+/**
+ * Return the public key DER in the KeyLocator (if available) or look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available). If the public key can't be found, return and empty Blob.
+ * @param {KeyLocator} keyLocator The KeyLocator.
+ * @returns {Blob} The public key DER or an empty Blob if not found.
+ */
+SelfVerifyPolicyManager.prototype.getPublicKeyDer = function(keyLocator)
+{
+  if (keyLocator.getType() == KeyLocatorType.KEY)
+    // Use the public key DER directly.
+    return keyLocator.getKeyData();
+  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+           this.identityStorage != null)
+    // Assume the key name is a certificate name.
+    return this.identityStorage.getKey
+      (IdentityCertificate.certificateNameToPublicKeyName
+       (keyLocator.getKeyName()));
   else
     // Can't find a key to verify.
-    return false;
+    return new Blob();
 };
 /**
  * Copyright (C) 2014 Regents of the University of California.
@@ -17464,6 +17698,24 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
 
     return this.identityManager.signByCertificate(array, signingCertificateName);
   }
+};
+
+/**
+ * Sign the target using DigestSha256.
+ * @param {Data|Interest} target If this is a Data object, wire encode for
+ * signing, digest it and set its SignatureInfo to a DigestSha256, updating its
+ * signature and wireEncoding. If this is an Interest object, wire encode for
+ * signing, append a SignatureInfo for DigestSha256 to the Interest name, digest
+ * the name components and append a final name component with the signature bits.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.prototype.signWithSha256 = function(target, wireFormat)
+{
+  if (target instanceof Interest)
+    this.identityManager.signInterestWithSha256(target, wireFormat);
+  else
+    this.identityManager.signWithSha256(target, wireFormat);
 };
 
 /**
@@ -19450,6 +19702,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
@@ -20047,6 +20300,9 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocato
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof DigestSha256Signature)
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
   else
     throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
     
@@ -20066,6 +20322,8 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
       Tlv0_1_1WireFormat.decodeKeyLocator
         (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
+  else if (signatureType == Tlv.SignatureType_DigestSha256)
+      data.setSignature(new DigestSha256Signature());
   else
       throw new DecodingException
        ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);

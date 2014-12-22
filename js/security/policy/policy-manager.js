@@ -18,8 +18,11 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var crypto = require("crypto");
+var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 
 /**
@@ -134,7 +137,10 @@ PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
 {
   if (signature instanceof Sha256WithRsaSignature)
     return PolicyManager.verifySha256WithRsaSignature
-        (signature.getSignature(), signedBlob, publicKeyDer);
+      (signature.getSignature(), signedBlob, publicKeyDer);
+  else if (signature instanceof DigestSha256Signature)
+    return PolicyManager.verifyDigestSha256Signature
+      (signature.getSignature(), signedBlob);
   else
     // We don't expect this to happen.
     throw new SecurityException
@@ -172,4 +178,22 @@ PolicyManager.verifySha256WithRsaSignature = function
   var signatureBytes = PolicyManager.verifyUsesString ?
     DataUtils.toString(signature.buf()) : signature.buf();
   return verifier.verify(keyPem, signatureBytes);
+};
+
+/**
+ * Verify the DigestSha256 signature on the SignedBlob by verifying that the
+ * digest of SignedBlob equals the signature.
+ * @param signature {Blob} The signature bits.
+ * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * verify.
+ * @returns true if the signature verifies, false if not.
+ */
+PolicyManager.verifyDigestSha256Signature = function(signature, signedBlob)
+{
+  // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
+  var hash = crypto.createHash('sha256');
+  hash.update(signedBlob.signedBuf());
+  var signedPortionDigest = new Blob(hash.digest(), false);
+
+  return signedPortionDigest.equals(signature);
 };
