@@ -24,6 +24,11 @@ var Name = require('../../..').Name;
 var Interest = require('../../..').Interest;
 var KeyLocatorType = require('../../..').KeyLocatorType;
 var Blob = require('../../..').Blob;
+var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
+var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
+var IdentityManager = require('../../..').IdentityManager;
+var SelfVerifyPolicyManager = require('../../..').SelfVerifyPolicyManager;
+var KeyChain = require('../../..').KeyChain;
 
 var codedInterest = new Buffer([
 0x05, 0x53, // Interest
@@ -217,5 +222,28 @@ describe('TestInterestMethods', function() {
     */
     interest.setChildSelector(0);
     assert.ok(interest.getNonce().isNull(), 'Interest should not have a nonce after changing fields');
+  });
+
+  it('VerifyDigestSha256', function() {
+    // Create a KeyChain but we don't need to add keys.
+    var identityStorage = new MemoryIdentityStorage();
+    var privateKeyStorage = new MemoryPrivateKeyStorage();
+    var keyChain = new KeyChain
+      (new IdentityManager(identityStorage, privateKeyStorage),
+       new SelfVerifyPolicyManager(identityStorage));
+
+    var interest = new Interest(new Name("/test/signed-interest"));
+    keyChain.signWithSha256(interest);
+
+    // We create simple callbacks to count calls since we're not interested in
+    //   the effect of the callbacks themselves.
+    var failedCallCount = 0;
+    var verifiedCallCount = 0;
+
+    keyChain.verifyInterest
+      (interest, function() { ++verifiedCallCount; },
+       function() { ++failedCallCount; });
+    assert.equal(failedCallCount, 0, 'Signature verification failed');
+    assert.equal(verifiedCallCount, 1, 'Verification callback was not used.');
   });
 });
