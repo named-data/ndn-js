@@ -128,6 +128,7 @@ def build (bld):
                  "js/security/key-manager.js",
                  "js/meta-info.js",
                  "js/sha256-with-rsa-signature.js",
+                 "js/digest-sha256-signature.js",
                  "js/data.js",
                  "js/security/security-exception.js",
                  "js/security/security-types.js",
