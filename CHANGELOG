@@ -1,4 +1,4 @@
-NDN-JS v0.6.0 (2014-10-15)
+NDN-JS v0.6.0 (2014-12-22)
 --------------------------
 
 Changes
@@ -7,9 +7,12 @@ Changes
 * In MemoryContentCache, added unregisterAll.
 * In Name, added wireEncode and wireDecode.
 * Added class sync/ChronoSync2013. Thanks to Zhehao Wang!
+* Added DigestSha256Signature. Support encoding/decoding it in interests and data packets.
+* In KeyChain, added signWithSha256.
 * In tests/node, added test-chrono-chat. Thanks to Zhehao Wang!
 * In tests/node, added test-encode-decode-interest including sign/verify.
-* In unit tests, added test-name-conventions.
+* Unit tests: Added test-name-conventions.
+* Unit tests: In test-data-methods, added VerifyDigestSha256.
 * Use version v0.6.0 instead of v0.6 to be consistent with npmjs.org
 * Added package.json for publishing on npmjs.org. Thanks to Ryan Bennett!
 * Fixed copyright headers to all say "Lesser" GPL. Thanks to Felix Rabe!
