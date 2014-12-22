@@ -184,6 +184,22 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
+ * If the signature is a type that has a KeyLocator (so that
+ * getFromSignature will succeed), return true.
+ * Note: This is a static method of KeyLocator instead of a method of
+ * Signature so that the Signature base class does not need to be overloaded
+ * with all the different kinds of information that various signature
+ * algorithms may use.
+ * @param {Signature} signature An object of a subclass of Signature.
+ * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * otherwise false.
+ */
+KeyLocator.canGetFromSignature = function(signature)
+{
+  return signature instanceof Sha256WithRsaSignature;
+}
+
+/**
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
  * throw an error.
  * @param {Signature} signature An object of a subclass of Signature.
