@@ -1,6 +1,6 @@
 /**
  * Provide the callback closure for the async communication methods in the Face class.
- * Copyright (C) 2013-2014 Regents of the University of California.
+ * Copyright (C) 2013-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * This is a port of Closure.py from PyNDN, written by:
  * Derek Kulinski <takeda@takeda.tk>

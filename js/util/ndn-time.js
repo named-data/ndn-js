@@ -1,6 +1,6 @@
 /**
  * This class represents NDNTime Objects
- * Copyright (C) 2013-2014 Regents of the University of California.
+ * Copyright (C) 2013-2015 Regents of the University of California.
  * @author: Meki Cheraoui
  *
  * This program is free software: you can redistribute it and/or modify
