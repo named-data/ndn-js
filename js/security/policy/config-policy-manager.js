@@ -107,7 +107,7 @@ var ConfigPolicyManager = function ConfigPolicyManager
 
   this.requiresVerification = true;
 
-  this.refreshManager = ConfigPolicyManager.TrustAnchorRefreshManager();
+  this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager();
   this.loadTrustAnchorCertificates();
 };
 
