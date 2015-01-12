@@ -390,7 +390,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     if (identityMatch != null) {
       var identityPrefix = new Name(identityMatch[1]).append
         (new Name(identityMatch[2]));
-      return this.matchesRelation(objectName, identityPrefix, "is-prefix-of");
+      return ConfigPolicyManager.matchesRelation(objectName, identityPrefix, "is-prefix-of");
     }
     else
       return false;
@@ -403,7 +403,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
     var relationType = keyLocatorInfo.getFirstValue("relation");
     if (relationType != null) {
       var matchName = new Name(keyLocatorInfo.get("name")[0].getValue());
-      return this.matchesRelation(signatureName, matchName, relationType);
+      return ConfigPolicyManager.matchesRelation(signatureName, matchName, relationType);
     }
 
     // Is this a simple regex?
@@ -433,7 +433,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
           return false;
         var nameMatchStr = ConfigPolicyManager.expand(nameMatch, nameExpansion);
 
-        return this.matchesRelation
+        return ConfigPolicyManager.matchesRelation
           (new Name(nameMatchStr), new Name(keyMatchPrefix), relationType);
       }
     }
@@ -524,7 +524,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
             var matchRelation = f.get('relation')[0].getValue();
             var matchUri = f.get('name')[0].getValue();
             var matchName = new Name(matchUri);
-            passed = this.matchesRelation(objName, matchName, matchRelation);
+            passed = ConfigPolicyManager.matchesRelation(objName, matchName, matchRelation);
           }
           else
             passed = (NdnRegexMatcher.match(regexPattern, objName) !== null);
@@ -554,8 +554,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
  *   'equal' - passes if the two names are equal
  * @returns {boolean}
  */
-ConfigPolicyManager.prototype.matchesRelation = function
-  (name, matchName, matchRelation)
+ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
 {
   var passed = false;
   if (matchRelation == 'is-strict-prefix-of') {
