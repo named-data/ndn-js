@@ -27,3 +27,6 @@ npm-debug.log
 
 # Temporary test files
 js/sync/hash-test.js
+
+# Ignore installed dependencies
+node_modules
