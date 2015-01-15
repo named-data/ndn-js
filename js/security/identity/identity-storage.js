@@ -230,6 +230,19 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 };
 
 /**
+ * Append all the key names of a particular identity to the nameList.
+ * @param identityName {Name} The identity name to search for.
+ * @param nameList {Array<Name>} Append result names to nameList.
+ * @param isDefault {boolean} If true, add only the default key name. If false, 
+ * add only the non-default key names.
+ */
+IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
+  (identityName, nameList, isDefault)
+{
+  throw new Error("IdentityStorage.getAllKeyNamesOfIdentity is not implemented");
+};
+
+/**
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
