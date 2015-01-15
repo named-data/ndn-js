@@ -15653,6 +15653,19 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 };
 
 /**
+ * Append all the key names of a particular identity to the nameList.
+ * @param identityName {Name} The identity name to search for.
+ * @param nameList {Array<Name>} Append result names to nameList.
+ * @param isDefault {boolean} If true, add only the default key name. If false, 
+ * add only the non-default key names.
+ */
+IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
+  (identityName, nameList, isDefault)
+{
+  throw new Error("IdentityStorage.getAllKeyNamesOfIdentity is not implemented");
+};
+
+/**
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
@@ -16415,6 +16428,33 @@ exports.IdentityManager = IdentityManager;
 IdentityManager.prototype.createIdentity = function(identityName)
 {
   throw new Error("IdentityManager.createIdentity is not implemented");
+};
+
+/**
+ * Delete the identity from the public and private key storage. If the
+ * identity to be deleted is the current default system default, this will not
+ * delete the identity and will return immediately.
+ * @param identityName {Name} The name of the identity.
+ */
+IdentityManager.prototype.deleteIdentity = function(identityName)
+{
+  try {
+    if (this.identityStorage.getDefaultIdentity().equals(identityName))
+      // Don't delete the default identity!
+      return;
+  }
+  catch (ex) {
+    // There is no default identity to check.
+  }
+
+  var keysToDelete = [];
+  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, true);
+  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, false);
+
+  this.identityStorage.deleteIdentityInfo(identityName);
+
+  for (var i = 0; i < keysToDelete.length; ++i)
+    this.privateKeyStorage.deleteKeyPair(keysToDelete[i]);
 };
 
 /**
@@ -17437,6 +17477,17 @@ exports.KeyChain = KeyChain;
 KeyChain.prototype.createIdentity = function(identityName)
 {
   return this.identityManager.createIdentity(identityName);
+};
+
+/**
+ * Delete the identity from the public and private key storage. If the
+ * identity to be deleted is the current default system default, this will not
+ * delete the identity and will return immediately.
+ * @param identityName {Name} The name of the identity.
+ */
+KeyChain.prototype.deleteIdentity = function(identityName)
+{
+  this.identityManager.deleteIdentity(identityName);
 };
 
 /**
