@@ -68,6 +68,17 @@ KeyChain.prototype.createIdentity = function(identityName)
 };
 
 /**
+ * Delete the identity from the public and private key storage. If the
+ * identity to be deleted is the current default system default, this will not
+ * delete the identity and will return immediately.
+ * @param identityName {Name} The name of the identity.
+ */
+KeyChain.prototype.deleteIdentity = function(identityName)
+{
+  this.identityManager.deleteIdentity(identityName);
+};
+
+/**
  * Get the default identity.
  * @returns {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
