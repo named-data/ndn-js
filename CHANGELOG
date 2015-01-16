@@ -1,3 +1,9 @@
+Interim changes since NDN-JS v0.7.0 (2016-01-16)
+------------------------------------------------
+
+Changes
+* http://redmine.named-data.net/issues/2388 Moved example programs from "tests" to "examples".
+
 NDN-JS v0.7.0 (2014-12-22)
 --------------------------
 
