@@ -227,7 +227,7 @@ Certificate.prototype.decode = function()
       var children = extInfo.getChildren();
       var oidStr = children[0].toVal();
       var isCritical = children[1].toVal();
-      var value = children[2].encode();
+      var value = children[2].toVal();
       this.addExtension(new CertificateExtension(oidStr, isCritical, value));
     }
   }
