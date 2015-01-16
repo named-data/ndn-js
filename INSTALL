@@ -4,10 +4,10 @@ NDN-JS: A javascript client library for Named Data Networking
 BASIC LIBRARY: NO BUILD REQUIRED
 ================================
 The basic NDN-JS library does not need to be "built".  To use the library in the
-browser, include build/ndn.js. See the examples in tests/browser.
+browser, include build/ndn.js. See the examples in examples/browser.
 
 To use the library in Node.js, require index.js at the top of the distribution tree.
-See the examples in tests/node.
+See the examples programs in examples/node.
 
 BUILD A COMBINED, COMPRESSED LIBRARY 
 ====================================
