@@ -178,7 +178,7 @@ Certificate.prototype.toDer = function()
   if (this.extensionList.length > 0) {
     var extensionList = new DerNode.DerSequence();
     for (var i = 0; i < this.extensionList.length; ++i)
-      subjectList.addChild(this.extensionList[i].toDer());
+      extensionList.addChild(this.extensionList[i].toDer());
     root.addChild(extensionList);
   }
 
