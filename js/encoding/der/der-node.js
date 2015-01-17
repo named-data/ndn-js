@@ -482,6 +482,17 @@ DerNode.DerInteger = function DerInteger(integer)
 DerNode.DerInteger.prototype = new DerNode();
 DerNode.DerInteger.prototype.name = "DerInteger";
 
+DerNode.DerInteger.prototype.toVal = function()
+{
+  var result = 0;
+  for (var i = 0; i < this.payloadPosition; ++i) {
+    result <<= 8;
+    result += this.payload.array[i];
+  }
+
+  return result;
+};
+
 /**
  * A DerBitString extends DerNode to handle a bit string.
  * Create a DerBitString with the given padding and inputBuf.
