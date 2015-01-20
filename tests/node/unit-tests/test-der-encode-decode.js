@@ -25,9 +25,13 @@ var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
 var KeyType = require('../../..').KeyType;
 var DerNode = require("../../../js/encoding/der/der-node.js").DerNode;
+var DerSequence = require("../../../js/encoding/der/der-node.js").DerNode.DerSequence;
+var DerOctetString = require("../../../js/encoding/der/der-node.js").DerNode.DerOctetString;
+var DerInteger = require("../../../js/encoding/der/der-node.js").DerNode.DerInteger;
 var PublicKey = require("../../../js/security/certificate/public-key.js").PublicKey;
 var Certificate = require("../../../js/security/certificate/certificate.js").Certificate;
 var CertificateSubjectDescription = require("../../../js/security/certificate/certificate-subject-description.js").CertificateSubjectDescription;
+var CertificateExtension = require("../../../js/security/certificate/certificate-extension.js").CertificateExtension;
 
 var PUBLIC_KEY = new Buffer([
 0x30, 0x81, 0x9d, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -154,9 +158,62 @@ describe('TestDerEncodeDecode', function() {
                  "Certificate representation changed after encoding");
   });
 
-  /* TODO: Implement after the PyNDN unit test is finished.
-  it('Extension', function()
-  */
+  it('Extension', function() {
+    // Now add an extension.
+    var name = "/hello/kitty";
+    var trustClass = 0;
+    var trustLevel = 300;
+
+    var extValueRoot = new DerSequence();
+    var extValueName = new DerOctetString(new Blob(name).buf());
+    var extValueTrustClass = new DerInteger(trustClass);
+    var extValueTrustLevel = new DerInteger(trustLevel);
+
+    extValueRoot.addChild(extValueName);
+    extValueRoot.addChild(extValueTrustClass);
+    extValueRoot.addChild(extValueTrustLevel);
+
+    var extValueData = extValueRoot.encode();
+
+    var oidString = "1.3.6.1.5.32.1";
+    var isCritical = true;
+    var certExtension = new CertificateExtension
+      (oidString, isCritical, extValueData);
+    toyCert.encode();
+    var cert = new Certificate(toyCert);
+    cert.addExtension(certExtension);
+
+    cert.encode();
+    var certData = cert.getContent();
+    var plainData = new Data();
+    plainData.setContent(certData);
+    // The constructor Certificate(Data) calls decode().
+    var decodedCert = new Certificate(plainData);
+    assert.equal(1, decodedCert.getExtensionList().length,
+      "Wrong number of certificate extensions after decoding");
+
+    var decodedExtension = decodedCert.getExtensionList()[0];
+    assert.equal(oidString, decodedExtension.getOid().toString(),
+      "Certificate extension has the wrong OID after decoding");
+    assert.equal(isCritical, decodedExtension.getIsCritical(),
+      "Certificate extension has the wrong isCritical value after decoding");
+
+    // Decode and check the extension value.
+    var parsedExtValue = DerNode.parse(decodedExtension.getValue().buf());
+    var decodedExtValueRoot = parsedExtValue.getChildren();
+    assert.equal(3, decodedExtValueRoot.length,
+      "Wrong number of certificate extension value items after decoding");
+
+    var decodedName = decodedExtValueRoot[0];
+    var decodedTrustClass = decodedExtValueRoot[1];
+    var decodedTrustLevel = decodedExtValueRoot[2];
+    assert.equal(name, decodedName.toVal().buf().toString(),
+      "Wrong extension value name after decoding");
+    assert.equal(trustClass, decodedTrustClass.toVal(),
+      "Wrong extension value trust class after decoding");
+    assert.equal(trustLevel, decodedTrustLevel.toVal(),
+      "Wrong extension value trust level after decoding");
+});
 
   it('Decode', function() {
     var data = new Data(new Name("/tmp"));
