@@ -45,7 +45,6 @@ var KeyChain = function KeyChain(identityManager, policyManager)
 {
   this.identityManager = identityManager;
   this.policyManager = policyManager;
-  this.encryptionManager = null;
   this.face = null;
   this.maxSteps = 100;
 };
@@ -427,54 +426,6 @@ KeyChain.prototype.verifyInterest = function
     onVerified(interest);
   else
     onVerifyFailed(interest);
-};
-
-/*****************************************
- *           Encrypt/Decrypt             *
- *****************************************/
-
-/**
- * Generate a symmetric key.
- * @param {Name} keyName The name of the generated key.
- * @param {number} keyType (optional) The type of the key from KeyType, e.g.
- * KeyType.AES.
- */
-KeyChain.prototype.generateSymmetricKey = function(keyName, keyType)
-{
-  this.encryptionManager.createSymmetricKey(keyName, keyType);
-};
-
-/**
- * Encrypt a byte array.
- * @param {Name} keyName The name of the encrypting key.
- * @param {Buffer} data The byte array that will be encrypted.
- * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
- * used, otherwise asymmetric encryption is used. If omitted, use symmetric
- * encryption.
- * @param encryptMode (optional) The encryption mode from EncryptMode. If
- * omitted, use EncryptMode.DEFAULT.
- * @returns {Blob} The encrypted data as an immutable Blob.
- */
-KeyChain.prototype.encrypt = function(keyName, data, useSymmetric, encryptMode)
-{
-  return this.encryptionManager.encrypt(keyName, data, useSymmetric, encryptMode);
-}
-
-/**
- * Decrypt a byte array.
- * @param {Name} keyName The name of the decrypting key.
- * @param {Buffer} data The byte array that will be decrypted.
- * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
- * used, otherwise asymmetric encryption is used. If omitted, use symmetric
- * encryption.
- * @param encryptMode (optional) The encryption mode from EncryptMode. If
- * omitted, use EncryptMode.DEFAULT.
- * @returns {Blob} The decrypted data as an immutable Blob.
- */
-KeyChain.prototype.decrypt = function(keyName, data, useSymmetric, encryptMode)
-{
-   return this.encryptionManager.decrypt
-     (keyName, data, useSymmetric, encryptMode);
 };
 
 /**
