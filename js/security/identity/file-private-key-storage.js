@@ -36,7 +36,8 @@ var tpmPath = null;
 
 /**
  * FilePrivateKeyStorage works with NFD's default private key storage, the files
- * stored in .ndn/ndnsec-tpm-file.
+ * stored in .ndn/ndnsec-tpm-file. This library will not be available from the
+ * browser
  * @param {string} nonDefaultTpmPath if desired, override the default TPM path (i.e. .ndn/ndnsec-tpm-file)
  * @constructor
  */
@@ -215,7 +216,8 @@ KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
  * @throws Error if the file cannot be written to
  */
 function write(keyName, keyClass, bytes) {
-	var options = {};
+	var options = { mode: parseInt('0400') };
+	if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444');
 	fs.writeFileSync(transformName(keyName, keyClass), bytes.toString('base64'), options);
 }
 
