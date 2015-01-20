@@ -19,6 +19,7 @@
  */
 
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var OID = require('../../encoding/oid.js').OID;
 
 /**
  * A CertificateExtension represents the Extension entry in a certificate.
