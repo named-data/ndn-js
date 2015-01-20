@@ -221,7 +221,7 @@ Certificate.prototype.decode = function()
 
   if (rootChildren.length > 3) {
     var extensionChildren = DerNode.getSequence(rootChildren, 3).getChildren();
-    for (var i = 0; i < extensionChildren.size(); ++i) {
+    for (var i = 0; i < extensionChildren.length; ++i) {
       var extInfo = DerNode.getSequence(extensionChildren, i);
 
       var children = extInfo.getChildren();
