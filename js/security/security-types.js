@@ -58,16 +58,3 @@ var DigestAlgorithm = function DigestAlgorithm()
 exports.DigestAlgorithm = DigestAlgorithm;
 
 DigestAlgorithm.SHA256 = 1;
-// DigestAlgorithm.MD2
-// DigestAlgorithm.MD5
-// DigestAlgorithm.SHA1
-
-var EncryptMode = function EncryptMode()
-{
-};
-
-exports.EncryptMode = EncryptMode;
-
-EncryptMode.DEFAULT = 1;
-EncryptMode.CFB_AES = 2;
-// EncryptMode.CBC_AES
