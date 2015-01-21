@@ -19,9 +19,9 @@
  */
 
 var assert = require('assert');
-var Name = require('../../../js/name').Name;
-var KeyClass = require('../../../js/security/security-types').KeyClass;
-var FilePrivateKeyStorage = require('../../../js/security/identity/file-private-key-storage').FilePrivateKeyStorage;
+var Name = require('../../..').Name;
+var KeyClass = require('../../..').KeyClass;
+var FilePrivateKeyStorage = require('../../..').FilePrivateKeyStorage;
 
 describe('FilePrivateKeyStorage', function () {
 	var storage;
