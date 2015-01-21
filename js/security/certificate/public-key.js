@@ -53,7 +53,7 @@ var PublicKey = function PublicKey(keyDer)
   }
   catch (ex) {
     throw new UnrecognizedKeyFormatException(new Error
-      ("PublicKey.decodeKeyType: Error decoding the public key" + ex.message));
+      ("PublicKey.decodeKeyType: Error decoding the public key: " + ex.message));
   }
 
   // Verify that the we can decode.
