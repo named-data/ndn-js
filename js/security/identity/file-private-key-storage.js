@@ -252,18 +252,6 @@ FilePrivateKeyStorage.prototype.getPublicKey = function (keyName)
 //	var buffer = read(keyName, KeyClass.PRIVATE);
 //	return new PublicKey(new Blob(buffer));
 //};
-//
-///**
-// * Get the symmetric key
-// * 
-// * @param {Name} keyName The name of symmetric key.
-// * @returns {PublicKey} The symmetric key.
-// */
-//FilePrivateKeyStorage.prototype.getSymmetricKey = function (keyName)
-//{
-//	var buffer = read(keyName, KeyClass.SYMMETRIC);
-//	return new PublicKey(new Blob(buffer));
-//};
 
 /**
  * Fetch the private key for keyName and sign the data, returning a signature Blob.
