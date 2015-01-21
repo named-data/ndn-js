@@ -324,8 +324,8 @@ KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
  * @throws Error if the file cannot be written to
  */
 function write(keyName, keyClass, bytes) {
-	var options = { mode: parseInt('0400') };
-	if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444');
+	var options = { mode: parseInt('0400', 8) };
+	if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444', 8);
 	fs.writeFileSync(transformName(keyName, keyClass), bytes.toString('base64'), options);
 }
 
