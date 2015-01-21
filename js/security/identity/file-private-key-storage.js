@@ -222,7 +222,8 @@ FilePrivateKeyStorage.prototype.deleteKeyPair = function (keyName)
  */
 FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
 {
-	for (var keyClass in KeyClass) {
+	for (var keyClassName in KeyClass) {
+    var keyClass = KeyClass[keyClassName];
 		if (this.doesKeyExist(keyName, keyClass)) {
 			var filePath = transformName(keyName, keyClass);
 			fs.unlinkSync(filePath);
