@@ -206,6 +206,9 @@ Data.prototype.setContent = function(content)
   return this;
 };
 
+/**
+ * @deprecated Use KeyChain.sign. See examples/node/test-encode-decode-data.js .
+ */
 Data.prototype.sign = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
@@ -231,6 +234,10 @@ Data.prototype.sign = function(wireFormat)
 // The first time verify is called, it sets this to determine if a signature
 //   buffer needs to be converted to a string for the crypto verifier.
 Data.verifyUsesString = null;
+
+/**
+ * @deprecated Use KeyChain.verifyData. See examples/node/test-encode-decode-data.js .
+ */
 Data.prototype.verify = function(/*Key*/ key)
 {
   if (key == null || key.publicKeyPem == null)
