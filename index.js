@@ -41,6 +41,7 @@ exports.EncryptMode = require('./js/security/security-types.js').EncryptMode;
 exports.IdentityStorage = require('./js/security/identity/identity-storage.js').IdentityStorage;
 exports.MemoryIdentityStorage = require('./js/security/identity/memory-identity-storage.js').MemoryIdentityStorage;
 exports.MemoryPrivateKeyStorage = require('./js/security/identity/memory-private-key-storage.js').MemoryPrivateKeyStorage;
+exports.FilePrivateKeyStorage = require('./js/security/identity/file-private-key-storage.js').FilePrivateKeyStorage;
 exports.IdentityManager = require('./js/security/identity/identity-manager.js').IdentityManager;
 exports.ValidationRequest = require('./js/security/policy/validation-request.js').ValidationRequest;
 exports.PolicyManager = require('./js/security/policy/policy-manager.js').PolicyManager;
