@@ -28,11 +28,10 @@ function SecurityException(error)
 {
   if (error) {
     this.message = error.message;
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-        this[prop] = error[prop];
+	this.stack = error.stack;
   }
 }
+
 SecurityException.prototype = new Error();
 SecurityException.prototype.name = "SecurityException";
 
