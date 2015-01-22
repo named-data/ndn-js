@@ -28,7 +28,7 @@ function SecurityException(error)
 {
   if (error) {
     this.message = error.message;
-	this.stack = error.stack;
+    this.stack = error.stack;
   }
 }
 

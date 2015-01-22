@@ -32,7 +32,7 @@ var FilePrivateKeyStorage = require('../../..').FilePrivateKeyStorage;
  * @returns {string} path to the user's home directory
  */
 function getUserHomePath() {
-	return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
 }
 
 var ndnFolder;
@@ -41,19 +41,19 @@ describe('FilePrivateKeyStorage', function () {
   /**
    * Create a few keys before testing.
    */
-	before(function () {
+  before(function () {
     // (Copy code from file-private-key-storage.js.)
     ndnFolder = path.join(getUserHomePath(), '.ndn', 'ndnsec-tpm-file');
     
     // Create some test key files to use in tests.
     var instance = new FilePrivateKeyStorage();
     instance.generateKeyPair(new Name("/test/KEY/123"), KeyType.RSA, 2048);
-	});
+  });
 
   /**
    * Delete the keys we created
    */
-	after(function () {
+  after(function () {
     // Delete all keys when done.
     var instance = new FilePrivateKeyStorage();
     try {
@@ -63,12 +63,12 @@ describe('FilePrivateKeyStorage', function () {
     catch (e){
       console.log("Failed to clean up generated keys");
     }
-	});
+  });
 
   /**
    * Test of generateKeyPair method, of class FilePrivateKeyStorage.
    */
-	it('GenerateAndDeleteKeys', function () {
+  it('GenerateAndDeleteKeys', function () {
     // Create some more key files.
     var instance = new FilePrivateKeyStorage();
     instance.generateKeyPair(new Name("/test/KEY/temp1"), KeyType.RSA, 2048);
@@ -83,33 +83,33 @@ describe('FilePrivateKeyStorage', function () {
     files = fs.readdirSync(ndnFolder);
     var deletedfileCount = files.length;
     assert.ok(createdFileCount - 2 == deletedfileCount, "Didn't delete 2 files");
-	});
+  });
 
   /**
    * Test of doesKeyExist method, of class FilePrivateKeyStorage.
    */
-	it('DoesKeyExist', function () {
+  it('DoesKeyExist', function () {
     var instance = new FilePrivateKeyStorage();
     assert.ok(instance.doesKeyExist(new Name("/test/KEY/123"), KeyClass.PRIVATE));
     assert.ok(!instance.doesKeyExist(new Name("/unknown"), KeyClass.PRIVATE));
-	});
+  });
 
   /**
    * Test of getPublicKey method, of class FilePrivateKeyStorage.
    */
-	it('GetPublicKey', function () {
+  it('GetPublicKey', function () {
     var instance = new FilePrivateKeyStorage();
     var result = instance.getPublicKey(new Name("/test/KEY/123"));
     assert.notEqual(result, null);
-	});
+  });
 
   /**
    * Test of sign method, of class FilePrivateKeyStorage.
    */
-	it('Sign', function () {
+  it('Sign', function () {
     var data = new Buffer([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
     var instance = new FilePrivateKeyStorage();
     var result = instance.sign(data, new Name("/test/KEY/123"), DigestAlgorithm.SHA256);
     assert.notEqual(result, null);
-	});
+  });
 });
