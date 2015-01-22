@@ -199,18 +199,6 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, ke
 };
 
 /**
- * Generate a symmetric key.
- * @param {Name} keyName The name of the key.
- * @param {KeyType} keyType (optional) The type of the key from KeyType, e.g.
- * KeyType.AES. If omitted, use KeyType.AES.
- * @param {number} keySize (optional) The size of the key. If omitted, use 256.
- */
-FilePrivateKeyStorage.prototype.generateKey = function (keyName, keyType, keySize)
-{
-  throw new Error("FilePrivateKeyStorage.generateKey is not implemented");
-};
-
-/**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
  */
@@ -280,34 +268,6 @@ FilePrivateKeyStorage.prototype.sign = function (data, keyName, digestAlgorithm)
     // We don't expect this to happen since getPrivateKey checked it.
     throw new SecurityException(new Error
       ("FilePrivateKeyStorage: Unsupported signature key type " + keyType[0]));
-};
-
-/**
- * Decrypt data.
- * @param {Name} keyName The name of the decrypting key.
- * @param {Buffer} data The byte to be decrypted.
- * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
- * otherwise asymmetric encryption is used. If omitted, use asymmetric
- * encryption.
- * @returns {Blob} The decrypted data.
- */
-FilePrivateKeyStorage.prototype.decrypt = function (keyName, data, isSymmetric)
-{
-  throw new Error("FilePrivateKeyStorage.decrypt is not implemented");
-};
-
-/**
- * Encrypt data.
- * @param {Name} keyName The name of the encrypting key.
- * @param {Buffer} data The byte to be encrypted.
- * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
- * otherwise asymmetric encryption is used. If omitted, use asymmetric
- * encryption.
- * @returns {Blob} The encrypted data.
- */
-FilePrivateKeyStorage.prototype.encrypt = function (keyName, data, isSymmetric)
-{
-  throw new Error("FilePrivateKeyStorage.encrypt is not implemented");
 };
 
 /** PRIVATE METHODS **/
