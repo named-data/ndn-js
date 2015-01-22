@@ -143,8 +143,8 @@ PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
       (signature.getSignature(), signedBlob);
   else
     // We don't expect this to happen.
-    throw new SecurityException
-      ("PolicyManager.verify: Signature type is unknown");
+    throw new SecurityException(new Error
+      ("PolicyManager.verify: Signature type is unknown"));
 };
 
 /**
