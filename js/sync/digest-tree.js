@@ -72,8 +72,8 @@ DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
 DigestTree.Node.prototype.Int32ToBuffer = function(value) {
   var result = new Buffer(4);
   for (var i = 0; i < 4; i++) {
-	result[i] = value % 256;
-	value = Math.floor(value / 256);
+    result[i] = value % 256;
+    value = Math.floor(value / 256);
   }
   return result;
 }
@@ -153,7 +153,7 @@ DigestTree.prototype.sortNodes = function (node1, node2)
 {
   if (node1.getDataPrefix() == node2.getDataPrefix() && 
      node1.getSessionNo() == node2.getSessionNo())
-	return 0;
+    return 0;
   
   if ((node1.getDataPrefix() > node2.getDataPrefix()) || 
      ((node1.getDataPrefix() == node2.getDataPrefix()) && 

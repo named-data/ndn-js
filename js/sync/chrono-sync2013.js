@@ -394,10 +394,10 @@ ChronoSync2013.prototype.onData = function(interest, co)
   var syncStates = [];
 
   for (var i = 0; i < content.length; i++) {
-	if (content[i].type == 0) {
-	  syncStates.push(new ChronoSync2013.SyncState
-	    (content[i].name, content[i].seqno.session, content[i].seqno.seq));
-	}
+    if (content[i].type == 0) {
+      syncStates.push(new ChronoSync2013.SyncState
+        (content[i].name, content[i].seqno.session, content[i].seqno.seq));
+    }
   }
   
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
@@ -405,13 +405,13 @@ ChronoSync2013.prototype.onData = function(interest, co)
   var updated = this.update(content);
   
   if (updated) {
-	var n = new Name(this.applicationBroadcastPrefix);
-	n.append(this.digest_tree.getRoot());
+    var n = new Name(this.applicationBroadcastPrefix);
+    n.append(this.digest_tree.getRoot());
   
-	var interest = new Interest(n);
-	interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+    var interest = new Interest(n);
+    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
   
-	this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   }
 };
 
