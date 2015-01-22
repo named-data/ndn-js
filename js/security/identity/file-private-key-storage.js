@@ -177,10 +177,10 @@ var DEBUG_RSA_PRIVATE_KEY_DER = new Buffer([
 FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, keySize)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
-    throw new SecurityException("Public key already exists");
+    throw new SecurityException(new Error("Public key already exists"));
   }
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE)) {
-    throw new SecurityException("Public key already exists");
+    throw new SecurityException(new Error("Public key already exists"));
   }
 
   // build keys
@@ -194,7 +194,7 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, ke
     write(keyName, KeyClass.PUBLIC, publicKey);
   }
   else {
-    throw new SecurityException("Only RSA key generation currently supported");
+    throw new SecurityException(new Error("Only RSA key generation currently supported"));
   }
 };
 
@@ -402,14 +402,14 @@ function getUserHomePath() {
 function transformName(keyName, keyClass) {
   var hash = crypto.createHash('sha256');
   if (!hash) {
-    throw new SecurityException('Could not instantiate SHA256 hash algorith.');
+    throw new SecurityException(new Error('Could not instantiate SHA256 hash algorith.'));
   }
 
   // hash the key name
   hash.update(new Buffer(keyName.toUri()));
   var fileName = hash.digest('base64');
   if (!fileName) {
-    throw new SecurityException('Failed to hash file name: ' + keyName.toUri());
+    throw new SecurityException(new Error('Failed to hash file name: ' + keyName.toUri()));
   }
 
   // return
