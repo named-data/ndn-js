@@ -25,10 +25,14 @@
  */
 function DerEncodingException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
       this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
 }
 DerEncodingException.prototype = new Error();
 DerEncodingException.prototype.name = "DerEncodingException";
