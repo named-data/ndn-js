@@ -275,7 +275,7 @@ FilePrivateKeyStorage.prototype.sign = function (data, keyName, digestAlgorithm)
 /**
  * A private method to get the private key.
  * @param {Name} keyName The name of private key.
- * @param keyType {Array} Set keyType[0] to the KeyType.
+ * @param {Array<KeyType>} keyType Set keyType[0] to the KeyType.
  * @returns {string} The PEM-encoded private key for use by the crypto module.
  */
 FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
