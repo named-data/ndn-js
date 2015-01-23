@@ -140,7 +140,7 @@ ndn-protocol.xpi.  (In Firefox for Android, type file: in the address bar and cl
 downloaded ndn-protocol.xpi.)  Restart Firefox.
 
 Firefox uses the protocol extension to load any URI starting with ndn.  See this test page for examples:
-ndn:/ndn/edu/ucla/remap/ndn-js-test/NDNProtocolExamples.html/?ndn.ChildSelector=1
+ndn:/ndn/edu/ucla/remap/demo/ndn-js-test/NDN-Protocol-Examples.html?ndn.ChildSelector=1
 
 When the page is loaded, Firefox updates the address bar with the full matched name from
 the retrieved content object including the version, but without the implicit digest or
