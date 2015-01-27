@@ -277,15 +277,15 @@ IdentityManager.prototype.getDefaultCertificateName = function()
 };
 
 /**
- * Sign the byte array data based on the certificate name.
- * @param {Buffer} target If this is a Data object, wire encode for signing,
- * update its signature and key locator field and wireEncoding. If it is an
- * array, sign it and return a Signature object.
+ * Sign the Data packet or byte array data based on the certificate name.
+ * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
+ * update its signature and key locator field and wireEncoding. If it is a
+ * Biffer, sign it and return a Signature object.
  * @param {Name} certificateName The Name identifying the certificate which
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
- * @returns {Signature} The generated signature.
+ * @returns {Signature} The generated signature (if target is a Buffer).
  */
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat)
