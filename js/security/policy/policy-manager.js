@@ -129,18 +129,20 @@ PolicyManager.verifyUsesString = null;
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
  * signature.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  * @throws {SecurityException} if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
  */
-PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
+PolicyManager.verifySignature = function
+  (signature, signedBlob, publicKeyDer, onComplete)
 {
   if (signature instanceof Sha256WithRsaSignature)
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer);
+    PolicyManager.verifySha256WithRsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   else if (signature instanceof DigestSha256Signature)
-    return PolicyManager.verifyDigestSha256Signature
-      (signature.getSignature(), signedBlob);
+    PolicyManager.verifyDigestSha256Signature
+      (signature.getSignature(), signedBlob, onComplete);
   else
     // We don't expect this to happen.
     throw new SecurityException
@@ -154,10 +156,11 @@ PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
  * signature.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifySha256WithRsaSignature = function
-  (signature, signedBlob, publicKeyDer)
+  (signature, signedBlob, publicKeyDer, onComplete)
 {
   if (PolicyManager.verifyUsesString === null) {
     var hashResult = require("crypto").createHash('sha256').digest();
@@ -177,7 +180,7 @@ PolicyManager.verifySha256WithRsaSignature = function
   verifier.update(signedBlob.signedBuf());
   var signatureBytes = PolicyManager.verifyUsesString ?
     DataUtils.toString(signature.buf()) : signature.buf();
-  return verifier.verify(keyPem, signatureBytes);
+  onComplete(verifier.verify(keyPem, signatureBytes));
 };
 
 /**
@@ -186,14 +189,16 @@ PolicyManager.verifySha256WithRsaSignature = function
  * @param signature {Blob} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
-PolicyManager.verifyDigestSha256Signature = function(signature, signedBlob)
+PolicyManager.verifyDigestSha256Signature = function
+  (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
   var hash = crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 
-  return signedPortionDigest.equals(signature);
+  onComplete(signedPortionDigest.equals(signature));
 };

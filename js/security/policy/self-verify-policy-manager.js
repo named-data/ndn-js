@@ -104,10 +104,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
   if (dataOrInterest instanceof Data) {
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
-    if (this.verify(data.getSignature(), data.wireEncode()))
-      onVerified(data);
-    else
-      onVerifyFailed(data);
+    this.verify(data.getSignature(), data.wireEncode(), function(verified) {
+      if (verified) onVerified(data); else onVerifyFailed(data);
+    });
   }
   else if (dataOrInterest instanceof Interest) {
     var interest = dataOrInterest;
@@ -117,10 +116,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
        interest.getName().get(-1).getValue().buf());
 
     // wireEncode returns the cached encoding if available.
-    if (this.verify(signature, interest.wireEncode()))
-      onVerified(interest);
-    else
-      onVerifyFailed(interest);
+    this.verify(signature, interest.wireEncode(), function(verified) {
+      if (verified) onVerified(interest); else onVerifyFailed(interest);
+    });
   }
   else
     throw new SecurityException(new Error
@@ -167,19 +165,22 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @returns {boolean} True if the signature is verified, false if failed.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
-SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
+SelfVerifyPolicyManager.prototype.verify = function
+  (signatureInfo, signedBlob, onComplete)
 {
   var publicKeyDer;
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
       (signatureInfo));
     if (publicKeyDer.isNull())
-      return false;
+      onComplete(false);
   }
   
-  return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
+  return PolicyManager.verifySignature
+    (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };
 
 /**

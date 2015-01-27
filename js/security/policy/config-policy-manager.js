@@ -278,13 +278,15 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   }
 
   // Certificate is known, so verify the signature.
-  if (this.verify(signature, dataOrInterest.wireEncode())) {
-    onVerified(dataOrInterest);
-    if (dataOrInterest instanceof Interest)
-      this.updateTimestampForKey(keyName, timestamp);
-  }
-  else
-    onVerifyFailed(dataOrInterest);
+  this.verify(signature, dataOrInterest.wireEncode(), function (verified) {
+    if (verified) {
+      onVerified(dataOrInterest);
+      if (dataOrInterest instanceof Interest)
+        this.updateTimestampForKey(keyName, timestamp);
+    }
+    else
+      onVerifyFailed(dataOrInterest);
+  });
 };
 
 /**
@@ -679,9 +681,11 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob The SignedBlob with the signed portion to
  * verify.
- * @returns {boolean} True if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
-ConfigPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
+ConfigPolicyManager.prototype.verify = function
+  (signatureInfo, signedBlob, onComplete)
 {
   // We have already checked once that there is a key locator.
   var keyLocator = KeyLocator.getFromSignature(signatureInfo);
@@ -693,18 +697,19 @@ ConfigPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
     if (certificate == null)
       certificate = this.certificateCache.getCertificate(signatureName);
     if (certificate == null)
-      return false;
+      return onComplete(false);
 
     var publicKeyDer = certificate.getPublicKeyInfo().getKeyDer();
     if (publicKeyDer.isNull())
       // Can't find the public key with the name.
-      return false;
+      return onComplete(false);
 
-    return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
+    return PolicyManager.verifySignature
+      (signatureInfo, signedBlob, publicKeyDer, onComplete);
   }
   else
     // Can't find a key to verify.
-    return false;
+    return onComplete(false);
 };
 
 ConfigPolicyManager.TrustAnchorRefreshManager =
