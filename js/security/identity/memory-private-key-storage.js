@@ -132,7 +132,7 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ * @returns {Blob} The signature Blob.
  */
 MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
 {
@@ -140,7 +140,8 @@ MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
-    return new Blob();
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage.sign: Unsupported digest algorithm"));
 
   // Find the private key.
   var keyUri = keyName.toUri();

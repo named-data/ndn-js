@@ -68,7 +68,7 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ * @returns {Blob} The signature Blob.
  */
 PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
 {

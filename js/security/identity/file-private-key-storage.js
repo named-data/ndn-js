@@ -162,10 +162,13 @@ FilePrivateKeyStorage.prototype.getPublicKey = function (keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ * @returns {Blob} The signature Blob.
  */
 FilePrivateKeyStorage.prototype.sign = function (data, keyName, digestAlgorithm)
 {
+  if (digestAlgorithm == null)
+    digestAlgorithm = DigestAlgorithm.SHA256;
+
   if (!this.doesKeyExist(keyName, KeyClass.PRIVATE))
     throw new SecurityException(new Error
       ("FilePrivateKeyStorage.sign: private key doesn't exist"));
