@@ -73,7 +73,6 @@ describe('FilePrivateKeyStorage', function () {
     var instance = new FilePrivateKeyStorage();
     instance.generateKeyPair(new Name("/test/KEY/temp1"), KeyType.RSA, 2048);
     // Check if the files were created.
-    console.log("ndnFolder " + ndnFolder);
     var files = fs.readdirSync(ndnFolder);
     var createdFileCount = files.length;
     // 2 pre-created + 2 created now + some created by NFD
