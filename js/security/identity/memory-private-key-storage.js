@@ -126,15 +126,20 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
 };
 
 /**
- * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * Fetch the private key for keyName and sign the data to produce a signature Blob.
  * @param {Buffer} data Pointer to the input byte array.
  * @param {Name} keyName The name of the signing key.
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature Blob.
+ * @param {function} onComplete (optional) This calls onComplete(signature) with
+ * the signature Blob. If omitted, the return value is the signature Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
+ * return null and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+MemoryPrivateKeyStorage.prototype.sign = function
+  (data, keyName, digestAlgorithm, onComplete)
 {
   if (digestAlgorithm == null)
     digestAlgorithm = DigestAlgorithm.SHA256;
@@ -155,7 +160,14 @@ MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm
 
   var signature = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
-  return new Blob(signature, false);
+  var result = new Blob(signature, false);
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 /**
