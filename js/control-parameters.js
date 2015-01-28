@@ -20,23 +20,25 @@
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Name = require('./name.js').Name;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var Blob = require('./util/blob').Blob;
 
 /**
  * A ControlParameters which holds a Name and other fields for a
  * ControlParameters which is used, for example, in the command interest to
- * register a prefix with a forwarder.
+ * register a prefix with a forwarder. See
+ * http://redmine.named-data.net/projects/nfd/wiki/ControlCommand#ControlParameters
  * @constructor
  */
 var ControlParameters = function ControlParameters()
 {
   this.name = new Name();
   this.faceId = null;
-  // TODO: Add "Uri" string.
+  this.uri = null;
   this.localControlFeature = null;
   this.origin = null;
   this.cost = null;
   this.forwardingFlags = new ForwardingFlags();
-  // TODO: Add "Strategy" name.
+  this.strategy = new Name();
   this.expirationPeriod = null;
 };
 
@@ -89,6 +91,15 @@ ControlParameters.prototype.getFaceId = function()
 };
 
 /**
+ * Get the URI.
+ * @returns {string} The face URI, or null if not specified.
+ */
+ControlParameters.prototype.getUri = function()
+{
+  return this.uri;
+};
+
+/**
  * Get the local control feature value.
  * @returns {number} The local control feature value, or null if not specified.
  */
@@ -125,6 +136,15 @@ ControlParameters.prototype.getForwardingFlags = function()
 };
 
 /**
+ * Get the strategy.
+ * @returns {Name} The strategy or an empty Name
+ */
+ControlParameters.prototype.getStrategy = function()
+{
+  return this.strategy;
+};
+
+/**
  * Get the expiration period.
  * @returns {number} The expiration period in milliseconds, or null if not specified.
  */
@@ -150,6 +170,15 @@ ControlParameters.prototype.setName = function(name)
 ControlParameters.prototype.setFaceId = function(faceId)
 {
   this.faceId = faceId;
+};
+
+/**
+ * Set the URI.
+ * @param {string} uri The new uri, or null for not specified.
+ */
+ControlParameters.prototype.setUri = function(uri)
+{
+  this.uri = uri;
 };
 
 /**
@@ -189,6 +218,16 @@ ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
   this.forwardingFlags =
     typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
       new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+};
+
+/**
+ * Set the strategy to a copy of the given Name.
+ * @param {Name} name The new Name to copy, or null if not specified
+ */
+ControlParameters.prototype.setStrategy = function(strategy)
+{
+  this.strategy = typeof strategy === 'object' && strategy instanceof Name ?
+              new Name(strategy) : new Name();
 };
 
 /**

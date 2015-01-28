@@ -19,6 +19,8 @@
 
 var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
+var Name = require('../name').Name;
+var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
@@ -264,8 +266,13 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_ExpirationPeriod,
      controlParameters.getExpirationPeriod());
-
-  // TODO: Encode Strategy.
+	 
+  if (controlParameters.getStrategy().size() > 0){
+    var strategySaveLength = encoder.getLength();
+	Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+	encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy, 
+	  encoder.getLength() - strategySaveLength);
+  }
 
   var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
   if (flags != new ForwardingFlags().getNfdForwardingFlags())
@@ -281,7 +288,8 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
     (Tlv.ControlParameters_LocalControlFeature,
      controlParameters.getLocalControlFeature());
 
-  // TODO: Encode Uri.
+  encoder.writeOptionalBlobTlv
+    (Tlv.ControlParameters_Uri, controlParameters.getUri());
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
@@ -292,6 +300,67 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 
   return new Blob(encoder.getOutput(), false);
+};
+
+/**
+  * Decode controlParameters in NDN-TLV and return the encoding.
+  * @param controlParameters The ControlParameters object to encode.
+  * @param input
+  * @throws EncodingException For invalid encoding
+  */
+Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+	readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+
+  // decode name
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+	var name = new Name();
+	Tlv0_1_1WireFormat.decodeName(name, decoder);
+	controlParameters.setName(name);
+  }
+
+  // decode face ID
+  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, endOffset));
+
+  // decode URI
+  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+	var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
+	controlParameters.setUri(uri.toString());
+  }
+
+  // decode integers
+  controlParameters.setLocalControlFeature(decoder.
+	readOptionalNonNegativeIntegerTlv(
+	  Tlv.ControlParameters_LocalControlFeature, endOffset));
+  controlParameters.setOrigin(decoder.
+	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin, 
+	  endOffset));
+  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
+	Tlv.ControlParameters_Cost, endOffset));
+
+  // set forwarding flags
+  var flags = new ForwardingFlags();
+  flags.setNfdForwardingFlags(decoder.
+	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, 
+	  endOffset));
+  controlParameters.setForwardingFlags(flags);
+
+  // decode strategy
+  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
+	var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
+	Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+	decoder.finishNestedTlvs(strategyEndOffset);
+  }
+
+  // decode expiration period
+  controlParameters.setExpirationPeriod(
+    decoder.readOptionalNonNegativeIntegerTlv(
+	  Tlv.ControlParameters_ExpirationPeriod, endOffset));
+
+  decoder.finishNestedTlvs(endOffset);
 };
 
 /**
