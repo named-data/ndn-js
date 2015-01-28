@@ -521,7 +521,7 @@ DerNode.DerBitString.prototype.name = "DerBitString";
 /**
  * DerOctetString extends DerByteString to encode a string of bytes.
  * Create a new DerOctetString for the inputData.
- * @param {type} inputData An input buffer containing the string to encode.
+ * @param {Buffer} inputData An input buffer containing the string to encode.
  */
 DerNode.DerOctetString = function DerOctetString(inputData)
 {
