@@ -258,32 +258,46 @@ KeyChain.prototype.getPolicyManager = function()
 
 /**
  * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, return a signature object.
+ * is an array, produce a Signature object.
  * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If this
  * is an Interest object, wire encode for signing, append a SignatureInfo to the
  * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and return a Signature
+ * with the signature bits. If it is an array, sign it and produce a Signature
  * object.
  * @param {Name} certificateName The certificate name of the key to use for
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is an Interest object, this calls
+ * onComplete(interest) with the supplied Interest object which has been
+ * modified to set its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data or Interest).
+ * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * described above.
  */
-KeyChain.prototype.sign = function(target, certificateName, wireFormat)
+KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComplete)
 {
   if (target instanceof Interest)
-    this.identityManager.signInterestByCertificate
-      (target, certificateName, wireFormat);
+    return this.identityManager.signInterestByCertificate
+      (target, certificateName, wireFormat, onComplete);
   else if (target instanceof Data)
-    this.identityManager.signByCertificate(target, certificateName, wireFormat);
+    return this.identityManager.signByCertificate
+      (target, certificateName, wireFormat, onComplete);
   else
-    return this.identityManager.signByCertificate(target, certificateName);
+    return this.identityManager.signByCertificate
+      (target, certificateName, onComplete);
 };
 
 /**
  * Sign the target. If it is a Data object, set its signature. If it is an
- * array, return a signature object.
+ * array, produce a signature object.
  * @param {Data|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If it
  * is an array, sign it and return a Signature object.
@@ -291,13 +305,25 @@ KeyChain.prototype.sign = function(target, certificateName, wireFormat)
  * signing.  If omitted, infer the signing identity from the data packet name.
  * @param wireFormat (optional) A WireFormat object used to encode the input. If
  * omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data).
+ * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * described above.
  */
-KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
+KeyChain.prototype.signByIdentity = function
+  (target, identityName, wireFormat, onComplete)
 {
   if (identityName == null)
     identityName = new Name();
 
   if (target instanceof Data) {
+    var data = target;
     var signingCertificateName;
     if (identityName.size() == 0) {
       var inferredIdentity = this.policyManager.inferSigningIdentity
@@ -322,10 +348,11 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
       throw new SecurityException(new Error
         ("Signing Cert name does not comply with signing policy"));
 
-    this.identityManager.signByCertificate
-      (data, signingCertificateName, wireFormat);
+    return this.identityManager.signByCertificate
+      (data, signingCertificateName, wireFormat, onComplete);
   }
   else {
+    var array = target;
     var signingCertificateName =
       this.identityManager.getDefaultCertificateNameForIdentity(identityName);
 
@@ -333,7 +360,8 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
       throw new SecurityException(new Error
         ("No qualified certificate name found!"));
 
-    return this.identityManager.signByCertificate(array, signingCertificateName);
+    return this.identityManager.signByCertificate
+      (array, signingCertificateName, onComplete);
   }
 };
 
