@@ -606,8 +606,8 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
     keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
   }
   else
-    throw new DecodingException
-      ("decodeKeyLocator: Unrecognized key locator type");
+    throw new DecodingException(new Error
+      ("decodeKeyLocator: Unrecognized key locator type"));
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -657,8 +657,8 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
   else if (signatureType == Tlv.SignatureType_DigestSha256)
       data.setSignature(new DigestSha256Signature());
   else
-      throw new DecodingException
-       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
+      throw new DecodingException(new Error
+       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType));
 
   decoder.finishNestedTlvs(endOffset);
 };

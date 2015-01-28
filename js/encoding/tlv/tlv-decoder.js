@@ -103,11 +103,11 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
 {
   var type = this.readVarNumber();
   if (type != expectedType)
-    throw new DecodingException("Did not get the expected TLV type");
+    throw new DecodingException(new Error("Did not get the expected TLV type"));
 
   var length = this.readVarNumber();
   if (this.offset + length > this.input.length)
-    throw new DecodingException("TLV length exceeds the buffer length");
+    throw new DecodingException(new Error("TLV length exceeds the buffer length"));
 
   return length;
 };
@@ -152,12 +152,12 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
     this.offset += length;
 
     if (this.offset > this.input.length)
-      throw new DecodingException("TLV length exceeds the buffer length");
+      throw new DecodingException(new Error("TLV length exceeds the buffer length"));
   }
 
   if (this.offset != endOffset)
-    throw new DecodingException
-      ("TLV length does not equal the total length of the nested TLVs");
+    throw new DecodingException(new Error
+      ("TLV length does not equal the total length of the nested TLVs"));
 };
 
 /**
@@ -221,7 +221,7 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
            this.input[this.offset + 7]);
   }
   else
-    throw new DecodingException("Invalid length for a TLV nonNegativeInteger");
+    throw new DecodingException(new Error("Invalid length for a TLV nonNegativeInteger"));
 
   this.offset += length;
   return result;
