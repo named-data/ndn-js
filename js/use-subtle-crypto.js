@@ -94,6 +94,6 @@ function DetectSubtleCrypto(){
   }
 }
 
-UseSubtleCrypto = DetectSubtleCrypto();
- 
-module.exports = {UseSubtleCrypto: UseSubtleCrypto};
+var UseSubtleCrypto = DetectSubtleCrypto();
+
+exports.UseSubtleCrypto = UseSubtleCrypto;
