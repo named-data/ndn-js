@@ -280,17 +280,27 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * Sign the Data packet or byte array data based on the certificate name.
  * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
  * update its signature and key locator field and wireEncoding. If it is a
- * Biffer, sign it and return a Signature object.
+ * Biffer, sign it to produce a Signature object.
  * @param {Name} certificateName The Name identifying the certificate which
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
- * @returns {Signature} The generated signature (if target is a Buffer).
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is a Buffer, this calls onComplete(signature) where
+ * signature is the produced Signature object. If omitted, the return value is
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data). Otherwise, if
+ * onComplete is supplied then return null and use onComplete as described above.
  */
 IdentityManager.prototype.signByCertificate = function
-  (target, certificateName, wireFormat)
+  (target, certificateName, wireFormat, onComplete)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
   if (target instanceof Data) {
     var data = target;
@@ -302,25 +312,44 @@ IdentityManager.prototype.signByCertificate = function
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
-    data.getSignature().setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), 
-       IdentityManager.certificateNameToPublicKeyName(certificateName),
-       digestAlgorithm[0]));
+    if (onComplete) {
+      this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
+          data.getSignature().setSignature(signatureValue);
+          // Encode again to include the signature.
+          data.wireEncode(wireFormat);
+          onComplete(data);
+        });
+    }
+    else {
+      data.getSignature().setSignature(this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
 
-    // Encode again to include the signature.
-    data.wireEncode(wireFormat);
+      // Encode again to include the signature.
+      data.wireEncode(wireFormat);
+    }
   }
   else {
     var digestAlgorithm = [0];
     var signature = this.makeSignatureByCertificate
       (certificateName, digestAlgorithm);
 
-    signature.setSignature(this.privateKeyStorage.sign
-      (target, IdentityManager.certificateNameToPublicKeyName(certificateName),
-       digestAlgorithm[0]));
+    if (onComplete) {
+      this.privateKeyStorage.sign
+        (target, keyName, digestAlgorithm[0], function(signatureValue) {
+          signature.setSignature(signatureValue);
+          onComplete(signature);
+        });
+    }
+    else {
+      signature.setSignature(this.privateKeyStorage.sign
+        (target, keyName, digestAlgorithm[0]));
 
-    return signature;
+      return signature;
+    }
   }
+
+  return null;
 };
 
 /**
@@ -332,9 +361,13 @@ IdentityManager.prototype.signByCertificate = function
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete(interest) with
+ * the supplied Interest object which has been modified to set its signature. If
+ * omitted, then return when the interest has been signed. (Some crypto
+ * libraries only use a callback, so onComplete is required to use these.)
  */
 IdentityManager.prototype.signInterestByCertificate = function
-  (interest, certificateName, wireFormat)
+  (interest, certificateName, wireFormat, onComplete)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
@@ -349,14 +382,27 @@ IdentityManager.prototype.signInterestByCertificate = function
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  signature.setSignature(this.privateKeyStorage.sign
-    (encoding.signedBuf(),
-     IdentityManager.certificateNameToPublicKeyName(certificateName),
-     digestAlgorithm[0]));
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
-  // Remove the empty signature and append the real one.
-  interest.setName(interest.getName().getPrefix(-1).append
-    (wireFormat.encodeSignatureValue(signature)));
+  if (onComplete) {
+    this.privateKeyStorage.sign
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
+        signature.setSignature(signatureValue);
+
+        // Remove the empty signature and append the real one.
+        interest.setName(interest.getName().getPrefix(-1).append
+          (wireFormat.encodeSignatureValue(signature)));
+        onComplete(interest);
+      });
+  }
+  else {
+    signature.setSignature(this.privateKeyStorage.sign
+      (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+  }
 };
 
 /**
