@@ -172,13 +172,18 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 			if(LOG>3)console.log(data);
 
             var output = EncodingUtils.dataToHtml(data);
-            // Verify with the same KeyChain used to sign.
+            // Verify with the same KeyChain used to sign.  Set the document
+            //   element inside the callback so that it receives the result.
             keyChain.verifyData
               (data,
-               function() { output+= "<br/>SIGNATURE VALID<br/>"; },
-               function() { output+= "<br/>SIGNATURE INVALID<br/>"; });
-
-			document.getElementById('result').innerHTML = output;
+               function() {
+                 output+= "<br/>SIGNATURE VALID<br/>";
+                 document.getElementById('result').innerHTML = output;
+               },
+               function() {
+                 output+= "<br/>SIGNATURE INVALID<br/>";
+                 document.getElementById('result').innerHTML = output;
+               });
 		}
 
 	</script>
