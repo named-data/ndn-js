@@ -84,7 +84,8 @@ def build (bld):
                        "contrib/securityLib/jsbn.js",
                        "contrib/securityLib/jsbn2.js"]
 
-        ndnjs = ["js/browserify-require.js"] + securityLib + [
+        ndnjs = ["js/browserify-require.js",
+                 "js/use-subtle-crypto.js"] + securityLib + [
                  "js/browserify.js",
                  "contrib/feross/base64-js.js",
                  "contrib/feross/ieee754.js",
