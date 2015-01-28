@@ -1,0 +1,322 @@
+/**
+ * Copyright (C) 2014-2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Andrew Brown <andrew.brown@intel.com>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+var KeyClass = require('../security-types').KeyClass;
+var KeyType = require('../security-types').KeyType;
+var DigestAlgorithm = require('../security-types').DigestAlgorithm;
+var SecurityException = require('../security-exception').SecurityException;
+var PublicKey = require('../certificate/public-key').PublicKey;
+var PrivateKeyStorage = require('./private-key-storage').PrivateKeyStorage;
+var Blob = require('../../util/blob').Blob;
+var OID = require('../../encoding/oid').OID;
+var DerNode = require('../../encoding/der/der-node').DerNode;
+var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var util = require('util');
+var crypto = require('crypto');
+var fs = require('fs');
+var path = require('path');
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
+
+/**
+ * Path to TPM folder
+ */
+var tpmPath = null;
+
+/**
+ * FilePrivateKeyStorage works with NFD's default private key storage, the files
+ * stored in .ndn/ndnsec-tpm-file. This library will not be available from the
+ * browser
+ * @param {string} nonDefaultTpmPath if desired, override the default TPM path (i.e. .ndn/ndnsec-tpm-file)
+ * @constructor
+ */
+var FilePrivateKeyStorage = function FilePrivateKeyStorage(nonDefaultTpmPath)
+{
+  PrivateKeyStorage.call(this);
+  tpmPath = nonDefaultTpmPath || path.join(getUserHomePath(), '.ndn', 'ndnsec-tpm-file');
+};
+util.inherits(FilePrivateKeyStorage, PrivateKeyStorage);
+exports.FilePrivateKeyStorage = FilePrivateKeyStorage;
+
+/**
+ * Check if a particular key exists.
+ * @param {Name} keyName The name of the key.
+ * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
+ * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
+ * @returns {boolean} True if the key exists, otherwise false.
+ */
+FilePrivateKeyStorage.prototype.doesKeyExist = function (keyName, keyClass)
+{
+  return fs.existsSync(transformName(keyName, keyClass));
+};
+
+/**
+ * Generate a pair of asymmetric keys; only currently supports RSA
+ * @param {Name} keyName The name of the key pair.
+ * @param {KeyType} keyType (optional) The type of the key pair, e.g. KeyType.RSA.
+ * If omitted, use KeyType.RSA.
+ * @param {number} keySize (optional) The size of the key pair. If omitted, use
+ * 2048.
+ */
+FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, keySize)
+{
+  if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
+    throw new SecurityException(new Error("Public key already exists"));
+  }
+  if (this.doesKeyExist(keyName, KeyClass.PRIVATE)) {
+    throw new SecurityException(new Error("Public key already exists"));
+  }
+
+  // build keys
+  if (keyType === KeyType.RSA) {
+    if (!rsaKeygen)
+      throw new SecurityException(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+    var keyPair = rsaKeygen.generate(keySize);
+
+    // Get the public key DER from the PEM string.
+    var publicKeyBase64 = keyPair.public_key.toString().replace
+      ("-----BEGIN PUBLIC KEY-----", "").replace
+      ("-----END PUBLIC KEY-----", "");
+    var publicKey = new Buffer(publicKeyBase64, 'base64');
+
+    // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
+    var privateKeyBase64 = keyPair.private_key.toString().replace
+      ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+      ("-----END RSA PRIVATE KEY-----", "");
+    var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+    var privateKey = FilePrivateKeyStorage.encodePkcs8PrivateKey
+      (pkcs1PrivateKeyDer, new OID(FilePrivateKeyStorage.RSA_ENCRYPTION_OID),
+       new DerNode.DerNull()).buf();
+
+    // save
+    write(keyName, KeyClass.PRIVATE, privateKey);
+    write(keyName, KeyClass.PUBLIC, publicKey);
+  }
+  else {
+    throw new SecurityException(new Error("Only RSA key generation currently supported"));
+  }
+};
+
+/**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+FilePrivateKeyStorage.prototype.deleteKeyPair = function (keyName)
+{
+  this.deleteKey(keyName);
+};
+
+/**
+ * Delete all keys with this name. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ */
+FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
+{
+  for (var keyClassName in KeyClass) {
+    var keyClass = KeyClass[keyClassName];
+    if (this.doesKeyExist(keyName, keyClass)) {
+      var filePath = transformName(keyName, keyClass);
+      fs.unlinkSync(filePath);
+    }
+  }
+};
+
+/**
+ * Get the public key
+ * @param {Name} keyName The name of public key.
+ * @returns {PublicKey} The public key.
+ */
+FilePrivateKeyStorage.prototype.getPublicKey = function (keyName)
+{
+  var buffer = read(keyName, KeyClass.PUBLIC);
+  return new PublicKey(new Blob(buffer));
+};
+
+/**
+ * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * @param {Buffer} data Pointer to the input byte array.
+ * @param {Name} keyName The name of the signing key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm from
+ * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
+ * DigestAlgorithm.SHA256.
+ * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ */
+FilePrivateKeyStorage.prototype.sign = function (data, keyName, digestAlgorithm)
+{
+  if (!this.doesKeyExist(keyName, KeyClass.PRIVATE))
+    throw new SecurityException(new Error
+      ("FilePrivateKeyStorage.sign: private key doesn't exist"));
+
+  if (digestAlgorithm != DigestAlgorithm.SHA256)
+    throw new SecurityException(new Error
+      ("FilePrivateKeyStorage.sign: Unsupported digest algorithm"));
+
+  // Retrieve the private key.
+  var keyType = [-1];
+  var privateKey = this.getPrivateKey(keyName, keyType);
+
+  // Sign.
+  if (keyType[0] == KeyType.RSA) {
+    var rsa = require("crypto").createSign('RSA-SHA256');
+    rsa.update(data);
+
+    var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));
+    return new Blob(signature, false);
+  }
+  else
+    // We don't expect this to happen since getPrivateKey checked it.
+    throw new SecurityException(new Error
+      ("FilePrivateKeyStorage: Unsupported signature key type " + keyType[0]));
+};
+
+/** PRIVATE METHODS **/
+
+/**
+ * A private method to get the private key.
+ * @param {Name} keyName The name of private key.
+ * @param {Array<KeyType>} keyType Set keyType[0] to the KeyType.
+ * @returns {string} The PEM-encoded private key for use by the crypto module.
+ */
+FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
+{
+  var pkcs8Der = read(keyName, KeyClass.PRIVATE);
+
+  // The private key is generated by NFD which stores as PKCS #8. Decode it
+  // to find the algorithm OID and the inner private key DER.
+  var parsedNode = DerNode.parse(pkcs8Der);
+  var pkcs8Children = parsedNode.getChildren();
+  // Get the algorithm OID and parameters.
+  var algorithmIdChildren = DerNode.getSequence(pkcs8Children, 1).getChildren();
+  var oidString = algorithmIdChildren[0].toVal();
+  var algorithmParameters = algorithmIdChildren[1];
+  // Get the value of the 3rd child which is the octet string.
+  var privateKeyDer = pkcs8Children[2].toVal();
+
+  if (oidString == FilePrivateKeyStorage.RSA_ENCRYPTION_OID) {
+    keyType[0] = KeyType.RSA;
+
+    // Encode the DER as PEM.
+    var keyBase64 = privateKeyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+
+    return keyPem;
+  }
+  else
+    throw new SecurityException(new Error
+      ("FilePrivateKeyStorage::sign: Unrecognized private key OID: " + oidString));
+};
+
+/**
+ * Encode the private key to a PKCS #8 private key. We do this explicitly here
+ * to avoid linking to extra OpenSSL libraries.
+ * @param {Buffer} privateKeyDer The input private key DER.
+ * @param {OID} oid The OID of the privateKey.
+ * @param {DerNode} parameters The DerNode of the parameters for the OID.
+ * @return {Blob} The PKCS #8 private key DER.
+ */
+FilePrivateKeyStorage.encodePkcs8PrivateKey = function
+  (privateKeyDer, oid, parameters)
+{
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
+  algorithmIdentifier.addChild(parameters);
+
+  var result = new DerNode.DerSequence();
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerOctetString(privateKeyDer));
+
+  return result.encode();
+};
+
+FilePrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+FilePrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
+
+/**
+ * File extensions by KeyClass type
+ */
+var KeyClassExtensions = {};
+KeyClassExtensions[KeyClass.PUBLIC] = '.pub';
+KeyClassExtensions[KeyClass.PRIVATE] = '.pri';
+KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
+
+/**
+ * Write to a key file
+ * @param {Name} keyName
+ * @param {KeyClass} keyClass [PUBLIC, PRIVATE, SYMMETRIC]
+ * @param {Buffer} bytes
+ * @throws Error if the file cannot be written to
+ */
+function write(keyName, keyClass, bytes) {
+  var options = { mode: parseInt('0400', 8) };
+  if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444', 8);
+  fs.writeFileSync(transformName(keyName, keyClass), bytes.toString('base64'), options);
+}
+
+/**
+ * Read from a key file
+ * @param keyName
+ * @param keyClass [PUBLIC, PRIVATE, SYMMETRIC]
+ * @return {Buffer} key bytes
+ * @throws Error if the file cannot be read from
+ */
+function read(keyName, keyClass){
+  var base64 = fs.readFileSync(transformName(keyName, keyClass)).toString();
+  return new Buffer(base64, 'base64');
+}
+
+/**
+ * Retrieve the user's current home directory
+ * @returns {string} path to the user's home directory
+ */
+function getUserHomePath() {
+  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+}
+
+/**
+ * Transform the key name into a file name
+ * @param {Name} keyName
+ * @param {KeyClass} keyClass
+ */
+function transformName(keyName, keyClass) {
+  var hash = crypto.createHash('sha256');
+  if (!hash) {
+    throw new SecurityException(new Error('Could not instantiate SHA256 hash algorith.'));
+  }
+
+  // hash the key name
+  hash.update(new Buffer(keyName.toUri()));
+  var fileName = hash.digest('base64');
+  if (!fileName) {
+    throw new SecurityException(new Error('Failed to hash file name: ' + keyName.toUri()));
+  }
+
+  // return
+  return path.join(tpmPath, fileName.replace(/\//g, '%') + KeyClassExtensions[keyClass]);
+}

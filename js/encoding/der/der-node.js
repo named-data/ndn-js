@@ -36,7 +36,6 @@ var DerNodeType = require('./der-node-type.js').DerNodeType;
 var DerNode = function DerNode(nodeType)
 {
   this.nodeType = nodeType;
-
   this.parent = null;
   this.header = new Buffer(0);
   this.payload = new DynamicBuffer(0);
@@ -45,6 +44,10 @@ var DerNode = function DerNode(nodeType)
 
 exports.DerNode = DerNode;
 
+/**
+ * Return the number of bytes in DER
+ * @returns {number}
+ */
 DerNode.prototype.getSize = function()
 {
   return this.header.length + this.payloadPosition;
@@ -518,7 +521,7 @@ DerNode.DerBitString.prototype.name = "DerBitString";
 /**
  * DerOctetString extends DerByteString to encode a string of bytes.
  * Create a new DerOctetString for the inputData.
- * @param {type} inputData An input buffer containing the string to encode.
+ * @param {Buffer} inputData An input buffer containing the string to encode.
  */
 DerNode.DerOctetString = function DerOctetString(inputData)
 {
