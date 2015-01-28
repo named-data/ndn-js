@@ -7223,10 +7223,14 @@ DataUtils.shuffle = function(array)
  */
 function DecodingException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
       this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
 }
 DecodingException.prototype = new Error();
 DecodingException.prototype.name = "DecodingException";
@@ -9048,11 +9052,11 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
 {
   var type = this.readVarNumber();
   if (type != expectedType)
-    throw new DecodingException("Did not get the expected TLV type");
+    throw new DecodingException(new Error("Did not get the expected TLV type"));
 
   var length = this.readVarNumber();
   if (this.offset + length > this.input.length)
-    throw new DecodingException("TLV length exceeds the buffer length");
+    throw new DecodingException(new Error("TLV length exceeds the buffer length"));
 
   return length;
 };
@@ -9097,12 +9101,12 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
     this.offset += length;
 
     if (this.offset > this.input.length)
-      throw new DecodingException("TLV length exceeds the buffer length");
+      throw new DecodingException(new Error("TLV length exceeds the buffer length"));
   }
 
   if (this.offset != endOffset)
-    throw new DecodingException
-      ("TLV length does not equal the total length of the nested TLVs");
+    throw new DecodingException(new Error
+      ("TLV length does not equal the total length of the nested TLVs"));
 };
 
 /**
@@ -9166,7 +9170,7 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
            this.input[this.offset + 7]);
   }
   else
-    throw new DecodingException("Invalid length for a TLV nonNegativeInteger");
+    throw new DecodingException(new Error("Invalid length for a TLV nonNegativeInteger"));
 
   this.offset += length;
   return result;
@@ -10152,10 +10156,14 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
  */
 function DerDecodingException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
       this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
 }
 DerDecodingException.prototype = new Error();
 DerDecodingException.prototype.name = "DerDecodingException";
@@ -10188,10 +10196,14 @@ exports.DerDecodingException = DerDecodingException;
  */
 function DerEncodingException(error)
 {
-  this.message = error.message;
-  // Copy lineNumber, etc. from where new Error was called.
-  for (var prop in error)
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
       this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
 }
 DerEncodingException.prototype = new Error();
 DerEncodingException.prototype.name = "DerEncodingException";
@@ -10294,7 +10306,6 @@ var DerNodeType = require('./der-node-type.js').DerNodeType;
 var DerNode = function DerNode(nodeType)
 {
   this.nodeType = nodeType;
-
   this.parent = null;
   this.header = new Buffer(0);
   this.payload = new DynamicBuffer(0);
@@ -10303,6 +10314,10 @@ var DerNode = function DerNode(nodeType)
 
 exports.DerNode = DerNode;
 
+/**
+ * Return the number of bytes in DER
+ * @returns {number}
+ */
 DerNode.prototype.getSize = function()
 {
   return this.header.length + this.payloadPosition;
@@ -10740,6 +10755,17 @@ DerNode.DerInteger = function DerInteger(integer)
 DerNode.DerInteger.prototype = new DerNode();
 DerNode.DerInteger.prototype.name = "DerInteger";
 
+DerNode.DerInteger.prototype.toVal = function()
+{
+  var result = 0;
+  for (var i = 0; i < this.payloadPosition; ++i) {
+    result <<= 8;
+    result += this.payload.array[i];
+  }
+
+  return result;
+};
+
 /**
  * A DerBitString extends DerNode to handle a bit string.
  * Create a DerBitString with the given padding and inputBuf.
@@ -10765,7 +10791,7 @@ DerNode.DerBitString.prototype.name = "DerBitString";
 /**
  * DerOctetString extends DerByteString to encode a string of bytes.
  * Create a new DerOctetString for the inputData.
- * @param {type} inputData An input buffer containing the string to encode.
+ * @param {Buffer} inputData An input buffer containing the string to encode.
  */
 DerNode.DerOctetString = function DerOctetString(inputData)
 {
@@ -14035,9 +14061,6 @@ Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
 
 Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 {
-  if (!this.validate())
-    throw new Error("Cannot encode: field values missing.");
-
   encoder.writeElementStartDTag(this.getElementLabel());
 
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
@@ -14047,17 +14070,15 @@ Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
     // needs to handle null witness
     encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
 
-  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+  if (this.getSignature().size() > 0)
+    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+  else
+    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, new Buffer([]));
 
   encoder.writeElementClose();
 };
 
 Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
-Sha256WithRsaSignature.prototype.validate = function()
-{
-  return this.getSignature().size() > 0;
-};
 
 /**
  * Note: This Signature class is not the same as the base Signature class of
@@ -14375,6 +14396,9 @@ Data.prototype.setContent = function(content)
   return this;
 };
 
+/**
+ * @deprecated Use KeyChain.sign. See examples/node/test-encode-decode-data.js .
+ */
 Data.prototype.sign = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
@@ -14400,6 +14424,10 @@ Data.prototype.sign = function(wireFormat)
 // The first time verify is called, it sets this to determine if a signature
 //   buffer needs to be converted to a string for the crypto verifier.
 Data.verifyUsesString = null;
+
+/**
+ * @deprecated Use KeyChain.verifyData. See examples/node/test-encode-decode-data.js .
+ */
 Data.prototype.verify = function(/*Key*/ key)
 {
   if (key == null || key.publicKeyPem == null)
@@ -14578,12 +14606,15 @@ exports.ContentObject = ContentObject;
 function SecurityException(error)
 {
   if (error) {
-    this.message = error.message;
     // Copy lineNumber, etc. from where new Error was called.
     for (var prop in error)
-        this[prop] = error[prop];
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
+
 SecurityException.prototype = new Error();
 SecurityException.prototype.name = "SecurityException";
 
@@ -14668,19 +14699,6 @@ var DigestAlgorithm = function DigestAlgorithm()
 exports.DigestAlgorithm = DigestAlgorithm;
 
 DigestAlgorithm.SHA256 = 1;
-// DigestAlgorithm.MD2
-// DigestAlgorithm.MD5
-// DigestAlgorithm.SHA1
-
-var EncryptMode = function EncryptMode()
-{
-};
-
-exports.EncryptMode = EncryptMode;
-
-EncryptMode.DEFAULT = 1;
-EncryptMode.CFB_AES = 2;
-// EncryptMode.CBC_AES
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -14736,7 +14754,7 @@ var PublicKey = function PublicKey(keyDer)
   }
   catch (ex) {
     throw new UnrecognizedKeyFormatException(new Error
-      ("PublicKey.decodeKeyType: Error decoding the public key" + ex.message));
+      ("PublicKey.decodeKeyType: Error decoding the public key: " + ex.message));
   }
 
   // Verify that the we can decode.
@@ -14822,6 +14840,7 @@ PublicKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
  */
 
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var OID = require('../../encoding/oid.js').OID;
 
 /**
  * A CertificateExtension represents the Extension entry in a certificate.
@@ -15136,7 +15155,7 @@ Certificate.prototype.toDer = function()
   if (this.extensionList.length > 0) {
     var extensionList = new DerNode.DerSequence();
     for (var i = 0; i < this.extensionList.length; ++i)
-      subjectList.addChild(this.extensionList[i].toDer());
+      extensionList.addChild(this.extensionList[i].toDer());
     root.addChild(extensionList);
   }
 
@@ -15179,13 +15198,13 @@ Certificate.prototype.decode = function()
 
   if (rootChildren.length > 3) {
     var extensionChildren = DerNode.getSequence(rootChildren, 3).getChildren();
-    for (var i = 0; i < extensionChildren.size(); ++i) {
+    for (var i = 0; i < extensionChildren.length; ++i) {
       var extInfo = DerNode.getSequence(extensionChildren, i);
 
       var children = extInfo.getChildren();
       var oidStr = children[0].toVal();
       var isCritical = children[1].toVal();
-      var value = children[2].encode();
+      var value = children[2].toVal();
       this.addExtension(new CertificateExtension(oidStr, isCritical, value));
     }
   }
@@ -16125,15 +16144,20 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
 };
 
 /**
- * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * Fetch the private key for keyName and sign the data to produce a signature Blob.
  * @param {Buffer} data Pointer to the input byte array.
  * @param {Name} keyName The name of the signing key.
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ * @param {function} onComplete (optional) This calls onComplete(signature) with
+ * the signature Blob. If omitted, the return value is the signature Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
+ * return null and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+PrivateKeyStorage.prototype.sign = function
+  (data, keyName, digestAlgorithm, onComplete)
 {
   throw new Error("PrivateKeyStorage.sign is not implemented");
 };
@@ -16317,21 +16341,27 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
 };
 
 /**
- * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * Fetch the private key for keyName and sign the data to produce a signature Blob.
  * @param {Buffer} data Pointer to the input byte array.
  * @param {Name} keyName The name of the signing key.
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature, or a isNull() Blob if signing fails.
+ * @param {function} onComplete (optional) This calls onComplete(signature) with
+ * the signature Blob. If omitted, the return value is the signature Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
+ * return null and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+MemoryPrivateKeyStorage.prototype.sign = function
+  (data, keyName, digestAlgorithm, onComplete)
 {
   if (digestAlgorithm == null)
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
-    return new Blob();
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage.sign: Unsupported digest algorithm"));
 
   // Find the private key.
   var keyUri = keyName.toUri();
@@ -16345,7 +16375,14 @@ MemoryPrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm
 
   var signature = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
-  return new Blob(signature, false);
+  var result = new Blob(signature, false);
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 /**
@@ -16645,20 +16682,30 @@ IdentityManager.prototype.getDefaultCertificateName = function()
 };
 
 /**
- * Sign the byte array data based on the certificate name.
- * @param {Buffer} target If this is a Data object, wire encode for signing,
- * update its signature and key locator field and wireEncoding. If it is an
- * array, sign it and return a Signature object.
+ * Sign the Data packet or byte array data based on the certificate name.
+ * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
+ * update its signature and key locator field and wireEncoding. If it is a
+ * Biffer, sign it to produce a Signature object.
  * @param {Name} certificateName The Name identifying the certificate which
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
- * @returns {Signature} The generated signature.
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is a Buffer, this calls onComplete(signature) where
+ * signature is the produced Signature object. If omitted, the return value is
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data). Otherwise, if
+ * onComplete is supplied then return null and use onComplete as described above.
  */
 IdentityManager.prototype.signByCertificate = function
-  (target, certificateName, wireFormat)
+  (target, certificateName, wireFormat, onComplete)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
   if (target instanceof Data) {
     var data = target;
@@ -16670,25 +16717,44 @@ IdentityManager.prototype.signByCertificate = function
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
-    data.getSignature().setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), 
-       IdentityManager.certificateNameToPublicKeyName(certificateName),
-       digestAlgorithm[0]));
+    if (onComplete) {
+      this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
+          data.getSignature().setSignature(signatureValue);
+          // Encode again to include the signature.
+          data.wireEncode(wireFormat);
+          onComplete(data);
+        });
+    }
+    else {
+      data.getSignature().setSignature(this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
 
-    // Encode again to include the signature.
-    data.wireEncode(wireFormat);
+      // Encode again to include the signature.
+      data.wireEncode(wireFormat);
+    }
   }
   else {
     var digestAlgorithm = [0];
     var signature = this.makeSignatureByCertificate
       (certificateName, digestAlgorithm);
 
-    signature.setSignature(this.privateKeyStorage.sign
-      (target, IdentityManager.certificateNameToPublicKeyName(certificateName),
-       digestAlgorithm[0]));
+    if (onComplete) {
+      this.privateKeyStorage.sign
+        (target, keyName, digestAlgorithm[0], function(signatureValue) {
+          signature.setSignature(signatureValue);
+          onComplete(signature);
+        });
+    }
+    else {
+      signature.setSignature(this.privateKeyStorage.sign
+        (target, keyName, digestAlgorithm[0]));
 
-    return signature;
+      return signature;
+    }
   }
+
+  return null;
 };
 
 /**
@@ -16700,9 +16766,13 @@ IdentityManager.prototype.signByCertificate = function
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete(interest) with
+ * the supplied Interest object which has been modified to set its signature. If
+ * omitted, then return when the interest has been signed. (Some crypto
+ * libraries only use a callback, so onComplete is required to use these.)
  */
 IdentityManager.prototype.signInterestByCertificate = function
-  (interest, certificateName, wireFormat)
+  (interest, certificateName, wireFormat, onComplete)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
@@ -16717,14 +16787,27 @@ IdentityManager.prototype.signInterestByCertificate = function
   interest.getName().append(new Name.Component());
   // Encode once to get the signed portion.
   var encoding = interest.wireEncode(wireFormat);
-  signature.setSignature(this.privateKeyStorage.sign
-    (encoding.signedBuf(),
-     IdentityManager.certificateNameToPublicKeyName(certificateName),
-     digestAlgorithm[0]));
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
-  // Remove the empty signature and append the real one.
-  interest.setName(interest.getName().getPrefix(-1).append
-    (wireFormat.encodeSignatureValue(signature)));
+  if (onComplete) {
+    this.privateKeyStorage.sign
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
+        signature.setSignature(signatureValue);
+
+        // Remove the empty signature and append the real one.
+        interest.setName(interest.getName().getPrefix(-1).append
+          (wireFormat.encodeSignatureValue(signature)));
+        onComplete(interest);
+      });
+  }
+  else {
+    signature.setSignature(this.privateKeyStorage.sign
+      (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+  }
 };
 
 /**
@@ -17029,22 +17112,24 @@ PolicyManager.verifyUsesString = null;
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
  * signature.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  * @throws {SecurityException} if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
  */
-PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
+PolicyManager.verifySignature = function
+  (signature, signedBlob, publicKeyDer, onComplete)
 {
   if (signature instanceof Sha256WithRsaSignature)
-    return PolicyManager.verifySha256WithRsaSignature
-      (signature.getSignature(), signedBlob, publicKeyDer);
+    PolicyManager.verifySha256WithRsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   else if (signature instanceof DigestSha256Signature)
-    return PolicyManager.verifyDigestSha256Signature
-      (signature.getSignature(), signedBlob);
+    PolicyManager.verifyDigestSha256Signature
+      (signature.getSignature(), signedBlob, onComplete);
   else
     // We don't expect this to happen.
-    throw new SecurityException
-      ("PolicyManager.verify: Signature type is unknown");
+    throw new SecurityException(new Error
+      ("PolicyManager.verify: Signature type is unknown"));
 };
 
 /**
@@ -17054,10 +17139,11 @@ PolicyManager.verifySignature = function(signature, signedBlob, publicKeyDer)
  * verify.
  * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
  * signature.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifySha256WithRsaSignature = function
-  (signature, signedBlob, publicKeyDer)
+  (signature, signedBlob, publicKeyDer, onComplete)
 {
   if (PolicyManager.verifyUsesString === null) {
     var hashResult = require("crypto").createHash('sha256').digest();
@@ -17077,7 +17163,7 @@ PolicyManager.verifySha256WithRsaSignature = function
   verifier.update(signedBlob.signedBuf());
   var signatureBytes = PolicyManager.verifyUsesString ?
     DataUtils.toString(signature.buf()) : signature.buf();
-  return verifier.verify(keyPem, signatureBytes);
+  onComplete(verifier.verify(keyPem, signatureBytes));
 };
 
 /**
@@ -17086,16 +17172,18 @@ PolicyManager.verifySha256WithRsaSignature = function
  * @param signature {Blob} The signature bits.
  * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
  * verify.
- * @returns true if the signature verifies, false if not.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
-PolicyManager.verifyDigestSha256Signature = function(signature, signedBlob)
+PolicyManager.verifyDigestSha256Signature = function
+  (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
   var hash = crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 
-  return signedPortionDigest.equals(signature);
+  onComplete(signedPortionDigest.equals(signature));
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -17310,10 +17398,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
   if (dataOrInterest instanceof Data) {
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
-    if (this.verify(data.getSignature(), data.wireEncode()))
-      onVerified(data);
-    else
-      onVerifyFailed(data);
+    this.verify(data.getSignature(), data.wireEncode(), function(verified) {
+      if (verified) onVerified(data); else onVerifyFailed(data);
+    });
   }
   else if (dataOrInterest instanceof Interest) {
     var interest = dataOrInterest;
@@ -17323,10 +17410,9 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
        interest.getName().get(-1).getValue().buf());
 
     // wireEncode returns the cached encoding if available.
-    if (this.verify(signature, interest.wireEncode()))
-      onVerified(interest);
-    else
-      onVerifyFailed(interest);
+    this.verify(signature, interest.wireEncode(), function(verified) {
+      if (verified) onVerified(interest); else onVerifyFailed(interest);
+    });
   }
   else
     throw new SecurityException(new Error
@@ -17373,19 +17459,22 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @returns {boolean} True if the signature is verified, false if failed.
+ * @param onComplete {function} This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
  */
-SelfVerifyPolicyManager.prototype.verify = function(signatureInfo, signedBlob)
+SelfVerifyPolicyManager.prototype.verify = function
+  (signatureInfo, signedBlob, onComplete)
 {
   var publicKeyDer;
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
       (signatureInfo));
     if (publicKeyDer.isNull())
-      return false;
+      onComplete(false);
   }
   
-  return PolicyManager.verifySignature(signatureInfo, signedBlob, publicKeyDer);
+  return PolicyManager.verifySignature
+    (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };
 
 /**
@@ -17457,7 +17546,6 @@ var KeyChain = function KeyChain(identityManager, policyManager)
 {
   this.identityManager = identityManager;
   this.policyManager = policyManager;
-  this.encryptionManager = null;
   this.face = null;
   this.maxSteps = 100;
 };
@@ -17671,32 +17759,46 @@ KeyChain.prototype.getPolicyManager = function()
 
 /**
  * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, return a signature object.
+ * is an array, produce a Signature object.
  * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If this
  * is an Interest object, wire encode for signing, append a SignatureInfo to the
  * Interest name, sign the name components and append a final name component
- * with the signature bits. If it is an array, sign it and return a Signature
+ * with the signature bits. If it is an array, sign it and produce a Signature
  * object.
  * @param {Name} certificateName The certificate name of the key to use for
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is an Interest object, this calls
+ * onComplete(interest) with the supplied Interest object which has been
+ * modified to set its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data or Interest).
+ * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * described above.
  */
-KeyChain.prototype.sign = function(target, certificateName, wireFormat)
+KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComplete)
 {
   if (target instanceof Interest)
-    this.identityManager.signInterestByCertificate
-      (target, certificateName, wireFormat);
+    return this.identityManager.signInterestByCertificate
+      (target, certificateName, wireFormat, onComplete);
   else if (target instanceof Data)
-    this.identityManager.signByCertificate(target, certificateName, wireFormat);
+    return this.identityManager.signByCertificate
+      (target, certificateName, wireFormat, onComplete);
   else
-    return this.identityManager.signByCertificate(target, certificateName);
+    return this.identityManager.signByCertificate
+      (target, certificateName, onComplete);
 };
 
 /**
  * Sign the target. If it is a Data object, set its signature. If it is an
- * array, return a signature object.
+ * array, produce a signature object.
  * @param {Data|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If it
  * is an array, sign it and return a Signature object.
@@ -17704,13 +17806,25 @@ KeyChain.prototype.sign = function(target, certificateName, wireFormat)
  * signing.  If omitted, infer the signing identity from the data packet name.
  * @param wireFormat (optional) A WireFormat object used to encode the input. If
  * omitted, use WireFormat getDefaultWireFormat().
+ * @param {function} onComplete (optional) If target is a Data object, this calls
+ * onComplete(data) with the supplied Data object which has been modified to set
+ * its signature. If target is a Buffer, this calls
+ * onComplete(signature) where signature is the produced Signature object. If
+ * omitted, the return value is described below. (Some crypto libraries only use
+ * a callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or null (if target is Data).
+ * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * described above.
  */
-KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
+KeyChain.prototype.signByIdentity = function
+  (target, identityName, wireFormat, onComplete)
 {
   if (identityName == null)
     identityName = new Name();
 
   if (target instanceof Data) {
+    var data = target;
     var signingCertificateName;
     if (identityName.size() == 0) {
       var inferredIdentity = this.policyManager.inferSigningIdentity
@@ -17735,10 +17849,11 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
       throw new SecurityException(new Error
         ("Signing Cert name does not comply with signing policy"));
 
-    this.identityManager.signByCertificate
-      (data, signingCertificateName, wireFormat);
+    return this.identityManager.signByCertificate
+      (data, signingCertificateName, wireFormat, onComplete);
   }
   else {
+    var array = target;
     var signingCertificateName =
       this.identityManager.getDefaultCertificateNameForIdentity(identityName);
 
@@ -17746,7 +17861,8 @@ KeyChain.prototype.signByIdentity = function(target, identityName, wireFormat)
       throw new SecurityException(new Error
         ("No qualified certificate name found!"));
 
-    return this.identityManager.signByCertificate(array, signingCertificateName);
+    return this.identityManager.signByCertificate
+      (array, signingCertificateName, onComplete);
   }
 };
 
@@ -17839,54 +17955,6 @@ KeyChain.prototype.verifyInterest = function
     onVerified(interest);
   else
     onVerifyFailed(interest);
-};
-
-/*****************************************
- *           Encrypt/Decrypt             *
- *****************************************/
-
-/**
- * Generate a symmetric key.
- * @param {Name} keyName The name of the generated key.
- * @param {number} keyType (optional) The type of the key from KeyType, e.g.
- * KeyType.AES.
- */
-KeyChain.prototype.generateSymmetricKey = function(keyName, keyType)
-{
-  this.encryptionManager.createSymmetricKey(keyName, keyType);
-};
-
-/**
- * Encrypt a byte array.
- * @param {Name} keyName The name of the encrypting key.
- * @param {Buffer} data The byte array that will be encrypted.
- * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
- * used, otherwise asymmetric encryption is used. If omitted, use symmetric
- * encryption.
- * @param encryptMode (optional) The encryption mode from EncryptMode. If
- * omitted, use EncryptMode.DEFAULT.
- * @returns {Blob} The encrypted data as an immutable Blob.
- */
-KeyChain.prototype.encrypt = function(keyName, data, useSymmetric, encryptMode)
-{
-  return this.encryptionManager.encrypt(keyName, data, useSymmetric, encryptMode);
-}
-
-/**
- * Decrypt a byte array.
- * @param {Name} keyName The name of the decrypting key.
- * @param {Buffer} data The byte array that will be decrypted.
- * @param {boolean} useSymmetric (optional) If true then symmetric encryption is
- * used, otherwise asymmetric encryption is used. If omitted, use symmetric
- * encryption.
- * @param encryptMode (optional) The encryption mode from EncryptMode. If
- * omitted, use EncryptMode.DEFAULT.
- * @returns {Blob} The decrypted data as an immutable Blob.
- */
-KeyChain.prototype.decrypt = function(keyName, data, useSymmetric, encryptMode)
-{
-   return this.encryptionManager.decrypt
-     (keyName, data, useSymmetric, encryptMode);
 };
 
 /**
@@ -20331,8 +20399,8 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
     keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
   }
   else
-    throw new DecodingException
-      ("decodeKeyLocator: Unrecognized key locator type");
+    throw new DecodingException(new Error
+      ("decodeKeyLocator: Unrecognized key locator type"));
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -20382,8 +20450,8 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
   else if (signatureType == Tlv.SignatureType_DigestSha256)
       data.setSignature(new DigestSha256Signature());
   else
-      throw new DecodingException
-       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType);
+      throw new DecodingException(new Error
+       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType));
 
   decoder.finishNestedTlvs(endOffset);
 };
