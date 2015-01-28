@@ -144,9 +144,6 @@ Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
 
 Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 {
-  if (!this.validate())
-    throw new Error("Cannot encode: field values missing.");
-
   encoder.writeElementStartDTag(this.getElementLabel());
 
   if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
@@ -156,17 +153,15 @@ Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
     // needs to handle null witness
     encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
 
-  encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+  if (this.getSignature().size() > 0)
+    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
+  else
+    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, new Buffer([]));
 
   encoder.writeElementClose();
 };
 
 Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
-Sha256WithRsaSignature.prototype.validate = function()
-{
-  return this.getSignature().size() > 0;
-};
 
 /**
  * Note: This Signature class is not the same as the base Signature class of
