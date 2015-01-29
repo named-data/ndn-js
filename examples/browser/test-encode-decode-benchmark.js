@@ -227,11 +227,6 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   return finish - start;
 }
 
-function onVerified(data)
-{
-  // Do nothing since we expect it to verify.
-}
-
 function onVerifyFailed(data)
 {
   console.log("Signature verification: FAILED");
@@ -242,9 +237,12 @@ function onVerifyFailed(data)
  * @param {number} nIterations The number of times to decode.
  * @param {boolean} useCrypto If true, verify the signature.  If false, don't verify.
  * @param {Buffer} encoding The encoded data packet to decode.
- * @returns {number} The number of seconds for the benchmark.
+ * @param {function} onFinished When finished this calls onFinished(duration)
+ * where duration is the number of seconds for the benchmark. It is necessary
+ * to use a callback because the crypto functions use callbacks.
  */
-TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, useCrypto, encoding)
+TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
+  (nIterations, useCrypto, encoding, onFinished)
 {
   // Initialize the KeyChain storage in case useCrypto is true.
   var identityStorage = new MemoryIdentityStorage();
@@ -256,6 +254,15 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
   identityStorage.addKey(keyName, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
 
   var start = getNowSeconds();
+  var count = 0;
+  var onVerified = function() {
+    count += 1;
+    if (count >= nIterations)
+      // We don't know when onVerified will be called. But after calling
+      //   nIterations times, we are finished.
+      onFinished(getNowSeconds() - start);
+  }
+
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data();
     data.wireDecode(encoding);
@@ -263,7 +270,8 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function(nIterations, use
     if (useCrypto)
       keyChain.verifyData(data, onVerified, onVerifyFailed);
   }
-  var finish = getNowSeconds();
 
-  return finish - start;
+  if (!useCrypto)
+    // onVerified wasn't called to call onFinished, so do it here.
+    onFinished(getNowSeconds() - start);
 };
