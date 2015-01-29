@@ -62,7 +62,7 @@ var PublicKey = function PublicKey(keyDer)
     // TODO: Check RSA decoding.
   }
   else if (oidString == PublicKey.EC_ENCRYPTION_OID) {
-    this.keyType = KeyType.EC;
+    this.keyType = KeyType.ECDSA;
     // TODO: Check EC decoding.
   }
 };
