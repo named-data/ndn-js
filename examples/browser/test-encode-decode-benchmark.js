@@ -148,10 +148,13 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * @param {boolean} useComplex If true, use a large name, large content and all fields.  If false, use a small name, small content
  * and only required fields.
  * @param {boolean} useCrypto If true, sign the data packet.  If false, use a blank signature.
- * @param {Array<Buffer>} encoding Set encoding[0] to the wire encoding.
- * @return {number} The number of seconds for all iterations.
+ * @param {function} onFinished When finished this calls onFinished(duration, encoding)
+ * where duration is the number of seconds for all iterations and encoding is
+ * the wire encoding Buffer. It is necessary to use a callback because the
+ * crypto functions use callbacks.
  */
-TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, useComplex, useCrypto, encoding)
+TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
+  (nIterations, useComplex, useCrypto, onFinished)
 {
   var name;
   var content;
@@ -194,7 +197,17 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
   for (var i = 0; i < signatureBits.length; ++i)
     signatureBits[i] = 0;
 
+  var encoding = null;
   var start = getNowSeconds();
+  var count = 0;
+  var onComplete = function() {
+    count += 1;
+    if (count >= nIterations)
+      // We don't know when onComplete will be called. But after calling
+      //   nIterations times, we are finished.
+      onFinished(getNowSeconds() - start, encoding);
+  };
+
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data(name);
     data.setContent(content);
@@ -208,7 +221,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
 
     if (useCrypto)
       // This sets the signature fields.
-      keyChain.sign(data, certificateName);
+      keyChain.sign(data, certificateName, null, onComplete);
     else {
       // Imitate IdentityManager.signByCertificate to set up the signature
       // fields, but don't sign.
@@ -220,11 +233,12 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function(nIterations, use
       sha256Signature.setSignature(signatureBits);
     }
 
-    encoding[0] = data.wireEncode().buf();
+    encoding = data.wireEncode().buf();
   }
-  var finish = getNowSeconds();
 
-  return finish - start;
+  if (!useCrypto)
+    // onComplete wasn't called to call onFinished, so do it here.
+    onFinished(getNowSeconds() - start, encoding);
 }
 
 function onVerifyFailed(data)
@@ -238,7 +252,7 @@ function onVerifyFailed(data)
  * @param {boolean} useCrypto If true, verify the signature.  If false, don't verify.
  * @param {Buffer} encoding The encoded data packet to decode.
  * @param {function} onFinished When finished this calls onFinished(duration)
- * where duration is the number of seconds for the benchmark. It is necessary
+ * where duration is the number of seconds for all iterations. It is necessary
  * to use a callback because the crypto functions use callbacks.
  */
 TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
@@ -261,7 +275,7 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
       // We don't know when onVerified will be called. But after calling
       //   nIterations times, we are finished.
       onFinished(getNowSeconds() - start);
-  }
+  };
 
   for (var i = 0; i < nIterations; ++i) {
     var data = new Data();
