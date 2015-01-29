@@ -62,15 +62,20 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
 };
 
 /**
- * Fetch the private key for keyName and sign the data, returning a signature Blob.
+ * Fetch the private key for keyName and sign the data to produce a signature Blob.
  * @param {Buffer} data Pointer to the input byte array.
  * @param {Name} keyName The name of the signing key.
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @returns {Blob} The signature Blob.
+ * @param {function} onComplete (optional) This calls onComplete(signature) with
+ * the signature Blob. If omitted, the return value is the signature Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
+ * return null and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+PrivateKeyStorage.prototype.sign = function
+  (data, keyName, digestAlgorithm, onComplete)
 {
   throw new Error("PrivateKeyStorage.sign is not implemented");
 };
