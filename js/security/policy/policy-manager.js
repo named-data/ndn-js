@@ -24,7 +24,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var UseSubtleCrypto = require("../../use-subtle-crypto.js").UseSubtleCrypto;
+var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
  * A PolicyManager is an abstract base class to represent the policy for
