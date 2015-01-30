@@ -200,12 +200,15 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   var encoding = null;
   var start = getNowSeconds();
   var count = 0;
-  var onComplete = function() {
+  var onComplete = function(data) {
     count += 1;
-    if (count >= nIterations)
+    if (count >= nIterations){
       // We don't know when onComplete will be called. But after calling
       //   nIterations times, we are finished.
+
+      encoding = data.wireEncode().buf();
       onFinished(getNowSeconds() - start, encoding);
+    }
   };
 
   for (var i = 0; i < nIterations; ++i) {
@@ -231,9 +234,10 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
       var sha256Signature = data.getSignature();
       sha256Signature.setKeyLocator(keyLocator);
       sha256Signature.setSignature(signatureBits);
+
+      encoding = data.wireEncode().buf();
     }
 
-    encoding = data.wireEncode().buf();
   }
 
   if (!useCrypto)
