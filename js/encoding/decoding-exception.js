@@ -25,18 +25,13 @@
  */
 function DecodingException(error)
 {
-  if (error instanceof Error) {
+  if (error) {
     // Copy lineNumber, etc. from where new Error was called.
     for (var prop in error)
       this[prop] = error[prop];
     // Make sure these are copied.
     this.message = error.message;
     this.stack = error.stack;
-  }
-  // assume string 
-  else{
-    this.message = error;
-	this.stack = (new Error()).stack;
   }
 }
 DecodingException.prototype = new Error();
