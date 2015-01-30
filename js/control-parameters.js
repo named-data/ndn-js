@@ -33,7 +33,7 @@ var ControlParameters = function ControlParameters()
 {
   this.name = new Name();
   this.faceId = null;
-  this.uri = null;
+  this.uri = '';
   this.localControlFeature = null;
   this.origin = null;
   this.cost = null;
@@ -92,7 +92,7 @@ ControlParameters.prototype.getFaceId = function()
 
 /**
  * Get the URI.
- * @returns {string} The face URI, or null if not specified.
+ * @returns {string} The face URI, or an empty string if not specified.
  */
 ControlParameters.prototype.getUri = function()
 {
@@ -174,11 +174,11 @@ ControlParameters.prototype.setFaceId = function(faceId)
 
 /**
  * Set the URI.
- * @param {string} uri The new uri, or null for not specified.
+ * @param {string} uri The new uri, or an empty string for not specified.
  */
 ControlParameters.prototype.setUri = function(uri)
 {
-  this.uri = uri;
+  this.uri = uri || '';
 };
 
 /**

@@ -36,6 +36,7 @@ describe('ControlParameters', function() {
     assert.equal(parameters.getName().toUri(), decodedParameters
       .getName().toUri());
     assert.equal(parameters.getFaceId(), decodedParameters.getFaceId());
+	assert.equal(parameters.getUri(), decodedParameters.getUri());
   });
   
   it('should encode and decode with no name', function() {
