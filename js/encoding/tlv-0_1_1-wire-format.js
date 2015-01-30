@@ -289,7 +289,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
      controlParameters.getLocalControlFeature());
 
   encoder.writeOptionalBlobTlv
-    (Tlv.ControlParameters_Uri, controlParameters.getUri());
+    (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
