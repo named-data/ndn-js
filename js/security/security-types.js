@@ -39,7 +39,7 @@ KeyType.AES = 1;
 // KeyType.DES
 // KeyType.RC4
 // KeyType.RC2
-KeyType.EC = 2;
+KeyType.ECDSA = 2;
 
 var KeyClass = function KeyClass()
 {

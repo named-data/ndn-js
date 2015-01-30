@@ -27,23 +27,26 @@ var TlvWireFormat = require('../..').TlvWireFormat;
  * results to console.log.
  * @param {boolean} useComplex See benchmarkEncodeDataSeconds.
  * @param {boolean} useCrypto See benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds.
+ * @param {function} onFinished When finished, call onFinished(). It is necessary
+ * to use a callback because the crypto functions use callbacks.
  */
-function benchmarkEncodeDecodeData(useComplex, useCrypto)
+function benchmarkEncodeDecodeData(useComplex, useCrypto, onFinished)
 {
   var format = WireFormat.getDefaultWireFormat() === BinaryXmlWireFormat.get() ? "ndnb" : "TLV ";
-  var encoding = [];
-  {
-    var nIterations = useCrypto ? 2000 : 500000;
-    var duration = TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds(nIterations, useComplex, useCrypto, encoding);
-    console.log("Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
-      + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));
-  }
-  {
-    var nIterations = useCrypto ? 20000 : 300000;
-    var duration = TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds(nIterations, useCrypto, encoding[0]);
-    console.log("Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
-      + ", Duration sec, Hz: " + duration + ", " + (nIterations / duration));
-  }
+  var nEncodeIterations = useCrypto ? 2000 : 500000;
+  TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds
+    (nEncodeIterations, useComplex, useCrypto, function(duration, encoding) {
+      console.log("Encode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
+        + ", Duration sec, Hz: " + duration + ", " + (nEncodeIterations / duration));
+
+      var nDecodeIterations = useCrypto ? 20000 : 300000;
+      TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds
+        (nDecodeIterations, useCrypto, encoding, function(duration) {
+          console.log("Decode " + (useComplex ? "complex " : "simple  ") + format + " data: Crypto? " + (useCrypto ? "RSA" : "no ")
+            + ", Duration sec, Hz: " + duration + ", " + (nDecodeIterations / duration));
+          onFinished();
+        });
+    });
 }
 
 // Make two passes, one for each wire format.
@@ -53,8 +56,11 @@ for (var i = 1; i <= 2; ++i) {
   else
     WireFormat.setDefaultWireFormat(TlvWireFormat.get());
 
-  benchmarkEncodeDecodeData(false, false);
-  benchmarkEncodeDecodeData(true, false);
-  benchmarkEncodeDecodeData(false, true);
-  benchmarkEncodeDecodeData(true, true);
+  benchmarkEncodeDecodeData(false, false, function() {
+  benchmarkEncodeDecodeData(true, false, function() {
+  benchmarkEncodeDecodeData(false, true, function() {
+  benchmarkEncodeDecodeData(true, true, function() {});
+  });
+  });
+  });
 }
