@@ -17024,22 +17024,22 @@ PolicyManager.verifySignature = function
 PolicyManager.verifySha256WithRsaSignature = function
   (signature, signedBlob, publicKeyDer, onComplete)
 {
-  if (PolicyManager.verifyUsesString === null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
-    // If the hash result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    PolicyManager.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  if (UseSubtleCrypto() && onComplete){
+  if (UseSubtleCrypto()){
     var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
+
     crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
-      crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf()).then(function(verified){
-        onComplete(verified);
-        //console.log("did subtle crypto verify?", verified)
-      });
+      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
+    }).then(function(verified){
+      onComplete(verified);
     });
   } else {
+    if (PolicyManager.verifyUsesString === null) {
+      var hashResult = require("crypto").createHash('sha256').digest();
+      // If the hash result is a string, we assume that this is a version of
+      //   crypto where verify also uses a string signature.
+      PolicyManager.verifyUsesString = (typeof hashResult === 'string');
+    }
+
     // The crypto verifier requires a PEM-encoded public key.
     var keyBase64 = publicKeyDer.buf().toString('base64');
     var keyPem = "-----BEGIN PUBLIC KEY-----\n";
