@@ -153,6 +153,10 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * the wire encoding Buffer. It is necessary to use a callback because the
  * crypto functions use callbacks.
  */
+
+//re-use a single keyChain so that we don't have to import key 1000 times
+var keyChain;
+
 TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   (nIterations, useComplex, useCrypto, onFinished)
 {
@@ -177,17 +181,24 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   var finalBlockId = new Buffer("\0");
 
   // Initialize the KeyChain storage in case useCrypto is true.
-  var identityStorage = new MemoryIdentityStorage();
-  var privateKeyStorage = new MemoryPrivateKeyStorage();
-  var keyChain = new KeyChain
-    (new IdentityManager(identityStorage, privateKeyStorage),
-     new SelfVerifyPolicyManager(identityStorage));
+
   var keyName = new Name("/testname/DSK-123");
   var certificateName = keyName.getSubName(0, keyName.size() - 1).append("KEY").append
     (keyName.get(keyName.size() - 1)).append("ID-CERT").append("0");
-  identityStorage.addKey(keyName, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
-  privateKeyStorage.setKeyPairForKeyName
-    (keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
+
+  if (!keyChain){
+    //generate KeyChain
+    var identityStorage = new MemoryIdentityStorage();
+    var privateKeyStorage = new MemoryPrivateKeyStorage();
+    keyChain = new KeyChain
+      (new IdentityManager(identityStorage, privateKeyStorage),
+       new SelfVerifyPolicyManager(identityStorage));
+    identityStorage.addKey(keyName, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
+    privateKeyStorage.setKeyPairForKeyName
+      (keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
+    //this is the first time, so do a dummy sign to make sure key is imported
+    var doDummySign = true;
+  }
 
   // Set up publisherPublicKeyDigest and signatureBits in case useCrypto is false.
   var publisherPublicKeyDigest = new Buffer(32);
@@ -236,6 +247,11 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
       sha256Signature.setSignature(signatureBits);
 
       encoding = data.wireEncode().buf();
+    }
+
+    if (doDummySign){
+      doDummySign = false;
+      keyChain.sign(data, certificateName, null, function(){console.log("dummy sign")});
     }
 
   }
