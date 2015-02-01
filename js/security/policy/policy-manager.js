@@ -170,7 +170,7 @@ PolicyManager.verifySha256WithRsaSignature = function
     PolicyManager.verifyUsesString = (typeof hashResult === 'string');
   }
 
-  if (UseSubtleCrypto().ndn_rsa && onComplete){
+  if (UseSubtleCrypto() && onComplete){
     var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
     crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
       crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf()).then(function(verified){
