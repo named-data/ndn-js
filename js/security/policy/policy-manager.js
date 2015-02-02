@@ -24,6 +24,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
  * A PolicyManager is an abstract base class to represent the policy for
@@ -162,25 +163,35 @@ PolicyManager.verifySignature = function
 PolicyManager.verifySha256WithRsaSignature = function
   (signature, signedBlob, publicKeyDer, onComplete)
 {
-  if (PolicyManager.verifyUsesString === null) {
-    var hashResult = require("crypto").createHash('sha256').digest();
-    // If the hash result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    PolicyManager.verifyUsesString = (typeof hashResult === 'string');
+  if (UseSubtleCrypto()){
+    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
+
+    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
+      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
+    }).then(function(verified){
+      onComplete(verified);
+    });
+  } else {
+    if (PolicyManager.verifyUsesString === null) {
+      var hashResult = require("crypto").createHash('sha256').digest();
+      // If the hash result is a string, we assume that this is a version of
+      //   crypto where verify also uses a string signature.
+      PolicyManager.verifyUsesString = (typeof hashResult === 'string');
+    }
+
+    // The crypto verifier requires a PEM-encoded public key.
+    var keyBase64 = publicKeyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    var verifier = require('crypto').createVerify('RSA-SHA256');
+    verifier.update(signedBlob.signedBuf());
+    var signatureBytes = PolicyManager.verifyUsesString ?
+      DataUtils.toString(signature.buf()) : signature.buf();
+    onComplete(verifier.verify(keyPem, signatureBytes));
   }
-
-  // The crypto verifier requires a PEM-encoded public key.
-  var keyBase64 = publicKeyDer.buf().toString('base64');
-  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END PUBLIC KEY-----";
-
-  var verifier = require('crypto').createVerify('RSA-SHA256');
-  verifier.update(signedBlob.signedBuf());
-  var signatureBytes = PolicyManager.verifyUsesString ?
-    DataUtils.toString(signature.buf()) : signature.buf();
-  onComplete(verifier.verify(keyPem, signatureBytes));
 };
 
 /**
