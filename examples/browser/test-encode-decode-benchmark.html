@@ -39,7 +39,7 @@
     function benchmarkEncodeDecodeData(useComplex, useCrypto, continuation)
     {
       var format = WireFormat.getDefaultWireFormat() === BinaryXmlWireFormat.get() ? "ndnb" : "TLV ";
-      var nEncodeIterations = useCrypto ? 500 : 150000;
+      var nEncodeIterations = useCrypto ? (UseSubtleCrypto() ? 4000 : 200) : 150000;
       TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds
         (nEncodeIterations, useComplex, useCrypto, function(duration, encoding) {
           document.getElementById('result').innerHTML +=
@@ -48,7 +48,7 @@
 
           // Use setTimeout so that the browser will update the display before continuing.
           setTimeout(function() {
-            var nDecodeIterations = useCrypto ? 4000 : 100000;
+            var nDecodeIterations = useCrypto ? (UseSubtleCrypto() ? 10000 : 2000) : 100000;
             TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds
               (nDecodeIterations, useCrypto, encoding, function(duration) {
                 document.getElementById('result').innerHTML +=
