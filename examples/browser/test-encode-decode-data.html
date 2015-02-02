@@ -152,12 +152,15 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
             data.getMetaInfo().setFinalBlockId(new Name("/%00%09").get(0));
             data.setContent(content);
 
-			keyChain.sign(data, certificateName);
+			keyChain.sign(data, certificateName, function(signeddata){
+
+              var output = EncodingUtils.encodeToHexData(signeddata);
+
+              document.getElementById('result').innerHTML = output;
+
+      });
 
 
-			var output = EncodingUtils.encodeToHexData(data);
-
-			document.getElementById('result').innerHTML = output;
 
 		}
 

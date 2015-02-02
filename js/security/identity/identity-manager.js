@@ -298,7 +298,8 @@ IdentityManager.prototype.getDefaultCertificateName = function()
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
