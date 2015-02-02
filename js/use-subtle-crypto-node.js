@@ -1,1 +1,1 @@
-exports.UseSubtleCrypto = function(){return {};};
+exports.UseSubtleCrypto = function(){return false;};
