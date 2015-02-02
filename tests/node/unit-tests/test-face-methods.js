@@ -72,7 +72,7 @@ var interestID;
 describe('TestFaceInterestMethods', function() {
   // Mocha will wait until a callback calls "done" before running the "it" test.
   before(function(done) {
-    face = new Face({host: "aleph.ndn.ucla.edu"});
+    face = new Face({host: "localhost"});
     uri = "/";
     counter = runExpressNameTest(done, face, uri);
   });
