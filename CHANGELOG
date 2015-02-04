@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2016-02-02)
+Interim changes since NDN-JS v0.7.0 (2016-02-04)
 ------------------------------------------------
 
 Changes
@@ -7,6 +7,8 @@ Changes
   KeyChain.sign (if using the onComplete callback). Tested in Chrome and Firefox.
   Thanks to Ryan Bennett!
 * Implemented FilePrivateKeyStorage for Node.js. Thanks to Andrew Brown!
+* In ControlParameters, added support for Uri and Strategy. Allow the Name to be optional. Thanks to Andrew Brown!
+* In the default WireFormat, implemented decodeControlParameters. Thanks again to Andrew Brown!
 * Unit tests: Added test-der-encode-decode tests for CertificateExtension.
 * Unit tests: Added test-file-private-key-storage. Thanks to Andrew Brown!
 
