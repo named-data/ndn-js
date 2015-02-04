@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "mocha tests/node/unit-tests --timeout 10000"
+    "test": "cd tests/node/unit-tests ; mocha . --timeout 10000 ; cd ../../.."
   },
   "repository": {
     "type": "git",
