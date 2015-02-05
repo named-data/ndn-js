@@ -251,7 +251,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
 
     if (doDummySign){
       doDummySign = false;
-      keyChain.sign(data, certificateName, null, function(){console.log("dummy sign")});
+      keyChain.sign(data, certificateName, null, function(){console.log("dummy sign");});
     }
 
   }
@@ -259,7 +259,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
   if (!useCrypto)
     // onComplete wasn't called to call onFinished, so do it here.
     onFinished(getNowSeconds() - start, encoding);
-}
+};
 
 function onVerifyFailed(data)
 {
