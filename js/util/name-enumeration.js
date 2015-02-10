@@ -76,7 +76,7 @@ NameEnumeration.prototype.processData = function(data)
       if (segmentNumber != expectedSegmentNumber)
         // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
         this.face.expressInterest
-          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
         this.contentParts.push(data.getContent().buf());
@@ -92,7 +92,7 @@ NameEnumeration.prototype.processData = function(data)
 
         // Fetch the next segment.
         this.face.expressInterest
-          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
       }
     }
   } catch (ex) {

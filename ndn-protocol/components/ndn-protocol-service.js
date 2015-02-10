@@ -341,7 +341,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
 
         // TODO: Use expressInterest with callbacks, not Closure.
         this.face.expressInterest
-            (new Name(this.nameWithoutSegment).addSegment(toRequest[i]),
+            (new Name(this.nameWithoutSegment).appendSegment(toRequest[i]),
              new ExponentialReExpressClosure(this), this.segmentTemplate);
     }
 
