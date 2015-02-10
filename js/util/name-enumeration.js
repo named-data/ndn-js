@@ -23,7 +23,7 @@ var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Name = require('../name.js').Name;
 
 /**
- * Create a context for getting the response from the name enumeration command, as neede by getComponents.
+ * Create a context for getting the response from the name enumeration command, as needed by getComponents.
  * (To do name enumeration, call the static method NameEnumeration.getComponents.)
  * @param {Face} face The Face object for using expressInterest.
  * @param {function} onComponents The onComponents callback given to getComponents.
