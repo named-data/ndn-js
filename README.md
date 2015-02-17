@@ -34,13 +34,13 @@ submit any bugs or issues to the NDN-JS issue tracker:
 http://redmine.named-data.net/projects/ndn-js/issues
 
 The primary goal of NDN-JS is to provide a pure Javascript implementation of the NDN API
-that enables developers to create browser-based applications using Named Data Networking.
+that enables developers to create browser-based or Node.js-based applications using Named Data Networking.
 The approach requires no native code or signed Java applets, and thus can be delivered
 over the current web to modern browsers with no hassle for the end user.
 
 Additional goals for the project:
-- Websockets transport (rather than TCP or UDP, which are not directly supported in
-Javascript).
+- Websockets transport for the browser (rather than TCP or UDP, which are not directly supported in
+the browser).
 - Relatively lightweight and compact, to enable efficient use on the web.
 - Implement the NDN-TLV wire format and be wire format compatible with the PARC's CCNx implementation of NDN.
 
@@ -51,9 +51,12 @@ https://github.com/named-data/NFD .
 
 Currently, the library has two APIs for developers:
 
-	1. The Javascript API for asynchronous Interest/Data exchange.
-	   This uses WebSockets for transport and currently requires a
-	   proxy for communication with a remote ndnd daemon.
+	1. The Javascript API for asynchronous Interest/Data exchange which follows the
+       NDN Common Client Libraries API: http://named-data.net/doc/ndn-ccl-api/ . This
+       API can be used from the browser or Node.js.
+	   The browser uses WebSockets for transport and currently requires a
+	   proxy for communication with a remote NDN daemon.  The Node.js API can use
+       the Node.js native support for TCP or Unix sockets.
 
 	2. A Firefox plug-in, which implements an "ndn:/" url scheme
 	   following NDNx repository conventions for file retrieval.
