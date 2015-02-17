@@ -44,7 +44,7 @@ the browser).
 - Relatively lightweight and compact, to enable efficient use on the web.
 - Implement the NDN-TLV wire format and be wire format compatible with the PARC's CCNx implementation of NDN.
 
-The library currently requires a remote NDN daemon, and has been tested with ndnd, from
+The library currently requires a remote NDN forwarder, and has been tested with ndnd, from
 the's NDNx package: http://ndnx.org/ , ndnd-tlv from the package
 https://github.com/named-data/ndnd-tlv and with NFD from the package
 https://github.com/named-data/NFD .
@@ -55,7 +55,7 @@ Currently, the library has two APIs for developers:
        NDN Common Client Libraries API: http://named-data.net/doc/ndn-ccl-api/ . This
        API can be used from the browser or Node.js.
 	   The browser uses WebSockets for transport and currently requires a
-	   proxy for communication with a remote NDN daemon.  The Node.js API can use
+	   proxy for communication with a remote NDN forwarder.  The Node.js API can use
        the Node.js native support for TCP or Unix sockets.
 
 	2. A Firefox plug-in, which implements an "ndn:/" url scheme
@@ -65,7 +65,7 @@ By default, both parts of the library connect automatically to a set of proxies 
 that are part of the NDN research project's testbed.  http://named-data.net/ndn-testbed/
 There are currently no restrictions on non-commercial, research-oriented data exchange on
 this testbed. (Contact jburke@remap.ucla.edu for more details.)   The developer can also
-specify a local or remote ndnd as well, as an argument to the NDN constructor.
+specify a local or remote NDN forwarder as well, as an argument to the Face constructor.
 
 
 
@@ -79,11 +79,12 @@ NDN-JS currently supports expressing Interests (and receiving data) and publishi
 signing and verifying them using RSA keys.
 
 ** NDN connectivity **
-The only way (for now) to get connectivity to other NDN nodes is via ndnd.  For the
-Javascript API, a Websockets proxy that can communicate the target ndnd is currently
-required.  Code for such a proxy (using Node.js) is in the wsproxy directory.  It
-currently listens on port 9696 and passes messages (using either TCP or UDP) to ndnd on
-the same host.
+The only way (for now) to get connectivity to other NDN nodes is via and NDN forwarder.  For the
+Javascript API in the browser, a Websockets proxy that can communicate the target NDN forwarder is currently
+required.  NFD supports its own Websockets proxy. For other forwarders, code for such a proxy (using Node.js) is in the wsproxy directory.
+The Websocket currently listens on port 9696 and passes messages to the NDN forwarder on
+the same host. The Node.js API can use the Node.js native support for TCP (remote or local) or Unix sockets
+(to the local NDN forwarder).
 
 ** Including the scripts in a web page **
 To use NDN-JS in a web page, one of two scripts must be included using a script tag:
@@ -117,7 +118,7 @@ face.expressInterest(new Name("/ndn/edu/ucla/remap/ndn-js-test/hello.txt"), onDa
 ** Example to publish content **
 
 // Note that publishing content requires knowledge of a
-// routable prefix for your upstream ndnd.  We are working
+// routable prefix for your upstream NDN forwarder.  We are working
 // on a way to either obtain that prefix or use the /local
 // convention.
 
