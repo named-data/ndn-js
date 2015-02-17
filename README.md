@@ -118,7 +118,7 @@ face.expressInterest(new Name("/ndn/edu/ucla/remap/ndn-js-test/hello.txt"), onDa
 // on a way to either obtain that prefix or use the /local
 // convention.
 
-For now, see tests/browser/test-publish-async.html
+For now, see examples/browser/test-publish-async.html
 
 
 
