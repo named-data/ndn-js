@@ -11148,7 +11148,7 @@ var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
 var Name = require('../name.js').Name;
 
 /**
- * Create a context for getting the response from the name enumeration command, as neede by getComponents.
+ * Create a context for getting the response from the name enumeration command, as needed by getComponents.
  * (To do name enumeration, call the static method NameEnumeration.getComponents.)
  * @param {Face} face The Face object for using expressInterest.
  * @param {function} onComponents The onComponents callback given to getComponents.
@@ -11201,7 +11201,7 @@ NameEnumeration.prototype.processData = function(data)
       if (segmentNumber != expectedSegmentNumber)
         // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
         this.face.expressInterest
-          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber), this.onData, this.onTimeout);
       else {
         // Save the content and check if we are finished.
         this.contentParts.push(data.getContent().buf());
@@ -11217,7 +11217,7 @@ NameEnumeration.prototype.processData = function(data)
 
         // Fetch the next segment.
         this.face.expressInterest
-          (data.getName().getPrefix(-1).addSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
+          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
       }
     }
   } catch (ex) {
@@ -13035,8 +13035,9 @@ Name.prototype.match = function(name)
   if (i_name.length > o_name.length)
     return false;
 
-  // Check if at least one of given components doesn't match.
-  for (var i = 0; i < i_name.length; ++i) {
+  // Check if at least one of given components doesn't match. Check from last to
+  // first since the last components are more likely to differ.
+  for (var i = i_name.length - 1; i >= 0; --i) {
     if (!i_name[i].equals(o_name[i]))
       return false;
   }
@@ -19097,23 +19098,25 @@ ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Name = require('./name.js').Name;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var Blob = require('./util/blob').Blob;
 
 /**
  * A ControlParameters which holds a Name and other fields for a
  * ControlParameters which is used, for example, in the command interest to
- * register a prefix with a forwarder.
+ * register a prefix with a forwarder. See
+ * http://redmine.named-data.net/projects/nfd/wiki/ControlCommand#ControlParameters
  * @constructor
  */
 var ControlParameters = function ControlParameters()
 {
   this.name = new Name();
   this.faceId = null;
-  // TODO: Add "Uri" string.
+  this.uri = '';
   this.localControlFeature = null;
   this.origin = null;
   this.cost = null;
   this.forwardingFlags = new ForwardingFlags();
-  // TODO: Add "Strategy" name.
+  this.strategy = new Name();
   this.expirationPeriod = null;
 };
 
@@ -19166,6 +19169,15 @@ ControlParameters.prototype.getFaceId = function()
 };
 
 /**
+ * Get the URI.
+ * @returns {string} The face URI, or an empty string if not specified.
+ */
+ControlParameters.prototype.getUri = function()
+{
+  return this.uri;
+};
+
+/**
  * Get the local control feature value.
  * @returns {number} The local control feature value, or null if not specified.
  */
@@ -19202,6 +19214,15 @@ ControlParameters.prototype.getForwardingFlags = function()
 };
 
 /**
+ * Get the strategy.
+ * @returns {Name} The strategy or an empty Name
+ */
+ControlParameters.prototype.getStrategy = function()
+{
+  return this.strategy;
+};
+
+/**
  * Get the expiration period.
  * @returns {number} The expiration period in milliseconds, or null if not specified.
  */
@@ -19227,6 +19248,15 @@ ControlParameters.prototype.setName = function(name)
 ControlParameters.prototype.setFaceId = function(faceId)
 {
   this.faceId = faceId;
+};
+
+/**
+ * Set the URI.
+ * @param {string} uri The new uri, or an empty string for not specified.
+ */
+ControlParameters.prototype.setUri = function(uri)
+{
+  this.uri = uri || '';
 };
 
 /**
@@ -19266,6 +19296,16 @@ ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
   this.forwardingFlags =
     typeof forwardingFlags === 'object' && forwardingFlags instanceof ForwardingFlags ?
       new ForwardingFlags(forwardingFlags) : new ForwardingFlags();
+};
+
+/**
+ * Set the strategy to a copy of the given Name.
+ * @param {Name} name The new Name to copy, or null if not specified
+ */
+ControlParameters.prototype.setStrategy = function(strategy)
+{
+  this.strategy = typeof strategy === 'object' && strategy instanceof Name ?
+              new Name(strategy) : new Name();
 };
 
 /**
@@ -19701,6 +19741,8 @@ BinaryXmlWireFormat.decodeData = function(data, decoder)
 
 var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
+var Name = require('../name').Name;
+var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
@@ -19946,8 +19988,13 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_ExpirationPeriod,
      controlParameters.getExpirationPeriod());
-
-  // TODO: Encode Strategy.
+	 
+  if (controlParameters.getStrategy().size() > 0){
+    var strategySaveLength = encoder.getLength();
+	Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+	encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy, 
+	  encoder.getLength() - strategySaveLength);
+  }
 
   var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
   if (flags != new ForwardingFlags().getNfdForwardingFlags())
@@ -19963,7 +20010,8 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
     (Tlv.ControlParameters_LocalControlFeature,
      controlParameters.getLocalControlFeature());
 
-  // TODO: Encode Uri.
+  encoder.writeOptionalBlobTlv
+    (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
@@ -19974,6 +20022,67 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 
   return new Blob(encoder.getOutput(), false);
+};
+
+/**
+  * Decode controlParameters in NDN-TLV and return the encoding.
+  * @param controlParameters The ControlParameters object to encode.
+  * @param input
+  * @throws EncodingException For invalid encoding
+  */
+Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+	readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+
+  // decode name
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+	var name = new Name();
+	Tlv0_1_1WireFormat.decodeName(name, decoder);
+	controlParameters.setName(name);
+  }
+
+  // decode face ID
+  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, endOffset));
+
+  // decode URI
+  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+	var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
+	controlParameters.setUri(uri.toString());
+  }
+
+  // decode integers
+  controlParameters.setLocalControlFeature(decoder.
+	readOptionalNonNegativeIntegerTlv(
+	  Tlv.ControlParameters_LocalControlFeature, endOffset));
+  controlParameters.setOrigin(decoder.
+	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin, 
+	  endOffset));
+  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
+	Tlv.ControlParameters_Cost, endOffset));
+
+  // set forwarding flags
+  var flags = new ForwardingFlags();
+  flags.setNfdForwardingFlags(decoder.
+	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, 
+	  endOffset));
+  controlParameters.setForwardingFlags(flags);
+
+  // decode strategy
+  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
+	var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
+	Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+	decoder.finishNestedTlvs(strategyEndOffset);
+  }
+
+  // decode expiration period
+  controlParameters.setExpirationPeriod(
+    decoder.readOptionalNonNegativeIntegerTlv(
+	  Tlv.ControlParameters_ExpirationPeriod, endOffset));
+
+  decoder.finishNestedTlvs(endOffset);
 };
 
 /**
