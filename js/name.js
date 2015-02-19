@@ -904,8 +904,9 @@ Name.prototype.match = function(name)
   if (i_name.length > o_name.length)
     return false;
 
-  // Check if at least one of given components doesn't match.
-  for (var i = 0; i < i_name.length; ++i) {
+  // Check if at least one of given components doesn't match. Check from last to
+  // first since the last components are more likely to differ.
+  for (var i = i_name.length - 1; i >= 0; --i) {
     if (!i_name[i].equals(o_name[i]))
       return false;
   }
