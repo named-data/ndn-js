@@ -62,7 +62,13 @@ exports.IdentityManager = IdentityManager;
  */
 IdentityManager.prototype.createIdentity = function(identityName, params)
 {
-  throw new Error("IdentityManager.createIdentity is not implemented");
+  this.identityStorage.addIdentity(identityName);
+  var keyName = this.generateKeyPair(identityName, true, params);
+  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+  var newCert = this.selfSign(keyName);
+  this.addCertificateAsDefault(newCert);
+
+  return keyName;
 };
 
 /**
@@ -124,7 +130,7 @@ IdentityManager.prototype.getDefaultIdentity = function()
 IdentityManager.prototype.generateRSAKeyPair = function
   (identityName, isKsk, keySize)
 {
-  throw new Error("IdentityManager.generateRSAKeyPair is not implemented");
+  return this.generateKeyPair(identityName, isKsk, new RsaKeyParams(keySize));
 };
 
 /**
@@ -165,7 +171,9 @@ IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
 IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  throw new Error("IdentityManager.generateRSAKeyPairAsDefault is not implemented");
+  var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
+  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName, identityName);
+  return newKeyName;
 };
 
 /**
@@ -474,7 +482,30 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
  */
 IdentityManager.prototype.selfSign = function(keyName)
 {
-  throw new Error("IdentityManager.selfSign is not implemented");
+  var certificate = new IdentityCertificate();
+
+  var keyBlob = this.identityStorage.getKey(keyName);
+  var publicKey = new PublicKey(keyBlob);
+
+  var notBefore = new Date().getTime();
+  var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
+
+  certificate.setNotBefore(notBefore);
+  certificate.setNotAfter(notAfter);
+
+  var certificateName = keyName.getPrefix(-1).append("KEY").append
+    (keyName.get(-1)).append("ID-CERT").append
+    (Name.Component.fromNumber(certificate.getNotBefore()));
+  certificate.setName(certificateName);
+
+  certificate.setPublicKeyInfo(publicKey);
+  certificate.addSubjectDescription(new CertificateSubjectDescription
+    ("2.5.4.41", keyName.toUri()));
+  certificate.encode();
+
+  this.signByCertificate(certificate, certificate.getName());
+
+  return certificate;
 };
 
 /**
@@ -533,4 +564,22 @@ IdentityManager.prototype.makeSignatureByCertificate = function
   }
   else
     throw new SecurityException(new Error("Key type is not recognized"));
+};
+
+/**
+ * A private method to generate a pair of keys for the specified identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {KeyParams} params The parameters of the key.
+ * @returns {Name} The generated key name.
+ */
+IdentityManager.prototype.generateKeyPair = function(identityName, isKsk, params)
+{
+  var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
+  this.privateKeyStorage.generateKeyPair(keyName, params);
+  var publicKeyBits = this.privateKeyStorage.getPublicKey(keyName).getKeyDer();
+  this.identityStorage.addKey(keyName, params.getKeyType(), publicKeyBits);
+
+  return keyName;
 };
