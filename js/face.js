@@ -175,6 +175,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.keyStore = new Array();
   this.pendingInterestTable = new Array();
   this.pitRemoveRequests = new Array();
+  this.registeredPrefixTable = new Array();
+  this.registeredPrefixRemoveRequests = new Array();
 };
 
 exports.Face = Face;
@@ -329,56 +331,52 @@ Face.prototype.extractEntriesForExpressedInterest = function(name)
   return result;
 };
 
-// For publishing data
-Face.registeredPrefixTable = new Array();
-Face.registeredPrefixRemoveRequests = new Array();
-
 /**
  * @constructor
  */
-var RegisteredPrefix = function RegisteredPrefix(registeredPrefixId, prefix, closure)
+Face.RegisteredPrefix = function FaceRegisteredPrefix(registeredPrefixId, prefix, closure)
 {
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;        // String
   this.closure = closure;  // Closure
 };
 
-RegisteredPrefix.lastRegisteredPrefixId = 0;
+Face.RegisteredPrefix.lastRegisteredPrefixId = 0;
 
 /**
  * Get the next unique registered prefix ID.
  * @returns {number} The next registered prefix ID.
  */
-RegisteredPrefix.getNextRegisteredPrefixId = function()
+Face.RegisteredPrefix.getNextRegisteredPrefixId = function()
 {
-  ++RegisteredPrefix.lastRegisteredPrefixId;
-  return RegisteredPrefix.lastRegisteredPrefixId;
+  ++Face.RegisteredPrefix.lastRegisteredPrefixId;
+  return Face.RegisteredPrefix.lastRegisteredPrefixId;
 };
 
 /**
- * Find the first entry from Face.registeredPrefixTable where the entry prefix is the longest that matches name.
+ * Find the first entry from this.registeredPrefixTable where the entry prefix is the longest that matches name.
  * @param {Name} name The name to find the PrefixEntry for (from the incoming interest packet).
- * @returns {object} The entry from Face.registeredPrefixTable, or 0 if not found.
+ * @returns {object} The entry from this.registeredPrefixTable, or 0 if not found.
  */
-function getEntryForRegisteredPrefix(name)
+Face.prototype.getEntryForRegisteredPrefix = function(name)
 {
   var iResult = -1;
 
-  for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
-    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
-    if (Face.registeredPrefixTable[i].prefix.match(name)) {
+  for (var i = 0; i < this.registeredPrefixTable.length; i++) {
+    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + this.registeredPrefixTable[i].prefix + " matches " + name);
+    if (this.registeredPrefixTable[i].prefix.match(name)) {
       if (iResult < 0 ||
-          Face.registeredPrefixTable[i].prefix.size() > Face.registeredPrefixTable[iResult].prefix.size())
+          this.registeredPrefixTable[i].prefix.size() > this.registeredPrefixTable[iResult].prefix.size())
         // Update to the longer match.
         iResult = i;
     }
   }
 
   if (iResult >= 0)
-    return Face.registeredPrefixTable[iResult];
+    return this.registeredPrefixTable[iResult];
   else
     return null;
-}
+};
 
 /**
  * Return a function that selects a host at random from hostList and returns
@@ -824,7 +822,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 Face.prototype.registerPrefixWithClosure = function
   (prefix, closure, flags, onRegisterFailed)
 {
-  var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
+  var registeredPrefixId = Face.RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
     // If we have an _ndndId, we know we already connected to NDNx.
@@ -1008,7 +1006,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
  * @param {type} registeredPrefixId The
- * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
+ * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
  * could return it to the caller. If this is 0, then don't add to
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
@@ -1022,13 +1020,13 @@ Face.prototype.registerPrefixHelper = function
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
-    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
       (registeredPrefixId);
   if (removeRequestIndex >= 0) {
     // removeRegisteredPrefix was called with the registeredPrefixId returned by
     //   registerPrefix before we got here, so don't add a registeredPrefixTable
     //   entry.
-    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
@@ -1062,8 +1060,8 @@ Face.prototype.registerPrefixHelper = function
   if (LOG > 3) console.log('Send Interest registration packet.');
 
   if (registeredPrefixId != 0)
-    Face.registeredPrefixTable.push
-      (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+    this.registeredPrefixTable.push
+      (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
     (null, interest, new Face.RegisterResponseClosure
@@ -1073,7 +1071,7 @@ Face.prototype.registerPrefixHelper = function
 /**
  * Do the work of registerPrefix to register with NFD.
  * @param {number} registeredPrefixId The 
- * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it 
+ * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
  * could return it to the caller. If this is 0, then don't add to 
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
@@ -1089,13 +1087,13 @@ Face.prototype.nfdRegisterPrefix = function
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
-    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
       (registeredPrefixId);
   if (removeRequestIndex >= 0) {
     // removeRegisteredPrefix was called with the registeredPrefixId returned by
     //   registerPrefix before we got here, so don't add a registeredPrefixTable
     //   entry.
-    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
@@ -1121,8 +1119,8 @@ Face.prototype.nfdRegisterPrefix = function
 
   if (registeredPrefixId != 0)
       // Save the onInterest callback and send the registration interest.
-      Face.registeredPrefixTable.push
-        (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+      this.registeredPrefixTable.push
+        (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
     (null, commandInterest, new Face.RegisterResponseClosure
@@ -1143,10 +1141,10 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though registeredPrefixId should be unique.
   var count = 0;
-  for (var i = Face.registeredPrefixTable.length - 1; i >= 0; --i) {
-    var entry = Face.registeredPrefixTable[i];
+  for (var i = this.registeredPrefixTable.length - 1; i >= 0; --i) {
+    var entry = this.registeredPrefixTable[i];
     if (entry.registeredPrefixId == registeredPrefixId) {
-      Face.registeredPrefixTable.splice(i, 1);
+      this.registeredPrefixTable.splice(i, 1);
       ++count;
     }
   }
@@ -1156,9 +1154,9 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
     //   the callback in registerPrefix can add to the registeredPrefixTable. Add
     //   this removal request which will be checked before adding to the
     //   registeredPrefixTable.
-    if (Face.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
+    if (this.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
       // Not already requested, so add the request.
-      Face.registeredPrefixRemoveRequests.push(registeredPrefixId);
+      this.registeredPrefixRemoveRequests.push(registeredPrefixId);
   }
 };
 
@@ -1203,7 +1201,7 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
 
-    var entry = getEntryForRegisteredPrefix(interest.getName());
+    var entry = this.getEntryForRegisteredPrefix(interest.getName());
     if (entry != null) {
       if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
       var info = new UpcallInfo(this, interest, 0, null);
