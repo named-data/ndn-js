@@ -133,6 +133,7 @@ def build (bld):
                  "js/data.js",
                  "js/security/security-exception.js",
                  "js/security/security-types.js",
+                 "js/security/key-params.js",
                  "js/security/certificate/public-key.js",
                  "js/security/certificate/certificate-extension.js",
                  "js/security/certificate/certificate-subject-description.js",

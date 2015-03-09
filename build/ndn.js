@@ -14787,6 +14787,93 @@ DigestAlgorithm.SHA256 = 1;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var KeyType = require('./security-types').KeyType;
+
+/**
+ * KeyParams is a base class for key parameters. Its subclasses are used to
+ * store parameters for key generation. You should create one of the subclasses,
+ * for example RsaKeyParams.
+ * @constructor
+ */
+var KeyParams = function KeyParams(keyType)
+{
+  this.keyType = keyType;
+};
+
+exports.KeyParams = KeyParams;
+
+KeyParams.prototype.getKeyType = function()
+{
+  return this.keyType;
+};
+
+var RsaKeyParams = function RsaKeyParams(size)
+{
+  // Call the base constructor.
+  KeyParams.call(this, RsaKeyParams.getType());
+
+  if (size == null)
+    size = RsaKeyParams.getDefaultSize();
+  this.size = size;
+};
+
+RsaKeyParams.prototype = new KeyParams();
+RsaKeyParams.prototype.name = "RsaKeyParams";
+
+exports.RsaKeyParams = RsaKeyParams;
+
+RsaKeyParams.prototype.getKeySize = function()
+{
+  return this.size;
+};
+
+RsaKeyParams.getDefaultSize = function() { return 2048; };
+
+RsaKeyParams.getType = function() { return KeyType.RSA; };
+
+var EcdsaKeyParams = function EcdsaKeyParams(size)
+{
+  // Call the base constructor.
+  KeyParams.call(this, EcdsaKeyParams.getType());
+
+  if (size == null)
+    size = EcdsaKeyParams.getDefaultSize();
+  this.size = size;
+};
+
+EcdsaKeyParams.prototype = new KeyParams();
+EcdsaKeyParams.prototype.name = "EcdsaKeyParams";
+
+exports.EcdsaKeyParams = EcdsaKeyParams;
+
+EcdsaKeyParams.prototype.getKeySize = function()
+{
+  return this.size;
+};
+
+EcdsaKeyParams.getDefaultSize = function() { return 256; };
+
+EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
+/**
+ * Copyright (C) 2014-2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
 var crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
@@ -16182,12 +16269,9 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 /**
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
- * @param {number} keyType (optional) The type of the key pair, e.g. KeyType.RSA.
- * If omitted, use KeyType.RSA.
- * @param {number} keySize (optional) The size of the key pair. If omitted, use
- * 2048.
+ * @param {KeyParams} params (optional) The parameters of the key.
  */
-PrivateKeyStorage.prototype.generateKeyPair = function(keyName, keyType, keySize)
+PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 {
   throw new Error("PrivateKeyStorage.generateKeyPair is not implemented");
 };
@@ -16261,11 +16345,9 @@ PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
 /**
  * @brief Generate a symmetric key.
  * @param {Name} keyName The name of the key.
- * @param {number} keyType (optional) The type of the key from KeyType, e.g.
- * KeyType.AES. If omitted, use KeyType.AES.
- * @param {number} keySize (optional) The size of the key. If omitted, use 256.
+ * @param {KeyParams} params The parameters of the key.
  */
-PrivateKeyStorage.prototype.generateKey = function(keyName, keyType, keySize)
+PrivateKeyStorage.prototype.generateKey = function(keyName, params)
 {
   throw new Error("PrivateKeyStorage.generateKey is not implemented");
 };
@@ -16312,6 +16394,7 @@ var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var KeyType = require('../security-types.js').KeyType;
+var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -16338,11 +16421,19 @@ exports.IdentityManager = IdentityManager;
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
  * identity and a self-signed certificate of the KSK.
  * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
-IdentityManager.prototype.createIdentity = function(identityName)
+IdentityManager.prototype.createIdentity = function(identityName, params)
 {
-  throw new Error("IdentityManager.createIdentity is not implemented");
+  this.identityStorage.addIdentity(identityName);
+  var keyName = this.generateKeyPair(identityName, true, params);
+  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+  var newCert = this.selfSign(keyName);
+  this.addCertificateAsDefault(newCert);
+
+  return keyName;
 };
 
 /**
@@ -16404,7 +16495,7 @@ IdentityManager.prototype.getDefaultIdentity = function()
 IdentityManager.prototype.generateRSAKeyPair = function
   (identityName, isKsk, keySize)
 {
-  throw new Error("IdentityManager.generateRSAKeyPair is not implemented");
+  return this.generateKeyPair(identityName, isKsk, new RsaKeyParams(keySize));
 };
 
 /**
@@ -16445,7 +16536,9 @@ IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
 IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  throw new Error("IdentityManager.generateRSAKeyPairAsDefault is not implemented");
+  var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
+  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName, identityName);
+  return newKeyName;
 };
 
 /**
@@ -16754,7 +16847,30 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
  */
 IdentityManager.prototype.selfSign = function(keyName)
 {
-  throw new Error("IdentityManager.selfSign is not implemented");
+  var certificate = new IdentityCertificate();
+
+  var keyBlob = this.identityStorage.getKey(keyName);
+  var publicKey = new PublicKey(keyBlob);
+
+  var notBefore = new Date().getTime();
+  var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
+
+  certificate.setNotBefore(notBefore);
+  certificate.setNotAfter(notAfter);
+
+  var certificateName = keyName.getPrefix(-1).append("KEY").append
+    (keyName.get(-1)).append("ID-CERT").append
+    (Name.Component.fromNumber(certificate.getNotBefore()));
+  certificate.setName(certificateName);
+
+  certificate.setPublicKeyInfo(publicKey);
+  certificate.addSubjectDescription(new CertificateSubjectDescription
+    ("2.5.4.41", keyName.toUri()));
+  certificate.encode();
+
+  this.signByCertificate(certificate, certificate.getName());
+
+  return certificate;
 };
 
 /**
@@ -16813,6 +16929,24 @@ IdentityManager.prototype.makeSignatureByCertificate = function
   }
   else
     throw new SecurityException(new Error("Key type is not recognized"));
+};
+
+/**
+ * A private method to generate a pair of keys for the specified identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {KeyParams} params The parameters of the key.
+ * @returns {Name} The generated key name.
+ */
+IdentityManager.prototype.generateKeyPair = function(identityName, isKsk, params)
+{
+  var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
+  this.privateKeyStorage.generateKeyPair(keyName, params);
+  var publicKeyBits = this.privateKeyStorage.getPublicKey(keyName).getKeyDer();
+  this.identityStorage.addKey(keyName, params.getKeyType(), publicKeyBits);
+
+  return keyName;
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -17418,6 +17552,7 @@ var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
+var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -17450,11 +17585,15 @@ exports.KeyChain = KeyChain;
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
  * identity and a self-signed certificate of the KSK.
  * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
-KeyChain.prototype.createIdentity = function(identityName)
+KeyChain.prototype.createIdentity = function(identityName, params)
 {
-  return this.identityManager.createIdentity(identityName);
+  if (params == undefined)
+    params = KeyChain.DEFAULT_KEY_PARAMS;
+  return this.identityManager.createIdentity(identityName, params);
 };
 
 /**
@@ -17855,6 +17994,8 @@ KeyChain.prototype.setFace = function(face)
 { 
   this.face = face;
 };
+
+KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
