@@ -15,6 +15,10 @@ Changes
 Deprecated
 * In Data, deprecated sign/verify. Use KeyChain sign/verifyData.
 
+Bug fixes
+* http://redmine.named-data.net/issues/2001 Change the Face pending interest table,
+  etc. from static to member variables of each face.
+
 NDN-JS v0.7.0 (2014-12-22)
 --------------------------
 
