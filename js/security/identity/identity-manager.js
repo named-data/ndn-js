@@ -29,6 +29,7 @@ var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SecurityException = require('../security-exception.js').SecurityException;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var KeyType = require('../security-types.js').KeyType;
+var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -55,9 +56,11 @@ exports.IdentityManager = IdentityManager;
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
  * identity and a self-signed certificate of the KSK.
  * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
-IdentityManager.prototype.createIdentity = function(identityName)
+IdentityManager.prototype.createIdentity = function(identityName, params)
 {
   throw new Error("IdentityManager.createIdentity is not implemented");
 };
