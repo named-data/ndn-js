@@ -173,6 +173,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.timeoutPrefix = new Name("/local/timeout");
 
   this.keyStore = new Array();
+  this.pendingInterestTable = new Array();
+  this.pitRemoveRequests = new Array();
 };
 
 exports.Face = Face;
@@ -275,14 +277,10 @@ Face.prototype.close = function()
   this.transport.close();
 };
 
-// For fetching data
-Face.PITTable = new Array();
-Face.PITTableRemoveRequests = new Array();
-
 /**
  * @constructor
  */
-var PITEntry = function PITEntry(pendingInterestId, interest, closure)
+Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest, closure)
 {
   this.pendingInterestId = pendingInterestId;
   this.interest = interest;  // Interest
@@ -290,46 +288,41 @@ var PITEntry = function PITEntry(pendingInterestId, interest, closure)
   this.timerID = -1;  // Timer ID
 };
 
-PITEntry.lastPendingInterestId = 0;
+Face.PendingInterest.lastPendingInterestId = 0;
 
 /**
  * Get the next unique pending interest ID.
  *
  * @returns {number} The next pending interest ID.
  */
-PITEntry.getNextPendingInterestId = function()
+Face.PendingInterest.getNextPendingInterestId = function()
 {
-  ++PITEntry.lastPendingInterestId;
-  return PITEntry.lastPendingInterestId;
+  ++Face.PendingInterest.lastPendingInterestId;
+  return Face.PendingInterest.lastPendingInterestId;
 };
 
 /**
- * Return the entry from Face.PITTable where the name conforms to the interest selectors, and
- * the interest name is the longest that matches name.
- */
-
-/**
- * Find all entries from Face.PITTable where the name conforms to the entry's
+ * Find all entries from this.pendingInterestTable where the name conforms to the entry's
  * interest selectors, remove the entries from the table, cancel their timeout
  * timers and return them.
  * @param {Name} name The name to find the interest for (from the incoming data
  * packet).
- * @returns {Array<PITEntry>} The matching entries from Face.PITTable, or [] if
+ * @returns {Array<Face.PendingInterest>} The matching entries from this.pendingInterestTable, or [] if
  * none are found.
  */
-Face.extractEntriesForExpressedInterest = function(name)
+Face.prototype.extractEntriesForExpressedInterest = function(name)
 {
   var result = [];
 
   // Go backwards through the list so we can erase entries.
-  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
-    var entry = Face.PITTable[i];
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
+    var entry = this.pendingInterestTable[i];
     if (entry.interest.matchesName(name)) {
       // Cancel the timeout timer.
       clearTimeout(entry.timerID);
 
       result.push(entry);
-      Face.PITTable.splice(i, 1);
+      this.pendingInterestTable.splice(i, 1);
     }
   }
 
@@ -537,7 +530,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
-  var pendingInterestId = PITEntry.getNextPendingInterestId();
+  var pendingInterestId = Face.PendingInterest.getNextPendingInterestId();
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -613,15 +606,15 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
   if (closure != null) {
     var removeRequestIndex = -1;
     if (removeRequestIndex != null)
-      removeRequestIndex = Face.PITTableRemoveRequests.indexOf(pendingInterestId);
+      removeRequestIndex = this.pitRemoveRequests.indexOf(pendingInterestId);
     if (removeRequestIndex >= 0)
       // removePendingInterest was called with the pendingInterestId returned by
       //   expressInterest before we got here, so don't add a PIT entry.
-      Face.PITTableRemoveRequests.splice(removeRequestIndex, 1);
+      this.pitRemoveRequests.splice(removeRequestIndex, 1);
     else {
-      var pitEntry = new PITEntry(pendingInterestId, interest, closure);
+      var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
       // TODO: This needs to be a single thread-safe transaction on a global object.
-      Face.PITTable.push(pitEntry);
+      this.pendingInterestTable.push(pitEntry);
       closure.pitEntry = pitEntry;
 
       // Set interest timer.
@@ -629,18 +622,18 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
       var timeoutCallback = function() {
         if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
+        // Remove PIT entry from this.pendingInterestTable, even if we add it again later to re-express
         //   the interest because we don't want to match it in the mean time.
         // TODO: Make this a thread-safe operation on the global PITTable.
-        var index = Face.PITTable.indexOf(pitEntry);
+        var index = this.pendingInterestTable.indexOf(pitEntry);
         if (index >= 0)
-          Face.PITTable.splice(index, 1);
+          this.pendingInterestTable.splice(index, 1);
 
         // Raise closure callback
         if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
           if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
           pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          Face.PITTable.push(pitEntry);
+          this.pendingInterestTable.push(pitEntry);
           thisFace.transport.send(binaryInterest.buf());
         }
       };
@@ -669,13 +662,13 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though pendingInterestId should be unique.
   var count = 0;
-  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
-    var entry = Face.PITTable[i];
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
+    var entry = this.pendingInterestTable[i];
     if (entry.pendingInterestId == pendingInterestId) {
       // Cancel the timeout timer.
       clearTimeout(entry.timerID);
 
-      Face.PITTable.splice(i, 1);
+      this.pendingInterestTable.splice(i, 1);
       ++count;
     }
   }
@@ -684,9 +677,9 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
     // The pendingInterestId was not found. Perhaps this has been called before
     //   the callback in expressInterest can add to the PIT. Add this
     //   removal request which will be checked before adding to the PIT.
-    if (Face.PITTableRemoveRequests.indexOf(pendingInterestId) < 0)
+    if (this.pitRemoveRequests.indexOf(pendingInterestId) < 0)
       // Not already requested, so add the request.
-      Face.PITTableRemoveRequests.push(pendingInterestId);
+      this.pitRemoveRequests.push(pendingInterestId);
   }
 };
 
@@ -1222,7 +1215,7 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
 
-    var pendingInterests = Face.extractEntriesForExpressedInterest(data.getName());
+    var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
