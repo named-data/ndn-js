@@ -47,7 +47,6 @@ describe('FilePrivateKeyStorage', function () {
     
     // Create some test key files to use in tests.
     var instance = new FilePrivateKeyStorage();
-    console.log("new RsaKeyParams().getKeyType() " + new RsaKeyParams().getKeyType());
     instance.generateKeyPair(new Name("/test/KEY/123"), new RsaKeyParams());
   });
 
