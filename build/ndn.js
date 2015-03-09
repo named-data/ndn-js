@@ -16095,7 +16095,7 @@ MemoryIdentityStorage.prototype.addCertificate = function(certificate)
       ("Certificate has already been installed!"));
 
   // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = getKey(keyName);
+  var keyBlob = this.getKey(keyName);
   if (keyBlob.isNull() ||
       !DataUtils.arraysEqual(keyBlob.buf(),
         certificate.getPublicKeyInfo().getKeyDer().buf()))
@@ -16395,6 +16395,9 @@ var SecurityException = require('../security-exception.js').SecurityException;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var KeyType = require('../security-types.js').KeyType;
 var RsaKeyParams = require('../key-params.js').RsaKeyParams;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var PublicKey = require('../certificate/public-key.js').PublicKey;
+var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,

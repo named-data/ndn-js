@@ -188,7 +188,7 @@ MemoryIdentityStorage.prototype.addCertificate = function(certificate)
       ("Certificate has already been installed!"));
 
   // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = getKey(keyName);
+  var keyBlob = this.getKey(keyName);
   if (keyBlob.isNull() ||
       !DataUtils.arraysEqual(keyBlob.buf(),
         certificate.getPublicKeyInfo().getKeyDer().buf()))
