@@ -23,7 +23,7 @@ var fs = require('fs');
 var path = require('path');
 var Name = require('../../..').Name;
 var KeyClass = require('../../..').KeyClass;
-var KeyType = require('../../..').KeyType;
+var RsaKeyParams = require('../../..').RsaKeyParams;
 var DigestAlgorithm = require('../../..').DigestAlgorithm;
 var FilePrivateKeyStorage = require('../../..').FilePrivateKeyStorage;
 
@@ -47,7 +47,8 @@ describe('FilePrivateKeyStorage', function () {
     
     // Create some test key files to use in tests.
     var instance = new FilePrivateKeyStorage();
-    instance.generateKeyPair(new Name("/test/KEY/123"), KeyType.RSA, 2048);
+    console.log("new RsaKeyParams().getKeyType() " + new RsaKeyParams().getKeyType());
+    instance.generateKeyPair(new Name("/test/KEY/123"), new RsaKeyParams());
   });
 
   /**
@@ -71,7 +72,7 @@ describe('FilePrivateKeyStorage', function () {
   it('GenerateAndDeleteKeys', function () {
     // Create some more key files.
     var instance = new FilePrivateKeyStorage();
-    instance.generateKeyPair(new Name("/test/KEY/temp1"), KeyType.RSA, 2048);
+    instance.generateKeyPair(new Name("/test/KEY/temp1"), new RsaKeyParams());
     // Check if the files were created.
     var files = fs.readdirSync(ndnFolder);
     var createdFileCount = files.length;
