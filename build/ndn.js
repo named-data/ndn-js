@@ -21830,7 +21830,10 @@ Face.FetchNdndidClosure = function FetchNdndidClosure
 Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    console.log("Timeout while requesting the ndndid.  Cannot registerPrefix for " + this.prefix.toUri() + " .");
+    if (LOG > 0)
+      console.log
+        ("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
+         this.prefix.toUri() + " .");
     if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
     return Closure.RESULT_OK;
@@ -21880,6 +21883,8 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
     // We timed out waiting for the response.
     if (this.isNfdCommand) {
       // The application set the commandKeyChain, but we may be connected to NDNx.
+      if (LOG > 2)
+        console.log("Timeout for NFD register prefix command. Attempting an NDNx command...");
       if (this.face.ndndid == null) {
         // Fetch ndndid first, then register.
         // Pass 0 for registeredPrefixId since the entry was already added to
@@ -21900,6 +21905,8 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
       // An NDNx command was sent because there is no commandKeyChain, so we
       //   can't try an NFD command. Or it was sent from this callback after
       //   trying an NFD command. Fail.
+      if (LOG > 0)
+        console.log("Register prefix failed: Timeout waiting for the response from the register prefix interest");
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
     }
@@ -21921,19 +21928,26 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
         statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
     }
     catch (e) {
-        // Error decoding the ControlResponse.
-        if (this.onRegisterFailed)
-          this.onRegisterFailed(this.prefix);
-        return Closure.RESULT_OK;
+      // Error decoding the ControlResponse.
+      if (LOG > 0)
+        console.log("Register prefix failed: Error decoding the NFD response: " + e);
+      if (this.onRegisterFailed)
+        this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
     }
 
     // Status code 200 is "OK".
     if (statusCode != 200) {
+      if (LOG > 0)
+        console.log("Register prefix failed: Expected NFD status code 200, got: " +
+                    statusCode);
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
     }
 
-    // Otherwise, silently succeed.
+    if (LOG > 2)
+      console.log("Register prefix succeeded with the NFD forwarder for prefix " +
+                  this.prefix.toUri());
   }
   else {
     var expectedName = new Name("/ndnx/.../selfreg");
@@ -21941,11 +21955,16 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
     if (upcallInfo.data.getName().size() < 4 ||
         !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
         !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
+      if (LOG > 0)
+        console.log("Register prefix failed: Unexpected name in NDNx response: " +
+                    upcallInfo.data.getName().toUri());
       this.onRegisterFailed(this.prefix);
       return Closure.RESULT_OK;
     }
 
-    // Otherwise, silently succeed.
+    if (LOG > 2)
+      console.log("Register prefix succeeded with the NDNx forwarder for prefix " +
+                  this.prefix.toUri());
   }
 
   return Closure.RESULT_OK;
