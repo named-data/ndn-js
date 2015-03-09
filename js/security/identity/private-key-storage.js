@@ -32,12 +32,9 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 /**
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
- * @param {number} keyType (optional) The type of the key pair, e.g. KeyType.RSA.
- * If omitted, use KeyType.RSA.
- * @param {number} keySize (optional) The size of the key pair. If omitted, use
- * 2048.
+ * @param {KeyParams} params (optional) The parameters of the key.
  */
-PrivateKeyStorage.prototype.generateKeyPair = function(keyName, keyType, keySize)
+PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 {
   throw new Error("PrivateKeyStorage.generateKeyPair is not implemented");
 };
@@ -111,11 +108,9 @@ PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
 /**
  * @brief Generate a symmetric key.
  * @param {Name} keyName The name of the key.
- * @param {number} keyType (optional) The type of the key from KeyType, e.g.
- * KeyType.AES. If omitted, use KeyType.AES.
- * @param {number} keySize (optional) The size of the key. If omitted, use 256.
+ * @param {KeyParams} params The parameters of the key.
  */
-PrivateKeyStorage.prototype.generateKey = function(keyName, keyType, keySize)
+PrivateKeyStorage.prototype.generateKey = function(keyName, params)
 {
   throw new Error("PrivateKeyStorage.generateKey is not implemented");
 };

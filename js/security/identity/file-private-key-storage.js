@@ -71,12 +71,9 @@ FilePrivateKeyStorage.prototype.doesKeyExist = function (keyName, keyClass)
 /**
  * Generate a pair of asymmetric keys; only currently supports RSA
  * @param {Name} keyName The name of the key pair.
- * @param {KeyType} keyType (optional) The type of the key pair, e.g. KeyType.RSA.
- * If omitted, use KeyType.RSA.
- * @param {number} keySize (optional) The size of the key pair. If omitted, use
- * 2048.
+ * @param {KeyParams} params (optional) The parameters of the key.
  */
-FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, keySize)
+FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
     throw new SecurityException(new Error("Public key already exists"));
@@ -86,12 +83,12 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, keyType, ke
   }
 
   // build keys
-  if (keyType === KeyType.RSA) {
+  if (params.getKeyType() === KeyType.RSA) {
     if (!rsaKeygen)
       throw new SecurityException(new Error
         ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
 
-    var keyPair = rsaKeygen.generate(keySize);
+    var keyPair = rsaKeygen.generate(params.getKeySize());
 
     // Get the public key DER from the PEM string.
     var publicKeyBase64 = keyPair.public_key.toString().replace
