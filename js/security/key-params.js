@@ -28,6 +28,7 @@ var KeyType = require('./security-types').KeyType;
  */
 var KeyParams = function KeyParams(keyType)
 {
+  this.keyType = keyType;
 };
 
 exports.KeyParams = KeyParams;
