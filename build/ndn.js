@@ -21120,6 +21120,12 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandCertificateName = new Name();
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
+
+  this.keyStore = new Array();
+  this.pendingInterestTable = new Array();
+  this.pitRemoveRequests = new Array();
+  this.registeredPrefixTable = new Array();
+  this.registeredPrefixRemoveRequests = new Array();
 };
 
 exports.Face = Face;
@@ -21183,8 +21189,6 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
   this.host = this.connectionInfo.port;
 };
 
-Face.KeyStore = new Array();
-
 var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
 {
   this.keyName = name;  // KeyName
@@ -21192,23 +21196,23 @@ var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
   this.timeStamp = time;  // Time Stamp
 };
 
-Face.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
+Face.prototype.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
 {
-  var result = Face.getKeyByName(keyEntry.keyName);
+  var result = this.getKeyByName(keyEntry.keyName);
   if (result == null)
-    Face.KeyStore.push(keyEntry);
+    this.keyStore.push(keyEntry);
   else
     result = keyEntry;
 };
 
-Face.getKeyByName = function(/* KeyName */ name)
+Face.prototype.getKeyByName = function(/* KeyName */ name)
 {
   var result = null;
 
-  for (var i = 0; i < Face.KeyStore.length; i++) {
-    if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || Face.KeyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
-        result = Face.KeyStore[i];
+  for (var i = 0; i < this.keyStore.length; i++) {
+    if (this.keyStore[i].keyName.contentName.match(name.contentName)) {
+      if (result == null || this.keyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
+        result = this.keyStore[i];
     }
   }
 
@@ -21224,14 +21228,10 @@ Face.prototype.close = function()
   this.transport.close();
 };
 
-// For fetching data
-Face.PITTable = new Array();
-Face.PITTableRemoveRequests = new Array();
-
 /**
  * @constructor
  */
-var PITEntry = function PITEntry(pendingInterestId, interest, closure)
+Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest, closure)
 {
   this.pendingInterestId = pendingInterestId;
   this.interest = interest;  // Interest
@@ -21239,102 +21239,93 @@ var PITEntry = function PITEntry(pendingInterestId, interest, closure)
   this.timerID = -1;  // Timer ID
 };
 
-PITEntry.lastPendingInterestId = 0;
+Face.PendingInterest.lastPendingInterestId = 0;
 
 /**
  * Get the next unique pending interest ID.
  *
  * @returns {number} The next pending interest ID.
  */
-PITEntry.getNextPendingInterestId = function()
+Face.PendingInterest.getNextPendingInterestId = function()
 {
-  ++PITEntry.lastPendingInterestId;
-  return PITEntry.lastPendingInterestId;
+  ++Face.PendingInterest.lastPendingInterestId;
+  return Face.PendingInterest.lastPendingInterestId;
 };
 
 /**
- * Return the entry from Face.PITTable where the name conforms to the interest selectors, and
- * the interest name is the longest that matches name.
- */
-
-/**
- * Find all entries from Face.PITTable where the name conforms to the entry's
+ * Find all entries from this.pendingInterestTable where the name conforms to the entry's
  * interest selectors, remove the entries from the table, cancel their timeout
  * timers and return them.
  * @param {Name} name The name to find the interest for (from the incoming data
  * packet).
- * @returns {Array<PITEntry>} The matching entries from Face.PITTable, or [] if
+ * @returns {Array<Face.PendingInterest>} The matching entries from this.pendingInterestTable, or [] if
  * none are found.
  */
-Face.extractEntriesForExpressedInterest = function(name)
+Face.prototype.extractEntriesForExpressedInterest = function(name)
 {
   var result = [];
 
   // Go backwards through the list so we can erase entries.
-  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
-    var entry = Face.PITTable[i];
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
+    var entry = this.pendingInterestTable[i];
     if (entry.interest.matchesName(name)) {
       // Cancel the timeout timer.
       clearTimeout(entry.timerID);
 
       result.push(entry);
-      Face.PITTable.splice(i, 1);
+      this.pendingInterestTable.splice(i, 1);
     }
   }
 
   return result;
 };
 
-// For publishing data
-Face.registeredPrefixTable = new Array();
-Face.registeredPrefixRemoveRequests = new Array();
-
 /**
  * @constructor
  */
-var RegisteredPrefix = function RegisteredPrefix(registeredPrefixId, prefix, closure)
+Face.RegisteredPrefix = function FaceRegisteredPrefix(registeredPrefixId, prefix, closure)
 {
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;        // String
   this.closure = closure;  // Closure
 };
 
-RegisteredPrefix.lastRegisteredPrefixId = 0;
+Face.RegisteredPrefix.lastRegisteredPrefixId = 0;
 
 /**
  * Get the next unique registered prefix ID.
  * @returns {number} The next registered prefix ID.
  */
-RegisteredPrefix.getNextRegisteredPrefixId = function()
+Face.RegisteredPrefix.getNextRegisteredPrefixId = function()
 {
-  ++RegisteredPrefix.lastRegisteredPrefixId;
-  return RegisteredPrefix.lastRegisteredPrefixId;
+  ++Face.RegisteredPrefix.lastRegisteredPrefixId;
+  return Face.RegisteredPrefix.lastRegisteredPrefixId;
 };
 
 /**
- * Find the first entry from Face.registeredPrefixTable where the entry prefix is the longest that matches name.
+ * Find the first entry from this.registeredPrefixTable where the entry prefix is the longest that matches name.
  * @param {Name} name The name to find the PrefixEntry for (from the incoming interest packet).
- * @returns {object} The entry from Face.registeredPrefixTable, or 0 if not found.
+ * @returns {object} The entry from this.registeredPrefixTable, or 0 if not found.
  */
-function getEntryForRegisteredPrefix(name)
+Face.prototype.getEntryForRegisteredPrefix = function(name)
 {
   var iResult = -1;
 
-  for (var i = 0; i < Face.registeredPrefixTable.length; i++) {
-    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + Face.registeredPrefixTable[i].prefix + " matches " + name);
-    if (Face.registeredPrefixTable[i].prefix.match(name)) {
+  for (var i = 0; i < this.registeredPrefixTable.length; i++) {
+    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + this.registeredPrefixTable[i].prefix + " matches " + name);
+    if (this.registeredPrefixTable[i].prefix.match(name)) {
       if (iResult < 0 ||
-          Face.registeredPrefixTable[i].prefix.size() > Face.registeredPrefixTable[iResult].prefix.size())
+          this.registeredPrefixTable[i].prefix.size() > this.registeredPrefixTable[iResult].prefix.size())
         // Update to the longer match.
         iResult = i;
     }
   }
 
   if (iResult >= 0)
-    return Face.registeredPrefixTable[iResult];
+    return this.registeredPrefixTable[iResult];
   else
     return null;
-}
+};
 
 /**
  * Return a function that selects a host at random from hostList and returns
@@ -21486,7 +21477,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
-  var pendingInterestId = PITEntry.getNextPendingInterestId();
+  var pendingInterestId = Face.PendingInterest.getNextPendingInterestId();
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -21562,15 +21553,15 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
   if (closure != null) {
     var removeRequestIndex = -1;
     if (removeRequestIndex != null)
-      removeRequestIndex = Face.PITTableRemoveRequests.indexOf(pendingInterestId);
+      removeRequestIndex = this.pitRemoveRequests.indexOf(pendingInterestId);
     if (removeRequestIndex >= 0)
       // removePendingInterest was called with the pendingInterestId returned by
       //   expressInterest before we got here, so don't add a PIT entry.
-      Face.PITTableRemoveRequests.splice(removeRequestIndex, 1);
+      this.pitRemoveRequests.splice(removeRequestIndex, 1);
     else {
-      var pitEntry = new PITEntry(pendingInterestId, interest, closure);
+      var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
       // TODO: This needs to be a single thread-safe transaction on a global object.
-      Face.PITTable.push(pitEntry);
+      this.pendingInterestTable.push(pitEntry);
       closure.pitEntry = pitEntry;
 
       // Set interest timer.
@@ -21578,18 +21569,18 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
       var timeoutCallback = function() {
         if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from Face.PITTable, even if we add it again later to re-express
+        // Remove PIT entry from this.pendingInterestTable, even if we add it again later to re-express
         //   the interest because we don't want to match it in the mean time.
         // TODO: Make this a thread-safe operation on the global PITTable.
-        var index = Face.PITTable.indexOf(pitEntry);
+        var index = this.pendingInterestTable.indexOf(pitEntry);
         if (index >= 0)
-          Face.PITTable.splice(index, 1);
+          this.pendingInterestTable.splice(index, 1);
 
         // Raise closure callback
         if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
           if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
           pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          Face.PITTable.push(pitEntry);
+          this.pendingInterestTable.push(pitEntry);
           thisFace.transport.send(binaryInterest.buf());
         }
       };
@@ -21618,13 +21609,13 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though pendingInterestId should be unique.
   var count = 0;
-  for (var i = Face.PITTable.length - 1; i >= 0; --i) {
-    var entry = Face.PITTable[i];
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
+    var entry = this.pendingInterestTable[i];
     if (entry.pendingInterestId == pendingInterestId) {
       // Cancel the timeout timer.
       clearTimeout(entry.timerID);
 
-      Face.PITTable.splice(i, 1);
+      this.pendingInterestTable.splice(i, 1);
       ++count;
     }
   }
@@ -21633,9 +21624,9 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
     // The pendingInterestId was not found. Perhaps this has been called before
     //   the callback in expressInterest can add to the PIT. Add this
     //   removal request which will be checked before adding to the PIT.
-    if (Face.PITTableRemoveRequests.indexOf(pendingInterestId) < 0)
+    if (this.pitRemoveRequests.indexOf(pendingInterestId) < 0)
       // Not already requested, so add the request.
-      Face.PITTableRemoveRequests.push(pendingInterestId);
+      this.pitRemoveRequests.push(pendingInterestId);
   }
 };
 
@@ -21780,7 +21771,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 Face.prototype.registerPrefixWithClosure = function
   (prefix, closure, flags, onRegisterFailed)
 {
-  var registeredPrefixId = RegisteredPrefix.getNextRegisteredPrefixId();
+  var registeredPrefixId = Face.RegisteredPrefix.getNextRegisteredPrefixId();
   var thisFace = this;
   var onConnected = function() {
     // If we have an _ndndId, we know we already connected to NDNx.
@@ -21964,7 +21955,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
  * @param {type} registeredPrefixId The
- * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
+ * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
  * could return it to the caller. If this is 0, then don't add to
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
@@ -21978,13 +21969,13 @@ Face.prototype.registerPrefixHelper = function
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
-    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
       (registeredPrefixId);
   if (removeRequestIndex >= 0) {
     // removeRegisteredPrefix was called with the registeredPrefixId returned by
     //   registerPrefix before we got here, so don't add a registeredPrefixTable
     //   entry.
-    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
@@ -22018,8 +22009,8 @@ Face.prototype.registerPrefixHelper = function
   if (LOG > 3) console.log('Send Interest registration packet.');
 
   if (registeredPrefixId != 0)
-    Face.registeredPrefixTable.push
-      (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+    this.registeredPrefixTable.push
+      (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
     (null, interest, new Face.RegisterResponseClosure
@@ -22029,7 +22020,7 @@ Face.prototype.registerPrefixHelper = function
 /**
  * Do the work of registerPrefix to register with NFD.
  * @param {number} registeredPrefixId The 
- * RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it 
+ * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
  * could return it to the caller. If this is 0, then don't add to 
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
@@ -22045,13 +22036,13 @@ Face.prototype.nfdRegisterPrefix = function
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
-    removeRequestIndex = Face.registeredPrefixRemoveRequests.indexOf
+    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
       (registeredPrefixId);
   if (removeRequestIndex >= 0) {
     // removeRegisteredPrefix was called with the registeredPrefixId returned by
     //   registerPrefix before we got here, so don't add a registeredPrefixTable
     //   entry.
-    Face.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
+    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
@@ -22077,8 +22068,8 @@ Face.prototype.nfdRegisterPrefix = function
 
   if (registeredPrefixId != 0)
       // Save the onInterest callback and send the registration interest.
-      Face.registeredPrefixTable.push
-        (new RegisteredPrefix(registeredPrefixId, prefix, closure));
+      this.registeredPrefixTable.push
+        (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
 
   this.reconnectAndExpressInterest
     (null, commandInterest, new Face.RegisterResponseClosure
@@ -22099,10 +22090,10 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though registeredPrefixId should be unique.
   var count = 0;
-  for (var i = Face.registeredPrefixTable.length - 1; i >= 0; --i) {
-    var entry = Face.registeredPrefixTable[i];
+  for (var i = this.registeredPrefixTable.length - 1; i >= 0; --i) {
+    var entry = this.registeredPrefixTable[i];
     if (entry.registeredPrefixId == registeredPrefixId) {
-      Face.registeredPrefixTable.splice(i, 1);
+      this.registeredPrefixTable.splice(i, 1);
       ++count;
     }
   }
@@ -22112,9 +22103,9 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
     //   the callback in registerPrefix can add to the registeredPrefixTable. Add
     //   this removal request which will be checked before adding to the
     //   registeredPrefixTable.
-    if (Face.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
+    if (this.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
       // Not already requested, so add the request.
-      Face.registeredPrefixRemoveRequests.push(registeredPrefixId);
+      this.registeredPrefixRemoveRequests.push(registeredPrefixId);
   }
 };
 
@@ -22159,7 +22150,7 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
 
-    var entry = getEntryForRegisteredPrefix(interest.getName());
+    var entry = this.getEntryForRegisteredPrefix(interest.getName());
     if (entry != null) {
       if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
       var info = new UpcallInfo(this, interest, 0, null);
@@ -22171,7 +22162,7 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
 
-    var pendingInterests = Face.extractEntriesForExpressedInterest(data.getName());
+    var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
@@ -22210,7 +22201,7 @@ Face.prototype.onReceivedElement = function(element)
 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          Face.addKeyEntry(keyEntry);
+          this.addKeyEntry(keyEntry);
         }
         else if (kind == Closure.UPCALL_CONTENT_BAD)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
@@ -22243,7 +22234,7 @@ Face.prototype.onReceivedElement = function(element)
           }
           else {
             // Check local key store
-            var keyEntry = Face.getKeyByName(keylocator.keyName);
+            var keyEntry = this.getKeyByName(keylocator.keyName);
             if (keyEntry) {
               // Key found, verify now
               if (LOG > 3) console.log("Local key cache hit");
