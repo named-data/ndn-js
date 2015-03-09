@@ -27,6 +27,7 @@ var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
+var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -59,11 +60,15 @@ exports.KeyChain = KeyChain;
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
  * identity and a self-signed certificate of the KSK.
  * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
-KeyChain.prototype.createIdentity = function(identityName)
+KeyChain.prototype.createIdentity = function(identityName, params)
 {
-  return this.identityManager.createIdentity(identityName);
+  if (params == undefined)
+    params = KeyChain.DEFAULT_KEY_PARAMS;
+  return this.identityManager.createIdentity(identityName, params);
 };
 
 /**
@@ -464,6 +469,8 @@ KeyChain.prototype.setFace = function(face)
 { 
   this.face = face;
 };
+
+KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
 {
