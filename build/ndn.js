@@ -21560,27 +21560,26 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
       this.pitRemoveRequests.splice(removeRequestIndex, 1);
     else {
       var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
-      // TODO: This needs to be a single thread-safe transaction on a global object.
       this.pendingInterestTable.push(pitEntry);
       closure.pitEntry = pitEntry;
 
       // Set interest timer.
       var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+      var thisFace = this;
       var timeoutCallback = function() {
         if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from this.pendingInterestTable, even if we add it again later to re-express
+        // Remove PIT entry from thisFace.pendingInterestTable, even if we add it again later to re-express
         //   the interest because we don't want to match it in the mean time.
-        // TODO: Make this a thread-safe operation on the global PITTable.
-        var index = this.pendingInterestTable.indexOf(pitEntry);
+        var index = thisFace.pendingInterestTable.indexOf(pitEntry);
         if (index >= 0)
-          this.pendingInterestTable.splice(index, 1);
+          thisFace.pendingInterestTable.splice(index, 1);
 
         // Raise closure callback
         if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
           if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
           pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          this.pendingInterestTable.push(pitEntry);
+          thisFace.pendingInterestTable.push(pitEntry);
           thisFace.transport.send(binaryInterest.buf());
         }
       };
