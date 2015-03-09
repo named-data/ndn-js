@@ -171,6 +171,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandCertificateName = new Name();
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
+
+  this.keyStore = new Array();
 };
 
 exports.Face = Face;
@@ -234,8 +236,6 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
   this.host = this.connectionInfo.port;
 };
 
-Face.KeyStore = new Array();
-
 var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
 {
   this.keyName = name;  // KeyName
@@ -243,23 +243,23 @@ var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
   this.timeStamp = time;  // Time Stamp
 };
 
-Face.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
+Face.prototype.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
 {
-  var result = Face.getKeyByName(keyEntry.keyName);
+  var result = this.getKeyByName(keyEntry.keyName);
   if (result == null)
-    Face.KeyStore.push(keyEntry);
+    this.keyStore.push(keyEntry);
   else
     result = keyEntry;
 };
 
-Face.getKeyByName = function(/* KeyName */ name)
+Face.prototype.getKeyByName = function(/* KeyName */ name)
 {
   var result = null;
 
-  for (var i = 0; i < Face.KeyStore.length; i++) {
-    if (Face.KeyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || Face.KeyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
-        result = Face.KeyStore[i];
+  for (var i = 0; i < this.keyStore.length; i++) {
+    if (this.keyStore[i].keyName.contentName.match(name.contentName)) {
+      if (result == null || this.keyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
+        result = this.keyStore[i];
     }
   }
 
@@ -1261,7 +1261,7 @@ Face.prototype.onReceivedElement = function(element)
 
           // Store key in cache
           var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          Face.addKeyEntry(keyEntry);
+          this.addKeyEntry(keyEntry);
         }
         else if (kind == Closure.UPCALL_CONTENT_BAD)
           console.log("In KeyFetchClosure.upcall: signature verification failed");
@@ -1294,7 +1294,7 @@ Face.prototype.onReceivedElement = function(element)
           }
           else {
             // Check local key store
-            var keyEntry = Face.getKeyByName(keylocator.keyName);
+            var keyEntry = this.getKeyByName(keylocator.keyName);
             if (keyEntry) {
               // Key found, verify now
               if (LOG > 3) console.log("Local key cache hit");
