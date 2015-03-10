@@ -44,6 +44,7 @@ var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
+var NdnCommon = require('./util/ndn-common.js').NdnCommon;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -422,6 +423,8 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
+
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
@@ -599,6 +602,10 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
 Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
 {
   var binaryInterest = interest.wireEncode();
+  if (binaryInterest.size() > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
+
   var thisFace = this;
   //TODO: check local content store first
   if (closure != null) {
@@ -859,6 +866,13 @@ Face.prototype.registerPrefixWithClosure = function
 
   return registeredPrefixId;
 };
+
+/**
+ * Get the practical limit of the size of a network-layer packet. If a packet
+ * is larger than this, the library or application MAY drop it.
+ * @return {number} The maximum NDN packet size.
+ */
+Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
