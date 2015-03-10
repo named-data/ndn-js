@@ -467,14 +467,18 @@ Name.prototype.clear = function()
 
 /**
  * Return the escaped name string according to "NDNx URI Scheme".
+ * @param {boolean} includeScheme (optional) If true, include the "ndn:" scheme
+ * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
+ * "/example/name". If ommitted, then just return the path which is the default
+ * case where toUri() is used for display.
  * @returns {String}
  */
-Name.prototype.toUri = function()
+Name.prototype.toUri = function(includeScheme)
 {
   if (this.size() == 0)
-    return "/";
+    return includeScheme ? "ndn:/" : "/";
 
-  var result = "";
+  var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
     result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
