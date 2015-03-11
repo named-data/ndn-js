@@ -6,6 +6,8 @@ Changes
 * Browser support for crypto.subtle native speedups, automatically used for verify and
   KeyChain.sign (if using the onComplete callback). Tested in Chrome and Firefox.
   Thanks to Ryan Bennett!
+* http://redmine.named-data.net/issues/1921 In Face, added getMaxNdnPacketSize().
+  expressInterest throws an exception if the encoded interest size exceeds it.
 * Implemented FilePrivateKeyStorage for Node.js. Thanks to Andrew Brown!
 * In ControlParameters, added support for Uri and Strategy. Allow the Name to be optional. Thanks to Andrew Brown!
 * In the default WireFormat, implemented decodeControlParameters. Thanks again to Andrew Brown!

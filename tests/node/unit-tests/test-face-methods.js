@@ -21,6 +21,7 @@
 
 var assert = require("assert");
 var Name = require('../../..').Name;
+var Interest = require('../../..').Interest;
 var Face = require('../../..').Face;
 
 // Returns an object with , so we can test onData and timeout behavior.
@@ -160,5 +161,28 @@ describe('TestFaceInterestMethods', function() {
   it('RemovePending', function() {
     assert.equal(counter.onDataCallCount, 0, 'Should not have called data callback after interest was removed');
     assert.equal(counter.onTimeoutCallCount, 0, 'Should not have called timeout callback after interest was removed');
+  });
+});
+
+describe('TestFaceInterestMethods', function() {
+  it('MaxNdnPacketSize', function() {
+    // Construct an interest whose encoding is one byte larger than getMaxNdnPacketSize.
+    var targetSize = Face.getMaxNdnPacketSize() + 1;
+    // Start with an interest which is almost the right size.
+    var interest = new Interest();
+    interest.getName().append(new Buffer(targetSize));
+    var initialSize = interest.wireEncode().size();
+    // Now replace the component with the desired size which trims off the extra encoding.
+    interest.setName
+      (new Name().append(new Buffer(targetSize - (initialSize - targetSize))));
+    var interestSize = interest.wireEncode().size();
+    assert.equal(targetSize, interestSize,  "Wrong interest size for MaxNdnPacketSize");
+
+    assert.throws
+      (function() {
+         face.expressInterest
+           (interest, function(interest, data) {}, function(interest) {}); },
+       Error,
+       "expressInterest didn't throw an exception when the interest size exceeds getMaxNdnPacketSize()");
   });
 });

@@ -91,6 +91,7 @@ def build (bld):
                  "contrib/feross/ieee754.js",
                  "contrib/feross/buffer.js",
                  "js/log.js",
+                 "js/util/ndn-common.js",
                  "js/util/ndn-protoco-id-tags.js",
                  "js/util/ndn-time.js",
                  "js/util/exponential-re-express-closure.js",

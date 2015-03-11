@@ -6201,6 +6201,42 @@ exports.Log = Log;
  */
 Log.LOG = 0;
 /**
+ * Encapsulate a Buffer and support dynamic reallocation.
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * NdnCommon has static NDN utility methods and constants.
+ * @constructor
+ */
+var NdnCommon = {};
+
+exports.NdnCommon = NdnCommon;
+
+/**
+ * The practical limit of the size of a network-layer packet. If a packet is
+ * larger than this, the library or application MAY drop it. This constant is
+ * defined in this low-level class so that internal code can use it, but
+ * applications should use the static API method
+ * Face.getMaxNdnPacketSize() which is equivalent.
+ */
+NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
+/**
  * This class contains all NDNx tags
  * Copyright (C) 2013-2015 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -21137,6 +21173,7 @@ var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
+var NdnCommon = require('./util/ndn-common.js').NdnCommon;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -21515,6 +21552,8 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
+
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
@@ -21692,6 +21731,10 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
 Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
 {
   var binaryInterest = interest.wireEncode();
+  if (binaryInterest.size() > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
+
   var thisFace = this;
   //TODO: check local content store first
   if (closure != null) {
@@ -21952,6 +21995,13 @@ Face.prototype.registerPrefixWithClosure = function
 
   return registeredPrefixId;
 };
+
+/**
+ * Get the practical limit of the size of a network-layer packet. If a packet
+ * is larger than this, the library or application MAY drop it.
+ * @return {number} The maximum NDN packet size.
+ */
+Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
 
 /**
  * This is a closure to receive the Data for Face.ndndIdFetcher and call
