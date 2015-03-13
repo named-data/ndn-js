@@ -259,6 +259,12 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
   return this.interestLifetime;
 };
 
+/**
+ * Set the interest name.
+ * Note: You can also call getName and change the name values directly.
+ * @param {Name} name The interest name. This makes a copy of the name.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setName = function(name)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -267,8 +273,15 @@ Interest.prototype.setName = function(name)
 
   this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
+  return this;
 };
 
+/**
+ * Set the min suffix components count.
+ * @param {number} minSuffixComponents The min suffix components count. If not
+ * specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -276,8 +289,15 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
   this.wireEncoding = new SignedBlob();
 
   this.minSuffixComponents = minSuffixComponents;
+  return this;
 };
 
+/**
+ * Set the max suffix components count.
+ * @param {number} maxSuffixComponents The max suffix components count. If not
+ * specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -285,13 +305,16 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
   this.wireEncoding = new SignedBlob();
 
   this.maxSuffixComponents = maxSuffixComponents;
+  return this;
 };
 
 /**
  * Set this interest to use a copy of the given exclude object. Note: You can
- * also change this interest's exclude object modifying the object from
- * getExclude().
- * @param {Exclude} exclude The exlcude object that is copied.
+ * also call getExclude and change the exclude entries directly.
+ * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
+ * If no exclude is specified, set to a new default Exclude(), or to an Exclude
+ * with size() 0.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setExclude = function(exclude)
 {
@@ -301,8 +324,15 @@ Interest.prototype.setExclude = function(exclude)
 
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
+  return this;
 };
 
+/**
+ * Set the child selector.
+ * @param {number} childSelector The child selector. If not specified, set to
+ * undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setChildSelector = function(childSelector)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -310,6 +340,7 @@ Interest.prototype.setChildSelector = function(childSelector)
   this.wireEncoding = new SignedBlob();
 
   this.childSelector = childSelector;
+  return this;
 };
 
 /**
@@ -322,11 +353,14 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
   this.wireEncoding = new SignedBlob();
 
   this.answerOriginKind = answerOriginKind;
+  return this;
 };
 
 /**
  * Set the MustBeFresh flag.
- * @param {boolean} mustBeFresh True if the content must be fresh, otherwise false.
+ * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
+ * false. If you do not set this flag, the default value is true.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
@@ -348,8 +382,14 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
       // Set the stale bit.
       this.answerOriginKind |= Interest.ANSWER_STALE;
   }
+  return this;
 };
 
+/**
+ * Set the interest scope.
+ * @param {number} scope The interest scope. If not specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setScope = function(scope)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -357,8 +397,15 @@ Interest.prototype.setScope = function(scope)
   this.wireEncoding = new SignedBlob();
 
   this.scope = scope;
+  return this;
 };
 
+/**
+ * Set the interest lifetime.
+ * @param {number} interestLifetimeMilliseconds The interest lifetime in
+ * milliseconds. If not specified, set to -1.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -366,6 +413,7 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
   this.wireEncoding = new SignedBlob();
 
   this.interestLifetime = interestLifetimeMilliseconds;
+  return this;
 };
 
 /**
@@ -386,14 +434,15 @@ Interest.prototype.setNonce = function(nonce)
   }
   else
     this.nonce = null;
+  return this;
 };
 
 /**
  * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
- * @returns {string} The URI string.
- * @note This is an experimental feature.  See the API docs for more detail at
+ * Note: This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
+ * @returns {string} The URI string.
  */
 Interest.prototype.toUri = function()
 {
