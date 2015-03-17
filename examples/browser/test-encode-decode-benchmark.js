@@ -142,6 +142,9 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
     0x3f, 0xb9, 0xfe, 0xbc, 0x8d, 0xda, 0xcb, 0xea, 0x8f
 ]);
 
+//re-use a single keyChain so that we don't have to import key 1000 times
+var keyChain;
+
 /**
  * Loop to encode a data packet nIterations times.
  * @param {number} nIterations The number of iterations.
@@ -152,13 +155,13 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * where duration is the number of seconds for all iterations and encoding is
  * the wire encoding Buffer. It is necessary to use a callback because the
  * crypto functions use callbacks.
+ * @param (number) nIterationsBeforeYield (optional) The number of loops before
+ * calling setTimeout(0) to yield.  This is useful to let the system process
+ * pending callbacks after nIterationsBeforeYield iterations. If null or omitted,
+ * this does not use setTimeout.
  */
-
-//re-use a single keyChain so that we don't have to import key 1000 times
-var keyChain;
-
 TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
-  (nIterations, useComplex, useCrypto, onFinished)
+  (nIterations, useComplex, useCrypto, onFinished, nIterationsBeforeYield)
 {
   var name;
   var content;
@@ -222,43 +225,57 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
     }
   };
 
-  for (var i = 0; i < nIterations; ++i) {
-    var data = new Data(name);
-    data.setContent(content);
-    data.setMetaInfo(new MetaInfo());
-    if (useComplex) {
-      // timestamp is deprecated.
-      data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
-      data.getMetaInfo().setFreshnessPeriod(30000);
-      data.getMetaInfo().setFinalBlockId(finalBlockId);
+  var iteration = 0;
+  var loopBody = function() {
+    // If !nIterationsBeforeYield then we loop forever.
+    for (j = 0; !nIterationsBeforeYield || j < nIterationsBeforeYield; ++j) {
+      if (iteration >= nIterations) {
+        if (!useCrypto)
+          // onComplete wasn't called to call onFinished, so do it here.
+          onFinished(getNowSeconds() - start, encoding);
+
+        return;
+      }
+
+      var data = new Data(name);
+      data.setContent(content);
+      data.setMetaInfo(new MetaInfo());
+      if (useComplex) {
+        // timestamp is deprecated.
+        data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
+        data.getMetaInfo().setFreshnessPeriod(30000);
+        data.getMetaInfo().setFinalBlockId(finalBlockId);
+      }
+
+      if (useCrypto)
+        // This sets the signature fields.
+        keyChain.sign(data, certificateName, null, onComplete);
+      else {
+        // Imitate IdentityManager.signByCertificate to set up the signature
+        // fields, but don't sign.
+        var keyLocator = new KeyLocator();
+        keyLocator.setType(KeyLocatorType.KEYNAME);
+        keyLocator.setKeyName(certificateName);
+        var sha256Signature = data.getSignature();
+        sha256Signature.setKeyLocator(keyLocator);
+        sha256Signature.setSignature(signatureBits);
+
+        encoding = data.wireEncode().buf();
+      }
+
+      if (doDummySign){
+        doDummySign = false;
+        keyChain.sign(data, certificateName, null, function(){});
+      }
+
+      ++iteration;
     }
 
-    if (useCrypto)
-      // This sets the signature fields.
-      keyChain.sign(data, certificateName, null, onComplete);
-    else {
-      // Imitate IdentityManager.signByCertificate to set up the signature
-      // fields, but don't sign.
-      var keyLocator = new KeyLocator();
-      keyLocator.setType(KeyLocatorType.KEYNAME);
-      keyLocator.setKeyName(certificateName);
-      var sha256Signature = data.getSignature();
-      sha256Signature.setKeyLocator(keyLocator);
-      sha256Signature.setSignature(signatureBits);
+    // Yield to process accumulated callbacks.
+    setTimeout(loopBody, 0);
+  };
 
-      encoding = data.wireEncode().buf();
-    }
-
-    if (doDummySign){
-      doDummySign = false;
-      keyChain.sign(data, certificateName, null, function(){console.log("dummy sign");});
-    }
-
-  }
-
-  if (!useCrypto)
-    // onComplete wasn't called to call onFinished, so do it here.
-    onFinished(getNowSeconds() - start, encoding);
+  loopBody();
 };
 
 function onVerifyFailed(data)
@@ -274,9 +291,13 @@ function onVerifyFailed(data)
  * @param {function} onFinished When finished this calls onFinished(duration)
  * where duration is the number of seconds for all iterations. It is necessary
  * to use a callback because the crypto functions use callbacks.
+ * @param (number) nIterationsBeforeYield (optional) The number of loops before
+ * calling setTimeout(0) to yield.  This is useful to let the system process
+ * pending callbacks after nIterationsBeforeYield iterations. If null or omitted,
+ * this does not use setTimeout.
  */
 TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
-  (nIterations, useCrypto, encoding, onFinished)
+  (nIterations, useCrypto, encoding, onFinished, nIterationsBeforeYield)
 {
   // Initialize the KeyChain storage in case useCrypto is true.
   var identityStorage = new MemoryIdentityStorage();
@@ -297,15 +318,30 @@ TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds = function
       onFinished(getNowSeconds() - start);
   };
 
-  for (var i = 0; i < nIterations; ++i) {
-    var data = new Data();
-    data.wireDecode(encoding);
+  var iteration = 0;
+  var loopBody = function() {
+    // If !nIterationsBeforeYield then we loop forever.
+    for (j = 0; !nIterationsBeforeYield || j < nIterationsBeforeYield; ++j) {
+      if (iteration >= nIterations) {
+        if (!useCrypto)
+          // onVerified wasn't called to call onFinished, so do it here.
+          onFinished(getNowSeconds() - start);
 
-    if (useCrypto)
-      keyChain.verifyData(data, onVerified, onVerifyFailed);
-  }
+        return;
+      }
 
-  if (!useCrypto)
-    // onVerified wasn't called to call onFinished, so do it here.
-    onFinished(getNowSeconds() - start);
+      var data = new Data();
+      data.wireDecode(encoding);
+
+      if (useCrypto)
+        keyChain.verifyData(data, onVerified, onVerifyFailed);
+
+      ++iteration;
+    }
+
+    // Yield to process accumulated callbacks.
+    setTimeout(loopBody, 0);
+  };
+
+  loopBody();
 };

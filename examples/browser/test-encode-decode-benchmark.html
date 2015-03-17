@@ -39,7 +39,9 @@
     function benchmarkEncodeDecodeData(useComplex, useCrypto, continuation)
     {
       var format = WireFormat.getDefaultWireFormat() === BinaryXmlWireFormat.get() ? "ndnb" : "TLV ";
-      var nEncodeIterations = useCrypto ? (UseSubtleCrypto() ? 4000 : 200) : 150000;
+      // Use nIterationsBeforeYield for crypto to yield and process callbacks accumulated by crypto.subtle.
+      var nIterationsBeforeYield = useCrypto ? 200 : null;
+      var nEncodeIterations = useCrypto ? (UseSubtleCrypto() ? 4000 : 200) : 80000;
       TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds
         (nEncodeIterations, useComplex, useCrypto, function(duration, encoding) {
           document.getElementById('result').innerHTML +=
@@ -48,7 +50,7 @@
 
           // Use setTimeout so that the browser will update the display before continuing.
           setTimeout(function() {
-            var nDecodeIterations = useCrypto ? (UseSubtleCrypto() ? 10000 : 2000) : 100000;
+            var nDecodeIterations = useCrypto ? (UseSubtleCrypto() ? 10000 : 2000) : 80000;
             TestEncodeDecodeBenchmark.benchmarkDecodeDataSeconds
               (nDecodeIterations, useCrypto, encoding, function(duration) {
                 document.getElementById('result').innerHTML +=
@@ -56,9 +58,9 @@
                   + ", Duration sec, Hz: " + duration + ", " + (nDecodeIterations / duration) + "<br/>";
 
                 setTimeout(continuation, 100);
-              });
+              }, nIterationsBeforeYield);
           }, 100);
-        });
+        }, nIterationsBeforeYield);
     }
 
 	function test(){
