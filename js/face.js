@@ -1193,6 +1193,26 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
 };
 
 /**
+ * The OnInterest callback calls this to put a Data packet which satisfies an
+ * Interest.
+ * @param {Data} data The Data packet which satisfies the interest.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat.getDefaultWireFormat().
+ * @throws Error If the encoded Data packet size exceeds getMaxNdnPacketSize().
+ */
+Face.prototype.putData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var encoding = data.wireEncode(wireFormat);
+  if (encoding.size() > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded interest Data packet exceeds the maximum limit getMaxNdnPacketSize()");
+
+  this.transport.send(encoding.buf());
+};
+
+/**
  * This is called when an entire binary XML element is received, such as a Data or Interest.
  * Look up in the PITTable and call the closure callback.
  */
