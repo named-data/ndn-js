@@ -677,6 +677,10 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
     }
   }
 
+  if (count == 0)
+    if (LOG > 0) console.log
+      ("removePendingInterest: Didn't find pendingInterestId " + pendingInterestId);
+
   if (count == 0) {
     // The pendingInterestId was not found. Perhaps this has been called before
     //   the callback in expressInterest can add to the PIT. Add this
@@ -1180,6 +1184,10 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
       ++count;
     }
   }
+
+  if (count == 0)
+    if (LOG > 0) console.log
+      ("removeRegisteredPrefix: Didn't find registeredPrefixId " + registeredPrefixId);
 
   if (count == 0) {
     // The registeredPrefixId was not found. Perhaps this has been called before
