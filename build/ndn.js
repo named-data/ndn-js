@@ -12634,14 +12634,18 @@ Name.prototype.clear = function()
 
 /**
  * Return the escaped name string according to "NDNx URI Scheme".
+ * @param {boolean} includeScheme (optional) If true, include the "ndn:" scheme
+ * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
+ * "/example/name". If ommitted, then just return the path which is the default
+ * case where toUri() is used for display.
  * @returns {String}
  */
-Name.prototype.toUri = function()
+Name.prototype.toUri = function(includeScheme)
 {
   if (this.size() == 0)
-    return "/";
+    return includeScheme ? "ndn:/" : "/";
 
-  var result = "";
+  var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
     result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
@@ -18574,6 +18578,12 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
   return this.interestLifetime;
 };
 
+/**
+ * Set the interest name.
+ * Note: You can also call getName and change the name values directly.
+ * @param {Name} name The interest name. This makes a copy of the name.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setName = function(name)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18582,8 +18592,15 @@ Interest.prototype.setName = function(name)
 
   this.name = typeof name === 'object' && name instanceof Name ?
               new Name(name) : new Name();
+  return this;
 };
 
+/**
+ * Set the min suffix components count.
+ * @param {number} minSuffixComponents The min suffix components count. If not
+ * specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18591,8 +18608,15 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
   this.wireEncoding = new SignedBlob();
 
   this.minSuffixComponents = minSuffixComponents;
+  return this;
 };
 
+/**
+ * Set the max suffix components count.
+ * @param {number} maxSuffixComponents The max suffix components count. If not
+ * specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18600,13 +18624,16 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
   this.wireEncoding = new SignedBlob();
 
   this.maxSuffixComponents = maxSuffixComponents;
+  return this;
 };
 
 /**
  * Set this interest to use a copy of the given exclude object. Note: You can
- * also change this interest's exclude object modifying the object from
- * getExclude().
- * @param {Exclude} exclude The exlcude object that is copied.
+ * also call getExclude and change the exclude entries directly.
+ * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
+ * If no exclude is specified, set to a new default Exclude(), or to an Exclude
+ * with size() 0.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setExclude = function(exclude)
 {
@@ -18616,8 +18643,15 @@ Interest.prototype.setExclude = function(exclude)
 
   this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
                  new Exclude(exclude) : new Exclude();
+  return this;
 };
 
+/**
+ * Set the child selector.
+ * @param {number} childSelector The child selector. If not specified, set to
+ * undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setChildSelector = function(childSelector)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18625,6 +18659,7 @@ Interest.prototype.setChildSelector = function(childSelector)
   this.wireEncoding = new SignedBlob();
 
   this.childSelector = childSelector;
+  return this;
 };
 
 /**
@@ -18637,11 +18672,14 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
   this.wireEncoding = new SignedBlob();
 
   this.answerOriginKind = answerOriginKind;
+  return this;
 };
 
 /**
  * Set the MustBeFresh flag.
- * @param {boolean} mustBeFresh True if the content must be fresh, otherwise false.
+ * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
+ * false. If you do not set this flag, the default value is true.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
@@ -18663,8 +18701,14 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
       // Set the stale bit.
       this.answerOriginKind |= Interest.ANSWER_STALE;
   }
+  return this;
 };
 
+/**
+ * Set the interest scope.
+ * @param {number} scope The interest scope. If not specified, set to undefined.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setScope = function(scope)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18672,8 +18716,15 @@ Interest.prototype.setScope = function(scope)
   this.wireEncoding = new SignedBlob();
 
   this.scope = scope;
+  return this;
 };
 
+/**
+ * Set the interest lifetime.
+ * @param {number} interestLifetimeMilliseconds The interest lifetime in
+ * milliseconds. If not specified, set to -1.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
@@ -18681,6 +18732,7 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
   this.wireEncoding = new SignedBlob();
 
   this.interestLifetime = interestLifetimeMilliseconds;
+  return this;
 };
 
 /**
@@ -18701,14 +18753,15 @@ Interest.prototype.setNonce = function(nonce)
   }
   else
     this.nonce = null;
+  return this;
 };
 
 /**
  * Encode the name according to the "NDN URI Scheme".  If there are interest selectors, append "?" and
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
- * @returns {string} The URI string.
- * @note This is an experimental feature.  See the API docs for more detail at
+ * Note: This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
+ * @returns {string} The URI string.
  */
 Interest.prototype.toUri = function()
 {
@@ -21806,6 +21859,10 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
     }
   }
 
+  if (count == 0)
+    if (LOG > 0) console.log
+      ("removePendingInterest: Didn't find pendingInterestId " + pendingInterestId);
+
   if (count == 0) {
     // The pendingInterestId was not found. Perhaps this has been called before
     //   the callback in expressInterest can add to the PIT. Add this
@@ -22310,6 +22367,10 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
     }
   }
 
+  if (count == 0)
+    if (LOG > 0) console.log
+      ("removeRegisteredPrefix: Didn't find registeredPrefixId " + registeredPrefixId);
+
   if (count == 0) {
     // The registeredPrefixId was not found. Perhaps this has been called before
     //   the callback in registerPrefix can add to the registeredPrefixTable. Add
@@ -22319,6 +22380,26 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
       // Not already requested, so add the request.
       this.registeredPrefixRemoveRequests.push(registeredPrefixId);
   }
+};
+
+/**
+ * The OnInterest callback calls this to put a Data packet which satisfies an
+ * Interest.
+ * @param {Data} data The Data packet which satisfies the interest.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet. If omitted, use WireFormat.getDefaultWireFormat().
+ * @throws Error If the encoded Data packet size exceeds getMaxNdnPacketSize().
+ */
+Face.prototype.putData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var encoding = data.wireEncode(wireFormat);
+  if (encoding.size() > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded interest Data packet exceeds the maximum limit getMaxNdnPacketSize()");
+
+  this.transport.send(encoding.buf());
 };
 
 /**

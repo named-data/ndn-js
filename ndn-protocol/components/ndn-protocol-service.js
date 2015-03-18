@@ -99,11 +99,10 @@ NdnProtocol.prototype = {
                 var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name,
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
 
-                /* Disable until bug is fixed for opening multiple tabs.
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
-                    ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
-                 */
+                    ContentClosure.setClosureForWindow(contentChannel.browserTab, closure);
+                    
                 // TODO: Use expressInterest with callbacks, not Closure.
                 NdnProtocolInfo.face.expressInterest
                     (name, new ExponentialReExpressClosure(closure), template);
@@ -361,11 +360,11 @@ ContentClosure.closureForWindowList = [];
  * If there is already another closure for window, callits contentListener.onStop(); so
  *   that further calls to upcall will do nothing.
  */
-ContentClosure.setClosureForWindow = function(window, closure)
+ContentClosure.setClosureForWindow = function(tab, closure)
 {
     for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
         var entry = ContentClosure.closureForWindowList[i];
-        if (entry.window == window) {
+        if (entry.tab == tab) {
             try {
                 entry.closure.contentListener.onStop();
             } catch (ex) {
@@ -376,7 +375,7 @@ ContentClosure.setClosureForWindow = function(window, closure)
         }
     }
 
-    ContentClosure.closureForWindowList.push({ window: window, closure: closure });
+    ContentClosure.closureForWindowList.push({ tab: tab, closure: closure });
 };
 
 /*

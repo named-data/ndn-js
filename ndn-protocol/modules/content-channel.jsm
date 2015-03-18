@@ -51,9 +51,10 @@ function ContentChannel(uri, requestContent)
   this.notificationCallback = null;
   this.securityInfo = null;
 
-    // Save the mostRecentWindow from the moment of creating the channel.
-    var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-    this.mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
+  // Save the mostRecentWindow from the moment of creating the channel.
+  var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+  this.mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
+  this.browserTab = this.mostRecentWindow.gBrowser.selectedTab;
 }
 
 ContentChannel.prototype = {
