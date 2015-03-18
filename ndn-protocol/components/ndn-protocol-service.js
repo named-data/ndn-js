@@ -30,6 +30,11 @@ Components.utils.import("chrome://modules/content/ndn-js.jsm");
 Components.utils.import("chrome://modules/content/content-channel.jsm");
 Components.utils.import("chrome://modules/content/ndn-protocol-info.jsm");
 
+// Dependency for file download
+Components.utils.import("resource://gre/modules/Downloads.jsm");
+Components.utils.import("resource://gre/modules/osfile.jsm")
+Components.utils.import("resource://gre/modules/Task.jsm");
+
 function NdnProtocol() {
 }
 
@@ -99,11 +104,10 @@ NdnProtocol.prototype = {
                 var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name,
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
 
-                /* Disable until bug is fixed for opening multiple tabs.
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
-                    ContentClosure.setClosureForWindow(contentChannel.mostRecentWindow, closure);
-                 */
+                    ContentClosure.setClosureForWindow(contentChannel.browserTab, closure);
+                    
                 // TODO: Use expressInterest with callbacks, not Closure.
                 NdnProtocolInfo.face.expressInterest
                     (name, new ExponentialReExpressClosure(closure), template);
@@ -229,26 +233,88 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             return Closure.RESULT_OK;
         }
 
-        iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
+        var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
+        
+        var iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
         if (!this.uriEndsWithSegmentNumber && iNdnfsFileComponent >= 0 && getIndexOfNdnfsFileComponent(this.uriName) < 0) {
-           // The matched content name has an NDNFS file meta component that wasn't requested in the original
-           //   URI.  Expect the data.getName() to be /<prefix>/<file component>/<version>.
-           // (We expect there to be a component after iNdnfsFileComponent but check anyway.)
-           if (data.getName().size() >= iNdnfsFileComponent + 2) {
-             // Make a name /<prefix>/<version>/%00.
-             var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
-               (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);
-             // TODO: Use expressInterest with callbacks, not Closure.
-             this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
-           }
-           return Closure.RESULT_OK;
+          // The matched content name has an NDNFS file meta component that wasn't requested in the original
+          //   URI.  Expect the data.getName() to be /<prefix>/<file name>/<%C1.FS.File>/<version>.
+          // (We expect there to be a component after iNdnfsFileComponent but check anyway.)
+          if (data.getName().size() >= iNdnfsFileComponent + 2) {          
+            // For Ndnfs file request with mime-type 'application/octet-stream', we spawn download task by default.
+            // This tries to override the default action for 'application/octet-stream', (and 'application/pdf').
+            if (contentTypeEtc.contentType == "application/octet-stream" || contentTypeEtc.contentType == "application/pdf") {
+              const nsIFilePicker = Components.interfaces.nsIFilePicker;
+              var fp = Components.classes["@mozilla.org/filepicker;1"]
+                             .createInstance(nsIFilePicker);
+              var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
+              var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");              
+              fp.init(mostRecentWindow, "Save File", nsIFilePicker.modeSave);
+              fp.appendFilters(nsIFilePicker.filterAll);
+            
+              var iFileName = data.getName().indexOfFileName();
+              fp.defaultString = DataUtils.toString(data.getName().get(iFileName).getValue().buf()).toLowerCase();
+            
+              var rv = fp.show();
+              if (rv == nsIFilePicker.returnOK || rv == nsIFilePicker.returnReplace) {
+                var file = fp.file;
+                // Get the path as string. Note that you usually won't 
+                // need to work with the string paths.
+                var path = fp.file.path;
+                Task.spawn(function () {                 
+                  //dump(data.getName().getPrefix(iNdnfsFileComponent).toUri() + "\n");
+                  // Following is an example of predefined default directory.
+                  //dump(OS.Path.join(OS.Constants.Path.homeDir, DataUtils.toString(name.get(iFileName).getValue().buf()).toLowerCase())))
+                
+                  // Note: With the version and return OK is apparently the correct way, which creates another channel
+                  // with the given URI;
+                  // but interestingly, without the version or return OK also works for files large enough.
+                  yield Downloads.fetch("ndn:" + data.getName().getPrefix(iNdnfsFileComponent).append
+                    (data.getName().get(iNdnfsFileComponent + 1)).toUri(), path);
+                }).then(null, Components.utils.reportError);
+              
+                // We have a new channel created for file saving using Downloads.fetch(aURI), 
+                // and we are done with this channel.
+                this.contentListener.onStart("text/plain", "utf-8", this.aURI);
+                this.contentListener.onReceivedContent
+                    ("Download: " + data.getName().getPrefix(iNdnfsFileComponent).append
+                      (data.getName().get(iNdnfsFileComponent + 1)).toUri() + " to " + 
+                       path);
+                this.contentListener.onStop();
+              }
+              return Closure.RESULT_OK;
+            }
+          
+            if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
+              // Make a name /<prefix>/<version>/%00.
+              var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
+                (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);
+              // TODO: Use expressInterest with callbacks, not Closure.
+              this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
+              return Closure.RESULT_OK;
+            } else {
+               // the file is supposedly empty; 
+               // In thie case, we force the returned content to be 'text/plain',
+               //  and returned content (file attributes) is displayed directly.
+               contentTypeEtc.contentType = "text/plain";
+               contentTypeEtc.contentCharset = "utf-8";
+            }
+          }
         }
 
         this.didOnStart = true;
-
+        
+        var iNdnfsFolderComponent = getIndexOfNdnfsFolderComponent(data.getName());
         // Get the URI from the Data including the version.
         var contentUriSpec;
-        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
+        if (iNdnfsFolderComponent >= 0) {
+            var folderString = data.getName().getPrefix(iNdnfsFolderComponent).toUri();
+            if (folderString.indexOf(ContentMetaString, folderString.length - ContentMetaString.length) !== -1) {
+              contentUriSpec = "ndn:" + folderString;
+            } else {
+              contentUriSpec = "ndn:" + folderString + "/" + ContentMetaString;
+            }
+        } else if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
             var nameWithoutSegmentNumber = data.getName().getPrefix(-1);
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
@@ -258,7 +324,6 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Include the search and hash.
         contentUriSpec += this.uriSearchAndHash;
 
-        var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
         var ioService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         this.contentListener.onStart(contentTypeEtc.contentType, contentTypeEtc.contentCharset,
             ioService.newURI(contentUriSpec, this.aURI.originCharset, null));
@@ -361,11 +426,11 @@ ContentClosure.closureForWindowList = [];
  * If there is already another closure for window, callits contentListener.onStop(); so
  *   that further calls to upcall will do nothing.
  */
-ContentClosure.setClosureForWindow = function(window, closure)
+ContentClosure.setClosureForWindow = function(tab, closure)
 {
     for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
         var entry = ContentClosure.closureForWindowList[i];
-        if (entry.window == window) {
+        if (entry.tab == tab) {
             try {
                 entry.closure.contentListener.onStop();
             } catch (ex) {
@@ -376,7 +441,7 @@ ContentClosure.setClosureForWindow = function(window, closure)
         }
     }
 
-    ContentClosure.closureForWindowList.push({ window: window, closure: closure });
+    ContentClosure.closureForWindowList.push({ tab: tab, closure: closure });
 };
 
 /*
@@ -638,6 +703,21 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
  * @param {type} name The Name to search.
  * @returns {number} The index or -1 if not found.
  */
+function getIndexOfNdnfsFolderComponent(name)
+{
+  for (var i = 0; i < name.size(); ++i) {
+    if (name.get(i).getValue().equals(NdnfsFolderComponent))
+      return i;
+  }
+
+  return -1;
+}
+
+/**
+ * Get the index of the first component that is the NDNFS file meta data marker.
+ * @param {type} name The Name to search.
+ * @returns {number} The index or -1 if not found.
+ */
 function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
@@ -648,5 +728,8 @@ function getIndexOfNdnfsFileComponent(name)
   return -1;
 }
 
+var ContentMetaString = "_list";
+
 var NdnfsFileComponent = Name.fromEscapedString("%C1.FS.file");
+var NdnfsFolderComponent = Name.fromEscapedString("%C1.FS.dir");
 
