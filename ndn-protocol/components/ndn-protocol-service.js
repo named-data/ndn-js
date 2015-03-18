@@ -244,10 +244,18 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         }
 
         this.didOnStart = true;
-
+        
+        var iNdnfsFolderComponent = getIndexOfNdnfsFolderComponent(data.getName());
         // Get the URI from the Data including the version.
         var contentUriSpec;
-        if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
+        if (iNdnfsFolderComponent >= 0) {
+            var folderString = data.getName().getPrefix(iNdnfsFolderComponent).toUri();
+            if (folderString.indexOf(ContentMetaString, folderString.length - ContentMetaString.length) !== -1) {
+              contentUriSpec = "ndn:" + folderString;
+            } else {
+              contentUriSpec = "ndn:" + folderString + "/" + ContentMetaString;
+            }
+        } else if (!this.uriEndsWithSegmentNumber && endsWithSegmentNumber(data.getName())) {
             var nameWithoutSegmentNumber = data.getName().getPrefix(-1);
             contentUriSpec = "ndn:" + nameWithoutSegmentNumber.toUri();
         }
@@ -637,6 +645,21 @@ var MetaComponentPrefix = new Buffer([0xc1, 0x2e, 0x4d, 0x45, 0x54, 0x41]);
  * @param {type} name The Name to search.
  * @returns {number} The index or -1 if not found.
  */
+function getIndexOfNdnfsFolderComponent(name)
+{
+  for (var i = 0; i < name.size(); ++i) {
+    if (name.get(i).getValue().equals(NdnfsFolderComponent))
+      return i;
+  }
+
+  return -1;
+}
+
+/**
+ * Get the index of the first component that is the NDNFS file meta data marker.
+ * @param {type} name The Name to search.
+ * @returns {number} The index or -1 if not found.
+ */
 function getIndexOfNdnfsFileComponent(name)
 {
   for (var i = 0; i < name.size(); ++i) {
@@ -647,5 +670,8 @@ function getIndexOfNdnfsFileComponent(name)
   return -1;
 }
 
+var ContentMetaString = "_list";
+
 var NdnfsFileComponent = Name.fromEscapedString("%C1.FS.file");
+var NdnfsFolderComponent = Name.fromEscapedString("%C1.FS.dir");
 
