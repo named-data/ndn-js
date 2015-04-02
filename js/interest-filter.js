@@ -49,14 +49,23 @@ var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
  */
 var InterestFilter = function InterestFilter(prefix, regexFilter)
 {
-  this.prefix = new Name(prefix);
-  if (regexFilter) {
-    this.regexFilter = regexFilter;
-    this.regexFilterPattern = InterestFilter.makePattern(regexFilter);
+  if (typeof prefix === 'object' && prefix instanceof InterestFilter) {
+    // The copy constructor.
+    var interestFilter = prefix;
+    this.prefix = new Name(interestFilter.prefix);
+    this.regexFilter = interestFilter.regexFilter;
+    this.regexFilterPattern = interestFilter.regexFilterPattern;
   }
   else {
-    this.regexFilter = null;
-    this.regexFilterPattern = null;
+    this.prefix = new Name(prefix);
+    if (regexFilter) {
+      this.regexFilter = regexFilter;
+      this.regexFilterPattern = InterestFilter.makePattern(regexFilter);
+    }
+    else {
+      this.regexFilter = null;
+      this.regexFilterPattern = null;
+    }
   }
 };
 
