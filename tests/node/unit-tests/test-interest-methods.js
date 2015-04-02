@@ -29,6 +29,7 @@ var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
 var IdentityManager = require('../../..').IdentityManager;
 var SelfVerifyPolicyManager = require('../../..').SelfVerifyPolicyManager;
 var KeyChain = require('../../..').KeyChain;
+var InterestFilter = require('../../..').InterestFilter;
 
 var codedInterest = new Buffer([
 0x05, 0x53, // Interest
@@ -245,5 +246,25 @@ describe('TestInterestMethods', function() {
        function() { ++failedCallCount; });
     assert.equal(failedCallCount, 0, 'Signature verification failed');
     assert.equal(verifiedCallCount, 1, 'Verification callback was not used.');
+  });
+
+  it('InterestFilterMatching', function() {
+    // From ndn-cxx interest.t.cpp.
+    assert.equal(true,  new InterestFilter("/a").doesMatch(new Name("/a/b")));
+    assert.equal(true,  new InterestFilter("/a/b").doesMatch(new Name("/a/b")));
+    assert.equal(false, new InterestFilter("/a/b/c").doesMatch(new Name("/a/b")));
+
+    assert.equal(true,  new InterestFilter("/a", "<b>").doesMatch(new Name("/a/b")));
+    assert.equal(false, new InterestFilter("/a/b", "<b>").doesMatch(new Name("/a/b")));
+
+    assert.equal(false, new InterestFilter("/a/b", "<c>").doesMatch(new Name("/a/b/c/d")));
+    assert.equal(false, new InterestFilter("/a/b", "<b>").doesMatch(new Name("/a/b/c/b")));
+    assert.equal(true,  new InterestFilter("/a/b", "<>*<b>").doesMatch(new Name("/a/b/c/b")));
+
+    assert.equal(false, new InterestFilter("/a", "<b>").doesMatch(new Name("/a/b/c/d")));
+    assert.equal(true,  new InterestFilter("/a", "<b><>*").doesMatch(new Name("/a/b/c/d")));
+    assert.equal(true,  new InterestFilter("/a", "<b><>*").doesMatch(new Name("/a/b")));
+    assert.equal(false, new InterestFilter("/a", "<b><>+").doesMatch(new Name("/a/b")));
+    assert.equal(true,  new InterestFilter("/a", "<b><>+").doesMatch(new Name("/a/b/c")));
   });
 });
