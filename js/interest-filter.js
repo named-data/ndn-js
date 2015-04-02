@@ -79,8 +79,7 @@ InterestFilter.prototype.doesMatch = function(name)
       return false;
 
     return null != NdnRegexMatcher.match
-      (this.regexFilterPattern,
-       name.getSubName(this.prefix.size(), name.size() - this.prefix.size()));
+      (this.regexFilterPattern, name.getSubName(this.prefix.size()));
   }
   else
     // Just perform a prefix match.
