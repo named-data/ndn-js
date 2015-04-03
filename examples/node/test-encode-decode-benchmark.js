@@ -18,9 +18,6 @@
  */
 
 var TestEncodeDecodeBenchmark = require("../browser/test-encode-decode-benchmark.js").TestEncodeDecodeBenchmark;
-var WireFormat = require('../..').WireFormat;
-var BinaryXmlWireFormat = require('../..').BinaryXmlWireFormat;
-var TlvWireFormat = require('../..').TlvWireFormat;
 
 /**
  * Call benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds with appropriate nInterations.  Print the
@@ -32,7 +29,7 @@ var TlvWireFormat = require('../..').TlvWireFormat;
  */
 function benchmarkEncodeDecodeData(useComplex, useCrypto, onFinished)
 {
-  var format = WireFormat.getDefaultWireFormat() === BinaryXmlWireFormat.get() ? "ndnb" : "TLV ";
+  var format = "TLV";
   var nEncodeIterations = useCrypto ? 2000 : 500000;
   TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds
     (nEncodeIterations, useComplex, useCrypto, function(duration, encoding) {
@@ -49,18 +46,10 @@ function benchmarkEncodeDecodeData(useComplex, useCrypto, onFinished)
     });
 }
 
-// Make two passes, one for each wire format.
-for (var i = 1; i <= 2; ++i) {
-  if (i == 1)
-    WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get());
-  else
-    WireFormat.setDefaultWireFormat(TlvWireFormat.get());
-
-  benchmarkEncodeDecodeData(false, false, function() {
-  benchmarkEncodeDecodeData(true, false, function() {
-  benchmarkEncodeDecodeData(false, true, function() {
-  benchmarkEncodeDecodeData(true, true, function() {});
-  });
-  });
-  });
-}
+benchmarkEncodeDecodeData(false, false, function() {
+benchmarkEncodeDecodeData(true, false, function() {
+benchmarkEncodeDecodeData(false, true, function() {
+benchmarkEncodeDecodeData(true, true, function() {});
+});
+});
+});
