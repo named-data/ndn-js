@@ -1,0 +1,28 @@
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("rib-entry.proto");
+
+package ndn_message;
+
+// Protobuf has no "outer" message type, so we need to put the TLV RibEntry
+// message inside an outer "typeless" RibEntryMessage.
+message RibEntryMessage {
+  message Name {
+    repeated bytes component = 8;
+  }
+
+  message Route {
+    required uint32 face_id = 105;
+    required uint32 origin = 111;
+    required uint32 cost = 106;
+    required uint32 flags = 108;
+    optional uint32 expiration_period = 109;
+  }
+
+  message RibEntry {
+    required Name name = 7;
+    repeated Route routes = 129;
+  }
+
+  // A RibEntryMessage has repeated RibEntry.
+  repeated RibEntry rib_entry = 128;
+}
