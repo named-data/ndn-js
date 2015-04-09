@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2015-03-16)
+Interim changes since NDN-JS v0.7.0 (2015-04-09)
 ------------------------------------------------
 
 Changes
@@ -12,7 +12,9 @@ Changes
 * In ControlParameters, added support for Uri and Strategy. Allow the Name to be optional. Thanks to Andrew Brown!
 * In the default WireFormat, implemented decodeControlParameters. Thanks again to Andrew Brown!
 * In Interest setter methods, return this so that you can chain calls to update values.
-* Added class util/SegmentFetcher, ported from ndn-cxx. Use it in examples/node/test-list-rib.
+* Added class util/SegmentFetcher, ported from ndn-cxx. Use it in examples/node/test-list-rib, etc.
+* examples: Added test-list-channels, test-list-faces, test-list-rib and
+  test-register-route to query NFD.
 * Moved tests which need NFD from tests/unit_tests to tests/integration_tests.
 * Unit tests: Added test-der-encode-decode tests for CertificateExtension.
 * Integration tests: Added test-file-private-key-storage. Thanks to Andrew Brown!
