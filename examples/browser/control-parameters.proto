@@ -1,0 +1,48 @@
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("control-parameters.proto");
+
+package ndn_message;
+
+// Create ControlParametersTypes so we can define both ControlParametersMessage
+//   and ControlParametersResponseMessage.
+message ControlParametersTypes {
+  message Name {
+    repeated bytes component = 8;
+  }
+
+  message Strategy {
+    required Name name = 7;
+  }
+
+  message ControlParameters {
+    optional Name name = 7;
+    optional uint64 face_id = 105;
+    optional string uri = 114;
+    optional uint64 local_control_feature = 110;
+    optional uint64 origin = 111;
+    optional uint64 cost = 106;
+    optional uint64 flags = 108;
+    optional Strategy strategy = 107;
+    optional uint64 expiration_period = 109;
+  }
+
+  // A ControlParametersResponse is a ControlResponse where the body is zero or
+  //   more ControlParameters.
+  message ControlParametersResponse {
+    required uint64 status_code = 102;
+    required string status_text = 103;
+    repeated ControlParameters control_parameters = 104;
+  }
+
+  // Protobuf has no "outer" message type, so we need to put the TLV ControlParameters
+  // message inside an outer "typeless" ControlParametersMessage.
+  message ControlParametersMessage {
+    // A ControlParametersMessage has one ControlParameters.
+    required ControlParameters control_parameters = 104;
+  }
+
+  message ControlParametersResponseMessage {
+    // A ControlParametersResponseMessage has one ControlParametersResponse.
+    required ControlParametersResponse control_response = 101;
+  }
+}

@@ -1,0 +1,37 @@
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("face-query-filter.proto");
+
+package ndn_message;
+
+// Protobuf has no "outer" message type, so we need to put the TLV FaceQueryFilter
+// message inside an outer "typeless" FaceQueryFilterMessage.
+message FaceQueryFilterMessage {
+  enum FaceScope {
+    NON_LOCAL = 0;
+    LOCAL = 1;
+  }
+
+  enum FacePersistency {
+    PERSISTENT = 0;
+    ON_DEMAND = 1;
+    PERMANENT = 2;
+  }
+
+  enum LinkType {
+    POINT_TO_POINT = 0;
+    MULTI_ACCESS = 1;
+  }
+
+  message FaceQueryFilter {
+    optional uint64 face_id = 105;
+    optional string uri_scheme = 131;
+    optional string uri = 114;
+    optional string local_uri = 129;
+    optional FaceScope face_scope = 132;
+    optional FacePersistency face_persistency = 133;
+    optional LinkType link_type = 134;
+  }
+
+  // A FaceQueryFilterMessage has repeated FaceQueryFilter.
+  repeated FaceQueryFilter face_query_filter = 150;
+}
