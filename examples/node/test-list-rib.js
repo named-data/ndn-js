@@ -16,6 +16,12 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/*
+ * This sends a rib list request to the local NFD and prints the response.
+ * This is equivalent to the NFD command line command "nfd-status -r".
+ * See http://redmine.named-data.net/projects/nfd/wiki/Management .
+ */
+
 var ProtoBuf = require("protobufjs");
 var Face = require('../..').Face;
 var Name = require('../..').Name;
