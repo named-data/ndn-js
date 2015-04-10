@@ -33,46 +33,38 @@
 var hostip = "spurs.cs.ucla.edu";
 
 var face = new Face({host:hostip});
-    
-var AsyncGetClosure = function AsyncGetClosure(T0) {
-  this.T0 = T0;
-  Closure.call(this);
-};
 
-AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
-
-
-  if (kind == Closure.UPCALL_FINAL) {
-    // Do nothing.
-  } else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-
-    nameStr = upcallInfo.interest.getName().toUri().split("/").slice(0,-2).join("/");
+function onTimeout(interest)
+{
+    var nameStr = interest.getName().toUri().split("/").slice(0,-2).join("/");
     document.getElementById('pingreport').innerHTML += '<tr><td width="50%">' + nameStr + ' </td><td align="right">timeout</td></tr>' ;
-  } else if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED) {
+}
+
+function onData(interest, content, T0)
+{
     var T1 = new Date();
-    var content = upcallInfo.data;
-    nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
-    strContent = DataUtils.toString(content.getContent().buf());
+    var nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
+    var strContent = DataUtils.toString(content.getContent().buf());
     
     // TODO: perhaps ndn-js should auto-handle the zero-terminated string? [jb]
     // 
     
-    if (kind==Closure.UPCALL_CONTENT_UNVERIFIED) {
-        nameStr += '<font color="gray" size="-1"> (unverified)</font>';
-    }
+    nameStr += '<font color="gray" size="-1"> (unverified)</font>';
          
     if (strContent=="NDN TLV Ping Response\0") {
-      document.getElementById('pingreport').innerHTML += '<tr><td width="50%">' + nameStr + ' </td><td align="right">' + (T1-this.T0) + ' ms</td></tr>' ;
+      document.getElementById('pingreport').innerHTML += '<tr><td width="50%">' + nameStr + ' </td><td align="right">' + (T1-T0) + ' ms</td></tr>' ;
     } else {
       console.log("Unknown content received.");
-    };
-  }
-  return Closure.RESULT_OK;
-};
+    }
+}
 
 function ping(name) {
-  pingname = name + "/ping/" + Math.floor(Math.random()*100000);
-  face.expressInterest(new Name(pingname), new AsyncGetClosure(new Date()));
+  var pingname = name + "/ping/" + Math.floor(Math.random()*100000);
+  var T0 = new Date();
+  face.expressInterest
+    (new Name(pingname),
+     function(interest, content) { onData(interest, content, T0); },
+     onTimeout);
 };
 
 function dopings() {
