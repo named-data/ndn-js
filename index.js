@@ -1,6 +1,6 @@
 exports.Face = require('./js/face.js').Face;
 exports.NDN = require('./js/face.js').NDN; // deprecated
-exports.Closure = require('./js/closure.js').Closure;
+exports.Closure = require('./js/closure.js').Closure; // deprecated
 exports.Name = require('./js/name.js').Name;
 exports.ForwardingFlags = require('./js/forwarding-flags.js').ForwardingFlags;
 exports.Interest = require('./js/interest.js').Interest;
