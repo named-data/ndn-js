@@ -31,13 +31,10 @@
     var face = new Face({port:9696,host:hostip});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /*
-     * Closure for calling expressInterest to fetch big file.
+    /*
+     * Context for calling expressInterest to fetch big file.
      */
-    var ContentClosure = function ContentClosure(face, T0) {
-        // Inherit from Closure.
-        Closure.call(this);
-
+    var ContentContext = function ContentContext(face, T0) {
         this.T0 = T0;  // start time
         this.face = face;
       this.totalBlocks = 0;  // total # of segments delivered to usr;
@@ -53,7 +50,7 @@
                              // when this counter reaches 3, apply fast retransmission alg.
         this.pkt_recved = 0;  // total # of data packet object received
         this.timed_out = 0;   // totle # of timed out interest
-        this.interest_sent = 1;  // there is an initial interest before calling the closure upcall
+        this.interest_sent = 1;  // there is an initial interest before calling the callback
         this.dups = 0;  // total # of dup content segments
 
         this.max_window = 32;  // max window size
@@ -69,10 +66,17 @@
         this.terminated = false;  // Set this flag after we receive all the segments;
     };
 
-    ContentClosure.prototype.upcall = function(kind, upcallInfo) {
-      this.pkt_recved++;
+    ContentContext.prototype.expressInterest = function(name) {
+      var thisContext = this;
+      this.face.expressInterest
+        (name,
+         function(interest, data) { thisContext.onData(interest, data); },
+         function(interest) { thisContext.onTimeout(interest); });
+    };
 
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+    ContentContext.prototype.onTimeout = function(interest) {
+          this.pkt_recved++;
+
           if (this.terminated == false) {
             this.timed_out++;
 
@@ -80,14 +84,13 @@
             this.snd_wnd = 1;
 
             // Retransmit interest for this segment
-            // TODO: Use expressInterest with callbacks, not Closure.
-            this.face.expressInterest(upcallInfo.interest.getName(), this);
-          //console.log("Resend interest sent for " + upcallInfo.interest.getName().toUri());
+            this.expressInterest(interest.getName());
+          //console.log("Resend interest sent for " + interest.getName().toUri());
           document.getElementById('content').innerHTML += "<p>Resend interest sent for "
-                                   + upcallInfo.interest.getName().toUri() + "</p>";
+                                   + interest.getName().toUri() + "</p>";
           this.interest_sent++;
 
-            document.getElementById('content').innerHTML += "<p>Interest " + upcallInfo.interest.getName().toUri() + " time out.</p>";
+            document.getElementById('content').innerHTML += "<p>Interest " + interest.getName().toUri() + " time out.</p>";
               document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
               document.getElementById('content').innerHTML += "<p>Total number of packets: " + this.pkt_recved + "</p>";
           document.getElementById('content').innerHTML += "<p>Total number of dup segments: " + this.dups + "</p>";
@@ -98,25 +101,14 @@
           document.getElementById('content').innerHTML += "<p>SND_WND: " + this.snd_wnd + "</p>";
           document.getElementById('content').innerHTML += "<p>SND_NXT: " + this.snd_nxt + "</p>";
         }
-            return Closure.RESULT_OK;
-        }
+};
 
-        if (kind == Closure.UPCALL_CONTENT_BAD) {
-          console.log("NdnProtocol.ContentClosure: signature verification failed");
-          console.log(upcallInfo.data.getName().toUri());
-          console.log(DataUtils.toHex(upcallInfo.data.getSignature().witness).toLowerCase());
-          return Closure.RESULT_OK;
-        }
+ContentContext.prototype.onData = function(interest, data) {
+        this.pkt_recved++;
 
-        if (!(kind == Closure.UPCALL_CONTENT ||
-              kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-            // The upcall is not for us.
-            return Closure.RESULT_ERR;
-
-        var data = upcallInfo.data;
         if (data.getContent().isNull()) {
             console.log("data content is null");
-            return Closure.RESULT_ERR;
+            return;
         }
 
         // Use the segmentNumber to load multiple segments.
@@ -162,7 +154,7 @@
           // Discard segment that is out of window
           //console.log("Out-of-window segment #" + segmentNumber);
           document.getElementById('content').innerHTML += "<p>Out-of-window segment #" + segmentNumber + "</p>";
-          return Closure.RESULT_OK;
+          return;
         }
         // Mark this segment in hash table
         var slot = segmentNumber % this.ooo_table_size;
@@ -178,7 +170,7 @@
           // SWT: what if we never receive the first unacked segment???
         }
 
-        return Closure.RESULT_OK;
+        return;
       }
 
       // In-order segment; slide window forward
@@ -209,7 +201,7 @@
         document.getElementById('content').innerHTML += "<p>SND_UNA: " + this.snd_una + "</p>";
         document.getElementById('content').innerHTML += "<p>SND_WND: " + this.snd_wnd + "</p>";
         document.getElementById('content').innerHTML += "<p>SND_NXT: " + this.snd_nxt + "</p>";
-        return Closure.RESULT_OK;
+        return;
       }
 
       // Adjust window size
@@ -232,16 +224,13 @@
         nextNameComponents.push(nextSegmentNumber);
 
         var nextName = new Name(nextNameComponents);
-        // TODO: Use expressInterest with callbacks, not Closure.
-        this.face.expressInterest(nextName, this);
+        this.expressInterest(nextName);
         //console.log("Interest sent for seg # " + this.snd_nxt + " name " + nextName.toUri());
         this.interest_sent++;
 
         this.snd_nxt++;
         nextNameComponents.pop();  // Remove segment number from components
       }
-
-      return Closure.RESULT_OK;
     };
 
     /*
@@ -309,9 +298,8 @@
     function run() {
       document.getElementById('content').innerHTML += "<p>Started...</p>";
       var name = new Name(document.getElementById('interest').value);
-      // TODO: Use expressInterest with callbacks, not Closure.
-      face.expressInterest( name,
-                    new ContentClosure( face, new Date() ));
+      var context = new ContentContext(face, new Date());
+      context.expressInterest(name);
     }
 
   </script>

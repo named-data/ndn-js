@@ -31,46 +31,37 @@
     var face = new Face({port:9696,host:hostip,verify:false});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-                /*
-     * Closure for calling expressInterest to fetch big file.
+    /*
+     * Context for calling expressInterest to fetch a big file.
      */
-    var ContentClosure = function ContentClosure(face, T0) {
-        // Inherit from Closure.
-        Closure.call(this);
-
+    var ContentContext = function ContentContext(face, T0) {
         this.T0 = T0;
         this.face = face;
       this.totalBlocks = 0;
 
         this.firstReceivedSegmentNumber = null;
         this.firstReceivedData = null;
-    }
+    };
 
-    ContentClosure.prototype.upcall = function(kind, upcallInfo) {
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
+    ContentContext.prototype.expressInterest = function(name) {
+      var thisContext = this;
+      this.face.expressInterest
+        (name,
+         function(interest, data) { thisContext.onData(interest, data); },
+         function(interest) { thisContext.onTimeout(interest); });
+    };
+    
+    ContentContext.prototype.onTimeout = function(interest) {
           var T1 = new Date();
           document.getElementById('content').innerHTML += "<p>Interest time out.</p>";
             document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms including 4s timeout</p>";
             document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
-            return Closure.RESULT_OK;
-        }
+    };
 
-        if (kind == Closure.UPCALL_CONTENT_BAD) {
-          console.log("NdnProtocol.ContentClosure: signature verification failed");
-          console.log(upcallInfo.data.getName().toUri());
-          console.log(DataUtils.toHex(upcallInfo.data.getSignature().witness).toLowerCase());
-          return Closure.RESULT_OK;
-        }
-
-        if (!(kind == Closure.UPCALL_CONTENT ||
-              kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-            // The upcall is not for us.
-            return Closure.RESULT_ERR;
-
-        var data = upcallInfo.data;
+    ContentContext.prototype.onData = function(interest, data) {
         if (data.getContent().isNull()) {
             console.log("data content is null");
-            return Closure.RESULT_ERR;
+            return;
         }
 
         // Use the segmentNumber to load multiple segments.
@@ -85,9 +76,8 @@
                   var componentsForZero = data.getName().components.slice
                       (0, data.getName().size() - 1);
                   componentsForZero.push([0]);
-                  // TODO: Use expressInterest with callbacks, not Closure.
-                  this.face.expressInterest(new Name(componentsForZero), this);
-                  return Closure.RESULT_OK;
+                  this.expressInterest(new Name(componentsForZero));
+                  return;
               }
           }
 
@@ -129,8 +119,7 @@
             var components = data.getName().components.slice
                 (0, data.getName().size() - 1);
             components.push(nextSegmentNumber);
-            // TODO: Use expressInterest with callbacks, not Closure.
-            this.face.expressInterest(new Name(components), this);
+            this.expressInterest(new Name(components));
         }
         else {
             // Final block received.
@@ -140,8 +129,6 @@
             document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>";
             document.getElementById('content').innerHTML += "<p>Total number of blocks: " + this.totalBlocks + "</p>";
         }
-
-        return Closure.RESULT_OK;
     };
 
     /*
@@ -178,9 +165,8 @@
     function run() {
       document.getElementById('content').innerHTML += "<p>Started...</p>";
       var name = new Name(document.getElementById('interest').value);
-      // TODO: Use expressInterest with callbacks, not Closure.
-      face.expressInterest( name,
-                    new ContentClosure( face, new Date() ));
+      var context = new ContentContext(face, new Date());
+      context.expressInterest(name);
     }
 
   </script>
