@@ -21,16 +21,7 @@
 var Closure = require('../closure.js').Closure;
 
 /**
- * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
- *   by expressing the interest again with double the interestLifetime. If the interesLifetime goes
- *   over maxInterestLifetime, then call callerClosure.upcall with UPCALL_INTEREST_TIMED_OUT.
- * When upcall is not UPCALL_INTEREST_TIMED_OUT, just call callerClosure.upcall.
- * @constructor
- * @param {Closure} callerClosure
- * @param {Object} settings if not null, an associative array with the following defaults:
- * {
- *   maxInterestLifetime: 16000 // milliseconds
- * }
+ * @deprecated Use ExponentialReExpress.makeOnTimeout().
  */
 var ExponentialReExpressClosure = function ExponentialReExpressClosure(callerClosure, settings)
 {

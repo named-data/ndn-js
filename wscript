@@ -94,7 +94,8 @@ def build (bld):
                  "js/util/ndn-common.js",
                  "js/util/ndn-protoco-id-tags.js",
                  "js/util/ndn-time.js",
-                 "js/util/exponential-re-express-closure.js",
+                 "js/util/exponential-re-express-closure.js", # deprecated
+                 "js/util/exponential-re-express.js",
                  "js/util/blob.js",
                  "js/util/signed-blob.js",
                  "js/util/dynamic-buffer.js",
@@ -123,7 +124,7 @@ def build (bld):
                  "js/transport/transport.js",
                  "js/transport/web-socket-transport.js",
                  "js/browserify-tcp-transport.js",
-                 "js/closure.js",
+                 "js/closure.js", # deprecated
                  "js/publisher-public-key-digest.js",
                  "js/publisher-id.js",
                  "js/name.js",
