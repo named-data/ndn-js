@@ -101,14 +101,14 @@ NdnProtocol.prototype = {
             var requestContent = function(contentListener) {
                 var name = new Name(uriParts.name);
                 // Use the same Face object each time.
-                var closure = new ContentClosure(NdnProtocolInfo.face, contentListener, name,
+                var context = new ContentContext(NdnProtocolInfo.face, contentListener, name,
                      aURI, searchWithoutNdn + uriParts.hash, segmentTemplate);
 
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
-                    ContentClosure.setClosureForWindow(contentChannel.browserTab, closure);
+                    ContentContext.setContextForWindow(contentChannel.browserTab, context);
                     
-                closure.expressInterest(name, template);
+                context.expressInterest(name, template);
             };
 
             var contentChannel = new ContentChannel(aURI, requestContent);
@@ -130,7 +130,7 @@ else
     var NSGetModule = XPCOMUtils.generateNSGetModule([NdnProtocol]);
 
 /*
- * Create a closure for calling expressInterest.
+ * Create a context for calling expressInterest and processing callbacks.
  * contentListener is from the call to requestContent.
  * uriName is the name in the URI passed to newChannel (used in part to determine whether to request
  *   only that segment number and for updating the URL bar).
@@ -138,14 +138,10 @@ else
  * uriSearchAndHash is the search and hash part of the URI passed to newChannel, including the '?'
  *    and/or '#' but without the interest selector fields.
  * segmentTemplate is the template used in expressInterest to fetch further segments.
- * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
  */
-var ContentClosure = function ContentClosure
+var ContentContext = function ContentContext
       (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate)
 {
-    // Inherit from Closure.
-    Closure.call(this);
-
     this.face = face;
     this.contentListener = contentListener;
     this.uriName = uriName;
@@ -171,44 +167,50 @@ var ContentClosure = function ContentClosure
  * @param {Name} name A Name for the interest. This copies the Name.
  * @param {Interest} interestTemplate Copy interest selectors from the template.
  */
-ContentClosure.prototype.expressInterest = function(name, interestTemplate)
+ContentContext.prototype.expressInterest = function(name, interestTemplate)
 {
-  // TODO: Use expressInterest with callbacks, not Closure.
+  // TODO: Use ExponentialReExpressClosure equivalent.
+  var thisContext = this;
   this.face.expressInterest
-    (name, new ExponentialReExpressClosure(this), interestTemplate);
+    (name, interestTemplate,
+     function(interest, data) { thisContext.onData(interest, data); },
+     function(interest) { thisContext.onTimeout(interest); });
 };
 
-ContentClosure.prototype.upcall = function(kind, upcallInfo)
+ContentContext.prototype.onTimeout = function(interest)
+{
+  try {
+    if (this.contentListener.isDone())
+      // We are getting unexpected extra results.
+      return;
+
+    dump("NdnProtocol: Interest timed out: " + interest.toUri());
+    if (!this.didOnStart) {
+      // We have not received a segment to start the content yet, so assume the URI can't be fetched.
+      this.contentListener.onStart("text/plain", "utf-8", this.aURI);
+      this.contentListener.onReceivedContent
+        ("The latest interest timed out after " + interest.getInterestLifetimeMilliseconds() + " milliseconds.");
+      this.contentListener.onStop();
+      return;
+    }
+    else
+      // We already tried to re-express, so quit.
+      return;
+  } catch (ex) {
+    dump("ContentContext.onTimeout exception: " + ex + "\n" + ex.stack);
+  }
+};
+
+ContentContext.prototype.onData = function(interest, data)
 {
   try {
     if (this.contentListener.isDone())
         // We are getting unexpected extra results.
-        return Closure.RESULT_ERR;
+        return;
 
-    if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-        dump("NdnProtocol: Interest timed out: " + upcallInfo.interest.toUri());
-        if (!this.didOnStart) {
-            // We have not received a segment to start the content yet, so assume the URI can't be fetched.
-            this.contentListener.onStart("text/plain", "utf-8", this.aURI);
-            this.contentListener.onReceivedContent
-                ("The latest interest timed out after " + upcallInfo.interest.getInterestLifetimeMilliseconds() + " milliseconds.");
-            this.contentListener.onStop();
-            return Closure.RESULT_OK;
-        }
-        else
-            // ExponentialReExpressClosure already tried to re-express, so quit.
-            return Closure.RESULT_ERR;
-    }
-
-    if (!(kind == Closure.UPCALL_CONTENT ||
-          kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-        // The upcall is not for us.
-        return Closure.RESULT_ERR;
-
-    var data = upcallInfo.data;
     if (data.getContent().isNull()) {
-        dump("NdnProtocol.ContentClosure: data content is null\n");
-        return Closure.RESULT_ERR;
+        dump("NdnProtocol.ContentContext: data content is null\n");
+        return;
     }
 
     // Assume this is only called once we're connected, report the host and port.
@@ -239,7 +241,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.setExclude(new Exclude(this.excludedMetaComponents));
             this.expressInterest(nameWithoutMeta, excludeMetaTemplate);
-            return Closure.RESULT_OK;
+            return;
         }
 
         var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
@@ -253,7 +255,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             // For Ndnfs file request with mime-type 'application/octet-stream', we spawn download task by default.
             // This tries to override the default action for 'application/octet-stream', (and 'application/pdf').
             if (contentTypeEtc.contentType == "application/octet-stream" || contentTypeEtc.contentType == "application/pdf") {
-              const nsIFilePicker = Components.interfaces.nsIFilePicker;
+              var nsIFilePicker = Components.interfaces.nsIFilePicker;
               var fp = Components.classes["@mozilla.org/filepicker;1"]
                              .createInstance(nsIFilePicker);
               var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
@@ -291,7 +293,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
                        path);
                 this.contentListener.onStop();
               }
-              return Closure.RESULT_OK;
+              return;
             }
           
             if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
@@ -299,7 +301,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
               var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
                 (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);
               this.expressInterest(nameWithoutMeta, this.segmentTemplate);
-              return Closure.RESULT_OK;
+              return;
             } else {
                // the file is supposedly empty; 
                // In thie case, we force the returned content to be 'text/plain',
@@ -341,7 +343,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
             this.contentListener.onReceivedContent(DataUtils.toString(data.getContent().buf()));
             this.contentSha256.update(data.getContent().buf(), data.getContent().size());
             this.contentListener.onStop();
-            ContentClosure.removeClosureForWindow(this);
+            ContentContext.removeContextForWindow(this);
 
             if (!this.uriEndsWithSegmentNumber) {
                 var nameContentDigest = data.getName().getContentDigestValue();
@@ -351,7 +353,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
                     // TODO: How to show the user an error for invalid digest?
                     dump("Content does not match digest in name " + data.getName().toUri() + "\n");
             }
-            return Closure.RESULT_OK;
+            return;
         }
         else
             // We are doing segments.  Make sure we always request the same base name.
@@ -360,12 +362,12 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
 
     if (segmentNumber == null)
         // We should be doing segments at this point.
-        return Closure.RESULT_ERR;
+        return;
 
     if (!(data.getName().size() == this.nameWithoutSegment.size() + 1 &&
           this.nameWithoutSegment.match(data.getName())))
         // The data packet object name is not part of our sequence of segments.
-        return Closure.RESULT_ERR;
+        return;
 
     this.segmentStore.storeContent(segmentNumber, data);
 
@@ -383,7 +385,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         if (this.finalSegmentNumber != null && segmentNumber == this.finalSegmentNumber) {
             // Finished.
             this.contentListener.onStop();
-            ContentClosure.removeClosureForWindow(this);
+            ContentContext.removeContextForWindow(this);
             var nameContentDigest = data.getName().getContentDigestValue();
             if (nameContentDigest != null && this.contentSha256 != null &&
                 !DataUtils.arraysEqual(nameContentDigest,
@@ -391,7 +393,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
                 // TODO: How to show the user an error for invalid digest?
                 dump("Content does not match digest in name " + data.getName().toUri() + "\n");
 
-            return Closure.RESULT_OK;
+            return;
         }
     }
 
@@ -414,49 +416,46 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
           (new Name(this.nameWithoutSegment).appendSegment(toRequest[i]),
            this.segmentTemplate);
     }
-
-    return Closure.RESULT_OK;
   } catch (ex) {
-        dump("ContentClosure.upcall exception: " + ex + "\n" + ex.stack);
-        return Closure.RESULT_ERR;
+        dump("ContentContext.onData exception: " + ex + "\n" + ex.stack);
   }
 };
 
-ContentClosure.closureForWindowList = [];
+ContentContext.contextForWindowList = [];
 
 /*
- * We use closureForWindowList to keep only one closure for each document window.
+ * We use contextForWindowList to keep only one context for each document window.
  * window is the window with the URL bar.
- * closure is the ContentClosure to associate with it.
- * If there is already another closure for window, callits contentListener.onStop(); so
- *   that further calls to upcall will do nothing.
+ * context is the ContentContext to associate with it.
+ * If there is already another context for window, callits contentListener.onStop(); so
+ *   that further calls to onData will do nothing.
  */
-ContentClosure.setClosureForWindow = function(tab, closure)
+ContentContext.setContextForWindow = function(tab, context)
 {
-    for (var i = 0; i < ContentClosure.closureForWindowList.length; ++i) {
-        var entry = ContentClosure.closureForWindowList[i];
+    for (var i = 0; i < ContentContext.contextForWindowList.length; ++i) {
+        var entry = ContentContext.contextForWindowList[i];
         if (entry.tab == tab) {
             try {
-                entry.closure.contentListener.onStop();
+                entry.context.contentListener.onStop();
             } catch (ex) {
                 // Ignore any errors when stopping.
             }
-            entry.closure = closure;
+            entry.context = context;
             return;
         }
     }
 
-    ContentClosure.closureForWindowList.push({ tab: tab, closure: closure });
+    ContentContext.contextForWindowList.push({ tab: tab, context: context });
 };
 
 /*
- * Remove any entry in closureForWindowList for closure.  This is called when the closure is done.
+ * Remove any entry in contextForWindowList for context.  This is called when the context is done.
  */
-ContentClosure.removeClosureForWindow = function(closure)
+ContentContext.removeContextForWindow = function(context)
 {
-    for (var i = ContentClosure.closureForWindowList.length - 1; i >= 0; --i) {
-        if (ContentClosure.closureForWindowList[i].closure == closure)
-            ContentClosure.closureForWindowList.splice(i, 1);
+    for (var i = ContentContext.contextForWindowList.length - 1; i >= 0; --i) {
+        if (ContentContext.contextForWindowList[i].context == context)
+            ContentContext.contextForWindowList.splice(i, 1);
     }
 };
 
