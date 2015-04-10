@@ -46,9 +46,6 @@ function onData(interest, content, T0)
     var nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
     var strContent = DataUtils.toString(content.getContent().buf());
     
-    // TODO: perhaps ndn-js should auto-handle the zero-terminated string? [jb]
-    // 
-    
     nameStr += '<font color="gray" size="-1"> (unverified)</font>';
          
     if (strContent=="NDN TLV Ping Response\0") {
