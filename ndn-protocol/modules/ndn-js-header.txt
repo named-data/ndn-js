@@ -21,9 +21,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var EXPORTED_SYMBOLS = ["Closure", "Data", "DataUtils", "Exclude", "Interest", 
-  "MimeTypes", "Face", "Name", "Sha256", "WireFormat", "XpcomTransport",
-  "Buffer"];
+var EXPORTED_SYMBOLS = ["Closure", "Data", "DataUtils", "Exclude", 
+  "ExponentialReExpress", "Interest", "MimeTypes", "Face", "Name", "Sha256",
+  "WireFormat", "XpcomTransport", "Buffer"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");

@@ -169,12 +169,12 @@ var ContentContext = function ContentContext
  */
 ContentContext.prototype.expressInterest = function(name, interestTemplate)
 {
-  // TODO: Use ExponentialReExpressClosure equivalent.
   var thisContext = this;
+  var onData = function(interest, data) { thisContext.onData(interest, data); };
+  var onTimeout = function(interest) { thisContext.onTimeout(interest); };
   this.face.expressInterest
-    (name, interestTemplate,
-     function(interest, data) { thisContext.onData(interest, data); },
-     function(interest) { thisContext.onTimeout(interest); });
+    (name, interestTemplate, onData,
+     ExponentialReExpress.makeOnTimeout(this.face, onData, onTimeout));
 };
 
 ContentContext.prototype.onTimeout = function(interest)
@@ -184,7 +184,7 @@ ContentContext.prototype.onTimeout = function(interest)
       // We are getting unexpected extra results.
       return;
 
-    dump("NdnProtocol: Interest timed out: " + interest.toUri());
+    dump("NdnProtocol: Interest timed out: " + interest.toUri() + "\n");
     if (!this.didOnStart) {
       // We have not received a segment to start the content yet, so assume the URI can't be fetched.
       this.contentListener.onStart("text/plain", "utf-8", this.aURI);
