@@ -108,9 +108,7 @@ NdnProtocol.prototype = {
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
                     ContentClosure.setClosureForWindow(contentChannel.browserTab, closure);
                     
-                // TODO: Use expressInterest with callbacks, not Closure.
-                NdnProtocolInfo.face.expressInterest
-                    (name, new ExponentialReExpressClosure(closure), template);
+                closure.expressInterest(name, template);
             };
 
             var contentChannel = new ContentChannel(aURI, requestContent);
@@ -141,7 +139,6 @@ else
  *    and/or '#' but without the interest selector fields.
  * segmentTemplate is the template used in expressInterest to fetch further segments.
  * The uses ExponentialReExpressClosure in expressInterest to re-express if fetching a segment times out.
- * TODO: Use expressInterest with callbacks, not Closure.
  */
 var ContentClosure = function ContentClosure
       (face, contentListener, uriName, aURI, uriSearchAndHash, segmentTemplate)
@@ -166,6 +163,19 @@ var ContentClosure = function ContentClosure
     this.nameWithoutSegment = null;
     this.excludedMetaComponents = [];
     this.iMetaComponent = null;
+};
+
+/**
+ * Call expressInterest using the face given to the constructor, and use this
+ * object's callbacks for onData and onTimeout.
+ * @param {Name} name A Name for the interest. This copies the Name.
+ * @param {Interest} interestTemplate Copy interest selectors from the template.
+ */
+ContentClosure.prototype.expressInterest = function(name, interestTemplate)
+{
+  // TODO: Use expressInterest with callbacks, not Closure.
+  this.face.expressInterest
+    (name, new ExponentialReExpressClosure(this), interestTemplate);
 };
 
 ContentClosure.prototype.upcall = function(kind, upcallInfo)
@@ -228,8 +238,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
 
             var excludeMetaTemplate = this.segmentTemplate.clone();
             excludeMetaTemplate.setExclude(new Exclude(this.excludedMetaComponents));
-            // TODO: Use expressInterest with callbacks, not Closure.
-            this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), excludeMetaTemplate);
+            this.expressInterest(nameWithoutMeta, excludeMetaTemplate);
             return Closure.RESULT_OK;
         }
 
@@ -289,8 +298,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
               // Make a name /<prefix>/<version>/%00.
               var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
                 (data.getName().get(iNdnfsFileComponent + 1)).appendSegment(0);
-              // TODO: Use expressInterest with callbacks, not Closure.
-              this.face.expressInterest(nameWithoutMeta, new ExponentialReExpressClosure(this), this.segmentTemplate);
+              this.expressInterest(nameWithoutMeta, this.segmentTemplate);
               return Closure.RESULT_OK;
             } else {
                // the file is supposedly empty; 
@@ -393,9 +401,7 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         // Clone the template to set the childSelector.
         var childSelectorTemplate = this.segmentTemplate.clone();
         childSelectorTemplate.setChildSelector(1);
-        // TODO: Use expressInterest with callbacks, not Closure.
-        this.face.expressInterest
-            (this.nameWithoutSegment, new ExponentialReExpressClosure(this), childSelectorTemplate);
+        this.expressInterest(this.nameWithoutSegment,  childSelectorTemplate);
     }
 
     // Request new segments.
@@ -404,10 +410,9 @@ ContentClosure.prototype.upcall = function(kind, upcallInfo)
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
 
-        // TODO: Use expressInterest with callbacks, not Closure.
-        this.face.expressInterest
-            (new Name(this.nameWithoutSegment).appendSegment(toRequest[i]),
-             new ExponentialReExpressClosure(this), this.segmentTemplate);
+        this.expressInterest
+          (new Name(this.nameWithoutSegment).appendSegment(toRequest[i]),
+           this.segmentTemplate);
     }
 
     return Closure.RESULT_OK;
