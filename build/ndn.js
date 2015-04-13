@@ -9846,11 +9846,10 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
       }
       else if (field.type.name == "bytes") {
         var buffer = value.toBuffer();
-        /*
         if (buffer.length == undefined)
-          // We are not running in Node.js, so fall back to toBinary().
-          buffer = value.toBinary();
-            */
+          // We are not running in Node.js, so assume we are using the dcodeIO
+          // browser implementation based on ArrayBuffer.
+          buffer = new Uint8Array(value.toArrayBuffer());
         encoder.writeBlobTlv(tlvType, buffer);
       }
       else if (field.type.name == "string")
