@@ -1,0 +1,22 @@
+// This is the Protobuf definition for RepoCommandResponse, described at:
+// http://redmine.named-data.net/projects/repo-ng/wiki/Repo_Command
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("repo-command-response.proto");
+
+package ndn_message;
+
+// Protobuf has no "outer" message type, so we need to put the TLV RepoCommandResponse
+// message inside an outer "typeless" RepoCommandResponseMessage.
+message RepoCommandResponseMessage {
+  message RepoCommandResponse {
+    optional uint64 process_id = 206;
+    required uint64 status_code = 208;
+    optional uint64 start_block_id = 204;
+    optional uint64 end_block_id = 205;
+    optional uint64 insert_num = 209;
+    optional uint64 delete_num = 210;
+  }
+
+  // A RepoCommandResponseMessage has one RepoCommandResponse.
+  required RepoCommandResponse repo_command_response = 207;
+}

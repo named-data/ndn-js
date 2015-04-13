@@ -1,0 +1,37 @@
+// This is the Protobuf definition for RepoCommandParameter, described at:
+// http://redmine.named-data.net/projects/repo-ng/wiki/Repo_Command
+// Load this file using:
+// var builder = ProtoBuf.loadProtoFile("repo-command-parameter.proto");
+
+package ndn_message;
+
+// Protobuf has no "outer" message type, so we need to put the TLV RepoCommandParameter
+// message inside an outer "typeless" RepoCommandParameterMessage.
+message RepoCommandParameterMessage {
+  message Name {
+    repeated bytes component = 8;
+  }
+
+  message Selectors {
+    optional uint32 min_suffix_components = 13;
+    optional uint32 max_suffix_components = 14;
+    optional bytes publisher_public_key_locator = 15;
+    // TODO: Add Exclude.
+    optional uint32 child_selector = 17;
+  }
+
+  message RepoCommandParameter {
+    optional Name name = 7;
+    optional Selectors selectors = 9;
+    optional uint64 start_block_id = 204;
+    optional uint64 end_block_id = 205;
+    optional uint64 process_id = 206;
+    optional uint64 max_interest_num = 211;
+    optional uint64 watch_timeout = 212;
+    optional uint64 watch_status = 213;
+    optional uint64 interest_lifetime = 214;
+  }
+
+  // A RepoCommandParameterMessage has one RepoCommandParameter.
+  required RepoCommandParameter repo_command_parameter = 201;
+}

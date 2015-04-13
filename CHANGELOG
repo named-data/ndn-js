@@ -16,6 +16,8 @@ Changes
 * examples: Added test-list-channels, test-list-faces, test-list-rib and
   test-register-route to query NFD.
 * examples: In ndnping/ndn-ping.js, changed to use onData instead of a deprecated Closure.
+* examples: Added node/repo-ng/basic-insertion.js to show interaction with the
+  repo-ng repository.
 * Moved tests which need NFD from tests/unit_tests to tests/integration_tests.
 * Unit tests: Added test-der-encode-decode tests for CertificateExtension.
 * Integration tests: Added test-file-private-key-storage. Thanks to Andrew Brown!
