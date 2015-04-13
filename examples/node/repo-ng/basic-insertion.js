@@ -307,24 +307,24 @@ function main()
       face.close();
      });
   console.log("Register prefix " + fetchPrefix.toUri());
-  face.registerPrefix(
-    fetchPrefix, 
-    function(prefix, interest, transport, registeredPrefixId) {
-      produceSegments.onInterest(prefix, interest, transport, registeredPrefixId);
-    },
-    function(prefix) { 
-      console.log("Register failed for prefix " + prefix.toUri());
-      // This will cause the script to quit.
-      face.close();
-    });
+  face.registerPrefix
+    (fetchPrefix,
+     function(prefix, interest, transport, registeredPrefixId) {
+       produceSegments.onInterest(prefix, interest, transport, registeredPrefixId);
+     },
+     function(prefix) {
+       console.log("Register failed for prefix " + prefix.toUri());
+       // This will cause the script to quit.
+       face.close();
+     });
 
-  requestInsert(
-    face, repoCommandPrefix, fetchPrefix, 
-    function() { console.log("Insert started for " + fetchPrefix.toUri()); },
-    function() {
-      // Already printed the error. This will cause the script to quit.
-      face.close();
-    }, startBlockId, endBlockId);
+  requestInsert
+    (face, repoCommandPrefix, fetchPrefix,
+     function() { console.log("Insert started for " + fetchPrefix.toUri()); },
+     function() {
+       // Already printed the error. This will cause the script to quit.
+       face.close();
+     }, startBlockId, endBlockId);
 }
 
 main();
