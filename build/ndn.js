@@ -9844,8 +9844,15 @@ ProtobufTlv._encodeMessageValue = function(message, descriptor, encoder)
           throw new Error("ProtobufTlv::encode: ENUM value may not be negative");
         encoder.writeNonNegativeIntegerTlv(tlvType, value);
       }
-      else if (field.type.name == "bytes")
-        encoder.writeBlobTlv(tlvType, value.toBinary());
+      else if (field.type.name == "bytes") {
+        var buffer = value.toBuffer();
+        /*
+        if (buffer.length == undefined)
+          // We are not running in Node.js, so fall back to toBinary().
+          buffer = value.toBinary();
+            */
+        encoder.writeBlobTlv(tlvType, buffer);
+      }
       else if (field.type.name == "string")
         // Use Blob to convert.
         encoder.writeBlobTlv(tlvType, new Blob(value, false).buf());

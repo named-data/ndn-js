@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2015-04-09)
+Interim changes since NDN-JS v0.7.0 (2015-04-13)
 ------------------------------------------------
 
 Changes
@@ -26,6 +26,8 @@ Deprecated
 Bug fixes
 * http://redmine.named-data.net/issues/2001 Change the Face pending interest table,
   etc. from static to member variables of each face.
+* In ProtobufTlv.encode (in Node.js), instead of toBinary() to convert a binary
+  value, use toBuffer() to produce a Node.js Buffer.
 
 NDN-JS v0.7.0 (2014-12-22)
 --------------------------
