@@ -152,7 +152,8 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 function startRepoWatch
   (face, repoCommandPrefix, watchPrefix, onRepoWatchStarted, onFailed)
 {
-  var builder = ProtoBuf.loadProtoFile("repo-command-parameter.proto");
+  var builder = ProtoBuf.loadProtoFile
+    ("../../browser/repo-ng/repo-command-parameter.proto");
   var descriptor = builder.lookup("ndn_message.RepoCommandParameterMessage");
   var RepoCommandParameterMessage = descriptor.build();
   var parameter = new RepoCommandParameterMessage();
@@ -175,7 +176,8 @@ function startRepoWatch
   face.expressInterest
     (interest,
      function(localInterest, data) {
-       var builder = ProtoBuf.loadProtoFile("repo-command-response.proto");
+       var builder = ProtoBuf.loadProtoFile
+         ("../../browser/repo-ng/repo-command-response.proto");
        var descriptor = builder.lookup("ndn_message.RepoCommandResponseMessage");
        var RepoCommandResponseMessage = descriptor.build();
        var response = new RepoCommandResponseMessage();
@@ -215,7 +217,8 @@ function startRepoWatch
 function stopRepoWatch
   (face, repoCommandPrefix, watchPrefix, onRepoWatchStopped, onFailed)
 {
-  var builder = ProtoBuf.loadProtoFile("repo-command-parameter.proto");
+  var builder = ProtoBuf.loadProtoFile
+    ("../../browser/repo-ng/repo-command-parameter.proto");
   var descriptor = builder.lookup("ndn_message.RepoCommandParameterMessage");
   var RepoCommandParameterMessage = descriptor.build();
   var parameter = new RepoCommandParameterMessage();
@@ -238,7 +241,8 @@ function stopRepoWatch
   face.expressInterest
     (interest,
      function(localInterest, data) {
-       var builder = ProtoBuf.loadProtoFile("repo-command-response.proto");
+       var builder = ProtoBuf.loadProtoFile
+         ("../../browser/repo-ng/repo-command-response.proto");
        var descriptor = builder.lookup("ndn_message.RepoCommandResponseMessage");
        var RepoCommandResponseMessage = descriptor.build();
        var response = new RepoCommandResponseMessage();
@@ -249,7 +253,7 @@ function stopRepoWatch
          onFailed();
        }
 
-       if (response.repo_command_response.status_code == 100)
+       if (response.repo_command_response.status_code == 101)
          onRepoWatchStopped();
        else {
           console.log

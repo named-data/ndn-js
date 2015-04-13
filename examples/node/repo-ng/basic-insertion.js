@@ -158,7 +158,8 @@ function requestInsert
   (face, repoCommandPrefix, fetchName, onInsertStarted, onFailed, startBlockId,
    endBlockId)
 {
-  var builder = ProtoBuf.loadProtoFile("repo-command-parameter.proto");
+  var builder = ProtoBuf.loadProtoFile
+    ("../../browser/repo-ng/repo-command-parameter.proto");
   var descriptor = builder.lookup("ndn_message.RepoCommandParameterMessage");
   var RepoCommandParameterMessage = descriptor.build();
   var parameter = new RepoCommandParameterMessage();
@@ -185,7 +186,8 @@ function requestInsert
   face.expressInterest
     (interest,
      function(localInterest, data) {
-       var builder = ProtoBuf.loadProtoFile("repo-command-response.proto");
+       var builder = ProtoBuf.loadProtoFile
+         ("../../browser/repo-ng/repo-command-response.proto");
        var descriptor = builder.lookup("ndn_message.RepoCommandResponseMessage");
        var RepoCommandResponseMessage = descriptor.build();
        var response = new RepoCommandResponseMessage();
