@@ -185,7 +185,7 @@ function main()
 
   var echo = new Echo(keyChain, certificateName, face);
   var prefix = new Name("/testecho");
-  console.log("Register prefix", prefix.toUri());
+  console.log("Register prefix " + prefix.toUri());
   face.registerPrefix
     (prefix,
      function(prefix, interest, transport) { echo.onInterest(prefix, interest, transport); },
