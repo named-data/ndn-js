@@ -24,6 +24,8 @@ Changes
 * examples: In node/repo-ng added basic-insertion.js and watched-insertion.js and
   in browser/repo-ng added basic-insertion.html and watched-insertion.html to
   show interaction with the repo-ng repository.
+* examples: In browser, removed the old-style test-publish-async.html and added
+  test-publish-async-nfd.html and test-echo-consumer.html, similar to Node.js.
 * Moved tests which need NFD from tests/unit_tests to tests/integration_tests.
 * Unit tests: Added test-der-encode-decode tests for CertificateExtension.
 * Integration tests: Added test-file-private-key-storage. Thanks to Andrew Brown!

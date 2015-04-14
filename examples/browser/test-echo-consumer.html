@@ -1,0 +1,91 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!--
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+-->
+<!--
+This page shows an example of the repo-ng basic insertion protocol,
+described here:
+http://redmine.named-data.net/projects/repo-ng/wiki/Basic_Repo_Insertion_Protocol
+See main() for more details.
+-->
+<html xmlns = "http://www.w3.org/1999/xhtml">
+
+<head>
+  <title>NDN Consumer via WebSocket</title>
+
+  <script type="text/javascript" src="../../build/ndn.js"></script>
+
+  <script type="text/javascript">
+
+function printLine(line)
+{
+  var result = document.getElementById('result');
+  result.innerHTML += line + "<br/>";
+}
+
+var face = null;
+
+function onData(interest, data)
+{
+  printLine("Got data packet with name " + data.getName().toUri());
+  printLine(data.getContent().buf().toString('binary'));
+};
+
+function onTimeout(interest)
+{
+  printLine("Time out for interest " + interest.getName().toUri());
+};
+
+function express() {
+  var result = document.getElementById('result');
+  if (result.innerHTML.toString() == 0)
+    // Initially clear the result.
+    result.innerHTML = "";
+
+  if (face == null) {
+    var host = document.getElementById('host').value;
+    // Connect to the forwarder with a WebSocket.
+    face = new Face({host: host});
+  }
+
+  var word = document.getElementById('word').value;
+
+  var name = new Name("/testecho");
+  name.append(word);
+  printLine("Express name " + name.toUri());
+  face.expressInterest(name, onData, onTimeout);
+}
+
+  </script>
+
+</head>
+<body >
+  If you haven't already, open the <a href="test-publish-async-nfd.html" target="_blank">Publisher Page</a>.
+  Enter a Word to Echo and click Express Interest.<br/><br/>
+  <form>
+    Host:<br/> <input id="host" type="text" size="50" name="HOST" value="localhost" /><br/>
+    Word to Echo:<br/> <input id="word" type="text" size="50" name="WORD" value="hello" />
+  </form>
+  <br/><button onclick="express()">Express Interest</button>
+
+  <p id="result"></p>
+
+</body>
+</html>
