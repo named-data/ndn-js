@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2015-04-13)
+Interim changes since NDN-JS v0.7.0 (2015-04-14)
 ------------------------------------------------
 
 Changes
@@ -10,6 +10,11 @@ Changes
   expressInterest throws an exception if the encoded interest size exceeds it.
 * Implemented FilePrivateKeyStorage for Node.js. Thanks to Andrew Brown!
 * In ControlParameters, added support for Uri and Strategy. Allow the Name to be optional. Thanks to Andrew Brown!
+* http://redmine.named-data.net/issues/2532#change-8836 In Face.registerPrefix,
+  if connected to a remote NFD then use localhop to do remote registration. (For
+  remote registration, the remote NFD must be configured for localhop_security.)
+  Added the optional method Face.isLocal() for the application to check if the
+  connection is local.
 * In the default WireFormat, implemented decodeControlParameters. Thanks again to Andrew Brown!
 * In Interest setter methods, return this so that you can chain calls to update values.
 * Added class util/SegmentFetcher, ported from ndn-cxx. Use it in examples/node/test-list-rib, etc.
