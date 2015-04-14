@@ -96,6 +96,19 @@ WebSocketTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
+ * Determine whether this transport connecting according to connectionInfo is to
+ * a node on the current machine. WebSocket transports are always non-local.
+ * @param {WebSocketTransport.ConnectionInfo} connectionInfo This is ignored.
+ * @param {function} onResult This calls onResult(false) because WebSocket
+ * transports are always non-local.
+ * @param {function} onError This is ignored.
+ */
+WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
+{
+  onResult(false);
+};
+
+/**
  * Connect to a WebSocket according to the info in connectionInfo. Listen on
  * the port to read an entire packet element and call
  * elementListener.onReceivedElement(element). Note: this connect method

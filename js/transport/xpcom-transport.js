@@ -89,6 +89,29 @@ XpcomTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
+ * Determine whether this transport connecting according to connectionInfo is to
+ * a node on the current machine; results are cached. According to
+ * http://redmine.named-data.net/projects/nfd/wiki/ScopeControl#local-face, TCP
+ * transports with a loopback address are local. If connectionInfo contains a
+ * host name, this will do a DNS lookup; otherwise this will parse the
+ * IP address and examine the first octet to determine if it is a loopback
+ * address (e.g. the first IPv4 octet is 127 or IPv6 is "::1").
+ * @param {function} onResult On success, this calls onResult(isLocal) where
+ * isLocal is true if the host is local, false if not. We use callbacks because
+ * this may need to do an asynchronous DNS lookup.
+ * @param {function} onError On failure for DNS lookup or other error, this
+ * calls onError(message) where message is an error string.
+ */
+XpcomTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
+{
+  // TODO: Use XPCOM to look up connectionInfo.getHost(). For now, only the
+  // ndn-protocol Firefox add-on uses XpcomTransport, so assume the host is
+  // non-local. (Also, the Firefox add-on doesn't do registerPrefix so this
+  // isn't called.)
+  onResult(false);
+};
+
+/**
  * Connect to a TCP socket through Xpcom according to the info in connectionInfo.
  * Listen on the port to read an entire packet element and call
  * elementListener.onReceivedElement(element). Note: this connect method

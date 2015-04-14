@@ -18,6 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var dns = require('dns');
 var ElementReader = require('../encoding/element-reader.js').ElementReader;
 var LOG = require('../log.js').Log.LOG;
 var Transport = require('./transport.js').Transport;
@@ -34,6 +35,8 @@ var TcpTransport = function TcpTransport()
   this.sock_ready = false;
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
+  this.isLocalConnectionInfo = null; // Used by isLocal to cache results.
+  this.isLocalResult = false;
 
   this.defaultGetConnectionInfo = require('../face.js').Face.makeShuffledHostGetConnectionInfo
     (["A.hub.ndn.ucla.edu", "B.hub.ndn.ucla.edu", "C.hub.ndn.ucla.edu", "D.hub.ndn.ucla.edu",
@@ -88,6 +91,52 @@ TcpTransport.ConnectionInfo.prototype.equals = function(other)
 TcpTransport.ConnectionInfo.prototype.toString = function()
 {
   return "{ host: " + this.host + ", port: " + this.port + " }";
+};
+
+/**
+ * Determine whether this transport connecting according to connectionInfo is to
+ * a node on the current machine; results are cached. According to
+ * http://redmine.named-data.net/projects/nfd/wiki/ScopeControl#local-face, TCP
+ * transports with a loopback address are local. If connectionInfo contains a
+ * host name, this will do a DNS lookup; otherwise this will parse the
+ * IP address and examine the first octet to determine if it is a loopback
+ * address (e.g. the first IPv4 octet is 127 or IPv6 is "::1").
+ * @param {function} onResult On success, this calls onResult(isLocal) where
+ * isLocal is true if the host is local, false if not. We use callbacks because
+ * this may need to do an asynchronous DNS lookup.
+ * @param {function} onError On failure for DNS lookup or other error, this
+ * calls onError(message) where message is an error string.
+ */
+TcpTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
+{
+  if (this.isLocalConnectionInfo == null ||
+      this.isLocalConnectionInfo.host != connectionInfo.host) {
+    // Do the async DNS lookup.
+    var thisTransport = this;
+    dns.lookup
+      (connectionInfo.host,
+       function(err, addresses, family) {
+         if (err != null)
+           onError(err.toString());
+         else {
+           if (family == 4)
+             // IPv4
+             thisTransport.isLocalResult = (addresses.substr(0, 4) == "127.");
+           else
+             // IPv6
+             thisTransport.isLocalResult = (addresses == "::1");
+         }
+
+         // Cache the result in this.isLocalResult and save
+         // this.isLocalConnectionInfo for next time.
+         thisTransport.isLocalConnectionInfo = connectionInfo;
+         
+         onResult(thisTransport.isLocalResult);
+       });
+  }
+  else
+    // Use the cached result.
+    onResult(this.isLocalResult);
 };
 
 /**

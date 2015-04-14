@@ -1143,25 +1143,46 @@ Face.prototype.nfdRegisterPrefix = function
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
 
-  var commandInterest = new Interest(new Name("/localhost/nfd/rib/register"));
-  // NFD only accepts TlvWireFormat packets.
-  commandInterest.getName().append
-    (controlParameters.wireEncode(TlvWireFormat.get()));
-  this.nodeMakeCommandInterest
-    (commandInterest, commandKeyChain, commandCertificateName,
-     TlvWireFormat.get());
-  // The interest is answered by the local host, so set a short timeout.
-  commandInterest.setInterestLifetimeMilliseconds(2000.0);
+  // Make the callback for this.isLocal().
+  var thisFace = this;
+  var onIsLocalResult = function(isLocal) {
+    var commandInterest = new Interest();
+    if (isLocal) {
+      commandInterest.setName(new Name("/localhost/nfd/rib/register"));
+      // The interest is answered by the local host, so set a short timeout.
+      commandInterest.setInterestLifetimeMilliseconds(2000.0);
+    }
+    else {
+      commandInterest.setName(new Name("/localhop/nfd/rib/register"));
+      // The host is remote, so set a longer timeout.
+      commandInterest.setInterestLifetimeMilliseconds(4000.0);
+    }
+    // NFD only accepts TlvWireFormat packets.
+    commandInterest.getName().append
+      (controlParameters.wireEncode(TlvWireFormat.get()));
+    thisFace.nodeMakeCommandInterest
+      (commandInterest, commandKeyChain, commandCertificateName,
+       TlvWireFormat.get());
 
-  if (registeredPrefixId != 0)
-      // Save the onInterest callback and send the registration interest.
-      this.registeredPrefixTable.push
-        (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
+    if (registeredPrefixId != 0)
+        // Save the onInterest callback and send the registration interest.
+        thisFace.registeredPrefixTable.push
+          (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
 
-  this.reconnectAndExpressInterest
-    (null, commandInterest, new Face.RegisterResponseClosure
-     (this, prefix, closure, onRegisterFailed, flags,
-      TlvWireFormat.get(), true));
+    thisFace.reconnectAndExpressInterest
+      (null, commandInterest, new Face.RegisterResponseClosure
+       (thisFace, prefix, closure, onRegisterFailed, flags,
+        TlvWireFormat.get(), true));
+  };
+
+  this.isLocal
+    (onIsLocalResult,
+     function(message) {
+       if (LOG > 0)
+         console.log("Error in Transport.isLocal: " + message);
+       if (onRegisterFailed)
+         onRegisterFailed(prefix);
+     });
 };
 
 /**
@@ -1218,6 +1239,27 @@ Face.prototype.putData = function(data, wireFormat)
       ("The encoded interest Data packet exceeds the maximum limit getMaxNdnPacketSize()");
 
   this.transport.send(encoding.buf());
+};
+
+/**
+ * Check if the face is local based on the current connection through the
+ * Transport; some Transport may cause network I/O (e.g. an IP host name lookup).
+ * @param {function} onResult On success, this calls onResult(isLocal) where
+ * isLocal is true if the host is local, false if not. We use callbacks because
+ * this may need to do network I/O (e.g. an IP host name lookup).
+ * @param {function} onError On failure for DNS lookup or other error, this
+ * calls onError(message) where message is an error string.
+ */
+Face.prototype.isLocal = function(onResult, onError)
+{
+  // TODO: How to call transport.isLocal when this.connectionInfo is null? (This
+  // happens when the application does not supply a host but relies on the
+  // getConnectionInfo function to select a host.) For now return true to keep
+  // the same behavior from before we added Transport.isLocal.
+  if (this.connectionInfo == null)
+    onResult(false);
+  else
+    this.transport.isLocal(this.connectionInfo, onResult, onError);
 };
 
 /**
