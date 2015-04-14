@@ -79,6 +79,19 @@ UnixTransport.ConnectionInfo.prototype.toString = function()
 };
 
 /**
+ * Determine whether this transport connecting according to connectionInfo is to 
+ * a node on the current machine. Unix transports are always local.
+ * @param {UnixTransport.ConnectionInfo} connectionInfo This is ignored.
+ * @param {function} onResult This calls onResult(true) because Unix transports
+ * are always local.
+ * @param {function} onError This is ignored.
+ */
+UnixTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
+{
+  onResult(true);
+};
+
+/**
  * Connect to a Unix socket according to the info in connectionInfo. Listen on
  * the port to read an entire packet element and call
  * elementListener.onReceivedElement(element). Note: this connect method
