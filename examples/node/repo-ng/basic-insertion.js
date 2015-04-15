@@ -152,7 +152,7 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * an error and calls onFailed().
  * @param {number} startBlockId (optional) The starting block ID (segment
  * number) to fetch.
- * @param {number} endBlockId The end block ID (segment number) to fetch.
+ * @param {number} endBlockId (optional) The end block ID (segment number) to fetch.
  */
 function requestInsert
   (face, repoCommandPrefix, fetchName, onInsertStarted, onFailed, startBlockId,
