@@ -84,9 +84,7 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
-  
-  this.pendingInterestTable = [];
-  
+    
   this.digest_log = new Array();
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
   
@@ -188,39 +186,6 @@ ChronoSync2013.prototype.shutdown = function()
   this.contentCache.unregisterAll();
 };
 
-// PendingInterest class
-
-/**
- * A PendingInterest holds an interest which onInterest received but could
- * not satisfy. When we add a new data packet to this.contentCache, we will
- * also check if it satisfies a pending interest.
- */
-ChronoSync2013.PendingInterest = function ChronoSync2013PendingInterest(interest, transport)
-{
-  this.interest = interest;
-  this.transport = transport;
-  
-  if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
-    this.timeoutMilliseconds = (new Date()).getTime() + this.interest.getInterestLifetimeMilliseconds();
-  else
-    this.timeoutMilliseconds = -1.0;
-};
-
-ChronoSync2013.PendingInterest.prototype.getInterest = function()
-{
-  return this.interest;
-};
-
-ChronoSync2013.PendingInterest.prototype.getTransport = function()
-{
-  return this.transport;
-};
-
-ChronoSync2013.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
-{
-  return (this.timeoutTimeMilliseconds >= 0.0 && nowMilliseconds >= this.timeoutTimeMilliseconds);
-};
-
 // SyncState class
 /**
  * A SyncState holds the values of a sync state message which is passed to the
@@ -278,7 +243,7 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
   data.getName().append(digest);
   data.setContent(new Blob(array, false));
   this.keyChain.sign(data, this.certificateName);
-  this.contentCacheAdd(data);
+  this.contentCache.add(data);
 };
 
 /**
@@ -320,8 +285,8 @@ ChronoSync2013.prototype.logfind = function(digest)
 
 /**
  * Process the sync interest from the applicationBroadcastPrefix. If we can't
- * satisfy the interest, add it to the pendingInterestTable so that a future
- * call to contentCacheAdd may satisfy it.
+ * satisfy the interest, add it to the pending interest table in
+ * this.contentCache so that a future call to contentCacheAdd may satisfy it.
  */
 ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
 {
@@ -339,7 +304,7 @@ ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, regi
     this.processRecoveryInst(interest, syncdigest, transport);
   }
   else {
-    this.pendingInterestTable.push(new ChronoSync2013.PendingInterest(interest, transport));
+    this.contentCache.storePendingInterest(interest, transport);
     
     if (syncdigest != this.digest_tree.getRoot()) {
       var index = this.logfind(syncdigest);
@@ -642,28 +607,6 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                  })];
     if (this.update(content)) {
       this.onInitialized();
-    }
-  }
-};
-
-ChronoSync2013.prototype.contentCacheAdd = function(data)
-{
-  this.contentCache.add(data);
-  
-  var nowMilliseconds = (new Date()).getTime();
-  
-  for (var i = this.pendingInterestTable.length - 1; i >= 0; i--) {
-    if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
-      this.pendingInterestTable.splice(i,1);
-      continue;
-    }
-    if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
-      try {
-        this.pendingInterestTable[i].getTransport().send(data.wireEncode().buf());
-      }
-      catch (e) {
-      }
-      this.pendingInterestTable.splice(i,1);
     }
   }
 };
