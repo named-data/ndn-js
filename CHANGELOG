@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2015-04-14)
+Interim changes since NDN-JS v0.7.0 (2015-04-16)
 ------------------------------------------------
 
 Changes
@@ -20,6 +20,9 @@ Changes
 * Added class util/SegmentFetcher, ported from ndn-cxx. Use it in examples/node/test-list-rib, etc.
 * examples: Added test-list-channels, test-list-faces, test-list-rib and
   test-register-route to query NFD.
+* In MemoryContentCache, added support for storePendingInterest. add(data) will
+  check if the added Data packet satisfies any pending interest. You can use
+  getStorePendingInterest() for onDataNotFound in registerPrefix().
 * examples: In ndnping/ndn-ping.js, changed to use onData instead of a deprecated Closure.
 * examples: In node/repo-ng added basic-insertion.js and watched-insertion.js and
   in browser/repo-ng added basic-insertion.html and watched-insertion.html to
