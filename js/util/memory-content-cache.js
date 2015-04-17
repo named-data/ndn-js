@@ -115,14 +115,14 @@ MemoryContentCache.prototype.unregisterAll = function()
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
- * interests. If data.getFreshnessPeriod() is not null, set the staleness
- * time to now plus data.getFreshnessPeriod(), which is checked during cleanup
- * to remove stale content. This also checks if cleanupIntervalMilliseconds
- * milliseconds have passed and removes stale content from the cache. After
- * removing stale content, remove timed-out pending interests from
- * storePendingInterest(), then if the added Data packet satisfies any interest,
- * send it through the transport and remove the interest from the pending
- * interest table.
+ * interests. If data.getMetaInfo().getFreshnessPeriod() is not null, set the
+ * staleness time to now plus data.getMetaInfo().getFreshnessPeriod(), which is
+ * checked during cleanup to remove stale content. This also checks if
+ * cleanupIntervalMilliseconds milliseconds have passed and removes stale
+ * content from the cache. After removing stale content, remove timed-out
+ * pending interests from storePendingInterest(), then if the added Data packet
+ * satisfies any interest, send it through the transport and remove the interest
+ * from the pending interest table.
  * @param {Data} data The Data packet object to put in the cache. This copies
  * the fields from the object.
  */
