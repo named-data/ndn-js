@@ -124,7 +124,7 @@ UnixTransport.prototype.connect = function
       // Make a copy of data (maybe a Buffer or a String)
       var buf = new Buffer(data);
       try {
-        // Find the end of the packet element and call face.onReceivedElement.
+        // Find the end of the packet element and call onReceivedElement.
         thisTransport.elementReader.onReceivedData(buf);
       } catch (ex) {
         console.log("NDN.UnixTransport.ondata exception: " + ex);
