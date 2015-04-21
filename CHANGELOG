@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.7.0 (2015-04-16)
+Interim changes since NDN-JS v0.7.0 (2015-04-21)
 ------------------------------------------------
 
 Changes
@@ -29,6 +29,8 @@ Changes
   show interaction with the repo-ng repository.
 * examples: In browser, removed the old-style test-publish-async.html and added
   test-publish-async-nfd.html and test-echo-consumer.html, similar to Node.js.
+* examples: Removed browser/test-encode-decode-interest-with-forwarding-entry and
+  node/test-publish-async-ndnx because NDNx support is deprecated.
 * Moved tests which need NFD from tests/unit_tests to tests/integration_tests.
 * Unit tests: Added test-der-encode-decode tests for CertificateExtension.
 * Integration tests: Added test-file-private-key-storage. Thanks to Andrew Brown!
