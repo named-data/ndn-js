@@ -98,8 +98,8 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       // else loop back to decode.
     }
     else {
-      // Save for a later call to concatArrays so that we only copy data once.
-      this.dataParts.push(data);
+      // Save a copy. We will call concatArrays later.
+      this.dataParts.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
         return;
     }
