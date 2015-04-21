@@ -83,16 +83,14 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       this.dataParts.push(data.slice(0, offset));
       var element = DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
-      try {
-        this.elementListener.onReceivedElement(element);
-      } catch (ex) {
-          console.log("ElementReader: ignoring exception from onReceivedElement: " + ex);
-      }
 
-      // Need to read a new object.
+      // Reset to read a new object. Do this before calling onReceivedElement
+      // in case it throws an exception.
       data = data.slice(offset, data.length);
       this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
       this.tlvStructureDecoder = new TlvStructureDecoder();
+
+      this.elementListener.onReceivedElement(element);
       if (data.length == 0)
         // No more data in the packet.
         return;
