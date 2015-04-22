@@ -21,6 +21,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
+var DecodingException = require('./decoding-exception.js').DecodingException;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -109,6 +111,19 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     }
     else {
       // Save a copy. We will call concatArrays later.
+      var totalLength = data.length;
+      for (var i = 0; i < this.dataParts.length; ++i)
+        totalLength += this.dataParts[i].length;
+      if (totalLength > NdnCommon.MAX_NDN_PACKET_SIZE) {
+        // Reset to read a new element on the next call.
+        this.dataParts = [];
+        this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+        this.tlvStructureDecoder = new TlvStructureDecoder();
+
+        throw new DecodingException(new Error
+          ("The incoming packet exceeds the maximum limit Face.getMaxNdnPacketSize()"));
+      }
+
       this.dataParts.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
         return;
