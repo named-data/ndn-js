@@ -47,35 +47,45 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 {
   // Process multiple objects in the data.
   while (true) {
-    if (this.dataParts.length == 0) {
-      // This is the beginning of an element.  Check whether it is binaryXML or TLV.
-      if (data.length <= 0)
-        // Wait for more data.
-        return;
-
-      // The type codes for TLV Interest and Data packets are chosen to not
-      //   conflict with the first byte of a binary XML packet, so we can
-      //   just look at the first byte.
-      if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 0x80)
-        this.useTlv = true;
-      else
-        // Binary XML.
-        this.useTlv = false;
-    }
-
     var gotElementEnd;
     var offset;
-    if (this.useTlv) {
-      // Scan the input to check if a whole TLV object has been read.
-      this.tlvStructureDecoder.seek(0);
-      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
-      offset = this.tlvStructureDecoder.getOffset();
-    }
-    else {
-      // Scan the input to check if a whole Binary XML object has been read.
-      this.binaryXmlStructureDecoder.seek(0);
-      gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
-      offset = this.binaryXmlStructureDecoder.offset;
+
+    try {
+      if (this.dataParts.length == 0) {
+        // This is the beginning of an element.  Check whether it is binaryXML or TLV.
+        if (data.length <= 0)
+          // Wait for more data.
+          return;
+
+        // The type codes for TLV Interest and Data packets are chosen to not
+        //   conflict with the first byte of a binary XML packet, so we can
+        //   just look at the first byte.
+        if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 0x80)
+          this.useTlv = true;
+        else
+          // Binary XML.
+          this.useTlv = false;
+      }
+
+      if (this.useTlv) {
+        // Scan the input to check if a whole TLV object has been read.
+        this.tlvStructureDecoder.seek(0);
+        gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
+        offset = this.tlvStructureDecoder.getOffset();
+      }
+      else {
+        // Scan the input to check if a whole Binary XML object has been read.
+        this.binaryXmlStructureDecoder.seek(0);
+        gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
+        offset = this.binaryXmlStructureDecoder.offset;
+      }
+    } catch (ex) {
+      // Reset to read a new element on the next call.
+      this.dataParts = [];
+      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+      this.tlvStructureDecoder = new TlvStructureDecoder();
+
+      throw ex;
     }
 
     if (gotElementEnd) {
