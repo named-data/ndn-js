@@ -70,7 +70,7 @@ ChangeCounter.prototype.set = function(target)
  */
 ChangeCounter.prototype.checkChanged = function()
 {
-  targetChangeCount = this.target.getChangeCount();
+  var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;
     return true;
