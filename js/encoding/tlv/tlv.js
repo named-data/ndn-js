@@ -88,6 +88,12 @@ Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
+Tlv.LocalControlHeader_LocalControlHeader = 80;
+Tlv.LocalControlHeader_IncomingFaceId = 81;
+Tlv.LocalControlHeader_NextHopFaceId = 82;
+Tlv.LocalControlHeader_CachingPolicy = 83;
+Tlv.LocalControlHeader_NoCache = 96;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
