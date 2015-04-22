@@ -7054,7 +7054,7 @@ ChangeCounter.prototype.set = function(target)
  */
 ChangeCounter.prototype.checkChanged = function()
 {
-  targetChangeCount = this.target.getChangeCount();
+  var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;
     return true;
@@ -8887,6 +8887,12 @@ Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
+Tlv.LocalControlHeader_LocalControlHeader = 80;
+Tlv.LocalControlHeader_IncomingFaceId = 81;
+Tlv.LocalControlHeader_NextHopFaceId = 82;
+Tlv.LocalControlHeader_CachingPolicy = 83;
+Tlv.LocalControlHeader_NoCache = 96;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
@@ -10234,6 +10240,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
+var DecodingException = require('./decoding-exception.js').DecodingException;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -10260,35 +10268,45 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 {
   // Process multiple objects in the data.
   while (true) {
-    if (this.dataParts.length == 0) {
-      // This is the beginning of an element.  Check whether it is binaryXML or TLV.
-      if (data.length <= 0)
-        // Wait for more data.
-        return;
-
-      // The type codes for TLV Interest and Data packets are chosen to not
-      //   conflict with the first byte of a binary XML packet, so we can
-      //   just look at the first byte.
-      if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 0x80)
-        this.useTlv = true;
-      else
-        // Binary XML.
-        this.useTlv = false;
-    }
-
     var gotElementEnd;
     var offset;
-    if (this.useTlv) {
-      // Scan the input to check if a whole TLV object has been read.
-      this.tlvStructureDecoder.seek(0);
-      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
-      offset = this.tlvStructureDecoder.getOffset();
-    }
-    else {
-      // Scan the input to check if a whole Binary XML object has been read.
-      this.binaryXmlStructureDecoder.seek(0);
-      gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
-      offset = this.binaryXmlStructureDecoder.offset;
+
+    try {
+      if (this.dataParts.length == 0) {
+        // This is the beginning of an element.  Check whether it is binaryXML or TLV.
+        if (data.length <= 0)
+          // Wait for more data.
+          return;
+
+        // The type codes for TLV Interest and Data packets are chosen to not
+        //   conflict with the first byte of a binary XML packet, so we can
+        //   just look at the first byte.
+        if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 0x80)
+          this.useTlv = true;
+        else
+          // Binary XML.
+          this.useTlv = false;
+      }
+
+      if (this.useTlv) {
+        // Scan the input to check if a whole TLV object has been read.
+        this.tlvStructureDecoder.seek(0);
+        gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
+        offset = this.tlvStructureDecoder.getOffset();
+      }
+      else {
+        // Scan the input to check if a whole Binary XML object has been read.
+        this.binaryXmlStructureDecoder.seek(0);
+        gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
+        offset = this.binaryXmlStructureDecoder.offset;
+      }
+    } catch (ex) {
+      // Reset to read a new element on the next call.
+      this.dataParts = [];
+      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+      this.tlvStructureDecoder = new TlvStructureDecoder();
+
+      throw ex;
     }
 
     if (gotElementEnd) {
@@ -10296,16 +10314,14 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       this.dataParts.push(data.slice(0, offset));
       var element = DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
-      try {
-        this.elementListener.onReceivedElement(element);
-      } catch (ex) {
-          console.log("ElementReader: ignoring exception from onReceivedElement: " + ex);
-      }
 
-      // Need to read a new object.
+      // Reset to read a new object. Do this before calling onReceivedElement
+      // in case it throws an exception.
       data = data.slice(offset, data.length);
       this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
       this.tlvStructureDecoder = new TlvStructureDecoder();
+
+      this.elementListener.onReceivedElement(element);
       if (data.length == 0)
         // No more data in the packet.
         return;
@@ -10313,8 +10329,21 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       // else loop back to decode.
     }
     else {
-      // Save for a later call to concatArrays so that we only copy data once.
-      this.dataParts.push(data);
+      // Save a copy. We will call concatArrays later.
+      var totalLength = data.length;
+      for (var i = 0; i < this.dataParts.length; ++i)
+        totalLength += this.dataParts[i].length;
+      if (totalLength > NdnCommon.MAX_NDN_PACKET_SIZE) {
+        // Reset to read a new element on the next call.
+        this.dataParts = [];
+        this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
+        this.tlvStructureDecoder = new TlvStructureDecoder();
+
+        throw new DecodingException(new Error
+          ("The incoming packet exceeds the maximum limit Face.getMaxNdnPacketSize()"));
+      }
+
+      this.dataParts.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
         return;
     }
@@ -11418,6 +11447,7 @@ NameEnumeration.endsWithSegmentNumber = function(name) {
  */
 
 var Name = require('../name.js').Name;
+var LOG = require('../log.js').Log.LOG;
 
 /**
  * A MemoryContentCache holds a set of Data packets and answers an Interest to
@@ -11451,6 +11481,13 @@ var MemoryContentCache = function MemoryContentCache
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
   //StaleTimeContent::Compare contentCompare_;
   this.emptyComponent = new Name.Component();
+  this.pendingInterestTable = [];
+
+  var thisMemoryContentCache = this;
+  this.storePendingInterestCallback = function
+    (localPrefix, localInterest, localTransport, localRegisteredPrefixId) {
+       thisMemoryContentCache.storePendingInterest(localInterest, localTransport);
+    };
 };
 
 exports.MemoryContentCache = MemoryContentCache;
@@ -11462,9 +11499,16 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onRegisterFailed If this fails to register the prefix for
  * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
  * given to registerPrefix.
- * @param {function} onDataNotFound (optional) If a data packet is not found in
- * the cache, this calls onInterest(prefix, interest, transport) to forward the
- * interest. If omitted, this does not use it.
+ * @param {function} onDataNotFound (optional) If a data packet for an interest
+ * is not found in the cache, this forwards the interest by calling
+ * onDataNotFound(prefix, interest, transport, registeredPrefixId). Your
+ * callback can find the Data packet for the interest and call
+ * transport.send. If your callback cannot find the Data packet, it can
+ * optionally call storePendingInterest(interest, face) to store the pending
+ * interest in this object to be satisfied by a later call to add(data). If you
+ * want to automatically store all pending interests, you can simply use
+ * getStorePendingInterest() for onDataNotFound. If onDataNotFound is omitted or
+ * null, this does not use it.
  * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
@@ -11496,14 +11540,18 @@ MemoryContentCache.prototype.unregisterAll = function()
 
   // Also clear each onDataNotFoundForPrefix given to registerPrefix.
   this.onDataNotFoundForPrefix = {};
-}
+};
 
 /**
  * Add the Data packet to the cache so that it is available to use to answer
- * interests. If data.getFreshnessPeriod() is not null, set the staleness
- * time to now plus data.getFreshnessPeriod(), which is checked during cleanup
- * to remove stale content. This also checks if cleanupIntervalMilliseconds
- * milliseconds have passed and removes stale content from the cache.
+ * interests. If data.getMetaInfo().getFreshnessPeriod() is not null, set the
+ * staleness time to now plus data.getMetaInfo().getFreshnessPeriod(), which is
+ * checked during cleanup to remove stale content. This also checks if
+ * cleanupIntervalMilliseconds milliseconds have passed and removes stale
+ * content from the cache. After removing stale content, remove timed-out
+ * pending interests from storePendingInterest(), then if the added Data packet
+ * satisfies any interest, send it through the transport and remove the interest
+ * from the pending interest table.
  * @param {Data} data The Data packet object to put in the cache. This copies
  * the fields from the object.
  */
@@ -11530,7 +11578,61 @@ MemoryContentCache.prototype.add = function(data)
   else
     // The data does not go stale, so use noStaleTimeCache.
     this.noStaleTimeCache.push(new MemoryContentCache.Content(data));
-}
+
+  // Remove timed-out interests and check if the data packet matches any pending
+  // interest.
+  // Go backwards through the list so we can erase entries.
+  var nowMilliseconds = new Date().getTime();
+  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
+    if (this.pendingInterestTable[i].isTimedOut(nowMilliseconds)) {
+      this.pendingInterestTable.splice(i, 1);
+      continue;
+    }
+    if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
+      try {
+        // Send to the same transport from the original call to onInterest.
+        // wireEncode returns the cached encoding if available.
+        this.pendingInterestTable[i].getTransport().send(data.wireEncode().buf());
+      }
+      catch (ex) {
+        if (LOG > 0)
+          console.log("" + ex);
+        return;
+      }
+
+      // The pending interest is satisfied, so remove it.
+      this.pendingInterestTable.splice(i, 1);
+    }
+  }
+};
+
+/**
+ * Store an interest from an OnInterest callback in the internal pending
+ * interest table (normally because there is no Data packet available yet to
+ * satisfy the interest). add(data) will check if the added Data packet
+ * satisfies any pending interest and send it through the transport.
+ * @param {Interest} interest The Interest for which we don't have a Data packet
+ * yet. You should not modify the interest after calling this.
+ * @param {Transport} transport The Transport with the connection which received
+ * the interest. This comes from the OnInterest callback.
+ */
+MemoryContentCache.prototype.storePendingInterest = function(interest, transport)
+{
+  this.pendingInterestTable.push
+    (new MemoryContentCache.PendingInterest(interest, transport));
+};
+
+/**
+ * Return a callback to use for onDataNotFound in registerPrefix which simply
+ * calls storePendingInterest() to store the interest that doesn't match a
+ * Data packet. add(data) will check if the added Data packet satisfies any
+ * pending interest and send it.
+ * @returns {function} A callback to use for onDataNotFound in registerPrefix().
+ */
+MemoryContentCache.prototype.getStorePendingInterest = function()
+{
+  return this.storePendingInterestCallback;
+};
 
 /**
  * This is the OnInterest callback which is called when the library receives
@@ -11541,7 +11643,8 @@ MemoryContentCache.prototype.add = function(data)
  * to the transport. If no matching Data packet is in the cache, call
  * the callback in onDataNotFoundForPrefix (if defined).
  */
-MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
+MemoryContentCache.prototype.onInterest = function
+  (prefix, interest, transport, registeredPrefixId)
 {
   this.doCleanup();
 
@@ -11603,8 +11706,7 @@ MemoryContentCache.prototype.onInterest = function(prefix, interest, transport)
     // Call the onDataNotFound callback (if defined).
     var onDataNotFound = this.onDataNotFoundForPrefix[prefix.toUri()];
     if (onDataNotFound)
-      // TODO: Include registeredPrefixId.
-      onDataNotFound(prefix, interest, transport);
+      onDataNotFound(prefix, interest, transport, registeredPrefixId);
   }
 };
 
@@ -11683,6 +11785,52 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
   return this.staleTimeMilliseconds <= nowMilliseconds;
+};
+
+/**
+ * A PendingInterest holds an interest which onInterest received but could
+ * not satisfy. When we add a new data packet to the cache, we will also check
+ * if it satisfies a pending interest.
+ */
+MemoryContentCache.PendingInterest = function MemoryContentCachePendingInterest
+  (interest, transport)
+{
+  this.interest = interest;
+  this.transport = transport;
+
+  if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
+    this.timeoutMilliseconds = (new Date()).getTime() +
+      this.interest.getInterestLifetimeMilliseconds();
+  else
+    this.timeoutMilliseconds = -1.0;
+};
+
+/**
+ * Return the interest given to the constructor.
+ */
+MemoryContentCache.PendingInterest.prototype.getInterest = function()
+{
+  return this.interest;
+};
+
+/**
+ * Return the transport given to the constructor.
+ */
+MemoryContentCache.PendingInterest.prototype.getTransport = function()
+{
+  return this.transport;
+};
+
+/**
+ * Check if this interest is timed out.
+ * @param {number} nowMilliseconds The current time in milliseconds from
+ *  Common.getNowMilliseconds.
+ * @returns {boolean} True if this interest timed out, otherwise false.
+ */
+MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
+{
+  return this.timeoutTimeMilliseconds >= 0.0 &&
+         nowMilliseconds >= this.timeoutTimeMilliseconds;
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -12251,7 +12399,7 @@ WebSocketTransport.prototype.connect = function
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
       try {
-        // Find the end of the binary XML element and call face.onReceivedElement.
+        // Find the end of the binary XML element and call onReceivedElement.
         self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);
