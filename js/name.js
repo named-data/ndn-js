@@ -82,12 +82,12 @@ Name.Component = function NameComponent(value)
     // Make a copy.  Turn the value into a Uint8Array since the Buffer
     //   constructor doesn't take an ArrayBuffer.
     this.value = new Buffer(new Uint8Array(value));
+  else if (!value)
+    this.value = new Buffer(0);
   else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
     this.value = new Buffer(value);
-  else if (!value)
-    this.value = new Buffer(0);
   else
     throw new Error("Name.Component constructor: Invalid type");
 }

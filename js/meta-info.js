@@ -55,27 +55,28 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
       publisherOrMetaInfo instanceof MetaInfo) {
     // Copy values.
     var metaInfo = publisherOrMetaInfo;
-    this.publisher = metaInfo.publisher;
-    this.timestamp = metaInfo.timestamp; // NDNTime // deprecated
-    this.type = metaInfo.type;
-    this.locator = metaInfo.locator == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator);
-    this.freshnessSeconds = metaInfo.freshnessSeconds;
-    this.finalBlockID = metaInfo.finalBlockID;
+    this.publisher_ = metaInfo.publisher_;
+    this.timestamp_ = metaInfo.timestamp; // NDNTime // deprecated
+    this.type_ = metaInfo.type_;
+    this.locator_ = metaInfo.locator_ == null ?
+      new KeyLocator() : new KeyLocator(metaInfo.locator_);
+    this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
+    this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
+    this.publisher = publisherOrMetaInfo; // deprecated
     this.timestamp = timestamp; // NDNTime // deprecated
-    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
+    this.type = type == null || type < 0 ? ContentType.BLOB : type;
+     // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
-    this.freshnessSeconds = freshnessSeconds; // Integer
-    this.finalBlockID = finalBlockId; //byte array
+    this.freshnessSeconds = freshnessSeconds; // deprecated
+    this.finalBlockID = finalBlockId; // byte array // deprecated
 
     if (!skipSetFields)
       this.setFields();
   }
 
-  this.changeCount = 0;
+  this.changeCount_ = 0;
 };
 
 exports.MetaInfo = MetaInfo;
@@ -86,7 +87,7 @@ exports.MetaInfo = MetaInfo;
  */
 MetaInfo.prototype.getType = function()
 {
-  return this.type;
+  return this.type_;
 };
 
 /**
@@ -96,12 +97,7 @@ MetaInfo.prototype.getType = function()
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
 {
-  // Use attribute freshnessSeconds for backwards compatibility.
-  if (this.freshnessSeconds == null || this.freshnessSeconds < 0)
-    return null;
-  else
-    // Convert to milliseconds.
-    return this.freshnessSeconds * 1000.0;
+  return this.freshnessPeriod_;
 };
 
 /**
@@ -111,8 +107,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
  */
 MetaInfo.prototype.getFinalBlockId = function()
 {
-  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
-  return new Name.Component(new Blob(this.finalBlockID, true));
+  return this.finalBlockId_;
 };
 
 /**
@@ -129,7 +124,7 @@ MetaInfo.prototype.getFinalBlockID = function()
  */
 MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 {
-  return this.finalBlockID;
+  return this.finalBlockId_.getValue().buf();
 };
 
 /**
@@ -139,8 +134,8 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
  */
 MetaInfo.prototype.setType = function(type)
 {
-  this.type = type == null || type < 0 ? ContentType.BLOB : type;
-  ++this.changeCount;
+  this.type_ = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount_;
 };
 
 /**
@@ -152,25 +147,18 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 {
   // Use attribute freshnessSeconds for backwards compatibility.
   if (freshnessPeriod == null || freshnessPeriod < 0)
-    this.freshnessSeconds = null;
+    this.freshnessPeriod_ = null;
   else
-    // Convert from milliseconds.
-    this.freshnessSeconds = freshnessPeriod / 1000.0;
-  ++this.changeCount;
+    this.freshnessPeriod_ = freshnessPeriod;
+  ++this.changeCount_;
 };
 
 MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  if (finalBlockId == null)
-    this.finalBlockID = null;
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
-    this.finalBlockID = finalBlockId.buf();
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
-    this.finalBlockID = finalBlockId.getValue().buf();
-  else
-    this.finalBlockID = new Buffer(finalBlockId);
-  ++this.changeCount;
+  this.finalBlockId_ = typeof finalBlockId === 'object' &&
+                       finalBlockId instanceof Name.Component ?
+    finalBlockId : new Name.Component(finalBlockId);
+  ++this.changeCount_;
 };
 
 /**
@@ -181,6 +169,9 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
   this.setFinalBlockId(finalBlockId);
 };
 
+/**
+ * @deprecated This sets fields for NDNx signing. Use KeyChain.
+ */
 MetaInfo.prototype.setFields = function()
 {
   var key = globalKeyManager.getKey();
@@ -203,7 +194,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
-  ++this.changeCount;
+  ++this.changeCount_;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -252,7 +243,7 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   }
 
   decoder.readElementClose();
-  ++this.changeCount;
+  ++this.changeCount_;
 };
 
 /**
@@ -311,11 +302,14 @@ MetaInfo.prototype.getElementLabel = function() {
   return NDNProtocolDTags.SignedInfo;
 };
 
+/**
+ * @@deprecated This is only used with to_ndnb.
+ */
 MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null == this.timestamp)
+  if (null == this.timestamp_)
     return false;
   return true;
 };
@@ -326,8 +320,56 @@ MetaInfo.prototype.validate = function()
  */
 MetaInfo.prototype.getChangeCount = function()
 {
-  return this.changeCount;
+  return this.changeCount_;
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(MetaInfo.prototype, "type",
+  { get: function() { return this.getType(); },
+    set: function(val) { this.setType(val); } });
+/**
+ * @deprecated Use getFreshnessPeriod and setFreshnessPeriod.
+ */
+Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
+  { get: function() {
+      if (this.freshnessPeriod_ == null || this.freshnessPeriod_ < 0)
+        return null;
+      else
+        // Convert from milliseconds.
+        return this.freshnessPeriod_ / 1000.0;
+    },
+    set: function(val) { 
+      if (val == null || val < 0)
+        this.freshnessPeriod_ = null;
+      else
+        // Convert to milliseconds.
+        this.freshnessPeriod_ = val * 1000.0;
+      ++this.changeCount_;
+    } });
+/**
+ * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
+ */
+Object.defineProperty(MetaInfo.prototype, "publisher",
+  { get: function() { return this.publisher_; },
+    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated Use getFinalBlockId and setFinalBlockId.
+ */
+Object.defineProperty(MetaInfo.prototype, "finalBlockID",
+  { get: function() { return this.getFinalBlockIDAsBuffer(); },
+    set: function(val) { this.setFinalBlockId(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(MetaInfo.prototype, "timestamp",
+  { get: function() { return this.timestamp_; },
+    set: function(val) { this.timestamp_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(MetaInfo.prototype, "locator",
+  { get: function() { return this.locator_; },
+    set: function(val) { this.locator_ = val; ++this.changeCount_; } });
 
 /**
  * @deprecated Use new MetaInfo.

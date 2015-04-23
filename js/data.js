@@ -22,6 +22,7 @@
 var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -49,19 +50,20 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     var data = nameOrData;
 
     // Copy the name.
-    this.name_ = new Name(data.name_);
-    this.metaInfo_ = new MetaInfo(data.metaInfo_);
-    this.signature_ = data.signature_.clone();
+    this.name_ = new ChangeCounter(new Name(data.getName()));
+    this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
+    this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
-    this.wireEncoding_ = data.wireEncoding_;
+    this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
     var name = nameOrData;
     if (typeof name === 'string')
-      this.name_ = new Name(name);
+      this.name_ = new ChangeCounter(new Name(name));
     else
-      this.name_ = typeof name === 'object' && name instanceof Name ?
-         new Name(name) : new Name();
+      this.name_ = new ChangeCounter(typeof name === 'object' && name instanceof Name ?
+         new Name(name) : new Name());
 
     var metaInfo;
     var content;
@@ -75,15 +77,19 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
       content = metaInfoOrContent;
     }
 
-    this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-      new MetaInfo(metaInfo) : new MetaInfo();
+    this.metaInfo_ = new ChangeCounter(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+      new MetaInfo(metaInfo) : new MetaInfo());
 
     this.content_ = typeof content === 'object' && content instanceof Blob ?
       content : new Blob(content, true);
 
-    this.signature_ = new Sha256WithRsaSignature();
-    this.wireEncoding_ = new SignedBlob();
-  }  
+    this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+  }
+
+  this.getDefaultWireEncodingChangeCount_ = 0;
+  this.changeCount_ = 0;
 };
 
 exports.Data = Data;
@@ -94,7 +100,7 @@ exports.Data = Data;
  */
 Data.prototype.getName = function()
 {
-  return this.name_;
+  return this.name_.get();
 };
 
 /**
@@ -103,7 +109,7 @@ Data.prototype.getName = function()
  */
 Data.prototype.getMetaInfo = function()
 {
-  return this.metaInfo_;
+  return this.metaInfo_.get();
 };
 
 /**
@@ -112,7 +118,7 @@ Data.prototype.getMetaInfo = function()
  */
 Data.prototype.getSignature = function()
 {
-  return this.signature_;
+  return this.signature_.get();
 };
 
 /**
@@ -134,17 +140,43 @@ Data.prototype.getContentAsBuffer = function()
 };
 
 /**
+ * Return the default wire encoding, which was encoded with
+ * getDefaultWireEncodingFormat().
+ * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * if there is no default wire encoding.
+ */
+Data.prototype.getDefaultWireEncoding = function()
+{
+  if (this.getDefaultWireEncodingChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the default wire encoding is invalidated.
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+    this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+  }
+
+  return this.defaultWireEncoding_;
+};
+
+/**
+ * Get the WireFormat which is used by getDefaultWireEncoding().
+ * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * getDefaultWireEncoding() is not isNull().
+ */
+Data.prototype.getDefaultWireEncodingFormat = function()
+{
+  return this.defaultWireEncodingFormat_;
+};
+
+/**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setName = function(name)
 {
-  this.name_ = typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
+  this.name_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
+  ++this.changeCount_;
   return this;
 };
 
@@ -155,11 +187,9 @@ Data.prototype.setName = function(name)
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
-  this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-    new MetaInfo(metaInfo) : new MetaInfo();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
+  this.metaInfo_.set(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+    new MetaInfo(metaInfo) : new MetaInfo());
+  ++this.changeCount_;
   return this;
 };
 
@@ -170,11 +200,9 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature_ = signature == null ? 
-    new Sha256WithRsaSignature() : signature.clone();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
+  this.signature_.set(signature == null ?
+    new Sha256WithRsaSignature() : signature.clone());
+  ++this.changeCount_;
   return this;
 };
 
@@ -189,9 +217,7 @@ Data.prototype.setContent = function(content)
 {
   this.content_ = typeof content === 'object' && content instanceof Blob ?
     content : new Blob(content, true);
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
+  ++this.changeCount_;
   return this;
 };
 
@@ -206,18 +232,15 @@ Data.prototype.sign = function(wireFormat)
       this.getSignatureOrMetaInfoKeyLocator().getType() == null)
     this.getMetaInfo().setFields();
 
-  if (this.wireEncoding_ == null || this.wireEncoding_.isNull()) {
-    // Need to encode to set wireEncoding.
-    // Set an initial empty signature so that we can encode.
-    this.getSignature().setSignature(new Buffer(128));
-    this.wireEncode(wireFormat);
-  }
+  // Encode once to get the signed portion.
+  var encoding = this.wireEncode(wireFormat);
   var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(this.wireEncoding_.signedBuf());
+  rsa.update(encoding.signedBuf());
 
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature_.setSignature(sig);
+  this.signature_.get().setSignature(sig);
+  ++this.changeCount_;
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -239,20 +262,19 @@ Data.prototype.verify = function(/*Key*/ key)
     Data.verifyUsesString = (typeof hashResult === 'string');
   }
 
-  if (this.wireEncoding_ == null || this.wireEncoding_.isNull())
-    // Need to encode to set wireEncoding.
-    this.wireEncode();
+  // wireEncode returns the cached encoding if available.
   var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncoding_.signedBuf());
+  verifier.update(this.wireEncode().signedBuf());
   var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature_.getSignature().buf()) : this.signature_.getSignature().buf();
+    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
- * Encode this Data for a particular wire format.
+ * Encode this Data for a particular wire format. If wireFormat is the default
+ * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
@@ -260,16 +282,28 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 Data.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have an encoding in the desired format.
+    return this.getDefaultWireEncoding();
+  
   var result = wireFormat.encodeData(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding_ = new SignedBlob
+  var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding_;
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.
+    this.setDefaultWireEncoding
+      (wireEncoding, WireFormat.getDefaultWireFormat());
+  return wireEncoding;
 };
 
 /**
- * Decode the input using a particular wire format and update this Data.
+ * Decode the input using a particular wire format and update this Data. If
+ * wireFormat is the default wire format, also set the defaultWireEncoding to
+ * another pointer to the input.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -277,21 +311,26 @@ Data.prototype.wireEncode = function(wireFormat)
 Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding_ = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.  In the Blob constructor, set copy
+    // true, but if input is already a Blob, it won't copy.
+    this.setDefaultWireEncoding(new SignedBlob
+      (new Blob(input, true), result.signedPortionBeginOffset,
+       result.signedPortionEndOffset),
+      WireFormat.getDefaultWireFormat());
+  else
+    this.setDefaultWireEncoding(new SignedBlob(), null);
 };
 
 /**
  * If getSignature() has a key locator, return it.  Otherwise, use
- * the key locator from getMetaInfo() for backward compatibility and print
+ * the deprecated key locator from getMetaInfo() for backward compatibility and print
  * a warning to console.log that the key locator has moved to the Signature
  * object.  If neither has a key locator, return an empty key locator.
  * When we stop supporting the key locator in MetaInfo, this function is not
@@ -304,25 +343,43 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     // The signature type doesn't support KeyLocator.
     return new KeyLocator();
   
-  if (this.signature_ != null && this.signature_.getKeyLocator() != null &&
-      this.signature_.getKeyLocator().getType() != null &&
-      this.signature_.getKeyLocator().getType() >= 0)
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
+      this.signature_.get().getKeyLocator().getType() != null &&
+      this.signature_.get().getKeyLocator().getType() >= 0)
     // The application is using the key locator in the correct object.
-    return this.signature_.getKeyLocator();
+    return this.signature_.get().getKeyLocator();
 
-  if (this.metaInfo_ != null && this.metaInfo_.locator != null &&
-      this.metaInfo_.locator.getType() != null &&
-      this.metaInfo_.locator.getType() >= 0) {
+  if (this.metaInfo_.get() != null && this.metaInfo_.get().locator != null &&
+      this.metaInfo_.get().locator.getType() != null &&
+      this.metaInfo_.get().locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.metaInfo_.locator;
+    return this.metaInfo_.get().locator;
   }
 
   // Return the empty key locator from the Signature object if possible.
-  if (this.signature_ != null && this.signature_.getKeyLocator() != null)
-    return this.signature_.getKeyLocator();
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null)
+    return this.signature_.get().getKeyLocator();
   else
     return new KeyLocator();
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Data.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.name_.checkChanged();
+  changed = this.metaInfo_.checkChanged() || changed;
+  changed = this.signature_.checkChanged() || changed;
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
@@ -362,6 +419,16 @@ Data.prototype.decode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
+};
+
+Data.prototype.setDefaultWireEncoding = function
+  (defaultWireEncoding, defaultWireEncodingFormat)
+{
+  this.defaultWireEncoding_ = defaultWireEncoding;
+  this.defaultWireEncodingFormat_ = defaultWireEncodingFormat;
+  // Set getDefaultWireEncodingChangeCount_ so that the next call to
+  // getDefaultWireEncoding() won't clear _defaultWireEncoding.
+  this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
 };
 
 // Define properties so we can change member variable types and implement changeCount_.

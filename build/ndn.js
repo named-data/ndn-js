@@ -6428,7 +6428,7 @@ exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
 var LOG = require('../log.js').Log.LOG;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var NDNTime = function NDNTime(input)
 {
@@ -12612,7 +12612,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
 {
@@ -12707,7 +12707,7 @@ var PublisherType = function PublisherType(tag)
 };
 
 /**
- * @constructor
+ * @deprecated Use KeyLocator getKeyData and setKeyData.
  */
 var PublisherID = function PublisherID()
 {
@@ -12878,12 +12878,12 @@ Name.Component = function NameComponent(value)
     // Make a copy.  Turn the value into a Uint8Array since the Buffer
     //   constructor doesn't take an ArrayBuffer.
     this.value = new Buffer(new Uint8Array(value));
+  else if (!value)
+    this.value = new Buffer(0);
   else if (typeof value === 'object')
     // Assume value is a byte array.  We can't check instanceof Array because
     //   this doesn't work in JavaScript if the array comes from a different module.
     this.value = new Buffer(value);
-  else if (!value)
-    this.value = new Buffer(0);
   else
     throw new Error("Name.Component constructor: Invalid type");
 }
@@ -13897,6 +13897,7 @@ Key.createFromPEM = function(obj)
  */
 
 var Blob = require('./util/blob.js').Blob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
@@ -13908,6 +13909,7 @@ var LOG = require('./log.js').Log.LOG;
 var KeyLocatorType = {
   KEYNAME: 1,
   KEY_LOCATOR_DIGEST: 2,
+  // KeyLocatorType KEY and CERTIFICATE are not supported in NDN-TLV encoding and are deprecated.
   KEY: 3,
   CERTIFICATE: 4
 };
@@ -13917,40 +13919,40 @@ exports.KeyLocatorType = KeyLocatorType;
 /**
  * @constructor
  */
-var KeyLocator = function KeyLocator(input,type)
+var KeyLocator = function KeyLocator(input, type)
 {
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
-    this.type = input.type;
-    this.keyName = new KeyName();
-    if (input.keyName != null) {
-      this.keyName.contentName = input.keyName.contentName == null ?
-        null : new Name(input.keyName.contentName);
-      this.keyName.publisherID = input.keyName.publisherID;
-    }
-    this.keyData = input.keyData == null ? null : new Buffer(input.keyData);
-    this.publicKey = input.publicKey == null ? null : new Buffer(input.publicKey);
-    this.certificate = input.certificate == null ? null : new Buffer(input.certificate);
+    this.type_ = input.type_;
+    this.keyName_ = new ChangeCounter(new KeyName());
+    this.keyName_.get().setContentName(input.keyName_.get().getContentName());
+    this.keyName_.get().publisherID = input.keyName_.get().publisherID;
+    this.keyData_ = input.keyData_;
+    this.publicKey_ = input.publicKey_ == null ? null : new Buffer(input.publicKey_);
+    this.certificate_ = input.certificate_ == null ? null : new Buffer(input.certificate_);
   }
   else {
-    this.type = type;
-    this.keyName = new KeyName();
+    this.type_ = type;
+    this.keyName_ = new ChangeCounter(new KeyName());
+    this.keyData_ = new Blob();
 
     if (type == KeyLocatorType.KEYNAME)
-      this.keyName = input;
+      this.keyName_.set(input);
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
     else if (type == KeyLocatorType.KEY) {
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
       // Set for backwards compatibility.
-      this.publicKey = this.keyData;
+      this.publicKey_ = this.keyData_;
     }
     else if (type == KeyLocatorType.CERTIFICATE) {
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
       // Set for backwards compatibility.
-      this.certificate = this.keyData;
+      this.certificate_ = this.keyData_;
     }
   }
+
+  this.changeCount_ = 0;
 };
 
 exports.KeyLocator = KeyLocator;
@@ -13961,7 +13963,7 @@ exports.KeyLocator = KeyLocator;
  * getKeyData() to get the digest.
  * @returns {number} The key locator type, or null if not specified.
  */
-KeyLocator.prototype.getType = function() { return this.type; };
+KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
@@ -13969,12 +13971,7 @@ KeyLocator.prototype.getType = function() { return this.type; };
  */
 KeyLocator.prototype.getKeyName = function()
 {
-  if (this.keyName == null)
-    this.keyName = new KeyName();
-  if (this.keyName.contentName == null)
-    this.keyName.contentName = new Name();
-
-  return this.keyName.contentName;
+  return this.keyName_.get().getContentName();
 };
 
 /**
@@ -13986,8 +13983,12 @@ KeyLocator.prototype.getKeyName = function()
  */
 KeyLocator.prototype.getKeyData = function()
 {
-  // For temporary backwards compatibility, leave the fields as a Buffer but return a Blob.
-  return new Blob(this.getKeyDataAsBuffer(), false);
+  if (this.type_ == KeyLocatorType.KEY)
+    return new Blob(this.publicKey_);
+  else if (this.type_ == KeyLocatorType.CERTIFICATE)
+    return new Blob(this.certificate_);
+  else
+    return this.keyData_;
 };
 
 /**
@@ -13996,12 +13997,7 @@ KeyLocator.prototype.getKeyData = function()
  */
 KeyLocator.prototype.getKeyDataAsBuffer = function()
 {
-  if (this.type == KeyLocatorType.KEY)
-    return this.publicKey;
-  else if (this.type == KeyLocatorType.CERTIFICATE)
-    return this.certificate;
-  else
-    return this.keyData;
+  return this.getKeyData().buf();
 };
 
 /**
@@ -14010,7 +14006,11 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * setKeyData() to the digest.
  * @param {number} type The key locator type.  If null, the type is unspecified.
  */
-KeyLocator.prototype.setType = function(type) { this.type = type; };
+KeyLocator.prototype.setType = function(type)
+{
+  this.type_ = type;
+  ++this.changeCount_;
+};
 
 /**
  * Set key name to a copy of the given Name.  This is the name if getType()
@@ -14019,11 +14019,8 @@ KeyLocator.prototype.setType = function(type) { this.type = type; };
  */
 KeyLocator.prototype.setKeyName = function(name)
 {
-  if (this.keyName == null)
-    this.keyName = new KeyName();
-
-  this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
-                             new Name(name) : new Name();
+  this.keyName_.get().setContentName(name);
+  ++this.changeCount_;
 };
 
 /**
@@ -14033,31 +14030,25 @@ KeyLocator.prototype.setKeyName = function(name)
  */
 KeyLocator.prototype.setKeyData = function(keyData)
 {
-  var value = keyData;
-  if (value != null) {
-    if (typeof value === 'object' && value instanceof Blob)
-      value = new Buffer(value.buf());
-    else
-      // Make a copy.
-      value = new Buffer(value);
-  }
-
-  this.keyData = value;
+  this.keyData_ = typeof keyData === 'object' && keyData instanceof Blob ?
+    keyData : new Blob(keyData);
   // Set for backwards compatibility.
-  this.publicKey = value;
-  this.certificate = value;
+  this.publicKey_ = this.keyData_.buf();
+  this.certificate_ = this.keyData_.buf();
+  ++this.changeCount_;
 };
 
 /**
- * Clear the keyData and set the type to none.
+ * Clear the keyData and set the type to not specified.
  */
 KeyLocator.prototype.clear = function()
 {
-  this.type = null;
-  this.keyName = null;
-  this.keyData = null;
-  this.publicKey = null;
-  this.certificate = null;
+  this.type_ = null;
+  this.keyName_.set(new KeyName());
+  this.keyData_ = new Blob();
+  this.publicKey_ = null;
+  this.certificate_ = null;
+  ++this.changeCount_;
 };
 
 /**
@@ -14137,8 +14128,8 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
   } else  {
     this.type = KeyLocatorType.KEYNAME;
 
-    this.keyName = new KeyName();
-    this.keyName.from_ndnb(decoder);
+    this.keyName_.set(new KeyName());
+    this.keyName_.get().from_ndnb(decoder);
   }
   decoder.readElementClose();
 };
@@ -14167,7 +14158,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     }
   }
   else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName.to_ndnb(encoder);
+    this.keyName_.get().to_ndnb(encoder);
 
   encoder.writeElementClose();
 };
@@ -14178,16 +14169,77 @@ KeyLocator.prototype.getElementLabel = function()
 };
 
 /**
- * KeyName is only used by KeyLocator.
- * @constructor
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+KeyLocator.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyName_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(KeyLocator.prototype, "type",
+  { get: function() { return this.getType(); },
+    set: function(val) { this.setType(val); } });
+/**
+ * @deprecated Use getKeyName and setKeyName.
+ */
+Object.defineProperty(KeyLocator.prototype, "keyName",
+  { get: function() { return this.keyName_.get(); },
+    set: function(val) { 
+      this.keyName_.set(val == null ? new KeyName() : val);
+      ++this.changeCount_;
+    } });
+/**
+ * @@deprecated Use getKeyData and setKeyData.
+ */
+Object.defineProperty(KeyLocator.prototype, "keyData",
+  { get: function() { return this.getKeyDataAsBuffer(); },
+    set: function(val) { this.setKeyData(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(KeyLocator.prototype, "publicKey",
+  { get: function() { return this.publicKey_; },
+    set: function(val) { this.publicKey_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(KeyLocator.prototype, "certificate",
+  { get: function() { return this.certificate_; },
+    set: function(val) { this.certificate_ = val; ++this.changeCount_; } });
+
+/**
+ * @deprecated Use KeyLocator getKeyName and setKeyName. This is only needed to
+ * support NDNx and will be removed.
  */
 var KeyName = function KeyName()
 {
-  this.contentName = new Name();  //contentName
+  this.contentName_ = new ChangeCounter(new Name());
   this.publisherID = this.publisherID;  //publisherID
+  this.changeCount_ = 0;
 };
 
 exports.KeyName = KeyName;
+
+KeyName.prototype.getContentName = function()
+{
+  return this.contentName_.get();
+};
+
+KeyName.prototype.setContentName = function(name)
+{
+  this.contentName_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
+  ++this.changeCount_;
+};
 
 KeyName.prototype.from_ndnb = function(decoder)
 {
@@ -14218,6 +14270,27 @@ KeyName.prototype.to_ndnb = function(encoder)
 };
 
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+KeyName.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.contentName_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(KeyName.prototype, "contentName",
+  { get: function() { return this.getContentName(); },
+    set: function(val) { this.setContentName(val); } });
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
@@ -14365,27 +14438,28 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
       publisherOrMetaInfo instanceof MetaInfo) {
     // Copy values.
     var metaInfo = publisherOrMetaInfo;
-    this.publisher = metaInfo.publisher;
-    this.timestamp = metaInfo.timestamp;
-    this.type = metaInfo.type;
-    this.locator = metaInfo.locator == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator);
-    this.freshnessSeconds = metaInfo.freshnessSeconds;
-    this.finalBlockID = metaInfo.finalBlockID;
+    this.publisher_ = metaInfo.publisher_;
+    this.timestamp_ = metaInfo.timestamp; // NDNTime // deprecated
+    this.type_ = metaInfo.type_;
+    this.locator_ = metaInfo.locator_ == null ?
+      new KeyLocator() : new KeyLocator(metaInfo.locator_);
+    this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
+    this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
-    this.timestamp = timestamp; // NDN Time
-    this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
+    this.publisher = publisherOrMetaInfo; // deprecated
+    this.timestamp = timestamp; // NDNTime // deprecated
+    this.type = type == null || type < 0 ? ContentType.BLOB : type;
+     // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
-    this.freshnessSeconds = freshnessSeconds; // Integer
-    this.finalBlockID = finalBlockId; //byte array
+    this.freshnessSeconds = freshnessSeconds; // deprecated
+    this.finalBlockID = finalBlockId; // byte array // deprecated
 
     if (!skipSetFields)
       this.setFields();
   }
 
-  this.changeCount = 0;
+  this.changeCount_ = 0;
 };
 
 exports.MetaInfo = MetaInfo;
@@ -14396,7 +14470,7 @@ exports.MetaInfo = MetaInfo;
  */
 MetaInfo.prototype.getType = function()
 {
-  return this.type;
+  return this.type_;
 };
 
 /**
@@ -14406,12 +14480,7 @@ MetaInfo.prototype.getType = function()
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
 {
-  // Use attribute freshnessSeconds for backwards compatibility.
-  if (this.freshnessSeconds == null || this.freshnessSeconds < 0)
-    return null;
-  else
-    // Convert to milliseconds.
-    return this.freshnessSeconds * 1000.0;
+  return this.freshnessPeriod_;
 };
 
 /**
@@ -14421,8 +14490,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
  */
 MetaInfo.prototype.getFinalBlockId = function()
 {
-  // For backwards-compatibility, leave this.finalBlockID as a Buffer but return a Name.Component.
-  return new Name.Component(new Blob(this.finalBlockID, true));
+  return this.finalBlockId_;
 };
 
 /**
@@ -14439,7 +14507,7 @@ MetaInfo.prototype.getFinalBlockID = function()
  */
 MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 {
-  return this.finalBlockID;
+  return this.finalBlockId_.getValue().buf();
 };
 
 /**
@@ -14449,8 +14517,8 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
  */
 MetaInfo.prototype.setType = function(type)
 {
-  this.type = type == null || type < 0 ? ContentType.BLOB : type;
-  ++this.changeCount;
+  this.type_ = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount_;
 };
 
 /**
@@ -14462,25 +14530,18 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 {
   // Use attribute freshnessSeconds for backwards compatibility.
   if (freshnessPeriod == null || freshnessPeriod < 0)
-    this.freshnessSeconds = null;
+    this.freshnessPeriod_ = null;
   else
-    // Convert from milliseconds.
-    this.freshnessSeconds = freshnessPeriod / 1000.0;
-  ++this.changeCount;
+    this.freshnessPeriod_ = freshnessPeriod;
+  ++this.changeCount_;
 };
 
 MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
-  // TODO: finalBlockID should be a Name.Component, not Buffer.
-  if (finalBlockId == null)
-    this.finalBlockID = null;
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Blob)
-    this.finalBlockID = finalBlockId.buf();
-  else if (typeof finalBlockId === 'object' && finalBlockId instanceof Name.Component)
-    this.finalBlockID = finalBlockId.getValue().buf();
-  else
-    this.finalBlockID = new Buffer(finalBlockId);
-  ++this.changeCount;
+  this.finalBlockId_ = typeof finalBlockId === 'object' &&
+                       finalBlockId instanceof Name.Component ?
+    finalBlockId : new Name.Component(finalBlockId);
+  ++this.changeCount_;
 };
 
 /**
@@ -14491,6 +14552,9 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
   this.setFinalBlockId(finalBlockId);
 };
 
+/**
+ * @deprecated This sets fields for NDNx signing. Use KeyChain.
+ */
 MetaInfo.prototype.setFields = function()
 {
   var key = globalKeyManager.getKey();
@@ -14513,7 +14577,7 @@ MetaInfo.prototype.setFields = function()
   if (LOG > 4) console.log(key.publicToDER().toString('hex'));
 
   this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
-  ++this.changeCount;
+  ++this.changeCount_;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -14562,7 +14626,7 @@ MetaInfo.prototype.from_ndnb = function(decoder)
   }
 
   decoder.readElementClose();
-  ++this.changeCount;
+  ++this.changeCount_;
 };
 
 /**
@@ -14621,11 +14685,14 @@ MetaInfo.prototype.getElementLabel = function() {
   return NDNProtocolDTags.SignedInfo;
 };
 
+/**
+ * @@deprecated This is only used with to_ndnb.
+ */
 MetaInfo.prototype.validate = function()
 {
   // We don't do partial matches any more, even though encoder/decoder
   // is still pretty generous.
-  if (null == this.timestamp)
+  if (null == this.timestamp_)
     return false;
   return true;
 };
@@ -14636,8 +14703,56 @@ MetaInfo.prototype.validate = function()
  */
 MetaInfo.prototype.getChangeCount = function()
 {
-  return this.changeCount;
+  return this.changeCount_;
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(MetaInfo.prototype, "type",
+  { get: function() { return this.getType(); },
+    set: function(val) { this.setType(val); } });
+/**
+ * @deprecated Use getFreshnessPeriod and setFreshnessPeriod.
+ */
+Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
+  { get: function() {
+      if (this.freshnessPeriod_ == null || this.freshnessPeriod_ < 0)
+        return null;
+      else
+        // Convert from milliseconds.
+        return this.freshnessPeriod_ / 1000.0;
+    },
+    set: function(val) { 
+      if (val == null || val < 0)
+        this.freshnessPeriod_ = null;
+      else
+        // Convert to milliseconds.
+        this.freshnessPeriod_ = val * 1000.0;
+      ++this.changeCount_;
+    } });
+/**
+ * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
+ */
+Object.defineProperty(MetaInfo.prototype, "publisher",
+  { get: function() { return this.publisher_; },
+    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated Use getFinalBlockId and setFinalBlockId.
+ */
+Object.defineProperty(MetaInfo.prototype, "finalBlockID",
+  { get: function() { return this.getFinalBlockIDAsBuffer(); },
+    set: function(val) { this.setFinalBlockId(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(MetaInfo.prototype, "timestamp",
+  { get: function() { return this.timestamp_; },
+    set: function(val) { this.timestamp_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(MetaInfo.prototype, "locator",
+  { get: function() { return this.locator_; },
+    set: function(val) { this.locator_ = val; ++this.changeCount_; } });
 
 /**
  * @deprecated Use new MetaInfo.
@@ -14674,6 +14789,7 @@ exports.SignedInfo = SignedInfo;
  */
 
 var Blob = require('./util/blob.js').Blob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -14693,21 +14809,23 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
   if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator = new KeyLocator(value.keyLocator);
-    this.signature = value.signature;
+    this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
+    this.signature_ = value.signature_;
     // witness is deprecated.
-    this.witness = value.witness;
+    this.witness_ = value.witness_;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = value.digestAlgorithm;
+    this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
-    this.keyLocator = new KeyLocator();
-    this.signature = null;
+    this.keyLocator_ = new ChangeCounter(new KeyLocator());
+    this.signature_ = new Blob();
     // witness is deprecated.
-    this.witness = null;
+    this.witness_ = null;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = null;
+    this.digestAlgorithm_ = null;
   }
+
+  this.changeCount_ = 0;
 };
 
 exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
@@ -14727,7 +14845,7 @@ Sha256WithRsaSignature.prototype.clone = function()
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
-  return this.keyLocator;
+  return this.keyLocator_.get();
 };
 
 /**
@@ -14736,8 +14854,7 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
  */
 Sha256WithRsaSignature.prototype.getSignature = function()
 {
-  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
-  return new Blob(this.signature, false);
+  return this.signature_;
 };
 
 /**
@@ -14746,7 +14863,7 @@ Sha256WithRsaSignature.prototype.getSignature = function()
  */
 Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
 {
-  return this.signature;
+  return this.signature_.buf();
 };
 
 /**
@@ -14755,8 +14872,10 @@ Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
  */
 Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
-  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
-                    new KeyLocator(keyLocator) : new KeyLocator();
+  this.keyLocator_.set(typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator());
+  ++this.changeCount_;
 };
 
 /**
@@ -14765,12 +14884,9 @@ Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
  */
 Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
-  if (signature == null)
-    this.signature = null;
-  else if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = new Buffer(signature.buf());
-  else
-    this.signature = new Buffer(signature);
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
+  ++this.changeCount_;
 };
 
 Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
@@ -14818,6 +14934,45 @@ Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
 /**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Sha256WithRsaSignature.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyLocator_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
+  { get: function() { return this.getKeyLocator(); },
+    set: function(val) { this.setKeyLocator(val); } });
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
+  { get: function() { return this.getSignatureAsBuffer(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
+  { get: function() { return this.witness_; },
+    set: function(val) { this.witness_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
+  { get: function() { return this.digestAlgorithm_; },
+    set: function(val) { this.digestAlgorithm_ = val; ++this.changeCount_; } });
+
+/**
  * Note: This Signature class is not the same as the base Signature class of
  * the Common Client Libraries API. It is a deprecated name for
  * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
@@ -14838,12 +14993,13 @@ var Signature = function Signature
     // Set the given fields (if supplied).
     if (witnessOrSignatureObject != null)
       // witness is deprecated.
-      this.witness = witnessOrSignatureObject;
+      this.witness_ = witnessOrSignatureObject;
     if (signature != null)
-      this.signature = signature;
+      this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+        signature : new Blob(signature);
     if (digestAlgorithm != null)
       // digestAlgorithm is deprecated.
-      this.digestAlgorithm = digestAlgorithm;
+      this.digestAlgorithm_ = digestAlgorithm;
   }
 }
 
@@ -14889,9 +15045,11 @@ var DigestSha256Signature = function DigestSha256Signature(value)
 {
   if (typeof value === 'object' && value instanceof DigestSha256Signature)
     // Copy the values.
-    this.signature = value.signature;
+    this.signature_ = value.signature_;
   else
-    this.signature = new Blob();
+    this.signature_ = new Blob();
+
+  this.changeCount_ = 0;
 };
 
 exports.DigestSha256Signature = DigestSha256Signature;
@@ -14911,7 +15069,7 @@ DigestSha256Signature.prototype.clone = function()
  */
 DigestSha256Signature.prototype.getSignature = function()
 {
-  return this.signature;
+  return this.signature_;
 };
 
 /**
@@ -14920,11 +15078,27 @@ DigestSha256Signature.prototype.getSignature = function()
  */
 DigestSha256Signature.prototype.setSignature = function(signature)
 {
-  if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = signature;
-  else
-    this.signature = new Blob(signature);
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
+  ++this.changeCount_;
 };
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+DigestSha256Signature.prototype.getChangeCount = function()
+{
+  return this.changeCount_;
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(DigestSha256Signature.prototype, "signature",
+  { get: function() { return this.getSignature(); },
+    set: function(val) { this.setSignature(val); } });
 /**
  * This class represents an NDN Data object.
  * Copyright (C) 2013-2015 Regents of the University of California.
@@ -14949,6 +15123,7 @@ DigestSha256Signature.prototype.setSignature = function(signature)
 var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -14975,21 +15150,21 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    this.name = new Name(data.getName());
-    // Use signedInfo instead of metaInfo for backward compatibility.
-    this.signedInfo = new MetaInfo(data.signedInfo);
-    this.signature = data.signature.clone();
-    // TODO: When content is store as Blob, we don't need to copy.
-    this.content = new Buffer(data.content);
-    this.wireEncoding = data.wireEncoding;
+    // Copy the name.
+    this.name_ = new ChangeCounter(new Name(data.getName()));
+    this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
+    this.signature_ = new ChangeCounter(data.getSignature().clone());
+    this.content_ = data.content_;
+    this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
     var name = nameOrData;
     if (typeof name === 'string')
-      this.name = new Name(name);
+      this.name_ = new ChangeCounter(new Name(name));
     else
-      this.name = typeof name === 'object' && name instanceof Name ?
-         new Name(name) : new Name();
+      this.name_ = new ChangeCounter(typeof name === 'object' && name instanceof Name ?
+         new Name(name) : new Name());
 
     var metaInfo;
     var content;
@@ -15003,20 +15178,19 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
       content = metaInfoOrContent;
     }
 
-    // Use signedInfo instead of metaInfo for backward compatibility.
-    this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-         new MetaInfo(metaInfo) : new MetaInfo();
+    this.metaInfo_ = new ChangeCounter(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+      new MetaInfo(metaInfo) : new MetaInfo());
 
-    if (typeof content === 'string')
-      this.content = DataUtils.toNumbersFromString(content);
-    else if (typeof content === 'object' && content instanceof Blob)
-      this.content = content.buf();
-    else
-      this.content = content;
+    this.content_ = typeof content === 'object' && content instanceof Blob ?
+      content : new Blob(content, true);
 
-    this.signature = new Sha256WithRsaSignature();
-    this.wireEncoding = new SignedBlob();
-  }  
+    this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+  }
+
+  this.getDefaultWireEncodingChangeCount_ = 0;
+  this.changeCount_ = 0;
 };
 
 exports.Data = Data;
@@ -15027,7 +15201,7 @@ exports.Data = Data;
  */
 Data.prototype.getName = function()
 {
-  return this.name;
+  return this.name_.get();
 };
 
 /**
@@ -15036,7 +15210,7 @@ Data.prototype.getName = function()
  */
 Data.prototype.getMetaInfo = function()
 {
-  return this.signedInfo;
+  return this.metaInfo_.get();
 };
 
 /**
@@ -15045,17 +15219,16 @@ Data.prototype.getMetaInfo = function()
  */
 Data.prototype.getSignature = function()
 {
-  return this.signature;
+  return this.signature_.get();
 };
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The data packet content as a Blob.
+ * @returns {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
-  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
-  return new Blob(this.content, false);
+  return this.content_;
 };
 
 /**
@@ -15064,7 +15237,35 @@ Data.prototype.getContent = function()
  */
 Data.prototype.getContentAsBuffer = function()
 {
-  return this.content;
+  return this.content_.buf();
+};
+
+/**
+ * Return the default wire encoding, which was encoded with
+ * getDefaultWireEncodingFormat().
+ * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * if there is no default wire encoding.
+ */
+Data.prototype.getDefaultWireEncoding = function()
+{
+  if (this.getDefaultWireEncodingChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the default wire encoding is invalidated.
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+    this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+  }
+
+  return this.defaultWireEncoding_;
+};
+
+/**
+ * Get the WireFormat which is used by getDefaultWireEncoding().
+ * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * getDefaultWireEncoding() is not isNull().
+ */
+Data.prototype.getDefaultWireEncodingFormat = function()
+{
+  return this.defaultWireEncodingFormat_;
 };
 
 /**
@@ -15074,11 +15275,9 @@ Data.prototype.getContentAsBuffer = function()
  */
 Data.prototype.setName = function(name)
 {
-  this.name = typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.name_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
+  ++this.changeCount_;
   return this;
 };
 
@@ -15089,11 +15288,9 @@ Data.prototype.setName = function(name)
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
-  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-    new MetaInfo(metaInfo) : new MetaInfo();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.metaInfo_.set(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+    new MetaInfo(metaInfo) : new MetaInfo());
+  ++this.changeCount_;
   return this;
 };
 
@@ -15104,32 +15301,24 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  if (signature == null)
-    this.signature = new Sha256WithRsaSignature();
-  else
-    this.signature =  signature.clone();
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.signature_.set(signature == null ?
+    new Sha256WithRsaSignature() : signature.clone());
+  ++this.changeCount_;
   return this;
 };
 
 /**
  * Set the content to the given value.
- * @param {type} content The array this is copied.
+ * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
+ * then create a new Blob to copy the bytes (otherwise take another pointer to
+ * the same Blob).
  * @returns {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
-  if (typeof content === 'string')
-    this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content === 'object' && content instanceof Blob)
-    this.content = content.buf();
-  else
-    this.content = new Buffer(content);
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.content_ = typeof content === 'object' && content instanceof Blob ?
+    content : new Blob(content, true);
+  ++this.changeCount_;
   return this;
 };
 
@@ -15144,18 +15333,15 @@ Data.prototype.sign = function(wireFormat)
       this.getSignatureOrMetaInfoKeyLocator().getType() == null)
     this.getMetaInfo().setFields();
 
-  if (this.wireEncoding == null || this.wireEncoding.isNull()) {
-    // Need to encode to set wireEncoding.
-    // Set an initial empty signature so that we can encode.
-    this.getSignature().setSignature(new Buffer(128));
-    this.wireEncode(wireFormat);
-  }
+  // Encode once to get the signed portion.
+  var encoding = this.wireEncode(wireFormat);
   var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(this.wireEncoding.signedBuf());
+  rsa.update(encoding.signedBuf());
 
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.setSignature(sig);
+  this.signature_.get().setSignature(sig);
+  ++this.changeCount_;
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -15177,20 +15363,19 @@ Data.prototype.verify = function(/*Key*/ key)
     Data.verifyUsesString = (typeof hashResult === 'string');
   }
 
-  if (this.wireEncoding == null || this.wireEncoding.isNull())
-    // Need to encode to set wireEncoding.
-    this.wireEncode();
+  // wireEncode returns the cached encoding if available.
   var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncoding.signedBuf());
+  verifier.update(this.wireEncode().signedBuf());
   var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
+    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
- * Encode this Data for a particular wire format.
+ * Encode this Data for a particular wire format. If wireFormat is the default
+ * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
@@ -15198,16 +15383,28 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 Data.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have an encoding in the desired format.
+    return this.getDefaultWireEncoding();
+  
   var result = wireFormat.encodeData(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding = new SignedBlob
+  var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding;
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.
+    this.setDefaultWireEncoding
+      (wireEncoding, WireFormat.getDefaultWireFormat());
+  return wireEncoding;
 };
 
 /**
- * Decode the input using a particular wire format and update this Data.
+ * Decode the input using a particular wire format and update this Data. If
+ * wireFormat is the default wire format, also set the defaultWireEncoding to
+ * another pointer to the input.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -15215,21 +15412,26 @@ Data.prototype.wireEncode = function(wireFormat)
 Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.  In the Blob constructor, set copy
+    // true, but if input is already a Blob, it won't copy.
+    this.setDefaultWireEncoding(new SignedBlob
+      (new Blob(input, true), result.signedPortionBeginOffset,
+       result.signedPortionEndOffset),
+      WireFormat.getDefaultWireFormat());
+  else
+    this.setDefaultWireEncoding(new SignedBlob(), null);
 };
 
 /**
  * If getSignature() has a key locator, return it.  Otherwise, use
- * the key locator from getMetaInfo() for backward compatibility and print
+ * the deprecated key locator from getMetaInfo() for backward compatibility and print
  * a warning to console.log that the key locator has moved to the Signature
  * object.  If neither has a key locator, return an empty key locator.
  * When we stop supporting the key locator in MetaInfo, this function is not
@@ -15242,25 +15444,43 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     // The signature type doesn't support KeyLocator.
     return new KeyLocator();
   
-  if (this.signature != null && this.signature.getKeyLocator() != null &&
-      this.signature.getKeyLocator().getType() != null &&
-      this.signature.getKeyLocator().getType() >= 0)
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
+      this.signature_.get().getKeyLocator().getType() != null &&
+      this.signature_.get().getKeyLocator().getType() >= 0)
     // The application is using the key locator in the correct object.
-    return this.signature.getKeyLocator();
+    return this.signature_.get().getKeyLocator();
 
-  if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.getType() != null &&
-      this.signedInfo.locator.getType() >= 0) {
+  if (this.metaInfo_.get() != null && this.metaInfo_.get().locator != null &&
+      this.metaInfo_.get().locator.getType() != null &&
+      this.metaInfo_.get().locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.signedInfo.locator;
+    return this.metaInfo_.get().locator;
   }
 
   // Return the empty key locator from the Signature object if possible.
-  if (this.signature != null && this.signature.getKeyLocator() != null)
-    return this.signature.getKeyLocator();
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null)
+    return this.signature_.get().getKeyLocator();
   else
     return new KeyLocator();
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Data.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.name_.checkChanged();
+  changed = this.metaInfo_.checkChanged() || changed;
+  changed = this.signature_.checkChanged() || changed;
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
@@ -15301,6 +15521,39 @@ Data.prototype.decode = function(input, wireFormat)
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
 };
+
+Data.prototype.setDefaultWireEncoding = function
+  (defaultWireEncoding, defaultWireEncodingFormat)
+{
+  this.defaultWireEncoding_ = defaultWireEncoding;
+  this.defaultWireEncodingFormat_ = defaultWireEncodingFormat;
+  // Set getDefaultWireEncodingChangeCount_ so that the next call to
+  // getDefaultWireEncoding() won't clear _defaultWireEncoding.
+  this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Data.prototype, "name",
+  { get: function() { return this.getName(); },
+    set: function(val) { this.setName(val); } });
+Object.defineProperty(Data.prototype, "metaInfo",
+  { get: function() { return this.getMetaInfo(); },
+    set: function(val) { this.setMetaInfo(val); } });
+Object.defineProperty(Data.prototype, "signature",
+  { get: function() { return this.getSignature(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * @deprecated Use getMetaInfo and setMetaInfo.
+ */
+Object.defineProperty(Data.prototype, "signedInfo",
+  { get: function() { return this.getMetaInfo(); },
+    set: function(val) { this.setMetaInfo(val); } });
+/**
+ * @deprecated Use getContent and setContent.
+ */
+Object.defineProperty(Data.prototype, "content",
+  { get: function() { return this.getContentAsBuffer(); },
+    set: function(val) { this.setContent(val); } });
 
 /**
  * @deprecated Use new Data.
@@ -18969,6 +19222,7 @@ Exclude.prototype.getChangeCount = function()
 
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
@@ -18983,13 +19237,6 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * other arguments.  Otherwise this is the optional name for the new Interest.
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
- * @param {Buffer} publisherPublicKeyDigest
- * @param {Exclude} exclude
- * @param {number} childSelector
- * @param {number} answerOriginKind
- * @param {number} scope
- * @param {number} interestLifetimeMilliseconds in milliseconds
- * @param {Buffer} nonce
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
@@ -18998,43 +19245,46 @@ var Interest = function Interest
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
-    if (interest.name)
-      // Copy the name.
-      this.name = new Name(interest.name);
-    this.maxSuffixComponents = interest.maxSuffixComponents;
-    this.minSuffixComponents = interest.minSuffixComponents;
+    // Copy the name.
+    this.name_ = new ChangeCounter(new Name(interest.getName()));
+    this.maxSuffixComponents_ = interest.maxSuffixComponents_;
+    this.minSuffixComponents_ = interest.minSuffixComponents_;
 
-    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.keyLocator = new KeyLocator(interest.keyLocator);
-    this.exclude = new Exclude(interest.exclude);
-    this.childSelector = interest.childSelector;
-    this.answerOriginKind = interest.answerOriginKind;
-    this.scope = interest.scope;
-    this.interestLifetime = interest.interestLifetime;
-    if (interest.nonce)
-      // Copy.
-      this.nonce = new Buffer(interest.nonce);
+    this.publisherPublicKeyDigest_ = interest.publisherPublicKeyDigest_;
+    this.keyLocator_ = new ChangeCounter(new KeyLocator(interest.getKeyLocator()));
+    this.exclude_ = new ChangeCounter(new Exclude(interest.getExclude()));
+    this.childSelector_ = interest.childSelector_;
+    this.answerOriginKind_ = interest.answerOriginKind_;
+    this.scope_ = interest.scope_;
+    this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
+    this.nonce_ = interest.nonce_;
+    this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
+    this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
   else {
-    this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
-                new Name(nameOrInterest) : new Name();
-    this.maxSuffixComponents = maxSuffixComponents;
-    this.minSuffixComponents = minSuffixComponents;
+    this.name_ = new ChangeCounter(typeof nameOrInterest === 'object' &&
+                                   nameOrInterest instanceof Name ?
+      new Name(nameOrInterest) : new Name());
+    this.maxSuffixComponents_ = maxSuffixComponents;
+    this.minSuffixComponents_ = minSuffixComponents;
 
-    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-    this.keyLocator = new KeyLocator();
-    this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
-                   new Exclude(exclude) : new Exclude();
-    this.childSelector = childSelector;
-    this.answerOriginKind = answerOriginKind;
-    this.scope = scope;
-    this.interestLifetime = interestLifetimeMilliseconds;
-    if (nonce)
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
+    this.publisherPublicKeyDigest_ = publisherPublicKeyDigest;
+    this.keyLocator_ = new ChangeCounter(new KeyLocator());
+    this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
+      new Exclude(exclude) : new Exclude());
+    this.childSelector_ = childSelector;
+    this.answerOriginKind_ = answerOriginKind;
+    this.scope_ = scope;
+    this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+    this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
+      nonce : new Blob(nonce, true);
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
   }
 
-  this.wireEncoding = new SignedBlob();
+  this.getNonceChangeCount_ = 0;
+  this.getDefaultWireEncodingChangeCount_ = 0;
+  this.changeCount_ = 0;
 };
 
 exports.Interest = Interest;
@@ -19053,25 +19303,26 @@ Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
 /**
- * Return true if this.name.match(name) and the name conforms to the interest selectors.
- * @param {Name} name
- * @returns {boolean}
+ * Check if this interest's name matches the given name (using Name.match) and
+ * the given name also conforms to the interest selectors.
+ * @param {Name} name The name to check.
+ * @returns {boolean} True if the name and interest selectors match, False otherwise.
  */
 Interest.prototype.matchesName = function(/*Name*/ name)
 {
-  if (!this.name.match(name))
+  if (!this.getName().match(name))
     return false;
 
-  if (this.minSuffixComponents != null &&
+  if (this.minSuffixComponents_ != null &&
       // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
+      !(name.size() + 1 - this.getName().size() >= this.minSuffixComponents_))
     return false;
-  if (this.maxSuffixComponents != null &&
+  if (this.maxSuffixComponents_ != null &&
       // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
+      !(name.size() + 1 - this.getName().size() <= this.maxSuffixComponents_))
     return false;
-  if (this.exclude != null && name.size() > this.name.size() &&
-      this.exclude.matches(name.get(this.name.size())))
+  if (this.getExclude() != null && name.size() > this.getName().size() &&
+      this.getExclude().matches(name.get(this.getName().size())))
     return false;
 
   return true;
@@ -19090,17 +19341,14 @@ Interest.prototype.matches_name = function(/*Name*/ name)
  */
 Interest.prototype.clone = function()
 {
-  return new Interest
-     (this.name, this.minSuffixComponents, this.maxSuffixComponents,
-      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind,
-      this.scope, this.interestLifetime, this.nonce);
+  return new Interest(this);
 };
 
 /**
  * Get the interest Name.
  * @returns {Name} The name.  The name size() may be 0 if not specified.
  */
-Interest.prototype.getName = function() { return this.name; };
+Interest.prototype.getName = function() { return this.name_.get(); };
 
 /**
  * Get the min suffix components.
@@ -19108,7 +19356,7 @@ Interest.prototype.getName = function() { return this.name; };
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
-  return this.minSuffixComponents;
+  return this.minSuffixComponents_;
 };
 
 /**
@@ -19117,7 +19365,7 @@ Interest.prototype.getMinSuffixComponents = function()
  */
 Interest.prototype.getMaxSuffixComponents = function()
 {
-  return this.maxSuffixComponents;
+  return this.maxSuffixComponents_;
 };
 
 /**
@@ -19127,7 +19375,7 @@ Interest.prototype.getMaxSuffixComponents = function()
  */
 Interest.prototype.getKeyLocator = function()
 {
-  return this.keyLocator;
+  return this.keyLocator_.get();
 };
 
 /**
@@ -19135,7 +19383,7 @@ Interest.prototype.getKeyLocator = function()
  * @returns {Exclude} The exclude object. If the exclude size() is zero, then
  * the exclude is not specified.
  */
-Interest.prototype.getExclude = function() { return this.exclude; };
+Interest.prototype.getExclude = function() { return this.exclude_.get(); };
 
 /**
  * Get the child selector.
@@ -19143,7 +19391,7 @@ Interest.prototype.getExclude = function() { return this.exclude; };
  */
 Interest.prototype.getChildSelector = function()
 {
-  return this.childSelector;
+  return this.childSelector_;
 };
 
 /**
@@ -19151,13 +19399,8 @@ Interest.prototype.getChildSelector = function()
  */
 Interest.prototype.getAnswerOriginKind = function()
 {
-  return this.answerOriginKind;
+  return this.answerOriginKind_;
 };
-
-  /**
-   * Return true if the content must be fresh.
-   * @return true if must be fresh, otherwise false.
-   */
 
 /**
  * Get the must be fresh flag. If not specified, the default is true.
@@ -19165,10 +19408,10 @@ Interest.prototype.getAnswerOriginKind = function()
  */
 Interest.prototype.getMustBeFresh = function()
 {
-  if (this.answerOriginKind == null || this.answerOriginKind < 0)
+  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0)
     return true;
   else
-    return (this.answerOriginKind & Interest.ANSWER_STALE) == 0;
+    return (this.answerOriginKind_ & Interest.ANSWER_STALE) == 0;
 };
 
 /**
@@ -19178,8 +19421,13 @@ Interest.prototype.getMustBeFresh = function()
  */
 Interest.prototype.getNonce = function()
 {
-  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.
-  return  new Blob(this.nonce, false);
+  if (this.getNonceChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the existing nonce is invalidated.
+    this.nonce_ = new Blob();
+    this.getNonceChangeCount_ = this.getChangeCount();
+  }
+
+  return this.nonce_;
 };
 
 /**
@@ -19188,14 +19436,14 @@ Interest.prototype.getNonce = function()
  */
 Interest.prototype.getNonceAsBuffer = function()
 {
-  return this.nonce;
+  return this.getNonce().buf();
 };
 
 /**
  * Get the interest scope.
  * @returns {number} The scope, or null if not specified.
  */
-Interest.prototype.getScope = function() { return this.scope; };
+Interest.prototype.getScope = function() { return this.scope_; };
 
 /**
  * Get the interest lifetime.
@@ -19204,7 +19452,35 @@ Interest.prototype.getScope = function() { return this.scope; };
  */
 Interest.prototype.getInterestLifetimeMilliseconds = function()
 {
-  return this.interestLifetime;
+  return this.interestLifetimeMilliseconds_;
+};
+
+/**
+ * Return the default wire encoding, which was encoded with
+ * getDefaultWireEncodingFormat().
+ * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * if there is no default wire encoding.
+ */
+Interest.prototype.getDefaultWireEncoding = function()
+{
+  if (this.getDefaultWireEncodingChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the default wire encoding is invalidated.
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+    this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+  }
+
+  return this.defaultWireEncoding_;
+};
+
+/**
+ * Get the WireFormat which is used by getDefaultWireEncoding().
+ * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * getDefaultWireEncoding() is not isNull().
+ */
+Interest.prototype.getDefaultWireEncodingFormat = function()
+{
+  return this.defaultWireEncodingFormat_;
 };
 
 /**
@@ -19215,12 +19491,9 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
  */
 Interest.prototype.setName = function(name)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.name = typeof name === 'object' && name instanceof Name ?
-              new Name(name) : new Name();
+  this.name_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
+  ++this.changeCount_;
   return this;
 };
 
@@ -19232,11 +19505,8 @@ Interest.prototype.setName = function(name)
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.minSuffixComponents = minSuffixComponents;
+  this.minSuffixComponents_ = minSuffixComponents;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19248,11 +19518,8 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.maxSuffixComponents = maxSuffixComponents;
+  this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19266,12 +19533,9 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
-                 new Exclude(exclude) : new Exclude();
+  this.exclude_.set(typeof exclude === 'object' && exclude instanceof Exclude ?
+    new Exclude(exclude) : new Exclude());
+  ++this.changeCount_;
   return this;
 };
 
@@ -19283,11 +19547,8 @@ Interest.prototype.setExclude = function(exclude)
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.childSelector = childSelector;
+  this.childSelector_ = childSelector;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19296,11 +19557,8 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.answerOriginKind = answerOriginKind;
+  this.answerOriginKind_ = answerOriginKind;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19312,24 +19570,21 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  if (this.answerOriginKind == null || this.answerOriginKind < 0) {
+  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
     // It is is already the default where MustBeFresh is true.
     if (!mustBeFresh)
       // Set answerOriginKind_ so that getMustBeFresh returns false.
-      this.answerOriginKind = Interest.ANSWER_STALE;
+      this.answerOriginKind_ = Interest.ANSWER_STALE;
   }
   else {
     if (mustBeFresh)
       // Clear the stale bit.
-      this.answerOriginKind &= ~Interest.ANSWER_STALE;
+      this.answerOriginKind_ &= ~Interest.ANSWER_STALE;
     else
       // Set the stale bit.
-      this.answerOriginKind |= Interest.ANSWER_STALE;
+      this.answerOriginKind_ |= Interest.ANSWER_STALE;
   }
+  ++this.changeCount_;
   return this;
 };
 
@@ -19340,11 +19595,8 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
  */
 Interest.prototype.setScope = function(scope)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.scope = scope;
+  this.scope_ = scope;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19356,11 +19608,8 @@ Interest.prototype.setScope = function(scope)
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
-
-  this.interestLifetime = interestLifetimeMilliseconds;
+  this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+  ++this.changeCount_;
   return this;
 };
 
@@ -19370,18 +19619,12 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
-
-  if (nonce) {
-    if (typeof nonce === 'object' && nonce instanceof Blob)
-      this.nonce = nonce.buf();
-    else
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
-  }
-  else
-    this.nonce = null;
+  this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
+    nonce : new Blob(nonce, true);
+  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // this.nonce_.
+  ++this.changeCount_;
+  this.getNonceChangeCount_ = this.getChangeCount();
   return this;
 };
 
@@ -19396,26 +19639,26 @@ Interest.prototype.toUri = function()
 {
   var selectors = "";
 
-  if (this.minSuffixComponents != null)
-    selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
-  if (this.maxSuffixComponents != null)
-    selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
-  if (this.childSelector != null)
-    selectors += "&ndn.ChildSelector=" + this.childSelector;
-  if (this.answerOriginKind != null)
-    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
-  if (this.scope != null)
-    selectors += "&ndn.Scope=" + this.scope;
-  if (this.interestLifetime != null)
-    selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
-  if (this.publisherPublicKeyDigest != null)
-    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
-  if (this.nonce != null)
-    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
-  if (this.exclude != null && this.exclude.size() > 0)
-    selectors += "&ndn.Exclude=" + this.exclude.toUri();
+  if (this.minSuffixComponents_ != null)
+    selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents_;
+  if (this.maxSuffixComponents_ != null)
+    selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents_;
+  if (this.childSelector_ != null)
+    selectors += "&ndn.ChildSelector=" + this.childSelector_;
+  if (this.answerOriginKind_ != null)
+    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind_;
+  if (this.scope_ != null)
+    selectors += "&ndn.Scope=" + this.scope_;
+  if (this.interestLifetimeMilliseconds_ != null)
+    selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
+  if (this.publisherPublicKeyDigest_ != null)
+    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
+  if (this.getNonce() != null)
+    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
+  if (this.getExclude() != null && this.getExclude().size() > 0)
+    selectors += "&ndn.Exclude=" + this.getExclude().toUri();
 
-  var result = this.name.toUri();
+  var result = this.getName().toUri();
   if (selectors != "")
     // Replace the first & with ?.
     result += "?" + selectors.substr(1);
@@ -19424,7 +19667,9 @@ Interest.prototype.toUri = function()
 };
 
 /**
- * Encode this Interest for a particular wire format.
+ * Encode this Interest for a particular wire format. If wireFormat is the
+ * default wire format, also set the defaultWireEncoding field to the encoded
+ * result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
@@ -19432,16 +19677,28 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have an encoding in the desired format.
+    return this.getDefaultWireEncoding();
+
   var result = wireFormat.encodeInterest(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding = new SignedBlob
+  var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding;
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.
+    this.setDefaultWireEncoding
+      (wireEncoding, WireFormat.getDefaultWireFormat());
+  return wireEncoding;
 };
 
 /**
- * Decode the input using a particular wire format and update this Interest.
+ * Decode the input using a particular wire format and update this Interest. If
+ * wireFormat is the default wire format, also set the defaultWireEncoding to
+ * another pointer to the input.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -19449,16 +19706,39 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
+    input.buf() : input;
   var result = wireFormat.decodeInterest(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.  In the Blob constructor, set copy
+    // true, but if input is already a Blob, it won't copy.
+    this.setDefaultWireEncoding(new SignedBlob
+      (new Blob(input, true), result.signedPortionBeginOffset,
+       result.signedPortionEndOffset),
+      WireFormat.getDefaultWireFormat());
+  else
+    this.setDefaultWireEncoding(new SignedBlob(), null);
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Interest.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.name_.checkChanged();
+  changed = this.keyLocator_.checkChanged() || changed;
+  changed = this.exclude_.checkChanged() || changed;
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom
@@ -19498,6 +19778,63 @@ Interest.prototype.decode = function(input, wireFormat)
 {
   this.wireDecode(input, BinaryXmlWireFormat.get())
 };
+
+Interest.prototype.setDefaultWireEncoding = function
+  (defaultWireEncoding, defaultWireEncodingFormat)
+{
+  this.defaultWireEncoding_ = defaultWireEncoding;
+  this.defaultWireEncodingFormat_ = defaultWireEncodingFormat;
+  // Set getDefaultWireEncodingChangeCount_ so that the next call to
+  // getDefaultWireEncoding() won't clear _defaultWireEncoding.
+  this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Interest.prototype, "name",
+  { get: function() { return this.getName(); },
+    set: function(val) { this.setName(val); } });
+Object.defineProperty(Interest.prototype, "minSuffixComponents",
+  { get: function() { return this.getMinSuffixComponents(); },
+    set: function(val) { this.setMinSuffixComponents(val); } });
+Object.defineProperty(Interest.prototype, "maxSuffixComponents",
+  { get: function() { return this.getMaxSuffixComponents(); },
+    set: function(val) { this.setMaxSuffixComponents(val); } });
+Object.defineProperty(Interest.prototype, "keyLocator",
+  { get: function() { return this.getKeyLocator(); },
+    set: function(val) { this.setKeyLocator(val); } });
+Object.defineProperty(Interest.prototype, "exclude",
+  { get: function() { return this.getExclude(); },
+    set: function(val) { this.setExclude(val); } });
+Object.defineProperty(Interest.prototype, "childSelector",
+  { get: function() { return this.getChildSelector(); },
+    set: function(val) { this.setChildSelector(val); } });
+Object.defineProperty(Interest.prototype, "scope",
+  { get: function() { return this.getScope(); },
+    set: function(val) { this.setScope(val); } });
+/**
+ * @deprecated Use getInterestLifetimeMilliseconds and setInterestLifetimeMilliseconds.
+ */
+Object.defineProperty(Interest.prototype, "interestLifetime",
+  { get: function() { return this.getInterestLifetimeMilliseconds(); },
+    set: function(val) { this.setInterestLifetimeMilliseconds(val); } });
+/**
+ * @deprecated Use getMustBeFresh and setMustBeFresh.
+ */
+Object.defineProperty(Interest.prototype, "answerOriginKind",
+  { get: function() { return this.getAnswerOriginKind(); },
+    set: function(val) { this.setAnswerOriginKind(val); } });
+/**
+ * @deprecated Use getNonce and setNonce.
+ */
+Object.defineProperty(Interest.prototype, "nonce",
+  { get: function() { return this.getNonceAsBuffer(); },
+    set: function(val) { this.setNonce(val); } });
+/**
+ * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
+ */
+Object.defineProperty(Interest.prototype, "publisherPublicKeyDigest",
+  { get: function() { return this.publisherPublicKeyDigest_; },
+    set: function(val) { this.publisherPublicKeyDigest_ = val; ++this.changeCount_; } });
 /**
  * This class represents Face Instances
  * Copyright (C) 2013-2015 Regents of the University of California.
@@ -19522,7 +19859,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
     multicastTTL, freshnessSeconds)
@@ -20537,11 +20874,11 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   if (null != interest.getChildSelector())
     encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null)
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.getAnswerOriginKind() && interest.getAnswerOriginKind()!=null)
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.getAnswerOriginKind());
 
-  if (null != interest.setScope())
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
+  if (null != interest.getScope())
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.getScope());
 
   if (null != interest.getInterestLifetimeMilliseconds())
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime,
@@ -21806,29 +22143,13 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.getMetaInfo() != null && data.getMetaInfo().timestamp != null) {
-      var d = new Date();
-      d.setTime(data.getMetaInfo().timestamp.msec);
-
-      var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-
-      output += "TimeStamp: "+d;
-      output+= "<br />";
-      output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
-
-      output+= "<br />";
-    }
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
       output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
       output+= "<br />";
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
       output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY)
-        output += "Key: " + DataUtils.toHex(data.getMetaInfo().locator.publicKey).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
-        output += "KeyLocatorDigest: " + DataUtils.toHex(data.getMetaInfo().locator.getKeyData().buf()).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
+      if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
       else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
         output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
