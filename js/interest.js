@@ -57,6 +57,8 @@ var Interest = function Interest
     this.scope_ = interest.scope_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
+    this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
+    this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
   else {
     this.name_ = new ChangeCounter(typeof nameOrInterest === 'object' &&
@@ -75,10 +77,12 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
   }
 
   this.getNonceChangeCount_ = 0;
-  this.wireEncoding_ = new SignedBlob();
+  this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
 };
 
@@ -251,6 +255,34 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 };
 
 /**
+ * Return the default wire encoding, which was encoded with
+ * getDefaultWireEncodingFormat().
+ * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * if there is no default wire encoding.
+ */
+Interest.prototype.getDefaultWireEncoding = function()
+{
+  if (this.getDefaultWireEncodingChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the default wire encoding is invalidated.
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+    this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+  }
+
+  return this.defaultWireEncoding_;
+};
+
+/**
+ * Get the WireFormat which is used by getDefaultWireEncoding().
+ * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * getDefaultWireEncoding() is not isNull().
+ */
+Interest.prototype.getDefaultWireEncodingFormat = function()
+{
+  return this.defaultWireEncodingFormat_;
+};
+
+/**
  * Set the interest name.
  * Note: You can also call getName and change the name values directly.
  * @param {Name} name The interest name. This makes a copy of the name.
@@ -258,8 +290,6 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
  */
 Interest.prototype.setName = function(name)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.name_.set(typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name());
   ++this.changeCount_;
@@ -274,8 +304,6 @@ Interest.prototype.setName = function(name)
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.minSuffixComponents_ = minSuffixComponents;
   ++this.changeCount_;
   return this;
@@ -289,8 +317,6 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.maxSuffixComponents_ = maxSuffixComponents;
   ++this.changeCount_;
   return this;
@@ -306,8 +332,6 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.exclude_.set(typeof exclude === 'object' && exclude instanceof Exclude ?
     new Exclude(exclude) : new Exclude());
   ++this.changeCount_;
@@ -322,8 +346,6 @@ Interest.prototype.setExclude = function(exclude)
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.childSelector_ = childSelector;
   ++this.changeCount_;
   return this;
@@ -334,8 +356,6 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.answerOriginKind_ = answerOriginKind;
   ++this.changeCount_;
   return this;
@@ -349,8 +369,6 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
     // It is is already the default where MustBeFresh is true.
     if (!mustBeFresh)
@@ -376,8 +394,6 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
  */
 Interest.prototype.setScope = function(scope)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.scope_ = scope;
   ++this.changeCount_;
   return this;
@@ -391,8 +407,6 @@ Interest.prototype.setScope = function(scope)
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
-  this.wireEncoding_ = new SignedBlob();
-
   this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
   ++this.changeCount_;
   return this;
@@ -404,9 +418,6 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
  */
 Interest.prototype.setNonce = function(nonce)
 {
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
-
   this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
     nonce : new Blob(nonce, true);
   // Set _getNonceChangeCount so that the next call to getNonce() won't clear
@@ -455,7 +466,9 @@ Interest.prototype.toUri = function()
 };
 
 /**
- * Encode this Interest for a particular wire format.
+ * Encode this Interest for a particular wire format. If wireFormat is the
+ * default wire format, also set the defaultWireEncoding field to the encoded
+ * result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
@@ -463,16 +476,28 @@ Interest.prototype.toUri = function()
 Interest.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have an encoding in the desired format.
+    return this.getDefaultWireEncoding();
+
   var result = wireFormat.encodeInterest(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding_ = new SignedBlob
+  var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding_;
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.
+    this.setDefaultWireEncoding
+      (wireEncoding, WireFormat.getDefaultWireFormat());
+  return wireEncoding;
 };
 
 /**
- * Decode the input using a particular wire format and update this Interest.
+ * Decode the input using a particular wire format and update this Interest. If
+ * wireFormat is the default wire format, also set the defaultWireEncoding to
+ * another pointer to the input.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -480,16 +505,21 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
     input.buf() : input;
   var result = wireFormat.decodeInterest(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding_ = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.  In the Blob constructor, set copy
+    // true, but if input is already a Blob, it won't copy.
+    this.setDefaultWireEncoding(new SignedBlob
+      (new Blob(input, true), result.signedPortionBeginOffset,
+       result.signedPortionEndOffset),
+      WireFormat.getDefaultWireFormat());
+  else
+    this.setDefaultWireEncoding(new SignedBlob(), null);
 };
 
 /**
@@ -546,6 +576,16 @@ Interest.prototype.encode = function(wireFormat)
 Interest.prototype.decode = function(input, wireFormat)
 {
   this.wireDecode(input, BinaryXmlWireFormat.get())
+};
+
+Interest.prototype.setDefaultWireEncoding = function
+  (defaultWireEncoding, defaultWireEncodingFormat)
+{
+  this.defaultWireEncoding_ = defaultWireEncoding;
+  this.defaultWireEncodingFormat_ = defaultWireEncodingFormat;
+  // Set getDefaultWireEncodingChangeCount_ so that the next call to
+  // getDefaultWireEncoding() won't clear _defaultWireEncoding.
+  this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
 };
 
 // Define properties so we can change member variable types and implement changeCount_.

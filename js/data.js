@@ -54,7 +54,8 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
-    this.wireEncoding_ = data.wireEncoding_;
+    this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
     var name = nameOrData;
@@ -83,9 +84,11 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
       content : new Blob(content, true);
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
-    this.wireEncoding_ = new SignedBlob();
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
   }
 
+  this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
 };
 
@@ -137,6 +140,34 @@ Data.prototype.getContentAsBuffer = function()
 };
 
 /**
+ * Return the default wire encoding, which was encoded with
+ * getDefaultWireEncodingFormat().
+ * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * if there is no default wire encoding.
+ */
+Data.prototype.getDefaultWireEncoding = function()
+{
+  if (this.getDefaultWireEncodingChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the default wire encoding is invalidated.
+    this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultWireEncodingFormat_ = null;
+    this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
+  }
+
+  return this.defaultWireEncoding_;
+};
+
+/**
+ * Get the WireFormat which is used by getDefaultWireEncoding().
+ * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * getDefaultWireEncoding() is not isNull().
+ */
+Data.prototype.getDefaultWireEncodingFormat = function()
+{
+  return this.defaultWireEncodingFormat_;
+};
+
+/**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
@@ -145,9 +176,6 @@ Data.prototype.setName = function(name)
 {
   this.name_.set(typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name());
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
   ++this.changeCount_;
   return this;
 };
@@ -161,9 +189,6 @@ Data.prototype.setMetaInfo = function(metaInfo)
 {
   this.metaInfo_.set(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
     new MetaInfo(metaInfo) : new MetaInfo());
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
   ++this.changeCount_;
   return this;
 };
@@ -177,9 +202,6 @@ Data.prototype.setSignature = function(signature)
 {
   this.signature_.set(signature == null ?
     new Sha256WithRsaSignature() : signature.clone());
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
   ++this.changeCount_;
   return this;
 };
@@ -195,9 +217,6 @@ Data.prototype.setContent = function(content)
 {
   this.content_ = typeof content === 'object' && content instanceof Blob ?
     content : new Blob(content, true);
-
-  // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding_ = new SignedBlob();
   ++this.changeCount_;
   return this;
 };
@@ -213,14 +232,10 @@ Data.prototype.sign = function(wireFormat)
       this.getSignatureOrMetaInfoKeyLocator().getType() == null)
     this.getMetaInfo().setFields();
 
-  if (this.wireEncoding_ == null || this.wireEncoding_.isNull()) {
-    // Need to encode to set wireEncoding.
-    // Set an initial empty signature so that we can encode.
-    this.getSignature().setSignature(new Buffer(128));
-    this.wireEncode(wireFormat);
-  }
+  // Encode once to get the signed portion.
+  var encoding = this.wireEncode(wireFormat);
   var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(this.wireEncoding_.signedBuf());
+  rsa.update(encoding.signedBuf());
 
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
@@ -247,11 +262,9 @@ Data.prototype.verify = function(/*Key*/ key)
     Data.verifyUsesString = (typeof hashResult === 'string');
   }
 
-  if (this.wireEncoding_ == null || this.wireEncoding_.isNull())
-    // Need to encode to set wireEncoding.
-    this.wireEncode();
+  // wireEncode returns the cached encoding if available.
   var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncoding_.signedBuf());
+  verifier.update(this.wireEncode().signedBuf());
   var signatureBytes = Data.verifyUsesString ?
     DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
@@ -260,7 +273,8 @@ Data.prototype.verify = function(/*Key*/ key)
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 
 /**
- * Encode this Data for a particular wire format.
+ * Encode this Data for a particular wire format. If wireFormat is the default
+ * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
@@ -268,16 +282,28 @@ Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
 Data.prototype.wireEncode = function(wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have an encoding in the desired format.
+    return this.getDefaultWireEncoding();
+  
   var result = wireFormat.encodeData(this);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding_ = new SignedBlob
+  var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding_;
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.
+    this.setDefaultWireEncoding
+      (wireEncoding, WireFormat.getDefaultWireFormat());
+  return wireEncoding;
 };
 
 /**
- * Decode the input using a particular wire format and update this Data.
+ * Decode the input using a particular wire format and update this Data. If
+ * wireFormat is the default wire format, also set the defaultWireEncoding to
+ * another pointer to the input.
  * @param {Blob|Buffer} input The buffer with the bytes to decode.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
@@ -285,16 +311,21 @@ Data.prototype.wireEncode = function(wireFormat)
 Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
                      input.buf() : input;
   var result = wireFormat.decodeData(this, decodeBuffer);
-  // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  // In the Blob constructor, set copy true, but if input is already a Blob, it
-  //   won't copy.
-  this.wireEncoding_ = new SignedBlob
-    (new Blob(input, true), result.signedPortionBeginOffset,
-     result.signedPortionEndOffset);
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // This is the default wire encoding.  In the Blob constructor, set copy
+    // true, but if input is already a Blob, it won't copy.
+    this.setDefaultWireEncoding(new SignedBlob
+      (new Blob(input, true), result.signedPortionBeginOffset,
+       result.signedPortionEndOffset),
+      WireFormat.getDefaultWireFormat());
+  else
+    this.setDefaultWireEncoding(new SignedBlob(), null);
 };
 
 /**
@@ -388,6 +419,16 @@ Data.prototype.decode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
+};
+
+Data.prototype.setDefaultWireEncoding = function
+  (defaultWireEncoding, defaultWireEncodingFormat)
+{
+  this.defaultWireEncoding_ = defaultWireEncoding;
+  this.defaultWireEncodingFormat_ = defaultWireEncodingFormat;
+  // Set getDefaultWireEncodingChangeCount_ so that the next call to
+  // getDefaultWireEncoding() won't clear _defaultWireEncoding.
+  this.getDefaultWireEncodingChangeCount_ = this.getChangeCount();
 };
 
 // Define properties so we can change member variable types and implement changeCount_.
