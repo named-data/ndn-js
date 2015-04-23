@@ -185,18 +185,6 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.getMetaInfo() != null && data.getMetaInfo().timestamp != null) {
-      var d = new Date();
-      d.setTime(data.getMetaInfo().timestamp.msec);
-
-      var bytes = [217, 185, 12, 225, 217, 185, 12, 225];
-
-      output += "TimeStamp: "+d;
-      output+= "<br />";
-      output += "TimeStamp(number): "+ data.getMetaInfo().timestamp.msec;
-
-      output+= "<br />";
-    }
     if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
       output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
       output+= "<br />";
