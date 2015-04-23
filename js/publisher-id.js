@@ -36,7 +36,7 @@ var PublisherType = function PublisherType(tag)
 };
 
 /**
- * @constructor
+ * @deprecated Use KeyLocator getKeyData and setKeyData.
  */
 var PublisherID = function PublisherID()
 {
