@@ -215,11 +215,11 @@ BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
   if (null != interest.getChildSelector())
     encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
 
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.setAnswerOriginKind() && interest.setAnswerOriginKind()!=null)
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.setAnswerOriginKind());
+  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.getAnswerOriginKind() && interest.getAnswerOriginKind()!=null)
+    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.getAnswerOriginKind());
 
-  if (null != interest.setScope())
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.setScope());
+  if (null != interest.getScope())
+    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.getScope());
 
   if (null != interest.getInterestLifetimeMilliseconds())
     encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime,
