@@ -77,6 +77,7 @@ var Interest = function Interest
       nonce : new Blob(nonce, true);
   }
 
+  this.getNonceChangeCount_ = 0;
   this.wireEncoding_ = new SignedBlob();
   this.changeCount_ = 0;
 };
@@ -215,6 +216,12 @@ Interest.prototype.getMustBeFresh = function()
  */
 Interest.prototype.getNonce = function()
 {
+  if (this.getNonceChangeCount_ != this.getChangeCount()) {
+    // The values have changed, so the existing nonce is invalidated.
+    this.nonce_ = new Blob();
+    this.getNonceChangeCount_ = this.getChangeCount();
+  }
+
   return this.nonce_;
 };
 
@@ -224,7 +231,7 @@ Interest.prototype.getNonce = function()
  */
 Interest.prototype.getNonceAsBuffer = function()
 {
-  return this.nonce_.buf();
+  return this.getNonce().buf();
 };
 
 /**
@@ -251,12 +258,11 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
  */
 Interest.prototype.setName = function(name)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.name_.set(typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name());
+  ++this.changeCount_;
   return this;
 };
 
@@ -268,11 +274,10 @@ Interest.prototype.setName = function(name)
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.minSuffixComponents_ = minSuffixComponents;
+  ++this.changeCount_;
   return this;
 };
 
@@ -284,11 +289,10 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
   return this;
 };
 
@@ -302,12 +306,11 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  */
 Interest.prototype.setExclude = function(exclude)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.exclude_.set(typeof exclude === 'object' && exclude instanceof Exclude ?
     new Exclude(exclude) : new Exclude());
+  ++this.changeCount_;
   return this;
 };
 
@@ -319,11 +322,10 @@ Interest.prototype.setExclude = function(exclude)
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.childSelector_ = childSelector;
+  ++this.changeCount_;
   return this;
 };
 
@@ -332,11 +334,10 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.answerOriginKind_ = answerOriginKind;
+  ++this.changeCount_;
   return this;
 };
 
@@ -348,8 +349,6 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
@@ -366,6 +365,7 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
       // Set the stale bit.
       this.answerOriginKind_ |= Interest.ANSWER_STALE;
   }
+  ++this.changeCount_;
   return this;
 };
 
@@ -376,11 +376,10 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
  */
 Interest.prototype.setScope = function(scope)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.scope_ = scope;
+  ++this.changeCount_;
   return this;
 };
 
@@ -392,11 +391,10 @@ Interest.prototype.setScope = function(scope)
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
-  // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce_ = new Blob();
   this.wireEncoding_ = new SignedBlob();
 
   this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+  ++this.changeCount_;
   return this;
 };
 
@@ -411,6 +409,10 @@ Interest.prototype.setNonce = function(nonce)
 
   this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
     nonce : new Blob(nonce, true);
+  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // this.nonce_.
+  ++this.changeCount_;
+  this.getNonceChangeCount_ = this.getChangeCount();
   return this;
 };
 
@@ -439,8 +441,8 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
   if (this.publisherPublicKeyDigest_ != null)
     selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
-  if (this.nonce_ != null)
-    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce_.buf());
+  if (this.getNonce() != null)
+    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
     selectors += "&ndn.Exclude=" + this.getExclude().toUri();
 
