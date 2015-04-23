@@ -20,6 +20,7 @@
  */
 
 var Blob = require('./util/blob.js').Blob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
@@ -46,22 +47,20 @@ var KeyLocator = function KeyLocator(input, type)
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
     this.type_ = input.type_;
-    this.keyName_ = new KeyName();
-    if (input.keyName_ != null) {
-      this.keyName_.setContentName(input.keyName_.getContentName());
-      this.keyName_.publisherID = input.keyName_.publisherID;
-    }
+    this.keyName_ = new ChangeCounter(new KeyName());
+    this.keyName_.get().setContentName(input.keyName_.get().getContentName());
+    this.keyName_.get().publisherID = input.keyName_.get().publisherID;
     this.keyData_ = input.keyData_;
     this.publicKey_ = input.publicKey_ == null ? null : new Buffer(input.publicKey_);
     this.certificate_ = input.certificate_ == null ? null : new Buffer(input.certificate_);
   }
   else {
     this.type_ = type;
-    this.keyName_ = new KeyName();
+    this.keyName_ = new ChangeCounter(new KeyName());
     this.keyData_ = new Blob();
 
     if (type == KeyLocatorType.KEYNAME)
-      this.keyName_ = input;
+      this.keyName_.set(input);
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
       this.keyData_ = new Blob(input);
     else if (type == KeyLocatorType.KEY) {
@@ -75,6 +74,8 @@ var KeyLocator = function KeyLocator(input, type)
       this.certificate_ = this.keyData_;
     }
   }
+
+  this.changeCount_ = 0;
 };
 
 exports.KeyLocator = KeyLocator;
@@ -93,7 +94,7 @@ KeyLocator.prototype.getType = function() { return this.type_; };
  */
 KeyLocator.prototype.getKeyName = function()
 {
-  return this.keyName_.getContentName();
+  return this.keyName_.get().getContentName();
 };
 
 /**
@@ -128,7 +129,11 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * setKeyData() to the digest.
  * @param {number} type The key locator type.  If null, the type is unspecified.
  */
-KeyLocator.prototype.setType = function(type) { this.type_ = type; };
+KeyLocator.prototype.setType = function(type)
+{
+  this.type_ = type;
+  ++this.changeCount_;
+};
 
 /**
  * Set key name to a copy of the given Name.  This is the name if getType()
@@ -137,7 +142,8 @@ KeyLocator.prototype.setType = function(type) { this.type_ = type; };
  */
 KeyLocator.prototype.setKeyName = function(name)
 {
-  this.keyName_.setContentName(name);
+  this.keyName_.get().setContentName(name);
+  ++this.changeCount_;
 };
 
 /**
@@ -152,6 +158,7 @@ KeyLocator.prototype.setKeyData = function(keyData)
   // Set for backwards compatibility.
   this.publicKey_ = this.keyData_.buf();
   this.certificate_ = this.keyData_.buf();
+  ++this.changeCount_;
 };
 
 /**
@@ -160,10 +167,11 @@ KeyLocator.prototype.setKeyData = function(keyData)
 KeyLocator.prototype.clear = function()
 {
   this.type_ = null;
-  this.keyName_ = new KeyName();
+  this.keyName_.set(new KeyName());
   this.keyData_ = new Blob();
   this.publicKey_ = null;
   this.certificate_ = null;
+  ++this.changeCount_;
 };
 
 /**
@@ -243,8 +251,8 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
   } else  {
     this.type = KeyLocatorType.KEYNAME;
 
-    this.keyName_ = new KeyName();
-    this.keyName_.from_ndnb(decoder);
+    this.keyName_.set(new KeyName());
+    this.keyName_.get().from_ndnb(decoder);
   }
   decoder.readElementClose();
 };
@@ -273,7 +281,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     }
   }
   else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName_.to_ndnb(encoder);
+    this.keyName_.get().to_ndnb(encoder);
 
   encoder.writeElementClose();
 };
@@ -281,6 +289,22 @@ KeyLocator.prototype.to_ndnb = function(encoder)
 KeyLocator.prototype.getElementLabel = function()
 {
   return NDNProtocolDTags.KeyLocator;
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+KeyLocator.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyName_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
 };
 
 // Define properties so we can change member variable types and implement changeCount_.
@@ -291,9 +315,9 @@ Object.defineProperty(KeyLocator.prototype, "type",
  * @deprecated Use getKeyName and setKeyName.
  */
 Object.defineProperty(KeyLocator.prototype, "keyName",
-  { get: function() { return this.keyName_; },
+  { get: function() { return this.keyName_.get(); },
     set: function(val) { 
-      this.keyName_ = val == null ? new KeyName() : val;
+      this.keyName_.set(val == null ? new KeyName() : val);
       ++this.changeCount_;
     } });
 /**
@@ -316,25 +340,28 @@ Object.defineProperty(KeyLocator.prototype, "certificate",
     set: function(val) { this.certificate_ = val; ++this.changeCount_; } });
 
 /**
- * @deprecated Use KeyLocator getKeyName and setKeyName.
+ * @deprecated Use KeyLocator getKeyName and setKeyName. This is only needed to
+ * support NDNx and will be removed.
  */
 var KeyName = function KeyName()
 {
-  this.contentName_ = new Name();  //contentName
+  this.contentName_ = new ChangeCounter(new Name());
   this.publisherID = this.publisherID;  //publisherID
+  this.changeCount_ = 0;
 };
 
 exports.KeyName = KeyName;
 
 KeyName.prototype.getContentName = function()
 {
-  return this.contentName_;
+  return this.contentName_.get();
 };
 
 KeyName.prototype.setContentName = function(name)
 {
-  this.contentName_ = typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name();
+  this.contentName_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
+  ++this.changeCount_;
 };
 
 KeyName.prototype.from_ndnb = function(decoder)
@@ -365,12 +392,28 @@ KeyName.prototype.to_ndnb = function(encoder)
   encoder.writeElementClose();
 };
 
+KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+KeyName.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.contentName_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
+
 // Define properties so we can change member variable types and implement changeCount_.
 Object.defineProperty(KeyName.prototype, "contentName",
   { get: function() { return this.getContentName(); },
     set: function(val) { this.setContentName(val); } });
-
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;

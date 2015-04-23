@@ -20,6 +20,7 @@
  */
 
 var Blob = require('./util/blob.js').Blob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
@@ -39,7 +40,7 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
   if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator_ = new KeyLocator(value.keyLocator_);
+    this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
     this.signature_ = value.signature_;
     // witness is deprecated.
     this.witness_ = value.witness_;
@@ -47,13 +48,15 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
     this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
-    this.keyLocator_ = new KeyLocator();
+    this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.signature_ = new Blob();
     // witness is deprecated.
     this.witness_ = null;
     // digestAlgorithm is deprecated.
     this.digestAlgorithm_ = null;
   }
+
+  this.changeCount_ = 0;
 };
 
 exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
@@ -73,7 +76,7 @@ Sha256WithRsaSignature.prototype.clone = function()
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
-  return this.keyLocator_;
+  return this.keyLocator_.get();
 };
 
 /**
@@ -100,8 +103,10 @@ Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
  */
 Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
-  this.keyLocator_ = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
-    new KeyLocator(keyLocator) : new KeyLocator();
+  this.keyLocator_.set(typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator());
+  ++this.changeCount_;
 };
 
 /**
@@ -112,6 +117,7 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
   this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
     signature : new Blob(signature);
+  ++this.changeCount_;
 };
 
 Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
@@ -157,6 +163,22 @@ Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 };
 
 Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Sha256WithRsaSignature.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyLocator_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
 
 // Define properties so we can change member variable types and implement changeCount_.
 Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",

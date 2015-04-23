@@ -22,6 +22,7 @@
 var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
@@ -49,19 +50,19 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     var data = nameOrData;
 
     // Copy the name.
-    this.name_ = new Name(data.name_);
-    this.metaInfo_ = new MetaInfo(data.metaInfo_);
-    this.signature_ = data.signature_.clone();
+    this.name_ = new ChangeCounter(new Name(data.getName()));
+    this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
+    this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.wireEncoding_ = data.wireEncoding_;
   }
   else {
     var name = nameOrData;
     if (typeof name === 'string')
-      this.name_ = new Name(name);
+      this.name_ = new ChangeCounter(new Name(name));
     else
-      this.name_ = typeof name === 'object' && name instanceof Name ?
-         new Name(name) : new Name();
+      this.name_ = new ChangeCounter(typeof name === 'object' && name instanceof Name ?
+         new Name(name) : new Name());
 
     var metaInfo;
     var content;
@@ -75,15 +76,17 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
       content = metaInfoOrContent;
     }
 
-    this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-      new MetaInfo(metaInfo) : new MetaInfo();
+    this.metaInfo_ = new ChangeCounter(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+      new MetaInfo(metaInfo) : new MetaInfo());
 
     this.content_ = typeof content === 'object' && content instanceof Blob ?
       content : new Blob(content, true);
 
-    this.signature_ = new Sha256WithRsaSignature();
+    this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.wireEncoding_ = new SignedBlob();
-  }  
+  }
+
+  this.changeCount_ = 0;
 };
 
 exports.Data = Data;
@@ -94,7 +97,7 @@ exports.Data = Data;
  */
 Data.prototype.getName = function()
 {
-  return this.name_;
+  return this.name_.get();
 };
 
 /**
@@ -103,7 +106,7 @@ Data.prototype.getName = function()
  */
 Data.prototype.getMetaInfo = function()
 {
-  return this.metaInfo_;
+  return this.metaInfo_.get();
 };
 
 /**
@@ -112,7 +115,7 @@ Data.prototype.getMetaInfo = function()
  */
 Data.prototype.getSignature = function()
 {
-  return this.signature_;
+  return this.signature_.get();
 };
 
 /**
@@ -140,11 +143,12 @@ Data.prototype.getContentAsBuffer = function()
  */
 Data.prototype.setName = function(name)
 {
-  this.name_ = typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name();
+  this.name_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding_ = new SignedBlob();
+  ++this.changeCount_;
   return this;
 };
 
@@ -155,11 +159,12 @@ Data.prototype.setName = function(name)
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
-  this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-    new MetaInfo(metaInfo) : new MetaInfo();
+  this.metaInfo_.set(typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+    new MetaInfo(metaInfo) : new MetaInfo());
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding_ = new SignedBlob();
+  ++this.changeCount_;
   return this;
 };
 
@@ -170,11 +175,12 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  this.signature_ = signature == null ? 
-    new Sha256WithRsaSignature() : signature.clone();
+  this.signature_.set(signature == null ?
+    new Sha256WithRsaSignature() : signature.clone());
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding_ = new SignedBlob();
+  ++this.changeCount_;
   return this;
 };
 
@@ -192,6 +198,7 @@ Data.prototype.setContent = function(content)
 
   // The object has changed, so the wireEncoding is invalid.
   this.wireEncoding_ = new SignedBlob();
+  ++this.changeCount_;
   return this;
 };
 
@@ -217,7 +224,8 @@ Data.prototype.sign = function(wireFormat)
 
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature_.setSignature(sig);
+  this.signature_.get().setSignature(sig);
+  ++this.changeCount_;
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -245,7 +253,7 @@ Data.prototype.verify = function(/*Key*/ key)
   var verifier = Crypto.createVerify('RSA-SHA256');
   verifier.update(this.wireEncoding_.signedBuf());
   var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature_.getSignature().buf()) : this.signature_.getSignature().buf();
+    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
@@ -291,7 +299,7 @@ Data.prototype.wireDecode = function(input, wireFormat)
 
 /**
  * If getSignature() has a key locator, return it.  Otherwise, use
- * the key locator from getMetaInfo() for backward compatibility and print
+ * the deprecated key locator from getMetaInfo() for backward compatibility and print
  * a warning to console.log that the key locator has moved to the Signature
  * object.  If neither has a key locator, return an empty key locator.
  * When we stop supporting the key locator in MetaInfo, this function is not
@@ -304,25 +312,43 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     // The signature type doesn't support KeyLocator.
     return new KeyLocator();
   
-  if (this.signature_ != null && this.signature_.getKeyLocator() != null &&
-      this.signature_.getKeyLocator().getType() != null &&
-      this.signature_.getKeyLocator().getType() >= 0)
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
+      this.signature_.get().getKeyLocator().getType() != null &&
+      this.signature_.get().getKeyLocator().getType() >= 0)
     // The application is using the key locator in the correct object.
-    return this.signature_.getKeyLocator();
+    return this.signature_.get().getKeyLocator();
 
-  if (this.metaInfo_ != null && this.metaInfo_.locator != null &&
-      this.metaInfo_.locator.getType() != null &&
-      this.metaInfo_.locator.getType() >= 0) {
+  if (this.metaInfo_.get() != null && this.metaInfo_.get().locator != null &&
+      this.metaInfo_.get().locator.getType() != null &&
+      this.metaInfo_.get().locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.metaInfo_.locator;
+    return this.metaInfo_.get().locator;
   }
 
   // Return the empty key locator from the Signature object if possible.
-  if (this.signature_ != null && this.signature_.getKeyLocator() != null)
-    return this.signature_.getKeyLocator();
+  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null)
+    return this.signature_.get().getKeyLocator();
   else
     return new KeyLocator();
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+Data.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.name_.checkChanged();
+  changed = this.metaInfo_.checkChanged() || changed;
+  changed = this.signature_.checkChanged() || changed;
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
 };
 
 // Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
