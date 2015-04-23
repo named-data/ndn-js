@@ -208,10 +208,6 @@ function dumpData(data)
   if (keyLocator !== null) {
     if (keyLocator.getType() == KeyLocatorType.NONE)
       console.log("signature.keyLocator: <none>");
-    else if (keyLocator.getType() == KeyLocatorType.KEY)
-      console.log("signature.keyLocator: Key: " + keyLocator.getKeyData().toHex());
-    else if (keyLocator.getType() == KeyLocatorType.CERTIFICATE)
-      console.log("signature.keyLocator: Certificate: " + keyLocator.getKeyData().toHex());
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       console.log("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
     else if (keyLocator.getType() == KeyLocatorType.KEYNAME)

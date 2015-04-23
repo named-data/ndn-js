@@ -191,11 +191,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
       output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY)
-        output += "Key: " + DataUtils.toHex(data.getMetaInfo().locator.publicKey).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
-        output += "KeyLocatorDigest: " + DataUtils.toHex(data.getMetaInfo().locator.getKeyData().buf()).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
+      if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
         output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
       else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
         output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";

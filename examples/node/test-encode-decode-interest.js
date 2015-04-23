@@ -160,11 +160,7 @@ function dumpInterest(interest)
   console.log("maxSuffixComponents: " + (interest.getMaxSuffixComponents() != null ?
     interest.getMaxSuffixComponents() : "<none>"));
   if (interest.getKeyLocator().getType() != null) {
-    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY)
-      console.log("keyLocator: Key: " + interest.getKeyLocator().getKeyData().toHex());
-    else if (interest.getKeyLocator().getType() == KeyLocatorType.CERTIFICATE)
-      console.log("keyLocator: Certificate: " + interest.getKeyLocator().getKeyData().toHex());
-    else if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       console.log("keyLocator: KeyLocatorDigest: " + interest.getKeyLocator().getKeyData().toHex());
     else if (interest.getKeyLocator().getType() == KeyLocatorType.KEYNAME)
       console.log("keyLocator: KeyName: " + interest.getKeyLocator().getKeyName().toUri());
