@@ -22,7 +22,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var LOG = require('./log.js').Log.LOG;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
 {
