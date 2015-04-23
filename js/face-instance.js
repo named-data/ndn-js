@@ -22,7 +22,7 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
     multicastTTL, freshnessSeconds)
