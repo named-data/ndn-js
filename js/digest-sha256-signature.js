@@ -40,6 +40,8 @@ var DigestSha256Signature = function DigestSha256Signature(value)
     this.signature_ = value.signature_;
   else
     this.signature_ = new Blob();
+
+  this.changeCount_ = 0;
 };
 
 exports.DigestSha256Signature = DigestSha256Signature;
@@ -70,6 +72,16 @@ DigestSha256Signature.prototype.setSignature = function(signature)
 {
   this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
     signature : new Blob(signature);
+  ++this.changeCount_;
+};
+
+/**
+ * Get the change count, which is incremented each time this object is changed.
+ * @returns {number} The change count.
+ */
+DigestSha256Signature.prototype.getChangeCount = function()
+{
+  return this.changeCount_;
 };
 
 // Define properties so we can change member variable types and implement changeCount_.
