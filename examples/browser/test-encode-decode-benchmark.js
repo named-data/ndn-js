@@ -24,7 +24,6 @@ var KeyLocator = require('../..').KeyLocator;
 var KeyLocatorType = require('../..').KeyLocatorType;
 var KeyName = require('../..').KeyName;
 var KeyType = require('../..').KeyType;
-var NDNTime = require('../..').NDNTime;
 var MemoryIdentityStorage = require('../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../..').MemoryPrivateKeyStorage;
 var IdentityManager = require('../..').IdentityManager;
@@ -241,8 +240,6 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
       data.setContent(content);
       data.setMetaInfo(new MetaInfo());
       if (useComplex) {
-        // timestamp is deprecated.
-        data.getMetaInfo().timestamp = new NDNTime(1.3e+12);
         data.getMetaInfo().setFreshnessPeriod(30000);
         data.getMetaInfo().setFinalBlockId(finalBlockId);
       }
