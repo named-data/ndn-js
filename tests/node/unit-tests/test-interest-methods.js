@@ -218,10 +218,7 @@ describe('TestInterestMethods', function() {
     assert.ok(!referenceInterest.getNonce().isNull());
     var interest = new Interest(referenceInterest);
     // Change a child object.
-    /* TODO: Implement ChangeCounter in Interest to detect changes in child objects.
     interest.getExclude().clear();
-    */
-    interest.setChildSelector(0);
     assert.ok(interest.getNonce().isNull(), 'Interest should not have a nonce after changing fields');
   });
 
