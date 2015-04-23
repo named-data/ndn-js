@@ -56,7 +56,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     // Copy values.
     var metaInfo = publisherOrMetaInfo;
     this.publisher = metaInfo.publisher;
-    this.timestamp = metaInfo.timestamp;
+    this.timestamp = metaInfo.timestamp; // NDNTime // deprecated
     this.type = metaInfo.type;
     this.locator = metaInfo.locator == null ?
       new KeyLocator() : new KeyLocator(metaInfo.locator);
@@ -65,7 +65,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   }
   else {
     this.publisher = publisherOrMetaInfo; //publisherPublicKeyDigest
-    this.timestamp = timestamp; // NDN Time
+    this.timestamp = timestamp; // NDNTime // deprecated
     this.type = type == null || type < 0 ? ContentType.BLOB : type; // ContentType
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // Integer

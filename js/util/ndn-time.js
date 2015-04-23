@@ -21,7 +21,7 @@
 var LOG = require('../log.js').Log.LOG;
 
 /**
- * @constructor
+ * @deprecated This is only used for NDNx support which is deprecated.
  */
 var NDNTime = function NDNTime(input)
 {
