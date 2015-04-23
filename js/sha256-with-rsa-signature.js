@@ -39,20 +39,20 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
 {
   if (typeof value === 'object' && value instanceof Sha256WithRsaSignature) {
     // Copy the values.
-    this.keyLocator = new KeyLocator(value.keyLocator);
-    this.signature = value.signature;
+    this.keyLocator_ = new KeyLocator(value.keyLocator_);
+    this.signature_ = value.signature_;
     // witness is deprecated.
-    this.witness = value.witness;
+    this.witness_ = value.witness_;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = value.digestAlgorithm;
+    this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
-    this.keyLocator = new KeyLocator();
-    this.signature = null;
+    this.keyLocator_ = new KeyLocator();
+    this.signature_ = new Blob();
     // witness is deprecated.
-    this.witness = null;
+    this.witness_ = null;
     // digestAlgorithm is deprecated.
-    this.digestAlgorithm = null;
+    this.digestAlgorithm_ = null;
   }
 };
 
@@ -73,7 +73,7 @@ Sha256WithRsaSignature.prototype.clone = function()
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
-  return this.keyLocator;
+  return this.keyLocator_;
 };
 
 /**
@@ -82,8 +82,7 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
  */
 Sha256WithRsaSignature.prototype.getSignature = function()
 {
-  // For backwards-compatibility, leave this.signature as a Buffer but return a Blob.
-  return new Blob(this.signature, false);
+  return this.signature_;
 };
 
 /**
@@ -92,7 +91,7 @@ Sha256WithRsaSignature.prototype.getSignature = function()
  */
 Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
 {
-  return this.signature;
+  return this.signature_.buf();
 };
 
 /**
@@ -101,8 +100,8 @@ Sha256WithRsaSignature.prototype.getSignatureAsBuffer = function()
  */
 Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
 {
-  this.keyLocator = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
-                    new KeyLocator(keyLocator) : new KeyLocator();
+  this.keyLocator_ = typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator();
 };
 
 /**
@@ -111,12 +110,8 @@ Sha256WithRsaSignature.prototype.setKeyLocator = function(keyLocator)
  */
 Sha256WithRsaSignature.prototype.setSignature = function(signature)
 {
-  if (signature == null)
-    this.signature = null;
-  else if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = new Buffer(signature.buf());
-  else
-    this.signature = new Buffer(signature);
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
 };
 
 Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
@@ -163,6 +158,29 @@ Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
 
 Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
 
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
+  { get: function() { return this.getKeyLocator(); },
+    set: function(val) { this.setKeyLocator(val); } });
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
+  { get: function() { return this.getSignatureAsBuffer(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
+  { get: function() { return this.witness_; },
+    set: function(val) { this.witness_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
+  { get: function() { return this.digestAlgorithm_; },
+    set: function(val) { this.digestAlgorithm_ = val; ++this.changeCount_; } });
+
 /**
  * Note: This Signature class is not the same as the base Signature class of
  * the Common Client Libraries API. It is a deprecated name for
@@ -184,12 +202,13 @@ var Signature = function Signature
     // Set the given fields (if supplied).
     if (witnessOrSignatureObject != null)
       // witness is deprecated.
-      this.witness = witnessOrSignatureObject;
+      this.witness_ = witnessOrSignatureObject;
     if (signature != null)
-      this.signature = signature;
+      this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+        signature : new Blob(signature);
     if (digestAlgorithm != null)
       // digestAlgorithm is deprecated.
-      this.digestAlgorithm = digestAlgorithm;
+      this.digestAlgorithm_ = digestAlgorithm;
   }
 }
 

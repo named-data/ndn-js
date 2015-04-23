@@ -40,38 +40,38 @@ exports.KeyLocatorType = KeyLocatorType;
 /**
  * @constructor
  */
-var KeyLocator = function KeyLocator(input,type)
+var KeyLocator = function KeyLocator(input, type)
 {
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
-    this.type = input.type;
-    this.keyName = new KeyName();
-    if (input.keyName != null) {
-      this.keyName.contentName = input.keyName.contentName == null ?
-        null : new Name(input.keyName.contentName);
-      this.keyName.publisherID = input.keyName.publisherID;
+    this.type_ = input.type_;
+    this.keyName_ = new KeyName();
+    if (input.keyName_ != null) {
+      this.keyName_.setContentName(input.keyName_.getContentName());
+      this.keyName_.publisherID = input.keyName_.publisherID;
     }
-    this.keyData = input.keyData == null ? null : new Buffer(input.keyData);
-    this.publicKey = input.publicKey == null ? null : new Buffer(input.publicKey);
-    this.certificate = input.certificate == null ? null : new Buffer(input.certificate);
+    this.keyData_ = input.keyData_;
+    this.publicKey_ = input.publicKey_ == null ? null : new Buffer(input.publicKey_);
+    this.certificate_ = input.certificate_ == null ? null : new Buffer(input.certificate_);
   }
   else {
-    this.type = type;
-    this.keyName = new KeyName();
+    this.type_ = type;
+    this.keyName_ = new KeyName();
+    this.keyData_ = new Blob();
 
     if (type == KeyLocatorType.KEYNAME)
-      this.keyName = input;
+      this.keyName_ = input;
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
     else if (type == KeyLocatorType.KEY) {
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
       // Set for backwards compatibility.
-      this.publicKey = this.keyData;
+      this.publicKey_ = this.keyData_;
     }
     else if (type == KeyLocatorType.CERTIFICATE) {
-      this.keyData = new Buffer(input);
+      this.keyData_ = new Blob(input);
       // Set for backwards compatibility.
-      this.certificate = this.keyData;
+      this.certificate_ = this.keyData_;
     }
   }
 };
@@ -84,7 +84,7 @@ exports.KeyLocator = KeyLocator;
  * getKeyData() to get the digest.
  * @returns {number} The key locator type, or null if not specified.
  */
-KeyLocator.prototype.getType = function() { return this.type; };
+KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
@@ -92,12 +92,7 @@ KeyLocator.prototype.getType = function() { return this.type; };
  */
 KeyLocator.prototype.getKeyName = function()
 {
-  if (this.keyName == null)
-    this.keyName = new KeyName();
-  if (this.keyName.contentName == null)
-    this.keyName.contentName = new Name();
-
-  return this.keyName.contentName;
+  return this.keyName_.getContentName();
 };
 
 /**
@@ -109,8 +104,12 @@ KeyLocator.prototype.getKeyName = function()
  */
 KeyLocator.prototype.getKeyData = function()
 {
-  // For temporary backwards compatibility, leave the fields as a Buffer but return a Blob.
-  return new Blob(this.getKeyDataAsBuffer(), false);
+  if (this.type_ == KeyLocatorType.KEY)
+    return new Blob(this.publicKey_);
+  else if (this.type_ == KeyLocatorType.CERTIFICATE)
+    return new Blob(this.certificate_);
+  else
+    return this.keyData_;
 };
 
 /**
@@ -119,12 +118,7 @@ KeyLocator.prototype.getKeyData = function()
  */
 KeyLocator.prototype.getKeyDataAsBuffer = function()
 {
-  if (this.type == KeyLocatorType.KEY)
-    return this.publicKey;
-  else if (this.type == KeyLocatorType.CERTIFICATE)
-    return this.certificate;
-  else
-    return this.keyData;
+  return this.getKeyData().buf();
 };
 
 /**
@@ -133,7 +127,7 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * setKeyData() to the digest.
  * @param {number} type The key locator type.  If null, the type is unspecified.
  */
-KeyLocator.prototype.setType = function(type) { this.type = type; };
+KeyLocator.prototype.setType = function(type) { this.type_ = type; };
 
 /**
  * Set key name to a copy of the given Name.  This is the name if getType()
@@ -142,11 +136,7 @@ KeyLocator.prototype.setType = function(type) { this.type = type; };
  */
 KeyLocator.prototype.setKeyName = function(name)
 {
-  if (this.keyName == null)
-    this.keyName = new KeyName();
-
-  this.keyName.contentName = typeof name === 'object' && name instanceof Name ?
-                             new Name(name) : new Name();
+  this.keyName_.setContentName(name);
 };
 
 /**
@@ -156,31 +146,23 @@ KeyLocator.prototype.setKeyName = function(name)
  */
 KeyLocator.prototype.setKeyData = function(keyData)
 {
-  var value = keyData;
-  if (value != null) {
-    if (typeof value === 'object' && value instanceof Blob)
-      value = new Buffer(value.buf());
-    else
-      // Make a copy.
-      value = new Buffer(value);
-  }
-
-  this.keyData = value;
+  this.keyData_ = typeof keyData === 'object' && keyData instanceof Blob ?
+    keyData : new Blob(keyData);
   // Set for backwards compatibility.
-  this.publicKey = value;
-  this.certificate = value;
+  this.publicKey_ = this.keyData_.buf();
+  this.certificate_ = this.keyData_.buf();
 };
 
 /**
- * Clear the keyData and set the type to none.
+ * Clear the keyData and set the type to not specified.
  */
 KeyLocator.prototype.clear = function()
 {
-  this.type = null;
-  this.keyName = null;
-  this.keyData = null;
-  this.publicKey = null;
-  this.certificate = null;
+  this.type_ = null;
+  this.keyName_ = new KeyName();
+  this.keyData_ = new Blob();
+  this.publicKey_ = null;
+  this.certificate_ = null;
 };
 
 /**
@@ -260,8 +242,8 @@ KeyLocator.prototype.from_ndnb = function(decoder) {
   } else  {
     this.type = KeyLocatorType.KEYNAME;
 
-    this.keyName = new KeyName();
-    this.keyName.from_ndnb(decoder);
+    this.keyName_ = new KeyName();
+    this.keyName_.from_ndnb(decoder);
   }
   decoder.readElementClose();
 };
@@ -290,7 +272,7 @@ KeyLocator.prototype.to_ndnb = function(encoder)
     }
   }
   else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName.to_ndnb(encoder);
+    this.keyName_.to_ndnb(encoder);
 
   encoder.writeElementClose();
 };
@@ -300,17 +282,59 @@ KeyLocator.prototype.getElementLabel = function()
   return NDNProtocolDTags.KeyLocator;
 };
 
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(KeyLocator.prototype, "type",
+  { get: function() { return this.getType(); },
+    set: function(val) { this.setType(val); } });
 /**
- * KeyName is only used by KeyLocator.
- * @constructor
+ * @deprecated Use getKeyName and setKeyName.
+ */
+Object.defineProperty(KeyLocator.prototype, "keyName",
+  { get: function() { return this.keyName_; },
+    set: function(val) { 
+      this.keyName_ = val == null ? new KeyName() : val;
+      ++this.changeCount_;
+    } });
+/**
+ * @@deprecated Use getKeyData and setKeyData.
+ */
+Object.defineProperty(KeyLocator.prototype, "keyData",
+  { get: function() { return this.getKeyDataAsBuffer(); },
+    set: function(val) { this.setKeyData(val); } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(KeyLocator.prototype, "publicKey",
+  { get: function() { return this.publicKey_; },
+    set: function(val) { this.publicKey_ = val; ++this.changeCount_; } });
+/**
+ * @deprecated
+ */
+Object.defineProperty(KeyLocator.prototype, "certificate",
+  { get: function() { return this.certificate_; },
+    set: function(val) { this.certificate_ = val; ++this.changeCount_; } });
+
+/**
+ * @deprecated Use KeyLocator getKeyName and setKeyName.
  */
 var KeyName = function KeyName()
 {
-  this.contentName = new Name();  //contentName
+  this.contentName_ = new Name();  //contentName
   this.publisherID = this.publisherID;  //publisherID
 };
 
 exports.KeyName = KeyName;
+
+KeyName.prototype.getContentName = function()
+{
+  return this.contentName_;
+};
+
+KeyName.prototype.setContentName = function(name)
+{
+  this.contentName_ = typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name();
+};
 
 KeyName.prototype.from_ndnb = function(decoder)
 {
@@ -339,6 +363,11 @@ KeyName.prototype.to_ndnb = function(encoder)
 
   encoder.writeElementClose();
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(KeyName.prototype, "contentName",
+  { get: function() { return this.getContentName(); },
+    set: function(val) { this.setContentName(val); } });
 
 KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 

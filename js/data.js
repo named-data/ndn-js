@@ -48,20 +48,19 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    this.name = new Name(data.getName());
-    // Use signedInfo instead of metaInfo for backward compatibility.
-    this.signedInfo = new MetaInfo(data.signedInfo);
-    this.signature = data.signature.clone();
-    // TODO: When content is store as Blob, we don't need to copy.
-    this.content = new Buffer(data.content);
-    this.wireEncoding = data.wireEncoding;
+    // Copy the name.
+    this.name_ = new Name(data.name_);
+    this.metaInfo_ = new MetaInfo(data.metaInfo_);
+    this.signature_ = data.signature_.clone();
+    this.content_ = data.content_;
+    this.wireEncoding_ = data.wireEncoding_;
   }
   else {
     var name = nameOrData;
     if (typeof name === 'string')
-      this.name = new Name(name);
+      this.name_ = new Name(name);
     else
-      this.name = typeof name === 'object' && name instanceof Name ?
+      this.name_ = typeof name === 'object' && name instanceof Name ?
          new Name(name) : new Name();
 
     var metaInfo;
@@ -76,19 +75,14 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
       content = metaInfoOrContent;
     }
 
-    // Use signedInfo instead of metaInfo for backward compatibility.
-    this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
-         new MetaInfo(metaInfo) : new MetaInfo();
+    this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+      new MetaInfo(metaInfo) : new MetaInfo();
 
-    if (typeof content === 'string')
-      this.content = DataUtils.toNumbersFromString(content);
-    else if (typeof content === 'object' && content instanceof Blob)
-      this.content = content.buf();
-    else
-      this.content = content;
+    this.content_ = typeof content === 'object' && content instanceof Blob ?
+      content : new Blob(content, true);
 
-    this.signature = new Sha256WithRsaSignature();
-    this.wireEncoding = new SignedBlob();
+    this.signature_ = new Sha256WithRsaSignature();
+    this.wireEncoding_ = new SignedBlob();
   }  
 };
 
@@ -100,7 +94,7 @@ exports.Data = Data;
  */
 Data.prototype.getName = function()
 {
-  return this.name;
+  return this.name_;
 };
 
 /**
@@ -109,7 +103,7 @@ Data.prototype.getName = function()
  */
 Data.prototype.getMetaInfo = function()
 {
-  return this.signedInfo;
+  return this.metaInfo_;
 };
 
 /**
@@ -118,17 +112,16 @@ Data.prototype.getMetaInfo = function()
  */
 Data.prototype.getSignature = function()
 {
-  return this.signature;
+  return this.signature_;
 };
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The data packet content as a Blob.
+ * @returns {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
-  // For temporary backwards compatibility, leave this.content as a Buffer but return a Blob.
-  return new Blob(this.content, false);
+  return this.content_;
 };
 
 /**
@@ -137,7 +130,7 @@ Data.prototype.getContent = function()
  */
 Data.prototype.getContentAsBuffer = function()
 {
-  return this.content;
+  return this.content_.buf();
 };
 
 /**
@@ -147,11 +140,11 @@ Data.prototype.getContentAsBuffer = function()
  */
 Data.prototype.setName = function(name)
 {
-  this.name = typeof name === 'object' && name instanceof Name ?
+  this.name_ = typeof name === 'object' && name instanceof Name ?
     new Name(name) : new Name();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
   return this;
 };
 
@@ -162,11 +155,11 @@ Data.prototype.setName = function(name)
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
-  this.signedInfo = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
+  this.metaInfo_ = typeof metaInfo === 'object' && metaInfo instanceof MetaInfo ?
     new MetaInfo(metaInfo) : new MetaInfo();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
   return this;
 };
 
@@ -177,32 +170,28 @@ Data.prototype.setMetaInfo = function(metaInfo)
  */
 Data.prototype.setSignature = function(signature)
 {
-  if (signature == null)
-    this.signature = new Sha256WithRsaSignature();
-  else
-    this.signature =  signature.clone();
+  this.signature_ = signature == null ? 
+    new Sha256WithRsaSignature() : signature.clone();
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
   return this;
 };
 
 /**
  * Set the content to the given value.
- * @param {type} content The array this is copied.
+ * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
+ * then create a new Blob to copy the bytes (otherwise take another pointer to
+ * the same Blob).
  * @returns {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
-  if (typeof content === 'string')
-    this.content = DataUtils.toNumbersFromString(content);
-  else if (typeof content === 'object' && content instanceof Blob)
-    this.content = content.buf();
-  else
-    this.content = new Buffer(content);
+  this.content_ = typeof content === 'object' && content instanceof Blob ?
+    content : new Blob(content, true);
 
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
   return this;
 };
 
@@ -217,18 +206,18 @@ Data.prototype.sign = function(wireFormat)
       this.getSignatureOrMetaInfoKeyLocator().getType() == null)
     this.getMetaInfo().setFields();
 
-  if (this.wireEncoding == null || this.wireEncoding.isNull()) {
+  if (this.wireEncoding_ == null || this.wireEncoding_.isNull()) {
     // Need to encode to set wireEncoding.
     // Set an initial empty signature so that we can encode.
     this.getSignature().setSignature(new Buffer(128));
     this.wireEncode(wireFormat);
   }
   var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(this.wireEncoding.signedBuf());
+  rsa.update(this.wireEncoding_.signedBuf());
 
   var sig = new Buffer
     (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature.setSignature(sig);
+  this.signature_.setSignature(sig);
 };
 
 // The first time verify is called, it sets this to determine if a signature
@@ -250,13 +239,13 @@ Data.prototype.verify = function(/*Key*/ key)
     Data.verifyUsesString = (typeof hashResult === 'string');
   }
 
-  if (this.wireEncoding == null || this.wireEncoding.isNull())
+  if (this.wireEncoding_ == null || this.wireEncoding_.isNull())
     // Need to encode to set wireEncoding.
     this.wireEncode();
   var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncoding.signedBuf());
+  verifier.update(this.wireEncoding_.signedBuf());
   var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature.getSignature().buf()) : this.signature.getSignature().buf();
+    DataUtils.toString(this.signature_.getSignature().buf()) : this.signature_.getSignature().buf();
   return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
@@ -273,10 +262,10 @@ Data.prototype.wireEncode = function(wireFormat)
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeData(this);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding = new SignedBlob
+  this.wireEncoding_ = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding;
+  return this.wireEncoding_;
 };
 
 /**
@@ -295,7 +284,7 @@ Data.prototype.wireDecode = function(input, wireFormat)
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
   // In the Blob constructor, set copy true, but if input is already a Blob, it
   //   won't copy.
-  this.wireEncoding = new SignedBlob
+  this.wireEncoding_ = new SignedBlob
     (new Blob(input, true), result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
 };
@@ -315,23 +304,23 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
     // The signature type doesn't support KeyLocator.
     return new KeyLocator();
   
-  if (this.signature != null && this.signature.getKeyLocator() != null &&
-      this.signature.getKeyLocator().getType() != null &&
-      this.signature.getKeyLocator().getType() >= 0)
+  if (this.signature_ != null && this.signature_.getKeyLocator() != null &&
+      this.signature_.getKeyLocator().getType() != null &&
+      this.signature_.getKeyLocator().getType() >= 0)
     // The application is using the key locator in the correct object.
-    return this.signature.getKeyLocator();
+    return this.signature_.getKeyLocator();
 
-  if (this.signedInfo != null && this.signedInfo.locator != null &&
-      this.signedInfo.locator.getType() != null &&
-      this.signedInfo.locator.getType() >= 0) {
+  if (this.metaInfo_ != null && this.metaInfo_.locator != null &&
+      this.metaInfo_.locator.getType() != null &&
+      this.metaInfo_.locator.getType() >= 0) {
     console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
     console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.signedInfo.locator;
+    return this.metaInfo_.locator;
   }
 
   // Return the empty key locator from the Signature object if possible.
-  if (this.signature != null && this.signature.getKeyLocator() != null)
-    return this.signature.getKeyLocator();
+  if (this.signature_ != null && this.signature_.getKeyLocator() != null)
+    return this.signature_.getKeyLocator();
   else
     return new KeyLocator();
 };
@@ -374,6 +363,29 @@ Data.prototype.decode = function(input, wireFormat)
   wireFormat = (wireFormat || BinaryXmlWireFormat.get());
   wireFormat.decodeData(this, input);
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Data.prototype, "name",
+  { get: function() { return this.getName(); },
+    set: function(val) { this.setName(val); } });
+Object.defineProperty(Data.prototype, "metaInfo",
+  { get: function() { return this.getMetaInfo(); },
+    set: function(val) { this.setMetaInfo(val); } });
+Object.defineProperty(Data.prototype, "signature",
+  { get: function() { return this.getSignature(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * @deprecated Use getMetaInfo and setMetaInfo.
+ */
+Object.defineProperty(Data.prototype, "signedInfo",
+  { get: function() { return this.getMetaInfo(); },
+    set: function(val) { this.setMetaInfo(val); } });
+/**
+ * @deprecated Use getContent and setContent.
+ */
+Object.defineProperty(Data.prototype, "content",
+  { get: function() { return this.getContentAsBuffer(); },
+    set: function(val) { this.setContent(val); } });
 
 /**
  * @deprecated Use new Data.

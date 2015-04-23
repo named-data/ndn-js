@@ -37,9 +37,9 @@ var DigestSha256Signature = function DigestSha256Signature(value)
 {
   if (typeof value === 'object' && value instanceof DigestSha256Signature)
     // Copy the values.
-    this.signature = value.signature;
+    this.signature_ = value.signature_;
   else
-    this.signature = new Blob();
+    this.signature_ = new Blob();
 };
 
 exports.DigestSha256Signature = DigestSha256Signature;
@@ -59,7 +59,7 @@ DigestSha256Signature.prototype.clone = function()
  */
 DigestSha256Signature.prototype.getSignature = function()
 {
-  return this.signature;
+  return this.signature_;
 };
 
 /**
@@ -68,8 +68,14 @@ DigestSha256Signature.prototype.getSignature = function()
  */
 DigestSha256Signature.prototype.setSignature = function(signature)
 {
-  if (typeof signature === 'object' && signature instanceof Blob)
-    this.signature = signature;
-  else
-    this.signature = new Blob(signature);
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(DigestSha256Signature.prototype, "signature",
+  { get: function() { return this.getSignature(); },
+    set: function(val) { this.setSignature(val); } });

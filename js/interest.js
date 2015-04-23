@@ -35,13 +35,6 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * other arguments.  Otherwise this is the optional name for the new Interest.
  * @param {number} minSuffixComponents
  * @param {number} maxSuffixComponents
- * @param {Buffer} publisherPublicKeyDigest
- * @param {Exclude} exclude
- * @param {number} childSelector
- * @param {number} answerOriginKind
- * @param {number} scope
- * @param {number} interestLifetimeMilliseconds in milliseconds
- * @param {Buffer} nonce
  */
 var Interest = function Interest
    (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
@@ -50,43 +43,39 @@ var Interest = function Interest
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
-    if (interest.name)
-      // Copy the name.
-      this.name = new Name(interest.name);
-    this.maxSuffixComponents = interest.maxSuffixComponents;
-    this.minSuffixComponents = interest.minSuffixComponents;
+    // Copy the name.
+    this.name_ = new Name(interest.name_);
+    this.maxSuffixComponents_ = interest.maxSuffixComponents_;
+    this.minSuffixComponents_ = interest.minSuffixComponents_;
 
-    this.publisherPublicKeyDigest = interest.publisherPublicKeyDigest;
-    this.keyLocator = new KeyLocator(interest.keyLocator);
-    this.exclude = new Exclude(interest.exclude);
-    this.childSelector = interest.childSelector;
-    this.answerOriginKind = interest.answerOriginKind;
-    this.scope = interest.scope;
-    this.interestLifetime = interest.interestLifetime;
-    if (interest.nonce)
-      // Copy.
-      this.nonce = new Buffer(interest.nonce);
+    this.publisherPublicKeyDigest_ = interest.publisherPublicKeyDigest_;
+    this.keyLocator_ = new KeyLocator(interest.keyLocator_);
+    this.exclude_ = new Exclude(interest.exclude_);
+    this.childSelector_ = interest.childSelector_;
+    this.answerOriginKind_ = interest.answerOriginKind_;
+    this.scope_ = interest.scope_;
+    this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
+    this.nonce_ = interest.nonce_;
   }
   else {
-    this.name = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
-                new Name(nameOrInterest) : new Name();
-    this.maxSuffixComponents = maxSuffixComponents;
-    this.minSuffixComponents = minSuffixComponents;
+    this.name_ = typeof nameOrInterest === 'object' && nameOrInterest instanceof Name ?
+      new Name(nameOrInterest) : new Name();
+    this.maxSuffixComponents_ = maxSuffixComponents;
+    this.minSuffixComponents_ = minSuffixComponents;
 
-    this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-    this.keyLocator = new KeyLocator();
-    this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
-                   new Exclude(exclude) : new Exclude();
-    this.childSelector = childSelector;
-    this.answerOriginKind = answerOriginKind;
-    this.scope = scope;
-    this.interestLifetime = interestLifetimeMilliseconds;
-    if (nonce)
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
+    this.publisherPublicKeyDigest_ = publisherPublicKeyDigest;
+    this.keyLocator_ = new KeyLocator();
+    this.exclude_ = typeof exclude === 'object' && exclude instanceof Exclude ?
+      new Exclude(exclude) : new Exclude();
+    this.childSelector_ = childSelector;
+    this.answerOriginKind_ = answerOriginKind;
+    this.scope_ = scope;
+    this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
+    this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
+      nonce : new Blob(nonce, true);
   }
 
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
 };
 
 exports.Interest = Interest;
@@ -105,25 +94,26 @@ Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
 Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
 /**
- * Return true if this.name.match(name) and the name conforms to the interest selectors.
- * @param {Name} name
- * @returns {boolean}
+ * Check if this interest's name matches the given name (using Name.match) and
+ * the given name also conforms to the interest selectors.
+ * @param {Name} name The name to check.
+ * @returns {boolean} True if the name and interest selectors match, False otherwise.
  */
 Interest.prototype.matchesName = function(/*Name*/ name)
 {
-  if (!this.name.match(name))
+  if (!this.name_.match(name))
     return false;
 
-  if (this.minSuffixComponents != null &&
+  if (this.minSuffixComponents_ != null &&
       // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() >= this.minSuffixComponents))
+      !(name.size() + 1 - this.name_.size() >= this.minSuffixComponents_))
     return false;
-  if (this.maxSuffixComponents != null &&
+  if (this.maxSuffixComponents_ != null &&
       // Add 1 for the implicit digest.
-      !(name.size() + 1 - this.name.size() <= this.maxSuffixComponents))
+      !(name.size() + 1 - this.name_.size() <= this.maxSuffixComponents_))
     return false;
-  if (this.exclude != null && name.size() > this.name.size() &&
-      this.exclude.matches(name.get(this.name.size())))
+  if (this.exclude_ != null && name.size() > this.name_.size() &&
+      this.exclude_.matches(name.get(this.name_.size())))
     return false;
 
   return true;
@@ -142,17 +132,14 @@ Interest.prototype.matches_name = function(/*Name*/ name)
  */
 Interest.prototype.clone = function()
 {
-  return new Interest
-     (this.name, this.minSuffixComponents, this.maxSuffixComponents,
-      this.publisherPublicKeyDigest, this.exclude, this.childSelector, this.answerOriginKind,
-      this.scope, this.interestLifetime, this.nonce);
+  return new Interest(this);
 };
 
 /**
  * Get the interest Name.
  * @returns {Name} The name.  The name size() may be 0 if not specified.
  */
-Interest.prototype.getName = function() { return this.name; };
+Interest.prototype.getName = function() { return this.name_; };
 
 /**
  * Get the min suffix components.
@@ -160,7 +147,7 @@ Interest.prototype.getName = function() { return this.name; };
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
-  return this.minSuffixComponents;
+  return this.minSuffixComponents_;
 };
 
 /**
@@ -169,7 +156,7 @@ Interest.prototype.getMinSuffixComponents = function()
  */
 Interest.prototype.getMaxSuffixComponents = function()
 {
-  return this.maxSuffixComponents;
+  return this.maxSuffixComponents_;
 };
 
 /**
@@ -179,7 +166,7 @@ Interest.prototype.getMaxSuffixComponents = function()
  */
 Interest.prototype.getKeyLocator = function()
 {
-  return this.keyLocator;
+  return this.keyLocator_;
 };
 
 /**
@@ -187,7 +174,7 @@ Interest.prototype.getKeyLocator = function()
  * @returns {Exclude} The exclude object. If the exclude size() is zero, then
  * the exclude is not specified.
  */
-Interest.prototype.getExclude = function() { return this.exclude; };
+Interest.prototype.getExclude = function() { return this.exclude_; };
 
 /**
  * Get the child selector.
@@ -195,7 +182,7 @@ Interest.prototype.getExclude = function() { return this.exclude; };
  */
 Interest.prototype.getChildSelector = function()
 {
-  return this.childSelector;
+  return this.childSelector_;
 };
 
 /**
@@ -203,13 +190,8 @@ Interest.prototype.getChildSelector = function()
  */
 Interest.prototype.getAnswerOriginKind = function()
 {
-  return this.answerOriginKind;
+  return this.answerOriginKind_;
 };
-
-  /**
-   * Return true if the content must be fresh.
-   * @return true if must be fresh, otherwise false.
-   */
 
 /**
  * Get the must be fresh flag. If not specified, the default is true.
@@ -217,10 +199,10 @@ Interest.prototype.getAnswerOriginKind = function()
  */
 Interest.prototype.getMustBeFresh = function()
 {
-  if (this.answerOriginKind == null || this.answerOriginKind < 0)
+  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0)
     return true;
   else
-    return (this.answerOriginKind & Interest.ANSWER_STALE) == 0;
+    return (this.answerOriginKind_ & Interest.ANSWER_STALE) == 0;
 };
 
 /**
@@ -230,8 +212,7 @@ Interest.prototype.getMustBeFresh = function()
  */
 Interest.prototype.getNonce = function()
 {
-  // For backwards-compatibility, leave this.nonce as a Buffer but return a Blob.
-  return  new Blob(this.nonce, false);
+  return this.nonce_;
 };
 
 /**
@@ -240,14 +221,14 @@ Interest.prototype.getNonce = function()
  */
 Interest.prototype.getNonceAsBuffer = function()
 {
-  return this.nonce;
+  return this.nonce_.buf();
 };
 
 /**
  * Get the interest scope.
  * @returns {number} The scope, or null if not specified.
  */
-Interest.prototype.getScope = function() { return this.scope; };
+Interest.prototype.getScope = function() { return this.scope_; };
 
 /**
  * Get the interest lifetime.
@@ -256,7 +237,7 @@ Interest.prototype.getScope = function() { return this.scope; };
  */
 Interest.prototype.getInterestLifetimeMilliseconds = function()
 {
-  return this.interestLifetime;
+  return this.interestLifetimeMilliseconds_;
 };
 
 /**
@@ -268,11 +249,11 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 Interest.prototype.setName = function(name)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.name = typeof name === 'object' && name instanceof Name ?
-              new Name(name) : new Name();
+  this.name_ = typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name();
   return this;
 };
 
@@ -285,10 +266,10 @@ Interest.prototype.setName = function(name)
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.minSuffixComponents = minSuffixComponents;
+  this.minSuffixComponents_ = minSuffixComponents;
   return this;
 };
 
@@ -301,10 +282,10 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.maxSuffixComponents = maxSuffixComponents;
+  this.maxSuffixComponents_ = maxSuffixComponents;
   return this;
 };
 
@@ -319,11 +300,11 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 Interest.prototype.setExclude = function(exclude)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.exclude = typeof exclude === 'object' && exclude instanceof Exclude ?
-                 new Exclude(exclude) : new Exclude();
+  this.exclude_ = typeof exclude === 'object' && exclude instanceof Exclude ?
+    new Exclude(exclude) : new Exclude();
   return this;
 };
 
@@ -336,10 +317,10 @@ Interest.prototype.setExclude = function(exclude)
 Interest.prototype.setChildSelector = function(childSelector)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.childSelector = childSelector;
+  this.childSelector_ = childSelector;
   return this;
 };
 
@@ -349,10 +330,10 @@ Interest.prototype.setChildSelector = function(childSelector)
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.answerOriginKind = answerOriginKind;
+  this.answerOriginKind_ = answerOriginKind;
   return this;
 };
 
@@ -365,22 +346,22 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  if (this.answerOriginKind == null || this.answerOriginKind < 0) {
+  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
     // It is is already the default where MustBeFresh is true.
     if (!mustBeFresh)
       // Set answerOriginKind_ so that getMustBeFresh returns false.
-      this.answerOriginKind = Interest.ANSWER_STALE;
+      this.answerOriginKind_ = Interest.ANSWER_STALE;
   }
   else {
     if (mustBeFresh)
       // Clear the stale bit.
-      this.answerOriginKind &= ~Interest.ANSWER_STALE;
+      this.answerOriginKind_ &= ~Interest.ANSWER_STALE;
     else
       // Set the stale bit.
-      this.answerOriginKind |= Interest.ANSWER_STALE;
+      this.answerOriginKind_ |= Interest.ANSWER_STALE;
   }
   return this;
 };
@@ -393,10 +374,10 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 Interest.prototype.setScope = function(scope)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.scope = scope;
+  this.scope_ = scope;
   return this;
 };
 
@@ -409,10 +390,10 @@ Interest.prototype.setScope = function(scope)
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
   // The object has changed, so the nonce and wireEncoding are invalid.
-  this.nonce = null;
-  this.wireEncoding = new SignedBlob();
+  this.nonce_ = new Blob();
+  this.wireEncoding_ = new SignedBlob();
 
-  this.interestLifetime = interestLifetimeMilliseconds;
+  this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
   return this;
 };
 
@@ -423,17 +404,10 @@ Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMi
 Interest.prototype.setNonce = function(nonce)
 {
   // The object has changed, so the wireEncoding is invalid.
-  this.wireEncoding = new SignedBlob();
+  this.wireEncoding_ = new SignedBlob();
 
-  if (nonce) {
-    if (typeof nonce === 'object' && nonce instanceof Blob)
-      this.nonce = nonce.buf();
-    else
-      // Copy and make sure it is a Buffer.
-      this.nonce = new Buffer(nonce);
-  }
-  else
-    this.nonce = null;
+  this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
+    nonce : new Blob(nonce, true);
   return this;
 };
 
@@ -448,26 +422,26 @@ Interest.prototype.toUri = function()
 {
   var selectors = "";
 
-  if (this.minSuffixComponents != null)
-    selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents;
-  if (this.maxSuffixComponents != null)
-    selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents;
-  if (this.childSelector != null)
-    selectors += "&ndn.ChildSelector=" + this.childSelector;
-  if (this.answerOriginKind != null)
-    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind;
-  if (this.scope != null)
-    selectors += "&ndn.Scope=" + this.scope;
-  if (this.interestLifetime != null)
-    selectors += "&ndn.InterestLifetime=" + this.interestLifetime;
-  if (this.publisherPublicKeyDigest != null)
-    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest.publisherPublicKeyDigest);
-  if (this.nonce != null)
-    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce);
-  if (this.exclude != null && this.exclude.size() > 0)
-    selectors += "&ndn.Exclude=" + this.exclude.toUri();
+  if (this.minSuffixComponents_ != null)
+    selectors += "&ndn.MinSuffixComponents=" + this.minSuffixComponents_;
+  if (this.maxSuffixComponents_ != null)
+    selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents_;
+  if (this.childSelector_ != null)
+    selectors += "&ndn.ChildSelector=" + this.childSelector_;
+  if (this.answerOriginKind_ != null)
+    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind_;
+  if (this.scope_ != null)
+    selectors += "&ndn.Scope=" + this.scope_;
+  if (this.interestLifetimeMilliseconds_ != null)
+    selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
+  if (this.publisherPublicKeyDigest_ != null)
+    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
+  if (this.nonce_ != null)
+    selectors += "&ndn.Nonce=" + Name.toEscapedString(this.nonce_.buf());
+  if (this.exclude_ != null && this.exclude_.size() > 0)
+    selectors += "&ndn.Exclude=" + this.exclude_.toUri();
 
-  var result = this.name.toUri();
+  var result = this.name_.toUri();
   if (selectors != "")
     // Replace the first & with ?.
     result += "?" + selectors.substr(1);
@@ -486,10 +460,10 @@ Interest.prototype.wireEncode = function(wireFormat)
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   var result = wireFormat.encodeInterest(this);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
-  this.wireEncoding = new SignedBlob
+  this.wireEncoding_ = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
-  return this.wireEncoding;
+  return this.wireEncoding_;
 };
 
 /**
@@ -503,12 +477,12 @@ Interest.prototype.wireDecode = function(input, wireFormat)
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
+    input.buf() : input;
   var result = wireFormat.decodeInterest(this, decodeBuffer);
   // TODO: Implement setDefaultWireEncoding with getChangeCount support.
   // In the Blob constructor, set copy true, but if input is already a Blob, it
   //   won't copy.
-  this.wireEncoding = new SignedBlob
+  this.wireEncoding_ = new SignedBlob
     (new Blob(input, true), result.signedPortionBeginOffset,
      result.signedPortionEndOffset);
 };
@@ -550,3 +524,50 @@ Interest.prototype.decode = function(input, wireFormat)
 {
   this.wireDecode(input, BinaryXmlWireFormat.get())
 };
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(Interest.prototype, "name",
+  { get: function() { return this.getName(); },
+    set: function(val) { this.setName(val); } });
+Object.defineProperty(Interest.prototype, "minSuffixComponents",
+  { get: function() { return this.getMinSuffixComponents(); },
+    set: function(val) { this.setMinSuffixComponents(val); } });
+Object.defineProperty(Interest.prototype, "maxSuffixComponents",
+  { get: function() { return this.getMaxSuffixComponents(); },
+    set: function(val) { this.setMaxSuffixComponents(val); } });
+Object.defineProperty(Interest.prototype, "keyLocator",
+  { get: function() { return this.getKeyLocator(); },
+    set: function(val) { this.setKeyLocator(val); } });
+Object.defineProperty(Interest.prototype, "exclude",
+  { get: function() { return this.getExclude(); },
+    set: function(val) { this.setExclude(val); } });
+Object.defineProperty(Interest.prototype, "childSelector",
+  { get: function() { return this.getChildSelector(); },
+    set: function(val) { this.setChildSelector(val); } });
+Object.defineProperty(Interest.prototype, "scope",
+  { get: function() { return this.getScope(); },
+    set: function(val) { this.setScope(val); } });
+/**
+ * @deprecated Use getInterestLifetimeMilliseconds and setInterestLifetimeMilliseconds.
+ */
+Object.defineProperty(Interest.prototype, "interestLifetime",
+  { get: function() { return this.getInterestLifetimeMilliseconds(); },
+    set: function(val) { this.setInterestLifetimeMilliseconds(val); } });
+/**
+ * @deprecated Use getMustBeFresh and setMustBeFresh.
+ */
+Object.defineProperty(Interest.prototype, "answerOriginKind",
+  { get: function() { return this.getAnswerOriginKind(); },
+    set: function(val) { this.setAnswerOriginKind(val); } });
+/**
+ * @deprecated Use getNonce and setNonce.
+ */
+Object.defineProperty(Interest.prototype, "nonce",
+  { get: function() { return this.getNonceAsBuffer(); },
+    set: function(val) { this.setNonce(val); } });
+/**
+ * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
+ */
+Object.defineProperty(Interest.prototype, "publisherPublicKeyDigest",
+  { get: function() { return this.publisherPublicKeyDigest_; },
+    set: function(val) { this.publisherPublicKeyDigest_ = val; ++this.changeCount_; } });
