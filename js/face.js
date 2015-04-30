@@ -558,15 +558,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
 };
 
-Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
+Face.CallbackClosure = function FaceCallbackClosure
+  (onData, onTimeout, onInterest, face, interestFilterId, filter) {
   // Inherit from Closure.
   Closure.call(this);
 
   this.onData = onData;
   this.onTimeout = onTimeout;
   this.onInterest = onInterest;
-  this.prefix = prefix;
-  this.transport = transport;
+  this.face = face;
+  this.interestFilterId = interestFilterId;
+  this.filter = filter;
 };
 
 Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -575,8 +577,10 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
   else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
     this.onTimeout(upcallInfo.interest);
   else if (kind == Closure.UPCALL_INTEREST)
-    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the transport.
-    this.onInterest(this.prefix, upcallInfo.interest, this.transport)
+    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
+    this.onInterest
+      (this.filter.getPrefix(), upcallInfo.interest, this.face, 
+       this.interestFilterId, this.filter)
 
   return Closure.RESULT_OK;
 };
@@ -828,10 +832,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onInterest (optional) If not None, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
  * filter, this calls
- * onInterest(prefix, interest, transport) where:
- *   prefix is the prefix given to registerPrefix.
- *   interest is the received interest.
- *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
+ * onInterest(prefix, interest, face, interestFilterId, filter).
  * NOTE: You must not change the prefix object - if you need to change it then
  * make a copy. If onInterest is null, it is ignored and you must call
  * setInterestFilter.
@@ -1323,7 +1324,7 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
  * @param {Name} prefix The Name prefix used to match the name of an incoming
  * Interest.
  * @param {function} onInterest When an Interest is received which matches the
- * filter, this calls onInterest(prefix, interest, transport, interestFilterId).
+ * filter, this calls onInterest(prefix, interest, face, interestFilterId, filter).
  */
 Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
 {
@@ -1334,15 +1335,15 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     // Assume it is a prefix Name.
     filter = new InterestFilter(filterOrPrefix);
 
+  var interestFilterId = Face.InterestFilterEntry.getNextInterestFilterId();
   var closure;
   if (onInterest.upcall && typeof onInterest.upcall == 'function')
     // Assume it is the deprecated use with Closure.
     closure = onInterest;
   else
     closure = new Face.CallbackClosure
-      (null, null, onInterest, filter.getPrefix(), this.transport);
+      (null, null, onInterest, this, interestFilterId, filter);
 
-  var interestFilterId = Face.InterestFilterEntry.getNextInterestFilterId();
   this.interestFilterTable.push(new Face.InterestFilterEntry
     (interestFilterId, filter, closure));
 
