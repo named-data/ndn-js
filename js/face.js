@@ -1474,7 +1474,7 @@ Face.prototype.onReceivedElement = function(element)
     // Call all interest filter callbacks which match.
     for (var i = 0; i < this.interestFilterTable.length; ++i) {
       var entry = this.interestFilterTable[i];
-      if (entry.getFilter().doesMatch(interest.getName()))
+      if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
         // TODO: Use a callback function instead of Closure.
@@ -1482,6 +1482,7 @@ Face.prototype.onReceivedElement = function(element)
         var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
         if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
           this.transport.send(info.data.wireEncode().buf());
+      }
     }
   }
   else if (data !== null) {
