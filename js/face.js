@@ -825,13 +825,16 @@ Face.prototype.nodeMakeCommandInterest = function
  * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
  * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest When an interest is received which matches the name prefix, this calls
+ * @param {function} onInterest (optional) If not None, this creates an interest
+ * filter from prefix so that when an Interest is received which matches the
+ * filter, this calls
  * onInterest(prefix, interest, transport) where:
  *   prefix is the prefix given to registerPrefix.
  *   interest is the received interest.
  *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
  * NOTE: You must not change the prefix object - if you need to change it then
- * make a copy.
+ * make a copy. If onInterest is null, it is ignored and you must call
+ * setInterestFilter.
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
