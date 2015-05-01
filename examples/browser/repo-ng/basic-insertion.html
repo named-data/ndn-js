@@ -244,7 +244,7 @@ var ProduceSegments = function ProduceSegments
 };
 
 ProduceSegments.prototype.onInterest = function
-  (prefix, interest, transport, registeredPrefixId)
+  (prefix, interest, face, interestFilterId, filter)
 {
   printLine("Got interest " + interest.toUri());
 
@@ -253,9 +253,8 @@ ProduceSegments.prototype.onInterest = function
   var content = "Data packet " + interest.name.toUri();
   data.setContent(new Blob(content));
   this.keyChain.sign(data, this.certificateName);
-  var encodedData = data.wireEncode();
 
-  transport.send(encodedData.buf());
+  face.putData(data);
   printLine("Sent data packet " + data.getName().toUri());
 
   this.nSegmentsSent += 1;
@@ -313,10 +312,7 @@ function main() {
      function() { printLine("All data was inserted."); });
   printLine("Register prefix " + fetchPrefix.toUri());
   face.registerPrefix
-    (fetchPrefix,
-     function(prefix, interest, transport, registeredPrefixId) {
-       produceSegments.onInterest(prefix, interest, transport, registeredPrefixId);
-     },
+    (fetchPrefix, produceSegments.onInterest.bind(produceSegments),
      function(prefix) {
        printLine("Register failed for prefix " + prefix.toUri());
      });

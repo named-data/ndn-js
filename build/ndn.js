@@ -11485,8 +11485,8 @@ var MemoryContentCache = function MemoryContentCache
 
   var thisMemoryContentCache = this;
   this.storePendingInterestCallback = function
-    (localPrefix, localInterest, localTransport, localRegisteredPrefixId) {
-       thisMemoryContentCache.storePendingInterest(localInterest, localTransport);
+    (localPrefix, localInterest, localFace, localInterestFilterId, localFilter) {
+       thisMemoryContentCache.storePendingInterest(localInterest, localFace);
     };
 };
 
@@ -11501,9 +11501,9 @@ exports.MemoryContentCache = MemoryContentCache;
  * given to registerPrefix.
  * @param {function} onDataNotFound (optional) If a data packet for an interest
  * is not found in the cache, this forwards the interest by calling
- * onDataNotFound(prefix, interest, transport, registeredPrefixId). Your
+ * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
  * callback can find the Data packet for the interest and call
- * transport.send. If your callback cannot find the Data packet, it can
+ * face.putData(data). If your callback cannot find the Data packet, it can
  * optionally call storePendingInterest(interest, face) to store the pending
  * interest in this object to be satisfied by a later call to add(data). If you
  * want to automatically store all pending interests, you can simply use
@@ -11517,12 +11517,8 @@ MemoryContentCache.prototype.registerPrefix = function
 {
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
-  var thisMemoryContentCache = this;
   var registeredPrefixId = this.face.registerPrefix
-    (prefix,
-     function(prefix, interest, transport)
-       { thisMemoryContentCache.onInterest(prefix, interest, transport); },
-     onRegisterFailed, flags, wireFormat);
+    (prefix, this.onInterest.bind(this), onRegisterFailed, flags, wireFormat);
   this.registeredPrefixIdList.push(registeredPrefixId);
 };
 
@@ -11550,7 +11546,7 @@ MemoryContentCache.prototype.unregisterAll = function()
  * cleanupIntervalMilliseconds milliseconds have passed and removes stale
  * content from the cache. After removing stale content, remove timed-out
  * pending interests from storePendingInterest(), then if the added Data packet
- * satisfies any interest, send it through the transport and remove the interest
+ * satisfies any interest, send it through the face and remove the interest
  * from the pending interest table.
  * @param {Data} data The Data packet object to put in the cache. This copies
  * the fields from the object.
@@ -11590,9 +11586,9 @@ MemoryContentCache.prototype.add = function(data)
     }
     if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
       try {
-        // Send to the same transport from the original call to onInterest.
+        // Send to the same face from the original call to onInterest.
         // wireEncode returns the cached encoding if available.
-        this.pendingInterestTable[i].getTransport().send(data.wireEncode().buf());
+        this.pendingInterestTable[i].getFace().send(data.wireEncode().buf());
       }
       catch (ex) {
         if (LOG > 0)
@@ -11610,16 +11606,16 @@ MemoryContentCache.prototype.add = function(data)
  * Store an interest from an OnInterest callback in the internal pending
  * interest table (normally because there is no Data packet available yet to
  * satisfy the interest). add(data) will check if the added Data packet
- * satisfies any pending interest and send it through the transport.
+ * satisfies any pending interest and send it through the face.
  * @param {Interest} interest The Interest for which we don't have a Data packet
  * yet. You should not modify the interest after calling this.
- * @param {Transport} transport The Transport with the connection which received
+ * @param {Face} face The Face with the connection which received
  * the interest. This comes from the OnInterest callback.
  */
-MemoryContentCache.prototype.storePendingInterest = function(interest, transport)
+MemoryContentCache.prototype.storePendingInterest = function(interest, face)
 {
   this.pendingInterestTable.push
-    (new MemoryContentCache.PendingInterest(interest, transport));
+    (new MemoryContentCache.PendingInterest(interest, face));
 };
 
 /**
@@ -11640,11 +11636,11 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
  * if cleanupIntervalMilliseconds milliseconds have passed and remove stale
  * content from the cache. Then search the cache for the Data packet, matching
  * any interest selectors including ChildSelector, and send the Data packet
- * to the transport. If no matching Data packet is in the cache, call
+ * to the face. If no matching Data packet is in the cache, call
  * the callback in onDataNotFoundForPrefix (if defined).
  */
 MemoryContentCache.prototype.onInterest = function
-  (prefix, interest, transport, registeredPrefixId)
+  (prefix, interest, face, interestFilterId, filter)
 {
   this.doCleanup();
 
@@ -11663,7 +11659,7 @@ MemoryContentCache.prototype.onInterest = function
     if (interest.matchesName(content.getName())) {
       if (interest.getChildSelector() < 0) {
         // No child selector, so send the first match that we have found.
-        transport.send(content.getDataEncoding());
+        face.send(content.getDataEncoding());
         return;
       }
       else {
@@ -11701,12 +11697,12 @@ MemoryContentCache.prototype.onInterest = function
 
   if (selectedEncoding !== null)
     // We found the leftmost or rightmost child.
-    transport.send(selectedEncoding);
+    face.send(selectedEncoding);
   else {
     // Call the onDataNotFound callback (if defined).
     var onDataNotFound = this.onDataNotFoundForPrefix[prefix.toUri()];
     if (onDataNotFound)
-      onDataNotFound(prefix, interest, transport, registeredPrefixId);
+      onDataNotFound(prefix, interest, face, interestFilterId, filter);
   }
 };
 
@@ -11793,10 +11789,10 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
  * if it satisfies a pending interest.
  */
 MemoryContentCache.PendingInterest = function MemoryContentCachePendingInterest
-  (interest, transport)
+  (interest, face)
 {
   this.interest = interest;
-  this.transport = transport;
+  this.face = face;
 
   if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
     this.timeoutMilliseconds = (new Date()).getTime() +
@@ -11814,11 +11810,11 @@ MemoryContentCache.PendingInterest.prototype.getInterest = function()
 };
 
 /**
- * Return the transport given to the constructor.
+ * Return the face given to the constructor.
  */
-MemoryContentCache.PendingInterest.prototype.getTransport = function()
+MemoryContentCache.PendingInterest.prototype.getFace = function()
 {
-  return this.transport;
+  return this.face;
 };
 
 /**
@@ -22299,6 +22295,7 @@ var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
+var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
@@ -22447,10 +22444,11 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.timeoutPrefix = new Name("/local/timeout");
 
   this.keyStore = new Array();
-  this.pendingInterestTable = new Array();
-  this.pitRemoveRequests = new Array();
-  this.registeredPrefixTable = new Array();
-  this.registeredPrefixRemoveRequests = new Array();
+  this.pendingInterestTable = new Array();  // of Face.PendingInterest
+  this.pitRemoveRequests = new Array();     // of number
+  this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
+  this.registeredPrefixRemoveRequests = new Array(); // of number
+  this.interestFilterTable = new Array();   // of Face.InterestFilterEntry
 };
 
 exports.Face = Face;
@@ -22606,13 +22604,23 @@ Face.prototype.extractEntriesForExpressedInterest = function(name)
 };
 
 /**
+ * A RegisteredPrefix holds a registeredPrefixId and information necessary to
+ * remove the registration later. It optionally holds a related interestFilterId
+ * if the InterestFilter was set in the same registerPrefix operation.
+ * @param {number} registeredPrefixId A unique ID for this entry, which you
+ * should get with getNextRegisteredPrefixId().
+ * @param {Name} prefix The name prefix.
+ * @param {number} relatedInterestFilterId (optional) The related
+ * interestFilterId for the filter set in the same registerPrefix operation. If
+ * omitted, set to 0.
  * @constructor
  */
-Face.RegisteredPrefix = function FaceRegisteredPrefix(registeredPrefixId, prefix, closure)
+Face.RegisteredPrefix = function FaceRegisteredPrefix
+  (registeredPrefixId, prefix, relatedInterestFilterId)
 {
   this.registeredPrefixId = registeredPrefixId;
-  this.prefix = prefix;        // String
-  this.closure = closure;  // Closure
+  this.prefix = prefix;
+  this.relatedInterestFilterId = relatedInterestFilterId;
 };
 
 Face.RegisteredPrefix.lastRegisteredPrefixId = 0;
@@ -22628,28 +22636,77 @@ Face.RegisteredPrefix.getNextRegisteredPrefixId = function()
 };
 
 /**
- * Find the first entry from this.registeredPrefixTable where the entry prefix is the longest that matches name.
- * @param {Name} name The name to find the PrefixEntry for (from the incoming interest packet).
- * @returns {object} The entry from this.registeredPrefixTable, or 0 if not found.
+ * Get the registeredPrefixId given to the constructor.
+ * @returns {number} The registeredPrefixId.
  */
-Face.prototype.getEntryForRegisteredPrefix = function(name)
+Face.RegisteredPrefix.prototype.getRegisteredPrefixId = function()
 {
-  var iResult = -1;
+  return this.registeredPrefixId;
+};
 
-  for (var i = 0; i < this.registeredPrefixTable.length; i++) {
-    if (LOG > 3) console.log("Registered prefix " + i + ": checking if " + this.registeredPrefixTable[i].prefix + " matches " + name);
-    if (this.registeredPrefixTable[i].prefix.match(name)) {
-      if (iResult < 0 ||
-          this.registeredPrefixTable[i].prefix.size() > this.registeredPrefixTable[iResult].prefix.size())
-        // Update to the longer match.
-        iResult = i;
-    }
-  }
+/**
+ * Get the name prefix given to the constructor.
+ * @returns {Name} The name prefix.
+ */
+Face.RegisteredPrefix.prototype.getPrefix = function()
+{
+  return this.prefix;
+};
 
-  if (iResult >= 0)
-    return this.registeredPrefixTable[iResult];
-  else
-    return null;
+/**
+ * Get the related interestFilterId given to the constructor.
+ * @returns {number} The related interestFilterId.
+ */
+Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
+{
+  return this.relatedInterestFilterId;
+};
+
+/**
+ * An InterestFilterEntry holds an interestFilterId, an InterestFilter and the
+ * OnInterest callback with its related Face.
+ * Create a new InterestFilterEntry with the given values.
+ * @param {number} interestFilterId The ID from getNextInterestFilterId().
+ * @param {InterestFilter} filter The InterestFilter for this entry.
+ * @param {Closure} closure The closure for calling upcall on interest. TODO:
+ * Change to a function instead of a Closure object.
+ * @constructor
+ */
+Face.InterestFilterEntry = function FaceInterestFilterEntry
+  (interestFilterId, filter, closure)
+{
+  this.interestFilterId = interestFilterId;
+  this.filter = filter;
+  this.closure = closure;
+};
+
+/**
+ * Get the next interest filter ID. This just calls
+ * Face.RegisteredPrefix.getNextRegisteredPrefixId() so that IDs come from the
+ * same pool and won't be confused when removing entries from the two tables.
+ * @returns {number} The next ID.
+ */
+Face.InterestFilterEntry.getNextInterestFilterId = function()
+{
+  return Face.RegisteredPrefix.getNextRegisteredPrefixId();
+};
+
+/**
+ * Get the interestFilterId given to the constructor.
+ * @returns {number} The interestFilterId.
+ */
+Face.InterestFilterEntry.prototype.getInterestFilterId = function()
+{
+  return this.interestFilterId;
+};
+
+/**
+ * Get the InterestFilter given to the constructor.
+ * @returns {InterestFilter} The InterestFilter.
+ */
+Face.InterestFilterEntry.prototype.getFilter = function()
+{
+  return this.filter;
 };
 
 /**
@@ -22770,15 +22827,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
 };
 
-Face.CallbackClosure = function FaceCallbackClosure(onData, onTimeout, onInterest, prefix, transport) {
+Face.CallbackClosure = function FaceCallbackClosure
+  (onData, onTimeout, onInterest, face, interestFilterId, filter) {
   // Inherit from Closure.
   Closure.call(this);
 
   this.onData = onData;
   this.onTimeout = onTimeout;
   this.onInterest = onInterest;
-  this.prefix = prefix;
-  this.transport = transport;
+  this.face = face;
+  this.interestFilterId = interestFilterId;
+  this.filter = filter;
 };
 
 Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
@@ -22787,8 +22846,10 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
   else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
     this.onTimeout(upcallInfo.interest);
   else if (kind == Closure.UPCALL_INTEREST)
-    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the transport.
-    this.onInterest(this.prefix, upcallInfo.interest, this.transport)
+    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
+    this.onInterest
+      (this.filter.getPrefix(), upcallInfo.interest, this.face, 
+       this.interestFilterId, this.filter)
 
   return Closure.RESULT_OK;
 };
@@ -23037,13 +23098,13 @@ Face.prototype.nodeMakeCommandInterest = function
  * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
  * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest When an interest is received which matches the name prefix, this calls
- * onInterest(prefix, interest, transport) where:
- *   prefix is the prefix given to registerPrefix.
- *   interest is the received interest.
- *   transport The Transport with the connection which received the interest. You must encode a signed Data packet and send it using transport.send().
+ * @param {function} onInterest (optional) If not None, this creates an interest
+ * filter from prefix so that when an Interest is received which matches the
+ * filter, this calls
+ * onInterest(prefix, interest, face, interestFilterId, filter).
  * NOTE: You must not change the prefix object - if you need to change it then
- * make a copy.
+ * make a copy. If onInterest is null, it is ignored and you must call
+ * setInterestFilter.
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
@@ -23085,8 +23146,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   var onRegisterFailed = (arg3 ? arg3 : function() {});
   var flags = (arg4 ? arg4 : new ForwardingFlags());
   return this.registerPrefixWithClosure
-    (prefix, new Face.CallbackClosure(null, null, onInterest, prefix, this.transport),
-     flags, onRegisterFailed);
+    (prefix, onInterest, flags, onRegisterFailed);
 };
 
 /**
@@ -23094,7 +23154,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
  * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)).
  * @deprecated Use registerPrefix with callback functions, not Closure.
  * @param {Name} prefix
- * @param {Closure} closure
+ * @param {Closure|function} closure or onInterest.
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed (optional) If called from the
  * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
@@ -23368,10 +23428,19 @@ Face.prototype.registerPrefixHelper = function
   interest.setScope(1);
   if (LOG > 3) console.log('Send Interest registration packet.');
 
-  if (registeredPrefixId != 0)
-    this.registeredPrefixTable.push
-      (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
+  if (registeredPrefixId != 0) {
+    var interestFilterId = 0;
+    if (closure != null)
+      // registerPrefix was called with the "combined" form that includes the
+      // callback, so add an InterestFilterEntry.
+      interestFilterId = this.setInterestFilter
+        (new InterestFilter(prefix), closure);
 
+    this.registeredPrefixTable.push
+      (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+  }
+
+  // Send the registration interest.
   this.reconnectAndExpressInterest
     (null, interest, new Face.RegisterResponseClosure
      (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
@@ -23437,11 +23506,19 @@ Face.prototype.nfdRegisterPrefix = function
       (commandInterest, commandKeyChain, commandCertificateName,
        TlvWireFormat.get());
 
-    if (registeredPrefixId != 0)
-        // Save the onInterest callback and send the registration interest.
-        thisFace.registeredPrefixTable.push
-          (new Face.RegisteredPrefix(registeredPrefixId, prefix, closure));
+    if (registeredPrefixId != 0) {
+      var interestFilterId = 0;
+      if (closure != null)
+        // registerPrefix was called with the "combined" form that includes the
+        // callback, so add an InterestFilterEntry.
+        interestFilterId = thisFace.setInterestFilter
+          (new InterestFilter(prefix), closure);
 
+      thisFace.registeredPrefixTable.push
+        (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+    }
+
+    // Send the registration interest.
     thisFace.reconnectAndExpressInterest
       (null, commandInterest, new Face.RegisterResponseClosure
        (thisFace, prefix, closure, onRegisterFailed, flags,
@@ -23461,8 +23538,9 @@ Face.prototype.nfdRegisterPrefix = function
 /**
  * Remove the registered prefix entry with the registeredPrefixId from the
  * registered prefix table. This does not affect another registered prefix with
- * a different registeredPrefixId, even if it has the same prefix name. If there
- * is no entry with the registeredPrefixId, do nothing.
+ * a different registeredPrefixId, even if it has the same prefix name. If an
+ * interest filter was automatically created by registerPrefix, also remove it.
+ * If there is no entry with the registeredPrefixId, do nothing.
  *
  * @param {number} registeredPrefixId The ID returned from registerPrefix.
  */
@@ -23473,9 +23551,14 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
   var count = 0;
   for (var i = this.registeredPrefixTable.length - 1; i >= 0; --i) {
     var entry = this.registeredPrefixTable[i];
-    if (entry.registeredPrefixId == registeredPrefixId) {
-      this.registeredPrefixTable.splice(i, 1);
+    if (entry.getRegisteredPrefixId() == registeredPrefixId) {
       ++count;
+
+      if (entry.getRelatedInterestFilterId() > 0)
+        // Remove the related interest filter.
+        this.unsetInterestFilter(entry.getRelatedInterestFilterId());
+
+      this.registeredPrefixTable.splice(i, 1);
     }
   }
 
@@ -23495,6 +23578,73 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
 };
 
 /**
+ * Add an entry to the local interest filter table to call the onInterest
+ * callback for a matching incoming Interest. This method only modifies the
+ * library's local callback table and does not register the prefix with the
+ * forwarder. It will always succeed. To register a prefix with the forwarder,
+ * use registerPrefix. There are two forms of setInterestFilter.
+ * The first form uses the exact given InterestFilter:
+ * setInterestFilter(filter, onInterest).
+ * The second form creates an InterestFilter from the given prefix Name:
+ * setInterestFilter(prefix, onInterest).
+ * @param {InterestFilter} filter The InterestFilter with a prefix and optional
+ * regex filter used to match the name of an incoming Interest. This makes a
+ * copy of filter.
+ * @param {Name} prefix The Name prefix used to match the name of an incoming
+ * Interest.
+ * @param {function} onInterest When an Interest is received which matches the
+ * filter, this calls onInterest(prefix, interest, face, interestFilterId, filter).
+ */
+Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
+{
+  var filter;
+  if (typeof filterOrPrefix === 'object' && filterOrPrefix instanceof InterestFilter)
+    filter = filterOrPrefix;
+  else
+    // Assume it is a prefix Name.
+    filter = new InterestFilter(filterOrPrefix);
+
+  var interestFilterId = Face.InterestFilterEntry.getNextInterestFilterId();
+  var closure;
+  if (onInterest.upcall && typeof onInterest.upcall == 'function')
+    // Assume it is the deprecated use with Closure.
+    closure = onInterest;
+  else
+    closure = new Face.CallbackClosure
+      (null, null, onInterest, this, interestFilterId, filter);
+
+  this.interestFilterTable.push(new Face.InterestFilterEntry
+    (interestFilterId, filter, closure));
+
+  return interestFilterId;
+};
+
+/**
+ * Remove the interest filter entry which has the interestFilterId from the
+ * interest filter table. This does not affect another interest filter with a
+ * different interestFilterId, even if it has the same prefix name. If there is
+ * no entry with the interestFilterId, do nothing.
+ * @param {number} interestFilterId The ID returned from setInterestFilter.
+ */
+Face.prototype.unsetInterestFilter = function(interestFilterId)
+{
+  // Go backwards through the list so we can erase entries.
+  // Remove all entries even though interestFilterId should be unique.
+  var count = 0;
+  for (var i = this.interestFilterTable.length - 1; i >= 0; --i) {
+    if (this.interestFilterTable[i].getInterestFilterId() == interestFilterId) {
+      ++count;
+
+      this.interestFilterTable.splice(i, 1);
+    }
+  }
+
+  if (count == 0)
+    if (LOG > 0) console.log
+      ("unsetInterestFilter: Didn't find interestFilterId " + interestFilterId);
+};
+
+/**
  * The OnInterest callback calls this to put a Data packet which satisfies an
  * Interest.
  * @param {Data} data The Data packet which satisfies the interest.
@@ -23509,9 +23659,23 @@ Face.prototype.putData = function(data, wireFormat)
   var encoding = data.wireEncode(wireFormat);
   if (encoding.size() > Face.getMaxNdnPacketSize())
     throw new Error
-      ("The encoded interest Data packet exceeds the maximum limit getMaxNdnPacketSize()");
+      ("The encoded Data packet size exceeds the maximum limit getMaxNdnPacketSize()");
 
   this.transport.send(encoding.buf());
+};
+
+/**
+ * Send the encoded packet out through the transport.
+ * @param {Buffer} encoding The Buffer with the encoded packet to send.
+ * @throws Error If the encoded packet size exceeds getMaxNdnPacketSize().
+ */
+Face.prototype.send = function(encoding)
+{
+  if (encoding.length > Face.getMaxNdnPacketSize())
+    throw new Error
+      ("The encoded packet size exceeds the maximum limit getMaxNdnPacketSize()");
+
+  this.transport.send(encoding);
 };
 
 /**
@@ -23576,13 +23740,18 @@ Face.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) console.log('Interest packet received.');
 
-    var entry = this.getEntryForRegisteredPrefix(interest.getName());
-    if (entry != null) {
-      if (LOG > 3) console.log("Found registered prefix for " + interest.getName().toUri());
-      var info = new UpcallInfo(this, interest, 0, null);
-      var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-      if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
-        this.transport.send(info.data.wireEncode().buf());
+    // Call all interest filter callbacks which match.
+    for (var i = 0; i < this.interestFilterTable.length; ++i) {
+      var entry = this.interestFilterTable[i];
+      if (entry.getFilter().doesMatch(interest.getName())) {
+        if (LOG > 3)
+          console.log("Found interest filter for " + interest.getName().toUri());
+        // TODO: Use a callback function instead of Closure.
+        var info = new UpcallInfo(this, interest, 0, null);
+        var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
+        if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
+          this.transport.send(info.data.wireEncode().buf());
+      }
     }
   }
   else if (data !== null) {

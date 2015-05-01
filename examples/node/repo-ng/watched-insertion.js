@@ -294,7 +294,7 @@ var SendSegments = function SendSegments(keyChain, certificateName, onFinished)
  * the last packet is sent, then call this.onFinished().
  */
 SendSegments.prototype.onInterest = function
-  (prefix, interest, transport, registeredPrefixId)
+  (prefix, interest, face, interestFilterId, filter)
 {
   var maxSegment = 2;
   if (this.segment >= maxSegment)
@@ -309,9 +309,8 @@ SendSegments.prototype.onInterest = function
   var content = "Segment number " + this.segment;
   data.setContent(content);
   this.keyChain.sign(data, this.certificateName);
-  var encodedData = data.wireEncode();
 
-  transport.send(encodedData.buf());
+  face.putData(data);
   console.log("Sent data packet " + data.name.toUri());
 
   if (this.segment >= maxSegment)
@@ -365,10 +364,7 @@ function main()
      function() { stopRepoWatchAndQuit(face, repoCommandPrefix, watchPrefix); });
   console.log("Register prefix " + watchPrefix.toUri());
   face.registerPrefix
-    (watchPrefix,
-     function(prefix, interest, transport, registeredPrefixId) {
-       sendSegments.onInterest(prefix, interest, transport, registeredPrefixId);
-     },
+    (watchPrefix, sendSegments.onInterest.bind(sendSegments),
      function(prefix) {
        console.log("Register failed for prefix " + prefix.toUri());
        // This will cause the script to quit.

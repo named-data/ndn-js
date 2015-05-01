@@ -56,8 +56,8 @@ var MemoryContentCache = function MemoryContentCache
 
   var thisMemoryContentCache = this;
   this.storePendingInterestCallback = function
-    (localPrefix, localInterest, localTransport, localRegisteredPrefixId) {
-       thisMemoryContentCache.storePendingInterest(localInterest, localTransport);
+    (localPrefix, localInterest, localFace, localInterestFilterId, localFilter) {
+       thisMemoryContentCache.storePendingInterest(localInterest, localFace);
     };
 };
 
@@ -72,9 +72,9 @@ exports.MemoryContentCache = MemoryContentCache;
  * given to registerPrefix.
  * @param {function} onDataNotFound (optional) If a data packet for an interest
  * is not found in the cache, this forwards the interest by calling
- * onDataNotFound(prefix, interest, transport, registeredPrefixId). Your
+ * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
  * callback can find the Data packet for the interest and call
- * transport.send. If your callback cannot find the Data packet, it can
+ * face.putData(data). If your callback cannot find the Data packet, it can
  * optionally call storePendingInterest(interest, face) to store the pending
  * interest in this object to be satisfied by a later call to add(data). If you
  * want to automatically store all pending interests, you can simply use
@@ -88,12 +88,8 @@ MemoryContentCache.prototype.registerPrefix = function
 {
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
-  var thisMemoryContentCache = this;
   var registeredPrefixId = this.face.registerPrefix
-    (prefix,
-     function(prefix, interest, transport)
-       { thisMemoryContentCache.onInterest(prefix, interest, transport); },
-     onRegisterFailed, flags, wireFormat);
+    (prefix, this.onInterest.bind(this), onRegisterFailed, flags, wireFormat);
   this.registeredPrefixIdList.push(registeredPrefixId);
 };
 
@@ -121,7 +117,7 @@ MemoryContentCache.prototype.unregisterAll = function()
  * cleanupIntervalMilliseconds milliseconds have passed and removes stale
  * content from the cache. After removing stale content, remove timed-out
  * pending interests from storePendingInterest(), then if the added Data packet
- * satisfies any interest, send it through the transport and remove the interest
+ * satisfies any interest, send it through the face and remove the interest
  * from the pending interest table.
  * @param {Data} data The Data packet object to put in the cache. This copies
  * the fields from the object.
@@ -161,9 +157,9 @@ MemoryContentCache.prototype.add = function(data)
     }
     if (this.pendingInterestTable[i].getInterest().matchesName(data.getName())) {
       try {
-        // Send to the same transport from the original call to onInterest.
+        // Send to the same face from the original call to onInterest.
         // wireEncode returns the cached encoding if available.
-        this.pendingInterestTable[i].getTransport().send(data.wireEncode().buf());
+        this.pendingInterestTable[i].getFace().send(data.wireEncode().buf());
       }
       catch (ex) {
         if (LOG > 0)
@@ -181,16 +177,16 @@ MemoryContentCache.prototype.add = function(data)
  * Store an interest from an OnInterest callback in the internal pending
  * interest table (normally because there is no Data packet available yet to
  * satisfy the interest). add(data) will check if the added Data packet
- * satisfies any pending interest and send it through the transport.
+ * satisfies any pending interest and send it through the face.
  * @param {Interest} interest The Interest for which we don't have a Data packet
  * yet. You should not modify the interest after calling this.
- * @param {Transport} transport The Transport with the connection which received
+ * @param {Face} face The Face with the connection which received
  * the interest. This comes from the OnInterest callback.
  */
-MemoryContentCache.prototype.storePendingInterest = function(interest, transport)
+MemoryContentCache.prototype.storePendingInterest = function(interest, face)
 {
   this.pendingInterestTable.push
-    (new MemoryContentCache.PendingInterest(interest, transport));
+    (new MemoryContentCache.PendingInterest(interest, face));
 };
 
 /**
@@ -211,11 +207,11 @@ MemoryContentCache.prototype.getStorePendingInterest = function()
  * if cleanupIntervalMilliseconds milliseconds have passed and remove stale
  * content from the cache. Then search the cache for the Data packet, matching
  * any interest selectors including ChildSelector, and send the Data packet
- * to the transport. If no matching Data packet is in the cache, call
+ * to the face. If no matching Data packet is in the cache, call
  * the callback in onDataNotFoundForPrefix (if defined).
  */
 MemoryContentCache.prototype.onInterest = function
-  (prefix, interest, transport, registeredPrefixId)
+  (prefix, interest, face, interestFilterId, filter)
 {
   this.doCleanup();
 
@@ -234,7 +230,7 @@ MemoryContentCache.prototype.onInterest = function
     if (interest.matchesName(content.getName())) {
       if (interest.getChildSelector() < 0) {
         // No child selector, so send the first match that we have found.
-        transport.send(content.getDataEncoding());
+        face.send(content.getDataEncoding());
         return;
       }
       else {
@@ -272,12 +268,12 @@ MemoryContentCache.prototype.onInterest = function
 
   if (selectedEncoding !== null)
     // We found the leftmost or rightmost child.
-    transport.send(selectedEncoding);
+    face.send(selectedEncoding);
   else {
     // Call the onDataNotFound callback (if defined).
     var onDataNotFound = this.onDataNotFoundForPrefix[prefix.toUri()];
     if (onDataNotFound)
-      onDataNotFound(prefix, interest, transport, registeredPrefixId);
+      onDataNotFound(prefix, interest, face, interestFilterId, filter);
   }
 };
 
@@ -364,10 +360,10 @@ MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds
  * if it satisfies a pending interest.
  */
 MemoryContentCache.PendingInterest = function MemoryContentCachePendingInterest
-  (interest, transport)
+  (interest, face)
 {
   this.interest = interest;
-  this.transport = transport;
+  this.face = face;
 
   if (this.interest.getInterestLifetimeMilliseconds() >= 0.0)
     this.timeoutMilliseconds = (new Date()).getTime() +
@@ -385,11 +381,11 @@ MemoryContentCache.PendingInterest.prototype.getInterest = function()
 };
 
 /**
- * Return the transport given to the constructor.
+ * Return the face given to the constructor.
  */
-MemoryContentCache.PendingInterest.prototype.getTransport = function()
+MemoryContentCache.PendingInterest.prototype.getFace = function()
 {
-  return this.transport;
+  return this.face;
 };
 
 /**

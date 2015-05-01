@@ -68,11 +68,14 @@ var MemoryContentCache = require('../util/memory-content-cache.js').MemoryConten
  * interests for the applicationBroadcastPrefix, this calls
  * onRegisterFailed(applicationBroadcastPrefix).
  */
-var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, applicationBroadcastPrefix, sessionNo, face, keyChain, certificateName, syncLifetime, arg10)
+var ChronoSync2013 = function ChronoSync2013
+  (onReceivedSyncState, onInitialized, applicationDataPrefix,
+   applicationBroadcastPrefix, sessionNo, face, keyChain, certificateName,
+   syncLifetime, onRegisterFailed)
 {
   // assigning function pointers
-  this.onReceivedSyncState = arg1;
-  this.onInitialized = arg2;
+  this.onReceivedSyncState = onReceivedSyncState;
+  this.onInitialized = onInitialized;
   this.applicationDataPrefixUri = applicationDataPrefix.toUri();
   this.applicationBroadcastPrefix = applicationBroadcastPrefix;
   this.session = sessionNo;
@@ -88,7 +91,9 @@ var ChronoSync2013 = function ChronoSync2013(arg1, arg2, applicationDataPrefix, 
   this.digest_log = new Array();
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
   
-  this.contentCache.registerPrefix(this.applicationBroadcastPrefix, arg10.bind(this), this.onInterest.bind(this));
+  this.contentCache.registerPrefix
+    (this.applicationBroadcastPrefix, onRegisterFailed,
+     this.onInterest.bind(this));
   this.enabled = true;
   
   var interest = new Interest(this.applicationBroadcastPrefix);
@@ -288,7 +293,8 @@ ChronoSync2013.prototype.logfind = function(digest)
  * satisfy the interest, add it to the pending interest table in
  * this.contentCache so that a future call to contentCacheAdd may satisfy it.
  */
-ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
+ChronoSync2013.prototype.onInterest = function
+  (prefix, interest, face, interestFilterId, filter)
 {
   if (!this.enabled)
     // Ignore callbacks after the application calls shutdown().
@@ -301,10 +307,10 @@ ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, regi
     syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
   }
   if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
-    this.processRecoveryInst(interest, syncdigest, transport);
+    this.processRecoveryInst(interest, syncdigest, face);
   }
   else {
-    this.contentCache.storePendingInterest(interest, transport);
+    this.contentCache.storePendingInterest(interest, face);
     
     if (syncdigest != this.digest_tree.getRoot()) {
       var index = this.logfind(syncdigest);
@@ -314,11 +320,13 @@ ChronoSync2013.prototype.onInterest = function(prefix, interest, transport, regi
         // Are we sure that using a "/timeout" interest is the best future call approach?
         var timeout = new Interest(new Name("/timeout"));
         timeout.setInterestLifetimeMilliseconds(2000);
-        this.face.expressInterest(timeout, this.dummyOnData, this.judgeRecovery.bind(this, timeout, syncdigest, transport));
+        this.face.expressInterest
+          (timeout, this.dummyOnData,
+           this.judgeRecovery.bind(this, timeout, syncdigest, face));
       }
       else {
         //common interest processing
-        this.processSyncInst(index, syncdigest, transport);
+        this.processSyncInst(index, syncdigest, face);
       }
     }
   }
@@ -409,7 +417,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));  
 };
 
-ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, transport)
+ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, face)
 {
   if (this.logfind(syncdigest) != -1) {
     var content = [];
@@ -431,7 +439,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, tr
       co.setContent(new Blob(str, false));
       this.keyChain.sign(co, this.certificateName);
       try {
-        transport.send(co.wireEncode().buf());
+        face.putData(co);
       } catch (e) {
         console.log(e.toString());
       }
@@ -443,7 +451,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, tr
  * Common interest processing, using digest log to find the difference after syncdigest_t
  * @return True if sent a data packet to satisfy the interest.
  */
-ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transport)
+ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
 {
   var content = [];
   var data_name = [];
@@ -490,7 +498,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, transpo
     co.setContent(new Blob(str, false));
     this.keyChain.sign(co, this.certificateName);
     try {
-      transport.send(co.wireEncode().buf());
+      face.putData(co);
     }
     catch (e) {
       console.log(e.toString());
@@ -520,15 +528,15 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
  * Face.expressInterest.
  * @param {Interest}
  * @param {string}
- * @param {Transport}
+ * @param {Face}
  */
-ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, transport)
+ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, face)
 {
   //console.log("*** judgeRecovery interest " + interest.getName().toUri() + " times out. Digest: " + syncdigest_t + " ***");
   var index = this.logfind(syncdigest_t);
   if (index != -1) {
     if (syncdigest_t != this.digest_tree.root)
-      this.processSyncInst(index, syncdigest_t, transport);
+      this.processSyncInst(index, syncdigest_t, face);
   }
   else
     this.sendRecovery(syncdigest_t);

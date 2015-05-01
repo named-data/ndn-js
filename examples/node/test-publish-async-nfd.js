@@ -134,18 +134,17 @@ var Echo = function Echo(keyChain, certificateName, face) {
   this.face = face;
 };
 
-Echo.prototype.onInterest = function(prefix, interest, transport)
+Echo.prototype.onInterest = function(prefix, interest, face, interestFilterId, filter)
 {
   // Make and sign a Data packet.
   var data = new Data(interest.getName());
   var content = "Echo " + interest.getName().toUri();
   data.setContent(content);
   this.keyChain.sign(data, this.certificateName);
-  var encodedData = data.wireEncode();
 
   try {
     console.log("Sent content " + content);
-    transport.send(encodedData.buf());
+    face.putData(data);
   } catch (e) {
     console.log(e.toString());
   }
@@ -187,9 +186,7 @@ function main()
   var prefix = new Name("/testecho");
   console.log("Register prefix " + prefix.toUri());
   face.registerPrefix
-    (prefix,
-     function(prefix, interest, transport) { echo.onInterest(prefix, interest, transport); },
-     function(prefix) { echo.onRegisterFailed(prefix); });
+    (prefix, echo.onInterest.bind(echo), echo.onRegisterFailed.bind(echo));
 }
 
 main();
