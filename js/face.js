@@ -1076,6 +1076,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
                     statusCode);
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
     }
 
     if (LOG > 2)
