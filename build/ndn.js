@@ -19981,17 +19981,30 @@ FaceInstance.prototype.getElementLabel = function()
  * bits are changed, amended or deprecated.
  * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
  */
-var ForwardingFlags = function ForwardingFlags()
+var ForwardingFlags = function ForwardingFlags(value)
 {
-  this.active = true;
-  this.childInherit = true;
-  this.advertise = false;
-  this.last = false;
-  this.capture = false;
-  this.local = false;
-  this.tap = false;
-  this.captureOk = false;
-}
+  if (typeof value === 'object' && value instanceof ForwardingFlags) {
+    // Make a copy.
+    this.active = value.active;
+    this.childInherit = value.childInherit;
+    this.advertise = value.advertise;
+    this.last = value.last;
+    this.capture = value.capture;
+    this.local = value.local;
+    this.tap = value.tap;
+    this.captureOk = value.captureOk;
+  }
+  else {
+    this.active = true;
+    this.childInherit = true;
+    this.advertise = false;
+    this.last = false;
+    this.capture = false;
+    this.local = false;
+    this.tap = false;
+    this.captureOk = false;
+  }
+};
 
 exports.ForwardingFlags = ForwardingFlags;
 
@@ -20302,9 +20315,38 @@ var Blob = require('./util/blob').Blob;
  * http://redmine.named-data.net/projects/nfd/wiki/ControlCommand#ControlParameters
  * @constructor
  */
-var ControlParameters = function ControlParameters()
+var ControlParameters = function ControlParameters(value)
 {
-  this.name = new Name();
+  if (typeof value === 'object' && value instanceof ControlParameters) {
+    // Make a deep copy.
+    this.name = value.name == null ? null : new Name(value.name);
+    this.faceId = value.faceId;
+    this.uri = value.uri;
+    this.localControlFeature = value.localControlFeature;
+    this.origin = value.origin;
+    this.cost = value.cost;
+    this.forwardingFlags = new ForwardingFlags(value.forwardingFlags);
+    this.strategy = new Name(value.strategy);
+    this.expirationPeriod = value.expirationPeriod;
+  }
+  else {
+    this.name = null;
+    this.faceId = null;
+    this.uri = '';
+    this.localControlFeature = null;
+    this.origin = null;
+    this.cost = null;
+    this.forwardingFlags = new ForwardingFlags();
+    this.strategy = new Name();
+    this.expirationPeriod = null;
+  }
+};
+
+exports.ControlParameters = ControlParameters;
+
+ControlParameters.prototype.clear = function()
+{
+  this.name = null;
   this.faceId = null;
   this.uri = '';
   this.localControlFeature = null;
@@ -20314,8 +20356,6 @@ var ControlParameters = function ControlParameters()
   this.strategy = new Name();
   this.expirationPeriod = null;
 };
-
-exports.ControlParameters = ControlParameters;
 
 /**
  * Encode this ControlParameters for a particular wire format.
@@ -20347,7 +20387,7 @@ ControlParameters.prototype.wireDecode = function(input, wireFormat)
 
 /**
  * Get the name.
- * @returns {Name} The name.
+ * @returns {Name} The name. If not specified, return null.
  */
 ControlParameters.prototype.getName = function()
 {
@@ -20427,13 +20467,14 @@ ControlParameters.prototype.getExpirationPeriod = function()
 };
 
 /**
- * Set the name to a copy of the given Name.
- * @param {Name} name The new Name to copy.
+ * Set the name.
+ * @param {Name} name The name. If not specified, set to null. If specified, this
+ * makes a copy of the name.
  */
 ControlParameters.prototype.setName = function(name)
 {
   this.name = typeof name === 'object' && name instanceof Name ?
-              new Name(name) : new Name();
+              new Name(name) : null;
 };
 
 /**
@@ -21351,7 +21392,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
-  if (controlParameters.getName().size() > 0)
+  if (controlParameters.getName() != null)
     Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
@@ -21368,6 +21409,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
+  controlParameters.clear();
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
 	readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
@@ -23345,6 +23387,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
                     statusCode);
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
+      return Closure.RESULT_OK;
     }
 
     if (LOG > 2)

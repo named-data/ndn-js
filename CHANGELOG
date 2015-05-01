@@ -61,6 +61,7 @@ Bug fixes
   etc. from static to member variables of each face.
 * In ProtobufTlv.encode (in Node.js), instead of toBinary() to convert a binary
   value, use toBuffer() to produce a Node.js Buffer.
+* http://redmine.named-data.net/issues/2758 ControlParameters with empty name not properly encoded.
 
 NDN-JS v0.7.0 (2014-12-22)
 --------------------------

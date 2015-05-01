@@ -58,6 +58,19 @@ var ControlParameters = function ControlParameters(value)
 
 exports.ControlParameters = ControlParameters;
 
+ControlParameters.prototype.clear = function()
+{
+  this.name = null;
+  this.faceId = null;
+  this.uri = '';
+  this.localControlFeature = null;
+  this.origin = null;
+  this.cost = null;
+  this.forwardingFlags = new ForwardingFlags();
+  this.strategy = new Name();
+  this.expirationPeriod = null;
+};
+
 /**
  * Encode this ControlParameters for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode

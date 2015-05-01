@@ -293,7 +293,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
-  if (controlParameters.getName().size() > 0)
+  if (controlParameters.getName() != null)
     Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
@@ -310,6 +310,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
+  controlParameters.clear();
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
 	readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
