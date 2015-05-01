@@ -49,7 +49,7 @@ describe('ControlParameters', function() {
 	var decodedParameters = new ControlParameters();
     decodedParameters.wireDecode(encoded);
     // compare
-    assert.equal(parameters.getName().size(), 0);
+    assert.equal(parameters.getName(), null);
 	assert.equal(parameters.getStrategy().toUri(), decodedParameters
       .getStrategy().toUri());
     assert.equal(parameters.getUri(), decodedParameters.getUri());
