@@ -171,10 +171,12 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
  * Send the data packet which contains the user's message
  * @param {Name} Interest name prefix
  * @param {Interest} The interest
- * @param {Transport} The transport
- * @param {uint64_t} registerPrefixId 
+ * @param {Face} The face
+ * @param {number} interestFilterId
+ * @param {InterestFilter} filter
  */
-ChronoChat.prototype.onInterest = function(prefix, interest, transport, registerPrefixId)
+ChronoChat.prototype.onInterest = function
+  (prefix, interest, face, interestFilterId, filter)
 {
   var content = {};
   
@@ -197,7 +199,7 @@ ChronoChat.prototype.onInterest = function(prefix, interest, transport, register
     co.setContent(str);
     this.keyChain.sign(co, this.certificateName);
     try {
-      transport.send(co.wireEncode().buf());
+      face.putData(co);
     } 
     catch (e) {
       console.log(e.toString());
@@ -205,9 +207,8 @@ ChronoChat.prototype.onInterest = function(prefix, interest, transport, register
   }
 };
 
-ChronoChat.prototype.onRegisterFailed = function()
+ChronoChat.prototype.onRegisterFailed = function(prefix)
 {
-
 };
 
 ChronoChat.prototype.initial = function()
@@ -447,11 +448,6 @@ ChronoChat.prototype.messageCacheAppend = function(messageType, message)
   while (this.msgcache.length > this.maxmsgcachelength) {
     this.msgcache.shift();
   }
-};
-
-ChronoChat.prototype.onRegisterFailed = function()
-{
-
 };
 
 ChronoChat.prototype.getRandomString = function()

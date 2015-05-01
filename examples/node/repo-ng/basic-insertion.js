@@ -239,7 +239,7 @@ var ProduceSegments = function ProduceSegments
 };
 
 ProduceSegments.prototype.onInterest = function
-  (prefix, interest, transport, registeredPrefixId)
+  (prefix, interest, face, interestFilterId, filter)
 {
   console.log("Got interest " + interest.toUri());
 
@@ -248,9 +248,8 @@ ProduceSegments.prototype.onInterest = function
   var content = "Data packet " + interest.name.toUri();
   data.setContent(new Blob(content));
   this.keyChain.sign(data, this.certificateName);
-  var encodedData = data.wireEncode();
 
-  transport.send(encodedData.buf());
+  face.putData(data);
   console.log("Sent data packet " + data.getName().toUri());
 
   this.nSegmentsSent += 1;
@@ -310,10 +309,7 @@ function main()
      });
   console.log("Register prefix " + fetchPrefix.toUri());
   face.registerPrefix
-    (fetchPrefix,
-     function(prefix, interest, transport, registeredPrefixId) {
-       produceSegments.onInterest(prefix, interest, transport, registeredPrefixId);
-     },
+    (fetchPrefix, produceSegments.onInterest.bind(produceSegments),
      function(prefix) {
        console.log("Register failed for prefix " + prefix.toUri());
        // This will cause the script to quit.
