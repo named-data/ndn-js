@@ -23,17 +23,30 @@
  * bits are changed, amended or deprecated.
  * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
  */
-var ForwardingFlags = function ForwardingFlags()
+var ForwardingFlags = function ForwardingFlags(value)
 {
-  this.active = true;
-  this.childInherit = true;
-  this.advertise = false;
-  this.last = false;
-  this.capture = false;
-  this.local = false;
-  this.tap = false;
-  this.captureOk = false;
-}
+  if (typeof value === 'object' && value instanceof ForwardingFlags) {
+    // Make a copy.
+    this.active = value.active;
+    this.childInherit = value.childInherit;
+    this.advertise = value.advertise;
+    this.last = value.last;
+    this.capture = value.capture;
+    this.local = value.local;
+    this.tap = value.tap;
+    this.captureOk = value.captureOk;
+  }
+  else {
+    this.active = true;
+    this.childInherit = true;
+    this.advertise = false;
+    this.last = false;
+    this.capture = false;
+    this.local = false;
+    this.tap = false;
+    this.captureOk = false;
+  }
+};
 
 exports.ForwardingFlags = ForwardingFlags;
 
