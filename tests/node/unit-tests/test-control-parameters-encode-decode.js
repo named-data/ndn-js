@@ -25,32 +25,32 @@ var Name = require('../../../js/name').Name;
 describe('ControlParameters', function() {
   it('should encode and decode', function() {
     var parameters = new ControlParameters();
-	parameters.setName(new Name('/test/control/parameters'));
-	parameters.setFaceId(1);
-	// encode
-	var encoded = parameters.wireEncode();
-	// decode
-	var decodedParameters = new ControlParameters();
+    parameters.setName(new Name('/test/control/parameters'));
+    parameters.setFaceId(1);
+    // encode
+    var encoded = parameters.wireEncode();
+    // decode
+    var decodedParameters = new ControlParameters();
     decodedParameters.wireDecode(encoded);
     // compare
     assert.equal(parameters.getName().toUri(), decodedParameters
       .getName().toUri());
     assert.equal(parameters.getFaceId(), decodedParameters.getFaceId());
-	assert.equal(parameters.getUri(), decodedParameters.getUri());
+    assert.equal(parameters.getUri(), decodedParameters.getUri());
   });
   
   it('should encode and decode with no name', function() {
     var parameters = new ControlParameters();
-	parameters.setStrategy(new Name('/localhost/nfd/strategy/broadcast'));
-	parameters.setUri('null://');
-	// encode
-	var encoded = parameters.wireEncode();
-	// decode
-	var decodedParameters = new ControlParameters();
+    parameters.setStrategy(new Name('/localhost/nfd/strategy/broadcast'));
+    parameters.setUri('null://');
+    // encode
+    var encoded = parameters.wireEncode();
+    // decode
+    var decodedParameters = new ControlParameters();
     decodedParameters.wireDecode(encoded);
     // compare
-    assert.equal(parameters.getName(), null);
-	assert.equal(parameters.getStrategy().toUri(), decodedParameters
+    assert.equal(decodedParameters.getName(), null);
+    assert.equal(parameters.getStrategy().toUri(), decodedParameters
       .getStrategy().toUri());
     assert.equal(parameters.getUri(), decodedParameters.getUri());
   });
