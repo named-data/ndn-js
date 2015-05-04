@@ -202,10 +202,6 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
     var doDummySign = true;
   }
 
-  // Set up publisherPublicKeyDigest and signatureBits in case useCrypto is false.
-  var publisherPublicKeyDigest = new Buffer(32);
-  for (var i = 0; i < publisherPublicKeyDigest.length; ++i)
-    publisherPublicKeyDigest[i] = 0;
   var signatureBits = new Buffer(256);
   for (var i = 0; i < signatureBits.length; ++i)
     signatureBits[i] = 0;
