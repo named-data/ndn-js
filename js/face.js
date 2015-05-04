@@ -497,20 +497,16 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
     // The first argument is a name. Make the interest from the name and possible template.
-    interest = new Interest(interestOrName);
     if (arg3) {
       var template = arg3;
-      interest.setMinSuffixComponents(template.getMinSuffixComponents());
-      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
-      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.setExclude(template.getExclude());
-      interest.setChildSelector(template.getChildSelector());
-      interest.getAnswerOriginKind(template.getAnswerOriginKind());
-      interest.setScope(template.getScope());
-      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
+      // Copy the template.
+      interest = new Interest(template);
+      interest.setName(interestOrName);
     }
-    else
+    else {
+      interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
+    }
 
     return this.expressInterestWithClosure(interest, arg2);
   }
@@ -527,19 +523,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
-    interest = new Interest(interestOrName);
+
     // expressInterest(Name name, Interest template, function onData);
     // expressInterest(Name name, Interest template, function onData, function onTimeout);
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
-      interest.setMinSuffixComponents(template.getMinSuffixComponents());
-      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
-      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.setExclude(template.getExclude());
-      interest.setChildSelector(template.getChildSelector());
-      interest.getAnswerOriginKind(template.getAnswerOriginKind());
-      interest.setScope(template.getScope());
-      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
+      // Copy the template.
+      interest = new Interest(template);
+      interest.setName(interestOrName);
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
@@ -547,6 +538,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, function onData);
     // expressInterest(Name name, function onData,   function onTimeout);
     else {
+      interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
