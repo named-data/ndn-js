@@ -10032,6 +10032,13 @@ var WireFormat = function WireFormat() {
 
 exports.WireFormat = WireFormat;
 
+/** NDNx support and binary XML (ccnb or ndnb) encoding is deprecated and code
+ * with throw an exception. To enable support while you upgrade your code to
+ * use NFD, set WireFormat.ENABLE_NDNX = true . NDNx support will be
+ * completely removed in an upcoming release.
+ */
+WireFormat.ENABLE_NDNX = false;
+
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
@@ -13744,15 +13751,18 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  * @constructor
- */
-/**
- * Key
  */
 var Key = function Key()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
   this.publicKeyDer = null;     // Buffer
   this.publicKeyDigest = null;  // Buffer
   this.publicKeyPem = null;     // String
@@ -14310,14 +14320,16 @@ var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256Wit
  */
 
 var Key = require('../key.js').Key;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
 
 /**
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  * @constructor
  */
 var KeyManager = function KeyManager()
 {
   // Public Key
-    this.publicKey =
+    this.publicKey_ =
   "-----BEGIN PUBLIC KEY-----\n" +
   "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuAmnWYKE7E8G+hyy4TiT\n"	+
   "U7t91KyIGvglEeT6HWEkW4LKzXLO22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+\n" +
@@ -14328,7 +14340,7 @@ var KeyManager = function KeyManager()
   "QQIDAQAB\n" +
   "-----END PUBLIC KEY-----";
   // Private Key
-    this.privateKey =
+    this.privateKey_ =
   "-----BEGIN RSA PRIVATE KEY-----\n" +
   "MIIEpQIBAAKCAQEAuAmnWYKE7E8G+hyy4TiTU7t91KyIGvglEeT6HWEkW4LKzXLO\n"	+
   "22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+O85u6gfbvwp+67zJe2I89eHO4dmN\n" +
@@ -14364,16 +14376,34 @@ var KeyManager = function KeyManager()
  * Return a Key object for the keys in this KeyManager.  This creates the Key on the first
  * call and returns a cached copy after that.
  * @returns {Key}
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  */
 KeyManager.prototype.getKey = function()
 {
   if (this.key === null) {
     this.key = new Key();
-    this.key.fromPemString(this.publicKey, this.privateKey);
+    this.key.fromPemString(this.publicKey_, this.privateKey_);
   }
 
   return this.key;
 }
+
+Object.defineProperty(KeyManager.prototype, "publicKey",
+  { get: function() {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
+      return this.publicKey_;
+    } });
+Object.defineProperty(KeyManager.prototype, "privateKey",
+  { get: function() {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
+      return this.privateKey_;
+    } });
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;
@@ -14408,6 +14438,7 @@ var Name = require('./name.js').Name;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 
 var ContentType = {
@@ -14451,8 +14482,17 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
 
-    if (!skipSetFields)
-      this.setFields();
+    if (!skipSetFields) {
+      // Temporarily set ENABLE_NDNX so that setFields doesn't throw.
+      var saveEnableNdnx = WireFormat.ENABLE_NDNX;
+      try {
+        WireFormat.ENABLE_NDNX = true;
+        this.setFields();
+      }
+      finally {
+        WireFormat.ENABLE_NDNX = saveEnableNdnx;
+      }
+    }
   }
 
   this.changeCount_ = 0;
@@ -14553,6 +14593,10 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
  */
 MetaInfo.prototype.setFields = function()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("Signing with NDNx-style keys is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
+
   var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 
@@ -14791,6 +14835,7 @@ var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDeco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new Sha256WithRsaSignature object, possibly copying values from
@@ -14959,14 +15004,39 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() { return this.witness_; },
-    set: function(val) { this.witness_ = val; ++this.changeCount_; } });
+  { get: function() { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      return this.witness_;
+    },
+    set: function(val) { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      this.witness_ = val; ++this.changeCount_;
+    } });
 /**
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() { return this.digestAlgorithm_; },
-    set: function(val) { this.digestAlgorithm_ = val; ++this.changeCount_; } });
+  { get: function() { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      return this.digestAlgorithm_;
+    },
+    set: function(val) {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      this.digestAlgorithm_ = val;
+      ++this.changeCount_;
+    } });
 
 /**
  * Note: This Signature class is not the same as the base Signature class of
@@ -14978,6 +15048,10 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
 var Signature = function Signature
   (witnessOrSignatureObject, signature, digestAlgorithm)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("The NDNx style of Signature is deprecated. To enable while you upgrade your code to use Sha256WithRsaSignature, set WireFormat.ENABLE_NDNX = true");
+
   if (typeof witnessOrSignatureObject === 'object' &&
       witnessOrSignatureObject instanceof Sha256WithRsaSignature)
     // Call the base copy constructor.
@@ -15323,6 +15397,10 @@ Data.prototype.setContent = function(content)
  */
 Data.prototype.sign = function(wireFormat)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("NDNx-style Data packet signing is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
+
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (this.getSignatureOrMetaInfoKeyLocator() == null ||
@@ -15349,6 +15427,10 @@ Data.verifyUsesString = null;
  */
 Data.prototype.verify = function(/*Key*/ key)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("Data packet verify with an NDNx-style key is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
+
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
 
@@ -19395,6 +19477,10 @@ Interest.prototype.getChildSelector = function()
  */
 Interest.prototype.getAnswerOriginKind = function()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("getAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's getMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
+
   return this.answerOriginKind_;
 };
 
@@ -19553,6 +19639,10 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("setAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's setMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
+
   this.answerOriginKind_ = answerOriginKind;
   ++this.changeCount_;
   return this;
@@ -20213,6 +20303,7 @@ var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var Name = require('./name.js').Name;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new ForwardingEntry with the optional arguments.
@@ -20226,6 +20317,10 @@ var Name = require('./name.js').Name;
  */
 var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("ForwardingEntry is for NDNx and is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
+
   this.action = action;
   this.prefixName = prefixName;
   this.ndndID = ndndId;
@@ -20734,6 +20829,10 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
+
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("BinaryXmlWireFormat (NDNx) is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
 };
 
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
@@ -22157,26 +22256,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
-
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getSignature() != null && data.getSignature().witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
-
-      output+= "<br />";
-      output+= "<br />";
-    }
     if (data.getSignature() != null && data.getSignature().getSignature() != null) {
       output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
-
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().publisher != null && data.getMetaInfo().publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
 
       output+= "<br />";
       output+= "<br />";
@@ -22474,6 +22555,12 @@ var Face = function Face(transportOrSettings, connectionInfo)
 
   this.readyStatus = Face.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
+  if (this.verify) {
+    if (!WireFormat.ENABLE_NDNX)
+      throw new Error
+        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
+  }
+  
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
@@ -22808,20 +22895,16 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
     // The first argument is a name. Make the interest from the name and possible template.
-    interest = new Interest(interestOrName);
     if (arg3) {
       var template = arg3;
-      interest.setMinSuffixComponents(template.getMinSuffixComponents());
-      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
-      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.setExclude(template.getExclude());
-      interest.setChildSelector(template.getChildSelector());
-      interest.getAnswerOriginKind(template.getAnswerOriginKind());
-      interest.setScope(template.getScope());
-      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
+      // Copy the template.
+      interest = new Interest(template);
+      interest.setName(interestOrName);
     }
-    else
+    else {
+      interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
+    }
 
     return this.expressInterestWithClosure(interest, arg2);
   }
@@ -22838,19 +22921,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
-    interest = new Interest(interestOrName);
+
     // expressInterest(Name name, Interest template, function onData);
     // expressInterest(Name name, Interest template, function onData, function onTimeout);
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
-      interest.setMinSuffixComponents(template.getMinSuffixComponents());
-      interest.setMaxSuffixComponents(template.getMaxSuffixComponents());
-      interest.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
-      interest.setExclude(template.getExclude());
-      interest.setChildSelector(template.getChildSelector());
-      interest.getAnswerOriginKind(template.getAnswerOriginKind());
-      interest.setScope(template.getScope());
-      interest.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
+      // Copy the template.
+      interest = new Interest(template);
+      interest.setName(interestOrName);
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
@@ -22858,6 +22936,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     // expressInterest(Name name, function onData);
     // expressInterest(Name name, function onData,   function onTimeout);
     else {
+      interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
@@ -23213,6 +23292,9 @@ Face.prototype.registerPrefixWithClosure = function
     // If we have an _ndndId, we know we already connected to NDNx.
     if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
       // Assume we are connected to a legacy NDNx server.
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
 
       if (thisFace.ndndid == null) {
         // Fetch ndndid first, then register.
@@ -23441,6 +23523,11 @@ Face.prototype.registerPrefixHelper = function
     this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
+
+  if (!WireFormat.ENABLE_NDNX)
+    // We can get here if the command signing info is set, but running NDNx.
+    throw new Error
+      ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
 
   // A ForwardingEntry is only used with NDNx.
   var fe = new ForwardingEntry
@@ -23811,6 +23898,10 @@ Face.prototype.onReceivedElement = function(element)
         currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
         continue;
       }
+
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
 
       // Key verification
 
