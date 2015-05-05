@@ -637,8 +637,6 @@ function extractNdnSearch(search, template)
                     template.setMaxSuffixComponents(nonNegativeInt);
                 else if (key == "ndn.ChildSelector" && nonNegativeInt >= 0)
                     template.setChildSelector(nonNegativeInt);
-                else if (key == "ndn.AnswerOriginKind" && nonNegativeInt >= 0)
-                    template.setAnswerOriginKind(nonNegativeInt);
                 else if (key == "ndn.Scope" && nonNegativeInt >= 0)
                     template.setScope(nonNegativeInt);
                 else if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
