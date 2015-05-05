@@ -1,7 +1,12 @@
-Interim changes since NDN-JS v0.7.0 (2015-05-01)
+Interim changes since NDN-JS v0.7.0 (2015-05-05)
 ------------------------------------------------
 
 Changes
+* http://redmine.named-data.net/issues/2624 By default, throw an exception when
+  using the deprecated NDNx and binary XML wire format, or when using NDNx-style
+  key management with globalKeyManager and the Key class. To enable support while
+  you upgrade your code to use NFD, in your main application set
+  WireFormat.ENABLE_NDNX = true
 * http://redmine.named-data.net/issues/2388 Moved example programs from "tests" to "examples".
 * Browser support for crypto.subtle native speedups, automatically used for verify and
   KeyChain.sign (if using the onComplete callback). Tested in Chrome and Firefox.
@@ -49,7 +54,13 @@ Changes
 * Integration tests: Added test-file-private-key-storage. Thanks to Andrew Brown!
 
 Deprecated
-* In Data, deprecated sign/verify. Use KeyChain sign/verifyData.
+* Deprecated support for NDNx and binary XML. See WireFormat.ENABLE_NDNX above.
+* In Data, deprecated sign/verify. Use KeyChain sign/verifyData. See WireFormat.ENABLE_NDNX above.
+* In MetaInfo, deprecated setFields. Use KeyChain sign/verifyData. See WireFormat.ENABLE_NDNX above.
+* Deprecated Key, globalKeyManager and security/KeyManager. Use KeyChain sign/verifyData.
+  See WireFormat.ENABLE_NDNX above.
+* In Face, deprecated NDNx-style verification in Closure.upcall. Use KeyChain.verifyData.
+  See WireFormat.ENABLE_NDNX above.
 * In Face, deprecated registerPrefix where the onInterest callback has the form
   onInterest(prefix, interest, transport, interestFilterId). Use the
   registerPrefix where onInterest has the form

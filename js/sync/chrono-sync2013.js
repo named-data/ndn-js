@@ -100,7 +100,6 @@ var ChronoSync2013 = function ChronoSync2013
   interest.getName().append("00");
   
   interest.setInterestLifetimeMilliseconds(1000);
-  interest.setAnswerOriginKind(Interest.ANSWER_NO_CONTENT_STORE);
   
   this.SyncStateMsg = require('./sync-state.js').SyncStateMsg;
   this.SyncState = require('./sync-state.js').SyncState;

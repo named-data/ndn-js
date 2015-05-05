@@ -29,6 +29,7 @@ var Name = require('./name.js').Name;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
 var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 
 var ContentType = {
@@ -72,8 +73,17 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
 
-    if (!skipSetFields)
-      this.setFields();
+    if (!skipSetFields) {
+      // Temporarily set ENABLE_NDNX so that setFields doesn't throw.
+      var saveEnableNdnx = WireFormat.ENABLE_NDNX;
+      try {
+        WireFormat.ENABLE_NDNX = true;
+        this.setFields();
+      }
+      finally {
+        WireFormat.ENABLE_NDNX = saveEnableNdnx;
+      }
+    }
   }
 
   this.changeCount_ = 0;
@@ -174,6 +184,10 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
  */
 MetaInfo.prototype.setFields = function()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("Signing with NDNx-style keys is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
+
   var key = globalKeyManager.getKey();
   this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
 

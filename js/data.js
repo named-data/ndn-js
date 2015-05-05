@@ -226,6 +226,10 @@ Data.prototype.setContent = function(content)
  */
 Data.prototype.sign = function(wireFormat)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("NDNx-style Data packet signing is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
+
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
   if (this.getSignatureOrMetaInfoKeyLocator() == null ||
@@ -252,6 +256,10 @@ Data.verifyUsesString = null;
  */
 Data.prototype.verify = function(/*Key*/ key)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("Data packet verify with an NDNx-style key is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
+
   if (key == null || key.publicKeyPem == null)
     throw new Error('Cannot verify Data without a public key.');
 

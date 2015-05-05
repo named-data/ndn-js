@@ -26,6 +26,7 @@ var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDeco
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new Sha256WithRsaSignature object, possibly copying values from
@@ -194,14 +195,39 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() { return this.witness_; },
-    set: function(val) { this.witness_ = val; ++this.changeCount_; } });
+  { get: function() { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      return this.witness_;
+    },
+    set: function(val) { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      this.witness_ = val; ++this.changeCount_;
+    } });
 /**
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() { return this.digestAlgorithm_; },
-    set: function(val) { this.digestAlgorithm_ = val; ++this.changeCount_; } });
+  { get: function() { 
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      return this.digestAlgorithm_;
+    },
+    set: function(val) {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
+
+      this.digestAlgorithm_ = val;
+      ++this.changeCount_;
+    } });
 
 /**
  * Note: This Signature class is not the same as the base Signature class of
@@ -213,6 +239,10 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
 var Signature = function Signature
   (witnessOrSignatureObject, signature, digestAlgorithm)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("The NDNx style of Signature is deprecated. To enable while you upgrade your code to use Sha256WithRsaSignature, set WireFormat.ENABLE_NDNX = true");
+
   if (typeof witnessOrSignatureObject === 'object' &&
       witnessOrSignatureObject instanceof Sha256WithRsaSignature)
     // Call the base copy constructor.

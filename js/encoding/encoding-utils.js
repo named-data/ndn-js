@@ -161,26 +161,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       output+= "<br />";
       output+= "<br />";
     }
-    if (data.getSignature() != null && data.getSignature().digestAlgorithm != null) {
-      output += "DigestAlgorithm (hex): "+ DataUtils.toHex(data.getSignature().digestAlgorithm);
-
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getSignature() != null && data.getSignature().witness != null) {
-      output += "Witness (hex): "+ DataUtils.toHex(data.getSignature().witness);
-
-      output+= "<br />";
-      output+= "<br />";
-    }
     if (data.getSignature() != null && data.getSignature().getSignature() != null) {
       output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
-
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().publisher != null && data.getMetaInfo().publisher.publisherPublicKeyDigest != null) {
-      output += "Publisher Public Key Digest(hex): "+ DataUtils.toHex(data.getMetaInfo().publisher.publisherPublicKeyDigest);
 
       output+= "<br />";
       output+= "<br />";

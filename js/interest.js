@@ -198,6 +198,10 @@ Interest.prototype.getChildSelector = function()
  */
 Interest.prototype.getAnswerOriginKind = function()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("getAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's getMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
+
   return this.answerOriginKind_;
 };
 
@@ -356,6 +360,10 @@ Interest.prototype.setChildSelector = function(childSelector)
  */
 Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("setAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's setMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
+
   this.answerOriginKind_ = answerOriginKind;
   ++this.changeCount_;
   return this;

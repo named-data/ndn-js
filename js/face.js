@@ -163,6 +163,12 @@ var Face = function Face(transportOrSettings, connectionInfo)
 
   this.readyStatus = Face.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
+  if (this.verify) {
+    if (!WireFormat.ENABLE_NDNX)
+      throw new Error
+        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
+  }
+  
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
@@ -894,6 +900,9 @@ Face.prototype.registerPrefixWithClosure = function
     // If we have an _ndndId, we know we already connected to NDNx.
     if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
       // Assume we are connected to a legacy NDNx server.
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
 
       if (thisFace.ndndid == null) {
         // Fetch ndndid first, then register.
@@ -1122,6 +1131,11 @@ Face.prototype.registerPrefixHelper = function
     this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
+
+  if (!WireFormat.ENABLE_NDNX)
+    // We can get here if the command signing info is set, but running NDNx.
+    throw new Error
+      ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
 
   // A ForwardingEntry is only used with NDNx.
   var fe = new ForwardingEntry
@@ -1492,6 +1506,10 @@ Face.prototype.onReceivedElement = function(element)
         currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
         continue;
       }
+
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
 
       // Key verification
 
