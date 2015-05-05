@@ -163,6 +163,12 @@ var Face = function Face(transportOrSettings, connectionInfo)
 
   this.readyStatus = Face.UNOPEN;
   this.verify = (settings.verify !== undefined ? settings.verify : false);
+  if (this.verify) {
+    if (!WireFormat.ENABLE_NDNX)
+      throw new Error
+        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
+  }
+  
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
@@ -1500,6 +1506,10 @@ Face.prototype.onReceivedElement = function(element)
         currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
         continue;
       }
+
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
 
       // Key verification
 
