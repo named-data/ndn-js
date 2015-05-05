@@ -18,14 +18,16 @@
  */
 
 var Key = require('../key.js').Key;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
 
 /**
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  * @constructor
  */
 var KeyManager = function KeyManager()
 {
   // Public Key
-    this.publicKey =
+    this.publicKey_ =
   "-----BEGIN PUBLIC KEY-----\n" +
   "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuAmnWYKE7E8G+hyy4TiT\n"	+
   "U7t91KyIGvglEeT6HWEkW4LKzXLO22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+\n" +
@@ -36,7 +38,7 @@ var KeyManager = function KeyManager()
   "QQIDAQAB\n" +
   "-----END PUBLIC KEY-----";
   // Private Key
-    this.privateKey =
+    this.privateKey_ =
   "-----BEGIN RSA PRIVATE KEY-----\n" +
   "MIIEpQIBAAKCAQEAuAmnWYKE7E8G+hyy4TiTU7t91KyIGvglEeT6HWEkW4LKzXLO\n"	+
   "22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+O85u6gfbvwp+67zJe2I89eHO4dmN\n" +
@@ -72,16 +74,34 @@ var KeyManager = function KeyManager()
  * Return a Key object for the keys in this KeyManager.  This creates the Key on the first
  * call and returns a cached copy after that.
  * @returns {Key}
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  */
 KeyManager.prototype.getKey = function()
 {
   if (this.key === null) {
     this.key = new Key();
-    this.key.fromPemString(this.publicKey, this.privateKey);
+    this.key.fromPemString(this.publicKey_, this.privateKey_);
   }
 
   return this.key;
 }
+
+Object.defineProperty(KeyManager.prototype, "publicKey",
+  { get: function() {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
+      return this.publicKey_;
+    } });
+Object.defineProperty(KeyManager.prototype, "privateKey",
+  { get: function() {
+      if (!WireFormat.ENABLE_NDNX)
+        throw new Error
+          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
+      return this.privateKey_;
+    } });
 
 var globalKeyManager = globalKeyManager || new KeyManager();
 exports.globalKeyManager = globalKeyManager;

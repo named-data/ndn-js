@@ -20,15 +20,18 @@
 
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
+ * @deprecated NDNx-style key management is deprecated. Use KeyChain.
  * @constructor
- */
-/**
- * Key
  */
 var Key = function Key()
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
+
   this.publicKeyDer = null;     // Buffer
   this.publicKeyDigest = null;  // Buffer
   this.publicKeyPem = null;     // String
