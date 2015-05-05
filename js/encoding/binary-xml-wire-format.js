@@ -38,6 +38,10 @@ var BinaryXmlWireFormat = function BinaryXmlWireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
+
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("BinaryXmlWireFormat (NDNx) is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
 };
 
 exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
