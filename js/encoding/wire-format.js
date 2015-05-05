@@ -26,6 +26,13 @@ var WireFormat = function WireFormat() {
 
 exports.WireFormat = WireFormat;
 
+/** NDNx support and binary XML (ccnb or ndnb) encoding is deprecated and code
+ * with throw an exception. To enable support while you upgrade your code to
+ * use NFD, set WireFormat.ENABLE_NDNX = true . NDNx support will be
+ * completely removed in an upcoming release.
+ */
+WireFormat.ENABLE_NDNX = false;
+
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
