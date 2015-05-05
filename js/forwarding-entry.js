@@ -22,6 +22,7 @@ var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var Name = require('./name.js').Name;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new ForwardingEntry with the optional arguments.
@@ -35,6 +36,10 @@ var Name = require('./name.js').Name;
  */
 var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("ForwardingEntry is for NDNx and is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
+
   this.action = action;
   this.prefixName = prefixName;
   this.ndndID = ndndId;
