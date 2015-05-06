@@ -248,38 +248,38 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
   var seqlist = [];
 
   for (var j = 0; j < syncStates.length; j++) {
-	var name_component = syncStates[j].getDataPrefix().split('/');
-	var name_t = name_component[name_component.length - 1];
-	var session = syncStates[j].getSessionNo();
+  var name_component = syncStates[j].getDataPrefix().split('/');
+  var name_t = name_component[name_component.length - 1];
+  var session = syncStates[j].getSessionNo();
 
-	// Note: application data prefix gets stored in digest tree,
-	// it does not make sense to compare it against screen_name.
-	// Potentially same problem in ndn-cpp's test.
-	if (this.chat_prefix.toUri() != syncStates[j].getDataPrefix()) {
-	  var index_n = sendlist.indexOf(syncStates[j].getDataPrefix());
+  // Note: application data prefix gets stored in digest tree,
+  // it does not make sense to compare it against screen_name.
+  // Potentially same problem in ndn-cpp's test.
+  if (this.chat_prefix.toUri() != syncStates[j].getDataPrefix()) {
+    var index_n = sendlist.indexOf(syncStates[j].getDataPrefix());
 
-	  if(index_n != -1) {
-		// With current code, this branch will not get executed.
-		console.log("*********** Prove me wrong ***********");
-		sessionlist[index_n] = session;
-		seqlist[index_n] = syncStates[j].getSequenceNo();
-	  }
-	  else {
-		var index_n = this.sync.digest_tree.find(syncStates[j].getDataPrefix(), session);
-		var startSeq = 0;
-		var stopSeq = syncStates[j].getSequenceNo();
+    if(index_n != -1) {
+    // With current code, this branch will not get executed.
+    console.log("*********** Prove me wrong ***********");
+    sessionlist[index_n] = session;
+    seqlist[index_n] = syncStates[j].getSequenceNo();
+    }
+    else {
+    var index_n = this.sync.digest_tree.find(syncStates[j].getDataPrefix(), session);
+    var startSeq = 0;
+    var stopSeq = syncStates[j].getSequenceNo();
 
-		if (index_n != -1) {
-		  startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
-		}
+    if (index_n != -1) {
+      startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
+    }
 
-		for (var k = startSeq; k < stopSeq + 1; k ++) {
-			sendlist.push(syncStates[j].getDataPrefix());
-			sessionlist.push(session);
-			seqlist.push(k);
-		}
-	  }
-	}
+    for (var k = startSeq; k < stopSeq + 1; k ++) {
+      sendlist.push(syncStates[j].getDataPrefix());
+      sessionlist.push(session);
+      seqlist.push(k);
+    }
+    }
+  }
   }
 
   for (var i = 0; i < sendlist.length; i++) {
