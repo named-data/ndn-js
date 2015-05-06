@@ -344,11 +344,12 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
     Tlv.ControlParameters_Cost, endOffset));
 
   // set forwarding flags
-  var flags = new ForwardingFlags();
-  flags.setNfdForwardingFlags(decoder.
-    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Flags,
-      endOffset));
-  controlParameters.setForwardingFlags(flags);
+  if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
+    var flags = new ForwardingFlags();
+    flags.setNfdForwardingFlags(decoder.
+      readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
+    controlParameters.setForwardingFlags(flags);
+  }
 
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
