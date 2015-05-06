@@ -329,7 +329,8 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 
   // decode URI
   if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
-    var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
+    var uri = new Blob
+      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
     controlParameters.setUri(uri.toString());
   }
 

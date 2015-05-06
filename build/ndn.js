@@ -6720,6 +6720,18 @@ Blob.prototype.toHex = function()
 };
 
 /**
+ * Decode the byte array as UTF8 and return the Unicode string.
+ * @return A unicode string, or "" if the buffer is null.
+ */
+Blob.prototype.toString = function()
+{
+  if (this.buffer == null)
+    return "";
+  else
+    return this.buffer.toString('utf8');
+};
+
+/**
  * Check if the value of this Blob equals the other blob.
  * @param {Blob} other The other Blob to check.
  * @returns {boolean} if this isNull and other isNull or if the bytes of this
@@ -21527,7 +21539,8 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 
   // decode URI
   if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
-    var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
+    var uri = new Blob
+      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
     controlParameters.setUri(uri.toString());
   }
 
