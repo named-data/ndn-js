@@ -250,7 +250,7 @@ ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
 
 /**
  * Set the strategy to a copy of the given Name.
- * @param {Name} name The new Name to copy, or null if not specified
+ * @param {Name} name The Name to copy, or an empty Name if not specified.
  */
 ControlParameters.prototype.setStrategy = function(strategy)
 {
