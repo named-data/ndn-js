@@ -37,6 +37,12 @@ describe('ControlParameters', function() {
       .getName().toUri());
     assert.equal(parameters.getFaceId(), decodedParameters.getFaceId());
     assert.equal(parameters.getUri(), decodedParameters.getUri());
+    assert.equal(parameters.getForwardingFlags().getChildInherit(),
+          decodedParameters.getForwardingFlags().getChildInherit(),
+          "decoded forwarding flags childInherit is different");
+    assert.equal(parameters.getForwardingFlags().getCapture(),
+          decodedParameters.getForwardingFlags().getCapture(),
+          "decoded forwarding flags capture is different");
   });
 
   it('should encode and decode with no name', function() {
