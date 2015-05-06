@@ -73,7 +73,7 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
     var newStr = oldStr.replace(/></g, ">|<");
     newPattern = newPattern.substr(0, start) + newStr + newPattern.substr(end);
   }
-  
+
   // Replace [] with (),  or (?! ) for negative lookahead.
   // If we use negative lookahead, we also have to consume one component.
   var isNegative = newPattern.indexOf("[^") >= 0;
@@ -85,6 +85,6 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
     newPattern = newPattern.replace(/\[/g, "(");
     newPattern = newPattern.replace(/\]/g, ")");
   }
-  
+
   return newPattern;
 };

@@ -38,7 +38,7 @@ DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_session, seqno_seq)
   this.dataPrefix = dataPrefix;
   this.seqno_session = seqno_session;
   this.seqno_seq = seqno_seq;
-  
+
   this.recomputeDigest();
 };
 
@@ -81,16 +81,16 @@ DigestTree.Node.prototype.Int32ToBuffer = function(value) {
 DigestTree.Node.prototype.recomputeDigest = function()
 {
   var seqHash = crypto.createHash('sha256');
-  
+
   seqHash.update(this.Int32ToBuffer(this.seqno_session));
   seqHash.update(this.Int32ToBuffer(this.seqno_seq));
-  
+
   var digest_seq = seqHash.digest();
-  
+
   var nameHash = crypto.createHash('sha256');
   nameHash.update(this.dataPrefix);
   var digest_name = nameHash.digest();
-  
+
   var hash = crypto.createHash('sha256');
   hash.update(digest_name);
   hash.update(digest_seq);
@@ -107,7 +107,7 @@ DigestTree.Node.Compare = function(node1, node2)
   return (node1.seqno_session < node2.seqno_session);
 };
 
-/** 
+/**
  * Update the digest tree and recompute the root digest. If the combination of dataPrefix
  * and sessionNo already exists in the tree then update its sequenceNo (only if the given
  * sequenceNo is newer), otherwise add a new node.
@@ -151,12 +151,12 @@ DigestTree.prototype.sortNodes = function()
 
 DigestTree.prototype.sortNodes = function (node1, node2)
 {
-  if (node1.getDataPrefix() == node2.getDataPrefix() && 
+  if (node1.getDataPrefix() == node2.getDataPrefix() &&
      node1.getSessionNo() == node2.getSessionNo())
     return 0;
-  
-  if ((node1.getDataPrefix() > node2.getDataPrefix()) || 
-     ((node1.getDataPrefix() == node2.getDataPrefix()) && 
+
+  if ((node1.getDataPrefix() > node2.getDataPrefix()) ||
+     ((node1.getDataPrefix() == node2.getDataPrefix()) &&
      (node1.getSessionNo() >node2.getSessionNo())))
     return 1;
   else
@@ -166,7 +166,7 @@ DigestTree.prototype.sortNodes = function (node1, node2)
 DigestTree.prototype.find = function(dataPrefix, sessionNo)
 {
   for (var i = 0; i < this.digestnode.length; ++i) {
-    if (this.digestnode[i].getDataPrefix() == dataPrefix && 
+    if (this.digestnode[i].getDataPrefix() == dataPrefix &&
         this.digestnode[i].getSessionNo() == sessionNo)
       return i;
   }

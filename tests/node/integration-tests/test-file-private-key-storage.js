@@ -44,7 +44,7 @@ describe('FilePrivateKeyStorage', function () {
   before(function () {
     // (Copy code from file-private-key-storage.js.)
     ndnFolder = path.join(getUserHomePath(), '.ndn', 'ndnsec-tpm-file');
-    
+
     // Create some test key files to use in tests.
     var instance = new FilePrivateKeyStorage();
     instance.generateKeyPair(new Name("/test/KEY/123"), new RsaKeyParams());

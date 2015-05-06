@@ -32,7 +32,7 @@ var MemoryContentCache = require('../util/memory-content-cache.js').MemoryConten
  * @note The support for ChronoSync is experimental and the API is not finalized.
  * See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html .
- * 
+ *
  * Create a new ChronoSync2013 to communicate using the given face. Initialize
  * the digest log with a digest of "00" and and empty content. Register the
  * applicationBroadcastPrefix to receive interests for sync state messages and
@@ -84,26 +84,26 @@ var ChronoSync2013 = function ChronoSync2013
   this.certificateName = certificateName;
   this.sync_lifetime = syncLifetime;
   this.usrseq = -1;
-  
+
   this.digest_tree = new DigestTree();
   this.contentCache = new MemoryContentCache(face);
-    
+
   this.digest_log = new Array();
   this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
-  
+
   this.contentCache.registerPrefix
     (this.applicationBroadcastPrefix, onRegisterFailed,
      this.onInterest.bind(this));
   this.enabled = true;
-  
+
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append("00");
-  
+
   interest.setInterestLifetimeMilliseconds(1000);
-  
+
   this.SyncStateMsg = require('./sync-state.js').SyncStateMsg;
   this.SyncState = require('./sync-state.js').SyncState;
-  
+
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
 
@@ -112,15 +112,15 @@ exports.ChronoSync2013 = ChronoSync2013;
 ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 {
   var index = this.digest_tree.find(dataPrefix, sessionNo);
-  if (index < 0) 
+  if (index < 0)
     return -1;
   else
     return this.digest_tree.get(index).getSequenceNo();
 };
 
 /**
- * Increment the sequence number, create a sync message with the new sequence number, 
- * and publish a data packet where the name is applicationBroadcastPrefix + root 
+ * Increment the sequence number, create a sync message with the new sequence number,
+ * and publish a data packet where the name is applicationBroadcastPrefix + root
  * digest of current digest tree. Then add the sync message to digest tree and digest
  * log which creates a new root digest. Finally, express an interest for the next sync
  * update with the name applicationBroadcastPrefix + the new root digest.
@@ -130,8 +130,8 @@ ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
 ChronoSync2013.prototype.publishNextSequenceNo = function()
 {
   this.usrseq ++;
-  var content = [new this.SyncState({ name:this.applicationDataPrefixUri, 
-                                 type:'UPDATE', 
+  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
+                                 type:'UPDATE',
                                  seqno:{
                                    seq:this.usrseq,
                                    session:this.session
@@ -139,14 +139,14 @@ ChronoSync2013.prototype.publishNextSequenceNo = function()
                                 })];
   var content_t = new this.SyncStateMsg({ss:content});
   this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
-  
+
   if (!this.update(content))
     console.log("Warning: ChronoSync: update did not create a new digest log entry");
-    
+
   var interest = new Interest(this.applicationBroadcastPrefix);
   interest.getName().append(this.digest_tree.getRoot());
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-  
+
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
@@ -209,9 +209,9 @@ ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessi
  * Get the application data prefix for this sync state message.
  * @return The application data prefix as a Name URI string.
  */
-ChronoSync2013.SyncState.prototype.getDataPrefix = function() 
+ChronoSync2013.SyncState.prototype.getDataPrefix = function()
 {
-  return this.dataPrefixUri_; 
+  return this.dataPrefixUri_;
 }
 
 /**
@@ -220,8 +220,8 @@ ChronoSync2013.SyncState.prototype.getDataPrefix = function()
  * @return The session number.
  */
 ChronoSync2013.SyncState.prototype.getSessionNo = function()
-{ 
-  return this.sessionNo_; 
+{
+  return this.sessionNo_;
 }
 
 /**
@@ -229,11 +229,11 @@ ChronoSync2013.SyncState.prototype.getSessionNo = function()
  * @return The sequence number.
  */
 ChronoSync2013.SyncState.prototype.getSequenceNo = function()
-{ 
-  return this.sequenceNo_; 
+{
+  return this.sequenceNo_;
 }
 
-// Private methods for ChronoSync2013 class, 
+// Private methods for ChronoSync2013 class,
 /**
  * Make a data packet with the syncMessage and with name applicationBroadcastPrefix_ + digest.
  * Sign and send.
@@ -268,7 +268,7 @@ ChronoSync2013.prototype.update = function(content)
       }
     }
   }
-  
+
   if (this.logfind(this.digest_tree.getRoot()) == -1) {
     var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content);
     this.digest_log.push(newlog);
@@ -300,7 +300,7 @@ ChronoSync2013.prototype.onInterest = function
     return;
 
   //search if the digest is already exist in the digest log
-  
+
   var syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
   if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
     syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
@@ -310,7 +310,7 @@ ChronoSync2013.prototype.onInterest = function
   }
   else {
     this.contentCache.storePendingInterest(interest, face);
-    
+
     if (syncdigest != this.digest_tree.getRoot()) {
       var index = this.logfind(syncdigest);
       var content = [];
@@ -346,15 +346,15 @@ ChronoSync2013.prototype.onData = function(interest, co)
   arr.set(co.getContent().buf());
   var content_t = this.SyncStateMsg.decode(arr.buffer);
   var content = content_t.ss;
-  
+
   var isRecovery = false;
-  
+
   if (this.digest_tree.getRoot() == "00") {
     isRecovery = true;
     this.initialOndata(content);
   }
   else {
-    // Note: if, for some reasons, this update did not update anything, 
+    // Note: if, for some reasons, this update did not update anything,
     // then the same message gets fetched again, and the same broadcast interest goes out again.
     // It has the potential of creating loop, which existed in my tests.
     if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
@@ -362,7 +362,7 @@ ChronoSync2013.prototype.onData = function(interest, co)
     else
       isRecovery = true;
   }
-  
+
   var syncStates = [];
 
   for (var i = 0; i < content.length; i++) {
@@ -371,18 +371,18 @@ ChronoSync2013.prototype.onData = function(interest, co)
         (content[i].name, content[i].seqno.session, content[i].seqno.seq));
     }
   }
-  
+
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
   this.onReceivedSyncState(syncStates, isRecovery);
   var updated = this.update(content);
-  
+
   if (updated) {
     var n = new Name(this.applicationBroadcastPrefix);
     n.append(this.digest_tree.getRoot());
-  
+
     var interest = new Interest(n);
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-  
+
     this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
   }
 };
@@ -397,7 +397,7 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
     return;
 
   console.log("no other people");
-    
+
   this.usrseq++;
   this.onInitialized();
   var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
@@ -412,15 +412,15 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   n.append(this.digest_tree.getRoot());
   var retryInterest = new Interest(n);
   retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-  
-  this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));  
+
+  this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
 ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, face)
 {
   if (this.logfind(syncdigest) != -1) {
     var content = [];
-    
+
     for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
       content[i] = new this.SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
                                    type:'UPDATE',
@@ -430,7 +430,7 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
                                     }
                                  });
     }
-    
+
     if (content.length != 0) {
       var content_t = new this.SyncStateMsg({ss:content});
       var str = new Uint8Array(content_t.toArrayBuffer());
@@ -477,7 +477,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
       }
     }
   }
-  
+
   for(var i = 0; i < data_name.length; i++) {
     content[i] = new this.SyncState({ name:data_name[i],
                                  type:'UPDATE',
@@ -492,7 +492,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
     var str = new Uint8Array(content_t.toArrayBuffer());
     var n = new Name(this.prefix)
     n.append(this.chatroom).append(syncdigest_t);
-    
+
     var co = new Data(n);
     co.setContent(new Blob(str, false));
     this.keyChain.sign(co, this.certificateName);
@@ -513,11 +513,11 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
 {
   var n = new Name(this.applicationBroadcastPrefix);
   n.append("recovery").append(syncdigest_t);
-  
+
   var interest = new Interest(n);
 
   interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-  
+
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
@@ -551,16 +551,16 @@ ChronoSync2013.prototype.syncTimeout = function(interest)
   if (component == this.digest_tree.root) {
     var n = new Name(interest.getName());
     var newInterest = new Interest(n);
-    
+
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
     this.face.expressInterest(newInterest, this.onData.bind(this), this.syncTimeout.bind(this));
-  }           
+  }
 };
 
 ChronoSync2013.prototype.initialOndata = function(content)
 {
   this.update(content);
-    
+
   var digest_t = this.digest_tree.getRoot();
   for (var i = 0; i < content.length; i++) {
     if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
@@ -579,13 +579,13 @@ ChronoSync2013.prototype.initialOndata = function(content)
       }
     }
   }
-  
+
   var content_t;
   if (this.usrseq >= 0) {
     //send the data packet with new seqno back
     content_t = new this.SyncState({ name:this.applicationDataPrefixUri,
                                    type:'UPDATE',
-                                   seqno: { 
+                                   seqno: {
                                      seq:this.usrseq,
                                      session:this.session
                                    }
@@ -601,13 +601,13 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                  });
   var content_tt = new this.SyncStateMsg({ss:content_t});
   this.broadcastSyncState(digest_t, content_tt);
-  
+
   if (this.digest_tree.find(this.applicationDataPrefixUri, this.session) == -1) {
     //the user haven't put himself in the digest tree
     this.usrseq++;
     var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                    type:'UPDATE',
-                                   seqno: { 
+                                   seqno: {
                                      seq:this.usrseq,
                                      session:this.session
                                    }

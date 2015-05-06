@@ -29,7 +29,7 @@
 // One of NDN project default hubs
 
 // TODO: Use NDN hub selection mechanism
-// 
+//
 var hostip = "spurs.cs.ucla.edu";
 
 var face = new Face({host:hostip});
@@ -45,9 +45,9 @@ function onData(interest, content, T0)
     var T1 = new Date();
     var nameStr = content.getName().toUri().split("/").slice(0,-2).join("/");
     var strContent = DataUtils.toString(content.getContent().buf());
-    
+
     nameStr += '<font color="gray" size="-1"> (unverified)</font>';
-         
+
     if (strContent=="NDN TLV Ping Response\0") {
       document.getElementById('pingreport').innerHTML += '<tr><td width="50%">' + nameStr + ' </td><td align="right">' + (T1-T0) + ' ms</td></tr>' ;
     } else {
@@ -66,24 +66,24 @@ function ping(name) {
 
 function dopings() {
     ping("/ndn/org/caida");
-    ping("/ndn/cn/edu/bupt");	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/cn/edu/pku"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/cn/edu/tongji"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/arizona"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/colostate"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/memphis"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/neu"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/uci"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/ucla");	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/ucla/remap"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/uiuc"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/umich ");	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/edu/wustl");	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/fr/lip6"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
-    ping("/ndn/fr/orange1"); 	  	  	  	  	  	  	  	  	  	  	  	  	  	  	  	 
+    ping("/ndn/cn/edu/bupt");
+    ping("/ndn/cn/edu/pku");
+    ping("/ndn/cn/edu/tongji");
+    ping("/ndn/edu/arizona");
+    ping("/ndn/edu/colostate");
+    ping("/ndn/edu/memphis");
+    ping("/ndn/edu/neu");
+    ping("/ndn/edu/uci");
+    ping("/ndn/edu/ucla");
+    ping("/ndn/edu/ucla/remap");
+    ping("/ndn/edu/uiuc");
+    ping("/ndn/edu/umich ");
+    ping("/ndn/edu/wustl");
+    ping("/ndn/fr/lip6");
+    ping("/ndn/fr/orange1");
 };
 
 window.onload = function() {
-    document.getElementById("host").innerHTML=hostip;    
+    document.getElementById("host").innerHTML=hostip;
     dopings()
 }

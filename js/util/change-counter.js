@@ -62,9 +62,9 @@ ChangeCounter.prototype.set = function(target)
 };
 
 /**
- * If the target's change count is different than the local change count, then 
- * update the local change count and return true. Otherwise return false, 
- * meaning that the target has not changed. This is useful since the target (or 
+ * If the target's change count is different than the local change count, then
+ * update the local change count and return true. Otherwise return false,
+ * meaning that the target has not changed. This is useful since the target (or
  * one of the target's targets) may be changed and you need to find out.
  * @returns {boolean} True if the change count has been updated, false if not.
  */

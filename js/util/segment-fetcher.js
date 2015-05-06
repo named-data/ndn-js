@@ -72,7 +72,7 @@ var Blob = require('./blob.js').Blob;
  *     var onComplete = function(content) { ... }
  *
  *     var onError = function(errorCode, message) { ... }
- *     
+ *
  *     var interest = new Interest(new Name("/data/prefix"));
  *     interest.setInterestLifetimeMilliseconds(1000);
  *
@@ -161,7 +161,7 @@ SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
   var thisSegmentFetcher = this;
   this.face.expressInterest
     (interest,
-     function(originalInterest, data) 
+     function(originalInterest, data)
        { thisSegmentFetcher.onData(originalInterest, data); },
      function(interest) { thisSegmentFetcher.onTimeout(interest); });
 };
@@ -233,7 +233,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
              ": " + ex);
           return;
         }
-        
+
         if (currentSegment == finalSegmentNumber) {
           // We are finished.
 
@@ -243,7 +243,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
           return;
         }
       }
-      
+
       // Fetch the next segment.
       this.fetchNextSegment
         (originalInterest, data.getName(), expectedSegmentNumber + 1);

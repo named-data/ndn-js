@@ -69,7 +69,7 @@ function printRibEntries(encodedMessage)
   console.log("RIB:");
   for (var iRibEntry = 0; iRibEntry < ribEntryMessage.rib_entry.length; ++iRibEntry) {
     var ribEntry = ribEntryMessage.rib_entry[iRibEntry];
-    
+
     var line = "";
     for (var i = 0; i < ribEntry.name.component.length; ++i)
       line += "/" + ribEntry.name.component[i].toString("utf8");
@@ -77,8 +77,8 @@ function printRibEntries(encodedMessage)
     // Show the routes.
     for (var i = 0; i < ribEntry.routes.length; ++i) {
       var route = ribEntry.routes[i];
-      
-      line += " route={faceId=" + route.face_id + " (origin=" + route.origin + 
+
+      line += " route={faceId=" + route.face_id + " (origin=" + route.origin +
         " cost=" + route.cost;
       if ((route.flags & 1) != 0)
         line += " ChildInherit";
@@ -88,7 +88,7 @@ function printRibEntries(encodedMessage)
         line += " expirationPeriod=" + route.expiration_period;
       line += ")}";
     }
-    
+
     console.log(line);
   }
 }

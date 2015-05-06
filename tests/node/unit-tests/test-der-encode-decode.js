@@ -145,7 +145,7 @@ describe('TestDerEncodeDecode', function() {
     assert.equal(CERT_STRING, toyCert.toString(),
                  "Certificate dump does not have expected format");
   });
-  
+
   it('EncodeDecode', function() {
     toyCert.encode();
     var cert_data = toyCert.getContent();

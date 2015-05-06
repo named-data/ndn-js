@@ -352,7 +352,7 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
         // Convert from milliseconds.
         return this.freshnessPeriod_ / 1000.0;
     },
-    set: function(val) { 
+    set: function(val) {
       if (val == null || val < 0)
         this.freshnessPeriod_ = null;
       else

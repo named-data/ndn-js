@@ -7046,9 +7046,9 @@ ChangeCounter.prototype.set = function(target)
 };
 
 /**
- * If the target's change count is different than the local change count, then 
- * update the local change count and return true. Otherwise return false, 
- * meaning that the target has not changed. This is useful since the target (or 
+ * If the target's change count is different than the local change count, then
+ * update the local change count and return true. Otherwise return false,
+ * meaning that the target has not changed. This is useful since the target (or
  * one of the target's targets) may be changed and you need to find out.
  * @returns {boolean} True if the change count has been updated, false if not.
  */
@@ -10683,7 +10683,7 @@ DerNode.parse = function(inputBuf, startIdx)
 {
   if (startIdx == undefined)
     startIdx = 0;
-  
+
   var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
@@ -10843,7 +10843,7 @@ DerNode.DerStructure.prototype.setChildChanged = function()
 };
 
 /**
- * Override the base encode to return raw data encoding for this node and its 
+ * Override the base encode to return raw data encoding for this node and its
  * children.
  * @returns {Blob} The raw data encoding.
  */
@@ -11910,7 +11910,7 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
     var newStr = oldStr.replace(/></g, ">|<");
     newPattern = newPattern.substr(0, start) + newStr + newPattern.substr(end);
   }
-  
+
   // Replace [] with (),  or (?! ) for negative lookahead.
   // If we use negative lookahead, we also have to consume one component.
   var isNegative = newPattern.indexOf("[^") >= 0;
@@ -11922,7 +11922,7 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
     newPattern = newPattern.replace(/\[/g, "(");
     newPattern = newPattern.replace(/\]/g, ")");
   }
-  
+
   return newPattern;
 };
 /**
@@ -11999,7 +11999,7 @@ var Blob = require('./blob.js').Blob;
  *     var onComplete = function(content) { ... }
  *
  *     var onError = function(errorCode, message) { ... }
- *     
+ *
  *     var interest = new Interest(new Name("/data/prefix"));
  *     interest.setInterestLifetimeMilliseconds(1000);
  *
@@ -12088,7 +12088,7 @@ SegmentFetcher.prototype.fetchFirstSegment = function(baseInterest)
   var thisSegmentFetcher = this;
   this.face.expressInterest
     (interest,
-     function(originalInterest, data) 
+     function(originalInterest, data)
        { thisSegmentFetcher.onData(originalInterest, data); },
      function(interest) { thisSegmentFetcher.onTimeout(interest); });
 };
@@ -12160,7 +12160,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
              ": " + ex);
           return;
         }
-        
+
         if (currentSegment == finalSegmentNumber) {
           // We are finished.
 
@@ -12170,7 +12170,7 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
           return;
         }
       }
-      
+
       // Fetch the next segment.
       this.fetchNextSegment
         (originalInterest, data.getName(), expectedSegmentNumber + 1);
@@ -12240,7 +12240,7 @@ Transport.ConnectionInfo = function TransportConnectionInfo()
  * remote prefix registration using '/localhop/nfd...'
  * @param {Transport.ConnectionInfo} connectionInfo A ConnectionInfo with the
  * host to check.
- * @param {function} onResult On success, this calls onResult(isLocal) where 
+ * @param {function} onResult On success, this calls onResult(isLocal) where
  * isLocal is true if the host is local, false if not. We use callbacks because
  * this may need to do an asynchronous DNS lookup.
  * @param {function} onError On failure for DNS lookup or other error, this
@@ -12930,7 +12930,7 @@ Name.Component.prototype.toNumber = function()
 };
 
 /**
- * Interpret this name component as a network-ordered number with a marker and 
+ * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
  * @returns {number} The integer number.
@@ -13020,7 +13020,7 @@ Name.Component.fromNumber = function(number)
 };
 
 /**
- * Create a component whose value is the marker appended with the 
+ * Create a component whose value is the marker appended with the
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
@@ -13509,15 +13509,15 @@ Name.prototype.wireDecode = function(input, wireFormat)
 };
 
 /**
- * Compare this to the other Name using NDN canonical ordering.  If the first 
- * components of each name are not equal, this returns -1 if the first comes 
- * before the second using the NDN canonical ordering for name components, or 1 
- * if it comes after. If they are equal, this compares the second components of 
- * each name, etc.  If both names are the same up to the size of the shorter 
- * name, this returns -1 if the first name is shorter than the second or 1 if it 
- * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
- * is intuitive because all names with the prefix /a are next to each other.  
- * But it may be also be counter-intuitive because /c comes before /bb according 
+ * Compare this to the other Name using NDN canonical ordering.  If the first
+ * components of each name are not equal, this returns -1 if the first comes
+ * before the second using the NDN canonical ordering for name components, or 1
+ * if it comes after. If they are equal, this compares the second components of
+ * each name, etc.  If both names are the same up to the size of the shorter
+ * name, this returns -1 if the first name is shorter than the second or 1 if it
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This
+ * is intuitive because all names with the prefix /a are next to each other.
+ * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
  * @param {Name} other The other Name to compare with.
  * @returns {boolean} If they compare equal, -1 if *this comes before other in
@@ -14199,7 +14199,7 @@ Object.defineProperty(KeyLocator.prototype, "type",
  */
 Object.defineProperty(KeyLocator.prototype, "keyName",
   { get: function() { return this.keyName_.get(); },
-    set: function(val) { 
+    set: function(val) {
       this.keyName_.set(val == null ? new KeyName() : val);
       ++this.changeCount_;
     } });
@@ -14761,7 +14761,7 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
         // Convert from milliseconds.
         return this.freshnessPeriod_ / 1000.0;
     },
-    set: function(val) { 
+    set: function(val) {
       if (val == null || val < 0)
         this.freshnessPeriod_ = null;
       else
@@ -15004,14 +15004,14 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() { 
+  { get: function() {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
 
       return this.witness_;
     },
-    set: function(val) { 
+    set: function(val) {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
@@ -15022,7 +15022,7 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() { 
+  { get: function() {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
@@ -15466,7 +15466,7 @@ Data.prototype.wireEncode = function(wireFormat)
       this.getDefaultWireEncodingFormat() == wireFormat)
     // We already have an encoding in the desired format.
     return this.getDefaultWireEncoding();
-  
+
   var result = wireFormat.encodeData(this);
   var wireEncoding = new SignedBlob
     (result.encoding, result.signedPortionBeginOffset,
@@ -15521,7 +15521,7 @@ Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
   if (!KeyLocator.canGetFromSignature(this.getSignature()))
     // The signature type doesn't support KeyLocator.
     return new KeyLocator();
-  
+
   if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
       this.signature_.get().getKeyLocator().getType() != null &&
       this.signature_.get().getKeyLocator().getType() >= 0)
@@ -15896,7 +15896,7 @@ var PublicKey = function PublicKey(keyDer)
     this.keyType = null;
     return;
   }
-  
+
   this.keyDer = keyDer;
 
   // Get the public key OID.
@@ -15945,7 +15945,7 @@ PublicKey.prototype.getKeyType = function()
 
 /**
  * Get the digest of the public key.
- * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
+ * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm,
  * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
  * @returns {Blob} The digest value.
  */
@@ -15953,7 +15953,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 {
   if (digestAlgorithm == undefined)
     digestAlgorithm = DigestAlgorithm.SHA256;
-  
+
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
     var hash = crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
@@ -16375,7 +16375,7 @@ Certificate.prototype.decode = function()
 Certificate.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  
+
   Data.prototype.wireDecode.call(this, input, wireFormat);
   this.decode();
 };
@@ -16497,7 +16497,7 @@ IdentityCertificate.prototype.name = "IdentityCertificate";
 exports.IdentityCertificate = IdentityCertificate;
 
 /**
- * Override the base class method to check that the name is a valid identity 
+ * Override the base class method to check that the name is a valid identity
  * certificate name.
  * @param {Name} name The identity certificate name which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
@@ -16830,7 +16830,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
  * Append all the key names of a particular identity to the nameList.
  * @param identityName {Name} The identity name to search for.
  * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false, 
+ * @param isDefault {boolean} If true, add only the default key name. If false,
  * add only the non-default key names.
  */
 IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
@@ -18499,7 +18499,7 @@ SelfVerifyPolicyManager.prototype.verify = function
     if (publicKeyDer.isNull())
       onComplete(false);
   }
-  
+
   return PolicyManager.verifySignature
     (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };
@@ -18768,7 +18768,7 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
  * @returns {IdentityManager} The identity manager.
  */
 KeyChain.prototype.getIdentityManager = function()
-{ 
+{
   return this.identityManager;
 };
 
@@ -18781,7 +18781,7 @@ KeyChain.prototype.getIdentityManager = function()
  * @returns {PolicyManager} The policy manager.
  */
 KeyChain.prototype.getPolicyManager = function()
-{ 
+{
   return this.policyManager;
 };
 
@@ -18917,7 +18917,7 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
 };
 
 /**
- * Check the signature on the Data object and call either onVerify or 
+ * Check the signature on the Data object and call either onVerify or
  * onVerifyFailed. We use callback functions because verify may fetch
  * information to check the signature.
  * @param {Data} data The Data object with the signature to check.
@@ -18994,7 +18994,7 @@ KeyChain.prototype.verifyInterest = function
  * @param {Face} face A pointer to the Face object.
  */
 KeyChain.prototype.setFace = function(face)
-{ 
+{
   this.face = face;
 };
 
@@ -19792,7 +19792,7 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  
+
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
     input.buf() : input;
@@ -21464,12 +21464,12 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_ExpirationPeriod,
      controlParameters.getExpirationPeriod());
-	 
+
   if (controlParameters.getStrategy().size() > 0){
     var strategySaveLength = encoder.getLength();
-	Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
-	encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy, 
-	  encoder.getLength() - strategySaveLength);
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
+      encoder.getLength() - strategySaveLength);
   }
 
   var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
@@ -21511,13 +21511,13 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
   controlParameters.clear();
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
-	readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+    readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
 
   // decode name
   if (decoder.peekType(Tlv.Name, endOffset)) {
-	var name = new Name();
-	Tlv0_1_1WireFormat.decodeName(name, decoder);
-	controlParameters.setName(name);
+    var name = new Name();
+    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    controlParameters.setName(name);
   }
 
   // decode face ID
@@ -21526,38 +21526,38 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 
   // decode URI
   if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
-	var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
-	controlParameters.setUri(uri.toString());
+    var uri = decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset);
+    controlParameters.setUri(uri.toString());
   }
 
   // decode integers
   controlParameters.setLocalControlFeature(decoder.
-	readOptionalNonNegativeIntegerTlv(
-	  Tlv.ControlParameters_LocalControlFeature, endOffset));
+    readOptionalNonNegativeIntegerTlv(
+      Tlv.ControlParameters_LocalControlFeature, endOffset));
   controlParameters.setOrigin(decoder.
-	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin, 
-	  endOffset));
+    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin,
+      endOffset));
   controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
-	Tlv.ControlParameters_Cost, endOffset));
+    Tlv.ControlParameters_Cost, endOffset));
 
   // set forwarding flags
   var flags = new ForwardingFlags();
   flags.setNfdForwardingFlags(decoder.
-	readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, 
-	  endOffset));
+    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Flags,
+      endOffset));
   controlParameters.setForwardingFlags(flags);
 
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
-	var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-	Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
-	decoder.finishNestedTlvs(strategyEndOffset);
+    var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
+    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    decoder.finishNestedTlvs(strategyEndOffset);
   }
 
   // decode expiration period
   controlParameters.setExpirationPeriod(
     decoder.readOptionalNonNegativeIntegerTlv(
-	  Tlv.ControlParameters_ExpirationPeriod, endOffset));
+      Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -21570,13 +21570,13 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  
+
   // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
   var keyLocator = null;
   if (KeyLocator.canGetFromSignature(signature))
     keyLocator = KeyLocator.getFromSignature(signature);
   Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
-  
+
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -21905,7 +21905,7 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocato
       (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
   else
     throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
-    
+
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
@@ -22358,7 +22358,7 @@ exports.CommandInterestGenerator = CommandInterestGenerator;
  * @param {KeyChain} keyChain The KeyChain for calling sign.
  * @param {Name} certificateName The certificate name of the key to use for
  * signing.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode interest name for signing. If omitted, use
  * WireFormat.getDefaultWireFormat().
  */
@@ -22560,7 +22560,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
       throw new Error
         ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
   }
-  
+
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
@@ -22969,7 +22969,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
   else if (kind == Closure.UPCALL_INTEREST)
     // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
     this.onInterest
-      (this.filter.getPrefix(), upcallInfo.interest, this.face, 
+      (this.filter.getPrefix(), upcallInfo.interest, this.face,
        this.interestFilterId, this.filter)
 
   return Closure.RESULT_OK;
@@ -22993,7 +22993,7 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
       console.log('ERROR: connectionInfo is NOT SET');
     else {
       var thisFace = this;
-      this.connectAndExecute(function() { 
+      this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
       });
     }
@@ -23117,7 +23117,7 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 {
   if (pendingInterestId == null)
     return;
-  
+
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though pendingInterestId should be unique.
   var count = 0;
@@ -23147,11 +23147,11 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 };
 
 /**
- * Set the KeyChain and certificate name used to sign command interests (e.g. 
+ * Set the KeyChain and certificate name used to sign command interests (e.g.
  * for registerPrefix).
- * @param {KeyChain} keyChain The KeyChain object for signing interests, which 
- * must remain valid for the life of this Face. You must create the KeyChain 
- * object and pass it in. You can create a default KeyChain for your system with 
+ * @param {KeyChain} keyChain The KeyChain object for signing interests, which
+ * must remain valid for the life of this Face. You must create the KeyChain
+ * object and pass it in. You can create a default KeyChain for your system with
  * the default KeyChain constructor.
  * @param {Name} certificateName The certificate name for signing interests.
  * This makes a copy of the Name. You can get the default certificate name with
@@ -23166,7 +23166,7 @@ Face.prototype.setCommandSigningInfo = function(keyChain, certificateName)
 /**
  * Set the certificate name used to sign command interest (e.g. for
  * registerPrefix), using the KeyChain that was set with setCommandSigningInfo.
- * @param {Name} certificateName The certificate name for signing interest. This 
+ * @param {Name} certificateName The certificate name for signing interest. This
  * makes a copy of the Name.
  */
 Face.prototype.setCommandCertificateName = function(certificateName)
@@ -23175,8 +23175,8 @@ Face.prototype.setCommandCertificateName = function(certificateName)
 };
 
 /**
- * Append a timestamp component and a random value component to interest's name. 
- * Then use the keyChain and certificateName from setCommandSigningInfo to sign 
+ * Append a timestamp component and a random value component to interest's name.
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign
  * the interest. If the interest lifetime is not set, this sets it.
  * @note This method is an experimental feature. See the API docs for more
  * detail at
@@ -23436,7 +23436,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
     }
-    
+
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -23578,9 +23578,9 @@ Face.prototype.registerPrefixHelper = function
 
 /**
  * Do the work of registerPrefix to register with NFD.
- * @param {number} registeredPrefixId The 
+ * @param {number} registeredPrefixId The
  * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
- * could return it to the caller. If this is 0, then don't add to 
+ * could return it to the caller. If this is 0, then don't add to
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {Closure} closure

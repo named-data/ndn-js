@@ -195,14 +195,14 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() { 
+  { get: function() {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
 
       return this.witness_;
     },
-    set: function(val) { 
+    set: function(val) {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
@@ -213,7 +213,7 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
  * @deprecated
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() { 
+  { get: function() {
       if (!WireFormat.ENABLE_NDNX)
         throw new Error
           ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");

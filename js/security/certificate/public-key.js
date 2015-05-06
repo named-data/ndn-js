@@ -40,7 +40,7 @@ var PublicKey = function PublicKey(keyDer)
     this.keyType = null;
     return;
   }
-  
+
   this.keyDer = keyDer;
 
   // Get the public key OID.
@@ -89,7 +89,7 @@ PublicKey.prototype.getKeyType = function()
 
 /**
  * Get the digest of the public key.
- * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm, 
+ * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm,
  * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
  * @returns {Blob} The digest value.
  */
@@ -97,7 +97,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 {
   if (digestAlgorithm == undefined)
     digestAlgorithm = DigestAlgorithm.SHA256;
-  
+
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
     var hash = crypto.createHash('sha256');
     hash.update(this.keyDer.buf());

@@ -243,7 +243,7 @@ Certificate.prototype.decode = function()
 Certificate.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  
+
   Data.prototype.wireDecode.call(this, input, wireFormat);
   this.decode();
 };

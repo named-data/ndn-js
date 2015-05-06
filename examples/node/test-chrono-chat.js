@@ -143,17 +143,17 @@ var ChronoChat = function(screenName, chatRoom, hubPrefix, face, keyChain, certi
   this.face = face;
   this.keyChain = keyChain;
   this.certificateName = certificateName;
-  
+
   this.chat_prefix = (new Name(hubPrefix)).append(this.chatroom).append(this.getRandomString());
-  
+
   this.roster = [];
   this.msgcache = [];
-  
+
   //console.log("The local chat prefix " + this.chat_prefix.toUri() + " ***");
-  
+
   var session = (new Date()).getTime();
   session = parseInt(session/1000);
-  
+
   this.usrname = this.screen_name + session;
   this.ChatMessage = require('./test-chrono-chat-protobuf.js').ChatMessage;
 
@@ -179,7 +179,7 @@ ChronoChat.prototype.onInterest = function
   (prefix, interest, face, interestFilterId, filter)
 {
   var content = {};
-  
+
   // chat_prefix should really be saved as a name, not a URI string.
   var chatPrefixSize = new Name(this.chat_prefix).size();
   var seq = parseInt(interest.getName().get(chatPrefixSize + 1).toEscapedString());
@@ -192,7 +192,7 @@ ChronoChat.prototype.onInterest = function
       break;
     }
   }
-  
+
   if (content.from != null) {
     var str = new Uint8Array(content.toArrayBuffer());
     var co = new Data(interest.getName());
@@ -200,7 +200,7 @@ ChronoChat.prototype.onInterest = function
     this.keyChain.sign(co, this.certificateName);
     try {
       face.putData(co);
-    } 
+    }
     catch (e) {
       console.log(e.toString());
     }
@@ -215,9 +215,9 @@ ChronoChat.prototype.initial = function()
 {
   var timeout = new Interest(new Name("/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
-  
+
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
-  
+
   if (this.roster.indexOf(this.usrname) == -1) {
     this.roster.push(this.usrname);
     //console.log("*** Local member " + this.usrname + " joins. ***");
@@ -242,22 +242,22 @@ ChronoChat.prototype.dummyOnData = function(interest, co)
 ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
   this.isRecoverySyncState = isRecovery;
-  
+
   var sendlist = [];
   var sessionlist = [];
   var seqlist = [];
-  
+
   for (var j = 0; j < syncStates.length; j++) {
 	var name_component = syncStates[j].getDataPrefix().split('/');
 	var name_t = name_component[name_component.length - 1];
 	var session = syncStates[j].getSessionNo();
-	
-	// Note: application data prefix gets stored in digest tree, 
+
+	// Note: application data prefix gets stored in digest tree,
 	// it does not make sense to compare it against screen_name.
 	// Potentially same problem in ndn-cpp's test.
 	if (this.chat_prefix.toUri() != syncStates[j].getDataPrefix()) {
 	  var index_n = sendlist.indexOf(syncStates[j].getDataPrefix());
-	  
+
 	  if(index_n != -1) {
 		// With current code, this branch will not get executed.
 		console.log("*********** Prove me wrong ***********");
@@ -267,12 +267,12 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 	  else {
 		var index_n = this.sync.digest_tree.find(syncStates[j].getDataPrefix(), session);
 		var startSeq = 0;
-		var stopSeq = syncStates[j].getSequenceNo(); 
-		
+		var stopSeq = syncStates[j].getSequenceNo();
+
 		if (index_n != -1) {
 		  startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
 		}
-		
+
 		for (var k = startSeq; k < stopSeq + 1; k ++) {
 			sendlist.push(syncStates[j].getDataPrefix());
 			sessionlist.push(session);
@@ -281,12 +281,12 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 	  }
 	}
   }
-  
+
   for (var i = 0; i < sendlist.length; i++) {
     var n = new Name(sendlist[i]+'/'+sessionlist[i]+'/'+seqlist[i]);
     var interest = new Interest(n);
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-    
+
     this.face.expressInterest(interest, this.onData.bind(this), this.chatTimeout.bind(this));
   }
 };
@@ -301,19 +301,19 @@ ChronoChat.prototype.onData = function(interest, co)
   var arr = new Uint8Array(co.getContent().size());
   arr.set(co.getContent().buf());
   var content = this.ChatMessage.decode(arr.buffer);
-  
+
   var temp = (new Date()).getTime();
   if (temp - content.timestamp * 1000 < 120000) {
     var t = (new Date(content.timestamp * 1000)).toLocaleTimeString();
     var name = content.from;
-    
+
     // chat_prefix should be saved as a name, not a URI string.
     var prefix = co.getName().getPrefix(-2).toUri();
-    
+
     var session = parseInt((co.getName().get(-2)).toEscapedString());
     var seqno = parseInt((co.getName().get(-1)).toEscapedString());
     var l = 0;
-    
+
     //update roster
     while (l < this.roster.length) {
       var name_t = this.roster[l].substring(0,this.roster[l].length-10);
@@ -327,7 +327,7 @@ ChronoChat.prototype.onData = function(interest, co)
         break;
       }
     }
-    
+
     if(l == this.roster.length) {
       this.roster.push(name + session);
       console.log("JOIN: " + name + session);
@@ -335,9 +335,9 @@ ChronoChat.prototype.onData = function(interest, co)
     var timeout = new Interest(new Name("/timeout"));
     timeout.setInterestLifetimeMilliseconds(120000);
     this.face.expressInterest(timeout, this.dummyOnData, this.alive.bind(this, timeout, seqno, name, session, prefix));
-    
+
     //if (content.type == 0 && this.isRecoverySyncState == false && content.from != this.screen_name){
-      // Note: the original logic does not display old data; 
+      // Note: the original logic does not display old data;
       // But what if an ordinary application data interest gets answered after entering recovery state?
     if (content.type == 0 && content.from != this.screen_name){
       console.log(content.from + ": " + content.data);
@@ -350,7 +350,7 @@ ChronoChat.prototype.onData = function(interest, co)
         for(var i = 0; i<this.roster.length; i++) {
           var name_t = this.roster[i].substring(0,this.roster[i].length - 10);
         }
-        
+
         var d = new Date(content.timestamp * 1000);
         var t = d.toLocaleTimeString();
       }
@@ -380,11 +380,11 @@ ChronoChat.prototype.heartbeat = function(interest)
   }
   this.sync.publishNextSequenceNo();
   this.messageCacheAppend("HELLO", "xxx");
-  
+
   // Making a timeout interest for heartbeat...
   var timeout = new Interest(new Name("/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
-  
+
   //console.log("*** Chat heartbeat expressed interest with name: " + timeout.getName().toUri() + " ***");
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
 };
@@ -406,7 +406,7 @@ ChronoChat.prototype.alive = function(interest, temp_seq, name, session, prefix)
   //console.log("check alive");
   var index_n = this.sync.digest_tree.find(prefix, session);
   var n = this.roster.indexOf(name + session);
-  
+
   if (index_n != -1 && n != -1) {
     var seq = this.sync.digest_tree.digestnode[index_n].seqno.seq;
     if (temp_seq == seq) {
@@ -434,7 +434,7 @@ ChronoChat.prototype.sendMessage = function(chatmsg)
 }
 
 /**
- * Append a new CachedMessage to msgcache, using given messageType and message, 
+ * Append a new CachedMessage to msgcache, using given messageType and message,
  * the sequence number from this.sync.getSequenceNo() and the current time.
  * Also remove elements from the front of the cache as needed to keep the size to
  * this.maxmsgcachelength.
@@ -443,7 +443,7 @@ ChronoChat.prototype.messageCacheAppend = function(messageType, message)
 {
   var d = new Date();
   var t = d.getTime();
-  
+
   this.msgcache.push(new ChronoChat.CachedMessage(this.sync.usrseq, messageType, message, t));
   while (this.msgcache.length > this.maxmsgcachelength) {
     this.msgcache.shift();
@@ -510,12 +510,12 @@ function initiateChat()
   var hostName = "localhost";
   var hubPrefix = "ndn/edu/ucla/remap";
   var screenName = getRandomNameString();
-  
+
   // chatroom is the name inputted by the user
   var chatroom = "ndnchat";
-  
+
   var face = new Face(new UnixTransport());
-  
+
   var identityStorage = new MemoryIdentityStorage();
   var privateKeyStorage = new MemoryPrivateKeyStorage();
   var keyChain = new KeyChain(new IdentityManager(identityStorage, privateKeyStorage),
@@ -526,11 +526,11 @@ function initiateChat()
     ("KEY").append(keyName.get(-1)).append("ID-CERT").append("0");
   identityStorage.addKey(keyName, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
   privateKeyStorage.setKeyPairForKeyName(keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
-  
+
   face.setCommandSigningInfo(keyChain, certificateName);
 
   var chronoChat = new ChronoChat(screenName, chatroom, hubPrefix, face, keyChain, certificateName);
-  
+
   // Send random test chat message at a fixed interval
   var num = 0;
   setInterval(

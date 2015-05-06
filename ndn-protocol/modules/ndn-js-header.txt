@@ -21,7 +21,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var EXPORTED_SYMBOLS = ["Data", "DataUtils", "Exclude", "ExponentialReExpress", 
+var EXPORTED_SYMBOLS = ["Data", "DataUtils", "Exclude", "ExponentialReExpress",
   "Interest", "MimeTypes", "Face", "Name", "Sha256", "XpcomTransport", "Buffer"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");

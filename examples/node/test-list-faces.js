@@ -69,7 +69,7 @@ function printFaceStatuses(encodedMessage)
   console.log("Faces:");
   for (var iEntry = 0; iEntry < faceStatusMessage.face_status.length; ++iEntry) {
     var faceStatus = faceStatusMessage.face_status[iEntry];
-    
+
     // Format to look the same as "nfd-status -f".
     var line = "  faceid=" + faceStatus.face_id +
       " remote=" + faceStatus.uri +
@@ -86,7 +86,7 @@ function printFaceStatuses(encodedMessage)
       " " + (faceStatus.face_persistency == 2 ? "permanent" :
              faceStatus.face_persistency == 1 ? "on-demand" : "persistent") +
       " " + (faceStatus.link_type == 1 ? "multi-access" : "point-to-point");
-    
+
     console.log(line);
   }
 }

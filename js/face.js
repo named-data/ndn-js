@@ -168,7 +168,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
       throw new Error
         ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
   }
-  
+
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
@@ -577,7 +577,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
   else if (kind == Closure.UPCALL_INTEREST)
     // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
     this.onInterest
-      (this.filter.getPrefix(), upcallInfo.interest, this.face, 
+      (this.filter.getPrefix(), upcallInfo.interest, this.face,
        this.interestFilterId, this.filter)
 
   return Closure.RESULT_OK;
@@ -601,7 +601,7 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
       console.log('ERROR: connectionInfo is NOT SET');
     else {
       var thisFace = this;
-      this.connectAndExecute(function() { 
+      this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
       });
     }
@@ -725,7 +725,7 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 {
   if (pendingInterestId == null)
     return;
-  
+
   // Go backwards through the list so we can erase entries.
   // Remove all entries even though pendingInterestId should be unique.
   var count = 0;
@@ -755,11 +755,11 @@ Face.prototype.removePendingInterest = function(pendingInterestId)
 };
 
 /**
- * Set the KeyChain and certificate name used to sign command interests (e.g. 
+ * Set the KeyChain and certificate name used to sign command interests (e.g.
  * for registerPrefix).
- * @param {KeyChain} keyChain The KeyChain object for signing interests, which 
- * must remain valid for the life of this Face. You must create the KeyChain 
- * object and pass it in. You can create a default KeyChain for your system with 
+ * @param {KeyChain} keyChain The KeyChain object for signing interests, which
+ * must remain valid for the life of this Face. You must create the KeyChain
+ * object and pass it in. You can create a default KeyChain for your system with
  * the default KeyChain constructor.
  * @param {Name} certificateName The certificate name for signing interests.
  * This makes a copy of the Name. You can get the default certificate name with
@@ -774,7 +774,7 @@ Face.prototype.setCommandSigningInfo = function(keyChain, certificateName)
 /**
  * Set the certificate name used to sign command interest (e.g. for
  * registerPrefix), using the KeyChain that was set with setCommandSigningInfo.
- * @param {Name} certificateName The certificate name for signing interest. This 
+ * @param {Name} certificateName The certificate name for signing interest. This
  * makes a copy of the Name.
  */
 Face.prototype.setCommandCertificateName = function(certificateName)
@@ -783,8 +783,8 @@ Face.prototype.setCommandCertificateName = function(certificateName)
 };
 
 /**
- * Append a timestamp component and a random value component to interest's name. 
- * Then use the keyChain and certificateName from setCommandSigningInfo to sign 
+ * Append a timestamp component and a random value component to interest's name.
+ * Then use the keyChain and certificateName from setCommandSigningInfo to sign
  * the interest. If the interest lifetime is not set, this sets it.
  * @note This method is an experimental feature. See the API docs for more
  * detail at
@@ -1044,7 +1044,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
       if (this.onRegisterFailed)
         this.onRegisterFailed(this.prefix);
     }
-    
+
     return Closure.RESULT_OK;
   }
   if (!(kind == Closure.UPCALL_CONTENT ||
@@ -1186,9 +1186,9 @@ Face.prototype.registerPrefixHelper = function
 
 /**
  * Do the work of registerPrefix to register with NFD.
- * @param {number} registeredPrefixId The 
+ * @param {number} registeredPrefixId The
  * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
- * could return it to the caller. If this is 0, then don't add to 
+ * could return it to the caller. If this is 0, then don't add to
  * registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {Closure} closure

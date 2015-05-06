@@ -69,7 +69,7 @@ function printChannelStatuses(encodedMessage)
   console.log("Channels:");
   for (var iEntry = 0; iEntry < channelStatusMessage.channel_status.length; ++iEntry) {
     var channelStatus = channelStatusMessage.channel_status[iEntry];
-    
+
     // Format to look the same as "nfd-status -c".
     console.log("  " + channelStatus.local_uri);
   }

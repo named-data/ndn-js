@@ -241,7 +241,7 @@ function main()
   dumpInterest(reDecodedFreshInterest);
 
   keyChain.verifyInterest
-    (reDecodedFreshInterest, 
+    (reDecodedFreshInterest,
      function() { console.log("Freshly-signed Interest signature verification: VERIFIED"); },
      function() { console.log("Freshly-signed Interest signature verification: FAILED"); });
 }

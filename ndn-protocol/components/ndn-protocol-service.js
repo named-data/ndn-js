@@ -107,7 +107,7 @@ NdnProtocol.prototype = {
                 if (contentChannel.loadFlags & (1<<19))
                     // Load flags bit 19 means this channel is for the main window with the URL bar.
                     ContentContext.setContextForWindow(contentChannel.browserTab, context);
-                    
+
                 context.expressInterest(name, template);
             };
 
@@ -245,13 +245,13 @@ ContentContext.prototype.onData = function(interest, data)
         }
 
         var contentTypeEtc = getNameContentTypeAndCharset(data.getName());
-        
+
         var iNdnfsFileComponent = getIndexOfNdnfsFileComponent(data.getName());
         if (!this.uriEndsWithSegmentNumber && iNdnfsFileComponent >= 0 && getIndexOfNdnfsFileComponent(this.uriName) < 0) {
           // The matched content name has an NDNFS file meta component that wasn't requested in the original
           //   URI.  Expect the data.getName() to be /<prefix>/<file name>/<%C1.FS.File>/<version>.
           // (We expect there to be a component after iNdnfsFileComponent but check anyway.)
-          if (data.getName().size() >= iNdnfsFileComponent + 2) {          
+          if (data.getName().size() >= iNdnfsFileComponent + 2) {
             // For Ndnfs file request with mime-type 'application/octet-stream', we spawn download task by default.
             // This tries to override the default action for 'application/octet-stream', (and 'application/pdf').
             if (contentTypeEtc.contentType == "application/octet-stream" || contentTypeEtc.contentType == "application/pdf") {
@@ -259,43 +259,43 @@ ContentContext.prototype.onData = function(interest, data)
               var fp = Components.classes["@mozilla.org/filepicker;1"]
                              .createInstance(nsIFilePicker);
               var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-              var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");              
+              var mostRecentWindow = wm.getMostRecentWindow("navigator:browser");
               fp.init(mostRecentWindow, "Save File", nsIFilePicker.modeSave);
               fp.appendFilters(nsIFilePicker.filterAll);
-            
+
               var iFileName = data.getName().indexOfFileName();
               fp.defaultString = DataUtils.toString(data.getName().get(iFileName).getValue().buf()).toLowerCase();
-            
+
               var rv = fp.show();
               if (rv == nsIFilePicker.returnOK || rv == nsIFilePicker.returnReplace) {
                 var file = fp.file;
-                // Get the path as string. Note that you usually won't 
+                // Get the path as string. Note that you usually won't
                 // need to work with the string paths.
                 var path = fp.file.path;
-                Task.spawn(function () {                 
+                Task.spawn(function () {
                   //dump(data.getName().getPrefix(iNdnfsFileComponent).toUri() + "\n");
                   // Following is an example of predefined default directory.
                   //dump(OS.Path.join(OS.Constants.Path.homeDir, DataUtils.toString(name.get(iFileName).getValue().buf()).toLowerCase())))
-                
+
                   // Note: With the version and return OK is apparently the correct way, which creates another channel
                   // with the given URI;
                   // but interestingly, without the version or return OK also works for files large enough.
                   yield Downloads.fetch("ndn:" + data.getName().getPrefix(iNdnfsFileComponent).append
                     (data.getName().get(iNdnfsFileComponent + 1)).toUri(), path);
                 }).then(null, Components.utils.reportError);
-              
-                // We have a new channel created for file saving using Downloads.fetch(aURI), 
+
+                // We have a new channel created for file saving using Downloads.fetch(aURI),
                 // and we are done with this channel.
                 this.contentListener.onStart("text/plain", "utf-8", this.aURI);
                 this.contentListener.onReceivedContent
                     ("Download: " + data.getName().getPrefix(iNdnfsFileComponent).append
-                      (data.getName().get(iNdnfsFileComponent + 1)).toUri() + " to " + 
+                      (data.getName().get(iNdnfsFileComponent + 1)).toUri() + " to " +
                        path);
                 this.contentListener.onStop();
               }
               return;
             }
-          
+
             if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
               // Make a name /<prefix>/<version>/%00.
               var nameWithoutMeta = data.getName().getPrefix(iNdnfsFileComponent).append
@@ -303,7 +303,7 @@ ContentContext.prototype.onData = function(interest, data)
               this.expressInterest(nameWithoutMeta, this.segmentTemplate);
               return;
             } else {
-               // the file is supposedly empty; 
+               // the file is supposedly empty;
                // In thie case, we force the returned content to be 'text/plain',
                //  and returned content (file attributes) is displayed directly.
                contentTypeEtc.contentType = "text/plain";
@@ -313,7 +313,7 @@ ContentContext.prototype.onData = function(interest, data)
         }
 
         this.didOnStart = true;
-        
+
         var iNdnfsFolderComponent = getIndexOfNdnfsFolderComponent(data.getName());
         // Get the URI from the Data including the version.
         var contentUriSpec;

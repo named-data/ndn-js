@@ -134,7 +134,7 @@ function certNameFromKeyName(keyName, keyIdx)
 {
   if (keyIdx == undefined)
     keyIdx = -1;
-  
+
   if (keyIdx < 0)
     keyIdx = keyName.size() + keyIdx;
   return keyName.getPrefix(keyIdx).append("KEY").append

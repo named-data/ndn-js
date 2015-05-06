@@ -186,7 +186,7 @@ DerNode.parse = function(inputBuf, startIdx)
 {
   if (startIdx == undefined)
     startIdx = 0;
-  
+
   var nodeType = inputBuf[startIdx] & 0xff;
   // Don't increment idx. We're just peeking.
 
@@ -346,7 +346,7 @@ DerNode.DerStructure.prototype.setChildChanged = function()
 };
 
 /**
- * Override the base encode to return raw data encoding for this node and its 
+ * Override the base encode to return raw data encoding for this node and its
  * children.
  * @returns {Blob} The raw data encoding.
  */

@@ -316,7 +316,7 @@ Object.defineProperty(KeyLocator.prototype, "type",
  */
 Object.defineProperty(KeyLocator.prototype, "keyName",
   { get: function() { return this.keyName_.get(); },
-    set: function(val) { 
+    set: function(val) {
       this.keyName_.set(val == null ? new KeyName() : val);
       ++this.changeCount_;
     } });

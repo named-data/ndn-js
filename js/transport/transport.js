@@ -42,7 +42,7 @@ Transport.ConnectionInfo = function TransportConnectionInfo()
  * remote prefix registration using '/localhop/nfd...'
  * @param {Transport.ConnectionInfo} connectionInfo A ConnectionInfo with the
  * host to check.
- * @param {function} onResult On success, this calls onResult(isLocal) where 
+ * @param {function} onResult On success, this calls onResult(isLocal) where
  * isLocal is true if the host is local, false if not. We use callbacks because
  * this may need to do an asynchronous DNS lookup.
  * @param {function} onError On failure for DNS lookup or other error, this

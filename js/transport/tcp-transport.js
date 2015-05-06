@@ -130,7 +130,7 @@ TcpTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
          // Cache the result in this.isLocalResult and save
          // this.isLocalConnectionInfo for next time.
          thisTransport.isLocalConnectionInfo = connectionInfo;
-         
+
          onResult(thisTransport.isLocalResult);
        });
   }

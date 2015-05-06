@@ -372,13 +372,13 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  
+
   // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
   var keyLocator = null;
   if (KeyLocator.canGetFromSignature(signature))
     keyLocator = KeyLocator.getFromSignature(signature);
   Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
-  
+
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -707,7 +707,7 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocato
       (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
   else
     throw new Error("encodeSignatureInfo: Unrecognized Signature object type");
-    
+
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 

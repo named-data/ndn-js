@@ -50,7 +50,7 @@
          function(interest, data) { thisContext.onData(interest, data); },
          function(interest) { thisContext.onTimeout(interest); });
     };
-    
+
     ContentContext.prototype.onTimeout = function(interest) {
           var T1 = new Date();
           document.getElementById('content').innerHTML += "<p>Interest time out.</p>";

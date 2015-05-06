@@ -131,7 +131,7 @@ Name.Component.prototype.toNumber = function()
 };
 
 /**
- * Interpret this name component as a network-ordered number with a marker and 
+ * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
  * @returns {number} The integer number.
@@ -221,7 +221,7 @@ Name.Component.fromNumber = function(number)
 };
 
 /**
- * Create a component whose value is the marker appended with the 
+ * Create a component whose value is the marker appended with the
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
@@ -710,15 +710,15 @@ Name.prototype.wireDecode = function(input, wireFormat)
 };
 
 /**
- * Compare this to the other Name using NDN canonical ordering.  If the first 
- * components of each name are not equal, this returns -1 if the first comes 
- * before the second using the NDN canonical ordering for name components, or 1 
- * if it comes after. If they are equal, this compares the second components of 
- * each name, etc.  If both names are the same up to the size of the shorter 
- * name, this returns -1 if the first name is shorter than the second or 1 if it 
- * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This 
- * is intuitive because all names with the prefix /a are next to each other.  
- * But it may be also be counter-intuitive because /c comes before /bb according 
+ * Compare this to the other Name using NDN canonical ordering.  If the first
+ * components of each name are not equal, this returns -1 if the first comes
+ * before the second using the NDN canonical ordering for name components, or 1
+ * if it comes after. If they are equal, this compares the second components of
+ * each name, etc.  If both names are the same up to the size of the shorter
+ * name, this returns -1 if the first name is shorter than the second or 1 if it
+ * is longer. For example, std::sort gives: /a/b/d /a/b/cc /c /c/a /bb .  This
+ * is intuitive because all names with the prefix /a are next to each other.
+ * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
  * @param {Name} other The other Name to compare with.
  * @returns {boolean} If they compare equal, -1 if *this comes before other in

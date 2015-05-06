@@ -314,14 +314,14 @@ function registerRoute(prefix, faceId, face)
   var flags = CHILD_INHERIT;
 
   var builder = ProtoBuf.loadProtoFile("../browser/control-parameters.proto");
-  var ControlParametersTypes = 
+  var ControlParametersTypes =
     builder.lookup("ndn_message.ControlParametersTypes").build();
   var descriptor = builder.lookup
     ("ndn_message.ControlParametersTypes.ControlParametersMessage");
   var ControlParametersMessage = descriptor.build();
   var message = new ControlParametersMessage();
 
-  message.control_parameters = 
+  message.control_parameters =
     new ControlParametersTypes.ControlParameters();
   message.control_parameters.name = new ControlParametersTypes.Name();
   for (var i = 0; i < prefix.size(); ++i)
@@ -355,8 +355,8 @@ function registerRoute(prefix, faceId, face)
 
 /**
  * This is called when the register route command responds to decode the
- * encodedControlResponse as a TLV ControlParametersResponse message containing 
- * one ControlParameters. On success, print the ControlParameters values which 
+ * encodedControlResponse as a TLV ControlParametersResponse message containing
+ * one ControlParameters. On success, print the ControlParameters values which
  * should be the same as requested.
  * @param {Blob} encodedControlResponse The TLV-encoded ControlParametersResponse.
  */

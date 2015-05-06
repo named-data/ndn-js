@@ -178,7 +178,7 @@ SelfVerifyPolicyManager.prototype.verify = function
     if (publicKeyDer.isNull())
       onComplete(false);
   }
-  
+
   return PolicyManager.verifySignature
     (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };

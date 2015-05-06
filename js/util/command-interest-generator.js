@@ -46,7 +46,7 @@ exports.CommandInterestGenerator = CommandInterestGenerator;
  * @param {KeyChain} keyChain The KeyChain for calling sign.
  * @param {Name} certificateName The certificate name of the key to use for
  * signing.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode 
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode interest name for signing. If omitted, use
  * WireFormat.getDefaultWireFormat().
  */

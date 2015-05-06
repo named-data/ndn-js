@@ -233,7 +233,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
  * Append all the key names of a particular identity to the nameList.
  * @param identityName {Name} The identity name to search for.
  * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false, 
+ * @param isDefault {boolean} If true, add only the default key name. If false,
  * add only the non-default key names.
  */
 IdentityStorage.prototype.getAllKeyNamesOfIdentity = function

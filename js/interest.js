@@ -513,7 +513,7 @@ Interest.prototype.wireEncode = function(wireFormat)
 Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  
+
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
     input.buf() : input;

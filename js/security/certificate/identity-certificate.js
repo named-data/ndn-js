@@ -51,7 +51,7 @@ IdentityCertificate.prototype.name = "IdentityCertificate";
 exports.IdentityCertificate = IdentityCertificate;
 
 /**
- * Override the base class method to check that the name is a valid identity 
+ * Override the base class method to check that the name is a valid identity
  * certificate name.
  * @param {Name} name The identity certificate name which is copied.
  * @returns {Data} This Data so that you can chain calls to update values.
