@@ -238,7 +238,7 @@ describe('TestInterestMethods', function() {
       component.toEscapedString() + " should match " + exclude.toUri());
     component = new Name("%00%21").get(0);
     assert.ok(!exclude.matches(component),
-      component.toEscapedString() + " should match " + exclude.toUri());
+      component.toEscapedString() + " should not match " + exclude.toUri());
   });
 
   it('VerifyDigestSha256', function() {
