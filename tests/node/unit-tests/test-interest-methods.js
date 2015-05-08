@@ -22,6 +22,7 @@
 var assert = require("assert");
 var Name = require('../../..').Name;
 var Interest = require('../../..').Interest;
+var Exclude = require('../../..').Exclude;
 var KeyLocatorType = require('../../..').KeyLocatorType;
 var Blob = require('../../..').Blob;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
@@ -220,6 +221,24 @@ describe('TestInterestMethods', function() {
     // Change a child object.
     interest.getExclude().clear();
     assert.ok(interest.getNonce().isNull(), 'Interest should not have a nonce after changing fields');
+  });
+
+  it('ExcludeMatches', function() {
+    var exclude = new Exclude();
+    exclude.appendComponent(new Name("%00%02").get(0));
+    exclude.appendAny();
+    exclude.appendComponent(new Name("%00%20").get(0));
+
+    var component;
+    component = new Name("%00%01").get(0);
+    assert.ok(!exclude.matches(component),
+      component.toEscapedString() + " should not match " + exclude.toUri());
+    component = new Name("%00%0F").get(0);
+    assert.ok(exclude.matches(component),
+      component.toEscapedString() + " should match " + exclude.toUri());
+    component = new Name("%00%21").get(0);
+    assert.ok(!exclude.matches(component),
+      component.toEscapedString() + " should match " + exclude.toUri());
   });
 
   it('VerifyDigestSha256', function() {
