@@ -460,7 +460,7 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
   if (this.publisherPublicKeyDigest_ != null)
     selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
-  if (this.getNonce() != null)
+  if (this.getNonce().size() > 0)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
     selectors += "&ndn.Exclude=" + this.getExclude().toUri();

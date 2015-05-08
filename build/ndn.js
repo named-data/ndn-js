@@ -19751,7 +19751,7 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
   if (this.publisherPublicKeyDigest_ != null)
     selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
-  if (this.getNonce() != null)
+  if (this.getNonce().size() > 0)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
     selectors += "&ndn.Exclude=" + this.getExclude().toUri();
@@ -20631,8 +20631,9 @@ ControlParameters.prototype.setCost = function(cost)
 };
 
 /**
- * Set the cost value.
- * @param {number} forwardingFlags The new cost value, or null for not specified.
+ * Set the ForwardingFlags object to a copy of forwardingFlags. You can use
+ * getForwardingFlags() and change the existing ForwardingFlags object.
+ * @param {ForwardingFlags} forwardingFlags The new cost value, or null for not specified.
  */
 ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
 {
@@ -20643,7 +20644,7 @@ ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
 
 /**
  * Set the strategy to a copy of the given Name.
- * @param {Name} name The Name to copy, or an empty Name if not specified.
+ * @param {Name} strategy The Name to copy, or an empty Name if not specified.
  */
 ControlParameters.prototype.setStrategy = function(strategy)
 {
