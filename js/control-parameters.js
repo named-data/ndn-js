@@ -238,8 +238,9 @@ ControlParameters.prototype.setCost = function(cost)
 };
 
 /**
- * Set the cost value.
- * @param {number} forwardingFlags The new cost value, or null for not specified.
+ * Set the ForwardingFlags object to a copy of forwardingFlags. You can use
+ * getForwardingFlags() and change the existing ForwardingFlags object.
+ * @param {ForwardingFlags} forwardingFlags The new cost value, or null for not specified.
  */
 ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
 {
@@ -250,7 +251,7 @@ ControlParameters.prototype.setForwardingFlags = function(forwardingFlags)
 
 /**
  * Set the strategy to a copy of the given Name.
- * @param {Name} name The Name to copy, or an empty Name if not specified.
+ * @param {Name} strategy The Name to copy, or an empty Name if not specified.
  */
 ControlParameters.prototype.setStrategy = function(strategy)
 {
