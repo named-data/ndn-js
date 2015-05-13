@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.7.0 (2015-05-08)
-------------------------------------------------
+NDN-JS v0.8.0 (2015-05-13)
+--------------------------
 
 Changes
 * http://redmine.named-data.net/issues/2624 By default, throw an exception when
