@@ -98,23 +98,39 @@ IdentityCertificate.isIdentityCertificate = function(certificate)
  */
 IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 {
-  var i = certificateName.size() - 1;
   var idString = "ID-CERT";
-  while (i >= 0) {
-    if (certificateName.get(i).toEscapedString() == idString)
+  var foundIdString = false;
+  var idCertComponentIndex = certificateName.size() - 1;
+  for (; idCertComponentIndex + 1 > 0; --idCertComponentIndex) {
+    if (certificateName.get(idCertComponentIndex).toEscapedString() == idString) {
+      foundIdString = true;
       break;
-    i -= 1;
+    }
   }
 
-  var tmpName = certificateName.getSubName(0, i);
+  if (!foundIdString)
+    throw new Error
+      ("Incorrect identity certificate name " + certificateName.toUri());
+
+  var tempName = certificateName.getSubName(0, idCertComponentIndex);
   var keyString = "KEY";
-  for (var i = 0; i < tmpName.size(); ++i) {
-    if (tmpName.get(i).toEscapedString() == keyString)
+  var foundKeyString = false;
+  var keyComponentIndex = 0;
+  for (; keyComponentIndex < tempName.size(); keyComponentIndex++) {
+    if (tempName.get(keyComponentIndex).toEscapedString() == keyString) {
+      foundKeyString = true;
       break;
+    }
   }
 
-  return tmpName.getSubName(0, i).append
-    (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+  if (!foundKeyString)
+    throw new Error
+      ("Incorrect identity certificate name " + certificateName.toUri());
+
+  return tempName
+    .getSubName(0, keyComponentIndex)
+    .append(tempName.getSubName
+            (keyComponentIndex + 1, tempName.size() - keyComponentIndex - 1));
 };
 
 IdentityCertificate.isCorrectName = function(name)
