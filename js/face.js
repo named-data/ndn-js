@@ -502,6 +502,10 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
   // expressInterest(Name name, Closure closure,   Interest template); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
+    if (!WireFormat.ENABLE_NDNX)
+      throw new Error
+        ("expressInterest with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
+
     // The first argument is a name. Make the interest from the name and possible template.
     if (arg3) {
       var template = arg3;
@@ -853,6 +857,10 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
   // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
   if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
     // Assume arg2 is the deprecated use with Closure.
+    if (!WireFormat.ENABLE_NDNX)
+      throw new Error
+        ("registerPrefix with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
+
     if (arg3) {
       var flags;
       if (typeof flags === 'number') {
