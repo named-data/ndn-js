@@ -674,7 +674,6 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
   var thisFace = this;
-  //TODO: check local content store first
   if (closure != null) {
     var removeRequestIndex = -1;
     if (removeRequestIndex != null)
