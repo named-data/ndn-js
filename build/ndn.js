@@ -16556,23 +16556,39 @@ IdentityCertificate.isIdentityCertificate = function(certificate)
  */
 IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 {
-  var i = certificateName.size() - 1;
   var idString = "ID-CERT";
-  while (i >= 0) {
-    if (certificateName.get(i).toEscapedString() == idString)
+  var foundIdString = false;
+  var idCertComponentIndex = certificateName.size() - 1;
+  for (; idCertComponentIndex + 1 > 0; --idCertComponentIndex) {
+    if (certificateName.get(idCertComponentIndex).toEscapedString() == idString) {
+      foundIdString = true;
       break;
-    i -= 1;
+    }
   }
 
-  var tmpName = certificateName.getSubName(0, i);
+  if (!foundIdString)
+    throw new Error
+      ("Incorrect identity certificate name " + certificateName.toUri());
+
+  var tempName = certificateName.getSubName(0, idCertComponentIndex);
   var keyString = "KEY";
-  for (var i = 0; i < tmpName.size(); ++i) {
-    if (tmpName.get(i).toEscapedString() == keyString)
+  var foundKeyString = false;
+  var keyComponentIndex = 0;
+  for (; keyComponentIndex < tempName.size(); keyComponentIndex++) {
+    if (tempName.get(keyComponentIndex).toEscapedString() == keyString) {
+      foundKeyString = true;
       break;
+    }
   }
 
-  return tmpName.getSubName(0, i).append
-    (tmpName.getSubName(i + 1, tmpName.size() - i - 1));
+  if (!foundKeyString)
+    throw new Error
+      ("Incorrect identity certificate name " + certificateName.toUri());
+
+  return tempName
+    .getSubName(0, keyComponentIndex)
+    .append(tempName.getSubName
+            (keyComponentIndex + 1, tempName.size() - keyComponentIndex - 1));
 };
 
 IdentityCertificate.isCorrectName = function(name)
@@ -17438,9 +17454,11 @@ exports.IdentityManager = IdentityManager;
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @returns {Name} The name of the certificate for the auto-generated KSK of the
+ * identity.
  */
-IdentityManager.prototype.createIdentity = function(identityName, params)
+IdentityManager.prototype.createIdentityAndCertificate = function
+  (identityName, params)
 {
   this.identityStorage.addIdentity(identityName);
   var keyName = this.generateKeyPair(identityName, true, params);
@@ -17448,7 +17466,25 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
   var newCert = this.selfSign(keyName);
   this.addCertificateAsDefault(newCert);
 
-  return keyName;
+  return newCert.getName();
+};
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @deprecated Use createIdentityAndCertificate which returns the
+ * certificate name instead of the key name. You can use
+ * IdentityCertificate.certificateNameToPublicKeyName to convert the
+ * certificate name to the key name.
+ * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
+ * @returns {Name} The key name of the auto-generated KSK of the identity.
+ */
+IdentityManager.prototype.createIdentity = function(identityName, params)
+{
+  return IdentityCertificate.certificateNameToPublicKeyName
+    (this.createIdentityAndCertificate(identityName, params));
 };
 
 /**
@@ -18568,6 +18604,7 @@ var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -18602,13 +18639,32 @@ exports.KeyChain = KeyChain;
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * @returns {Name} The name of the certificate for the auto-generated KSK of the
+ * identity.
+ */
+KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
+{
+  if (params == undefined)
+    params = KeyChain.DEFAULT_KEY_PARAMS;
+  return this.identityManager.createIdentityAndCertificate(identityName, params);
+};
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @deprecated Use createIdentityAndCertificate which returns the
+ * certificate name instead of the key name. You can use
+ * IdentityCertificate.certificateNameToPublicKeyName to convert the
+ * certificate name to the key name.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
-  if (params == undefined)
-    params = KeyChain.DEFAULT_KEY_PARAMS;
-  return this.identityManager.createIdentity(identityName, params);
+  return IdentityCertificate.certificateNameToPublicKeyName
+    (this.createIdentityAndCertificate(identityName, params));
 };
 
 /**
@@ -21650,7 +21706,7 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
- * Get a singleton instance of a Tlv1_0a2WireFormat.  To always use the
+ * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
  * @returns {Tlv0_1_1WireFormat} The singleton instance.
  */
@@ -23082,7 +23138,6 @@ Face.prototype.expressInterestHelper = function(pendingInterestId, interest, clo
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
   var thisFace = this;
-  //TODO: check local content store first
   if (closure != null) {
     var removeRequestIndex = -1;
     if (removeRequestIndex != null)

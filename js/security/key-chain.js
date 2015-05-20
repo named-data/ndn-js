@@ -28,6 +28,7 @@ var Tlv = require('../encoding/tlv/tlv.js').Tlv;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -62,13 +63,32 @@ exports.KeyChain = KeyChain;
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
+ * @returns {Name} The name of the certificate for the auto-generated KSK of the
+ * identity.
+ */
+KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
+{
+  if (params == undefined)
+    params = KeyChain.DEFAULT_KEY_PARAMS;
+  return this.identityManager.createIdentityAndCertificate(identityName, params);
+};
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @deprecated Use createIdentityAndCertificate which returns the
+ * certificate name instead of the key name. You can use
+ * IdentityCertificate.certificateNameToPublicKeyName to convert the
+ * certificate name to the key name.
+ * @param {Name} identityName The name of the identity.
+ * @param {KeyParams} params (optional) The key parameters if a key needs to be
+ * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
  * @returns {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
-  if (params == undefined)
-    params = KeyChain.DEFAULT_KEY_PARAMS;
-  return this.identityManager.createIdentity(identityName, params);
+  return IdentityCertificate.certificateNameToPublicKeyName
+    (this.createIdentityAndCertificate(identityName, params));
 };
 
 /**

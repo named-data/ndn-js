@@ -1,3 +1,15 @@
+Interim changes since NDN-JS v0.8.1 (2015-05-20)
+------------------------------------------------
+
+Changes
+* In security, added KeyChain.createIdentityAndCertificate which returns the
+  certificate name, instead of the deprecated createIdentity which returns the
+  key name.
+
+Deprecated
+* Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
+  returns the certificate name instead of the key name.
+
 NDN-JS v0.8.1 (2015-05-14)
 --------------------------
 

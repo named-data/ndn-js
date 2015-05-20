@@ -61,9 +61,11 @@ exports.IdentityManager = IdentityManager;
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @returns {Name} The name of the certificate for the auto-generated KSK of the
+ * identity.
  */
-IdentityManager.prototype.createIdentity = function(identityName, params)
+IdentityManager.prototype.createIdentityAndCertificate = function
+  (identityName, params)
 {
   this.identityStorage.addIdentity(identityName);
   var keyName = this.generateKeyPair(identityName, true, params);
@@ -71,7 +73,25 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
   var newCert = this.selfSign(keyName);
   this.addCertificateAsDefault(newCert);
 
-  return keyName;
+  return newCert.getName();
+};
+
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK.
+ * @deprecated Use createIdentityAndCertificate which returns the
+ * certificate name instead of the key name. You can use
+ * IdentityCertificate.certificateNameToPublicKeyName to convert the
+ * certificate name to the key name.
+ * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
+ * @returns {Name} The key name of the auto-generated KSK of the identity.
+ */
+IdentityManager.prototype.createIdentity = function(identityName, params)
+{
+  return IdentityCertificate.certificateNameToPublicKeyName
+    (this.createIdentityAndCertificate(identityName, params));
 };
 
 /**
