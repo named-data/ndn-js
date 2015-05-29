@@ -17450,28 +17450,54 @@ exports.IdentityManager = IdentityManager;
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @returns {Name} The name of the certificate for the auto-generated KSK of the
- * identity.
+ * @returns {Name} The name of the default certificate of the identity.
  */
 IdentityManager.prototype.createIdentityAndCertificate = function
   (identityName, params)
 {
   this.identityStorage.addIdentity(identityName);
-  var keyName = this.generateKeyPair(identityName, true, params);
-  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
-  var newCert = this.selfSign(keyName);
-  this.addCertificateAsDefault(newCert);
 
-  return newCert.getName();
+  var keyName = null;
+  var generateKey = true;
+  try {
+    keyName = this.identityStorage.getDefaultKeyNameForIdentity(identityName);
+    var key = new PublicKey(this.identityStorage.getKey(keyName));
+    if (key.getKeyType() == params.getKeyType())
+      // The key exists and has the same type, so don't need to generate one.
+      generateKey = false;
+  } catch (ex) {}
+
+  if (generateKey) {
+    keyName = this.generateKeyPair(identityName, true, params);
+    this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+  }
+
+  var certName = null;
+  var makeCert = true;
+  try {
+    certName = this.identityStorage.getDefaultCertificateNameForKey(keyName);
+    // The cert exists, so don't need to make it.
+    makeCert = false;
+  } catch (ex) {}
+
+  if (makeCert) {
+    var selfCert = this.selfSign(keyName);
+    this.addCertificateAsIdentityDefault(selfCert);
+    certName = selfCert.getName();
+  }
+
+  return certName;
 };
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @deprecated Use createIdentityAndCertificate which returns the
  * certificate name instead of the key name. You can use
  * IdentityCertificate.certificateNameToPublicKeyName to convert the
@@ -18635,12 +18661,12 @@ exports.KeyChain = KeyChain;
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The name of the certificate for the auto-generated KSK of the
- * identity.
+ * @returns {Name} The name of the default certificate of the identity.
  */
 KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
 {
@@ -18651,7 +18677,8 @@ KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @deprecated Use createIdentityAndCertificate which returns the
  * certificate name instead of the key name. You can use
  * IdentityCertificate.certificateNameToPublicKeyName to convert the

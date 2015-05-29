@@ -59,12 +59,12 @@ exports.KeyChain = KeyChain;
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The name of the certificate for the auto-generated KSK of the
- * identity.
+ * @returns {Name} The name of the default certificate of the identity.
  */
 KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
 {
@@ -75,7 +75,8 @@ KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
 
 /**
  * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
- * identity and a self-signed certificate of the KSK.
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
  * @deprecated Use createIdentityAndCertificate which returns the
  * certificate name instead of the key name. You can use
  * IdentityCertificate.certificateNameToPublicKeyName to convert the
