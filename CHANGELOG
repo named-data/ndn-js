@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-05-20)
+Interim changes since NDN-JS v0.8.1 (2015-06-01)
 ------------------------------------------------
 
 Changes
@@ -9,6 +9,9 @@ Changes
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
   returns the certificate name instead of the key name.
+
+Bug fixes
+* http://redmine.named-data.net/issues/2846 Self-signed cert name needs a version component.
 
 NDN-JS v0.8.1 (2015-05-14)
 --------------------------

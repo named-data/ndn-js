@@ -543,8 +543,7 @@ IdentityManager.prototype.selfSign = function(keyName)
   certificate.setNotAfter(notAfter);
 
   var certificateName = keyName.getPrefix(-1).append("KEY").append
-    (keyName.get(-1)).append("ID-CERT").append
-    (Name.Component.fromNumber(certificate.getNotBefore()));
+    (keyName.get(-1)).append("ID-CERT").appendVersion(certificate.getNotBefore());
   certificate.setName(certificateName);
 
   certificate.setPublicKeyInfo(publicKey);
