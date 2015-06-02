@@ -80,9 +80,9 @@ IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
 
   var keyIdStr;
   if (useKsk)
-    keyIdStr = "KSK-" + seconds;
+    keyIdStr = "ksk-" + seconds;
   else
-    keyIdStr = "DSK-" + seconds;
+    keyIdStr = "dsk-" + seconds;
 
   var keyName = new Name(identityName).append(keyIdStr);
 

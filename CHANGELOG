@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-06-01)
+Interim changes since NDN-JS v0.8.1 (2015-06-02)
 ------------------------------------------------
 
 Changes
@@ -12,6 +12,7 @@ Deprecated
 
 Bug fixes
 * http://redmine.named-data.net/issues/2846 Self-signed cert name needs a version component.
+* http://redmine.named-data.net/issues/2847 Lower-case "ksk-" in generated key name.
 
 NDN-JS v0.8.1 (2015-05-14)
 --------------------------
