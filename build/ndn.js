@@ -22778,6 +22778,21 @@ Face.prototype.close = function()
   this.transport.close();
 };
 
+Face.lastEntryId_ = 0;
+
+/**
+ * An internal method to get the next unique entry ID for the pending interest
+ * table, interest filter table, etc. Most entry IDs are for the pending
+ * interest table (there usually are not many interest filter table entries) so
+ * we use a common pool to only have to have one method which is called by Face.
+ *
+ * @returns {number} The next entry ID.
+ */
+Face.getNextEntryId = function()
+{
+  return ++Face.lastEntryId_;
+};
+
 /**
  * @constructor
  */
@@ -22787,19 +22802,6 @@ Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest,
   this.interest = interest;  // Interest
   this.closure = closure;    // Closure
   this.timerID = -1;  // Timer ID
-};
-
-Face.PendingInterest.lastPendingInterestId = 0;
-
-/**
- * Get the next unique pending interest ID.
- *
- * @returns {number} The next pending interest ID.
- */
-Face.PendingInterest.getNextPendingInterestId = function()
-{
-  ++Face.PendingInterest.lastPendingInterestId;
-  return Face.PendingInterest.lastPendingInterestId;
 };
 
 /**
@@ -22835,7 +22837,7 @@ Face.prototype.extractEntriesForExpressedInterest = function(name)
  * remove the registration later. It optionally holds a related interestFilterId
  * if the InterestFilter was set in the same registerPrefix operation.
  * @param {number} registeredPrefixId A unique ID for this entry, which you
- * should get with getNextRegisteredPrefixId().
+ * should get with getNextEntryId().
  * @param {Name} prefix The name prefix.
  * @param {number} relatedInterestFilterId (optional) The related
  * interestFilterId for the filter set in the same registerPrefix operation. If
@@ -22848,18 +22850,6 @@ Face.RegisteredPrefix = function FaceRegisteredPrefix
   this.registeredPrefixId = registeredPrefixId;
   this.prefix = prefix;
   this.relatedInterestFilterId = relatedInterestFilterId;
-};
-
-Face.RegisteredPrefix.lastRegisteredPrefixId = 0;
-
-/**
- * Get the next unique registered prefix ID.
- * @returns {number} The next registered prefix ID.
- */
-Face.RegisteredPrefix.getNextRegisteredPrefixId = function()
-{
-  ++Face.RegisteredPrefix.lastRegisteredPrefixId;
-  return Face.RegisteredPrefix.lastRegisteredPrefixId;
 };
 
 /**
@@ -22893,7 +22883,7 @@ Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
  * An InterestFilterEntry holds an interestFilterId, an InterestFilter and the
  * OnInterest callback with its related Face.
  * Create a new InterestFilterEntry with the given values.
- * @param {number} interestFilterId The ID from getNextInterestFilterId().
+ * @param {number} interestFilterId The ID from getNextEntryId().
  * @param {InterestFilter} filter The InterestFilter for this entry.
  * @param {Closure} closure The closure for calling upcall on interest. TODO:
  * Change to a function instead of a Closure object.
@@ -22905,17 +22895,6 @@ Face.InterestFilterEntry = function FaceInterestFilterEntry
   this.interestFilterId = interestFilterId;
   this.filter = filter;
   this.closure = closure;
-};
-
-/**
- * Get the next interest filter ID. This just calls
- * Face.RegisteredPrefix.getNextRegisteredPrefixId() so that IDs come from the
- * same pool and won't be confused when removing entries from the two tables.
- * @returns {number} The next ID.
- */
-Face.InterestFilterEntry.getNextInterestFilterId = function()
-{
-  return Face.RegisteredPrefix.getNextRegisteredPrefixId();
 };
 
 /**
@@ -23088,7 +23067,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
-  var pendingInterestId = Face.PendingInterest.getNextPendingInterestId();
+  var pendingInterestId = Face.getNextEntryId();
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -23391,7 +23370,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 Face.prototype.registerPrefixWithClosure = function
   (prefix, closure, flags, onRegisterFailed)
 {
-  var registeredPrefixId = Face.RegisteredPrefix.getNextRegisteredPrefixId();
+  var registeredPrefixId = Face.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     // If we have an _ndndId, we know we already connected to NDNx.
@@ -23604,10 +23583,9 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 
 /**
  * Do the work of registerPrefix once we know we are connected with an ndndid.
- * @param {type} registeredPrefixId The
- * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
- * could return it to the caller. If this is 0, then don't add to
- * registeredPrefixTable (assuming it has already been done).
+ * @param {type} registeredPrefixId The Face.getNextEntryId() which
+ * registerPrefix got so it could return it to the caller. If this is 0, then
+ * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {Closure} closure
  * @param {ForwardingFlags} flags
@@ -23683,10 +23661,9 @@ Face.prototype.registerPrefixHelper = function
 
 /**
  * Do the work of registerPrefix to register with NFD.
- * @param {number} registeredPrefixId The
- * Face.RegisteredPrefix.getNextRegisteredPrefixId() which registerPrefix got so it
- * could return it to the caller. If this is 0, then don't add to
- * registeredPrefixTable (assuming it has already been done).
+ * @param {number} registeredPrefixId The Face.getNextEntryId() which
+ * registerPrefix got so it could return it to the caller. If this is 0, then
+ * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
  * @param {Closure} closure
  * @param {ForwardingFlags} flags
@@ -23839,7 +23816,7 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     // Assume it is a prefix Name.
     filter = new InterestFilter(filterOrPrefix);
 
-  var interestFilterId = Face.InterestFilterEntry.getNextInterestFilterId();
+  var interestFilterId = Face.getNextEntryId();
   var closure;
   if (onInterest.upcall && typeof onInterest.upcall == 'function')
     // Assume it is the deprecated use with Closure.
