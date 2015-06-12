@@ -22676,6 +22676,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
   this.registeredPrefixRemoveRequests = new Array(); // of number
   this.interestFilterTable = new Array();   // of Face.InterestFilterEntry
+  this.lastEntryId = 0;
 };
 
 exports.Face = Face;
@@ -22778,8 +22779,6 @@ Face.prototype.close = function()
   this.transport.close();
 };
 
-Face.lastEntryId_ = 0;
-
 /**
  * An internal method to get the next unique entry ID for the pending interest
  * table, interest filter table, etc. Most entry IDs are for the pending
@@ -22788,9 +22787,9 @@ Face.lastEntryId_ = 0;
  *
  * @returns {number} The next entry ID.
  */
-Face.getNextEntryId = function()
+Face.prototype.getNextEntryId = function()
 {
-  return ++Face.lastEntryId_;
+  return ++this.lastEntryId;
 };
 
 /**
@@ -23067,7 +23066,7 @@ Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
  */
 Face.prototype.expressInterestWithClosure = function(interest, closure)
 {
-  var pendingInterestId = Face.getNextEntryId();
+  var pendingInterestId = this.getNextEntryId();
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -23370,7 +23369,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 Face.prototype.registerPrefixWithClosure = function
   (prefix, closure, flags, onRegisterFailed)
 {
-  var registeredPrefixId = Face.getNextEntryId();
+  var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     // If we have an _ndndId, we know we already connected to NDNx.
@@ -23816,7 +23815,7 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     // Assume it is a prefix Name.
     filter = new InterestFilter(filterOrPrefix);
 
-  var interestFilterId = Face.getNextEntryId();
+  var interestFilterId = this.getNextEntryId();
   var closure;
   if (onInterest.upcall && typeof onInterest.upcall == 'function')
     // Assume it is the deprecated use with Closure.
