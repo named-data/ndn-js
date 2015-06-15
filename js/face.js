@@ -1205,6 +1205,7 @@ Face.prototype.nfdRegisterPrefix = function
 
   var controlParameters = new ControlParameters();
   controlParameters.setName(prefix);
+  controlParameters.setForwardingFlags(flags);
 
   // Make the callback for this.isLocal().
   var thisFace = this;
