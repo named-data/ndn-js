@@ -33,7 +33,7 @@ var KeyChain = require('../../..').KeyChain;
 var InterestFilter = require('../../..').InterestFilter;
 
 var codedInterest = new Buffer([
-0x05, 0x53, // Interest
+0x05, 0x50, // Interest
   0x07, 0x0A, 0x08, 0x03, 0x6E, 0x64, 0x6E, 0x08, 0x03, 0x61, 0x62, 0x63, // Name
   0x09, 0x38, // Selectors
     0x0D, 0x01, 0x04, // MinSuffixComponents
@@ -48,7 +48,6 @@ var codedInterest = new Buffer([
     0x11, 0x01, 0x01, // ChildSelector
     0x12, 0x00, // MustBeFesh
   0x0A, 0x04, 0x61, 0x62, 0x61, 0x62,   // Nonce
-  0x0B, 0x01, 0x02, // Scope
   0x0C, 0x02, 0x75, 0x30, // InterestLifetime
 1
 ]);
@@ -61,7 +60,6 @@ var initialDump = ['name: /ndn/abc',
   'childSelector: 1',
   'mustBeFresh: true',
   'nonce: 61626162',
-  'scope: 2',
   'lifetimeMilliseconds: 30000'];
 
 function dump(s1, s2)
@@ -103,8 +101,6 @@ function dumpInterest(interest)
   result.push(dump("mustBeFresh:", interest.getMustBeFresh()));
   result.push(dump("nonce:", interest.getNonce().size() == 0 ?
     "<none>" : interest.getNonce().toHex()));
-  result.push(dump("scope:", interest.getScope() == null ?
-    "<none>" : interest.getScope()));
   result.push(dump("lifetimeMilliseconds:",
     interest.getInterestLifetimeMilliseconds() == null ?
       "<none>" : interest.getInterestLifetimeMilliseconds()));
@@ -149,8 +145,7 @@ function createFreshInterest()
     .setMaxSuffixComponents(6)
     .setInterestLifetimeMilliseconds(30000)
     .setChildSelector(1)
-    .setMustBeFresh(true)
-    .setScope(2);
+    .setMustBeFresh(true);
   freshInterest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
   freshInterest.getKeyLocator().setKeyData(new Blob(
     [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
