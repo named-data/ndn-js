@@ -243,10 +243,16 @@ Interest.prototype.getNonceAsBuffer = function()
 };
 
 /**
- * Get the interest scope.
- * @returns {number} The scope, or null if not specified.
+ * @deprecated Scope is not used by NFD.
  */
-Interest.prototype.getScope = function() { return this.scope_; };
+Interest.prototype.getScope = function()
+{
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("getScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
+
+  return this.scope_;
+};
 
 /**
  * Get the interest lifetime.
@@ -396,12 +402,14 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 };
 
 /**
- * Set the interest scope.
- * @param {number} scope The interest scope. If not specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Scope is not used by NFD.
  */
 Interest.prototype.setScope = function(scope)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("setScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
+
   this.scope_ = scope;
   ++this.changeCount_;
   return this;

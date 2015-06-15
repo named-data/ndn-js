@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-06-02)
+Interim changes since NDN-JS v0.8.1 (2015-06-15)
 ------------------------------------------------
 
 Changes
@@ -9,6 +9,7 @@ Changes
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
   returns the certificate name instead of the key name.
+* In Interest, deprecated get/setScope since it is for NDNx and NFD does not use it.
 
 Bug fixes
 * http://redmine.named-data.net/issues/2846 Self-signed cert name needs a version component.

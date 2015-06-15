@@ -19616,10 +19616,16 @@ Interest.prototype.getNonceAsBuffer = function()
 };
 
 /**
- * Get the interest scope.
- * @returns {number} The scope, or null if not specified.
+ * @deprecated Scope is not used by NFD.
  */
-Interest.prototype.getScope = function() { return this.scope_; };
+Interest.prototype.getScope = function()
+{
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("getScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
+
+  return this.scope_;
+};
 
 /**
  * Get the interest lifetime.
@@ -19769,12 +19775,14 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 };
 
 /**
- * Set the interest scope.
- * @param {number} scope The interest scope. If not specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @deprecated Scope is not used by NFD.
  */
 Interest.prototype.setScope = function(scope)
 {
+  if (!WireFormat.ENABLE_NDNX)
+    throw new Error
+      ("setScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
+
   this.scope_ = scope;
   ++this.changeCount_;
   return this;
@@ -21390,7 +21398,8 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode backwards.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
-  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.getScope());
+  // Access scope_ directy to avoid throwing the deprecated exception.
+  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.scope_);
 
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
@@ -21455,8 +21464,9 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
     Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
-  interest.setScope(decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.Scope, endOffset));
+  // Access scope_ directy to avoid throwing the deprecated exception.
+  interest.scope_ = decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.Scope, endOffset);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
 
