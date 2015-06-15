@@ -132,7 +132,7 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 ]);
 
 var TlvInterest = new Buffer([
-0x05, 0x53, // Interest
+0x05, 0x50, // Interest
   0x07, 0x0A, 0x08, 0x03, 0x6E, 0x64, 0x6E, 0x08, 0x03, 0x61, 0x62, 0x63, // Name
   0x09, 0x38, // Selectors
     0x0D, 0x01, 0x04, // MinSuffixComponents
@@ -147,7 +147,6 @@ var TlvInterest = new Buffer([
     0x11, 0x01, 0x01, // ChildSelector
     0x12, 0x00, // MustBeFesh
   0x0A, 0x04, 0x61, 0x62, 0x61, 0x62, // Nonce
-  0x0B, 0x01, 0x02, // Scope
   0x0C, 0x02, 0x75, 0x30, // InterestLifetime
 1
 ]);
@@ -178,8 +177,6 @@ function dumpInterest(interest)
   console.log("childSelector: " +
     (interest.getChildSelector() != null ?interest.getChildSelector() : "<none>"));
   console.log("mustBeFresh: " + (interest.getMustBeFresh() ? "true" : "false"));
-  console.log("scope: " +
-    (interest.getScope() != null ? interest.getScope() : "<none>"));
   console.log("nonce: " +
     (interest.getNonce().size() > 0 ? interest.getNonce().toHex() : "<none>"));
 }
@@ -207,8 +204,7 @@ function main()
     .setMaxSuffixComponents(6)
     .setInterestLifetimeMilliseconds(30000)
     .setChildSelector(1)
-    .setMustBeFresh(true)
-    .setScope(2);
+    .setMustBeFresh(true);
   freshInterest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
   freshInterest.getKeyLocator().setKeyData(new Blob
     ([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,

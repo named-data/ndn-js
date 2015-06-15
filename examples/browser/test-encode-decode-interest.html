@@ -33,7 +33,6 @@
             interest.setMaxSuffixComponents(4);
             interest.setChildSelector(1);
             interest.setMustBeFresh(false);
-            interest.setScope(2);
             interest.setInterestLifetimeMilliseconds(30000);
             interest.setNonce(new Buffer([0x61, 0x62, 0x61, 0x62, 0x61, 0x62]));
             var pkd = [];
@@ -86,8 +85,6 @@
             if (interest.getChildSelector() != null )
 				output += "ChildSelector: " + interest.getChildSelector() + "<br/>";
 			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
-			if (interest.setScope() != null )
-				output += "Scope: " + interest.setScope() + "<br/>";
 			if (interest.getInterestLifetimeMilliseconds() != null )
 				output += "InterestLifetime (milliseconds): " + interest.getInterestLifetimeMilliseconds() + "<br/>";
 			if (interest.getNonce().size() > 0)
