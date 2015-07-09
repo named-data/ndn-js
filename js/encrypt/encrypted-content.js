@@ -1,6 +1,7 @@
 /**
  * Copyright (C) 2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/encrypted-content https://github.com/named-data/ndn-group-encrypt
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -74,33 +75,42 @@ EncryptedContent.prototype.getPayload = function()
 /**
  * Set the algorithm type.
  * @param {number} algorithmType The algorithm type. If not specified, set to null.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
  */
 EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
 {
-  return this.algorithmType_ = algorithmType;
+  this.algorithmType_ = algorithmType;
+  return this;
 };
 
 /**
  * Set the key locator.
  * @param {KeyLocator} keyLocator The key locator. If not specified, set to the
  * default KeyLocator().
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
  */
 EncryptedContent.prototype.setKeyLocator = function(keyLocator)
 {
   this.keyLocator_ = typeof keyLocator === 'object' &&
                        keyLocator instanceof KeyLocator ?
     new KeyLocator(keyLocator) : new KeyLocator();
+  return this;
 };
 
 /**
  * Set the encrypted payload.
  * @param {Blob} payload The payload. If not specified, set to the default Blob()
  * where isNull() is true.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
  */
 EncryptedContent.prototype.setPayload = function(payload)
 {
   this.payload_ = typeof payload === 'object' && payload instanceof Blob ?
     payload : new Blob(payload);
+  return this;
 };
 
 /**
