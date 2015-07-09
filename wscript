@@ -165,6 +165,7 @@ def build (bld):
                  "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
                  "js/encoding/encoding-utils.js",
+                 "js/encrypt/encrypted-content.js",
                  "js/util/command-interest-generator.js",
                  "js/face.js"]
 

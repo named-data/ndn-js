@@ -441,6 +441,56 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Encode the EncryptedContent in NDN-TLV and return the encoding.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv
+    (Tlv.EncryptedContent_EncryptedPayload, encryptedContent.getPayload().buf());
+  // Assume the algorithmType value is the same as the TLV type.
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.EncryptedContent_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
+  Tlv0_1_1WireFormat.encodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.EncryptedContent_EncryptedContent, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
+ * encryptedContent object.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.EncryptedContent_EncryptedContent);
+
+  Tlv0_1_1WireFormat.decodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
+  encryptedContent.setAlgorithmType
+    (decoder.readNonNegativeIntegerTlv(Tlv.EncryptedContent_EncryptionAlgorithm));
+  encryptedContent.setPayload
+    (new Blob(decoder.readBlobTlv(Tlv.EncryptedContent_EncryptedPayload), true));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
  * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
  * @returns {Tlv0_1_1WireFormat} The singleton instance.

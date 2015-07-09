@@ -8905,6 +8905,10 @@ Tlv.LocalControlHeader_NextHopFaceId = 82;
 Tlv.LocalControlHeader_CachingPolicy = 83;
 Tlv.LocalControlHeader_NoCache = 96;
 
+Tlv.EncryptedContent_EncryptedContent = 130;
+Tlv.EncryptedContent_EncryptionAlgorithm = 131;
+Tlv.EncryptedContent_EncryptedPayload = 132;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
@@ -10210,6 +10214,36 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
 WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the EncryptedContent and return the encoding.  Your derived class
+ * should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  throw new Error
+    ("encodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an EncryptedContent and set the fields of the
+ * encryptedContent object. Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
+{
+  throw new Error
+    ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -21742,6 +21776,56 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Encode the EncryptedContent in NDN-TLV and return the encoding.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv
+    (Tlv.EncryptedContent_EncryptedPayload, encryptedContent.getPayload().buf());
+  // Assume the algorithmType value is the same as the TLV type.
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.EncryptedContent_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
+  Tlv0_1_1WireFormat.encodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.EncryptedContent_EncryptedContent, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
+ * encryptedContent object.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.EncryptedContent_EncryptedContent);
+
+  Tlv0_1_1WireFormat.decodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
+  encryptedContent.setAlgorithmType
+    (decoder.readNonNegativeIntegerTlv(Tlv.EncryptedContent_EncryptionAlgorithm));
+  encryptedContent.setPayload
+    (new Blob(decoder.readBlobTlv(Tlv.EncryptedContent_EncryptedPayload), true));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
  * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
  * @returns {Tlv0_1_1WireFormat} The singleton instance.
@@ -22418,6 +22502,138 @@ function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); 
  * @deprecated Use data.wireEncode().
  */
 function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var KeyLocator = require('../key-locator.js').KeyLocator;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
+var Blob = require('../util/blob').Blob;
+
+/**
+ * An EncryptedContent holds an encryption type, a payload and other fields
+ * representing encrypted content.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var EncryptedContent = function EncryptedContent(value)
+{
+  if (typeof value === 'object' && value instanceof EncryptedContent) {
+    // Make a deep copy.
+    this.algorithmType_ = value.algorithmType_;
+    this.keyLocator_ = new KeyLocator(value.keyLocator_);
+    this.payload_ = value.payload_;
+  }
+  else {
+    this.algorithmType_ = null;
+    this.keyLocator_ = new KeyLocator();
+    this.payload_ = new Blob();
+  }
+};
+
+exports.EncryptedContent = EncryptedContent;
+
+/**
+ * Get the algorithm type.
+ * @returns {number} The algorithm type, or null if not specified.
+ */
+EncryptedContent.prototype.getAlgorithmType = function()
+{
+  return this.algorithmType_;
+};
+
+/**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ */
+EncryptedContent.prototype.getKeyLocator = function()
+{
+  return this.keyLocator_;
+};
+
+/**
+ * Get the payload.
+ * @returns {Blob} The payload. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getPayload = function()
+{
+  return this.payload_;
+};
+
+/**
+ * Set the algorithm type.
+ * @param {number} algorithmType The algorithm type. If not specified, set to null.
+ */
+EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
+{
+  return this.algorithmType_ = algorithmType;
+};
+
+/**
+ * Set the key locator.
+ * @param {KeyLocator} keyLocator The key locator. If not specified, set to the
+ * default KeyLocator().
+ */
+EncryptedContent.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_ = typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator();
+};
+
+/**
+ * Set the encrypted payload.
+ * @param {Blob} payload The payload. If not specified, set to the default Blob()
+ * where isNull() is true.
+ */
+EncryptedContent.prototype.setPayload = function(payload)
+{
+  this.payload_ = typeof payload === 'object' && payload instanceof Blob ?
+    payload : new Blob(payload);
+};
+
+/**
+ * Encode this EncryptedContent for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+EncryptedContent.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeEncryptedContent(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this
+ * EncryptedContent.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+EncryptedContent.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+};
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>

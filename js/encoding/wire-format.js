@@ -195,6 +195,36 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Encode the EncryptedContent and return the encoding.  Your derived class
+ * should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  throw new Error
+    ("encodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an EncryptedContent and set the fields of the
+ * encryptedContent object. Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
+{
+  throw new Error
+    ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
  * Set the static default WireFormat used by default encoding and decoding
  * methods.
  * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
