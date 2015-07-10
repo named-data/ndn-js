@@ -105,6 +105,16 @@ exports.createVerify = function(alg)
     return pBitStringV + 2;
   };
 
+  var publicKeyPemToDer = function(publicKeyPem) {
+    // Remove the '-----XXX-----' from the beginning and the end of the public
+    // key and also remove any \n in the public key string.
+    var lines = publicKeyPem.split('\n');
+    var pub = "";
+    for (var i = 1; i < lines.length - 1; i++)
+      pub += lines[i];
+    return new Buffer(pub, 'base64');
+  }
+
   var readPublicDER = function(pub_der) {
     var hex = pub_der.toString('hex');
     var p = getSubjectPublicKeyPosFromHex(hex);
@@ -119,10 +129,7 @@ exports.createVerify = function(alg)
   };
 
   obj.verify = function(keypem, sig) {
-    var key = new ndn.Key();
-    key.fromPemString(keypem);
-
-    var rsa = readPublicDER(key.publicToDER());
+    var rsa = readPublicDER(publicKeyPemToDer(keypem));
     var signer = new KJUR.crypto.Signature({alg: "SHA256withRSA", prov: "cryptojs/jsrsa"});
     signer.initVerifyByPublicKey(rsa);
     for (var i = 0; i < this.arr.length; i++)
