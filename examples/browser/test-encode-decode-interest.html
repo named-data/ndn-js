@@ -21,13 +21,13 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Encode/Decode Interest</title>
+    <title>NDN Encode/Decode Interest</title>
 
-	<script type="text/javascript" src="../../build/ndn.js"></script>
+    <script type="text/javascript" src="../../build/ndn.js"></script>
 
-	<script type="text/javascript">
-		function encode() {
-			var interest = new Interest( new Name(document.getElementById('interest').value ) );
+    <script type="text/javascript">
+        function encode() {
+            var interest = new Interest( new Name(document.getElementById('interest').value ) );
 
             interest.setMinSuffixComponents(2);
             interest.setMaxSuffixComponents(4);
@@ -44,30 +44,30 @@
             interest.getExclude().appendComponent(Name.fromEscapedString("abc"));
             interest.getExclude().appendAny();
 
-			var output = EncodingUtils.encodeToHexInterest(interest);
+            var output = EncodingUtils.encodeToHexInterest(interest);
 
-			document.getElementById('result').innerHTML = output;
+            document.getElementById('result').innerHTML = output;
 
-		}
+        }
 
-		function decode() {
-			var input = document.getElementById('result').innerHTML;
+        function decode() {
+            var input = document.getElementById('result').innerHTML;
 
-			var interest = EncodingUtils.decodeHexInterest(input);
+            var interest = EncodingUtils.decodeHexInterest(input);
 
-			if (LOG>3)console.log('INTEREST DECODED');
-			if (LOG>3)console.log(interest);
+            if (LOG>3)console.log('INTEREST DECODED');
+            if (LOG>3)console.log(interest);
 
-			///////////////////////////////////////
+            ///////////////////////////////////////
 
-			var output ="";
+            var output ="";
 
-			if (interest.getName() != null)
-				output += "Name: " + interest.getName().toUri() + "<br/>";
-			if (interest.getMinSuffixComponents() != null )
-				output += "MinSuffixComponents : " + interest.getMinSuffixComponents() + "<br/>";
-			if (interest.getMaxSuffixComponents() != null )
-				output += "MaxSuffixComponents : " + interest.getMaxSuffixComponents() + "<br/>";
+            if (interest.getName() != null)
+                output += "Name: " + interest.getName().toUri() + "<br/>";
+            if (interest.getMinSuffixComponents() != null )
+                output += "MinSuffixComponents : " + interest.getMinSuffixComponents() + "<br/>";
+            if (interest.getMaxSuffixComponents() != null )
+                output += "MaxSuffixComponents : " + interest.getMaxSuffixComponents() + "<br/>";
 
             output += "KeyLocator: ";
             if (interest.getKeyLocator().getType() >= 0) {
@@ -83,37 +83,37 @@
             output += "<br/>";
 
             if (interest.getChildSelector() != null )
-				output += "ChildSelector: " + interest.getChildSelector() + "<br/>";
-			output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
-			if (interest.getInterestLifetimeMilliseconds() != null )
-				output += "InterestLifetime (milliseconds): " + interest.getInterestLifetimeMilliseconds() + "<br/>";
-			if (interest.getNonce().size() > 0)
-				output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
-			if (interest.getExclude() != null )
-				output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
+                output += "ChildSelector: " + interest.getChildSelector() + "<br/>";
+            output += "MustBeFresh: " + interest.getMustBeFresh() + "<br/>";
+            if (interest.getInterestLifetimeMilliseconds() != null )
+                output += "InterestLifetime (milliseconds): " + interest.getInterestLifetimeMilliseconds() + "<br/>";
+            if (interest.getNonce().size() > 0)
+                output += "Nonce: " + interest.getNonce().toHex() + "<br/>";
+            if (interest.getExclude() != null )
+                output += "Exclude: " + interest.getExclude().toUri() + "<br/>";
 
-			document.getElementById('result').innerHTML = output;
-		}
+            document.getElementById('result').innerHTML = output;
+        }
 
-	</script>
+    </script>
 
 </head>
 <body >
-	<form>
+    <form>
 
-		Please Enter an Interest:<br />
+        Please Enter an Interest:<br />
 
-		<input id="interest" type="text" name="INTEREST" value="/ndn/abc" />
+        <input id="interest" type="text" name="INTEREST" value="/ndn/abc" />
 
-	</form>
-	<button onclick="encode()">Encode</button>
-	<button onclick="decode()">Decode</button>
+    </form>
+    <button onclick="encode()">Encode</button>
+    <button onclick="decode()">Decode</button>
 
-			<p id="result"></p>
+            <p id="result"></p>
 
 
 
-		<!--  p id="result">01d2f2fafdc12e4d2e532e6c6f63616c686f737400fabdc12e4d2e53525600faa563636e6400fa9d4b4559000002d28e310000</p-->
+        <!--  p id="result">01d2f2fafdc12e4d2e532e6c6f63616c686f737400fabdc12e4d2e53525600faa563636e6400fa9d4b4559000002d28e310000</p-->
 
 </body>
 </html>

@@ -21,20 +21,20 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>Test SHA-256</title>
+    <title>Test SHA-256</title>
 
-	<script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
-	<script type="text/javascript">
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/sha256.js"></script>
+    <script type="text/javascript">
     // Save a pointer to the downloaded reference CryptoJS, then set it null so ndn.js can define it again.
     var referenceCryptoJS = CryptoJS;
     CryptoJS = null;
-	</script>
+    </script>
 
   <script type="text/javascript" src="../../build/ndn.js"></script>
 
-	<script type="text/javascript">
-		function hash(){
-			var input = document.getElementById('contentname').value;
+    <script type="text/javascript">
+    function hash(){
+      var input = document.getElementById('contentname').value;
 
       var sha256 = ndn.createHash('sha256')
       var data = DataUtils.toNumbersFromString(input);
@@ -44,22 +44,22 @@
       for (var i = 0; i < nCalls; ++i)
          sha256.update(data.slice(i * chunkSize, chunkSize));
       sha256.update(data.slice(i * nCalls, data.length));
-			var output  = "from bytes-- " + DataUtils.toHex(sha256.digest()) + "<br/>";
+      var output  = "from bytes-- " + DataUtils.toHex(sha256.digest()) + "<br/>";
 
-			output += "reference---- " + referenceCryptoJS.SHA256(input);
+      output += "reference---- " + referenceCryptoJS.SHA256(input);
 
-			document.getElementById('result').innerHTML = output;
-		}
-	</script>
+      document.getElementById('result').innerHTML = output;
+    }
+    </script>
 
 </head>
 <body >
-	<form>
-		Please Enter Text to Hash:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" /> <br />
-	</form>
-	<button onclick="hash()">Hash</button>
+    <form>
+        Please Enter Text to Hash:<br /><input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" /> <br />
+    </form>
+    <button onclick="hash()">Hash</button>
 
-		<p id="result"></p>
+        <p id="result"></p>
 
 </body>
 </html>

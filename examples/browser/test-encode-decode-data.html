@@ -21,11 +21,11 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>NDN Encode/Decode Data Packet</title>
+    <title>NDN Encode/Decode Data Packet</title>
 
-	<script type="text/javascript" src="../../build/ndn.js"></script>
+    <script type="text/javascript" src="../../build/ndn.js"></script>
 
-	<script type="text/javascript">
+    <script type="text/javascript">
 
 DEFAULT_RSA_PUBLIC_KEY_DER = new Buffer([
     0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -128,7 +128,7 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 ]);
 
         var keyChain;
-		function encode(){
+        function encode(){
             var identityStorage = new MemoryIdentityStorage();
             var privateKeyStorage = new MemoryPrivateKeyStorage();
             keyChain = new KeyChain
@@ -143,16 +143,16 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
             privateKeyStorage.setKeyPairForKeyName
               (keyName, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
 
-			var contentname = new Name( document.getElementById('contentname').value );
+            var contentname = new Name( document.getElementById('contentname').value );
 
-			var content = document.getElementById('content').value;
+            var content = document.getElementById('content').value;
 
-			var data = new Data(contentname);
+            var data = new Data(contentname);
             data.getMetaInfo().setFreshnessPeriod(5000);
             data.getMetaInfo().setFinalBlockId(new Name("/%00%09").get(0));
             data.setContent(content);
 
-			keyChain.sign(data, certificateName, function(signeddata){
+            keyChain.sign(data, certificateName, function(signeddata){
 
               var output = EncodingUtils.encodeToHexData(signeddata);
 
@@ -162,17 +162,17 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
 
 
 
-		}
+        }
 
-		function decode(){
-			var input = document.getElementById('result').innerHTML;
+        function decode(){
+            var input = document.getElementById('result').innerHTML;
 
-			input = input.toUpperCase();
+            input = input.toUpperCase();
 
-			var data = EncodingUtils.decodeHexData(input);
+            var data = EncodingUtils.decodeHexData(input);
 
-			if(LOG>3)console.log('DATA PACKET DECODED');
-			if(LOG>3)console.log(data);
+            if(LOG>3)console.log('DATA PACKET DECODED');
+            if(LOG>3)console.log(data);
 
             var output = EncodingUtils.dataToHtml(data);
             // Verify with the same KeyChain used to sign.  Set the document
@@ -187,28 +187,28 @@ DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
                  output+= "<br/>SIGNATURE INVALID<br/>";
                  document.getElementById('result').innerHTML = output;
                });
-		}
+        }
 
-	</script>
+    </script>
 
 </head>
 <body >
-	<form>
+    <form>
 
-		Please Enter a Content Name:<br />
+        Please Enter a Content Name:<br />
 
-		<input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" />
+        <input id="contentname" type="text" name="CONTENTNAME" value="/ndn/abc" />
 
-		<br />Please Enter the Content:<br />
+        <br />Please Enter the Content:<br />
 
-		<textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea>
+        <textarea id="content" cols="40" rows="5" name="CONTENT" value="SUCCESS"  >SUCCESS!</textarea>
 
-	</form>
-	<button onclick="encode()">Encode</button>
-	<button onclick="decode()">Decode</button>
+    </form>
+    <button onclick="encode()">Encode</button>
+    <button onclick="decode()">Decode</button>
 
 
-	<p id="result"></p>
+    <p id="result"></p>
 
 
 </body>
