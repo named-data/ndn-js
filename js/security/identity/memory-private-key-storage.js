@@ -193,10 +193,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
       //so we have to convert to pkcs8 and import it.
       //assigning it to privateKey.subtleKey means we only have to do this once per session,
       //giving us a small, but not insignificant, performance boost.
-      var key = new Key();
-      key.fromPemString(null, privateKey.privateKey);
-
-      var privateDER = key.privateToDER();
+      var privateDER = DataUtils.privateKeyPemToDer(privateKey.privateKey);
       var pkcs8 = MemoryPrivateKeyStorage.encodePkcs8PrivateKey
         (privateDER, new OID(MemoryPrivateKeyStorage.RSA_ENCRYPTION_OID),
          new DerNode.DerNull()).buf();
