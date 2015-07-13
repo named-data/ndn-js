@@ -454,6 +454,8 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
   // Encode backwards.
   encoder.writeBlobTlv
     (Tlv.EncryptedContent_EncryptedPayload, encryptedContent.getPayload().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.EncryptedContent_InitialVector, encryptedContent.getInitialVector().buf());
   // Assume the algorithmType value is the same as the TLV type.
   encoder.writeNonNegativeIntegerTlv
     (Tlv.EncryptedContent_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
@@ -484,6 +486,9 @@ Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
   encryptedContent.setAlgorithmType
     (decoder.readNonNegativeIntegerTlv(Tlv.EncryptedContent_EncryptionAlgorithm));
+  encryptedContent.setInitialVector
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.EncryptedContent_InitialVector, endOffset), true));
   encryptedContent.setPayload
     (new Blob(decoder.readBlobTlv(Tlv.EncryptedContent_EncryptedPayload), true));
 

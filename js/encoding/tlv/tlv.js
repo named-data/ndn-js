@@ -97,6 +97,7 @@ Tlv.LocalControlHeader_NoCache = 96;
 Tlv.EncryptedContent_EncryptedContent = 130;
 Tlv.EncryptedContent_EncryptionAlgorithm = 131;
 Tlv.EncryptedContent_EncryptedPayload = 132;
+Tlv.EncryptedContent_InitialVector = 133;
 
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
