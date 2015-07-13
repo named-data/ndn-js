@@ -34,11 +34,13 @@ var EncryptedContent = function EncryptedContent(value)
     // Make a deep copy.
     this.algorithmType_ = value.algorithmType_;
     this.keyLocator_ = new KeyLocator(value.keyLocator_);
+    this.initialVector_ = value.initialVector_;
     this.payload_ = value.payload_;
   }
   else {
     this.algorithmType_ = null;
     this.keyLocator_ = new KeyLocator();
+    this.initialVector_ = new Blob();
     this.payload_ = new Blob();
   }
 };
@@ -61,6 +63,15 @@ EncryptedContent.prototype.getAlgorithmType = function()
 EncryptedContent.prototype.getKeyLocator = function()
 {
   return this.keyLocator_;
+};
+
+/**
+ * Get the initial vector.
+ * @returns {Blob} The initial vector. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getInitialVector = function()
+{
+  return this.initialVector_;
 };
 
 /**
@@ -96,6 +107,21 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
   this.keyLocator_ = typeof keyLocator === 'object' &&
                        keyLocator instanceof KeyLocator ?
     new KeyLocator(keyLocator) : new KeyLocator();
+  return this;
+};
+
+/**
+ * Set the initial vector.
+ * @param {Blob} initialVector The initial vector. If not specified, set to the
+ * default Blob() where isNull() is true.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setInitialVector = function(initialVector)
+{
+  this.initialVector_ =
+      typeof initialVector === 'object' && initialVector instanceof Blob ?
+    initialVector : new Blob(initialVector);
   return this;
 };
 
