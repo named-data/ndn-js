@@ -85,3 +85,27 @@ EcdsaKeyParams.prototype.getKeySize = function()
 EcdsaKeyParams.getDefaultSize = function() { return 256; };
 
 EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
+
+var AesKeyParams = function AesKeyParams(size)
+{
+  // Call the base constructor.
+  KeyParams.call(this, AesKeyParams.getType());
+
+  if (size == null)
+    size = AesKeyParams.getDefaultSize();
+  this.size = size;
+};
+
+AesKeyParams.prototype = new KeyParams();
+AesKeyParams.prototype.name = "AesKeyParams";
+
+exports.AesKeyParams = AesKeyParams;
+
+AesKeyParams.prototype.getKeySize = function()
+{
+  return this.size;
+};
+
+AesKeyParams.getDefaultSize = function() { return 64; };
+
+AesKeyParams.getType = function() { return KeyType.AES; };
