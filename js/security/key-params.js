@@ -18,7 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var KeyType = require('./security-types').KeyType;
+var KeyType = require('./security-types.js').KeyType;
 
 /**
  * KeyParams is a base class for key parameters. Its subclasses are used to
