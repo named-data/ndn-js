@@ -20,7 +20,7 @@
 
 var KeyLocator = require('../key-locator.js').KeyLocator;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var Blob = require('../util/blob').Blob;
+var Blob = require('../util/blob.js').Blob;
 
 /**
  * An EncryptedContent holds an encryption type, a payload and other fields
