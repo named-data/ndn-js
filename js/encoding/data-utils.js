@@ -317,3 +317,21 @@ DataUtils.shuffle = function(array)
     array[j] = temp;
   }
 };
+
+/**
+ * Decode the base64-encoded private key PEM and return the binary DER.
+ * @param {string} The PEM-encoded private key.
+ * @returns {Buffer} The binary DER.
+ *
+ */
+DataUtils.privateKeyPemToDer = function(privateKeyPem)
+{
+  // Remove the '-----XXX-----' from the beginning and the end of the key and
+  // also remove any \n in the key string.
+  var lines = privateKeyPem.split('\n');
+  var privateKey = "";
+  for (var i = 1; i < lines.length - 1; i++)
+    privateKey += lines[i];
+
+  return new Buffer(privateKey, 'base64');
+};

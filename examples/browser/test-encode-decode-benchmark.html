@@ -22,12 +22,12 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>Test Encode/Decode Benchmark</title>
+    <title>Test Encode/Decode Benchmark</title>
 
-	<script type="text/javascript" src="../../build/ndn.js"></script>
-	<script type="text/javascript" src="test-encode-decode-benchmark.js"></script>
+    <script type="text/javascript" src="../../build/ndn.js"></script>
+    <script type="text/javascript" src="test-encode-decode-benchmark.js"></script>
 
-	<script type="text/javascript">
+    <script type="text/javascript">
     /**
      * Call benchmarkEncodeDataSeconds and benchmarkDecodeDataSeconds with appropriate nInterations.  Print the
      * results to console.log.
@@ -63,7 +63,7 @@
         }, nIterationsBeforeYield);
     }
 
-	function test(){
+    function test(){
       document.getElementById('result').innerHTML = "Results:<br/>";
 
       benchmarkEncodeDecodeData(false, false, function() {
@@ -77,13 +77,13 @@
       });
     }
 
-	</script>
+    </script>
 
 </head>
 <body >
-	<button onclick="test()">Test</button>
+    <button onclick="test()">Test</button>
 
-	<p id="result"></p>
+    <p id="result"></p>
 
 </body>
 </html>

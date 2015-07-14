@@ -21,48 +21,48 @@
 <html xmlns = "http://www.w3.org/1999/xhtml">
 
 <head>
-	<title>Test WebSocket Support</title>
+    <title>Test WebSocket Support</title>
 
-	<script type="text/javascript">
+    <script type="text/javascript">
 
-		function test(){
-			var output = "";
+        function test(){
+            var output = "";
 
-			if ('WebSocket' in window) {
-				output += "This browser support WebSocket.";
-			} else {
-				output += "No WebSocket support.";
-			}
+            if ('WebSocket' in window) {
+                output += "This browser support WebSocket.";
+            } else {
+                output += "No WebSocket support.";
+            }
 
-			document.getElementById('result').innerHTML += output;
+            document.getElementById('result').innerHTML += output;
 
-			console.log("starting websocket...");
-			if ("WebSocket" in window) {
-			    var ws = new WebSocket("ws://localhost:9696");
+            console.log("starting websocket...");
+            if ("WebSocket" in window) {
+                var ws = new WebSocket("ws://localhost:9696");
 
-			    ws.onopen = function() {
-			        console.log("WebSockets connection opened");
-			        ws.send("Hello Server (from client).");
-			    }
-			    ws.onmessage = function(e) {
-			        console.log("Got from server: " + e.data);
-			    }
-			    ws.onclose = function() {
-			        console.log("WebSockets connection closed");
-			    }
-			} else {
-			    alert("No WebSockets support");
-			}
+                ws.onopen = function() {
+                    console.log("WebSockets connection opened");
+                    ws.send("Hello Server (from client).");
+                }
+                ws.onmessage = function(e) {
+                    console.log("Got from server: " + e.data);
+                }
+                ws.onclose = function() {
+                    console.log("WebSockets connection closed");
+                }
+            } else {
+                alert("No WebSockets support");
+            }
 
-		}
+        }
 
-	</script>
+    </script>
 
 </head>
 <body >
-	<button onclick="test()">Test Now!</button>
+    <button onclick="test()">Test Now!</button>
 
-	<p id="result">Result here: </p>
+    <p id="result">Result here: </p>
 
 </body>
 </html>

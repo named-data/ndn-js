@@ -24,7 +24,7 @@
 
 /**
  * The KeyType integer is used by the Sqlite key storage, so don't change them.
- * Make these the same as ndn-cpp in case the Sqlite file is shared.
+ * Make these the same as ndn-cxx in case the storage file is shared.
  * @constructor
  */
 var KeyType = function KeyType()
@@ -34,12 +34,8 @@ var KeyType = function KeyType()
 exports.KeyType = KeyType;
 
 KeyType.RSA = 0;
-KeyType.AES = 1;
-// KeyType.DSA
-// KeyType.DES
-// KeyType.RC4
-// KeyType.RC2
-KeyType.ECDSA = 2;
+KeyType.ECDSA = 1;
+KeyType.AES = 128;
 
 var KeyClass = function KeyClass()
 {
