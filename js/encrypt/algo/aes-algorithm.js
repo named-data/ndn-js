@@ -53,8 +53,8 @@ AesAlgorithm.generateKey = function(params)
 };
 
 /**
- * Derive a new encrypt key from the given key value.
- * @param {Blob} keyBits The key value for the new encrypt key.
+ * Derive a new encrypt key from the given decrypt key value.
+ * @param {Blob} keyBits The key value of the decrypt key.
  * @return {EncryptKey} The new encrypt key.
  */
 AesAlgorithm.deriveEncryptKey = function(keyBits)
