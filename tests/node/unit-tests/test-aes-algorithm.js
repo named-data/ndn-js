@@ -28,7 +28,7 @@ var EncryptParams = require('../../..').EncryptParams;
 var DecryptKey = require('../../..').DecryptKey;
 var EncryptKey = require('../../..').EncryptKey;
 var EncryptionMode = require('../../..').EncryptionMode;
-var Aes = require('../../..').Aes;
+var AesAlgorithm = require('../../..').AesAlgorithm;
 
 var KEY = new Buffer([
   0xdd, 0x60, 0x77, 0xec, 0xa9, 0x6b, 0x23, 0x1b,
@@ -65,29 +65,29 @@ describe('TestAesAlgorithm', function() {
       (EncryptionMode.ECB_AES, PaddingScheme.PKCS7, 16);
 
     var decryptKey = new DecryptKey(new Blob(KEY, false));
-    var encryptKey = Aes.deriveEncryptKey(decryptKey.getKeyBits());
+    var encryptKey = AesAlgorithm.deriveEncryptKey(decryptKey.getKeyBits());
 
     var plainBlob = new Blob(PLAINTEXT, false);
 
-    var cipherBlob = Aes.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
+    var cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     assert.ok(cipherBlob.equals(new Blob(CIPHERTEXT_ECB, false)));
 
-    var receivedBlob = Aes.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
+    var receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
 
     encryptParams.setEncryptionMode(EncryptionMode.CBC_AES);
 
-    cipherBlob = Aes.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
-    receivedBlob = Aes.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
+    cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
+    receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
 
     var initialVector = new Blob(INITIAL_VECTOR, false);
     encryptParams.setInitialVector(initialVector);
 
-    cipherBlob = Aes.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
+    cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     assert.ok(cipherBlob.equals(new Blob(CIPHERTEXT_CBC_IV, false)));
 
-    receivedBlob = Aes.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
+    receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
   });
 });

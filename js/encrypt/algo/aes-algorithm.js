@@ -18,6 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// (This is ported from ndn::gep::algo::Aes, and named AesAlgorithm because
+// "Aes" is very short and not all the Common Client Libraries have namespaces.)
+
 var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DecryptKey = require('../decrypt-key.js').DecryptKey;
@@ -25,22 +28,22 @@ var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptionMode = require('./encrypt-params.js').EncryptionMode;
 
 /**
- * The Aes class provides static methods to manipulate keys, encrypt and decrypt
- * using the AES symmetric key cipher.
+ * The AesAlgorithm class provides static methods to manipulate keys, encrypt
+ * and decrypt using the AES symmetric key cipher.
  * @note This class is an experimental feature. The API may change.
  */
-var Aes = function Aes()
+var AesAlgorithm = function AesAlgorithm()
 {
 };
 
-exports.Aes = Aes;
+exports.AesAlgorithm = AesAlgorithm;
 
 /**
  * Generate a new random decrypt key for AES based on the given params.
  * @param {AesKeyParams} params The key params with the key size (in bits).
  * @return {DecryptKey} The new decrypt key.
  */
-Aes.generateKey = function(params)
+AesAlgorithm.generateKey = function(params)
 {
   // Convert the key bit size to bytes.
   var key = Crypto.randomBytes(params.getKeySize() / 8);
@@ -54,7 +57,7 @@ Aes.generateKey = function(params)
  * @param {Blob} keyBits The key value for the new encrypt key.
  * @return {EncryptKey} The new encrypt key.
  */
-Aes.deriveEncryptKey = function(keyBits)
+AesAlgorithm.deriveEncryptKey = function(keyBits)
 {
   return new EncryptKey(keyBits);
 };
@@ -68,7 +71,7 @@ Aes.deriveEncryptKey = function(keyBits)
  * params.getInitialVector().
  * @return {Blob} The decrypted data.
  */
-Aes.decrypt = function(keyBits, encryptedData, params)
+AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
 {
   if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
     // ECB ignores the initial vector.
@@ -97,7 +100,7 @@ Aes.decrypt = function(keyBits, encryptedData, params)
  * params.getInitialVector().
  * @return {Blob} The encrypted data.
  */
-Aes.encrypt = function(keyBits, plainData, params)
+AesAlgorithm.encrypt = function(keyBits, plainData, params)
 {
   if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
     // ECB ignores the initial vector.
@@ -117,4 +120,4 @@ Aes.encrypt = function(keyBits, plainData, params)
     throw new Error("unsupported encryption mode");
 };
 
-Aes.BLOCK_SIZE = 16;
+AesAlgorithm.BLOCK_SIZE = 16;

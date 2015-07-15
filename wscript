@@ -165,7 +165,7 @@ def build (bld):
                  "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
                  "js/encoding/encoding-utils.js",
-                 "js/encrypt/encrypt/algo/aes.js",
+                 "js/encrypt/encrypt/algo/aes-algorithm.js",
                  "js/encrypt/encrypt/algo/encrypt-params.js",
                  "js/encrypt/decrypt-key.js",
                  "js/encrypt/encrypt-key.js",
