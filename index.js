@@ -55,6 +55,12 @@ exports.ConfigPolicyManager = require('./js/security/policy/config-policy-manage
 exports.NoVerifyPolicyManager = require('./js/security/policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 exports.SelfVerifyPolicyManager = require('./js/security/policy/self-verify-policy-manager.js').SelfVerifyPolicyManager;
 exports.KeyChain = require('./js/security/key-chain.js').KeyChain;
+exports.Aes = require('./js/encrypt/algo/aes.js').Aes;
+exports.EncryptionMode = require('./js/encrypt/algo/encrypt-params.js').EncryptionMode;
+exports.PaddingScheme = require('./js/encrypt/algo/encrypt-params.js').PaddingScheme;
+exports.EncryptParams = require('./js/encrypt/algo/encrypt-params.js').EncryptParams;
+exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
+exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
