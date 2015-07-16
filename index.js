@@ -59,6 +59,7 @@ exports.AesAlgorithm = require('./js/encrypt/algo/aes-algorithm.js').AesAlgorith
 exports.EncryptionMode = require('./js/encrypt/algo/encrypt-params.js').EncryptionMode;
 exports.PaddingScheme = require('./js/encrypt/algo/encrypt-params.js').PaddingScheme;
 exports.EncryptParams = require('./js/encrypt/algo/encrypt-params.js').EncryptParams;
+exports.RsaAlgorithm = require('./js/encrypt/algo/rsa-algorithm.js').RsaAlgorithm;
 exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
 exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;

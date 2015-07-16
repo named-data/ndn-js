@@ -167,6 +167,7 @@ def build (bld):
                  "js/encoding/encoding-utils.js",
                  "js/encrypt/encrypt/algo/aes-algorithm.js",
                  "js/encrypt/encrypt/algo/encrypt-params.js",
+                 "js/encrypt/encrypt/algo/rsa-algorithm.js",
                  "js/encrypt/decrypt-key.js",
                  "js/encrypt/encrypt-key.js",
                  "js/encrypt/encrypted-content.js",
