@@ -227,6 +227,15 @@ DerNode.prototype.toVal = function()
 };
 
 /**
+ * Get a copy of the payload bytes.
+ * @return {Blob} A copy of the payload.
+ */
+DerNode.prototype.getPayload = function()
+{
+  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+};
+
+/**
  * If this object is a DerNode.DerSequence, get the children of this node.
  * Otherwise, throw an exception. (DerSequence overrides to implement this
  * method.)
@@ -419,8 +428,7 @@ DerNode.DerByteString.prototype.name = "DerByteString";
  */
 DerNode.DerByteString.prototype.toVal = function()
 {
-  // Make a copy since this.payload can change.
-  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+  return this.getPayload();
 };
 
 /**
