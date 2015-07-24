@@ -10761,6 +10761,15 @@ DerNode.prototype.toVal = function()
 };
 
 /**
+ * Get a copy of the payload bytes.
+ * @return {Blob} A copy of the payload.
+ */
+DerNode.prototype.getPayload = function()
+{
+  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+};
+
+/**
  * If this object is a DerNode.DerSequence, get the children of this node.
  * Otherwise, throw an exception. (DerSequence overrides to implement this
  * method.)
@@ -10953,8 +10962,7 @@ DerNode.DerByteString.prototype.name = "DerByteString";
  */
 DerNode.DerByteString.prototype.toVal = function()
 {
-  // Make a copy since this.payload can change.
-  return new Blob(this.payload.slice(0, this.payloadPosition), true);
+  return this.getPayload();
 };
 
 /**
@@ -15770,7 +15778,7 @@ exports.UnrecognizedDigestAlgorithmException = UnrecognizedDigestAlgorithmExcept
 
 /**
  * The KeyType integer is used by the Sqlite key storage, so don't change them.
- * Make these the same as ndn-cpp in case the Sqlite file is shared.
+ * Make these the same as ndn-cxx in case the storage file is shared.
  * @constructor
  */
 var KeyType = function KeyType()
@@ -15780,12 +15788,8 @@ var KeyType = function KeyType()
 exports.KeyType = KeyType;
 
 KeyType.RSA = 0;
-KeyType.AES = 1;
-// KeyType.DSA
-// KeyType.DES
-// KeyType.RC4
-// KeyType.RC2
-KeyType.ECDSA = 2;
+KeyType.ECDSA = 1;
+KeyType.AES = 128;
 
 var KeyClass = function KeyClass()
 {
@@ -16999,13 +17003,16 @@ var MemoryIdentityStorage = function MemoryIdentityStorage()
   // Call the base constructor.
   IdentityStorage.call(this);
 
-  // A list of name URI.
-  this.identityStore = [];
-  // The default identity in identityStore_, or "" if not defined.
+  // The map key is the identityName.toUri(). The value is the object
+  //   {defaultKey // Name
+  //   }.
+  this.identityStore = {};
+  // The default identity in identityStore, or "" if not defined.
   this.defaultIdentity = "";
   // The key is the keyName.toUri(). The value is the object
   //  {keyType, // number from KeyType
   //   keyDer   // Blob
+  //   defaultCertificate // Name
   //  }.
   this.keyStore = {};
   // The key is the key is the certificateName.toUri(). The value is the
@@ -17024,7 +17031,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
  */
 MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 {
-  return this.identityStore.indexOf(identityName.toUri()) !== -1;
+  return this.identityStore[identityName.toUri()] !== undefined;
 };
 
 /**
@@ -17034,10 +17041,10 @@ MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 MemoryIdentityStorage.prototype.addIdentity = function(identityName)
 {
   var identityUri = identityName.toUri();
-  if (this.identityStore.indexOf(identityUri) >= 0)
+  if (this.identityStore[identityUri] !== undefined)
     return;
 
-  this.identityStore.push(identityUri);
+  this.identityStore[identityUri] = { defaultKey: null };
 };
 
 /**
@@ -17078,7 +17085,7 @@ MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer
       ("A key with the same name already exists!"));
 
   this.keyStore[keyName.toUri()] =
-    { keyType: keyType, keyDer: new Blob(publicKeyDer) };
+    { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
 };
 
 /**
@@ -17206,7 +17213,15 @@ MemoryIdentityStorage.prototype.getDefaultIdentity = function()
 MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
   (identityName)
 {
-  throw new Error("MemoryIdentityStorage.getDefaultKeyNameForIdentity is not implemented");
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined) {
+    if (this.identityStore[identityUri].defaultKey != null)
+      return this.identityStore[identityUri].defaultKey;
+    else
+      throw new SecurityException(new Error("No default key set."));
+  }
+  else
+    throw new SecurityException(new Error("Identity not found."));
 };
 
 /**
@@ -17218,7 +17233,15 @@ MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
  */
 MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 {
-  throw new Error("MemoryIdentityStorage.getDefaultCertificateNameForKey is not implemented");
+  var keyUri = keyName.toUri();
+  if (this.keyStore[keyUri] !== undefined) {
+    if (this.keyStore[keyUri].defaultCertificate != null)
+      return this.keyStore[keyUri].defaultCertificate;
+    else
+      throw new SecurityException(new Error("No default certificate set."));
+  }
+  else
+    throw new SecurityException(new Error("Key not found."));
 };
 
 /**
@@ -17228,8 +17251,9 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyNa
  */
 MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 {
-  if (this.doesIdentityExist(identityName))
-    this.defaultIdentity = identityName.toUri();
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined)
+    this.defaultIdentity = identityUri;
   else
     // The identity doesn't exist, so clear the default.
     this.defaultIdentity = "";
@@ -17244,7 +17268,17 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  throw new Error("MemoryIdentityStorage.setDefaultKeyNameForIdentity is not implemented");
+  var keyId = keyName.get(-1).toEscapedString();
+  var identityName = keyName.getPrefix(-1);
+
+  if (identityNameCheck != null && identityNameCheck.size() > 0 &&
+      !identityNameCheck.equals(identityName))
+    throw new SecurityException(new Error
+      ("The specified identity name does not match the key name"));
+
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined)
+    this.identityStore[identityUri].defaultKey = new Name(keyName);
 };
 
 /**
@@ -17255,7 +17289,9 @@ MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
 MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
   (keyName, certificateName)
 {
-  throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
+  var keyUri = keyName.toUri();
+  if (this.keyStore[keyUri] !== undefined)
+    this.keyStore[keyUri].defaultCertificate = new Name(certificateName);
 };
 
 /*****************************************
@@ -17440,13 +17476,20 @@ var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var KeyClass = require('../security-types.js').KeyClass;
+var KeyType = require('../security-types').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-
+// TODO: Handle keygen with crypto.subtle.
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
 
 /**
  * MemoryPrivateKeyStorage class extends PrivateKeyStorage to implement private
@@ -17517,6 +17560,46 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
 {
   this.setPublicKeyForKeyName(keyName, keyType, publicKeyDer);
   this.setPrivateKeyForKeyName(keyName, keyType, privateKeyDer);
+};
+
+/**
+ * Generate a pair of asymmetric keys.
+ * @param {Name} keyName The name of the key pair.
+ * @param {KeyParams} params The parameters of the key.
+ */
+MemoryPrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
+{
+  if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
+    throw new SecurityException(new Error("Public key already exists"));
+  if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
+    throw new SecurityException(new Error("Public key already exists"));
+
+  var publicKeyDer;
+  var privateKeyPem;
+
+  if (params.getKeyType() === KeyType.RSA) {
+    // TODO: Handle keygen with crypto.subtle.
+    if (!rsaKeygen)
+      throw new SecurityException(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+    var keyPair = rsaKeygen.generate(params.getKeySize());
+
+    // Get the public key DER from the PEM string.
+    var publicKeyBase64 = keyPair.public_key.toString().replace
+      ("-----BEGIN PUBLIC KEY-----", "").replace
+      ("-----END PUBLIC KEY-----", "");
+    publicKeyDer = new Buffer(publicKeyBase64, 'base64');
+
+    privateKeyPem = keyPair.private_key.toString();
+  }
+  else
+    throw new SecurityException(new Error
+      ("Only RSA key generation currently supported"));
+
+  this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+  this.privateKeyStore[keyName.toUri()] =
+    { keyType: params.getKeyType(), privateKey: privateKeyPem };
 };
 
 /**
