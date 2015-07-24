@@ -22,13 +22,20 @@ var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var KeyClass = require('../security-types.js').KeyClass;
+var KeyType = require('../security-types').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-
+// TODO: Handle keygen with crypto.subtle.
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
 
 /**
  * MemoryPrivateKeyStorage class extends PrivateKeyStorage to implement private
@@ -99,6 +106,46 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
 {
   this.setPublicKeyForKeyName(keyName, keyType, publicKeyDer);
   this.setPrivateKeyForKeyName(keyName, keyType, privateKeyDer);
+};
+
+/**
+ * Generate a pair of asymmetric keys.
+ * @param {Name} keyName The name of the key pair.
+ * @param {KeyParams} params The parameters of the key.
+ */
+MemoryPrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
+{
+  if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
+    throw new SecurityException(new Error("Public key already exists"));
+  if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
+    throw new SecurityException(new Error("Public key already exists"));
+
+  var publicKeyDer;
+  var privateKeyPem;
+
+  if (params.getKeyType() === KeyType.RSA) {
+    // TODO: Handle keygen with crypto.subtle.
+    if (!rsaKeygen)
+      throw new SecurityException(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+    var keyPair = rsaKeygen.generate(params.getKeySize());
+
+    // Get the public key DER from the PEM string.
+    var publicKeyBase64 = keyPair.public_key.toString().replace
+      ("-----BEGIN PUBLIC KEY-----", "").replace
+      ("-----END PUBLIC KEY-----", "");
+    publicKeyDer = new Buffer(publicKeyBase64, 'base64');
+
+    privateKeyPem = keyPair.private_key.toString();
+  }
+  else
+    throw new SecurityException(new Error
+      ("Only RSA key generation currently supported"));
+
+  this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+  this.privateKeyStore[keyName.toUri()] =
+    { keyType: params.getKeyType(), privateKey: privateKeyPem };
 };
 
 /**
