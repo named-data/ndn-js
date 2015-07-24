@@ -21,6 +21,7 @@
 
 var fs = require('fs');
 var Name = require('../../name.js').Name;
+var Data = require('../../data.js').Data;
 var Interest = require('../../interest.js').Interest;
 var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
