@@ -175,8 +175,10 @@ SelfVerifyPolicyManager.prototype.verify = function
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
       (signatureInfo));
-    if (publicKeyDer.isNull())
+    if (publicKeyDer.isNull()) {
       onComplete(false);
+      return;
+    }
   }
 
   PolicyManager.verifySignature
