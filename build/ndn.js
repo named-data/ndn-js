@@ -11872,7 +11872,7 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
 /**
  * Check if this interest is timed out.
  * @param {number} nowMilliseconds The current time in milliseconds from
- *  Common.getNowMilliseconds.
+ * new Date().getTime().
  * @returns {boolean} True if this interest timed out, otherwise false.
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
@@ -17359,7 +17359,7 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 /**
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
- * @param {KeyParams} params (optional) The parameters of the key.
+ * @param {KeyParams} params The parameters of the key.
  */
 PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 {
@@ -18571,9 +18571,14 @@ PolicyManager.verifyUsesString = null;
 PolicyManager.verifySignature = function
   (signature, signedBlob, publicKeyDer, onComplete)
 {
-  if (signature instanceof Sha256WithRsaSignature)
+  if (signature instanceof Sha256WithRsaSignature) {
+    if (publicKeyDer.isNull()) {
+      onComplete(false);
+      return;
+    }
     PolicyManager.verifySha256WithRsaSignature
       (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
+  }
   else if (signature instanceof DigestSha256Signature)
     PolicyManager.verifyDigestSha256Signature
       (signature.getSignature(), signedBlob, onComplete);
@@ -18749,6 +18754,7 @@ CertificateCache.prototype.reset = function()
  */
 
 var fs = require('fs');
+var path = require('path');
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Interest = require('../../interest.js').Interest;
@@ -18760,6 +18766,7 @@ var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser
 var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher;
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
 var ValidationRequest = require('./validation-request.js').ValidationRequest;
+var SecurityException = require('../security-exception.js').SecurityException;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -19447,7 +19454,11 @@ ConfigPolicyManager.TrustAnchorRefreshManager =
 {
   this.certificateCache = new CertificateCache();
   // Maps the directory name to certificate names so they can be deleted when
-  // necessary
+  // necessary. The key is the directory name string. The value is the object
+  //  {certificateNames,  // array of string
+  //   nextRefresh,       // number
+  //   refreshPeriod      // number
+  //  }.
   this.refreshDirectories = {};
 };
 
@@ -19468,12 +19479,42 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificate = functio
   return this.certificateCache.getCertificate(certificateName);
 };
 
-// refershPeriod in milliseconds.
+// refreshPeriod in milliseconds.
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.addDirectory = function
   (directoryName, refreshPeriod)
 {
-  throw new Error
-    ("ConfigPolicyManager.TrustAnchorRefreshManager.addDirectory is not implemented");
+  var allFiles;
+  try {
+    allFiles = fs.readdirSync(directoryName);
+  }
+  catch (e) {
+    throw new SecurityException(new Error
+      ("Cannot list files in directory " + directoryName));
+  }
+
+  var certificateNames = [];
+  for (var i = 0; i < allFiles.length; ++i) {
+    var cert;
+    try {
+      var fullPath = path.join(directoryName, allFiles[i]);
+      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
+        (fullPath);
+    }
+    catch (e) {
+      // Allow files that are not certificates.
+      continue;
+    }
+
+    // Cut off the timestamp so it matches the KeyLocator Name format.
+    var certUri = cert.getName().getPrefix(-1).toUri();
+    this.certificateCache.insertCertificate(cert);
+    certificateNames.push(certUri);
+  }
+
+  this.refreshDirectories[directoryName] = {
+    certificates: certificateNames,
+    nextRefresh: new Date().getTime() + refreshPeriod,
+    refreshPeriod: refreshPeriod };
 };
 
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = function()
@@ -19778,11 +19819,13 @@ SelfVerifyPolicyManager.prototype.verify = function
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
     publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
       (signatureInfo));
-    if (publicKeyDer.isNull())
+    if (publicKeyDer.isNull()) {
       onComplete(false);
+      return;
+    }
   }
 
-  return PolicyManager.verifySignature
+  PolicyManager.verifySignature
     (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };
 
