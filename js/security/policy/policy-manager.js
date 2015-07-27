@@ -139,17 +139,16 @@ PolicyManager.verifySignature = function
   (signature, signedBlob, publicKeyDer, onComplete)
 {
   if (signature instanceof Sha256WithRsaSignature) {
-    if (publicKeyDer.isNull())
-      return false;
+    if (publicKeyDer.isNull()) {
+      onComplete(false);
+      return;
+    }
     PolicyManager.verifySha256WithRsaSignature
       (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   }
-  else if (signature instanceof DigestSha256Signature) {
-    if (publicKeyDer.isNull())
-      return false;
+  else if (signature instanceof DigestSha256Signature)
     PolicyManager.verifyDigestSha256Signature
       (signature.getSignature(), signedBlob, onComplete);
-  }
   else
     // We don't expect this to happen.
     throw new SecurityException(new Error
