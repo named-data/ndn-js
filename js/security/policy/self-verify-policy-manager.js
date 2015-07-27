@@ -179,7 +179,7 @@ SelfVerifyPolicyManager.prototype.verify = function
       onComplete(false);
   }
 
-  return PolicyManager.verifySignature
+  PolicyManager.verifySignature
     (signatureInfo, signedBlob, publicKeyDer, onComplete);
 };
 
