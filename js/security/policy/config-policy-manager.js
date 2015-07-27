@@ -20,6 +20,7 @@
  */
 
 var fs = require('fs');
+var path = require('path');
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Interest = require('../../interest.js').Interest;
@@ -31,6 +32,7 @@ var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser
 var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher;
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
 var ValidationRequest = require('./validation-request.js').ValidationRequest;
+var SecurityException = require('../security-exception.js').SecurityException;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -718,7 +720,11 @@ ConfigPolicyManager.TrustAnchorRefreshManager =
 {
   this.certificateCache = new CertificateCache();
   // Maps the directory name to certificate names so they can be deleted when
-  // necessary
+  // necessary. The key is the directory name string. The value is the object
+  //  {certificateNames,  // array of string
+  //   nextRefresh,       // number
+  //   refreshPeriod      // number
+  //  }.
   this.refreshDirectories = {};
 };
 
@@ -739,12 +745,42 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.getCertificate = functio
   return this.certificateCache.getCertificate(certificateName);
 };
 
-// refershPeriod in milliseconds.
+// refreshPeriod in milliseconds.
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.addDirectory = function
   (directoryName, refreshPeriod)
 {
-  throw new Error
-    ("ConfigPolicyManager.TrustAnchorRefreshManager.addDirectory is not implemented");
+  var allFiles;
+  try {
+    allFiles = fs.readdirSync(directoryName);
+  }
+  catch (e) {
+    throw new SecurityException(new Error
+      ("Cannot list files in directory " + directoryName));
+  }
+
+  var certificateNames = [];
+  for (var i = 0; i < allFiles.length; ++i) {
+    var cert;
+    try {
+      var fullPath = path.join(directoryName, allFiles[i]);
+      cert = ConfigPolicyManager.TrustAnchorRefreshManager.loadIdentityCertificateFromFile
+        (fullPath);
+    }
+    catch (e) {
+      // Allow files that are not certificates.
+      continue;
+    }
+
+    // Cut off the timestamp so it matches the KeyLocator Name format.
+    var certUri = cert.getName().getPrefix(-1).toUri();
+    this.certificateCache.insertCertificate(cert);
+    certificateNames.push(certUri);
+  }
+
+  this.refreshDirectories[directoryName] = {
+    certificates: certificateNames,
+    nextRefresh: new Date().getTime() + refreshPeriod,
+    refreshPeriod: refreshPeriod };
 };
 
 ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = function()
