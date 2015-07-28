@@ -198,6 +198,11 @@ describe ("TestPolicyMatching", function() {
   });
   
   afterEach(function() {
+    try {
+      fs.unlinkSync('policy_config/certs/testData.cert');
+    }
+    catch (e) {}
+    
     face_.close();
   });
   
@@ -364,9 +369,6 @@ describe ("TestPolicyMatching", function() {
       successCount = 0;
       vr = policyManager_.checkVerificationPolicy(data, 0,
         function() { ++successCount; }, function() { ++failureCount; });
-      
-      // Delete testData.cert to make sure the correctness of reusing this test file.
-      fs.unlinkSync('policy_config/certs/testData.cert');
 
       assert.equal
         (vr, null, "ConfigPolicyManager did not refresh certificate store");
