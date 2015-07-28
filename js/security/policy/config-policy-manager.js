@@ -286,7 +286,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     if (verified) {
       onVerified(dataOrInterest);
       if (dataOrInterest instanceof Interest)
-        this.updateTimestampForKey(keyName, timestamp);
+        thisManager.updateTimestampForKey(keyName, timestamp);
     }
     else
       onVerifyFailed(dataOrInterest);
