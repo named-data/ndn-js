@@ -33,6 +33,7 @@ var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
 var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var SecurityException = require('../security-exception.js').SecurityException;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
