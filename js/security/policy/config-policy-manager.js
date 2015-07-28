@@ -251,9 +251,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   var foundCert = this.refreshManager.getCertificate(signatureName);
   if (foundCert == null)
     foundCert = this.certificateCache.getCertificate(signatureName);
+  var thisManager = this;
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
-    var thisManager = this;
     var onCertificateDownloadComplete = function(data) {
       var certificate = new IdentityCertificate(data);
       thisManager.certificateCache.insertCertificate(certificate);
