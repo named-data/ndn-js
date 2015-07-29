@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-07-28)
+Interim changes since NDN-JS v0.8.1 (2015-07-29)
 ------------------------------------------------
 
 Changes
@@ -6,6 +6,7 @@ Changes
   certificate name, instead of the deprecated createIdentity which returns the
   key name.
 * Integration tests: Added test-policy-manager. Thanks to Jiayi Meng!
+* Firefox add-on: Increased the number of outstanding interests to help streaming video.
 
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
