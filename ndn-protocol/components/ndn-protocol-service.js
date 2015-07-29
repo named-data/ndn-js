@@ -253,7 +253,7 @@ ContentContext.prototype.onData = function(interest, data)
           if (data.getName().size() >= iNdnfsFileComponent + 2) {
             // For Ndnfs file request with mime-type 'application/octet-stream', we spawn download task by default.
             // This tries to override the default action for 'application/octet-stream', (and 'application/pdf').
-            if (contentTypeEtc.contentType == "application/octet-stream" || contentTypeEtc.contentType == "application/pdf") {
+            if (contentTypeEtc.contentType == "application/octet-stream" || contentTypeEtc.contentType == "application/pdf" || contentTypeEtc.contentType == "application/x-netcdf") {
               var nsIFilePicker = Components.interfaces.nsIFilePicker;
               var fp = Components.classes["@mozilla.org/filepicker;1"]
                              .createInstance(nsIFilePicker);

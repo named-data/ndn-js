@@ -22,6 +22,7 @@ var Data = require('../../data.js').Data;
 var Name = require('../../name.js').Name;
 var SecurityException = require('../../security//security-exception.js').SecurityException;
 var Certificate = require('./certificate.js').Certificate;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 
 var IdentityCertificate = function IdentityCertificate(data)
 {

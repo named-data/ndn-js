@@ -71,7 +71,7 @@ FilePrivateKeyStorage.prototype.doesKeyExist = function (keyName, keyClass)
 /**
  * Generate a pair of asymmetric keys; only currently supports RSA
  * @param {Name} keyName The name of the key pair.
- * @param {KeyParams} params (optional) The parameters of the key.
+ * @param {KeyParams} params The parameters of the key.
  */
 FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
 {

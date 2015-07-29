@@ -391,7 +391,7 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
 /**
  * Check if this interest is timed out.
  * @param {number} nowMilliseconds The current time in milliseconds from
- *  Common.getNowMilliseconds.
+ * new Date().getTime().
  * @returns {boolean} True if this interest timed out, otherwise false.
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)

@@ -39,13 +39,16 @@ var MemoryIdentityStorage = function MemoryIdentityStorage()
   // Call the base constructor.
   IdentityStorage.call(this);
 
-  // A list of name URI.
-  this.identityStore = [];
-  // The default identity in identityStore_, or "" if not defined.
+  // The map key is the identityName.toUri(). The value is the object
+  //   {defaultKey // Name
+  //   }.
+  this.identityStore = {};
+  // The default identity in identityStore, or "" if not defined.
   this.defaultIdentity = "";
   // The key is the keyName.toUri(). The value is the object
   //  {keyType, // number from KeyType
   //   keyDer   // Blob
+  //   defaultCertificate // Name
   //  }.
   this.keyStore = {};
   // The key is the key is the certificateName.toUri(). The value is the
@@ -64,7 +67,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
  */
 MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 {
-  return this.identityStore.indexOf(identityName.toUri()) !== -1;
+  return this.identityStore[identityName.toUri()] !== undefined;
 };
 
 /**
@@ -74,10 +77,10 @@ MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
 MemoryIdentityStorage.prototype.addIdentity = function(identityName)
 {
   var identityUri = identityName.toUri();
-  if (this.identityStore.indexOf(identityUri) >= 0)
+  if (this.identityStore[identityUri] !== undefined)
     return;
 
-  this.identityStore.push(identityUri);
+  this.identityStore[identityUri] = { defaultKey: null };
 };
 
 /**
@@ -118,7 +121,7 @@ MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer
       ("A key with the same name already exists!"));
 
   this.keyStore[keyName.toUri()] =
-    { keyType: keyType, keyDer: new Blob(publicKeyDer) };
+    { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
 };
 
 /**
@@ -246,7 +249,15 @@ MemoryIdentityStorage.prototype.getDefaultIdentity = function()
 MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
   (identityName)
 {
-  throw new Error("MemoryIdentityStorage.getDefaultKeyNameForIdentity is not implemented");
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined) {
+    if (this.identityStore[identityUri].defaultKey != null)
+      return this.identityStore[identityUri].defaultKey;
+    else
+      throw new SecurityException(new Error("No default key set."));
+  }
+  else
+    throw new SecurityException(new Error("Identity not found."));
 };
 
 /**
@@ -258,7 +269,15 @@ MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
  */
 MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 {
-  throw new Error("MemoryIdentityStorage.getDefaultCertificateNameForKey is not implemented");
+  var keyUri = keyName.toUri();
+  if (this.keyStore[keyUri] !== undefined) {
+    if (this.keyStore[keyUri].defaultCertificate != null)
+      return this.keyStore[keyUri].defaultCertificate;
+    else
+      throw new SecurityException(new Error("No default certificate set."));
+  }
+  else
+    throw new SecurityException(new Error("Key not found."));
 };
 
 /**
@@ -268,8 +287,9 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyNa
  */
 MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 {
-  if (this.doesIdentityExist(identityName))
-    this.defaultIdentity = identityName.toUri();
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined)
+    this.defaultIdentity = identityUri;
   else
     // The identity doesn't exist, so clear the default.
     this.defaultIdentity = "";
@@ -284,7 +304,16 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  throw new Error("MemoryIdentityStorage.setDefaultKeyNameForIdentity is not implemented");
+  var identityName = keyName.getPrefix(-1);
+
+  if (identityNameCheck != null && identityNameCheck.size() > 0 &&
+      !identityNameCheck.equals(identityName))
+    throw new SecurityException(new Error
+      ("The specified identity name does not match the key name"));
+
+  var identityUri = identityName.toUri();
+  if (this.identityStore[identityUri] !== undefined)
+    this.identityStore[identityUri].defaultKey = new Name(keyName);
 };
 
 /**
@@ -295,7 +324,9 @@ MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
 MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
   (keyName, certificateName)
 {
-  throw new Error("MemoryIdentityStorage.setDefaultCertificateNameForKey is not implemented");
+  var keyUri = keyName.toUri();
+  if (this.keyStore[keyUri] !== undefined)
+    this.keyStore[keyUri].defaultCertificate = new Name(certificateName);
 };
 
 /*****************************************

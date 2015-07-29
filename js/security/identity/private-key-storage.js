@@ -32,7 +32,7 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 /**
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
- * @param {KeyParams} params (optional) The parameters of the key.
+ * @param {KeyParams} params The parameters of the key.
  */
 PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 {

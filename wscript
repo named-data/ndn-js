@@ -150,6 +150,8 @@ def build (bld):
                  "js/security/identity/identity-manager.js",
                  "js/security/policy/validation-request.js",
                  "js/security/policy/policy-manager.js",
+                 "js/security/policy/certificate-cache.js",
+                 "js/security/policy/config-policy-manager.js",
                  "js/security/policy/no-verify-policy-manager.js",
                  "js/security/policy/self-verify-policy-manager.js",
                  "js/security/key-chain.js",
