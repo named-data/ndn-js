@@ -304,7 +304,6 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
   if (identityNameCheck != null && identityNameCheck.size() > 0 &&
