@@ -96,6 +96,8 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     }
     else
       throw new Error("unsupported encryption mode");
+
+    return null;
   }
   else {
     var result;
@@ -164,6 +166,8 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     }
     else
       throw new Error("unsupported encryption mode");
+
+    return null;
   }
   else {
     var result;
