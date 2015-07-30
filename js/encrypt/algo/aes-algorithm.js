@@ -26,6 +26,7 @@ var Blob = require('../../util/blob.js').Blob;
 var DecryptKey = require('../decrypt-key.js').DecryptKey;
 var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptionMode = require('./encrypt-params.js').EncryptionMode;
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 
 /**
  * The AesAlgorithm class provides static methods to manipulate keys, encrypt
@@ -77,30 +78,51 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
  */
 AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
-  var result;
-  if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
-    // ECB ignores the initial vector.
-    var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
-    var result = new Blob
-      (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
-       false);
+  if (UseSubtleCrypto() && onComplete &&
+      // Crypto.subtle doesn't implement ECB.
+      params.getEncryptionMode() != EncryptionMode.ECB_AES) {
+    if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      crypto.subtle.importKey
+        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
+         ["encrypt", "decrypt"])
+      .then(function(key) {
+        return crypto.subtle.decrypt
+          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
+           key, encryptedData.buf());
+      })
+      .then(function(result) {
+        onComplete(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      throw new Error("unsupported encryption mode");
   }
-  else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
-    var cipher = Crypto.createDecipheriv
-      ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-    var result = new Blob
-      (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
-       false);
-  }
-  else
-    throw new Error("unsupported encryption mode");
+  else {
+    var result;
+    if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
+      // ECB ignores the initial vector.
+      var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
+      var result = new Blob
+        (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+         false);
+    }
+    else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      var cipher = Crypto.createDecipheriv
+        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+      var result = new Blob
+        (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+         false);
+    }
+    else
+      throw new Error("unsupported encryption mode");
 
-  if (onComplete) {
-    onComplete(result);
-    return null;
+    if (onComplete) {
+      onComplete(result);
+      return null;
+    }
+    else
+      return result;
   }
-  else
-    return result;
 };
 
 /**
@@ -124,30 +146,51 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
       throw new Error("incorrect initial vector size");
   }
 
-  var result;
-  if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
-    // ECB ignores the initial vector.
-    var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
-    result = new Blob
-      (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
-       false);
+  if (UseSubtleCrypto() && onComplete &&
+      // Crypto.subtle doesn't implement ECB.
+      params.getEncryptionMode() != EncryptionMode.ECB_AES) {
+    if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      crypto.subtle.importKey
+        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
+         ["encrypt", "decrypt"])
+      .then(function(key) {
+        return crypto.subtle.encrypt
+          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
+           key, plainData.buf());
+      })
+      .then(function(result) {
+        onComplete(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      throw new Error("unsupported encryption mode");
   }
-  else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
-    var cipher = Crypto.createCipheriv
-      ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-    result = new Blob
-      (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
-       false);
-  }
-  else
-    throw new Error("unsupported encryption mode");
+  else {
+    var result;
+    if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
+      // ECB ignores the initial vector.
+      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
+      result = new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false);
+    }
+    else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      var cipher = Crypto.createCipheriv
+        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+      result = new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false);
+    }
+    else
+      throw new Error("unsupported encryption mode");
 
-  if (onComplete) {
-    onComplete(result);
-    return null;
+    if (onComplete) {
+      onComplete(result);
+      return null;
+    }
+    else
+      return result;
   }
-  else
-    return result;
 };
 
 AesAlgorithm.BLOCK_SIZE = 16;
