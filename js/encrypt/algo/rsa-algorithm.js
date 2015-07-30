@@ -29,6 +29,7 @@ var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var PaddingScheme = require('./encrypt-params.js').PaddingScheme;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 
 /**
  * The RsaAlgorithm class provides static methods to manipulate keys, encrypt
@@ -100,35 +101,57 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
-  // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
-  var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
+  if (UseSubtleCrypto() && onComplete &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      params.getPaddingScheme() != PaddingScheme.PKCS1v15) {
+    if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA) {
+      crypto.subtle.importKey
+        ("pkcs8", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["decrypt"])
+      .then(function(privateKey) {
+        return crypto.subtle.decrypt
+          ({ name: "RSA-OAEP" }, privateKey, encryptedData.buf());
+      })
+      .then(function(result) {
+        onComplete(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      throw new Error("unsupported padding scheme");
 
-  // Encode the key DER as a PEM private key as needed by Crypto.
-  var keyBase64 = rsaPrivateKeyDer.buf().toString('base64');
-  var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END RSA PRIVATE KEY-----";
-
-  var padding;
-  if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
-    padding = constants.RSA_PKCS1_PADDING;
-  else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
-    padding = constants.RSA_PKCS1_OAEP_PADDING;
-  else
-    throw new Error("unsupported padding scheme");
-
-  // In Node.js, privateDecrypt requires version v0.12.
-  var result = new Blob
-    (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
-     false);
-
-  if (onComplete) {
-    onComplete(result);
     return null;
   }
-  else
-    return result;
+  else {
+    // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
+    var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
+
+    // Encode the key DER as a PEM private key as needed by Crypto.
+    var keyBase64 = rsaPrivateKeyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+
+    var padding;
+    if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
+      padding = constants.RSA_PKCS1_PADDING;
+    else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    else
+      throw new Error("unsupported padding scheme");
+
+    // In Node.js, privateDecrypt requires version v0.12.
+    var result = new Blob
+      (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
+       false);
+
+    if (onComplete) {
+      onComplete(result);
+      return null;
+    }
+    else
+      return result;
+  }
 };
 
 /**
@@ -146,32 +169,54 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
-  // Encode the key DER as a PEM public key as needed by Crypto.
-  var keyBase64 = keyBits.buf().toString('base64');
-  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END PUBLIC KEY-----";
+  if (UseSubtleCrypto() && onComplete &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      params.getPaddingScheme() != PaddingScheme.PKCS1v15) {
+    if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA) {
+      crypto.subtle.importKey
+        ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["encrypt"])
+      .then(function(publicKey) {
+        return crypto.subtle.encrypt
+          ({ name: "RSA-OAEP" }, publicKey, plainData.buf());
+      })
+      .then(function(result) {
+        onComplete(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      throw new Error("unsupported padding scheme");
 
-  var padding;
-  if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
-    padding = constants.RSA_PKCS1_PADDING;
-  else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
-    padding = constants.RSA_PKCS1_OAEP_PADDING;
-  else
-    throw new Error("unsupported padding scheme");
-
-  // In Node.js, publicEncrypt requires version v0.12.
-  var result = new Blob
-    (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
-     false);
-
-  if (onComplete) {
-    onComplete(result);
     return null;
   }
-  else
-    return result;
+  else {
+    // Encode the key DER as a PEM public key as needed by Crypto.
+    var keyBase64 = keyBits.buf().toString('base64');
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    var padding;
+    if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
+      padding = constants.RSA_PKCS1_PADDING;
+    else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    else
+      throw new Error("unsupported padding scheme");
+
+    // In Node.js, publicEncrypt requires version v0.12.
+    var result = new Blob
+      (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
+       false);
+
+    if (onComplete) {
+      onComplete(result);
+      return null;
+    }
+    else
+      return result;
+  }
 };
 
 /**
