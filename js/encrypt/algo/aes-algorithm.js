@@ -69,26 +69,38 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
  * @param params {EncryptParams} This decrypts according to
  * params.getEncryptionMode() and other params as needed such as
  * params.getInitialVector().
- * @return {Blob} The decrypted data.
+ * @param {function} onComplete (optional) This calls onComplete(plainData) with
+ * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
+ * return null and use onComplete as described above.
  */
-AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
+AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
+  var result;
   if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
     // ECB ignores the initial vector.
     var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
-    var result = Buffer.concat
-      ([cipher.update(encryptedData.buf()), cipher.final()]);
-    return new Blob(result, false);
+    var result = new Blob
+      (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+       false);
   }
   else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
     var cipher = Crypto.createDecipheriv
       ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-    var result = Buffer.concat
-      ([cipher.update(encryptedData.buf()), cipher.final()]);
-    return new Blob(result, false);
+    var result = new Blob
+      (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+       false);
   }
   else
     throw new Error("unsupported encryption mode");
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 /**
@@ -98,29 +110,44 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
  * @param params {EncryptParams} This encrypts according to
  * params.getEncryptionMode() and other params as needed such as
  * params.getInitialVector().
- * @return {Blob} The encrypted data.
+ * @param {function} onComplete (optional) This calls onComplete(encryptedData)
+ * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
+ * (Some crypto libraries only use a callback, so onComplete is required to use
+ * these.)
+ * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
+ * return null and use onComplete as described above.
  */
-AesAlgorithm.encrypt = function(keyBits, plainData, params)
+AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
+  if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
+      throw new Error("incorrect initial vector size");
+  }
+
+  var result;
   if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
     // ECB ignores the initial vector.
     var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
-    var result = Buffer.concat
-      ([cipher.update(plainData.buf()), cipher.final()]);
-    return new Blob(result, false);
+    result = new Blob
+      (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+       false);
   }
   else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
-    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
-      throw new Error("incorrect initial vector size");
-
     var cipher = Crypto.createCipheriv
       ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-    var result = Buffer.concat
-      ([cipher.update(plainData.buf()), cipher.final()]);
-    return new Blob(result, false);
+    result = new Blob
+      (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+       false);
   }
   else
     throw new Error("unsupported encryption mode");
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 AesAlgorithm.BLOCK_SIZE = 16;

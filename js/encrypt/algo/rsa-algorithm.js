@@ -42,7 +42,7 @@ var RsaAlgorithm = function RsaAlgorithm()
 exports.RsaAlgorithm = RsaAlgorithm;
 
 /**
- * Generate a new random decrypt key for AES based on the given params.
+ * Generate a new random decrypt key for RSA based on the given params.
  * @param {RsaKeyParams} params The key params with the key size (in bits).
  * @return {DecryptKey} The new decrypt key (PKCS8-encoded private key).
  */
@@ -92,9 +92,13 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
  * @param encryptedData {Blob} The data to decrypt.
  * @param params {EncryptParams} This decrypts according to
  * params.getPaddingScheme().
- * @return {Blob} The decrypted data.
+ * @param {function} onComplete (optional) This calls onComplete(plainData) with
+ * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
+ * return null and use onComplete as described above.
  */
-RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
+RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
   // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
   var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
@@ -115,9 +119,16 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
     throw new Error("unsupported padding scheme");
 
   // In Node.js, privateDecrypt requires version v0.12.
-  var result = Crypto.privateDecrypt
-    ({ key: keyPem, padding: padding }, encryptedData.buf());
-  return new Blob(result, false);
+  var result = new Blob
+    (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
+     false);
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 /**
@@ -126,9 +137,14 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
  * @param plainData {Blob} The data to encrypt.
  * @param params {EncryptParams} This encrypts according to
  * params.getPaddingScheme().
- * @return {Blob} The encrypted data.
+ * @param {function} onComplete (optional) This calls onComplete(encryptedData)
+ * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
+ * (Some crypto libraries only use a callback, so onComplete is required to use
+ * these.)
+ * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
+ * return null and use onComplete as described above.
  */
-RsaAlgorithm.encrypt = function(keyBits, plainData, params)
+RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
   // Encode the key DER as a PEM public key as needed by Crypto.
   var keyBase64 = keyBits.buf().toString('base64');
@@ -146,9 +162,16 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params)
     throw new Error("unsupported padding scheme");
 
   // In Node.js, publicEncrypt requires version v0.12.
-  var result = Crypto.publicEncrypt
-    ({ key: keyPem, padding: padding }, plainData.buf());
-  return new Blob(result, false);
+  var result = new Blob
+    (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
+     false);
+
+  if (onComplete) {
+    onComplete(result);
+    return null;
+  }
+  else
+    return result;
 };
 
 /**
