@@ -110,6 +110,9 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params)
     return new Blob(result, false);
   }
   else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
+      throw new Error("incorrect initial vector size");
+
     var cipher = Crypto.createCipheriv
       ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
     var result = Buffer.concat
