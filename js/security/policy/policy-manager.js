@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -178,7 +179,7 @@ PolicyManager.verifySha256WithRsaSignature = function
     });
   } else {
     if (PolicyManager.verifyUsesString === null) {
-      var hashResult = require("crypto").createHash('sha256').digest();
+      var hashResult = Crypto.createHash('sha256').digest();
       // If the hash result is a string, we assume that this is a version of
       //   crypto where verify also uses a string signature.
       PolicyManager.verifyUsesString = (typeof hashResult === 'string');
@@ -191,7 +192,7 @@ PolicyManager.verifySha256WithRsaSignature = function
       keyPem += (keyBase64.substr(i, 64) + "\n");
     keyPem += "-----END PUBLIC KEY-----";
 
-    var verifier = require('crypto').createVerify('RSA-SHA256');
+    var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
     var signatureBytes = PolicyManager.verifyUsesString ?
       DataUtils.toString(signature.buf()) : signature.buf();
@@ -212,7 +213,7 @@ PolicyManager.verifyDigestSha256Signature = function
   (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 

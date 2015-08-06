@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Blob = require('../../util/blob.js').Blob;
@@ -483,7 +484,7 @@ IdentityManager.prototype.signWithSha256 = function(data, wireFormat)
   var encoding = data.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   data.getSignature().setSignature(new Blob(hash.digest(), false));
 
@@ -515,7 +516,7 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
   var encoding = interest.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   signature.setSignature(new Blob(hash.digest(), false));
 

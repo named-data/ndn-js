@@ -29,7 +29,8 @@ var OID = require('../../encoding/oid').OID;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var util = require('util');
-var crypto = require('crypto');
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
 var rsaKeygen = null;
@@ -182,7 +183,7 @@ FilePrivateKeyStorage.prototype.sign = function
 
   // Sign.
   if (keyType[0] == KeyType.RSA) {
-    var rsa = require("crypto").createSign('RSA-SHA256');
+    var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
 
     var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));
@@ -314,7 +315,7 @@ FilePrivateKeyStorage.getUserHomePath = function() {
  * @param {KeyClass} keyClass
  */
 FilePrivateKeyStorage.prototype.transformName = function(keyName, keyClass) {
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   if (!hash) {
     throw new SecurityException(new Error('Could not instantiate SHA256 hash algorith.'));
   }

@@ -406,7 +406,7 @@ ContentContext.prototype.onData = function(interest, data)
     }
 
     // Request new segments.
-    var toRequest = this.segmentStore.requestSegmentNumbers(2);
+    var toRequest = this.segmentStore.requestSegmentNumbers(8);
     for (var i = 0; i < toRequest.length; ++i) {
         if (this.finalSegmentNumber != null && toRequest[i] > this.finalSegmentNumber)
             continue;
