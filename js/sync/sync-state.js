@@ -1,6 +1,6 @@
-var ProtoBuf = require("protobufjs");
-
-var Sync = ProtoBuf.newBuilder().import({
+// Just define the SyncStateProto object. We do a Protobuf import dynamically
+// when we need it so that protobufjs is optional.
+var SyncStateProto = {
     "package": "Sync",
     "messages": [
         {
@@ -93,7 +93,6 @@ var Sync = ProtoBuf.newBuilder().import({
     "enums": [],
     "imports": [],
     "options": {}
-}).build("Sync");
+};
 
-exports.SyncStateMsg = Sync.SyncStateMsg;
-exports.SyncState = Sync.SyncState;
+exports.SyncStateProto = SyncStateProto;

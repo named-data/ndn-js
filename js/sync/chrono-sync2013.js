@@ -24,6 +24,7 @@ var Data = require('../data.js').Data;
 var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
+var SyncStateProto = require('./sync-state').SyncStateProto;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
@@ -101,8 +102,9 @@ var ChronoSync2013 = function ChronoSync2013
 
   interest.setInterestLifetimeMilliseconds(1000);
 
-  this.SyncStateMsg = require('./sync-state.js').SyncStateMsg;
-  this.SyncState = require('./sync-state.js').SyncState;
+  var Sync = require("protobufjs").newBuilder().import(SyncStateProto).build("Sync");
+  this.SyncStateMsg = Sync.SyncStateMsg;
+  this.SyncState = Sync.SyncState;
 
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
