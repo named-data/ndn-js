@@ -102,10 +102,9 @@ DigestTree.Node.prototype.recomputeDigest = function()
 // Do the work of string and then sequence number compare
 DigestTree.Node.Compare = function(node1, node2)
 {
-  var nameComparison = strcmp(node1.dataPrefix, node2.dataPrefix);
-  if (nameComparison != 0)
-    return (nameComparison < 0);
-  return (node1.seqno_session < node2.seqno_session);
+  if (node1.dataPrefix != node2.dataPrefix)
+    return node1.dataPrefix < node2.dataPrefix;
+  return node1.seqno_session < node2.seqno_session;
 };
 
 /**
@@ -199,9 +198,4 @@ DigestTree.prototype.recomputeRoot = function()
     md.update(new Buffer(this.digestnode[i].digest, 'hex'));
   }
   this.root = md.digest('hex');
-};
-
-function strcmp(component1, component2)
-{
-  return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
 };
