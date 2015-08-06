@@ -102,7 +102,15 @@ var ChronoSync2013 = function ChronoSync2013
 
   interest.setInterestLifetimeMilliseconds(1000);
 
-  var Sync = require("protobufjs").newBuilder().import(SyncStateProto).build("Sync");
+  var Sync;
+  try {
+    // Using protobuf.min.js in the browser.
+    Sync = dcodeIO.ProtoBuf.newBuilder().import(SyncStateProto).build("Sync");
+  }
+  catch (ex) {
+    // Using protobufjs in node.
+    Sync = require("protobufjs").newBuilder().import(SyncStateProto).build("Sync");
+  }
   this.SyncStateMsg = Sync.SyncStateMsg;
   this.SyncState = Sync.SyncState;
 
@@ -467,7 +475,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
       }
       if (this.digest_tree.find(temp[i].name, temp[i].seqno.session) != -1) {
         var n = data_name.indexOf(temp[i].name);
-        if (n = -1) {
+        if (n == -1) {
           data_name.push(temp[i].name);
           data_seq.push(temp[i].seqno.seq);
           data_ses.push(temp[i].seqno.session);
@@ -523,7 +531,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
-/*
+/**
  * This is called by onInterest after a timeout to check if a recovery is needed.
  * This method has an interest argument because we use it as the onTimeout for
  * Face.expressInterest.
