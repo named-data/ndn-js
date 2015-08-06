@@ -13794,6 +13794,8 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
@@ -13861,7 +13863,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   this.publicKeyDer = pub_der;
 
-  var hash = require("crypto").createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(this.publicKeyDer);
   this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
 
@@ -13898,7 +13900,7 @@ Key.prototype.fromPemString = function(pub, pri)
     this.publicKeyDer = new Buffer(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
 
-    var hash = require("crypto").createHash('sha256');
+    var hash = Crypto.createHash('sha256');
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
@@ -15915,7 +15917,8 @@ EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -15996,7 +15999,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
-    var hash = crypto.createHash('sha256');
+    var hash = Crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
     return new Blob(hash.digest(), false);
   }
@@ -17269,7 +17272,6 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
   if (identityNameCheck != null && identityNameCheck.size() > 0 &&
@@ -17473,6 +17475,8 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
@@ -17717,7 +17721,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
 
     return null;
   } else {
-    var rsa = require("crypto").createSign('RSA-SHA256');
+    var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
 
     var signature = new Buffer
@@ -17772,7 +17776,8 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Blob = require('../../util/blob.js').Blob;
@@ -18237,7 +18242,7 @@ IdentityManager.prototype.signWithSha256 = function(data, wireFormat)
   var encoding = data.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   data.getSignature().setSignature(new Blob(hash.digest(), false));
 
@@ -18269,7 +18274,7 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
   var encoding = interest.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   signature.setSignature(new Blob(hash.digest(), false));
 
@@ -18451,7 +18456,8 @@ exports.ValidationRequest = ValidationRequest;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -18611,7 +18617,7 @@ PolicyManager.verifySha256WithRsaSignature = function
     });
   } else {
     if (PolicyManager.verifyUsesString === null) {
-      var hashResult = require("crypto").createHash('sha256').digest();
+      var hashResult = Crypto.createHash('sha256').digest();
       // If the hash result is a string, we assume that this is a version of
       //   crypto where verify also uses a string signature.
       PolicyManager.verifyUsesString = (typeof hashResult === 'string');
@@ -18624,7 +18630,7 @@ PolicyManager.verifySha256WithRsaSignature = function
       keyPem += (keyBase64.substr(i, 64) + "\n");
     keyPem += "-----END PUBLIC KEY-----";
 
-    var verifier = require('crypto').createVerify('RSA-SHA256');
+    var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
     var signatureBytes = PolicyManager.verifyUsesString ?
       DataUtils.toString(signature.buf()) : signature.buf();
@@ -18645,7 +18651,7 @@ PolicyManager.verifyDigestSha256Signature = function
   (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 
@@ -18767,6 +18773,7 @@ var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
 var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var SecurityException = require('../security-exception.js').SecurityException;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -18984,9 +18991,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   var foundCert = this.refreshManager.getCertificate(signatureName);
   if (foundCert == null)
     foundCert = this.certificateCache.getCertificate(signatureName);
+  var thisManager = this;
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
-    var thisManager = this;
     var onCertificateDownloadComplete = function(data) {
       var certificate = new IdentityCertificate(data);
       thisManager.certificateCache.insertCertificate(certificate);
@@ -19019,7 +19026,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     if (verified) {
       onVerified(dataOrInterest);
       if (dataOrInterest instanceof Interest)
-        this.updateTimestampForKey(keyName, timestamp);
+        thisManager.updateTimestampForKey(keyName, timestamp);
     }
     else
       onVerifyFailed(dataOrInterest);
@@ -23689,6 +23696,8 @@ function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var Blob = require('./blob.js').Blob;
@@ -23738,7 +23747,7 @@ CommandInterestGenerator.prototype.generate = function
 
   // The random value is a TLV nonNegativeInteger too, but we know it is 8
   // bytes, so we don't need to call the nonNegativeInteger encoder.
-  interest.getName().append(new Blob(require("crypto").randomBytes(8), false));
+  interest.getName().append(new Blob(Crypto.randomBytes(8), false));
 
   keyChain.sign(interest, certificateName, wireFormat);
 
@@ -23770,7 +23779,8 @@ CommandInterestGenerator.prototype.generate = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require('crypto');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -24716,7 +24726,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
-  var hash = require("crypto").createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(upcallInfo.data.getContent().buf());
   this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);

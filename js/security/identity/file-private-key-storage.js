@@ -183,7 +183,7 @@ FilePrivateKeyStorage.prototype.sign = function
 
   // Sign.
   if (keyType[0] == KeyType.RSA) {
-    var rsa = require("crypto").createSign('RSA-SHA256');
+    var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
 
     var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));

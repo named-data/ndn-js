@@ -18,6 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
@@ -262,7 +264,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
 
     return null;
   } else {
-    var rsa = require("crypto").createSign('RSA-SHA256');
+    var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
 
     var signature = new Buffer

@@ -17,6 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var Blob = require('./blob.js').Blob;
@@ -66,7 +68,7 @@ CommandInterestGenerator.prototype.generate = function
 
   // The random value is a TLV nonNegativeInteger too, but we know it is 8
   // bytes, so we don't need to call the nonNegativeInteger encoder.
-  interest.getName().append(new Blob(require("crypto").randomBytes(8), false));
+  interest.getName().append(new Blob(Crypto.randomBytes(8), false));
 
   keyChain.sign(interest, certificateName, wireFormat);
 

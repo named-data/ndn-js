@@ -179,7 +179,7 @@ PolicyManager.verifySha256WithRsaSignature = function
     });
   } else {
     if (PolicyManager.verifyUsesString === null) {
-      var hashResult = require("crypto").createHash('sha256').digest();
+      var hashResult = Crypto.createHash('sha256').digest();
       // If the hash result is a string, we assume that this is a version of
       //   crypto where verify also uses a string signature.
       PolicyManager.verifyUsesString = (typeof hashResult === 'string');
@@ -192,7 +192,7 @@ PolicyManager.verifySha256WithRsaSignature = function
       keyPem += (keyBase64.substr(i, 64) + "\n");
     keyPem += "-----END PUBLIC KEY-----";
 
-    var verifier = require('crypto').createVerify('RSA-SHA256');
+    var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
     var signatureBytes = PolicyManager.verifyUsesString ?
       DataUtils.toString(signature.buf()) : signature.buf();
