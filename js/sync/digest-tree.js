@@ -201,18 +201,6 @@ DigestTree.prototype.recomputeRoot = function()
   this.root = md.digest('hex');
 };
 
-function fromHexChar(c)
-{
-  if (c >= '0' && c <= '9')
-    return (c - '0');
-  else if (c >= 'a' && c <= 'f')
-    return (c - 'a' + 10);
-  else if (c >= 'A' && c<= 'F')
-    return (c - 'A' + 10);
-  else
-    return -1;
-};
-
 function strcmp(component1, component2)
 {
   return ( ( str1 == str2 ) ? 0 : ( ( str1 > str2 ) ? 1 : -1 ) );
