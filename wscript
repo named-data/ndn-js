@@ -169,6 +169,7 @@ def build (bld):
                  "js/encoding/encoding-utils.js",
                  "js/sync/chrono-sync2013.js",
                  "js/sync/digest-tree.js",
+                 "js/sync/sync-state.js",
                  "js/util/command-interest-generator.js",
                  "js/face.js"]
 

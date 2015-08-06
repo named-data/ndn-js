@@ -23696,6 +23696,7 @@ var Data = require('../data.js').Data;
 var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
+var SyncStateProto = require('./sync-state').SyncStateProto;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
@@ -23773,8 +23774,17 @@ var ChronoSync2013 = function ChronoSync2013
 
   interest.setInterestLifetimeMilliseconds(1000);
 
-  this.SyncStateMsg = require('./sync-state.js').SyncStateMsg;
-  this.SyncState = require('./sync-state.js').SyncState;
+  var Sync;
+  try {
+    // Using protobuf.min.js in the browser.
+    Sync = dcodeIO.ProtoBuf.newBuilder().import(SyncStateProto).build("Sync");
+  }
+  catch (ex) {
+    // Using protobufjs in node.
+    Sync = require("protobufjs").newBuilder().import(SyncStateProto).build("Sync");
+  }
+  this.SyncStateMsg = Sync.SyncStateMsg;
+  this.SyncState = Sync.SyncState;
 
   this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
 };
@@ -24137,7 +24147,7 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
       }
       if (this.digest_tree.find(temp[i].name, temp[i].seqno.session) != -1) {
         var n = data_name.indexOf(temp[i].name);
-        if (n = -1) {
+        if (n == -1) {
           data_name.push(temp[i].name);
           data_seq.push(temp[i].seqno.seq);
           data_ses.push(temp[i].seqno.session);
@@ -24193,7 +24203,7 @@ ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
   this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
-/*
+/**
  * This is called by onInterest after a timeout to check if a recovery is needed.
  * This method has an interest argument because we use it as the onTimeout for
  * Face.expressInterest.
@@ -24494,6 +24504,104 @@ DigestTree.prototype.recomputeRoot = function()
   }
   this.root = md.digest('hex');
 };
+// Just define the SyncStateProto object. We do a Protobuf import dynamically
+// when we need it so that protobufjs is optional.
+var SyncStateProto = {
+    "package": "Sync",
+    "messages": [
+        {
+            "name": "SyncState",
+            "fields": [
+                {
+                    "rule": "required",
+                    "type": "string",
+                    "name": "name",
+                    "id": 1,
+                    "options": {}
+                },
+                {
+                    "rule": "required",
+                    "type": "ActionType",
+                    "name": "type",
+                    "id": 2,
+                    "options": {}
+                },
+                {
+                    "rule": "optional",
+                    "type": "SeqNo",
+                    "name": "seqno",
+                    "id": 3,
+                    "options": {}
+                }
+            ],
+            "enums": [
+                {
+                    "name": "ActionType",
+                    "values": [
+                        {
+                            "name": "UPDATE",
+                            "id": 0
+                        },
+                        {
+                            "name": "DELETE",
+                            "id": 1
+                        },
+                        {
+                            "name": "OTHER",
+                            "id": 2
+                        }
+                    ],
+                    "options": {}
+                }
+            ],
+            "messages": [
+                {
+                    "name": "SeqNo",
+                    "fields": [
+                        {
+                            "rule": "required",
+                            "type": "uint32",
+                            "name": "seq",
+                            "id": 1,
+                            "options": {}
+                        },
+                        {
+                            "rule": "required",
+                            "type": "uint32",
+                            "name": "session",
+                            "id": 2,
+                            "options": {}
+                        }
+                    ],
+                    "enums": [],
+                    "messages": [],
+                    "options": {}
+                }
+            ],
+            "options": {}
+        },
+        {
+            "name": "SyncStateMsg",
+            "fields": [
+                {
+                    "rule": "repeated",
+                    "type": "SyncState",
+                    "name": "ss",
+                    "id": 1,
+                    "options": {}
+                }
+            ],
+            "enums": [],
+            "messages": [],
+            "options": {}
+        }
+    ],
+    "enums": [],
+    "imports": [],
+    "options": {}
+};
+
+exports.SyncStateProto = SyncStateProto;
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
