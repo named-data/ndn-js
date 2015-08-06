@@ -8930,10 +8930,6 @@ Tlv.LocalControlHeader_NextHopFaceId = 82;
 Tlv.LocalControlHeader_CachingPolicy = 83;
 Tlv.LocalControlHeader_NoCache = 96;
 
-Tlv.EncryptedContent_EncryptedContent = 130;
-Tlv.EncryptedContent_EncryptionAlgorithm = 131;
-Tlv.EncryptedContent_EncryptedPayload = 132;
-
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
@@ -9797,8 +9793,8 @@ ProtobufTlv.establishField = function()
       ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
     }
     catch (ex) {
-      // Using protobufjs in node or via browserify.
-      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
+      // Using protobufjs in node.
+      ProtobufTlv._Field = require("protobufjs").Reflect.Message.Field;
     }
   }
 }
@@ -9836,13 +9832,6 @@ ProtobufTlv.encode = function(message, descriptor)
 ProtobufTlv.decode = function(message, descriptor, input)
 {
   ProtobufTlv.establishField();
-
-  if (ProtobufTlv._Field === null) {
-    if (dcodeIO)
-      ProtobufTlv._Field = dcodeIO.ProtoBuf.Reflect.Message.Field;
-    else
-      ProtobufTlv._Field = require("protobufjs/dist/ProtoBuf.js").Reflect.Message.Field;
-  }
 
   // If input is a blob, get its buf().
   var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
@@ -10239,36 +10228,6 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
 WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
-};
-
-/**
- * Encode the EncryptedContent and return the encoding.  Your derived class
- * should override.
- * @param {EncryptedContent} encryptedContent The EncryptedContent object to
- * encode.
- * @returns {Blob} A Blob containing the encoding.
- * @throws Error This always throws an "unimplemented" error. The derived class
- * should override.
- */
-WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
-{
-  throw new Error
-    ("encodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
-};
-
-/**
- * Decode input as an EncryptedContent and set the fields of the
- * encryptedContent object. Your derived class should override.
- * @param {EncryptedContent} encryptedContent The EncryptedContent object
- * whose fields are updated.
- * @param {Buffer} input The buffer with the bytes to decode.
- * @throws Error This always throws an "unimplemented" error. The derived class
- * should override.
- */
-WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
-{
-  throw new Error
-    ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -13828,6 +13787,8 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var LOG = require('./log.js').Log.LOG;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
@@ -13895,7 +13856,7 @@ Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
 
   this.publicKeyDer = pub_der;
 
-  var hash = require("crypto").createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(this.publicKeyDer);
   this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
 
@@ -13932,7 +13893,7 @@ Key.prototype.fromPemString = function(pub, pri)
     this.publicKeyDer = new Buffer(pub, 'base64');
     if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
 
-    var hash = require("crypto").createHash('sha256');
+    var hash = Crypto.createHash('sha256');
     hash.update(this.publicKeyDer);
     this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
     if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
@@ -15949,7 +15910,8 @@ EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -16030,7 +15992,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
-    var hash = crypto.createHash('sha256');
+    var hash = Crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
     return new Blob(hash.digest(), false);
   }
@@ -17303,7 +17265,6 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
 MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
   if (identityNameCheck != null && identityNameCheck.size() > 0 &&
@@ -17507,6 +17468,8 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
@@ -17751,7 +17714,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
 
     return null;
   } else {
-    var rsa = require("crypto").createSign('RSA-SHA256');
+    var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
 
     var signature = new Buffer
@@ -17806,7 +17769,8 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Blob = require('../../util/blob.js').Blob;
@@ -18271,7 +18235,7 @@ IdentityManager.prototype.signWithSha256 = function(data, wireFormat)
   var encoding = data.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   data.getSignature().setSignature(new Blob(hash.digest(), false));
 
@@ -18303,7 +18267,7 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
   var encoding = interest.wireEncode(wireFormat);
 
   // Digest and set the signature.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(encoding.signedBuf());
   signature.setSignature(new Blob(hash.digest(), false));
 
@@ -18485,7 +18449,8 @@ exports.ValidationRequest = ValidationRequest;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -18645,7 +18610,7 @@ PolicyManager.verifySha256WithRsaSignature = function
     });
   } else {
     if (PolicyManager.verifyUsesString === null) {
-      var hashResult = require("crypto").createHash('sha256').digest();
+      var hashResult = Crypto.createHash('sha256').digest();
       // If the hash result is a string, we assume that this is a version of
       //   crypto where verify also uses a string signature.
       PolicyManager.verifyUsesString = (typeof hashResult === 'string');
@@ -18658,7 +18623,7 @@ PolicyManager.verifySha256WithRsaSignature = function
       keyPem += (keyBase64.substr(i, 64) + "\n");
     keyPem += "-----END PUBLIC KEY-----";
 
-    var verifier = require('crypto').createVerify('RSA-SHA256');
+    var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
     var signatureBytes = PolicyManager.verifyUsesString ?
       DataUtils.toString(signature.buf()) : signature.buf();
@@ -18679,7 +18644,7 @@ PolicyManager.verifyDigestSha256Signature = function
   (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 
@@ -18801,6 +18766,7 @@ var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher
 var CertificateCache = require('./certificate-cache.js').CertificateCache;
 var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var SecurityException = require('../security-exception.js').SecurityException;
+var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -19018,9 +18984,9 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   var foundCert = this.refreshManager.getCertificate(signatureName);
   if (foundCert == null)
     foundCert = this.certificateCache.getCertificate(signatureName);
+  var thisManager = this;
   if (foundCert == null) {
     var certificateInterest = new Interest(signatureName);
-    var thisManager = this;
     var onCertificateDownloadComplete = function(data) {
       var certificate = new IdentityCertificate(data);
       thisManager.certificateCache.insertCertificate(certificate);
@@ -19053,7 +19019,7 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     if (verified) {
       onVerified(dataOrInterest);
       if (dataOrInterest instanceof Interest)
-        this.updateTimestampForKey(keyName, timestamp);
+        thisManager.updateTimestampForKey(keyName, timestamp);
     }
     else
       onVerifyFailed(dataOrInterest);
@@ -23028,56 +22994,6 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
- * Encode the EncryptedContent in NDN-TLV and return the encoding.
- * @param {EncryptedContent} encryptedContent The EncryptedContent object to
- * encode.
- * @returns {Blob} A Blob containing the encoding.
- */
-Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
-{
-  var encoder = new TlvEncoder(256);
-  var saveLength = encoder.getLength();
-
-  // Encode backwards.
-  encoder.writeBlobTlv
-    (Tlv.EncryptedContent_EncryptedPayload, encryptedContent.getPayload().buf());
-  // Assume the algorithmType value is the same as the TLV type.
-  encoder.writeNonNegativeIntegerTlv
-    (Tlv.EncryptedContent_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
-  Tlv0_1_1WireFormat.encodeKeyLocator
-    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
-
-  encoder.writeTypeAndLength
-    (Tlv.EncryptedContent_EncryptedContent, encoder.getLength() - saveLength);
-
-  return new Blob(encoder.getOutput(), false);
-};
-
-/**
- * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
- * encryptedContent object.
- * @param {EncryptedContent} encryptedContent The EncryptedContent object
- * whose fields are updated.
- * @param {Buffer} input The buffer with the bytes to decode.
- */
-Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
-  (encryptedContent, input)
-{
-  var decoder = new TlvDecoder(input);
-  var endOffset = decoder.
-    readNestedTlvsStart(Tlv.EncryptedContent_EncryptedContent);
-
-  Tlv0_1_1WireFormat.decodeKeyLocator
-    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
-  encryptedContent.setAlgorithmType
-    (decoder.readNonNegativeIntegerTlv(Tlv.EncryptedContent_EncryptionAlgorithm));
-  encryptedContent.setPayload
-    (new Blob(decoder.readBlobTlv(Tlv.EncryptedContent_EncryptedPayload), true));
-
-  decoder.finishNestedTlvs(endOffset);
-};
-
-/**
  * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
  * @returns {Tlv0_1_1WireFormat} The singleton instance.
@@ -23755,8 +23671,9 @@ function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); 
  */
 function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
 /**
- * Copyright (C) 2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * This class represents the digest tree for chrono-sync2013.
+ * Copyright (C) 2014-2015 Regents of the University of California.
+ * @author: Zhehao Wang, based on Jeff T.'s implementation in ndn-cpp
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23773,119 +23690,918 @@ function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var KeyLocator = require('../key-locator.js').KeyLocator;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var Blob = require('../util/blob').Blob;
+var DigestTree = require('./digest-tree.js').DigestTree;
+var Interest = require('../interest.js').Interest;
+var Data = require('../data.js').Data;
+var Name = require('../name.js').Name;
+var Blob = require('../util/blob.js').Blob;
+var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
+var SyncStateProto = require('./sync-state').SyncStateProto;
 
 /**
- * An EncryptedContent holds an encryption type, a payload and other fields
- * representing encrypted content.
- * @note This class is an experimental feature. The API may change.
- * @constructor
+ * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
+ * 2013 paper "Let's ChronoSync: Decentralized Dataset State Synchronization in
+ * Named Data Networking". http://named-data.net/publications/chronosync .
+ * @note The support for ChronoSync is experimental and the API is not finalized.
+ * See the API docs for more detail at
+ * http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html .
+ *
+ * Create a new ChronoSync2013 to communicate using the given face. Initialize
+ * the digest log with a digest of "00" and and empty content. Register the
+ * applicationBroadcastPrefix to receive interests for sync state messages and
+ * express an interest for the initial root digest "00".
+ * @param {function} onReceivedSyncState When ChronoSync receives a sync state message,
+ * this calls onReceivedSyncState(syncStates, isRecovery) where syncStates is the
+ * list of SyncState messages and isRecovery is true if this is the initial
+ * list of SyncState messages or from a recovery interest. (For example, if
+ * isRecovery is true, a chat application would not want to re-display all
+ * the associated chat messages.) The callback should send interests to fetch
+ * the application data for the sequence numbers in the sync state.
+ * @param {function} onInitialized This calls onInitialized() when the first sync data
+ * is received (or the interest times out because there are no other
+ * publishers yet).
+ * @param {Name} applicationDataPrefix The prefix used by this application instance
+ * for application data. For example, "/my/local/prefix/ndnchat4/0K4wChff2v".
+ * This is used when sending a sync message for a new sequence number.
+ * In the sync message, this uses applicationDataPrefix.toUri().
+ * @param {Name} applicationBroadcastPrefix The broadcast name prefix including the
+ * application name. For example, "/ndn/broadcast/ChronoChat-0.3/ndnchat1".
+ * This makes a copy of the name.
+ * @param {int} sessionNo The session number used with the applicationDataPrefix in
+ * sync state messages.
+ * @param {Face} face The Face for calling registerPrefix and expressInterest. The
+ * Face object must remain valid for the life of this ChronoSync2013 object.
+ * @param {KeyChain} keyChain To sign a data packet containing a sync state message, this
+ * calls keyChain.sign(data, certificateName).
+ * @param {Name} certificateName The certificate name of the key to use for signing a
+ * data packet containing a sync state message.
+ * @param {Milliseconds} syncLifetime The interest lifetime in milliseconds for sending
+ * sync interests.
+ * @param {function} onRegisterFailed If failed to register the prefix to receive
+ * interests for the applicationBroadcastPrefix, this calls
+ * onRegisterFailed(applicationBroadcastPrefix).
  */
-var EncryptedContent = function EncryptedContent(value)
+var ChronoSync2013 = function ChronoSync2013
+  (onReceivedSyncState, onInitialized, applicationDataPrefix,
+   applicationBroadcastPrefix, sessionNo, face, keyChain, certificateName,
+   syncLifetime, onRegisterFailed)
 {
-  if (typeof value === 'object' && value instanceof EncryptedContent) {
-    // Make a deep copy.
-    this.algorithmType_ = value.algorithmType_;
-    this.keyLocator_ = new KeyLocator(value.keyLocator_);
-    this.payload_ = value.payload_;
+  // assigning function pointers
+  this.onReceivedSyncState = onReceivedSyncState;
+  this.onInitialized = onInitialized;
+  this.applicationDataPrefixUri = applicationDataPrefix.toUri();
+  this.applicationBroadcastPrefix = applicationBroadcastPrefix;
+  this.session = sessionNo;
+  this.face = face;
+  this.keyChain = keyChain;
+  this.certificateName = certificateName;
+  this.sync_lifetime = syncLifetime;
+  this.usrseq = -1;
+
+  this.digest_tree = new DigestTree();
+  this.contentCache = new MemoryContentCache(face);
+
+  this.digest_log = new Array();
+  this.digest_log.push(new ChronoSync2013.DigestLogEntry("00",[]));
+
+  this.contentCache.registerPrefix
+    (this.applicationBroadcastPrefix, onRegisterFailed,
+     this.onInterest.bind(this));
+  this.enabled = true;
+
+  var interest = new Interest(this.applicationBroadcastPrefix);
+  interest.getName().append("00");
+
+  interest.setInterestLifetimeMilliseconds(1000);
+
+  var Sync;
+  try {
+    // Using protobuf.min.js in the browser.
+    Sync = dcodeIO.ProtoBuf.newBuilder().import(SyncStateProto).build("Sync");
+  }
+  catch (ex) {
+    // Using protobufjs in node.
+    Sync = require("protobufjs").newBuilder().import(SyncStateProto).build("Sync");
+  }
+  this.SyncStateMsg = Sync.SyncStateMsg;
+  this.SyncState = Sync.SyncState;
+
+  this.face.expressInterest(interest, this.onData.bind(this), this.initialTimeOut.bind(this));
+};
+
+exports.ChronoSync2013 = ChronoSync2013;
+
+ChronoSync2013.prototype.getProducerSequenceNo = function(dataPrefix, sessionNo)
+{
+  var index = this.digest_tree.find(dataPrefix, sessionNo);
+  if (index < 0)
+    return -1;
+  else
+    return this.digest_tree.get(index).getSequenceNo();
+};
+
+/**
+ * Increment the sequence number, create a sync message with the new sequence number,
+ * and publish a data packet where the name is applicationBroadcastPrefix + root
+ * digest of current digest tree. Then add the sync message to digest tree and digest
+ * log which creates a new root digest. Finally, express an interest for the next sync
+ * update with the name applicationBroadcastPrefix + the new root digest.
+ * After this, application should publish the content for the new sequence number.
+ * Get the new sequence number with getSequenceNo().
+ */
+ChronoSync2013.prototype.publishNextSequenceNo = function()
+{
+  this.usrseq ++;
+  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
+                                 type:'UPDATE',
+                                 seqno:{
+                                   seq:this.usrseq,
+                                   session:this.session
+                                  }
+                                })];
+  var content_t = new this.SyncStateMsg({ss:content});
+  this.broadcastSyncState(this.digest_tree.getRoot(), content_t);
+
+  if (!this.update(content))
+    console.log("Warning: ChronoSync: update did not create a new digest log entry");
+
+  var interest = new Interest(this.applicationBroadcastPrefix);
+  interest.getName().append(this.digest_tree.getRoot());
+  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+
+  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+};
+
+/**
+ * Get the sequence number of the latest data published by this application instance.
+ * @return {int} the sequence number
+ */
+ChronoSync2013.prototype.getSequenceNo = function()
+{
+  return this.usrseq;
+};
+
+// DigestLogEntry class
+
+ChronoSync2013.DigestLogEntry = function ChronoSync2013DisgestLogEntry(digest, data)
+{
+  this.digest = digest;
+  this.data = data;
+};
+
+ChronoSync2013.DigestLogEntry.prototype.getDigest = function()
+{
+  return this.digest;
+};
+
+ChronoSync2013.DigestLogEntry.prototype.getData = function()
+{
+  return this.data;
+};
+
+/**
+ * Unregister callbacks so that this does not respond to interests anymore.
+ * If you will dispose this ChronoSync2013 object while your application is
+ * still running, you should call shutdown() first.  After calling this, you
+ * should not call publishNextSequenceNo() again since the behavior will be
+ * undefined.
+ */
+ChronoSync2013.prototype.shutdown = function()
+{
+  this.enabled = false;
+  this.contentCache.unregisterAll();
+};
+
+// SyncState class
+/**
+ * A SyncState holds the values of a sync state message which is passed to the
+ * onReceivedSyncState callback which was given to the ChronoSyn2013
+ * constructor. Note: this has the same info as the Protobuf class
+ * Sync::SyncState, but we make a separate class so that we don't need the
+ * Protobuf definition in the ChronoSync API.
+ */
+ChronoSync2013.SyncState = function ChronoSync2013SyncState(dataPrefixUri, sessionNo, sequenceNo)
+{
+  this.dataPrefixUri_ = dataPrefixUri;
+  this.sessionNo_ = sessionNo;
+  this.sequenceNo_ = sequenceNo;
+};
+
+/**
+ * Get the application data prefix for this sync state message.
+ * @return The application data prefix as a Name URI string.
+ */
+ChronoSync2013.SyncState.prototype.getDataPrefix = function()
+{
+  return this.dataPrefixUri_;
+}
+
+/**
+ * Get the session number associated with the application data prefix for
+ * this sync state message.
+ * @return The session number.
+ */
+ChronoSync2013.SyncState.prototype.getSessionNo = function()
+{
+  return this.sessionNo_;
+}
+
+/**
+ * Get the sequence number for this sync state message.
+ * @return The sequence number.
+ */
+ChronoSync2013.SyncState.prototype.getSequenceNo = function()
+{
+  return this.sequenceNo_;
+}
+
+// Private methods for ChronoSync2013 class,
+/**
+ * Make a data packet with the syncMessage and with name applicationBroadcastPrefix_ + digest.
+ * Sign and send.
+ * @param {string} The root digest as a hex string for the data packet name.
+ * @param {SyncStateMsg} The syncMessage updates the digest tree state with the given digest.
+ */
+ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
+{
+  var array = new Uint8Array(syncMessage.toArrayBuffer());
+  var data = new Data(this.applicationBroadcastPrefix);
+  data.getName().append(digest);
+  data.setContent(new Blob(array, false));
+  this.keyChain.sign(data, this.certificateName);
+  this.contentCache.add(data);
+};
+
+/**
+ * Update the digest tree with the messages in content. If the digest tree root is not in
+ * the digest log, also add a log entry with the content.
+ * @param {SyncStates[]} The sync state messages
+ * @return {bool} True if added a digest log entry (because the updated digest tree root
+ * was not in the log), false if didn't add a log entry.
+ */
+ // Whatever's received by ondata, is pushed into digest log as its data directly
+ChronoSync2013.prototype.update = function(content)
+{
+  for (var i = 0; i < content.length; i++) {
+    if (content[i].type == 0) {
+      if (this.digest_tree.update(content[i].name, content[i].seqno.session, content[i].seqno.seq)) {
+        if (this.applicationDataPrefixUri == content[i].name)
+          this.usrseq = content[i].seqno.seq;
+      }
+    }
+  }
+
+  if (this.logfind(this.digest_tree.getRoot()) == -1) {
+    var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content);
+    this.digest_log.push(newlog);
+    return true;
+  }
+  else
+    return false;
+};
+
+ChronoSync2013.prototype.logfind = function(digest)
+{
+  for (var i = 0; i < this.digest_log.length; i++) {
+    if(digest == this.digest_log[i].digest)
+      return i;
+  }
+  return -1;
+};
+
+/**
+ * Process the sync interest from the applicationBroadcastPrefix. If we can't
+ * satisfy the interest, add it to the pending interest table in
+ * this.contentCache so that a future call to contentCacheAdd may satisfy it.
+ */
+ChronoSync2013.prototype.onInterest = function
+  (prefix, interest, face, interestFilterId, filter)
+{
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
+  //search if the digest is already exist in the digest log
+
+  var syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size()).toEscapedString();
+  if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2) {
+    syncdigest = interest.getName().get(this.applicationBroadcastPrefix.size() + 1).toEscapedString();
+  }
+  if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2 || syncdigest == "00") {
+    this.processRecoveryInst(interest, syncdigest, face);
   }
   else {
-    this.algorithmType_ = null;
-    this.keyLocator_ = new KeyLocator();
-    this.payload_ = new Blob();
+    this.contentCache.storePendingInterest(interest, face);
+
+    if (syncdigest != this.digest_tree.getRoot()) {
+      var index = this.logfind(syncdigest);
+      var content = [];
+      if(index == -1) {
+        var self = this;
+        // Are we sure that using a "/timeout" interest is the best future call approach?
+        var timeout = new Interest(new Name("/timeout"));
+        timeout.setInterestLifetimeMilliseconds(2000);
+        this.face.expressInterest
+          (timeout, this.dummyOnData,
+           this.judgeRecovery.bind(this, timeout, syncdigest, face));
+      }
+      else {
+        //common interest processing
+        this.processSyncInst(index, syncdigest, face);
+      }
+    }
   }
 };
 
-exports.EncryptedContent = EncryptedContent;
-
 /**
- * Get the algorithm type.
- * @returns {number} The algorithm type, or null if not specified.
+ * Process sync/recovery data.
+ * @param {Interest}
+ * @param {Data}
  */
-EncryptedContent.prototype.getAlgorithmType = function()
+ChronoSync2013.prototype.onData = function(interest, co)
 {
-  return this.algorithmType_;
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
+  var arr = new Uint8Array(co.getContent().size());
+  arr.set(co.getContent().buf());
+  var content_t = this.SyncStateMsg.decode(arr.buffer);
+  var content = content_t.ss;
+
+  var isRecovery = false;
+
+  if (this.digest_tree.getRoot() == "00") {
+    isRecovery = true;
+    this.initialOndata(content);
+  }
+  else {
+    // Note: if, for some reasons, this update did not update anything,
+    // then the same message gets fetched again, and the same broadcast interest goes out again.
+    // It has the potential of creating loop, which existed in my tests.
+    if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
+      isRecovery = false;
+    else
+      isRecovery = true;
+  }
+
+  var syncStates = [];
+
+  for (var i = 0; i < content.length; i++) {
+    if (content[i].type == 0) {
+      syncStates.push(new ChronoSync2013.SyncState
+        (content[i].name, content[i].seqno.session, content[i].seqno.seq));
+    }
+  }
+
+  // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
+  this.onReceivedSyncState(syncStates, isRecovery);
+  var updated = this.update(content);
+
+  if (updated) {
+    var n = new Name(this.applicationBroadcastPrefix);
+    n.append(this.digest_tree.getRoot());
+
+    var interest = new Interest(n);
+    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+
+    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
+  }
 };
 
 /**
- * Get the key locator.
- * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ * Interest variable not actually in use here
  */
-EncryptedContent.prototype.getKeyLocator = function()
+ChronoSync2013.prototype.initialTimeOut = function(interest)
 {
-  return this.keyLocator_;
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
+  console.log("no other people");
+
+  this.usrseq++;
+  this.onInitialized();
+  var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
+                                 type:'UPDATE',
+                                 seqno: {
+                                   seq:this.usrseq,
+                                   session:this.session
+                                 }
+                               })];
+  this.update(content);
+  var n = new Name(this.applicationBroadcastPrefix);
+  n.append(this.digest_tree.getRoot());
+  var retryInterest = new Interest(n);
+  retryInterest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+
+  this.face.expressInterest(retryInterest, this.onData.bind(this), this.syncTimeout.bind(this));
+};
+
+ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, face)
+{
+  if (this.logfind(syncdigest) != -1) {
+    var content = [];
+
+    for(var i = 0; i < this.digest_tree.digestnode.length; i++) {
+      content[i] = new this.SyncState({ name:this.digest_tree.digestnode[i].getDataPrefix(),
+                                   type:'UPDATE',
+                                   seqno:{
+                                     seq:this.digest_tree.digestnode[i].getSequenceNo(),
+                                     session:this.digest_tree.digestnode[i].getSessionNo()
+                                    }
+                                 });
+    }
+
+    if (content.length != 0) {
+      var content_t = new this.SyncStateMsg({ss:content});
+      var str = new Uint8Array(content_t.toArrayBuffer());
+      var co = new Data(interest.getName());
+      co.setContent(new Blob(str, false));
+      this.keyChain.sign(co, this.certificateName);
+      try {
+        face.putData(co);
+      } catch (e) {
+        console.log(e.toString());
+      }
+    }
+  }
 };
 
 /**
- * Get the payload.
- * @returns {Blob} The payload. If not specified, isNull() is true.
+ * Common interest processing, using digest log to find the difference after syncdigest_t
+ * @return True if sent a data packet to satisfy the interest.
  */
-EncryptedContent.prototype.getPayload = function()
+ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
 {
-  return this.payload_;
+  var content = [];
+  var data_name = [];
+  var data_seq = [];
+  var data_ses = [];
+
+  for (var j = index + 1; j < this.digest_log.length; j++) {
+    var temp = this.digest_log[j].getData();
+    for (var i = 0 ; i < temp.length ; i++) {
+      if (temp[i].type != 0) {
+        continue;
+      }
+      if (this.digest_tree.find(temp[i].name, temp[i].seqno.session) != -1) {
+        var n = data_name.indexOf(temp[i].name);
+        if (n == -1) {
+          data_name.push(temp[i].name);
+          data_seq.push(temp[i].seqno.seq);
+          data_ses.push(temp[i].seqno.session);
+        }
+        else {
+          data_seq[n] = temp[i].seqno.seq;
+          data_ses[n] = temp[i].seqno.session;
+        }
+      }
+    }
+  }
+
+  for(var i = 0; i < data_name.length; i++) {
+    content[i] = new this.SyncState({ name:data_name[i],
+                                 type:'UPDATE',
+                                 seqno: {
+                                   seq:data_seq[i],
+                                   session:data_ses[i]
+                                 }
+                               });
+  }
+  if (content.length != 0) {
+    var content_t = new this.SyncStateMsg({ss:content});
+    var str = new Uint8Array(content_t.toArrayBuffer());
+    var n = new Name(this.prefix)
+    n.append(this.chatroom).append(syncdigest_t);
+
+    var co = new Data(n);
+    co.setContent(new Blob(str, false));
+    this.keyChain.sign(co, this.certificateName);
+    try {
+      face.putData(co);
+    }
+    catch (e) {
+      console.log(e.toString());
+    }
+  }
 };
 
 /**
- * Set the algorithm type.
- * @param {number} algorithmType The algorithm type. If not specified, set to null.
+ * Send recovery interset.
+ * @param {string} syncdigest_t
  */
-EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
+ChronoSync2013.prototype.sendRecovery = function(syncdigest_t)
 {
-  return this.algorithmType_ = algorithmType;
+  var n = new Name(this.applicationBroadcastPrefix);
+  n.append("recovery").append(syncdigest_t);
+
+  var interest = new Interest(n);
+
+  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+
+  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
 /**
- * Set the key locator.
- * @param {KeyLocator} keyLocator The key locator. If not specified, set to the
- * default KeyLocator().
+ * This is called by onInterest after a timeout to check if a recovery is needed.
+ * This method has an interest argument because we use it as the onTimeout for
+ * Face.expressInterest.
+ * @param {Interest}
+ * @param {string}
+ * @param {Face}
  */
-EncryptedContent.prototype.setKeyLocator = function(keyLocator)
+ChronoSync2013.prototype.judgeRecovery = function(interest, syncdigest_t, face)
 {
-  this.keyLocator_ = typeof keyLocator === 'object' &&
-                       keyLocator instanceof KeyLocator ?
-    new KeyLocator(keyLocator) : new KeyLocator();
+  //console.log("*** judgeRecovery interest " + interest.getName().toUri() + " times out. Digest: " + syncdigest_t + " ***");
+  var index = this.logfind(syncdigest_t);
+  if (index != -1) {
+    if (syncdigest_t != this.digest_tree.root)
+      this.processSyncInst(index, syncdigest_t, face);
+  }
+  else
+    this.sendRecovery(syncdigest_t);
+};
+
+ChronoSync2013.prototype.syncTimeout = function(interest)
+{
+  if (!this.enabled)
+    // Ignore callbacks after the application calls shutdown().
+    return;
+
+  var component = interest.getName().get(4).toEscapedString();
+  if (component == this.digest_tree.root) {
+    var n = new Name(interest.getName());
+    var newInterest = new Interest(n);
+
+    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+    this.face.expressInterest(newInterest, this.onData.bind(this), this.syncTimeout.bind(this));
+  }
+};
+
+ChronoSync2013.prototype.initialOndata = function(content)
+{
+  this.update(content);
+
+  var digest_t = this.digest_tree.getRoot();
+  for (var i = 0; i < content.length; i++) {
+    if (content[i].name == this.applicationDataPrefixUri && content[i].seqno.session == this.session) {
+      //if the user was an old comer, after add the static log he need to increase his seqno by 1
+      var content_t = [new this.SyncState({ name:this.applicationDataPrefixUri,
+                                       type:'UPDATE',
+                                       seqno: {
+                                         seq:content[i].seqno.seq + 1,
+                                         session:this.session
+                                       }
+                                     })];
+      if (this.update(content_t)) {
+        var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content_t);
+        this.digest_log.push(newlog);
+        this.onInitialized();
+      }
+    }
+  }
+
+  var content_t;
+  if (this.usrseq >= 0) {
+    //send the data packet with new seqno back
+    content_t = new this.SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: {
+                                     seq:this.usrseq,
+                                     session:this.session
+                                   }
+                                 });
+  }
+  else
+    content_t = new this.SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: {
+                                     seq:0,
+                                     session:this.session
+                                   }
+                                 });
+  var content_tt = new this.SyncStateMsg({ss:content_t});
+  this.broadcastSyncState(digest_t, content_tt);
+
+  if (this.digest_tree.find(this.applicationDataPrefixUri, this.session) == -1) {
+    //the user haven't put himself in the digest tree
+    this.usrseq++;
+    var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
+                                   type:'UPDATE',
+                                   seqno: {
+                                     seq:this.usrseq,
+                                     session:this.session
+                                   }
+                                 })];
+    if (this.update(content)) {
+      this.onInitialized();
+    }
+  }
+};
+
+ChronoSync2013.prototype.dummyOnData = function(interest, data)
+{
+  console.log("*** dummyOnData called. ***");
+};/**
+ * This class represents the digest tree for chrono-sync2013.
+ * Copyright (C) 2014-2015 Regents of the University of California.
+ * @author: Zhehao Wang, based on Jeff T.'s implementation in ndn-cpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
+var DataUtils = require("../encoding/data-utils.js").DataUtils;
+
+var DigestTree = function DigestTree()
+{
+  this.root = "00";
+  this.digestnode = [];
+};
+
+exports.DigestTree = DigestTree;
+
+// The meaning of a session is explained here:
+// http://named-data.net/doc/ndn-ccl-api/chrono-sync2013.html
+// DigestTree.Node works with seqno_seq and seqno_session, without protobuf definition,
+DigestTree.Node = function DigestTreeNode(dataPrefix, seqno_session, seqno_seq)
+{
+  // In this context, this should mean DigestTree.Node instead
+  this.dataPrefix = dataPrefix;
+  this.seqno_session = seqno_session;
+  this.seqno_seq = seqno_seq;
+
+  this.recomputeDigest();
+};
+
+DigestTree.Node.prototype.getDataPrefix = function()
+{
+  return this.dataPrefix;
+};
+
+DigestTree.Node.prototype.getSessionNo = function()
+{
+  return this.seqno_session;
+};
+
+DigestTree.Node.prototype.getSequenceNo = function()
+{
+  return this.seqno_seq;
+};
+
+DigestTree.Node.prototype.getDigest = function()
+{
+  return this.digest;
+};
+
+DigestTree.Node.prototype.setSequenceNo = function(sequenceNo)
+{
+  this.seqno_seq = sequenceNo;
+  this.recomputeDigest();
+};
+
+// Using Node.JS buffer, as documented here http://nodejs.org/api/buffer.html.
+DigestTree.Node.prototype.Int32ToBuffer = function(value) {
+  var result = new Buffer(4);
+  for (var i = 0; i < 4; i++) {
+    result[i] = value % 256;
+    value = Math.floor(value / 256);
+  }
+  return result;
+}
+
+DigestTree.Node.prototype.recomputeDigest = function()
+{
+  var seqHash = Crypto.createHash('sha256');
+
+  seqHash.update(this.Int32ToBuffer(this.seqno_session));
+  seqHash.update(this.Int32ToBuffer(this.seqno_seq));
+
+  var digest_seq = seqHash.digest();
+
+  var nameHash = Crypto.createHash('sha256');
+  nameHash.update(this.dataPrefix);
+  var digest_name = nameHash.digest();
+
+  var hash = Crypto.createHash('sha256');
+  hash.update(digest_name);
+  hash.update(digest_seq);
+
+  this.digest = hash.digest('hex');
+};
+
+// Do the work of string and then sequence number compare
+DigestTree.Node.Compare = function(node1, node2)
+{
+  if (node1.dataPrefix != node2.dataPrefix)
+    return node1.dataPrefix < node2.dataPrefix;
+  return node1.seqno_session < node2.seqno_session;
 };
 
 /**
- * Set the encrypted payload.
- * @param {Blob} payload The payload. If not specified, set to the default Blob()
- * where isNull() is true.
+ * Update the digest tree and recompute the root digest. If the combination of dataPrefix
+ * and sessionNo already exists in the tree then update its sequenceNo (only if the given
+ * sequenceNo is newer), otherwise add a new node.
+ * @param {string} The name prefix.
+ * @param {int} sessionNo The session number.
+ * @param {int} sequenceNo The sequence number.
+ * @return True if the digest tree is updated, false if not
  */
-EncryptedContent.prototype.setPayload = function(payload)
+DigestTree.prototype.update = function(dataPrefix, sessionNo, sequenceNo)
 {
-  this.payload_ = typeof payload === 'object' && payload instanceof Blob ?
-    payload : new Blob(payload);
+  var n_index = this.find(dataPrefix, sessionNo);
+  if (n_index >= 0) {
+    if (this.digestnode[n_index].getSequenceNo() < sequenceNo)
+      this.digestnode[n_index].setSequenceNo(sequenceNo);
+    else
+      return false;
+  }
+  else {
+    var temp = new DigestTree.Node(dataPrefix, sessionNo, sequenceNo);
+    this.digestnode.push(temp);
+    this.digestnode.sort(this.sortNodes);
+  }
+  this.recomputeRoot();
+  return true;
 };
 
-/**
- * Encode this EncryptedContent for a particular wire format.
- * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
- * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
- */
-EncryptedContent.prototype.wireEncode = function(wireFormat)
+// Need to confirm this sort works with the insertion in ndn-cpp.
+DigestTree.prototype.sortNodes = function()
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  return wireFormat.encodeEncryptedContent(this);
+  var temp;
+  for (var i = this.digestnode.length; i > 0; i--) {
+    for (var j = 0; j < i - 1; j++) {
+      if (this.digestnode[j].getDataPrefix() > this.digestnode[j + 1].getDataPrefix()) {
+        temp = this.digestnode[j];
+        this.digestnode[j] = this.digestnode[j + 1];
+        this.digestnode[j + 1] = temp;
+      }
+    }
+  }
 };
 
-/**
- * Decode the input using a particular wire format and update this
- * EncryptedContent.
- * @param {Blob|Buffer} input The buffer with the bytes to decode.
- * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
- * this object. If omitted, use WireFormat.getDefaultWireFormat().
- */
-EncryptedContent.prototype.wireDecode = function(input, wireFormat)
+DigestTree.prototype.sortNodes = function (node1, node2)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+  if (node1.getDataPrefix() == node2.getDataPrefix() &&
+     node1.getSessionNo() == node2.getSessionNo())
+    return 0;
+
+  if ((node1.getDataPrefix() > node2.getDataPrefix()) ||
+     ((node1.getDataPrefix() == node2.getDataPrefix()) &&
+     (node1.getSessionNo() >node2.getSessionNo())))
+    return 1;
+  else
+    return -1;
+}
+
+DigestTree.prototype.find = function(dataPrefix, sessionNo)
+{
+  for (var i = 0; i < this.digestnode.length; ++i) {
+    if (this.digestnode[i].getDataPrefix() == dataPrefix &&
+        this.digestnode[i].getSessionNo() == sessionNo)
+      return i;
+  }
+  return -1;
 };
+
+DigestTree.prototype.size = function()
+{
+  return this.digestnode.size();
+};
+
+// Not really used
+DigestTree.prototype.get = function(i)
+{
+  return this.digestnode[i];
+};
+
+DigestTree.prototype.getRoot = function()
+{
+  return this.root;
+};
+
+DigestTree.prototype.recomputeRoot = function()
+{
+  var md = Crypto.createHash('sha256');
+  // The result of updateHex is related with the sequence of participants,
+  // I don't think that should be the case.
+  for (var i = 0; i < this.digestnode.length; i++) {
+    md.update(new Buffer(this.digestnode[i].digest, 'hex'));
+  }
+  this.root = md.digest('hex');
+};
+// Just define the SyncStateProto object. We do a Protobuf import dynamically
+// when we need it so that protobufjs is optional.
+var SyncStateProto = {
+    "package": "Sync",
+    "messages": [
+        {
+            "name": "SyncState",
+            "fields": [
+                {
+                    "rule": "required",
+                    "type": "string",
+                    "name": "name",
+                    "id": 1,
+                    "options": {}
+                },
+                {
+                    "rule": "required",
+                    "type": "ActionType",
+                    "name": "type",
+                    "id": 2,
+                    "options": {}
+                },
+                {
+                    "rule": "optional",
+                    "type": "SeqNo",
+                    "name": "seqno",
+                    "id": 3,
+                    "options": {}
+                }
+            ],
+            "enums": [
+                {
+                    "name": "ActionType",
+                    "values": [
+                        {
+                            "name": "UPDATE",
+                            "id": 0
+                        },
+                        {
+                            "name": "DELETE",
+                            "id": 1
+                        },
+                        {
+                            "name": "OTHER",
+                            "id": 2
+                        }
+                    ],
+                    "options": {}
+                }
+            ],
+            "messages": [
+                {
+                    "name": "SeqNo",
+                    "fields": [
+                        {
+                            "rule": "required",
+                            "type": "uint32",
+                            "name": "seq",
+                            "id": 1,
+                            "options": {}
+                        },
+                        {
+                            "rule": "required",
+                            "type": "uint32",
+                            "name": "session",
+                            "id": 2,
+                            "options": {}
+                        }
+                    ],
+                    "enums": [],
+                    "messages": [],
+                    "options": {}
+                }
+            ],
+            "options": {}
+        },
+        {
+            "name": "SyncStateMsg",
+            "fields": [
+                {
+                    "rule": "repeated",
+                    "type": "SyncState",
+                    "name": "ss",
+                    "id": 1,
+                    "options": {}
+                }
+            ],
+            "enums": [],
+            "messages": [],
+            "options": {}
+        }
+    ],
+    "enums": [],
+    "imports": [],
+    "options": {}
+};
+
+exports.SyncStateProto = SyncStateProto;
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -23905,6 +24621,8 @@ EncryptedContent.prototype.wireDecode = function(input, wireFormat)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var Blob = require('./blob.js').Blob;
@@ -23954,7 +24672,7 @@ CommandInterestGenerator.prototype.generate = function
 
   // The random value is a TLV nonNegativeInteger too, but we know it is 8
   // bytes, so we don't need to call the nonNegativeInteger encoder.
-  interest.getName().append(new Blob(require("crypto").randomBytes(8), false));
+  interest.getName().append(new Blob(Crypto.randomBytes(8), false));
 
   keyChain.sign(interest, certificateName, wireFormat);
 
@@ -23986,7 +24704,8 @@ CommandInterestGenerator.prototype.generate = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require('crypto');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -24932,7 +25651,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
-  var hash = require("crypto").createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(upcallInfo.data.getContent().buf());
   this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
