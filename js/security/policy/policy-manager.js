@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -212,7 +213,7 @@ PolicyManager.verifyDigestSha256Signature = function
   (signature, signedBlob, onComplete)
 {
   // Set signedPortionDigest to the digest of the signed portion of the signedBlob.
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(signedBlob.signedBuf());
   var signedPortionDigest = new Blob(hash.digest(), false);
 

@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -99,7 +100,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (digestAlgorithm == DigestAlgorithm.SHA256) {
-    var hash = crypto.createHash('sha256');
+    var hash = Crypto.createHash('sha256');
     hash.update(this.keyDer.buf());
     return new Blob(hash.digest(), false);
   }

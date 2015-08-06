@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require("crypto");
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require("crypto");
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 var DigestTree = function DigestTree()
@@ -80,18 +81,18 @@ DigestTree.Node.prototype.Int32ToBuffer = function(value) {
 
 DigestTree.Node.prototype.recomputeDigest = function()
 {
-  var seqHash = crypto.createHash('sha256');
+  var seqHash = Crypto.createHash('sha256');
 
   seqHash.update(this.Int32ToBuffer(this.seqno_session));
   seqHash.update(this.Int32ToBuffer(this.seqno_seq));
 
   var digest_seq = seqHash.digest();
 
-  var nameHash = crypto.createHash('sha256');
+  var nameHash = Crypto.createHash('sha256');
   nameHash.update(this.dataPrefix);
   var digest_name = nameHash.digest();
 
-  var hash = crypto.createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(digest_name);
   hash.update(digest_seq);
 
@@ -191,7 +192,7 @@ DigestTree.prototype.getRoot = function()
 
 DigestTree.prototype.recomputeRoot = function()
 {
-  var md = crypto.createHash('sha256');
+  var md = Crypto.createHash('sha256');
   // The result of updateHex is related with the sequence of participants,
   // I don't think that should be the case.
   for (var i = 0; i < this.digestnode.length; i++) {

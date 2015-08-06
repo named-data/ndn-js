@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var crypto = require('crypto');
+// Use capitalized Crypto to not clash with the browser's crypto.subtle.
+var Crypto = require('crypto');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -964,7 +965,7 @@ Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
 
   if (LOG > 3) console.log('Got ndndid from ndnd.');
   // Get the digest of the public key in the data packet content.
-  var hash = require("crypto").createHash('sha256');
+  var hash = Crypto.createHash('sha256');
   hash.update(upcallInfo.data.getContent().buf());
   this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
   if (LOG > 3) console.log(this.face.ndndid);
