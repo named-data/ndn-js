@@ -4684,8 +4684,12 @@ exports.createHash = function(alg)
     this.md.updateHex(buf.toString('hex'));
   };
 
-  obj.digest = function() {
-    return new Buffer(this.md.digest(), 'hex');
+  obj.digest = function(encoding) {
+    var hexDigest = this.md.digest();
+    if (encoding == 'hex')
+      return hexDigest;
+    else
+      return new Buffer(hexDigest, 'hex');
   };
 
   return obj;
