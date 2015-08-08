@@ -241,7 +241,6 @@ ChronoChat.prototype.dummyOnData = function(interest, co)
  */
 ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
-  console.log("debug sendInterest 0 isRecovery " + isRecovery);
   this.isRecoverySyncState = isRecovery;
 
   var sendList = [];       // of String
@@ -249,7 +248,6 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
   var sequenceNoList = []; // of number
 
   for (var j = 0; j < syncStates.length; j++) {
-    console.log("debug sendInterest 1");
     var syncState = syncStates[j];
     var nameComponents = new Name(syncState.getDataPrefix());
     var tempName = nameComponents.get(-1).toEscapedString();
