@@ -368,9 +368,10 @@ ChronoSync2013.prototype.onData = function(interest, co)
     // then the same message gets fetched again, and the same broadcast interest goes out again.
     // It has the potential of creating loop, which existed in my tests.
     if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
-      isRecovery = false;
-    else
+      // Assume this is a recovery interest.
       isRecovery = true;
+    else
+      isRecovery = false;
   }
 
   var syncStates = [];
