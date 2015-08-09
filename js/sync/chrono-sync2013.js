@@ -364,9 +364,7 @@ ChronoSync2013.prototype.onData = function(interest, co)
     this.initialOndata(content);
   }
   else {
-    // Note: if, for some reasons, this update did not update anything,
-    // then the same message gets fetched again, and the same broadcast interest goes out again.
-    // It has the potential of creating loop, which existed in my tests.
+    this.update(content);
     if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
       // Assume this is a recovery interest.
       isRecovery = true;
@@ -385,17 +383,14 @@ ChronoSync2013.prototype.onData = function(interest, co)
 
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
   this.onReceivedSyncState(syncStates, isRecovery);
-  var updated = this.update(content);
 
-  if (updated) {
-    var n = new Name(this.applicationBroadcastPrefix);
-    n.append(this.digest_tree.getRoot());
+  var n = new Name(this.applicationBroadcastPrefix);
+  n.append(this.digest_tree.getRoot());
 
-    var interest = new Interest(n);
-    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+  var interest = new Interest(n);
+  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
 
-    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
-  }
+  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
 /**
