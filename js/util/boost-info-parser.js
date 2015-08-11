@@ -20,6 +20,18 @@
 
 var fs = require('fs');
 
+/**
+ * BoostInfoTree is provided for compatibility with the Boost INFO property list
+ * format used in ndn-cxx.
+ *
+ * Each node in the tree may have a name and a value as well as associated
+ * sub-trees. The sub-tree names are not unique, and so sub-trees are stored as
+ * dictionaries where the key is a sub-tree name and the values are the
+ * sub-trees sharing the same name.
+ *
+ * Nodes can be accessed with a path syntax, as long as nodes in the path do not
+ * contain the path separator '/' in their names.
+ */
 var BoostInfoTree = function BoostInfoTree(value, parent)
 {
   // subtrees is an array of {key: treeName, value: subtreeList} where
@@ -148,7 +160,8 @@ BoostInfoTree.prototype.toString = function()
 
 /**
  * Use treeName to find the array of BoostInfoTree in this.subtrees.
- * @param {string} treeName The key in this.subtrees to search for.
+ * @param {string} treeName The key in this.subtrees to search for. This does a
+ * flat search in subtrees_.  It does not split by '/' into a path.
  * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
@@ -161,6 +174,10 @@ BoostInfoTree.prototype.find = function(treeName)
   return null;
 };
 
+/**
+ * A BoostInfoParser reads files in Boost's INFO format and constructs a
+ * BoostInfoTree.
+ */
 var BoostInfoParser = function BoostInfoParser()
 {
   this.root = new BoostInfoTree();
@@ -169,6 +186,10 @@ var BoostInfoParser = function BoostInfoParser()
 exports.BoostInfoParser = BoostInfoParser;
 exports.BoostInfoTree = BoostInfoTree; // debug
 
+/**
+ * Add the contents of the file to the root BoostInfoTree.
+ * @param {string} fileName The path to the INFO file.
+ */
 BoostInfoParser.prototype.read = function(fileName)
 {
   var ctx = this.root;
@@ -178,11 +199,19 @@ BoostInfoParser.prototype.read = function(fileName)
   });
 };
 
+/**
+ * Write the root tree of this BoostInfoParser as file in Boost's INFO format.
+ * @param {string} fileName The output path.
+ */
 BoostInfoParser.prototype.write = function(fileName)
 {
   fs.writeFileSync(fileName, "" + this.root);
 };
 
+/**
+ * Get the root tree of this parser.
+ * @return {BoostInfoTree} The root BoostInfoTree.
+ */
 BoostInfoParser.prototype.getRoot = function() { return this.root; };
 
 /**
