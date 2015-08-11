@@ -187,14 +187,31 @@ exports.BoostInfoParser = BoostInfoParser;
 exports.BoostInfoTree = BoostInfoTree; // debug
 
 /**
- * Add the contents of the file to the root BoostInfoTree.
+ * Add the contents of the file or input string to the root BoostInfoTree. There
+ * are two forms:
+ * read(fileName) reads fileName from the file system.
+ * read(input, inputName) reads from the input, in which case inputName is used
+ * only for log messages, etc.
  * @param {string} fileName The path to the INFO file.
+ * @param {string} input The contents of the INFO file, with lines separated by
+ * "\n" or "\r\n".
+ * @param {string} inputName Use with input for log messages, etc.
  */
-BoostInfoParser.prototype.read = function(fileName)
+BoostInfoParser.prototype.read = function(fileNameOrInput, inputName)
 {
+  var input;
+  if (typeof inputName == 'string')
+    input = fileNameOrInput;
+  else {
+    // No inputName, so assume the first arg is the file name.
+    var fileName = fileNameOrInput;
+    inputName = fileName;
+    input = fs.readFileSync(fileName).toString();
+  }
+
   var ctx = this.root;
   var thisParser = this;
-  fs.readFileSync(fileName).toString().split(/\r?\n/).forEach(function(line) {
+  input.split(/\r?\n/).forEach(function(line) {
     ctx = thisParser.parseLine(line.trim(), ctx);
   });
 };
