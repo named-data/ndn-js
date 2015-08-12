@@ -4684,8 +4684,12 @@ exports.createHash = function(alg)
     this.md.updateHex(buf.toString('hex'));
   };
 
-  obj.digest = function() {
-    return new Buffer(this.md.digest(), 'hex');
+  obj.digest = function(encoding) {
+    var hexDigest = this.md.digest();
+    if (encoding == 'hex')
+      return hexDigest;
+    else
+      return new Buffer(hexDigest, 'hex');
   };
 
   return obj;
@@ -18788,8 +18792,9 @@ var PolicyManager = require('./policy-manager.js').PolicyManager;
  * configuration file and downloads unknown certificates when necessary.
  * Note: This only works in Node.js since it reads files using the "fs" module.
  *
- * @param {string} configFileName The path to the configuration file containing
- * verification rules.
+ * @param {string} configFileName (optional) If not null or empty, the path to
+ * the configuration file containing verification rules. Otherwise, you should
+ * separately call load().
  * @param {CertificateCache} certificateCache (optional) A CertificateCache to
  * hold known certificates. If this is null or omitted, then create an internal
  * CertificateCache.
@@ -18830,6 +18835,24 @@ var ConfigPolicyManager = function ConfigPolicyManager
   this.keyTimestampTtl = keyTimestampTtl;
   this.maxTrackedKeys = maxTrackedKeys;
 
+  this.reset();
+
+  if (configFileName != null && configFileName != "")
+    this.load(configFileName);
+};
+
+ConfigPolicyManager.prototype = new PolicyManager();
+ConfigPolicyManager.prototype.name = "ConfigPolicyManager";
+
+exports.ConfigPolicyManager = ConfigPolicyManager;
+
+/**
+ * Reset the certificate cache and other fields to the constructor state.
+ */
+ConfigPolicyManager.prototype.reset = function()
+{
+  this.certificateCache.reset();
+
   // Stores the fixed-signer certificate name associated with validation rules
   // so we don't keep loading from files.
   this.fixedCertificateCache = {};
@@ -18839,19 +18862,30 @@ var ConfigPolicyManager = function ConfigPolicyManager
   // Key is public key name, value is last timestamp.
   this.keyTimestamps = {};
 
-  this.config = new BoostInfoParser();
-  this.config.read(configFileName);
-
   this.requiresVerification = true;
 
+  this.config = new BoostInfoParser();
   this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager();
-  this.loadTrustAnchorCertificates();
 };
 
-ConfigPolicyManager.prototype = new PolicyManager();
-ConfigPolicyManager.prototype.name = "ConfigPolicyManager";
-
-exports.ConfigPolicyManager = ConfigPolicyManager;
+/**
+ * Call reset() and load the configuration rules from the file name or the input
+ * string. There are two forms:
+ * load(configFileName) reads configFileName from the file system.
+ * load(input, inputName) reads from the input, in which case inputName is used
+ * only for log messages, etc.
+ * @param {string} configFileName The path to the file containing configuration
+ * rules.
+ * @param {string} input The contents of the configuration rules, with lines
+ * separated by "\n" or "\r\n".
+ * @param {string} inputName Use with input for log messages, etc.
+ */
+ConfigPolicyManager.prototype.load = function(configFileNameOrInput, inputName)
+{
+  this.reset();
+  this.config.read(configFileNameOrInput, inputName);
+  this.loadTrustAnchorCertificates();
+}
 
 /**
  * Check if this PolicyManager has a verification rule for the received data.
@@ -24036,13 +24070,12 @@ ChronoSync2013.prototype.onData = function(interest, co)
     this.initialOndata(content);
   }
   else {
-    // Note: if, for some reasons, this update did not update anything,
-    // then the same message gets fetched again, and the same broadcast interest goes out again.
-    // It has the potential of creating loop, which existed in my tests.
+    this.update(content);
     if (interest.getName().size() == this.applicationBroadcastPrefix.size() + 2)
-      isRecovery = false;
-    else
+      // Assume this is a recovery interest.
       isRecovery = true;
+    else
+      isRecovery = false;
   }
 
   var syncStates = [];
@@ -24056,17 +24089,14 @@ ChronoSync2013.prototype.onData = function(interest, co)
 
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
   this.onReceivedSyncState(syncStates, isRecovery);
-  var updated = this.update(content);
 
-  if (updated) {
-    var n = new Name(this.applicationBroadcastPrefix);
-    n.append(this.digest_tree.getRoot());
+  var n = new Name(this.applicationBroadcastPrefix);
+  n.append(this.digest_tree.getRoot());
 
-    var interest = new Interest(n);
-    interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
+  var interest = new Interest(n);
+  interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
 
-    this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
-  }
+  this.face.expressInterest(interest, this.onData.bind(this), this.syncTimeout.bind(this));
 };
 
 /**

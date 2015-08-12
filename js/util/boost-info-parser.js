@@ -20,6 +20,18 @@
 
 var fs = require('fs');
 
+/**
+ * BoostInfoTree is provided for compatibility with the Boost INFO property list
+ * format used in ndn-cxx.
+ *
+ * Each node in the tree may have a name and a value as well as associated
+ * sub-trees. The sub-tree names are not unique, and so sub-trees are stored as
+ * dictionaries where the key is a sub-tree name and the values are the
+ * sub-trees sharing the same name.
+ *
+ * Nodes can be accessed with a path syntax, as long as nodes in the path do not
+ * contain the path separator '/' in their names.
+ */
 var BoostInfoTree = function BoostInfoTree(value, parent)
 {
   // subtrees is an array of {key: treeName, value: subtreeList} where
@@ -148,7 +160,8 @@ BoostInfoTree.prototype.toString = function()
 
 /**
  * Use treeName to find the array of BoostInfoTree in this.subtrees.
- * @param {string} treeName The key in this.subtrees to search for.
+ * @param {string} treeName The key in this.subtrees to search for. This does a
+ * flat search in subtrees_.  It does not split by '/' into a path.
  * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
@@ -161,6 +174,10 @@ BoostInfoTree.prototype.find = function(treeName)
   return null;
 };
 
+/**
+ * A BoostInfoParser reads files in Boost's INFO format and constructs a
+ * BoostInfoTree.
+ */
 var BoostInfoParser = function BoostInfoParser()
 {
   this.root = new BoostInfoTree();
@@ -169,20 +186,49 @@ var BoostInfoParser = function BoostInfoParser()
 exports.BoostInfoParser = BoostInfoParser;
 exports.BoostInfoTree = BoostInfoTree; // debug
 
-BoostInfoParser.prototype.read = function(fileName)
+/**
+ * Add the contents of the file or input string to the root BoostInfoTree. There
+ * are two forms:
+ * read(fileName) reads fileName from the file system.
+ * read(input, inputName) reads from the input, in which case inputName is used
+ * only for log messages, etc.
+ * @param {string} fileName The path to the INFO file.
+ * @param {string} input The contents of the INFO file, with lines separated by
+ * "\n" or "\r\n".
+ * @param {string} inputName Use with input for log messages, etc.
+ */
+BoostInfoParser.prototype.read = function(fileNameOrInput, inputName)
 {
+  var input;
+  if (typeof inputName == 'string')
+    input = fileNameOrInput;
+  else {
+    // No inputName, so assume the first arg is the file name.
+    var fileName = fileNameOrInput;
+    inputName = fileName;
+    input = fs.readFileSync(fileName).toString();
+  }
+
   var ctx = this.root;
   var thisParser = this;
-  fs.readFileSync(fileName).toString().split(/\r?\n/).forEach(function(line) {
+  input.split(/\r?\n/).forEach(function(line) {
     ctx = thisParser.parseLine(line.trim(), ctx);
   });
 };
 
+/**
+ * Write the root tree of this BoostInfoParser as file in Boost's INFO format.
+ * @param {string} fileName The output path.
+ */
 BoostInfoParser.prototype.write = function(fileName)
 {
   fs.writeFileSync(fileName, "" + this.root);
 };
 
+/**
+ * Get the root tree of this parser.
+ * @return {BoostInfoTree} The root BoostInfoTree.
+ */
 BoostInfoParser.prototype.getRoot = function() { return this.root; };
 
 /**

@@ -51,12 +51,13 @@ var PolicyManager = require('./policy-manager.js').PolicyManager;
  * The KeyLocators of data packets and signed interests MUST contain a name for
  * verification to succeed.
  *
- * Create a new ConfigPolicyManager which acts on the rules specified in the
- * configuration file and downloads unknown certificates when necessary.
- * Note: This only works in Node.js since it reads files using the "fs" module.
+ * Create a new ConfigPolicyManager which will act on the rules specified in the
+ * configuration and download unknown certificates when necessary.
  *
- * @param {string} configFileName The path to the configuration file containing
- * verification rules.
+ * @param {string} configFileName (optional) If not null or empty, the path to
+ * the configuration file containing verification rules. (This only works in
+ * Node.js since it reads files using the "fs" module.) Otherwise, you should
+ * separately call load().
  * @param {CertificateCache} certificateCache (optional) A CertificateCache to
  * hold known certificates. If this is null or omitted, then create an internal
  * CertificateCache.
@@ -97,6 +98,24 @@ var ConfigPolicyManager = function ConfigPolicyManager
   this.keyTimestampTtl = keyTimestampTtl;
   this.maxTrackedKeys = maxTrackedKeys;
 
+  this.reset();
+
+  if (configFileName != null && configFileName != "")
+    this.load(configFileName);
+};
+
+ConfigPolicyManager.prototype = new PolicyManager();
+ConfigPolicyManager.prototype.name = "ConfigPolicyManager";
+
+exports.ConfigPolicyManager = ConfigPolicyManager;
+
+/**
+ * Reset the certificate cache and other fields to the constructor state.
+ */
+ConfigPolicyManager.prototype.reset = function()
+{
+  this.certificateCache.reset();
+
   // Stores the fixed-signer certificate name associated with validation rules
   // so we don't keep loading from files.
   this.fixedCertificateCache = {};
@@ -106,19 +125,31 @@ var ConfigPolicyManager = function ConfigPolicyManager
   // Key is public key name, value is last timestamp.
   this.keyTimestamps = {};
 
-  this.config = new BoostInfoParser();
-  this.config.read(configFileName);
-
   this.requiresVerification = true;
 
+  this.config = new BoostInfoParser();
   this.refreshManager = new ConfigPolicyManager.TrustAnchorRefreshManager();
-  this.loadTrustAnchorCertificates();
 };
 
-ConfigPolicyManager.prototype = new PolicyManager();
-ConfigPolicyManager.prototype.name = "ConfigPolicyManager";
-
-exports.ConfigPolicyManager = ConfigPolicyManager;
+/**
+ * Call reset() and load the configuration rules from the file name or the input
+ * string. There are two forms:
+ * load(configFileName) reads configFileName from the file system. (This only
+ * works in Node.js since it reads files using the "fs" module.)
+ * load(input, inputName) reads from the input, in which case inputName is used
+ * only for log messages, etc.
+ * @param {string} configFileName The path to the file containing configuration
+ * rules.
+ * @param {string} input The contents of the configuration rules, with lines
+ * separated by "\n" or "\r\n".
+ * @param {string} inputName Use with input for log messages, etc.
+ */
+ConfigPolicyManager.prototype.load = function(configFileNameOrInput, inputName)
+{
+  this.reset();
+  this.config.read(configFileNameOrInput, inputName);
+  this.loadTrustAnchorCertificates();
+}
 
 /**
  * Check if this PolicyManager has a verification rule for the received data.

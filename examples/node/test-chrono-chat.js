@@ -243,50 +243,39 @@ ChronoChat.prototype.sendInterest = function(syncStates, isRecovery)
 {
   this.isRecoverySyncState = isRecovery;
 
-  var sendlist = [];
-  var sessionlist = [];
-  var seqlist = [];
+  var sendList = [];       // of String
+  var sessionNoList = [];  // of number
+  var sequenceNoList = []; // of number
 
   for (var j = 0; j < syncStates.length; j++) {
-  var name_component = syncStates[j].getDataPrefix().split('/');
-  var name_t = name_component[name_component.length - 1];
-  var session = syncStates[j].getSessionNo();
-
-  // Note: application data prefix gets stored in digest tree,
-  // it does not make sense to compare it against screen_name.
-  // Potentially same problem in ndn-cpp's test.
-  if (this.chat_prefix.toUri() != syncStates[j].getDataPrefix()) {
-    var index_n = sendlist.indexOf(syncStates[j].getDataPrefix());
-
-    if(index_n != -1) {
-    // With current code, this branch will not get executed.
-    console.log("*********** Prove me wrong ***********");
-    sessionlist[index_n] = session;
-    seqlist[index_n] = syncStates[j].getSequenceNo();
-    }
-    else {
-    var index_n = this.sync.digest_tree.find(syncStates[j].getDataPrefix(), session);
-    var startSeq = 0;
-    var stopSeq = syncStates[j].getSequenceNo();
-
-    if (index_n != -1) {
-      startSeq = this.sync.digest_tree.digestnode[index_n].getSequenceNo() + 1;
-    }
-
-    for (var k = startSeq; k < stopSeq + 1; k ++) {
-      sendlist.push(syncStates[j].getDataPrefix());
-      sessionlist.push(session);
-      seqlist.push(k);
-    }
+    var syncState = syncStates[j];
+    var nameComponents = new Name(syncState.getDataPrefix());
+    var tempName = nameComponents.get(-1).toEscapedString();
+    var sessionNo = syncState.getSessionNo();
+    if (tempName != this.screen_name) {
+      var index = -1;
+      for (var k = 0; k < sendList.length; ++k) {
+        if (sendList[k] == syncState.getDataPrefix()) {
+          index = k;
+          break;
+        }
+      }
+      if (index != -1) {
+        sessionNoList[index] = sessionNo;
+        sequenceNoList[index] = syncState.getSequenceNo();
+      }
+      else {
+        sendList.push(syncState.getDataPrefix());
+        sessionNoList.push(sessionNo);
+        sequenceNoList.push(syncState.getSequenceNo());
+      }
     }
   }
-  }
 
-  for (var i = 0; i < sendlist.length; i++) {
-    var n = new Name(sendlist[i]+'/'+sessionlist[i]+'/'+seqlist[i]);
-    var interest = new Interest(n);
+  for (var i = 0; i < sendList.length; ++i) {
+    var uri = sendList[i] + "/" + sessionNoList[i] + "/" + sequenceNoList[i];
+    var interest = new Interest(new Name(uri));
     interest.setInterestLifetimeMilliseconds(this.sync_lifetime);
-
     this.face.expressInterest(interest, this.onData.bind(this), this.chatTimeout.bind(this));
   }
 };
