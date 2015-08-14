@@ -48,7 +48,7 @@ function require(){return ndn;}
 function DetectSubtleCrypto(){
   var use = false;
   var baselineSupport = (
-                            (crypto && crypto.subtle)
+                            (typeof crypto !== 'undefined' && crypto && crypto.subtle)
                             && (
                                 (location.protocol === "https:" || "chrome-extension:" || "chrome:")
                                 || (location.hostname === "localhost" || location.hostname === "127.0.0.1")
@@ -18788,12 +18788,12 @@ var PolicyManager = require('./policy-manager.js').PolicyManager;
  * The KeyLocators of data packets and signed interests MUST contain a name for
  * verification to succeed.
  *
- * Create a new ConfigPolicyManager which acts on the rules specified in the
- * configuration file and downloads unknown certificates when necessary.
- * Note: This only works in Node.js since it reads files using the "fs" module.
+ * Create a new ConfigPolicyManager which will act on the rules specified in the
+ * configuration and download unknown certificates when necessary.
  *
  * @param {string} configFileName (optional) If not null or empty, the path to
- * the configuration file containing verification rules. Otherwise, you should
+ * the configuration file containing verification rules. (This only works in
+ * Node.js since it reads files using the "fs" module.) Otherwise, you should
  * separately call load().
  * @param {CertificateCache} certificateCache (optional) A CertificateCache to
  * hold known certificates. If this is null or omitted, then create an internal
@@ -18871,7 +18871,8 @@ ConfigPolicyManager.prototype.reset = function()
 /**
  * Call reset() and load the configuration rules from the file name or the input
  * string. There are two forms:
- * load(configFileName) reads configFileName from the file system.
+ * load(configFileName) reads configFileName from the file system. (This only
+ * works in Node.js since it reads files using the "fs" module.)
  * load(input, inputName) reads from the input, in which case inputName is used
  * only for log messages, etc.
  * @param {string} configFileName The path to the file containing configuration
