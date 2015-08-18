@@ -63,43 +63,70 @@ exports.IdentityManager = IdentityManager;
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @returns {Name} The name of the default certificate of the identity.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with name of the default certificate of the identity. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * @returns {Name} If onComplete is omitted, return the name of the default
+ * certificate of the identity. Otherwise, if onComplete is supplied then return
+ * null and use onComplete as described above.
  */
 IdentityManager.prototype.createIdentityAndCertificate = function
-  (identityName, params)
+  (identityName, params, onComplete)
 {
   this.identityStorage.addIdentity(identityName);
 
-  var keyName = null;
+  var existingKeyName = null;
   var generateKey = true;
   try {
-    keyName = this.identityStorage.getDefaultKeyNameForIdentity(identityName);
-    var key = new PublicKey(this.identityStorage.getKey(keyName));
+    existingKeyName = this.identityStorage.getDefaultKeyNameForIdentity(identityName);
+    var key = new PublicKey(this.identityStorage.getKey(existingKeyName));
     if (key.getKeyType() == params.getKeyType())
       // The key exists and has the same type, so don't need to generate one.
       generateKey = false;
   } catch (ex) {}
 
+  var thisIdentityManager = this;
+  function onGenerateComplete(keyName) {
+    if (generateKey)
+      thisIdentityManager.identityStorage.setDefaultKeyNameForIdentity
+        (keyName, identityName);
+
+    var certName = null;
+    var makeCert = true;
+    try {
+      certName = thisIdentityManager.identityStorage.getDefaultCertificateNameForKey
+        (keyName);
+      // The cert exists, so don't need to make it.
+      makeCert = false;
+    } catch (ex) {}
+
+    if (makeCert) {
+      var selfCert = thisIdentityManager.selfSign(keyName);
+      thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
+      certName = selfCert.getName();
+    }
+
+    if (onComplete) {
+      onComplete(certName);
+      return null;
+    }
+    else
+      return certName;
+  }
+
   if (generateKey) {
-    keyName = this.generateKeyPair(identityName, true, params);
-    this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+    if (onComplete) {
+      // Pass control to the callback.
+      this.generateKeyPair(identityName, true, params, onGenerateComplete);
+      return null;
+    }
+    else
+      return onGenerateComplete(this.generateKeyPair(identityName, true, params));
   }
-
-  var certName = null;
-  var makeCert = true;
-  try {
-    certName = this.identityStorage.getDefaultCertificateNameForKey(keyName);
-    // The cert exists, so don't need to make it.
-    makeCert = false;
-  } catch (ex) {}
-
-  if (makeCert) {
-    var selfCert = this.selfSign(keyName);
-    this.addCertificateAsIdentityDefault(selfCert);
-    certName = selfCert.getName();
-  }
-
-  return certName;
+  else
+    // Don't generate a key pair. Use existingKeyName.
+    return onGenerateComplete(existingKeyName);
 };
 
 /**
@@ -374,22 +401,20 @@ IdentityManager.prototype.signByCertificate = function
     // Encode once to get the signed portion.
     var encoding = data.wireEncode(wireFormat);
 
-    if (onComplete) {
-      this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
-          data.getSignature().setSignature(signatureValue);
-          // Encode again to include the signature.
-          data.wireEncode(wireFormat);
-          onComplete(data);
-        });
-    }
-    else {
-      data.getSignature().setSignature(this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
-
+    function onSignComplete(signatureValue) {
+      data.getSignature().setSignature(signatureValue);
       // Encode again to include the signature.
       data.wireEncode(wireFormat);
+      if (onComplete)
+        onComplete(data);
     }
+    
+    if (onComplete)
+      this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0], onSignComplete);
+    else
+      onSignComplete(this.privateKeyStorage.sign
+        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
   }
   else {
     var digestAlgorithm = [0];
@@ -621,14 +646,40 @@ IdentityManager.prototype.makeSignatureByCertificate = function
  * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
  * a Data-Signing-Key (DSK).
  * @param {KeyParams} params The parameters of the key.
- * @returns {Name} The generated key name.
+ * @param {function} onComplete (optional) This calls onComplete(keyName)
+ * where keyName is the generated key name. If omitted, the return value is
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {Name} If onComplete is omitted, return the generated key name.
+ * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * described above.
  */
-IdentityManager.prototype.generateKeyPair = function(identityName, isKsk, params)
+IdentityManager.prototype.generateKeyPair = function
+  (identityName, isKsk, params, onComplete)
 {
   var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
-  this.privateKeyStorage.generateKeyPair(keyName, params);
-  var publicKeyBits = this.privateKeyStorage.getPublicKey(keyName).getKeyDer();
-  this.identityStorage.addKey(keyName, params.getKeyType(), publicKeyBits);
 
-  return keyName;
+  thisIdentityManager = this;
+  function onGenerateComplete() {
+    var publicKeyBits = thisIdentityManager.privateKeyStorage.getPublicKey
+      (keyName).getKeyDer();
+    thisIdentityManager.identityStorage.addKey
+      (keyName, params.getKeyType(), publicKeyBits);
+
+    if (onComplete) {
+      onComplete(keyName);
+      return null;
+    }
+    else
+      return keyName;
+  }
+
+  if (onComplete) {
+    this.privateKeyStorage.generateKeyPair(keyName, params, onGenerateComplete);
+    return null;
+  }
+  else {
+    this.privateKeyStorage.generateKeyPair(keyName, params);
+    return onGenerateComplete();
+  }
 };
