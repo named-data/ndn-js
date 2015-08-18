@@ -64,13 +64,23 @@ exports.KeyChain = KeyChain;
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The name of the default certificate of the identity.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with name of the default certificate of the identity. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * @returns {Name} If onComplete is omitted, return the name of the default
+ * certificate of the identity. Otherwise, if onComplete is supplied then return
+ * null and use onComplete as described above.
  */
-KeyChain.prototype.createIdentityAndCertificate = function(identityName, params)
+KeyChain.prototype.createIdentityAndCertificate = function
+  (identityName, params, onComplete)
 {
-  if (params == undefined)
-    params = KeyChain.DEFAULT_KEY_PARAMS;
-  return this.identityManager.createIdentityAndCertificate(identityName, params);
+  onComplete = (typeof params === "function") ? params : onComplete;
+  params = (typeof params === "function" || !params) ?
+    KeyChain.DEFAULT_KEY_PARAMS : params;
+
+  return this.identityManager.createIdentityAndCertificate
+    (identityName, params, onComplete);
 };
 
 /**
