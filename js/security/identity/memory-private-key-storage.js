@@ -31,7 +31,6 @@ var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-// TODO: Handle keygen with crypto.subtle.
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -114,40 +113,94 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
+ * @param {function} onComplete (optional) When the key pair is generated and 
+ * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
  */
-MemoryPrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
+MemoryPrivateKeyStorage.prototype.generateKeyPair = function
+  (keyName, params, onComplete)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
     throw new SecurityException(new Error("Public key already exists"));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
     throw new SecurityException(new Error("Public key already exists"));
 
-  var publicKeyDer;
-  var privateKeyPem;
+  if (UseSubtleCrypto() && onComplete) {
+    var thisStore = this;
+    
+    if (params.getKeyType() === KeyType.RSA) {
+      var privateKey = null;
+      var publicKeyDer = null;
+      
+      crypto.subtle.generateKey
+        ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
+           publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+           hash: {name: "SHA-256"} },
+         true, ["sign", "verify"])
+      .then(function(key) {
+        privateKey = key.privateKey;
 
-  if (params.getKeyType() === KeyType.RSA) {
-    // TODO: Handle keygen with crypto.subtle.
-    if (!rsaKeygen)
+        // Export the public key to DER.
+        return crypto.subtle.exportKey("spki", key.publicKey);
+      })
+      .then(function(exportedPublicKey) {
+        publicKeyDer = new Blob(new Uint8Array(exportedPublicKey), false).buf();
+
+        // Export the private key to DER.
+        return crypto.subtle.exportKey("pkcs8", privateKey);
+      })
+      .then(function(pkcs8Der) {
+        // Crypto.subtle exports the private key as PKCS #8. Decode it to find
+        // the inner private key DER.
+        var parsedNode = DerNode.parse
+          (new Blob(new Uint8Array(pkcs8Der), false).buf());
+        // Get the value of the 3rd child which is the octet string.
+        var privateKeyDer = parsedNode.getChildren()[2].toVal();
+
+        // Save the key pair.
+        thisStore.setKeyPairForKeyName
+          (keyName, params.getKeyType(), publicKeyDer, privateKeyDer.buf());
+
+        // sign will use subtleKey directly.
+        thisStore.privateKeyStore[keyName.toUri()].subtleKey = privateKey;
+
+        onComplete();
+      });
+    }
+    else
       throw new SecurityException(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
-
-    var keyPair = rsaKeygen.generate(params.getKeySize());
-
-    // Get the public key DER from the PEM string.
-    var publicKeyBase64 = keyPair.public_key.toString().replace
-      ("-----BEGIN PUBLIC KEY-----", "").replace
-      ("-----END PUBLIC KEY-----", "");
-    publicKeyDer = new Buffer(publicKeyBase64, 'base64');
-
-    privateKeyPem = keyPair.private_key.toString();
+        ("Only RSA key generation currently supported"));
   }
-  else
-    throw new SecurityException(new Error
-      ("Only RSA key generation currently supported"));
+  else {
+    var publicKeyDer;
+    var privateKeyPem;
 
-  this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
-  this.privateKeyStore[keyName.toUri()] =
-    { keyType: params.getKeyType(), privateKey: privateKeyPem };
+    if (params.getKeyType() === KeyType.RSA) {
+      if (!rsaKeygen)
+        throw new SecurityException(new Error
+          ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+      var keyPair = rsaKeygen.generate(params.getKeySize());
+
+      // Get the public key DER from the PEM string.
+      var publicKeyBase64 = keyPair.public_key.toString().replace
+        ("-----BEGIN PUBLIC KEY-----", "").replace
+        ("-----END PUBLIC KEY-----", "");
+      publicKeyDer = new Buffer(publicKeyBase64, 'base64');
+
+      privateKeyPem = keyPair.private_key.toString();
+    }
+    else
+      throw new SecurityException(new Error
+        ("Only RSA key generation currently supported"));
+
+    this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+    this.privateKeyStore[keyName.toUri()] =
+      { keyType: params.getKeyType(), privateKey: privateKeyPem };
+
+    if (onComplete)
+      onComplete();
+  }
 };
 
 /**
@@ -253,7 +306,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
         return crypto.subtle.sign(algo, subtleKey, data);
       });
     } else {
-      //crypto.subtle key has been cached on a previous sign
+      // The crypto.subtle key has been cached on a previous sign or from keygen.
       var promise = crypto.subtle.sign(algo, privateKey.subtleKey, data);
     }
 
