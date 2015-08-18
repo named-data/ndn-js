@@ -22,7 +22,7 @@
 function DetectSubtleCrypto(){
   var use = false;
   var baselineSupport = (
-                            (crypto && crypto.subtle)
+                            (typeof crypto !== 'undefined' && crypto && crypto.subtle)
                             && (
                                 (location.protocol === "https:" || "chrome-extension:" || "chrome:")
                                 || (location.hostname === "localhost" || location.hostname === "127.0.0.1")
