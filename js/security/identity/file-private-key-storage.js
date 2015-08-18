@@ -73,8 +73,12 @@ FilePrivateKeyStorage.prototype.doesKeyExist = function (keyName, keyClass)
  * Generate a pair of asymmetric keys; only currently supports RSA
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
+ * @param {function} onComplete (optional) When the key pair is generated and
+ * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
  */
-FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
+FilePrivateKeyStorage.prototype.generateKeyPair = function
+  (keyName, params, onComplete)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
     throw new SecurityException(new Error("Public key already exists"));
@@ -113,6 +117,9 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function (keyName, params)
   else {
     throw new SecurityException(new Error("Only RSA key generation currently supported"));
   }
+
+  if (onComplete)
+    onComplete();
 };
 
 /**

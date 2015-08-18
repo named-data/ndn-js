@@ -33,8 +33,12 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
+ * @param {function} onComplete (optional) When the key pair is generated and
+ * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
+ * crypto libraries only use a callback, so onComplete is required to use these.)
  */
-PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
+PrivateKeyStorage.prototype.generateKeyPair = function
+  (keyName, params, onComplete)
 {
   throw new Error("PrivateKeyStorage.generateKeyPair is not implemented");
 };
