@@ -268,7 +268,7 @@ MemoryPrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
  * the signature Blob. If omitted, the return value is the signature Blob. (Some
  * crypto libraries only use a callback, so onComplete is required to use these.)
  * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 MemoryPrivateKeyStorage.prototype.sign = function
   (data, keyName, digestAlgorithm, onComplete)
@@ -314,8 +314,6 @@ MemoryPrivateKeyStorage.prototype.sign = function
       var result = new Blob(new Uint8Array(signature), true);
       onComplete(result)
     });
-
-    return null;
   } else {
     var rsa = Crypto.createSign('RSA-SHA256');
     rsa.update(data);
@@ -324,14 +322,11 @@ MemoryPrivateKeyStorage.prototype.sign = function
       (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(result);
-      return null;
-    }
     else
       return result;
   }
-
 };
 
 /**

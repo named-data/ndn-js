@@ -69,7 +69,7 @@ exports.IdentityManager = IdentityManager;
  * onComplete is required to use these.)
  * @returns {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
- * null and use onComplete as described above.
+ * undefined and use onComplete as described above.
  */
 IdentityManager.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete)
@@ -107,20 +107,16 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       certName = selfCert.getName();
     }
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(certName);
-      return null;
-    }
     else
       return certName;
   }
 
   if (generateKey) {
-    if (onComplete) {
+    if (onComplete)
       // Pass control to the callback.
       this.generateKeyPair(identityName, true, params, onGenerateComplete);
-      return null;
-    }
     else
       return onGenerateComplete(this.generateKeyPair(identityName, true, params));
   }
@@ -368,7 +364,7 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * Sign the Data packet or byte array data based on the certificate name.
  * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
  * update its signature and key locator field and wireEncoding. If it is a
- * Biffer, sign it to produce a Signature object.
+ * Buffer, sign it to produce a Signature object.
  * @param {Name} certificateName The Name identifying the certificate which
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
@@ -380,8 +376,9 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or null (if target is Data). Otherwise, if
- * onComplete is supplied then return null and use onComplete as described above.
+ * object (if target is a Buffer) or undefined (if target is Data). Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
  */
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete)
@@ -435,8 +432,6 @@ IdentityManager.prototype.signByCertificate = function
       return signature;
     }
   }
-
-  return null;
 };
 
 /**
@@ -651,8 +646,8 @@ IdentityManager.prototype.makeSignatureByCertificate = function
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * @returns {Name} If onComplete is omitted, return the generated key name.
- * Otherwise, if onComplete is supplied then return null and use onComplete as
- * described above.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  */
 IdentityManager.prototype.generateKeyPair = function
   (identityName, isKsk, params, onComplete)
@@ -666,18 +661,14 @@ IdentityManager.prototype.generateKeyPair = function
     thisIdentityManager.identityStorage.addKey
       (keyName, params.getKeyType(), publicKeyBits);
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(keyName);
-      return null;
-    }
     else
       return keyName;
   }
 
-  if (onComplete) {
+  if (onComplete)
     this.privateKeyStorage.generateKeyPair(keyName, params, onGenerateComplete);
-    return null;
-  }
   else {
     this.privateKeyStorage.generateKeyPair(keyName, params);
     return onGenerateComplete();

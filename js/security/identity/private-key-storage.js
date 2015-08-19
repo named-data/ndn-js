@@ -73,7 +73,7 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * the signature Blob. If omitted, the return value is the signature Blob. (Some
  * crypto libraries only use a callback, so onComplete is required to use these.)
  * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 PrivateKeyStorage.prototype.sign = function
   (data, keyName, digestAlgorithm, onComplete)
