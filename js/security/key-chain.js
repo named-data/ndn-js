@@ -70,7 +70,7 @@ exports.KeyChain = KeyChain;
  * onComplete is required to use these.)
  * @returns {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
- * null and use onComplete as described above.
+ * undefined and use onComplete as described above.
  */
 KeyChain.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete)
@@ -314,8 +314,8 @@ KeyChain.prototype.getPolicyManager = function()
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or null (if target is Data or Interest).
- * Otherwise, if onComplete is supplied then return null and use onComplete as
+ * object (if target is a Buffer) or undefined (if target is Data or Interest).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
  */
 KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComplete)
@@ -348,9 +348,9 @@ KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComple
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or null (if target is Data).
- * Otherwise, if onComplete is supplied then return null and use onComplete as
- * described above.
+ * object (if target is a Buffer) or undefined (if target is Data).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  */
 KeyChain.prototype.signByIdentity = function
   (target, identityName, wireFormat, onComplete)
