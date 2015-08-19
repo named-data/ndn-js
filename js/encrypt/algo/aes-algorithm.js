@@ -74,7 +74,7 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
  * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
  * crypto libraries only use a callback, so onComplete is required to use these.)
  * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
@@ -96,8 +96,6 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     }
     else
       throw new Error("unsupported encryption mode");
-
-    return null;
   }
   else {
     var result;
@@ -118,10 +116,8 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     else
       throw new Error("unsupported encryption mode");
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(result);
-      return null;
-    }
     else
       return result;
   }
@@ -139,7 +135,7 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * (Some crypto libraries only use a callback, so onComplete is required to use
  * these.)
  * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
@@ -166,8 +162,6 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     }
     else
       throw new Error("unsupported encryption mode");
-
-    return null;
   }
   else {
     var result;
@@ -188,10 +182,8 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     else
       throw new Error("unsupported encryption mode");
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(result);
-      return null;
-    }
     else
       return result;
   }

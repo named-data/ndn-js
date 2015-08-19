@@ -97,7 +97,7 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
  * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
  * crypto libraries only use a callback, so onComplete is required to use these.)
  * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
@@ -118,8 +118,6 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     }
     else
       throw new Error("unsupported padding scheme");
-
-    return null;
   }
   else {
     // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
@@ -145,10 +143,8 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
       (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
        false);
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(result);
-      return null;
-    }
     else
       return result;
   }
@@ -165,7 +161,7 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * (Some crypto libraries only use a callback, so onComplete is required to use
  * these.)
  * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
- * return null and use onComplete as described above.
+ * return undefined and use onComplete as described above.
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
@@ -186,8 +182,6 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     }
     else
       throw new Error("unsupported padding scheme");
-
-    return null;
   }
   else {
     // Encode the key DER as a PEM public key as needed by Crypto.
@@ -210,10 +204,8 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
       (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
        false);
 
-    if (onComplete) {
+    if (onComplete)
       onComplete(result);
-      return null;
-    }
     else
       return result;
   }
