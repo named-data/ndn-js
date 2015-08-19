@@ -47,6 +47,8 @@ exports.createHash = function(alg)
     var hexDigest = this.md.digest();
     if (encoding == 'hex')
       return hexDigest;
+    else if (encoding == 'base64')
+      return new Buffer(hexDigest, 'hex').toString('base64');
     else
       return new Buffer(hexDigest, 'hex');
   };
