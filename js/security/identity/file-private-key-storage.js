@@ -149,12 +149,21 @@ FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some crypto
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the  public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-FilePrivateKeyStorage.prototype.getPublicKey = function (keyName)
+FilePrivateKeyStorage.prototype.getPublicKey = function (keyName, onComplete)
 {
   var buffer = this.read(keyName, KeyClass.PUBLIC);
-  return new PublicKey(new Blob(buffer));
+  var publicKey = new PublicKey(new Blob(buffer));
+
+  if (onComplete)
+    onComplete(publicKey);
+  else
+    return publicKey;
 };
 
 /**
