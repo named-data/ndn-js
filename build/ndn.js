@@ -18469,22 +18469,30 @@ IdentityManager.prototype.generateKeyPair = function
 
   thisIdentityManager = this;
   function onGenerateComplete() {
-    var publicKeyBits = thisIdentityManager.privateKeyStorage.getPublicKey
-      (keyName).getKeyDer();
-    thisIdentityManager.identityStorage.addKey
-      (keyName, params.getKeyType(), publicKeyBits);
+    function onGotPublicKey(publicKey) {
+      thisIdentityManager.identityStorage.addKey
+        (keyName, params.getKeyType(), publicKey.getKeyDer());
+
+      if (onComplete)
+        onComplete(keyName);
+      else
+        return keyName;
+    }
 
     if (onComplete)
-      onComplete(keyName);
+      thisIdentityManager.privateKeyStorage.getPublicKey
+        (keyName, onGotPublicKey);
     else
-      return keyName;
+      return onGotPublicKey(thisIdentityManager.privateKeyStorage.getPublicKey
+        (keyName));
   }
 
   if (onComplete)
-    this.privateKeyStorage.generateKeyPair(keyName, params, onGenerateComplete);
+    this.privateKeyStorage.generateKeyPair
+      (keyName, params, onGenerateComplete);
   else {
-    this.privateKeyStorage.generateKeyPair(keyName, params);
-    return onGenerateComplete();
+    return onGenerateComplete(this.privateKeyStorage.generateKeyPair
+      (keyName, params));
   }
 };
 /**
