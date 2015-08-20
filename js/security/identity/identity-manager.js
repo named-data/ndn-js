@@ -404,27 +404,35 @@ IdentityManager.prototype.signByCertificate = function
   if (target instanceof Data) {
     var data = target;
     var digestAlgorithm = [0];
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
+    var thisIdentityManager = this;
 
-    data.setSignature(signature);
-    // Encode once to get the signed portion.
-    var encoding = data.wireEncode(wireFormat);
+    function onMadeSignature(signature) {
+      data.setSignature(signature);
+      // Encode once to get the signed portion.
+      var encoding = data.wireEncode(wireFormat);
 
-    function onSignComplete(signatureValue) {
-      data.getSignature().setSignature(signatureValue);
-      // Encode again to include the signature.
-      data.wireEncode(wireFormat);
+      function onSignComplete(signatureValue) {
+        data.getSignature().setSignature(signatureValue);
+        // Encode again to include the signature.
+        data.wireEncode(wireFormat);
+        if (onComplete)
+          onComplete(data);
+      }
+
       if (onComplete)
-        onComplete(data);
+        thisIdentityManager.privateKeyStorage.sign
+          (encoding.signedBuf(), keyName, digestAlgorithm[0], onSignComplete);
+      else
+        onSignComplete(thisIdentityManager.privateKeyStorage.sign
+          (encoding.signedBuf(), keyName, digestAlgorithm[0]));
     }
-    
+
     if (onComplete)
-      this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], onSignComplete);
+      this.makeSignatureByCertificate
+        (certificateName, digestAlgorithm, onMadeSignature);
     else
-      onSignComplete(this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+      onMadeSignature(this.makeSignatureByCertificate
+        (certificateName, digestAlgorithm));
   }
   else {
     var digestAlgorithm = [0];
@@ -636,26 +644,43 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @returns {Signature} A new object of the correct subclass of Signature.
+ * @param {function} onComplete (optional) This calls onComplete(signature)
+ * with a new object of the correct subclass of Signature. If omitted, the
+ * return value is as described below. (Some crypto libraries only use a
+ * callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return a new object of the
+ * correct subclass of Signature. Otherwise, return undefined and use onComplete
+ * as described above.
  */
 IdentityManager.prototype.makeSignatureByCertificate = function
-  (certificateName, digestAlgorithm)
+  (certificateName, digestAlgorithm, onComplete)
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
-  var keyType = publicKey.getKeyType();
 
-  if (keyType == KeyType.RSA) {
-    var signature = new Sha256WithRsaSignature();
-    digestAlgorithm[0] = DigestAlgorithm.SHA256;
+  function onGotPublicKey(publicKey) {
+    var keyType = publicKey.getKeyType();
 
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    var signature = null;
+    if (keyType == KeyType.RSA) {
+      signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-    return signature;
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else
+      throw new SecurityException(new Error("Key type is not recognized"));
+
+    if (onComplete)
+      onComplete(signature)
+    else
+      return signature;
   }
+
+  if (onComplete)
+    this.privateKeyStorage.getPublicKey(keyName, onGotPublicKey);
   else
-    throw new SecurityException(new Error("Key type is not recognized"));
+    return onGotPublicKey(this.privateKeyStorage.getPublicKey(keyName));
 };
 
 /**
