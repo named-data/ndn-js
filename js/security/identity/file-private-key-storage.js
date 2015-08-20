@@ -95,7 +95,7 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function
     throw new SecurityException(new Error("Public key already exists"));
   }
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE)) {
-    throw new SecurityException(new Error("Public key already exists"));
+    throw new SecurityException(new Error("Private key already exists"));
   }
 
   // build keys
