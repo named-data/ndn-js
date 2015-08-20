@@ -102,15 +102,28 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     } catch (ex) {}
 
     if (makeCert) {
-      var selfCert = thisIdentityManager.selfSign(keyName);
-      thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
-      certName = selfCert.getName();
-    }
+      function onSelfCertComplete(selfCert) {
+        thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
+        certName = selfCert.getName();
 
-    if (onComplete)
-      onComplete(certName);
-    else
-      return certName;
+        if (onComplete)
+          onComplete(certName);
+        else
+          return certName;
+      }
+
+      if (onComplete)
+        // Pass control to the callback.
+        thisIdentityManager.selfSign(keyName, onSelfCertComplete);
+      else
+        return onSelfCertComplete(thisIdentityManager.selfSign(keyName));
+    }
+    else {
+      if (onComplete)
+        onComplete(certName);
+      else
+        return certName;
+    }
   }
 
   if (generateKey) {
@@ -548,9 +561,14 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @returns {IdentityCertificate} The generated certificate.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the generated certificate. If omitted, the return value is as
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {IdentityCertificate} If onComplete is omitted, return the generated
+ * certificate. Otherwise, return undefined and use onComplete as described above.
  */
-IdentityManager.prototype.selfSign = function(keyName)
+IdentityManager.prototype.selfSign = function(keyName, onComplete)
 {
   var certificate = new IdentityCertificate();
 
@@ -572,9 +590,14 @@ IdentityManager.prototype.selfSign = function(keyName)
     ("2.5.4.41", keyName.toUri()));
   certificate.encode();
 
-  this.signByCertificate(certificate, certificate.getName());
-
-  return certificate;
+  if (onComplete)
+    this.signByCertificate(certificate, certificate.getName(), function() {
+      onComplete(certificate);
+    });
+  else {
+    this.signByCertificate(certificate, certificate.getName());
+    return certificate;
+  }
 };
 
 /**
