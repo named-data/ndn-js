@@ -17384,9 +17384,9 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @param {function} onComplete (optional) This calls onComplete(publicKey) with
- * the PublicKey. If omitted, the return value is the PublicKey. (Some crypto
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
  * libraries only use a callback, so onComplete is required to use these.)
- * @returns {PublicKey} If onComplete is omitted, return the  public key.
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
  * Otherwise, return undefined and use onComplete as described above.
  */
 PrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
@@ -17456,9 +17456,15 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+PrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
 };
@@ -17587,7 +17593,7 @@ MemoryPrivateKeyStorage.prototype.generateKeyPair = function
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
     throw new SecurityException(new Error("Public key already exists"));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
-    throw new SecurityException(new Error("Public key already exists"));
+    throw new SecurityException(new Error("Private key already exists"));
 
   if (UseSubtleCrypto() && onComplete) {
     var thisStore = this;
@@ -17915,15 +17921,28 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     } catch (ex) {}
 
     if (makeCert) {
-      var selfCert = thisIdentityManager.selfSign(keyName);
-      thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
-      certName = selfCert.getName();
-    }
+      function onSelfCertComplete(selfCert) {
+        thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
+        certName = selfCert.getName();
 
-    if (onComplete)
-      onComplete(certName);
-    else
-      return certName;
+        if (onComplete)
+          onComplete(certName);
+        else
+          return certName;
+      }
+
+      if (onComplete)
+        // Pass control to the callback.
+        thisIdentityManager.selfSign(keyName, onSelfCertComplete);
+      else
+        return onSelfCertComplete(thisIdentityManager.selfSign(keyName));
+    }
+    else {
+      if (onComplete)
+        onComplete(certName);
+      else
+        return certName;
+    }
   }
 
   if (generateKey) {
@@ -18361,9 +18380,14 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @returns {IdentityCertificate} The generated certificate.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the generated certificate. If omitted, the return value is as
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {IdentityCertificate} If onComplete is omitted, return the generated
+ * certificate. Otherwise, return undefined and use onComplete as described above.
  */
-IdentityManager.prototype.selfSign = function(keyName)
+IdentityManager.prototype.selfSign = function(keyName, onComplete)
 {
   var certificate = new IdentityCertificate();
 
@@ -18385,9 +18409,14 @@ IdentityManager.prototype.selfSign = function(keyName)
     ("2.5.4.41", keyName.toUri()));
   certificate.encode();
 
-  this.signByCertificate(certificate, certificate.getName());
-
-  return certificate;
+  if (onComplete)
+    this.signByCertificate(certificate, certificate.getName(), function() {
+      onComplete(certificate);
+    });
+  else {
+    this.signByCertificate(certificate, certificate.getName());
+    return certificate;
+  }
 };
 
 /**
