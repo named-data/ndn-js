@@ -28,6 +28,8 @@ var Blob = require('../../util/blob').Blob;
 var OID = require('../../encoding/oid').OID;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 var util = require('util');
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 var Crypto = require('crypto');
@@ -73,11 +75,7 @@ FilePrivateKeyStorage.prototype.doesKeyExist = function
   (keyName, keyClass, onComplete)
 {
   var exists = fs.existsSync(this.transformName(keyName, keyClass));
-
-  if (onComplete)
-    onComplete(exists);
-  else
-    return exists;
+  return complete(onComplete, exists);
 };
 
 /**
@@ -170,11 +168,7 @@ FilePrivateKeyStorage.prototype.getPublicKey = function (keyName, onComplete)
 {
   var buffer = this.read(keyName, KeyClass.PUBLIC);
   var publicKey = new PublicKey(new Blob(buffer));
-
-  if (onComplete)
-    onComplete(publicKey);
-  else
-    return publicKey;
+  return complete(onComplete, publicKey);
 };
 
 /**
@@ -214,12 +208,7 @@ FilePrivateKeyStorage.prototype.sign = function
     rsa.update(data);
 
     var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));
-    var result = new Blob(signature, false);
-
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    return complete(onComplete, new Blob(signature, false));
   }
   else
     // We don't expect this to happen since getPrivateKey checked it.
