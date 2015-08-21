@@ -34,6 +34,8 @@ var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -87,7 +89,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   } catch (ex) {}
 
   var thisIdentityManager = this;
-  function onGenerateComplete(keyName) {
+  function onGotKeyName(keyName) {
     if (generateKey)
       thisIdentityManager.identityStorage.setDefaultKeyNameForIdentity
         (keyName, identityName);
@@ -102,27 +104,24 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     } catch (ex) {}
 
     if (makeCert) {
-      var selfCert = thisIdentityManager.selfSign(keyName);
-      thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
-      certName = selfCert.getName();
+      return applyThen
+        (thisIdentityManager, "selfSign", [keyName], onComplete,
+         function(selfCert) {
+        thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
+        return complete(onComplete, selfCert.getName());
+      });
     }
-
-    if (onComplete)
-      onComplete(certName);
     else
-      return certName;
+      return complete(onComplete, certName);
   }
 
-  if (generateKey) {
-    if (onComplete)
-      // Pass control to the callback.
-      this.generateKeyPair(identityName, true, params, onGenerateComplete);
-    else
-      return onGenerateComplete(this.generateKeyPair(identityName, true, params));
-  }
+  if (generateKey)
+    return applyThen
+      (this, "generateKeyPair", [identityName, true, params], onComplete,
+       onGotKeyName);
   else
     // Don't generate a key pair. Use existingKeyName.
-    return onGenerateComplete(existingKeyName);
+    return onGotKeyName(existingKeyName);
 };
 
 /**
@@ -376,8 +375,8 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data). Otherwise, if
- * onComplete is supplied then return undefined and use onComplete as described
+ * object (if target is a Buffer) or the target (if target is Data). Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as described
  * above.
  */
 IdentityManager.prototype.signByCertificate = function
@@ -391,46 +390,38 @@ IdentityManager.prototype.signByCertificate = function
   if (target instanceof Data) {
     var data = target;
     var digestAlgorithm = [0];
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
+    var thisIdentityManager = this;
 
-    data.setSignature(signature);
-    // Encode once to get the signed portion.
-    var encoding = data.wireEncode(wireFormat);
+    return applyThen
+      (this, "makeSignatureByCertificate", [certificateName, digestAlgorithm],
+       onComplete, function(signature) {
+      data.setSignature(signature);
+      // Encode once to get the signed portion.
+      var encoding = data.wireEncode(wireFormat);
 
-    function onSignComplete(signatureValue) {
-      data.getSignature().setSignature(signatureValue);
-      // Encode again to include the signature.
-      data.wireEncode(wireFormat);
-      if (onComplete)
-        onComplete(data);
-    }
-    
-    if (onComplete)
-      this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], onSignComplete);
-    else
-      onSignComplete(this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+      return applyThen
+        (thisIdentityManager.privateKeyStorage, "sign",
+         [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
+         function(signatureValue) {
+        data.getSignature().setSignature(signatureValue);
+        // Encode again to include the signature.
+        data.wireEncode(wireFormat);
+
+        return complete(onComplete, data);
+      });
+    });
   }
   else {
     var digestAlgorithm = [0];
     var signature = this.makeSignatureByCertificate
       (certificateName, digestAlgorithm);
 
-    if (onComplete) {
-      this.privateKeyStorage.sign
-        (target, keyName, digestAlgorithm[0], function(signatureValue) {
-          signature.setSignature(signatureValue);
-          onComplete(signature);
-        });
-    }
-    else {
-      signature.setSignature(this.privateKeyStorage.sign
-        (target, keyName, digestAlgorithm[0]));
-
-      return signature;
-    }
+    return applyThen
+      (this.privateKeyStorage, "sign", [target, keyName, digestAlgorithm[0]],
+       onComplete, function (signatureValue) {
+      signature.setSignature(signatureValue);
+      return complete(onComplete, signature);
+    });
   }
 };
 
@@ -466,25 +457,17 @@ IdentityManager.prototype.signInterestByCertificate = function
   var encoding = interest.wireEncode(wireFormat);
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
-  if (onComplete) {
-    this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
-        signature.setSignature(signatureValue);
-
-        // Remove the empty signature and append the real one.
-        interest.setName(interest.getName().getPrefix(-1).append
-          (wireFormat.encodeSignatureValue(signature)));
-        onComplete(interest);
-      });
-  }
-  else {
-    signature.setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+  return applyThen
+    (this.privateKeyStorage, "sign",
+     [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
+     function(signatureValue) {
+    signature.setSignature(signatureValue);
 
     // Remove the empty signature and append the real one.
     interest.setName(interest.getName().getPrefix(-1).append
       (wireFormat.encodeSignatureValue(signature)));
-  }
+    return complete(onComplete, interest);
+  });
 };
 
 /**
@@ -548,9 +531,14 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @returns {IdentityCertificate} The generated certificate.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the generated certificate. If omitted, the return value is as
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {IdentityCertificate} If onComplete is omitted, return the generated
+ * certificate. Otherwise, return undefined and use onComplete as described above.
  */
-IdentityManager.prototype.selfSign = function(keyName)
+IdentityManager.prototype.selfSign = function(keyName, onComplete)
 {
   var certificate = new IdentityCertificate();
 
@@ -572,9 +560,11 @@ IdentityManager.prototype.selfSign = function(keyName)
     ("2.5.4.41", keyName.toUri()));
   certificate.encode();
 
-  this.signByCertificate(certificate, certificate.getName());
-
-  return certificate;
+  return applyThen
+    (this, "signByCertificate", [certificate, certificate.getName()], onComplete,
+     function() {
+    return complete(onComplete, certificate);
+  });
 };
 
 /**
@@ -613,26 +603,37 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @returns {Signature} A new object of the correct subclass of Signature.
+ * @param {function} onComplete (optional) This calls onComplete(signature)
+ * with a new object of the correct subclass of Signature. If omitted, the
+ * return value is as described below. (Some crypto libraries only use a
+ * callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return a new object of the
+ * correct subclass of Signature. Otherwise, return undefined and use onComplete
+ * as described above.
  */
 IdentityManager.prototype.makeSignatureByCertificate = function
-  (certificateName, digestAlgorithm)
+  (certificateName, digestAlgorithm, onComplete)
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
-  var keyType = publicKey.getKeyType();
 
-  if (keyType == KeyType.RSA) {
-    var signature = new Sha256WithRsaSignature();
-    digestAlgorithm[0] = DigestAlgorithm.SHA256;
+  return applyThen
+    (this.privateKeyStorage, "getPublicKey", [keyName], onComplete,
+     function(publicKey) {
+    var keyType = publicKey.getKeyType();
 
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    var signature = null;
+    if (keyType == KeyType.RSA) {
+      signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-    return signature;
-  }
-  else
-    throw new SecurityException(new Error("Key type is not recognized"));
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else
+      throw new SecurityException(new Error("Key type is not recognized"));
+
+    return complete(onComplete, signature);
+  });
 };
 
 /**
@@ -655,22 +656,16 @@ IdentityManager.prototype.generateKeyPair = function
   var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
 
   thisIdentityManager = this;
-  function onGenerateComplete() {
-    var publicKeyBits = thisIdentityManager.privateKeyStorage.getPublicKey
-      (keyName).getKeyDer();
-    thisIdentityManager.identityStorage.addKey
-      (keyName, params.getKeyType(), publicKeyBits);
+  return applyThen
+    (this.privateKeyStorage, "generateKeyPair", [keyName, params], onComplete,
+     function() {
+    return applyThen
+      (thisIdentityManager.privateKeyStorage, "getPublicKey", [keyName],
+       onComplete, function(publicKey) {
+      thisIdentityManager.identityStorage.addKey
+        (keyName, params.getKeyType(), publicKey.getKeyDer());
 
-    if (onComplete)
-      onComplete(keyName);
-    else
-      return keyName;
-  }
-
-  if (onComplete)
-    this.privateKeyStorage.generateKeyPair(keyName, params, onGenerateComplete);
-  else {
-    this.privateKeyStorage.generateKeyPair(keyName, params);
-    return onGenerateComplete();
-  }
+      return complete(onComplete, keyName);
+    });
+  });
 };

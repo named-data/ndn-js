@@ -55,9 +55,13 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.getPublicKey = function(keyName)
+PrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
 {
   throw new Error("PrivateKeyStorage.getPublicKey is not implemented");
 };
@@ -124,9 +128,15 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+PrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
 };

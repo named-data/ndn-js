@@ -28,6 +28,8 @@ var Blob = require('../../util/blob').Blob;
 var OID = require('../../encoding/oid').OID;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 var util = require('util');
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 var Crypto = require('crypto');
@@ -62,11 +64,18 @@ exports.FilePrivateKeyStorage = FilePrivateKeyStorage;
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-FilePrivateKeyStorage.prototype.doesKeyExist = function (keyName, keyClass)
+FilePrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
-  return fs.existsSync(this.transformName(keyName, keyClass));
+  var exists = fs.existsSync(this.transformName(keyName, keyClass));
+  return complete(onComplete, exists);
 };
 
 /**
@@ -84,7 +93,7 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function
     throw new SecurityException(new Error("Public key already exists"));
   }
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE)) {
-    throw new SecurityException(new Error("Public key already exists"));
+    throw new SecurityException(new Error("Private key already exists"));
   }
 
   // build keys
@@ -149,12 +158,17 @@ FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-FilePrivateKeyStorage.prototype.getPublicKey = function (keyName)
+FilePrivateKeyStorage.prototype.getPublicKey = function (keyName, onComplete)
 {
   var buffer = this.read(keyName, KeyClass.PUBLIC);
-  return new PublicKey(new Blob(buffer));
+  var publicKey = new PublicKey(new Blob(buffer));
+  return complete(onComplete, publicKey);
 };
 
 /**
@@ -194,12 +208,7 @@ FilePrivateKeyStorage.prototype.sign = function
     rsa.update(data);
 
     var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));
-    var result = new Blob(signature, false);
-
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    return complete(onComplete, new Blob(signature, false));
   }
   else
     // We don't expect this to happen since getPrivateKey checked it.

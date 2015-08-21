@@ -6249,6 +6249,85 @@ exports.NdnCommon = NdnCommon;
  * Face.getMaxNdnPacketSize() which is equivalent.
  */
 NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
+
+/**
+ * Use apply to call a function and then use a continuation function to process
+ * the result synchronously or asynchronously as follows. If doAsync, then
+ * append continuation to the argument list when calling apply, so that the
+ * continuation processes the result asynchronously. Otherwise, immediately call
+ * continuation with the value and return the result synchronously. This is
+ * needed for functions which allow an optional onComplete callback for
+ * asynchronous mode. For example, you can call:
+ * function myOptionalAsyncFunc(x, y, onComplete) {
+ *   // Do some stuff to create someObject.
+ *   return applyThen(someObject, "someMethod", [x, y], onComplete, function(val) {
+ *     // Process val and create the result.
+ *     return complete(onComplete, result);
+ *   });
+ * }
+ *
+ * If onComplete is omitted, then the effective synchronous code is:
+ * function myOptionalAsyncFunc(x, y, onComplete) {
+ *   // Do some stuff to create someObject.
+ *   var val = someObject.someMethod(x, y);
+ *   // Process val and create the result.
+ *   return result;
+ * }
+ *
+ * If onComplete is supplied, then the effective asynchronous code is:
+ * function myOptionalAsyncFunc(x, y, onComplete) {
+ *   // Do some stuff to create someObject.
+ *   someObject.someMethod(x, y, function(val) {
+ *     // Process val and create the result.
+ *     onComplete(result);
+ *   });
+ * }
+ *
+ * @param {object} thisArg The "this" value for calling apply.
+ * @param {string} funcName The function for calling apply is thisArg[funcName],
+ * and its last argument must be an optional onComplete callback for
+ * asynchronoous mode.
+ * @param {array} args The array of arguments for calling apply. If doAsync, then
+ * continuation is appended to args.
+ * @param {boolean} doAsync If doAsync, then append continuation to args for
+ * calling apply. Otheriwse, pass the result of apply to continuation and return
+ * the result. As shown in the example above, you should simply pass onComplete
+ * so that doAsync is true if onComplete is supplied. But note that applyThen
+ * does not use onComplete itself - instead onComplete is used by the
+ * continuation function.
+ * @param {function} continuation A function which takes the result from calling
+ * apply, and continues processing.
+ * @return {any} If !doAsync, this returns the result of calling
+ * continuation. Otherwise this returns undefined.
+ */
+NdnCommon.applyThen = function(thisArg, funcName, args, doAsync, continuation)
+{
+  if (doAsync)
+    // Pass control to the callback.
+    thisArg[funcName].apply(thisArg, args.concat([continuation]));
+  else
+    return continuation(thisArg[funcName].apply(thisArg, args));
+}
+
+/**
+ * If onComplete is omitted, just return the  value synchronously. Otherwise
+ * call onComplete(value) to provide it asynchronously. This is needed for
+ * functions which allow an optional onComplete callback for asynchronous mode.
+ * The function should finish with: return complete(onComplete, value);
+ * @param {function} onComplete (optional) If supplied, this calls
+ * onComplete(value).
+ * @param {any} value The value for onComplete(value), or to return if onComplete
+ * is omitted.
+ * @return {any} If onComplete is omitted, this returns value. Otherwise this
+ * returns undefined.
+ */
+NdnCommon.complete = function(onComplete, value)
+{
+  if (onComplete)
+    onComplete(value);
+  else
+    return value;
+}
 /**
  * This class contains all NDNx tags
  * Copyright (C) 2013-2015 Regents of the University of California.
@@ -17383,9 +17462,13 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.getPublicKey = function(keyName)
+PrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
 {
   throw new Error("PrivateKeyStorage.getPublicKey is not implemented");
 };
@@ -17452,9 +17535,15 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+PrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
 };
@@ -17490,6 +17579,8 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {
@@ -17583,7 +17674,7 @@ MemoryPrivateKeyStorage.prototype.generateKeyPair = function
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
     throw new SecurityException(new Error("Public key already exists"));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
-    throw new SecurityException(new Error("Public key already exists"));
+    throw new SecurityException(new Error("Private key already exists"));
 
   if (UseSubtleCrypto() && onComplete) {
     var thisStore = this;
@@ -17678,9 +17769,13 @@ MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
+MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
 {
   var keyUri = keyName.toUri();
   var publicKey = this.publicKeyStore[keyUri];
@@ -17688,7 +17783,7 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
 
-  return publicKey;
+  return complete(onComplete, publicKey);
 };
 
 /**
@@ -17782,10 +17877,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
       (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    return complete(onComplete, result);
   }
 };
 
@@ -17794,18 +17886,24 @@ MemoryPrivateKeyStorage.prototype.sign = function
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+MemoryPrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
   var keyUri = keyName.toUri();
+  var result = false;
   if (keyClass == KeyClass.PUBLIC)
-    return this.publicKeyStore[keyUri] !== undefined;
+    result = this.publicKeyStore[keyUri] !== undefined;
   else if (keyClass == KeyClass.PRIVATE)
-    return this.privateKeyStore[keyUri] !== undefined;
-  else
-    // KeyClass.SYMMETRIC not implemented yet.
-    return false ;
+    result = this.privateKeyStore[keyUri] !== undefined;
+
+  return complete(onComplete, result);
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -17843,6 +17941,8 @@ var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -17896,7 +17996,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   } catch (ex) {}
 
   var thisIdentityManager = this;
-  function onGenerateComplete(keyName) {
+  function onGotKeyName(keyName) {
     if (generateKey)
       thisIdentityManager.identityStorage.setDefaultKeyNameForIdentity
         (keyName, identityName);
@@ -17911,27 +18011,24 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     } catch (ex) {}
 
     if (makeCert) {
-      var selfCert = thisIdentityManager.selfSign(keyName);
-      thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
-      certName = selfCert.getName();
+      return applyThen
+        (thisIdentityManager, "selfSign", [keyName], onComplete,
+         function(selfCert) {
+        thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
+        return complete(onComplete, selfCert.getName());
+      });
     }
-
-    if (onComplete)
-      onComplete(certName);
     else
-      return certName;
+      return complete(onComplete, certName);
   }
 
-  if (generateKey) {
-    if (onComplete)
-      // Pass control to the callback.
-      this.generateKeyPair(identityName, true, params, onGenerateComplete);
-    else
-      return onGenerateComplete(this.generateKeyPair(identityName, true, params));
-  }
+  if (generateKey)
+    return applyThen
+      (this, "generateKeyPair", [identityName, true, params], onComplete,
+       onGotKeyName);
   else
     // Don't generate a key pair. Use existingKeyName.
-    return onGenerateComplete(existingKeyName);
+    return onGotKeyName(existingKeyName);
 };
 
 /**
@@ -18185,8 +18282,8 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data). Otherwise, if
- * onComplete is supplied then return undefined and use onComplete as described
+ * object (if target is a Buffer) or the target (if target is Data). Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as described
  * above.
  */
 IdentityManager.prototype.signByCertificate = function
@@ -18200,46 +18297,38 @@ IdentityManager.prototype.signByCertificate = function
   if (target instanceof Data) {
     var data = target;
     var digestAlgorithm = [0];
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
+    var thisIdentityManager = this;
 
-    data.setSignature(signature);
-    // Encode once to get the signed portion.
-    var encoding = data.wireEncode(wireFormat);
+    return applyThen
+      (this, "makeSignatureByCertificate", [certificateName, digestAlgorithm],
+       onComplete, function(signature) {
+      data.setSignature(signature);
+      // Encode once to get the signed portion.
+      var encoding = data.wireEncode(wireFormat);
 
-    function onSignComplete(signatureValue) {
-      data.getSignature().setSignature(signatureValue);
-      // Encode again to include the signature.
-      data.wireEncode(wireFormat);
-      if (onComplete)
-        onComplete(data);
-    }
-    
-    if (onComplete)
-      this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], onSignComplete);
-    else
-      onSignComplete(this.privateKeyStorage.sign
-        (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+      return applyThen
+        (thisIdentityManager.privateKeyStorage, "sign",
+         [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
+         function(signatureValue) {
+        data.getSignature().setSignature(signatureValue);
+        // Encode again to include the signature.
+        data.wireEncode(wireFormat);
+
+        return complete(onComplete, data);
+      });
+    });
   }
   else {
     var digestAlgorithm = [0];
     var signature = this.makeSignatureByCertificate
       (certificateName, digestAlgorithm);
 
-    if (onComplete) {
-      this.privateKeyStorage.sign
-        (target, keyName, digestAlgorithm[0], function(signatureValue) {
-          signature.setSignature(signatureValue);
-          onComplete(signature);
-        });
-    }
-    else {
-      signature.setSignature(this.privateKeyStorage.sign
-        (target, keyName, digestAlgorithm[0]));
-
-      return signature;
-    }
+    return applyThen
+      (this.privateKeyStorage, "sign", [target, keyName, digestAlgorithm[0]],
+       onComplete, function (signatureValue) {
+      signature.setSignature(signatureValue);
+      return complete(onComplete, signature);
+    });
   }
 };
 
@@ -18275,25 +18364,17 @@ IdentityManager.prototype.signInterestByCertificate = function
   var encoding = interest.wireEncode(wireFormat);
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
-  if (onComplete) {
-    this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName, digestAlgorithm[0], function(signatureValue) {
-        signature.setSignature(signatureValue);
-
-        // Remove the empty signature and append the real one.
-        interest.setName(interest.getName().getPrefix(-1).append
-          (wireFormat.encodeSignatureValue(signature)));
-        onComplete(interest);
-      });
-  }
-  else {
-    signature.setSignature(this.privateKeyStorage.sign
-      (encoding.signedBuf(), keyName, digestAlgorithm[0]));
+  return applyThen
+    (this.privateKeyStorage, "sign",
+     [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
+     function(signatureValue) {
+    signature.setSignature(signatureValue);
 
     // Remove the empty signature and append the real one.
     interest.setName(interest.getName().getPrefix(-1).append
       (wireFormat.encodeSignatureValue(signature)));
-  }
+    return complete(onComplete, interest);
+  });
 };
 
 /**
@@ -18357,9 +18438,14 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @returns {IdentityCertificate} The generated certificate.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the generated certificate. If omitted, the return value is as
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @returns {IdentityCertificate} If onComplete is omitted, return the generated
+ * certificate. Otherwise, return undefined and use onComplete as described above.
  */
-IdentityManager.prototype.selfSign = function(keyName)
+IdentityManager.prototype.selfSign = function(keyName, onComplete)
 {
   var certificate = new IdentityCertificate();
 
@@ -18381,9 +18467,11 @@ IdentityManager.prototype.selfSign = function(keyName)
     ("2.5.4.41", keyName.toUri()));
   certificate.encode();
 
-  this.signByCertificate(certificate, certificate.getName());
-
-  return certificate;
+  return applyThen
+    (this, "signByCertificate", [certificate, certificate.getName()], onComplete,
+     function() {
+    return complete(onComplete, certificate);
+  });
 };
 
 /**
@@ -18422,26 +18510,37 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @returns {Signature} A new object of the correct subclass of Signature.
+ * @param {function} onComplete (optional) This calls onComplete(signature)
+ * with a new object of the correct subclass of Signature. If omitted, the
+ * return value is as described below. (Some crypto libraries only use a
+ * callback, so onComplete is required to use these.)
+ * @returns {Signature} If onComplete is omitted, return a new object of the
+ * correct subclass of Signature. Otherwise, return undefined and use onComplete
+ * as described above.
  */
 IdentityManager.prototype.makeSignatureByCertificate = function
-  (certificateName, digestAlgorithm)
+  (certificateName, digestAlgorithm, onComplete)
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
-  var keyType = publicKey.getKeyType();
 
-  if (keyType == KeyType.RSA) {
-    var signature = new Sha256WithRsaSignature();
-    digestAlgorithm[0] = DigestAlgorithm.SHA256;
+  return applyThen
+    (this.privateKeyStorage, "getPublicKey", [keyName], onComplete,
+     function(publicKey) {
+    var keyType = publicKey.getKeyType();
 
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    var signature = null;
+    if (keyType == KeyType.RSA) {
+      signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-    return signature;
-  }
-  else
-    throw new SecurityException(new Error("Key type is not recognized"));
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else
+      throw new SecurityException(new Error("Key type is not recognized"));
+
+    return complete(onComplete, signature);
+  });
 };
 
 /**
@@ -18464,24 +18563,18 @@ IdentityManager.prototype.generateKeyPair = function
   var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
 
   thisIdentityManager = this;
-  function onGenerateComplete() {
-    var publicKeyBits = thisIdentityManager.privateKeyStorage.getPublicKey
-      (keyName).getKeyDer();
-    thisIdentityManager.identityStorage.addKey
-      (keyName, params.getKeyType(), publicKeyBits);
+  return applyThen
+    (this.privateKeyStorage, "generateKeyPair", [keyName, params], onComplete,
+     function() {
+    return applyThen
+      (thisIdentityManager.privateKeyStorage, "getPublicKey", [keyName],
+       onComplete, function(publicKey) {
+      thisIdentityManager.identityStorage.addKey
+        (keyName, params.getKeyType(), publicKey.getKeyDer());
 
-    if (onComplete)
-      onComplete(keyName);
-    else
-      return keyName;
-  }
-
-  if (onComplete)
-    this.privateKeyStorage.generateKeyPair(keyName, params, onGenerateComplete);
-  else {
-    this.privateKeyStorage.generateKeyPair(keyName, params);
-    return onGenerateComplete();
-  }
+      return complete(onComplete, keyName);
+    });
+  });
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.

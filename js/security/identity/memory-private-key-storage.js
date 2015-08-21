@@ -30,6 +30,8 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
+var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
+var complete = require('../../util/ndn-common.js').NdnCommon.complete;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {
@@ -123,7 +125,7 @@ MemoryPrivateKeyStorage.prototype.generateKeyPair = function
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
     throw new SecurityException(new Error("Public key already exists"));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
-    throw new SecurityException(new Error("Public key already exists"));
+    throw new SecurityException(new Error("Private key already exists"));
 
   if (UseSubtleCrypto() && onComplete) {
     var thisStore = this;
@@ -218,9 +220,13 @@ MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @returns {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey) with
+ * the PublicKey. If omitted, the return value is the PublicKey. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @returns {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, return undefined and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
+MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
 {
   var keyUri = keyName.toUri();
   var publicKey = this.publicKeyStore[keyUri];
@@ -228,7 +234,7 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName)
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
 
-  return publicKey;
+  return complete(onComplete, publicKey);
 };
 
 /**
@@ -322,10 +328,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
       (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    return complete(onComplete, result);
   }
 };
 
@@ -334,16 +337,22 @@ MemoryPrivateKeyStorage.prototype.sign = function
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @returns {boolean} True if the key exists, otherwise false.
+ * @param {function} onComplete (optional) This calls onComplete(exists) where
+ * exists is true if the key exists. If omitted, the return value is as
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
+ * @returns {boolean} If onComplete is omitted, return the true if the key
+ * exists. Otherwise, return undefined and use onComplete as described above.
  */
-MemoryPrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+MemoryPrivateKeyStorage.prototype.doesKeyExist = function
+  (keyName, keyClass, onComplete)
 {
   var keyUri = keyName.toUri();
+  var result = false;
   if (keyClass == KeyClass.PUBLIC)
-    return this.publicKeyStore[keyUri] !== undefined;
+    result = this.publicKeyStore[keyUri] !== undefined;
   else if (keyClass == KeyClass.PRIVATE)
-    return this.privateKeyStore[keyUri] !== undefined;
-  else
-    // KeyClass.SYMMETRIC not implemented yet.
-    return false ;
+    result = this.privateKeyStore[keyUri] !== undefined;
+
+  return complete(onComplete, result);
 };
