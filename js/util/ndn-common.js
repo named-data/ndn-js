@@ -69,9 +69,9 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
  * }
  *
  * @param {object} thisArg The "this" value for calling apply.
- * @param {string} funcName The function for calling apply is thisArg[funcName],
- * and its last argument must be an optional onComplete callback for
- * asynchronoous mode.
+ * @param {function|string} func The function for calling apply. If func is a
+ * string, then the function is thisArg[func]. The function's last argument must
+ * be an optional onComplete callback for asynchronoous mode.
  * @param {array} args The array of arguments for calling apply. If doAsync, then
  * continuation is appended to args.
  * @param {boolean} doAsync If doAsync, then append continuation to args for
@@ -85,13 +85,16 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
  * @return {any} If !doAsync, this returns the result of calling
  * continuation. Otherwise this returns undefined.
  */
-NdnCommon.applyThen = function(thisArg, funcName, args, doAsync, continuation)
+NdnCommon.applyThen = function(thisArg, func, args, doAsync, continuation)
 {
+  if (typeof func === 'string')
+    func = thisArg[func];
+
   if (doAsync)
     // Pass control to the callback.
-    thisArg[funcName].apply(thisArg, args.concat([continuation]));
+    func.apply(thisArg, args.concat([continuation]));
   else
-    return continuation(thisArg[funcName].apply(thisArg, args));
+    return continuation(func.apply(thisArg, args));
 }
 
 /**
