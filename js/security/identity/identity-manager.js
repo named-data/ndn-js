@@ -386,18 +386,21 @@ IdentityManager.prototype.signByCertificatePromise = function
 
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
+  var thisManager = this;
   if (target instanceof Data) {
     var data = target;
     var digestAlgorithm = [0];
 
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
-    data.setSignature(signature);
-    // Encode once to get the signed portion.
-    var encoding = data.wireEncode(wireFormat);
+    return this.makeSignatureByCertificatePromise
+      (certificateName, digestAlgorithm, useSync)
+    .then(function(signature) {
+      data.setSignature(signature);
+      // Encode once to get the signed portion.
+      var encoding = data.wireEncode(wireFormat);
 
-    return this.privateKeyStorage.signPromise
-      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync)
+      return thisManager.privateKeyStorage.signPromise
+        (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
+    })
     .then(function(signatureValue) {
       data.getSignature().setSignature(signatureValue);
       // Encode again to include the signature.
@@ -408,11 +411,12 @@ IdentityManager.prototype.signByCertificatePromise = function
   }
   else {
     var digestAlgorithm = [0];
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
-
-    return this.privateKeyStorage.signPromise
-      (target, keyName, digestAlgorithm[0], useSync)
+    return this.makeSignatureByCertificatePromise
+      (certificateName, digestAlgorithm, useSync)
+    .then(function(signature) {
+      return thisManager.privateKeyStorage.signPromise
+        (target, keyName, digestAlgorithm[0], useSync);
+    })
     .then(function (signatureValue) {
       signature.setSignature(signatureValue);
       return SyncPromise.resolve(signature);
@@ -474,22 +478,27 @@ IdentityManager.prototype.signInterestByCertificate = function
 
   var useSync = !onComplete;
 
+  var thisManager = this;
+  var signature;
   var digestAlgorithm = [0];
-  var signature = this.makeSignatureByCertificate
-    (certificateName, digestAlgorithm);
-
-  // Append the encoded SignatureInfo.
-  interest.getName().append(wireFormat.encodeSignatureInfo(signature));
-
-  // Append an empty signature so that the "signedPortion" is correct.
-  interest.getName().append(new Name.Component());
-  // Encode once to get the signed portion.
-  var encoding = interest.wireEncode(wireFormat);
-  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-
   return SyncPromise.complete(onComplete,
-    this.privateKeyStorage.signPromise
-      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync)
+    this.makeSignatureByCertificatePromise
+      (certificateName, digestAlgorithm, useSync)
+    .then(function(localSignature) {
+      signature = localSignature;
+      // Append the encoded SignatureInfo.
+      interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+      // Append an empty signature so that the "signedPortion" is correct.
+      interest.getName().append(new Name.Component());
+      // Encode once to get the signed portion.
+      var encoding = interest.wireEncode(wireFormat);
+      var keyName = IdentityManager.certificateNameToPublicKeyName
+        (certificateName);
+
+      return thisManager.privateKeyStorage.signPromise
+        (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
+    })
     .then(function(signatureValue) {
       signature.setSignature(signatureValue);
 
@@ -645,27 +654,32 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @return {Signature} A new object of the correct subclass of Signature.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new object of the
+ * correct subclass of Signature.
  */
-IdentityManager.prototype.makeSignatureByCertificate = function
-  (certificateName, digestAlgorithm)
+IdentityManager.prototype.makeSignatureByCertificatePromise = function
+  (certificateName, digestAlgorithm, useSync)
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
-  var keyType = publicKey.getKeyType();
+  return this.privateKeyStorage.getPublicKeyPromise(keyName, useSync)
+  .then(function(publicKey) {
+    var keyType = publicKey.getKeyType();
 
-  var signature = null;
-  if (keyType == KeyType.RSA) {
-    signature = new Sha256WithRsaSignature();
-    digestAlgorithm[0] = DigestAlgorithm.SHA256;
+    var signature = null;
+    if (keyType == KeyType.RSA) {
+      signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-  }
-  else
-    throw new SecurityException(new Error("Key type is not recognized"));
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else
+      throw new SecurityException(new Error("Key type is not recognized"));
 
-  return signature;
+    return SyncPromise.resolve(signature);
+  });
 };
 
 /**
