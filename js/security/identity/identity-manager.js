@@ -34,8 +34,7 @@ var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
-var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
-var complete = require('../../util/ndn-common.js').NdnCommon.complete;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -69,13 +68,15 @@ exports.IdentityManager = IdentityManager;
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
 IdentityManager.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete)
 {
+  var useSync = !onComplete;
+
   this.identityStorage.addIdentity(identityName);
 
   var existingKeyName = null;
@@ -88,40 +89,40 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       generateKey = false;
   } catch (ex) {}
 
-  var thisIdentityManager = this;
-  function onGotKeyName(keyName) {
-    if (generateKey)
-      thisIdentityManager.identityStorage.setDefaultKeyNameForIdentity
-        (keyName, identityName);
-
-    var certName = null;
-    var makeCert = true;
-    try {
-      certName = thisIdentityManager.identityStorage.getDefaultCertificateNameForKey
-        (keyName);
-      // The cert exists, so don't need to make it.
-      makeCert = false;
-    } catch (ex) {}
-
-    if (makeCert) {
-      return applyThen
-        (thisIdentityManager, "selfSign", [keyName], onComplete,
-         function(selfCert) {
-        thisIdentityManager.addCertificateAsIdentityDefault(selfCert);
-        return complete(onComplete, selfCert.getName());
-      });
-    }
-    else
-      return complete(onComplete, certName);
-  }
-
+  var keyNamePromise;
   if (generateKey)
-    return applyThen
-      (this, "generateKeyPair", [identityName, true, params], onComplete,
-       onGotKeyName);
+    keyNamePromise = this.generateKeyPairPromise(identityName, true, params, useSync);
   else
     // Don't generate a key pair. Use existingKeyName.
-    return onGotKeyName(existingKeyName);
+    keyNamePromise = SyncPromise.resolve(existingKeyName);
+
+  var thisManager = this;
+  return SyncPromise.complete(onComplete,
+    keyNamePromise
+    .then(function(keyName) {
+      if (generateKey)
+        thisManager.identityStorage.setDefaultKeyNameForIdentity
+          (keyName, identityName);
+
+      var certName = null;
+      var makeCert = true;
+      try {
+        certName = thisManager.identityStorage.getDefaultCertificateNameForKey
+          (keyName);
+        // The cert exists, so don't need to make it.
+        makeCert = false;
+      } catch (ex) {}
+
+      if (makeCert) {
+        return thisManager.selfSignPromise(keyName, useSync)
+        .then(function(selfCert) {
+          thisManager.addCertificateAsIdentityDefault(selfCert);
+          return SyncPromise.resolve(selfCert.getName());
+        });
+      }
+      else
+        return SyncPromise.resolve(certName);
+    }));
 };
 
 /**
@@ -135,7 +136,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 IdentityManager.prototype.createIdentity = function(identityName, params)
 {
@@ -182,7 +183,7 @@ IdentityManager.prototype.setDefaultIdentity = function(identityName)
 
 /**
  * Get the default identity.
- * @returns {Name} The name of default identity.
+ * @return {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
  */
 IdentityManager.prototype.getDefaultIdentity = function()
@@ -197,12 +198,15 @@ IdentityManager.prototype.getDefaultIdentity = function()
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPair = function
   (identityName, isKsk, keySize)
 {
-  return this.generateKeyPair(identityName, isKsk, new RsaKeyParams(keySize));
+  // For now, require sync. This method may be removed from the API.
+  return SyncPromise.getValue
+    (this.generateKeyPairPromise
+     (identityName, isKsk, new RsaKeyParams(keySize), true));
 };
 
 /**
@@ -222,7 +226,7 @@ IdentityManager.prototype.setDefaultKeyForIdentity = function
 /**
  * Get the default key for an identity.
  * @param {Name} identityName The name of the identity.
- * @returns {Name} The default key name.
+ * @return {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
  */
 IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
@@ -238,7 +242,7 @@ IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
@@ -251,7 +255,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
 /**
  * Get the public key with the specified name.
  * @param {Name} keyName The name of the key.
- * @returns {PublicKey} The public key.
+ * @return {PublicKey} The public key.
  */
 IdentityManager.prototype.getPublicKey = function(keyName)
 {
@@ -314,7 +318,7 @@ IdentityManager.prototype.addCertificateAsDefault = function(certificate)
 /**
  * Get a certificate with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {IdentityCertificate} the requested certificate which is valid.
+ * @return {IdentityCertificate} the requested certificate which is valid.
  */
 IdentityManager.prototype.getCertificate = function(certificateName)
 {
@@ -324,7 +328,7 @@ IdentityManager.prototype.getCertificate = function(certificateName)
 /**
  * Get a certificate even if the certificate is not valid anymore.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {IdentityCertificate} the requested certificate.
+ * @return {IdentityCertificate} the requested certificate.
  */
 IdentityManager.prototype.getAnyCertificate = function(certificateName)
 {
@@ -335,7 +339,7 @@ IdentityManager.prototype.getAnyCertificate = function(certificateName)
  * Get the default certificate name for the specified identity, which will be
  * used when signing is performed based on identity.
  * @param {Name} identityName The name of the specified identity.
- * @returns {Name} The requested certificate name.
+ * @return {Name} The requested certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
  */
@@ -348,7 +352,7 @@ IdentityManager.prototype.getDefaultCertificateNameForIdentity = function
 /**
  * Get the default certificate name of the default identity, which will be used when signing is based on identity and
  * the identity is not specified.
- * @returns {Name} The requested certificate name.
+ * @return {Name} The requested certificate name.
  * @throws SecurityException if the default identity is not set or the default
  * key name for the identity is not set or the default certificate name for
  * the key name is not set.
@@ -368,13 +372,71 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise that returns the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data).
+ */
+IdentityManager.prototype.signByCertificatePromise = function
+  (target, certificateName, wireFormat, useSync)
+{
+  useSync = (typeof wireFormat === "boolean") ? wireFormat : useSync;
+  wireFormat = (typeof wireFormat === "boolean" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+
+  if (target instanceof Data) {
+    var data = target;
+    var digestAlgorithm = [0];
+
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
+    data.setSignature(signature);
+    // Encode once to get the signed portion.
+    var encoding = data.wireEncode(wireFormat);
+
+    return this.privateKeyStorage.signPromise
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync)
+    .then(function(signatureValue) {
+      data.getSignature().setSignature(signatureValue);
+      // Encode again to include the signature.
+      data.wireEncode(wireFormat);
+
+      return SyncPromise.resolve(data);
+    });
+  }
+  else {
+    var digestAlgorithm = [0];
+    var signature = this.makeSignatureByCertificate
+      (certificateName, digestAlgorithm);
+
+    return this.privateKeyStorage.signPromise
+      (target, keyName, digestAlgorithm[0], useSync)
+    .then(function (signatureValue) {
+      signature.setSignature(signatureValue);
+      return SyncPromise.resolve(signature);
+    });
+  }
+};
+
+
+/**
+ * Sign the Data packet or byte array data based on the certificate name.
+ * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
+ * update its signature and key locator field and wireEncoding. If it is a
+ * Buffer, sign it to produce a Signature object.
+ * @param {Name} certificateName The Name identifying the certificate which
+ * identifies the signing key.
+ * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
+ * WireFormat.getDefaultWireFormat() if omitted.
  * @param {function} onComplete (optional) If target is a Data object, this calls
  * onComplete(data) with the supplied Data object which has been modified to set
  * its signature. If target is a Buffer, this calls onComplete(signature) where
  * signature is the produced Signature object. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data). Otherwise,
  * if onComplete is supplied then return undefined and use onComplete as described
  * above.
@@ -385,44 +447,9 @@ IdentityManager.prototype.signByCertificate = function
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
-  var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
-
-  if (target instanceof Data) {
-    var data = target;
-    var digestAlgorithm = [0];
-    var thisIdentityManager = this;
-
-    return applyThen
-      (this, "makeSignatureByCertificate", [certificateName, digestAlgorithm],
-       onComplete, function(signature) {
-      data.setSignature(signature);
-      // Encode once to get the signed portion.
-      var encoding = data.wireEncode(wireFormat);
-
-      return applyThen
-        (thisIdentityManager.privateKeyStorage, "sign",
-         [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
-         function(signatureValue) {
-        data.getSignature().setSignature(signatureValue);
-        // Encode again to include the signature.
-        data.wireEncode(wireFormat);
-
-        return complete(onComplete, data);
-      });
-    });
-  }
-  else {
-    var digestAlgorithm = [0];
-    var signature = this.makeSignatureByCertificate
-      (certificateName, digestAlgorithm);
-
-    return applyThen
-      (this.privateKeyStorage, "sign", [target, keyName, digestAlgorithm[0]],
-       onComplete, function (signatureValue) {
-      signature.setSignature(signatureValue);
-      return complete(onComplete, signature);
-    });
-  }
+  return SyncPromise.complete(onComplete,
+    this.signByCertificatePromise
+      (target, certificateName, wireFormat, !onComplete));
 };
 
 /**
@@ -442,7 +469,10 @@ IdentityManager.prototype.signByCertificate = function
 IdentityManager.prototype.signInterestByCertificate = function
   (interest, certificateName, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  var useSync = !onComplete;
 
   var digestAlgorithm = [0];
   var signature = this.makeSignatureByCertificate
@@ -457,17 +487,17 @@ IdentityManager.prototype.signInterestByCertificate = function
   var encoding = interest.wireEncode(wireFormat);
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
 
-  return applyThen
-    (this.privateKeyStorage, "sign",
-     [encoding.signedBuf(), keyName, digestAlgorithm[0]], onComplete,
-     function(signatureValue) {
-    signature.setSignature(signatureValue);
+  return SyncPromise.complete(onComplete,
+    this.privateKeyStorage.signPromise
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync)
+    .then(function(signatureValue) {
+      signature.setSignature(signatureValue);
 
-    // Remove the empty signature and append the real one.
-    interest.setName(interest.getName().getPrefix(-1).append
-      (wireFormat.encodeSignatureValue(signature)));
-    return complete(onComplete, interest);
-  });
+      // Remove the empty signature and append the real one.
+      interest.setName(interest.getName().getPrefix(-1).append
+        (wireFormat.encodeSignatureValue(signature)));
+      return SyncPromise.resolve(interest);
+    }));
 };
 
 /**
@@ -531,14 +561,12 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the generated certificate. If omitted, the return value is as
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * @returns {IdentityCertificate} If onComplete is omitted, return the generated
- * certificate. Otherwise, return undefined and use onComplete as described above.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the generated
+ * IdentityCertificate.
  */
-IdentityManager.prototype.selfSign = function(keyName, onComplete)
+IdentityManager.prototype.selfSignPromise = function(keyName, useSync)
 {
   var certificate = new IdentityCertificate();
 
@@ -560,18 +588,32 @@ IdentityManager.prototype.selfSign = function(keyName, onComplete)
     ("2.5.4.41", keyName.toUri()));
   certificate.encode();
 
-  return applyThen
-    (this, "signByCertificate", [certificate, certificate.getName()], onComplete,
-     function() {
-    return complete(onComplete, certificate);
-  });
+  return this.signByCertificatePromise
+    (certificate, certificate.getName(), useSync);
+};
+
+/**
+ * Generate a self-signed certificate for a public key.
+ * @param {Name} keyName The name of the public key.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the the generated IdentityCertificate. If omitted, the return value is
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @return {IdentityCertificate} If onComplete is omitted, return the
+ * generated certificate. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+IdentityManager.prototype.selfSign = function(keyName, onComplete)
+{
+  return SyncPromise.complete(onComplete,
+    this.selfSignPromise(keyName, !onComplete));
 };
 
 /**
  * Get the public key name from the full certificate name.
  *
  * @param {Name} certificateName The full certificate name.
- * @returns {Name} The related public key name.
+ * @return {Name} The related public key name.
  * TODO: Move this to IdentityCertificate
  */
 IdentityManager.certificateNameToPublicKeyName = function(certificateName)
@@ -603,37 +645,27 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @param {function} onComplete (optional) This calls onComplete(signature)
- * with a new object of the correct subclass of Signature. If omitted, the
- * return value is as described below. (Some crypto libraries only use a
- * callback, so onComplete is required to use these.)
- * @returns {Signature} If onComplete is omitted, return a new object of the
- * correct subclass of Signature. Otherwise, return undefined and use onComplete
- * as described above.
+ * @return {Signature} A new object of the correct subclass of Signature.
  */
 IdentityManager.prototype.makeSignatureByCertificate = function
-  (certificateName, digestAlgorithm, onComplete)
+  (certificateName, digestAlgorithm)
 {
   var keyName = IdentityManager.certificateNameToPublicKeyName(certificateName);
+  var publicKey = this.privateKeyStorage.getPublicKey(keyName);
+  var keyType = publicKey.getKeyType();
 
-  return applyThen
-    (this.privateKeyStorage, "getPublicKey", [keyName], onComplete,
-     function(publicKey) {
-    var keyType = publicKey.getKeyType();
+  var signature = null;
+  if (keyType == KeyType.RSA) {
+    signature = new Sha256WithRsaSignature();
+    digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
-    var signature = null;
-    if (keyType == KeyType.RSA) {
-      signature = new Sha256WithRsaSignature();
-      digestAlgorithm[0] = DigestAlgorithm.SHA256;
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+  }
+  else
+    throw new SecurityException(new Error("Key type is not recognized"));
 
-      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
-      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
-    }
-    else
-      throw new SecurityException(new Error("Key type is not recognized"));
-
-    return complete(onComplete, signature);
-  });
+  return signature;
 };
 
 /**
@@ -642,30 +674,25 @@ IdentityManager.prototype.makeSignatureByCertificate = function
  * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
  * a Data-Signing-Key (DSK).
  * @param {KeyParams} params The parameters of the key.
- * @param {function} onComplete (optional) This calls onComplete(keyName)
- * where keyName is the generated key name. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * @returns {Name} If onComplete is omitted, return the generated key name.
- * Otherwise, if onComplete is supplied then return undefined and use onComplete
- * as described above.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the generated key name.
  */
-IdentityManager.prototype.generateKeyPair = function
-  (identityName, isKsk, params, onComplete)
+IdentityManager.prototype.generateKeyPairPromise = function
+  (identityName, isKsk, params, useSync)
 {
   var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
 
-  thisIdentityManager = this;
-  return applyThen
-    (this.privateKeyStorage, "generateKeyPair", [keyName, params], onComplete,
-     function() {
-    return applyThen
-      (thisIdentityManager.privateKeyStorage, "getPublicKey", [keyName],
-       onComplete, function(publicKey) {
-      thisIdentityManager.identityStorage.addKey
-        (keyName, params.getKeyType(), publicKey.getKeyDer());
+  thisManager = this;
+  return this.privateKeyStorage.generateKeyPairPromise(keyName, params, useSync)
+  .then(function() {
+    return thisManager.privateKeyStorage.getPublicKeyPromise
+      (keyName, useSync);
+  })
+  .then(function(publicKey) {
+    thisManager.identityStorage.addKey
+      (keyName, params.getKeyType(), publicKey.getKeyDer());
 
-      return complete(onComplete, keyName);
-    });
+    return SyncPromise.resolve(keyName);
   });
 };
