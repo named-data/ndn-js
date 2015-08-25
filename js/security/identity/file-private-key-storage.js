@@ -28,8 +28,7 @@ var Blob = require('../../util/blob').Blob;
 var OID = require('../../encoding/oid').OID;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
-var complete = require('../../util/ndn-common.js').NdnCommon.complete;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var util = require('util');
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
 var Crypto = require('crypto');
@@ -64,30 +63,22 @@ exports.FilePrivateKeyStorage = FilePrivateKeyStorage;
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {function} onComplete (optional) This calls onComplete(exists) where
- * exists is true if the key exists. If omitted, the return value is as
- * described below. (Some database libraries only use a callback, so onComplete
- * is required to use these.)
- * @returns {boolean} If onComplete is omitted, return the true if the key
- * exists. Otherwise, return undefined and use onComplete as described above.
+ * @return {SyncPromise} A promise which returns true if the key exists.
  */
-FilePrivateKeyStorage.prototype.doesKeyExist = function
-  (keyName, keyClass, onComplete)
+FilePrivateKeyStorage.prototype.doesKeyExistPromise = function(keyName, keyClass)
 {
   var exists = fs.existsSync(this.transformName(keyName, keyClass));
-  return complete(onComplete, exists);
+  return SyncPromise.resolve(exists);
 };
 
 /**
  * Generate a pair of asymmetric keys; only currently supports RSA
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {function} onComplete (optional) When the key pair is generated and
- * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @return {SyncPromise} A promise that fulfills when the pair is generated.
  */
-FilePrivateKeyStorage.prototype.generateKeyPair = function
-  (keyName, params, onComplete)
+FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
+  (keyName, params)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
     throw new SecurityException(new Error("Public key already exists"));
@@ -127,8 +118,7 @@ FilePrivateKeyStorage.prototype.generateKeyPair = function
     throw new SecurityException(new Error("Only RSA key generation currently supported"));
   }
 
-  if (onComplete)
-    onComplete();
+  return SyncPromise.resolve();
 };
 
 /**
@@ -158,17 +148,12 @@ FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {function} onComplete (optional) This calls onComplete(publicKey) with
- * the PublicKey. If omitted, the return value is the PublicKey. (Some database
- * libraries only use a callback, so onComplete is required to use these.)
- * @returns {PublicKey} If onComplete is omitted, return the public key.
- * Otherwise, return undefined and use onComplete as described above.
+ * @return {SyncPromise} A promise that returns the PublicKey.
  */
-FilePrivateKeyStorage.prototype.getPublicKey = function (keyName, onComplete)
+FilePrivateKeyStorage.prototype.getPublicKeyPromise = function (keyName)
 {
   var buffer = this.read(keyName, KeyClass.PUBLIC);
-  var publicKey = new PublicKey(new Blob(buffer));
-  return complete(onComplete, publicKey);
+  return SyncPromise.resolve(new PublicKey(new Blob(buffer)));
 };
 
 /**
@@ -178,14 +163,10 @@ FilePrivateKeyStorage.prototype.getPublicKey = function (keyName, onComplete)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {function} onComplete (optional) This calls onComplete(signature) with
- * the signature Blob. If omitted, the return value is the signature Blob. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
- * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
- * return undefined and use onComplete as described above.
+ * @return {SyncPromise} A promise that returns the signature Blob.
  */
-FilePrivateKeyStorage.prototype.sign = function
-  (data, keyName, digestAlgorithm, onComplete)
+FilePrivateKeyStorage.prototype.signPromise = function
+  (data, keyName, digestAlgorithm)
 {
   if (digestAlgorithm == null)
     digestAlgorithm = DigestAlgorithm.SHA256;
@@ -208,7 +189,7 @@ FilePrivateKeyStorage.prototype.sign = function
     rsa.update(data);
 
     var signature = new Buffer(DataUtils.toNumbersIfString(rsa.sign(privateKey)));
-    return complete(onComplete, new Blob(signature, false));
+    return SyncPromise.resolve(new Blob(signature, false));
   }
   else
     // We don't expect this to happen since getPrivateKey checked it.
