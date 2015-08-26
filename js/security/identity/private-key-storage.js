@@ -35,9 +35,9 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} (optional) useSync If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that fulfills when the pair is
  * generated.
  */
@@ -62,9 +62,9 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that fulfills when the key pair is
  * deleted.
  */
@@ -87,9 +87,9 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the PublicKey.
  */
 PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
@@ -116,9 +116,9 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the signature Blob.
  */
 PrivateKeyStorage.prototype.signPromise = function
@@ -187,9 +187,9 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
 PrivateKeyStorage.prototype.doesKeyExistPromise = function

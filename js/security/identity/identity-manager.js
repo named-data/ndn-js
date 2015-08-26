@@ -372,9 +372,9 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the generated Signature
  * object (if target is a Buffer) or the target (if target is Data).
  */
@@ -570,8 +570,9 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns the generated
  * IdentityCertificate.
  */
@@ -654,8 +655,9 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns a new object of the
  * correct subclass of Signature.
  */
@@ -688,8 +690,9 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
  * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
  * a Data-Signing-Key (DSK).
  * @param {KeyParams} params The parameters of the key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns the generated key name.
  */
 IdentityManager.prototype.generateKeyPairPromise = function
