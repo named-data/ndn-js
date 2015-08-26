@@ -30,8 +30,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
 var DerNode = require('../../encoding/der/der-node').DerNode;
 var OID = require('../../encoding/oid').OID;
-var applyThen = require('../../util/ndn-common.js').NdnCommon.applyThen;
-var complete = require('../../util/ndn-common.js').NdnCommon.complete;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {
@@ -115,26 +114,29 @@ MemoryPrivateKeyStorage.prototype.setKeyPairForKeyName = function
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {function} onComplete (optional) When the key pair is generated and 
- * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @param {boolean} useSync (optional) If true then use blocking crypto and
+ * return a SyncPromise which is already fulfilled. If omitted or false, if
+ * possible use crypto.subtle and return an async Promise, otherwise use
+ * blocking crypto and return a SyncPromise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the pair is
+ * generated.
  */
-MemoryPrivateKeyStorage.prototype.generateKeyPair = function
-  (keyName, params, onComplete)
+MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
+  (keyName, params, useSync)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
     throw new SecurityException(new Error("Public key already exists"));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
     throw new SecurityException(new Error("Private key already exists"));
 
-  if (UseSubtleCrypto() && onComplete) {
+  if (UseSubtleCrypto() && !useSync) {
     var thisStore = this;
     
     if (params.getKeyType() === KeyType.RSA) {
       var privateKey = null;
       var publicKeyDer = null;
       
-      crypto.subtle.generateKey
+      return crypto.subtle.generateKey
         ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
            hash: {name: "SHA-256"} },
@@ -166,7 +168,7 @@ MemoryPrivateKeyStorage.prototype.generateKeyPair = function
         // sign will use subtleKey directly.
         thisStore.privateKeyStore[keyName.toUri()].subtleKey = privateKey;
 
-        onComplete();
+        return Promise.resolve();
       });
     }
     else
@@ -200,8 +202,7 @@ MemoryPrivateKeyStorage.prototype.generateKeyPair = function
     this.privateKeyStore[keyName.toUri()] =
       { keyType: params.getKeyType(), privateKey: privateKeyPem };
 
-    if (onComplete)
-      onComplete();
+    return SyncPromise.resolve();
   }
 };
 
@@ -220,13 +221,9 @@ MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {function} onComplete (optional) This calls onComplete(publicKey) with
- * the PublicKey. If omitted, the return value is the PublicKey. (Some database
- * libraries only use a callback, so onComplete is required to use these.)
- * @returns {PublicKey} If onComplete is omitted, return the public key.
- * Otherwise, return undefined and use onComplete as described above.
+ * @return {SyncPromise} A promise that returns the PublicKey.
  */
-MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
+MemoryPrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName)
 {
   var keyUri = keyName.toUri();
   var publicKey = this.publicKeyStore[keyUri];
@@ -234,7 +231,7 @@ MemoryPrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
 
-  return complete(onComplete, publicKey);
+  return SyncPromise.resolve(publicKey);
 };
 
 /**
@@ -270,17 +267,17 @@ MemoryPrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {function} onComplete (optional) This calls onComplete(signature) with
- * the signature Blob. If omitted, the return value is the signature Blob. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
- * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
- * return undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then use blocking crypto and
+ * return a SyncPromise which is already fulfilled. If omitted or false, if
+ * possible use crypto.subtle and return an async Promise, otherwise use
+ * blocking crypto and return a SyncPromise.
+ * @return {Promise|SyncPromise} A promise that returns the signature Blob.
  */
-MemoryPrivateKeyStorage.prototype.sign = function
-  (data, keyName, digestAlgorithm, onComplete)
+MemoryPrivateKeyStorage.prototype.signPromise = function
+  (data, keyName, digestAlgorithm, useSync)
 {
-  onComplete = (typeof digestAlgorithm === "function") ? digestAlgorithm : onComplete;
-  digestAlgorithm = (typeof digestAlgorithm === "function" || !digestAlgorithm) ? DigestAlgorithm.SHA256 : digestAlgorithm;
+  useSync = (typeof digestAlgorithm === "boolean") ? digestAlgorithm : useSync;
+  digestAlgorithm = (typeof digestAlgorithm === "boolean" || !digestAlgorithm) ? DigestAlgorithm.SHA256 : digestAlgorithm;
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     throw new SecurityException(new Error
@@ -293,7 +290,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
     throw new SecurityException(new Error
       ("MemoryPrivateKeyStorage: Cannot find private key " + keyUri));
 
-  if (UseSubtleCrypto() && onComplete){
+  if (UseSubtleCrypto() && !useSync){
     var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
 
     if (!privateKey.subtleKey){
@@ -316,9 +313,9 @@ MemoryPrivateKeyStorage.prototype.sign = function
       var promise = crypto.subtle.sign(algo, privateKey.subtleKey, data);
     }
 
-    promise.then(function(signature){
+    return promise.then(function(signature){
       var result = new Blob(new Uint8Array(signature), true);
-      onComplete(result)
+      return Promise.resolve(result);
     });
   } else {
     var rsa = Crypto.createSign('RSA-SHA256');
@@ -328,7 +325,7 @@ MemoryPrivateKeyStorage.prototype.sign = function
       (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
-    return complete(onComplete, result);
+    return SyncPromise.resolve(result);
   }
 };
 
@@ -337,15 +334,10 @@ MemoryPrivateKeyStorage.prototype.sign = function
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {function} onComplete (optional) This calls onComplete(exists) where
- * exists is true if the key exists. If omitted, the return value is as
- * described below. (Some database libraries only use a callback, so onComplete
- * is required to use these.)
- * @returns {boolean} If onComplete is omitted, return the true if the key
- * exists. Otherwise, return undefined and use onComplete as described above.
+ * @return {SyncPromise} A promise which returns true if the key exists.
  */
-MemoryPrivateKeyStorage.prototype.doesKeyExist = function
-  (keyName, keyClass, onComplete)
+MemoryPrivateKeyStorage.prototype.doesKeyExistPromise = function
+  (keyName, keyClass)
 {
   var keyUri = keyName.toUri();
   var result = false;
@@ -354,5 +346,5 @@ MemoryPrivateKeyStorage.prototype.doesKeyExist = function
   else if (keyClass == KeyClass.PRIVATE)
     result = this.privateKeyStore[keyUri] !== undefined;
 
-  return complete(onComplete, result);
+  return SyncPromise.resolve(result);
 };

@@ -100,6 +100,7 @@ def build (bld):
                  "js/util/signed-blob.js",
                  "js/util/dynamic-buffer.js",
                  "js/util/change-counter.js",
+                 "js/util/sync-promise.js",
                  "js/encoding/data-utils.js",
                  "js/encoding/decoding-exception.js",
                  "js/encoding/binary-xml-encoder.js",

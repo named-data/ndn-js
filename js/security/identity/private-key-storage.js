@@ -18,6 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
+
 /**
  * PrivateKeyStorage is an abstract class which declares methods for working
  * with a private key storage. You should use a subclass.
@@ -33,14 +35,28 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {function} onComplete (optional) When the key pair is generated and
- * stored, this calls onComplete(). If omitted, this blocks until complete. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the pair is
+ * generated.
  */
-PrivateKeyStorage.prototype.generateKeyPair = function
-  (keyName, params, onComplete)
+PrivateKeyStorage.prototype.generateKeyPairPromise = function
+  (keyName, params, useSync)
 {
-  throw new Error("PrivateKeyStorage.generateKeyPair is not implemented");
+  throw new Error("PrivateKeyStorage.generateKeyPairPromise is not implemented");
+};
+
+/**
+ * Generate a pair of asymmetric keys.
+ * @param {Name} keyName The name of the key pair.
+ * @param {KeyParams} params The parameters of the key.
+ * @throws {Error} If generateKeyPairPromise doesn't return a SyncPromise which
+ * is already fulfilled.
+ */
+PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
+{
+  SyncPromise.getValue(this.generateKeyPairPromise(keyName, params, true));
 };
 
 /**
@@ -55,15 +71,26 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {function} onComplete (optional) This calls onComplete(publicKey) with
- * the PublicKey. If omitted, the return value is the PublicKey. (Some database
- * libraries only use a callback, so onComplete is required to use these.)
- * @returns {PublicKey} If onComplete is omitted, return the public key.
- * Otherwise, return undefined and use onComplete as described above.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise that returns the PublicKey.
  */
-PrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
+PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  throw new Error("PrivateKeyStorage.getPublicKey is not implemented");
+  throw new Error("PrivateKeyStorage.getPublicKeyPromise is not implemented");
+};
+
+/**
+ * Get the public key
+ * @param {Name} keyName The name of public key.
+ * @return {PublicKey} The public key.
+ * @throws {Error} If getPublicKeyPromise doesn't return a SyncPromise which
+ * is already fulfilled.
+ */
+PrivateKeyStorage.prototype.getPublicKey = function(keyName)
+{
+  return SyncPromise.getValue(this.getPublicKeyPromise(keyName, true));
 };
 
 /**
@@ -73,16 +100,32 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName, onComplete)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {function} onComplete (optional) This calls onComplete(signature) with
- * the signature Blob. If omitted, the return value is the signature Blob. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
- * @returns {Blob} If onComplete is omitted, return the signature Blob. Otherwise,
- * return undefined and use onComplete as described above.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise that returns the signature Blob.
  */
-PrivateKeyStorage.prototype.sign = function
-  (data, keyName, digestAlgorithm, onComplete)
+PrivateKeyStorage.prototype.signPromise = function
+  (data, keyName, digestAlgorithm, useSync)
 {
   throw new Error("PrivateKeyStorage.sign is not implemented");
+};
+
+/**
+ * Fetch the private key for keyName and sign the data to produce a signature Blob.
+ * @param {Buffer} data Pointer to the input byte array.
+ * @param {Name} keyName The name of the signing key.
+ * @param {number} digestAlgorithm (optional) The digest algorithm from
+ * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
+ * DigestAlgorithm.SHA256.
+ * @return {Blob} The signature Blob.
+ * @throws {Error} If signPromise doesn't return a SyncPromise which is already
+ * fulfilled.
+ */
+PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
+{
+  return SyncPromise.getValue
+    (this.signPromise(data, keyName, digestAlgorithm, true));
 };
 
 /**
@@ -92,7 +135,7 @@ PrivateKeyStorage.prototype.sign = function
  * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
  * otherwise asymmetric encryption is used. If omitted, use asymmetric
  * encryption.
- * @returns {Blob} The decrypted data.
+ * @return {Blob} The decrypted data.
  */
 PrivateKeyStorage.prototype.decrypt = function(keyName, data, isSymmetric)
 {
@@ -106,7 +149,7 @@ PrivateKeyStorage.prototype.decrypt = function(keyName, data, isSymmetric)
  * @param {boolean} isSymmetric (optional) If true symmetric encryption is used,
  * otherwise asymmetric encryption is used. If omitted, use asymmetric
  * encryption.
- * @returns {Blob} The encrypted data.
+ * @return {Blob} The encrypted data.
  */
 PrivateKeyStorage.prototype.encrypt = function(keyName, data, isSymmetric)
 {
@@ -128,15 +171,27 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {function} onComplete (optional) This calls onComplete(exists) where
- * exists is true if the key exists. If omitted, the return value is as
- * described below. (Some database libraries only use a callback, so onComplete
- * is required to use these.)
- * @returns {boolean} If onComplete is omitted, return the true if the key
- * exists. Otherwise, return undefined and use onComplete as described above.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
-PrivateKeyStorage.prototype.doesKeyExist = function
-  (keyName, keyClass, onComplete)
+PrivateKeyStorage.prototype.doesKeyExistPromise = function
+  (keyName, keyClass, useSync)
 {
   throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
+};
+
+/**
+ * Check if a particular key exists.
+ * @param {Name} keyName The name of the key.
+ * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
+ * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
+ * @return {boolean} True if the key exists.
+ * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * is already fulfilled.
+ */
+PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
+{
+  return SyncPromise.getValue(this.doesKeyExistPromise(keyName, keyClass, true));
 };
