@@ -124,10 +124,12 @@ FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @return {SyncPromise} A promise that fulfills when the key pair is deleted.
  */
-FilePrivateKeyStorage.prototype.deleteKeyPair = function (keyName)
+FilePrivateKeyStorage.prototype.deleteKeyPairPromise = function (keyName)
 {
   this.deleteKey(keyName);
+  return SyncPromise.resolve();
 };
 
 /**

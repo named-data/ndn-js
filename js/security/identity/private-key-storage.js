@@ -62,10 +62,26 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @param {boolean} useSync If true then return a SyncPromise which is already
+ * fulfilled. If omitted or false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key pair is
+ * deleted.
+ */
+PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
+{
+  throw new Error("PrivateKeyStorage.deleteKeyPairPromise is not implemented");
+};
+
+/**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ * @throws {Error} If deleteKeyPairPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 {
-  throw new Error("PrivateKeyStorage.deleteKeyPair is not implemented");
+  SyncPromise.getValue(this.deleteKeyPairPromise(keyName, true));
 };
 
 /**

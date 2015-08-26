@@ -209,13 +209,16 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @return {SyncPromise} A promise that fulfills when the key pair is deleted.
  */
-MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+MemoryPrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName)
 {
   var keyUri = keyName.toUri();
 
   delete this.publicKeyStore[keyUri];
   delete this.privateKeyStore[keyUri];
+
+  return SyncPromise.resolve();
 };
 
 /**
