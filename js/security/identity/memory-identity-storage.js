@@ -141,26 +141,6 @@ MemoryIdentityStorage.prototype.getKey = function(keyName)
 };
 
 /**
- * Activate a key.  If a key is marked as inactive, its private part will not be
- * used in packet signing.
- * @param {Name} keyName name of the key
- */
-MemoryIdentityStorage.prototype.activateKey = function(keyName)
-{
-  throw new Error("MemoryIdentityStorage.activateKey is not implemented");
-};
-
-/**
- * Deactivate a key. If a key is marked as inactive, its private part will not
- * be used in packet signing.
- * @param {Name} keyName name of the key
- */
-MemoryIdentityStorage.prototype.deactivateKey = function(keyName)
-{
-  throw new Error("MemoryIdentityStorage.deactivateKey is not implemented");
-};
-
-/**
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
  * @returns {boolean} true if the certificate exists, otherwise false.
