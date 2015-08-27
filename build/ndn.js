@@ -19173,7 +19173,7 @@ IdentityManager.prototype.generateKeyPairPromise = function
 {
   var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
 
-  thisManager = this;
+  var thisManager = this;
   return this.privateKeyStorage.generateKeyPairPromise(keyName, params, useSync)
   .then(function() {
     return thisManager.privateKeyStorage.getPublicKeyPromise
