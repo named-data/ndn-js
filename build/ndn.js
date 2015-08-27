@@ -17601,7 +17601,6 @@ MemoryIdentityStorage.prototype.addIdentityPromise = function(identityName)
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
- * @returns {boolean} true if the key exists, otherwise false.
  * @return {SyncPromise} A promise which returns true if the key exists.
  */
 MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
@@ -18567,6 +18566,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
         return SyncPromise.resolve();
       });
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+      
       // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
@@ -18590,6 +18592,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       // The cert exists, so don't need to make it.
       return SyncPromise.resolve(certName);
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+
       // The cert doesn't exist, so make one.
       var certName;
       return thisManager.selfSignPromise(keyName, useSync)

@@ -98,6 +98,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
         return SyncPromise.resolve();
       });
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+      
       // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
@@ -121,6 +124,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       // The cert exists, so don't need to make it.
       return SyncPromise.resolve(certName);
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+
       // The cert doesn't exist, so make one.
       var certName;
       return thisManager.selfSignPromise(keyName, useSync)
