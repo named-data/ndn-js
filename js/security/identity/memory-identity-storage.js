@@ -89,7 +89,6 @@ MemoryIdentityStorage.prototype.addIdentityPromise = function(identityName)
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
- * @returns {boolean} true if the key exists, otherwise false.
  * @return {SyncPromise} A promise which returns true if the key exists.
  */
 MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
