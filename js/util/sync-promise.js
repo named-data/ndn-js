@@ -20,11 +20,11 @@
 /**
  * A SyncPromise is a promise which is immediately fulfilled or rejected, used
  * to return a promise in synchronous code.
- * This private constructor creates a SyncPromise fulfilled pr rejected with the
+ * This private constructor creates a SyncPromise fulfilled or rejected with the
  * given value. You should normally not call this constructor but call
- * SyncPromise.resolve. Note that we don't need a constructor like
- * SyncPromise(function(resolve, reject)) because this wpuld be for scheduling the
- * function to be called later, which we don't do.
+ * SyncPromise.resolve or SyncPromise.reject. Note that we don't need a
+ * constructor like SyncPromise(function(resolve, reject)) because this would be
+ * for scheduling the function to be called later, which we don't do.
  * @param {any} value If isRejected is false, this is the value of the fulfilled
  * promise, else if isRejected is true, this is the error.
  * @param {boolean} isRejected True to create a promise in the rejected state,
@@ -109,6 +109,15 @@ SyncPromise.prototype.catch = function(onRejected)
 SyncPromise.resolve = function(value)
 {
   return new SyncPromise(value, false);
+};
+
+/**
+ * Return a new SyncPromise which is already rejected with the given error.
+ * @param {any} err The error for the rejected promise.
+ */
+SyncPromise.reject = function(err)
+{
+  return new SyncPromise(err, true);
 };
 
 /**
