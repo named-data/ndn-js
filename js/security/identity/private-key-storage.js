@@ -35,16 +35,17 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} (optional) useSync If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that fulfills when the pair is
  * generated.
  */
 PrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
-  throw new Error("PrivateKeyStorage.generateKeyPairPromise is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.generateKeyPairPromise is not implemented"));
 };
 
 /**
@@ -62,23 +63,41 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key pair is
+ * deleted.
+ */
+PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.deleteKeyPairPromise is not implemented"));
+};
+
+/**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ * @throws {Error} If deleteKeyPairPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 {
-  throw new Error("PrivateKeyStorage.deleteKeyPair is not implemented");
+  SyncPromise.getValue(this.deleteKeyPairPromise(keyName, true));
 };
 
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the PublicKey.
  */
 PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  throw new Error("PrivateKeyStorage.getPublicKeyPromise is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.getPublicKeyPromise is not implemented"));
 };
 
 /**
@@ -100,15 +119,15 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the signature Blob.
  */
 PrivateKeyStorage.prototype.signPromise = function
   (data, keyName, digestAlgorithm, useSync)
 {
-  throw new Error("PrivateKeyStorage.sign is not implemented");
+  return SyncPromise.reject(Error("PrivateKeyStorage.sign is not implemented"));
 };
 
 /**
@@ -171,15 +190,16 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
 PrivateKeyStorage.prototype.doesKeyExistPromise = function
   (keyName, keyClass, useSync)
 {
-  throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.doesKeyExist is not implemented"));
 };
 
 /**

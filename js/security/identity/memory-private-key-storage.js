@@ -125,9 +125,11 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC))
-    throw new SecurityException(new Error("Public key already exists"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Public key already exists")));
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE))
-    throw new SecurityException(new Error("Private key already exists"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Private key already exists")));
 
   if (UseSubtleCrypto() && !useSync) {
     var thisStore = this;
@@ -172,8 +174,8 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
       });
     }
     else
-      throw new SecurityException(new Error
-        ("Only RSA key generation currently supported"));
+      return SyncPromise.reject(new SecurityException(new Error
+        ("Only RSA key generation currently supported")));
   }
   else {
     var publicKeyDer;
@@ -181,8 +183,8 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 
     if (params.getKeyType() === KeyType.RSA) {
       if (!rsaKeygen)
-        throw new SecurityException(new Error
-          ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+        return SyncPromise.reject(new SecurityException(new Error
+          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
       var keyPair = rsaKeygen.generate(params.getKeySize());
 
@@ -195,8 +197,8 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
       privateKeyPem = keyPair.private_key.toString();
     }
     else
-      throw new SecurityException(new Error
-        ("Only RSA key generation currently supported"));
+      return SyncPromise.reject(new SecurityException(new Error
+        ("Only RSA key generation currently supported")));
 
     this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
     this.privateKeyStore[keyName.toUri()] =
@@ -209,13 +211,16 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @return {SyncPromise} A promise that fulfills when the key pair is deleted.
  */
-MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+MemoryPrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName)
 {
   var keyUri = keyName.toUri();
 
   delete this.publicKeyStore[keyUri];
   delete this.privateKeyStore[keyUri];
+
+  return SyncPromise.resolve();
 };
 
 /**
@@ -228,8 +233,8 @@ MemoryPrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName)
   var keyUri = keyName.toUri();
   var publicKey = this.publicKeyStore[keyUri];
   if (publicKey === undefined)
-    throw new SecurityException(new Error
-      ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri()));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: Cannot find public key " + keyName.toUri())));
 
   return SyncPromise.resolve(publicKey);
 };
@@ -280,15 +285,15 @@ MemoryPrivateKeyStorage.prototype.signPromise = function
   digestAlgorithm = (typeof digestAlgorithm === "boolean" || !digestAlgorithm) ? DigestAlgorithm.SHA256 : digestAlgorithm;
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
-    throw new SecurityException(new Error
-      ("MemoryPrivateKeyStorage.sign: Unsupported digest algorithm"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryPrivateKeyStorage.sign: Unsupported digest algorithm")));
 
   // Find the private key.
   var keyUri = keyName.toUri();
   var privateKey = this.privateKeyStore[keyUri];
   if (privateKey === undefined)
-    throw new SecurityException(new Error
-      ("MemoryPrivateKeyStorage: Cannot find private key " + keyUri));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: Cannot find private key " + keyUri)));
 
   if (UseSubtleCrypto() && !useSync){
     var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};

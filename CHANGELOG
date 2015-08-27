@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-08-11)
+Interim changes since NDN-JS v0.8.1 (2015-08-27)
 ------------------------------------------------
 
 Changes
@@ -9,6 +9,8 @@ Changes
   configuration rules from a string.
 * Integration tests: Added test-policy-manager. Thanks to Jiayi Meng!
 * Firefox add-on: Increased the number of outstanding interests to help streaming video.
+* In security IdentityStorage and PrivateKeyStorage added promise-based methods
+  like getKeyPromise, which the subclasses like MemoryIdentityStorage now implement.
 
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
