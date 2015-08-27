@@ -7107,36 +7107,88 @@ ChangeCounter.prototype.checkChanged = function()
  */
 
 /**
- * A SyncPromise is a promise which is immediately fulfilled, used to return a
- * promise in synchronous code.
- * This private constructor creates a SyncPromise fulfilled with the given value.
- * You should normally not call this constructor but call SyncPromise.resolve.
- * Note that we don't need a constructor like
- * SyncPromise(function(resolve, reject)) because this is for scheduling the
+ * A SyncPromise is a promise which is immediately fulfilled or rejected, used
+ * to return a promise in synchronous code.
+ * This private constructor creates a SyncPromise fulfilled pr rejected with the
+ * given value. You should normally not call this constructor but call
+ * SyncPromise.resolve. Note that we don't need a constructor like
+ * SyncPromise(function(resolve, reject)) because this wpuld be for scheduling the
  * function to be called later, which we don't do.
- * @param {any} value The value of the promise.
+ * @param {any} value If isRejected is false, this is the value of the fulfilled
+ * promise, else if isRejected is true, this is the error.
+ * @param {boolean} isRejected True to create a promise in the rejected state,
+ * where value is the error.
  * @constructor
  */
-var SyncPromise = function SyncPromise(value)
+var SyncPromise = function SyncPromise(value, isRejected)
 {
   this.value = value;
+  this.isRejected = isRejected;
 };
 
 exports.SyncPromise = SyncPromise;
 
 /**
- * Immediately call onFulfilled with the value of this promise. 
- * @param {function} onFulfilled This calls onFulfilled(value) with the value of
- * this promise. The function should return a promise. To use all synchronous
- * code, onFulfilled should return SyncPromise.resolve(newValue).
- * @return {Promise|SyncPromise} The result of calling onFulfilled(value) which
- * should be a promise. Note that this does not create a promise which is
- * scheduled to execute later. Rather it immediately calls onFulfilled which
- * should return a promise.
+ * If this promise is fulfilled, immediately call onFulfilled with the fulfilled
+ * value as described below. Otherwise, if this promise is rejected, immediately
+ * call onRejected with the error as described below.
+ * @param {function} (optional) onFulfilled If this promise is fulfilled, this 
+ * calls onFulfilled(value) with the value of this promise and returns the 
+ * result. The function should return a promise. To use all synchronous code,
+ * onFulfilled should return SyncPromise.resolve(newValue).
+ * @param {function} (optional) onRejected If this promise is rejected, this
+ * calls onRejected(err) with the error value of this promise and returns the
+ * result. The function should return a promise. To use all synchronous code,
+ * onFulfilled should return SyncPromise.resolve(newValue) (or throw an
+ * exception).
+ * @return {Promise|SyncPromise} If this promise is fulfilled, return the result
+ * of calling onFulfilled(value). Note that this does not create a promise which
+ * is scheduled to execute later. Rather it immediately calls onFulfilled which
+ * should return a promise. But if onFulfilled is undefined, simply return this
+ * promise to pass it forward. If this promise is rejected, return the result of
+ * calling onRejected(err) with the error value. But if onRejected is undefined,
+ * simply return this promise to pass it forward. However, if onFulfilled or
+ * onRejected throws an exception, then return a new SyncPromise in the rejected
+ * state with the exception.
  */
-SyncPromise.prototype.then = function(onFulfilled)
+SyncPromise.prototype.then = function(onFulfilled, onRejected)
 {
-  return onFulfilled(this.value);
+  if (this.isRejected) {
+    if (onRejected) {
+      try {
+        return onRejected(this.value);
+      }
+      catch(err) {
+        return new SyncPromise(err, true);
+      }
+    }
+    else
+      // Pass the error forward.
+      return this;
+  }
+  else {
+    if (onFulfilled) {
+      try {
+        return onFulfilled(this.value);
+      }
+      catch(err) {
+        return new SyncPromise(err, true);
+      }
+    }
+    else
+      // Pass the fulfilled value forward.
+      return this;
+  }
+};
+
+/**
+ * Call this.then(undefined, onRejected) and return the result. If this promise
+ * is rejected then onRejected will process it. If this promise is fulfilled,
+ * this simply passes it forward.
+ */
+SyncPromise.prototype.catch = function(onRejected)
+{
+  return this.then(undefined, onRejected);
 };
 
 /**
@@ -7145,23 +7197,29 @@ SyncPromise.prototype.then = function(onFulfilled)
  */
 SyncPromise.resolve = function(value)
 {
-  return new SyncPromise(value);
+  return new SyncPromise(value, false);
 };
 
 /**
  * This static method checks if the promise is a SyncPromise and immediately
- * returns its value. If it is not a SyncPromise, this throws an exceptions
- * since it is not possible to immediately get the value. This can be used with
- * "promise-based" code which you expect to always return a SyncPromise to
- * operate in synchronous mode.
+ * returns its value or throws the error if promise is rejected. If promise is
+ * not a SyncPromise, this throws an exception since it is not possible to
+ * immediately get the value. This can be used with "promise-based" code which
+ * you expect to always return a SyncPromise to operate in synchronous mode.
  * @param {SyncPromise} promise The SyncPromise with the value to get.
  * @return {any} The value of the promise.
  * @throws {Error} If promise is not a SyncPromise.
+ * @throws {any} If promise is a SyncPromise in the rejected state, this throws
+ * the error.
  */
 SyncPromise.getValue = function(promise)
 {
-  if (promise instanceof SyncPromise)
-    return promise.value;
+  if (promise instanceof SyncPromise) {
+    if (promise.isRejected)
+      throw promise.value;
+    else
+      return promise.value;
+  }
   else
     throw new Error("Cannot return immediately because promise is not a SyncPromise");
 };
@@ -7171,9 +7229,9 @@ SyncPromise.getValue = function(promise)
  * onComplete(value) when fulfilled (possibly in asynchronous mode). If
  * onComplete is undefined, then we are in synchronous mode so return
  * SyncPromise.getValue(promise) which will throw an exception if the promise is
- * not a SyncPromise. This static method can be used to handle both
- * synchronous and asynchronous code based on whether the caller supplies the
- * onComlete callback.
+ * not a SyncPromise (or is a SyncPromise in the rejected state). This static
+ * method can be used to handle both synchronous and asynchronous code based on
+ * whether the caller supplies the onComlete callback.
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
@@ -7181,11 +7239,15 @@ SyncPromise.getValue = function(promise)
  * Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * @throws {Error} If onComplete is undefined and promise is not a SyncPromise.
+ * @throws {any} If onComplete is undefined and promise is a SyncPromise in the
+ * rejected state.
  */
 SyncPromise.complete = function(onComplete, promise)
 {
   if (onComplete)
-    promise.then(function(value) { onComplete(value); });
+    promise.then
+      (function(value) { onComplete(value); },
+       function(err) { throw err; });
   else
     return SyncPromise.getValue(promise);
 };
@@ -16779,6 +16841,7 @@ IdentityCertificate.prototype.setPublicKeyName = function()
 
 var Name = require('../../name.js').Name;
 var SecurityException = require('../security-exception.js').SecurityException;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 
 /**
  * IdentityStorage is a base class for the storage of identity, public keys and
@@ -16795,20 +16858,53 @@ exports.IdentityStorage = IdentityStorage;
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @returns {Promise|SyncPromise} A promise which returns true if the identity
+ * exists.
+ */
+IdentityStorage.prototype.doesIdentityExistPromise = function
+  (identityName, useSync)
+{
+  throw new Error("IdentityStorage.doesIdentityExistPromise is not implemented");
+};
+
+/**
+ * Check if the specified identity already exists.
+ * @param {Name} identityName The identity name.
  * @returns {boolean} true if the identity exists, otherwise false.
+ * @throws {Error} If doesIdentityExistPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.doesIdentityExist = function(identityName)
 {
-  throw new Error("IdentityStorage.doesIdentityExist is not implemented");
+  return SyncPromise.getValue(this.doesIdentityExistPromise(identityName, true));
 };
 
 /**
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity is
+ * added.
+ */
+IdentityStorage.prototype.addIdentityPromise = function(identityName, useSync)
+{
+  throw new Error("IdentityStorage.addIdentityPromise is not implemented");
+};
+
+/**
+ * Add a new identity. Do nothing if the identity already exists.
+ * @param {Name} identityName The identity name to be added.
+ * @throws {Error} If addIdentityPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.addIdentity = function(identityName)
 {
-  throw new Error("IdentityStorage.addIdentity is not implemented");
+  return SyncPromise.getValue(this.addIdentityPromise(identityName, true));
 };
 
 /**
@@ -16824,9 +16920,13 @@ IdentityStorage.prototype.revokeIdentity = function()
  * Generate a name for a new key belonging to the identity.
  * @param {Name} identityName The identity name.
  * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
- * @returns {Name} The generated key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @returns {Promise|SyncPromise} A promise that returns the generated key Name.
  */
-IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
+IdentityStorage.prototype.getNewKeyNamePromise = function
+  (identityName, useKsk, useSync)
 {
   var timestamp = Math.floor(new Date().getTime() / 1000.0);
   while (timestamp <= IdentityStorage.lastTimestamp)
@@ -16845,20 +16945,52 @@ IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
 
   var keyName = new Name(identityName).append(keyIdStr);
 
-  if (this.doesKeyExist(keyName))
-    throw new SecurityException(new Error("Key name already exists"));
+  return this.doesKeyExistPromise(keyName, useSync)
+  .then(function(exists) {
+    if (exists)
+      throw new SecurityException(new Error("Key name already exists"));
 
-  return keyName;
+    return SyncPromise.resolve(keyName);
+  });
+};
+
+/**
+ * Generate a name for a new key belonging to the identity.
+ * @param {Name} identityName The identity name.
+ * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
+ * @returns {Name} The generated key name.
+ * @throws {Error} If getNewKeyNamePromise doesn't return a SyncPromise which
+ * is already fulfilled.
+ */
+IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
+{
+  return SyncPromise.getValue
+    (this.getNewKeyNamePromise(identityName, useKsk, true));
+};
+
+/**
+ * Check if the specified key already exists.
+ * @param {Name} keyName The name of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the key exists.
+ */
+IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
+{
+  throw new Error("IdentityStorage.doesKeyExistPromise is not implemented");
 };
 
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @returns {boolean} true if the key exists, otherwise false.
+ * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.doesKeyExist = function(keyName)
 {
-  throw new Error("IdentityStorage.doesKeyExist is not implemented");
+  return SyncPromise.getValue(this.doesKeyExistPromise(keyName, true));
 };
 
 /**
@@ -16868,20 +17000,57 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the key is added.
+ */
+IdentityStorage.prototype.addKeyPromise = function
+  (keyName, keyType, publicKeyDer, useSync)
+{
+  throw new Error("IdentityStorage.addKeyPromise is not implemented");
+};
+
+/**
+ * Add a public key to the identity storage. Also call addIdentity to ensure
+ * that the identityName for the key exists.
+ * @param {Name} keyName The name of the public key to be added.
+ * @param {number} keyType Type of the public key to be added from KeyType, such
+ * as KeyType.RSA..
+ * @param {Blob} publicKeyDer A blob of the public key DER to be added.
+ * @throws {Error} If addKeyPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
 {
-  throw new Error("IdentityStorage.addKey is not implemented");
+  return SyncPromise.getValue
+    (this.addKeyPromise(keyName, keyType, publicKeyDer, true));
+};
+
+/**
+ * Get the public key DER blob from the identity storage.
+ * @param {Name} keyName The name of the requested public key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a Blob
+ * with a null pointer if not found.
+ */
+IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
+{
+  throw new Error("IdentityStorage.getKeyPromise is not implemented");
 };
 
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
  * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ * @throws {Error} If getKeyPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.getKey = function(keyName)
 {
-  throw new Error("IdentityStorage.getKey is not implemented");
+  return SyncPromise.getValue(this.getKeyPromise(keyName, true));
 };
 
 /**
@@ -16907,34 +17076,89 @@ IdentityStorage.prototype.deactivateKey = function(keyName)
 /**
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns true if the certificate
+ * exists.
+ */
+IdentityStorage.prototype.doesCertificateExistPromise = function
+  (certificateName, useSync)
+{
+  throw new Error("IdentityStorage.doesCertificateExistPromise is not implemented");
+};
+
+/**
+ * Check if the specified certificate already exists.
+ * @param {Name} certificateName The name of the certificate.
  * @returns {boolean} true if the certificate exists, otherwise false.
+ * @throws {Error} If doesCertificateExistPromise doesn't return a SyncPromise
+ * which is already fulfilled.
  */
 IdentityStorage.prototype.doesCertificateExist = function(certificateName)
 {
-  throw new Error("IdentityStorage.doesCertificateExist is not implemented");
+  return SyncPromise.getValue
+    (this.doesCertificateExistPromise(certificateName, true));
 };
 
 /**
  * Add a certificate to the identity storage.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate
+ * is added.
+ */
+IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
+{
+  throw new Error("IdentityStorage.addCertificatePromise is not implemented");
+};
+
+/**
+ * Add a certificate to the identity storage.
+ * @param {IdentityCertificate} certificate The certificate to be added.  This
+ * makes a copy of the certificate.
+ * @throws {Error} If addCertificatePromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.addCertificate = function(certificate)
 {
-  throw new Error("IdentityStorage.addCertificate is not implemented");
+  return SyncPromise.getValue(this.addCertificatePromise(certificate, true));
 };
 
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny (optional) If false, only a valid certificate will
- * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
+ * @param {boolean} allowAny If false, only a valid certificate will be returned,
+ * otherwise validity is disregarded.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the requested
+ * IdentityCertificate or null if not found.
+ */
+IdentityStorage.prototype.getCertificatePromise = function
+  (certificateName, allowAny, useSync)
+{
+  throw new Error("IdentityStorage.getCertificatePromise is not implemented");
+};
+
+/**
+ * Get a certificate from the identity storage.
+ * @param {Name} certificateName The name of the requested certificate.
+ * @param {boolean} allowAny If false, only a valid certificate will be returned,
+ * otherwise validity is disregarded.
  * @returns {IdentityCertificate} The requested certificate.  If not found, return a shared_ptr
  * with a null pointer.
+ * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
 {
-  throw new Error("IdentityStorage.getCertificate is not implemented");
+  return SyncPromise.getValue
+    (this.getValuePromise(certificateName, allowAny, true));
 };
 
 /*****************************************
@@ -16943,12 +17167,45 @@ IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
 
 /**
  * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the Name of default
+ * identity.
+ * @throws SecurityException if the default identity is not set.
+ */
+IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
+{
+  throw new Error("IdentityStorage.getDefaultIdentityPromise is not implemented");
+};
+
+/**
+ * Get the default identity.
  * @returns {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
+ * @throws {Error} If getDefaultIdentityPromise doesn't return a SyncPromise
+ * which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultIdentity = function()
 {
-  throw new Error("IdentityStorage.getDefaultIdentity is not implemented");
+  return SyncPromise.getValue
+    (this.getDefaultIdentityPromise(true));
+};
+
+/**
+ * Get the default key name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default key Name.
+ * @throws SecurityException if the default key name for the identity is not set.
+ */
+IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
+  (identityName, useSync)
+{
+  throw new Error
+    ("IdentityStorage.getDefaultKeyNameForIdentityPromise is not implemented");
 };
 
 /**
@@ -16956,10 +17213,13 @@ IdentityStorage.prototype.getDefaultIdentity = function()
  * @param {Name} identityName The identity name.
  * @returns {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
+ * @throws {Error} If getDefaultKeyNameForIdentityPromise doesn't return a
+ * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultKeyNameForIdentity = function(identityName)
 {
-  throw new Error("IdentityStorage.getDefaultKeyNameForIdentity is not implemented");
+  return SyncPromise.getValue
+    (this.getDefaultKeyNameForIdentityPromise(identityName, true));
 };
 
 /**
@@ -16979,13 +17239,34 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
 /**
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
- * @returns {Name} The default certificate name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default certificate
+ * Name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
  */
+IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
+  (keyName, useSync)
+{
+  throw new Error
+    ("IdentityStorage.getDefaultCertificateNameForKeyPromise is not implemented");
+};
+
+/**
+ * Get the default certificate name for the specified key.
+ * @param {Name} keyName The key name.
+ * @returns {Name} The default certificate name.
+ * @throws SecurityException if the default certificate name for the key name
+ * is not set.
+ * @throws {Error} If getDefaultCertificateNameForKeyPromise doesn't return a
+ * SyncPromise which is already fulfilled.
+ */
 IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 {
-  throw new Error("IdentityStorage.getDefaultCertificateNameForKey is not implemented");
+  return SyncPromise.getValue
+    (this.getDefaultCertificateNameForKeyPromise(keyName, true));
 };
 
 /**
@@ -16994,21 +17275,62 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
  * @param nameList {Array<Name>} Append result names to nameList.
  * @param isDefault {boolean} If true, add only the default key name. If false,
  * add only the non-default key names.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the names are
+ * added to nameList.
+ */
+IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
+  (identityName, nameList, isDefault, useSync)
+{
+  throw new Error
+    ("IdentityStorage.getAllKeyNamesOfIdentityPromise is not implemented");
+};
+
+/**
+ * Append all the key names of a particular identity to the nameList.
+ * @param identityName {Name} The identity name to search for.
+ * @param nameList {Array<Name>} Append result names to nameList.
+ * @param isDefault {boolean} If true, add only the default key name. If false,
+ * add only the non-default key names.
+ * @throws {Error} If getAllKeyNamesOfIdentityPromise doesn't return a
+ * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
   (identityName, nameList, isDefault)
 {
-  throw new Error("IdentityStorage.getAllKeyNamesOfIdentity is not implemented");
+  return SyncPromise.getValue
+    (this.getAllKeyNamesOfIdentityPromise(identityName, nameList, isDefault, true));
 };
 
 /**
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * identity is set.
+ */
+IdentityStorage.prototype.setDefaultIdentityPromise = function
+  (identityName, useSync)
+{
+  throw new Error("IdentityStorage.setDefaultIdentityPromise is not implemented");
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
+ * @throws {Error} If setDefaultIdentityPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultIdentity = function(identityName)
 {
-  throw new Error("IdentityStorage.setDefaultIdentity is not implemented");
+  return SyncPromise.getValue
+    (this.setDefaultIdentityPromise(identityName, true));
 };
 
 /**
@@ -17016,22 +17338,63 @@ IdentityStorage.prototype.setDefaultIdentity = function(identityName)
  * @param {Name} keyName The key name.
  * @param {Name} identityNameCheck (optional) The identity name to check the
  * keyName.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default key
+ * name is set.
+ */
+IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
+  (keyName, identityNameCheck, useSync)
+{
+  throw new Error
+    ("IdentityStorage.setDefaultKeyNameForIdentityPromise is not implemented");
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} identityNameCheck (optional) The identity name to check the
+ * keyName.
+ * @throws {Error} If setDefaultKeyNameForIdentityPromise doesn't return a
+ * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   (keyName, identityNameCheck)
 {
-  throw new Error("IdentityStorage.setDefaultKeyNameForIdentity is not implemented");
+  return SyncPromise.getValue
+    (this.setDefaultKeyNameForIdentityPromise(keyName, identityNameCheck, true));
 };
 
 /**
  * Set the default key name for the specified identity.
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * certificate name is set.
+ */
+IdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
+  (keyName, certificateName, useSync)
+{
+  throw new Error
+    ("IdentityStorage.setDefaultCertificateNameForKeyPromise is not implemented");
+};
+
+/**
+ * Set the default key name for the specified identity.
+ * @param {Name} keyName The key name.
+ * @param {Name} certificateName The certificate name.
+ * @throws {Error} If setDefaultCertificateNameForKeyPromise doesn't return a
+ * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultCertificateNameForKey = function
   (keyName, certificateName)
 {
-  throw new Error("IdentityStorage.setDefaultCertificateNameForKey is not implemented");
+  return SyncPromise.getValue
+    (this.setDefaultCertificateNameForKeyPromise(keyName, certificateName, true));
 };
 
 /*****************************************
@@ -17041,28 +17404,80 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 /**
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate
+ * info is deleted.
+ */
+IdentityStorage.prototype.deleteCertificateInfoPromise = function
+  (certificateName, useSync)
+{
+  throw new Error("IdentityStorage.deleteCertificateInfoPromise is not implemented");
+};
+
+/**
+ * Delete a certificate.
+ * @param {Name} certificateName The certificate name.
+ * @throws {Error} If deleteCertificateInfoPromise doesn't return a SyncPromise
+ * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
 {
-  throw new Error("IdentityStorage.deleteCertificateInfo is not implemented");
+  return SyncPromise.getValue
+    (this.deleteCertificateInfoPromise(certificateName, true));
 };
 
 /**
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the public key
+ * info is deleted.
+ */
+IdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, useSync)
+{
+  throw new Error("IdentityStorage.deletePublicKeyInfoPromise is not implemented");
+};
+
+/**
+ * Delete a public key and related certificates.
+ * @param {Name} keyName The key name.
+ * @throws {Error} If deletePublicKeyInfoPromise doesn't return a SyncPromise
+ * which is already fulfilled.
  */
 IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
 {
-  throw new Error("IdentityStorage.deletePublicKeyInfo is not implemented");
+  return SyncPromise.getValue
+    (this.deletePublicKeyInfoPromise(keyName, true));
 };
 
 /**
  * Delete an identity and related public keys and certificates.
  * @param {Name} identity The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the identity info
+ * is deleted.
+ */
+IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync)
+{
+  throw new Error("IdentityStorage.deleteIdentityInfoPromise is not implemented");
+};
+
+/**
+ * Delete an identity and related public keys and certificates.
+ * @param {Name} identity The identity name.
+ * @throws {Error} If deleteIdentityInfoPromise doesn't return a SyncPromise
+ * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteIdentityInfo = function(identity)
 {
-  throw new Error("IdentityStorage.deleteIdentityInfo is not implemented");
+  return SyncPromise.getValue
+    (this.deleteIdentityInfoPromise(identity, true));
 };
 
 // Track the lastTimestamp so that each timestamp is unique.
@@ -17093,6 +17508,7 @@ var Blob = require('../../util/blob.js').Blob;
 var KeyType = require('../security-types.js').KeyType;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 
 /**
@@ -17132,43 +17548,37 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {boolean} true if the identity exists, otherwise false.
+ * @returns {SyncPromise} A promise which returns true if the identity exists.
  */
-MemoryIdentityStorage.prototype.doesIdentityExist = function(identityName)
+MemoryIdentityStorage.prototype.doesIdentityExistPromise = function(identityName)
 {
-  return this.identityStore[identityName.toUri()] !== undefined;
+  return SyncPromise.resolve
+    (this.identityStore[identityName.toUri()] !== undefined);
 };
 
 /**
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
+ * @return {SyncPromise} A promise which fulfills when the identity is added.
  */
-MemoryIdentityStorage.prototype.addIdentity = function(identityName)
+MemoryIdentityStorage.prototype.addIdentityPromise = function(identityName)
 {
   var identityUri = identityName.toUri();
-  if (this.identityStore[identityUri] !== undefined)
-    return;
+  if (this.identityStore[identityUri] === undefined)
+    this.identityStore[identityUri] = { defaultKey: null };
 
-  this.identityStore[identityUri] = { defaultKey: null };
-};
-
-/**
- * Revoke the identity.
- * @returns {boolean} true if the identity was revoked, false if not.
- */
-MemoryIdentityStorage.prototype.revokeIdentity = function()
-{
-  throw new Error("MemoryIdentityStorage.revokeIdentity is not implemented");
+  return SyncPromise.resolve();
 };
 
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @returns {boolean} true if the key exists, otherwise false.
+ * @return {SyncPromise} A promise which returns true if the key exists.
  */
-MemoryIdentityStorage.prototype.doesKeyExist = function(keyName)
+MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 {
-  return this.keyStore[keyName.toUri()] !== undefined;
+  return SyncPromise.resolve(this.keyStore[keyName.toUri()] !== undefined);
 };
 
 /**
@@ -17178,8 +17588,10 @@ MemoryIdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
+ * @return {SyncPromise} A promise which fulfills when the key is added.
  */
-MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
+MemoryIdentityStorage.prototype.addKeyPromise = function
+  (keyName, keyType, publicKeyDer)
 {
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
@@ -17191,60 +17603,46 @@ MemoryIdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
+
+  return SyncPromise.resolve();
 };
 
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ * @return {SyncPromise} A promise which returns the DER Blob, or a Blob with a
+ * null pointer if not found.
  */
-MemoryIdentityStorage.prototype.getKey = function(keyName)
+MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
     // Not found.  Silently return a null Blob.
-    return new Blob();
+    return SyncPromise.resolve(new Blob());
 
-  return entry.keyDer;
-};
-
-/**
- * Activate a key.  If a key is marked as inactive, its private part will not be
- * used in packet signing.
- * @param {Name} keyName name of the key
- */
-MemoryIdentityStorage.prototype.activateKey = function(keyName)
-{
-  throw new Error("MemoryIdentityStorage.activateKey is not implemented");
-};
-
-/**
- * Deactivate a key. If a key is marked as inactive, its private part will not
- * be used in packet signing.
- * @param {Name} keyName name of the key
- */
-MemoryIdentityStorage.prototype.deactivateKey = function(keyName)
-{
-  throw new Error("MemoryIdentityStorage.deactivateKey is not implemented");
+  return SyncPromise.resolve(entry.keyDer);
 };
 
 /**
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
- * @returns {boolean} true if the certificate exists, otherwise false.
+ * @return {SyncPromise} A promise which returns true if the certificate exists.
  */
-MemoryIdentityStorage.prototype.doesCertificateExist = function(certificateName)
+MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
+  (certificateName)
 {
-  return this.certificateStore[certificateName.toUri()] !== undefined;
+  return SyncPromise.resolve
+    (this.certificateStore[certificateName.toUri()] !== undefined);
 };
 
 /**
  * Add a certificate to the identity storage.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
+ * @return {SyncPromise} A promise which fulfills when the certificate is added.
  */
-MemoryIdentityStorage.prototype.addCertificate = function(certificate)
+MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
   var certificateName = certificate.getName();
   var keyName = certificate.getPublicKeyName();
@@ -17270,25 +17668,33 @@ MemoryIdentityStorage.prototype.addCertificate = function(certificate)
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.
   this.certificateStore[certificateName.toUri()] = certificate.wireEncode();
+
+  return SyncPromise.resolve();
 };
 
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny (optional) If false, only a valid certificate will
- * be returned, otherwise validity is disregarded. If omitted, allowAny is false.
- * @returns {IdentityCertificate} The requested certificate.  If not found, return null.
+ * @param {boolean} allowAny If false, only a valid certificate will
+ * be returned, otherwise validity is disregarded.
+ * @return {SyncPromise} A promise which returns the requested
+ * IdentityCertificate or null if not found.
  */
-MemoryIdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+MemoryIdentityStorage.prototype.getCertificatePromise = function
+  (certificateName, allowAny)
 {
+  if (!allowAny)
+    throw new Error
+      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented");
+
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
     // Not found.  Silently return null.
-    return null;
+    return SyncPromise.resolve(null);
 
   var certificiate = new IdentityCertificate();
   certificiate.wireDecode(this.certificateStore[certificateNameUri]);
-  return certificiate;
+  return SyncPromise.resolve(certificiate);
 };
 
 /*****************************************
@@ -17297,31 +17703,31 @@ MemoryIdentityStorage.prototype.getCertificate = function(certificateName, allow
 
 /**
  * Get the default identity.
- * @returns {Name} The name of default identity.
+ * @return {SyncPromise} A promise which returns the Name of default identity.
  * @throws SecurityException if the default identity is not set.
  */
-MemoryIdentityStorage.prototype.getDefaultIdentity = function()
+MemoryIdentityStorage.prototype.getDefaultIdentityPromise = function()
 {
   if (this.defaultIdentity.length === 0)
     throw new SecurityException(new Error
       ("MemoryIdentityStorage.getDefaultIdentity: The default identity is not defined"));
 
-  return new Name(this.defaultIdentity);
+  return SyncPromise.resolve(new Name(this.defaultIdentity));
 };
 
 /**
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
- * @returns {Name} The default key name.
+ * @return {SyncPromise} A promise which returns the default key Name.
  * @throws SecurityException if the default key name for the identity is not set.
  */
-MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
+MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
   (identityName)
 {
   var identityUri = identityName.toUri();
   if (this.identityStore[identityUri] !== undefined) {
     if (this.identityStore[identityUri].defaultKey != null)
-      return this.identityStore[identityUri].defaultKey;
+      return SyncPromise.resolve(this.identityStore[identityUri].defaultKey);
     else
       throw new SecurityException(new Error("No default key set."));
   }
@@ -17332,16 +17738,17 @@ MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentity = function
 /**
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
- * @returns {Name} The default certificate name.
+ * @return {SyncPromise} A promise which returns the default certificate Name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
  */
-MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
+MemoryIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
+  (keyName)
 {
   var keyUri = keyName.toUri();
   if (this.keyStore[keyUri] !== undefined) {
     if (this.keyStore[keyUri].defaultCertificate != null)
-      return this.keyStore[keyUri].defaultCertificate;
+      return SyncPromise.resolve(this.keyStore[keyUri].defaultCertificate);
     else
       throw new SecurityException(new Error("No default certificate set."));
   }
@@ -17353,8 +17760,10 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyNa
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @return {SyncPromise} A promise which fulfills when the default identity is set.
  */
-MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
+MemoryIdentityStorage.prototype.setDefaultIdentityPromise = function
+  (identityName)
 {
   var identityUri = identityName.toUri();
   if (this.identityStore[identityUri] !== undefined)
@@ -17362,6 +17771,8 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
   else
     // The identity doesn't exist, so clear the default.
     this.defaultIdentity = "";
+
+  return SyncPromise.resolve();
 };
 
 /**
@@ -17369,10 +17780,14 @@ MemoryIdentityStorage.prototype.setDefaultIdentity = function(identityName)
  * @param {Name} keyName The key name.
  * @param {Name} identityNameCheck (optional) The identity name to check the
  * keyName.
+ * @return {SyncPromise} A promise which fulfills when the default key name is
+ * set.
  */
-MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
+MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
   (keyName, identityNameCheck)
 {
+  identityNameCheck = (identityNameCheck instanceof Name) ? identityNameCheck : null;
+
   var identityName = keyName.getPrefix(-1);
 
   if (identityNameCheck != null && identityNameCheck.size() > 0 &&
@@ -17383,19 +17798,25 @@ MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentity = function
   var identityUri = identityName.toUri();
   if (this.identityStore[identityUri] !== undefined)
     this.identityStore[identityUri].defaultKey = new Name(keyName);
+
+  return SyncPromise.resolve();
 };
 
 /**
  * Set the default key name for the specified identity.
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
+ * @return {SyncPromise} A promise which fulfills when the default certificate
+ * name is set.
  */
-MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
+MemoryIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
   (keyName, certificateName)
 {
   var keyUri = keyName.toUri();
   if (this.keyStore[keyUri] !== undefined)
     this.keyStore[keyUri].defaultCertificate = new Name(certificateName);
+
+  return SyncPromise.resolve();
 };
 
 /*****************************************
@@ -17405,28 +17826,38 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKey = function
 /**
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
+ * @return {SyncPromise} A promise which fulfills when the certificate
+ * info is deleted.
  */
-MemoryIdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
+MemoryIdentityStorage.prototype.deleteCertificateInfoPromise = function
+  (certificateName)
 {
-  throw new Error("MemoryIdentityStorage.deleteCertificateInfo is not implemented");
+  throw new Error
+    ("MemoryIdentityStorage.deleteCertificateInfoPromise is not implemented");
 };
 
 /**
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
+ * @return {SyncPromise} A promise which fulfills when the public key info is
+ * deleted.
  */
-MemoryIdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
+MemoryIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName)
 {
-  throw new Error("MemoryIdentityStorage.deletePublicKeyInfo is not implemented");
+  throw new Error
+    ("MemoryIdentityStorage.deletePublicKeyInfoPromise is not implemented");
 };
 
 /**
  * Delete an identity and related public keys and certificates.
  * @param {Name} identity The identity name.
+ * @return {SyncPromise} A promise which fulfills when the identity info is
+ * deleted.
  */
-MemoryIdentityStorage.prototype.deleteIdentityInfo = function(identity)
+MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
 {
-  throw new Error("MemoryIdentityStorage.deleteIdentityInfo is not implemented");
+  throw new Error
+    ("MemoryIdentityStorage.deleteIdentityInfoPromise is not implemented");
 };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -17465,9 +17896,9 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} (optional) useSync If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that fulfills when the pair is
  * generated.
  */
@@ -17492,18 +17923,34 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key pair is
+ * deleted.
+ */
+PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
+{
+  throw new Error("PrivateKeyStorage.deleteKeyPairPromise is not implemented");
+};
+
+/**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ * @throws {Error} If deleteKeyPairPromise doesn't return a SyncPromise which
+ * is already fulfilled.
  */
 PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
 {
-  throw new Error("PrivateKeyStorage.deleteKeyPair is not implemented");
+  SyncPromise.getValue(this.deleteKeyPairPromise(keyName, true));
 };
 
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the PublicKey.
  */
 PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
@@ -17530,9 +17977,9 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
  * @param {number} digestAlgorithm (optional) The digest algorithm from
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the signature Blob.
  */
 PrivateKeyStorage.prototype.signPromise = function
@@ -17601,9 +18048,9 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
  * @param {Name} keyName The name of the key.
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns true if the key exists.
  */
 PrivateKeyStorage.prototype.doesKeyExistPromise = function
@@ -17836,13 +18283,16 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
+ * @return {SyncPromise} A promise that fulfills when the key pair is deleted.
  */
-MemoryPrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
+MemoryPrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName)
 {
   var keyUri = keyName.toUri();
 
   delete this.publicKeyStore[keyUri];
   delete this.privateKeyStore[keyUri];
+
+  return SyncPromise.resolve();
 };
 
 /**
@@ -18053,53 +18503,65 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete)
 {
   var useSync = !onComplete;
-
-  this.identityStorage.addIdentity(identityName);
-
-  var existingKeyName = null;
-  var generateKey = true;
-  try {
-    existingKeyName = this.identityStorage.getDefaultKeyNameForIdentity(identityName);
-    var key = new PublicKey(this.identityStorage.getKey(existingKeyName));
-    if (key.getKeyType() == params.getKeyType())
-      // The key exists and has the same type, so don't need to generate one.
-      generateKey = false;
-  } catch (ex) {}
-
-  var keyNamePromise;
-  if (generateKey)
-    keyNamePromise = this.generateKeyPairPromise(identityName, true, params, useSync);
-  else
-    // Don't generate a key pair. Use existingKeyName.
-    keyNamePromise = SyncPromise.resolve(existingKeyName);
-
   var thisManager = this;
-  return SyncPromise.complete(onComplete,
-    keyNamePromise
-    .then(function(keyName) {
-      if (generateKey)
-        thisManager.identityStorage.setDefaultKeyNameForIdentity
-          (keyName, identityName);
 
-      var certName = null;
-      var makeCert = true;
-      try {
-        certName = thisManager.identityStorage.getDefaultCertificateNameForKey
-          (keyName);
-        // The cert exists, so don't need to make it.
-        makeCert = false;
-      } catch (ex) {}
+  var generateKey = true;
+  var keyName = null;
 
-      if (makeCert) {
-        return thisManager.selfSignPromise(keyName, useSync)
-        .then(function(selfCert) {
-          thisManager.addCertificateAsIdentityDefault(selfCert);
-          return SyncPromise.resolve(selfCert.getName());
-        });
-      }
-      else
-        return SyncPromise.resolve(certName);
-    }));
+  var mainPromise = this.identityStorage.addIdentityPromise(identityName, useSync)
+  .then(function() {
+    return thisManager.identityStorage.getDefaultKeyNameForIdentityPromise
+      (identityName, useSync);
+  })
+  .then(function(localKeyName) {
+    keyName = localKeyName;
+
+    // Set generateKey.
+    return thisManager.identityStorage.getKeyPromise(keyName, useSync)
+    .then(function(publicKeyDer) {
+      var key = new PublicKey(publicKeyDer);
+      if (key.getKeyType() == params.getKeyType())
+        // The key exists and has the same type, so don't need to generate one.
+        generateKey = false;
+      return SyncPromise.resolve();
+    });
+  }, function(err) {
+    // The key doesn't exist, so leave generateKey true.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (generateKey)
+      return thisManager.generateKeyPairPromise(identityName, true, params, useSync)
+      .then(function(localKeyName) {
+        keyName = localKeyName;
+        return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+          (keyName, identityName, useSync);
+      });
+    else
+      // Don't generate a key pair. Use the existing keyName.
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    return thisManager.identityStorage.getDefaultCertificateNameForKeyPromise
+        (keyName, useSync);
+  })
+  .then(function(certName) {
+    // The cert exists, so don't need to make it.
+    return SyncPromise.resolve(certName);
+  }, function(err) {
+    // The cert doesn't exist, so make one.
+    var certName;
+    return thisManager.selfSignPromise(keyName, useSync)
+    .then(function(selfCert) {
+      certName = selfCert.getName();
+      return thisManager.addCertificateAsIdentityDefaultPromise(selfCert, useSync);
+    })
+    .then(function() {
+      return SyncPromise.resolve(certName);
+    });
+  });
+
+  return SyncPromise.complete(onComplete, mainPromise);
 };
 
 /**
@@ -18254,17 +18716,37 @@ IdentityManager.prototype.addCertificate = function(certificate)
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * certificate is set.
  */
-IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
+  (certificate, useSync)
 {
+  var thisManager = this;
+  
   var keyName = certificate.getPublicKeyName();
-
-  if (!this.identityStorage.doesKeyExist(keyName))
+  return this.identityStorage.doesKeyExistPromise(keyName, useSync)
+  .then(function(exists) {
+    if (!exists)
       throw new SecurityException(new Error
         ("No corresponding Key record for certificate!"));
 
-  this.identityStorage.setDefaultCertificateNameForKey
-    (keyName, certificate.getName());
+    return thisManager.identityStorage.setDefaultCertificateNameForKeyPromise
+      (keyName, certificate.getName(), useSync);
+  });
+};
+
+/**
+ * Set the certificate as the default for its corresponding key.
+ * @param {IdentityCertificate} certificate The certificate.
+ */
+IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+{
+  return SyncPromise.getValue
+    (this.setDefaultCertificateForKeyPromise(certificate, true));
 };
 
 /**
@@ -18272,13 +18754,25 @@ IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
  * certificate as the default for its corresponding identity.
  * @param {IdentityCertificate} certificate The certificate to be added. This
  * makes a copy of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate
+ * is added.
  */
-IdentityManager.prototype.addCertificateAsIdentityDefault = function(certificate)
+IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
+  (certificate, useSync)
 {
-  this.identityStorage.addCertificate(certificate);
-  var keyName = certificate.getPublicKeyName();
-  this.setDefaultKeyForIdentity(keyName);
-  this.setDefaultCertificateForKey(certificate);
+  var thisManager = this;
+  return this.identityStorage.addCertificatePromise(certificate, useSync)
+  .then(function() {
+    var keyName = certificate.getPublicKeyName();
+    return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+      (keyName, null, useSync);
+  })
+  .then(function() {
+    return thisManager.setDefaultCertificateForKeyPromise(certificate, useSync);
+  });
 };
 
 /**
@@ -18349,9 +18843,9 @@ IdentityManager.prototype.getDefaultCertificateName = function()
  * identifies the signing key.
  * @param {WireFormat} (optional) The WireFormat for calling encodeData, or
  * WireFormat.getDefaultWireFormat() if omitted.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If omitted or false, this may return a SyncPromise or an async
- * Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the generated Signature
  * object (if target is a Buffer) or the target (if target is Data).
  */
@@ -18400,7 +18894,6 @@ IdentityManager.prototype.signByCertificatePromise = function
     });
   }
 };
-
 
 /**
  * Sign the Data packet or byte array data based on the certificate name.
@@ -18547,8 +19040,9 @@ IdentityManager.prototype.signInterestWithSha256 = function(interest, wireFormat
 /**
  * Generate a self-signed certificate for a public key.
  * @param {Name} keyName The name of the public key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns the generated
  * IdentityCertificate.
  */
@@ -18556,26 +19050,29 @@ IdentityManager.prototype.selfSignPromise = function(keyName, useSync)
 {
   var certificate = new IdentityCertificate();
 
-  var keyBlob = this.identityStorage.getKey(keyName);
-  var publicKey = new PublicKey(keyBlob);
+  var thisManager = this;
+  return this.identityStorage.getKeyPromise(keyName, useSync)
+  .then(function(keyBlob) {
+    var publicKey = new PublicKey(keyBlob);
 
-  var notBefore = new Date().getTime();
-  var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
+    var notBefore = new Date().getTime();
+    var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
 
-  certificate.setNotBefore(notBefore);
-  certificate.setNotAfter(notAfter);
+    certificate.setNotBefore(notBefore);
+    certificate.setNotAfter(notAfter);
 
-  var certificateName = keyName.getPrefix(-1).append("KEY").append
-    (keyName.get(-1)).append("ID-CERT").appendVersion(certificate.getNotBefore());
-  certificate.setName(certificateName);
+    var certificateName = keyName.getPrefix(-1).append("KEY").append
+      (keyName.get(-1)).append("ID-CERT").appendVersion(certificate.getNotBefore());
+    certificate.setName(certificateName);
 
-  certificate.setPublicKeyInfo(publicKey);
-  certificate.addSubjectDescription(new CertificateSubjectDescription
-    ("2.5.4.41", keyName.toUri()));
-  certificate.encode();
+    certificate.setPublicKeyInfo(publicKey);
+    certificate.addSubjectDescription(new CertificateSubjectDescription
+      ("2.5.4.41", keyName.toUri()));
+    certificate.encode();
 
-  return this.signByCertificatePromise
-    (certificate, certificate.getName(), useSync);
+    return thisManager.signByCertificatePromise
+      (certificate, certificate.getName(), useSync);
+  })
 };
 
 /**
@@ -18631,8 +19128,9 @@ IdentityManager.certificateNameToPublicKeyName = function(certificateName)
  * @param {Name} certificateName The certificate name.
  * @param {Array} digestAlgorithm Set digestAlgorithm[0] to the signature
  * algorithm's digest algorithm, e.g. DigestAlgorithm.SHA256.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns a new object of the
  * correct subclass of Signature.
  */
@@ -18665,8 +19163,9 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
  * @param {boolean} isKsk true for generating a Key-Signing-Key (KSK), false for
  * a Data-Signing-Key (DSK).
  * @param {KeyParams} params The parameters of the key.
- * @param {boolean} useSync If true then return a SyncPromise which is already
- * fulfilled. If false, this may return a SyncPromise or an async Promise.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
  * @return {Promise|SyncPromise} A promise which returns the generated key name.
  */
 IdentityManager.prototype.generateKeyPairPromise = function

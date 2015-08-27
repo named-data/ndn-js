@@ -76,53 +76,65 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete)
 {
   var useSync = !onComplete;
-
-  this.identityStorage.addIdentity(identityName);
-
-  var existingKeyName = null;
-  var generateKey = true;
-  try {
-    existingKeyName = this.identityStorage.getDefaultKeyNameForIdentity(identityName);
-    var key = new PublicKey(this.identityStorage.getKey(existingKeyName));
-    if (key.getKeyType() == params.getKeyType())
-      // The key exists and has the same type, so don't need to generate one.
-      generateKey = false;
-  } catch (ex) {}
-
-  var keyNamePromise;
-  if (generateKey)
-    keyNamePromise = this.generateKeyPairPromise(identityName, true, params, useSync);
-  else
-    // Don't generate a key pair. Use existingKeyName.
-    keyNamePromise = SyncPromise.resolve(existingKeyName);
-
   var thisManager = this;
-  return SyncPromise.complete(onComplete,
-    keyNamePromise
-    .then(function(keyName) {
-      if (generateKey)
-        thisManager.identityStorage.setDefaultKeyNameForIdentity
-          (keyName, identityName);
 
-      var certName = null;
-      var makeCert = true;
-      try {
-        certName = thisManager.identityStorage.getDefaultCertificateNameForKey
-          (keyName);
-        // The cert exists, so don't need to make it.
-        makeCert = false;
-      } catch (ex) {}
+  var generateKey = true;
+  var keyName = null;
 
-      if (makeCert) {
-        return thisManager.selfSignPromise(keyName, useSync)
-        .then(function(selfCert) {
-          thisManager.addCertificateAsIdentityDefault(selfCert);
-          return SyncPromise.resolve(selfCert.getName());
-        });
-      }
-      else
-        return SyncPromise.resolve(certName);
-    }));
+  var mainPromise = this.identityStorage.addIdentityPromise(identityName, useSync)
+  .then(function() {
+    return thisManager.identityStorage.getDefaultKeyNameForIdentityPromise
+      (identityName, useSync);
+  })
+  .then(function(localKeyName) {
+    keyName = localKeyName;
+
+    // Set generateKey.
+    return thisManager.identityStorage.getKeyPromise(keyName, useSync)
+    .then(function(publicKeyDer) {
+      var key = new PublicKey(publicKeyDer);
+      if (key.getKeyType() == params.getKeyType())
+        // The key exists and has the same type, so don't need to generate one.
+        generateKey = false;
+      return SyncPromise.resolve();
+    });
+  }, function(err) {
+    // The key doesn't exist, so leave generateKey true.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (generateKey)
+      return thisManager.generateKeyPairPromise(identityName, true, params, useSync)
+      .then(function(localKeyName) {
+        keyName = localKeyName;
+        return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+          (keyName, identityName, useSync);
+      });
+    else
+      // Don't generate a key pair. Use the existing keyName.
+      return SyncPromise.resolve();
+  })
+  .then(function() {
+    return thisManager.identityStorage.getDefaultCertificateNameForKeyPromise
+        (keyName, useSync);
+  })
+  .then(function(certName) {
+    // The cert exists, so don't need to make it.
+    return SyncPromise.resolve(certName);
+  }, function(err) {
+    // The cert doesn't exist, so make one.
+    var certName;
+    return thisManager.selfSignPromise(keyName, useSync)
+    .then(function(selfCert) {
+      certName = selfCert.getName();
+      return thisManager.addCertificateAsIdentityDefaultPromise(selfCert, useSync);
+    })
+    .then(function() {
+      return SyncPromise.resolve(certName);
+    });
+  });
+
+  return SyncPromise.complete(onComplete, mainPromise);
 };
 
 /**
@@ -277,17 +289,37 @@ IdentityManager.prototype.addCertificate = function(certificate)
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * certificate is set.
  */
-IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
+  (certificate, useSync)
 {
+  var thisManager = this;
+  
   var keyName = certificate.getPublicKeyName();
-
-  if (!this.identityStorage.doesKeyExist(keyName))
+  return this.identityStorage.doesKeyExistPromise(keyName, useSync)
+  .then(function(exists) {
+    if (!exists)
       throw new SecurityException(new Error
         ("No corresponding Key record for certificate!"));
 
-  this.identityStorage.setDefaultCertificateNameForKey
-    (keyName, certificate.getName());
+    return thisManager.identityStorage.setDefaultCertificateNameForKeyPromise
+      (keyName, certificate.getName(), useSync);
+  });
+};
+
+/**
+ * Set the certificate as the default for its corresponding key.
+ * @param {IdentityCertificate} certificate The certificate.
+ */
+IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+{
+  return SyncPromise.getValue
+    (this.setDefaultCertificateForKeyPromise(certificate, true));
 };
 
 /**
@@ -295,13 +327,25 @@ IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
  * certificate as the default for its corresponding identity.
  * @param {IdentityCertificate} certificate The certificate to be added. This
  * makes a copy of the certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the certificate
+ * is added.
  */
-IdentityManager.prototype.addCertificateAsIdentityDefault = function(certificate)
+IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
+  (certificate, useSync)
 {
-  this.identityStorage.addCertificate(certificate);
-  var keyName = certificate.getPublicKeyName();
-  this.setDefaultKeyForIdentity(keyName);
-  this.setDefaultCertificateForKey(certificate);
+  var thisManager = this;
+  return this.identityStorage.addCertificatePromise(certificate, useSync)
+  .then(function() {
+    var keyName = certificate.getPublicKeyName();
+    return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+      (keyName, null, useSync);
+  })
+  .then(function() {
+    return thisManager.setDefaultCertificateForKeyPromise(certificate, useSync);
+  });
 };
 
 /**
@@ -423,7 +467,6 @@ IdentityManager.prototype.signByCertificatePromise = function
     });
   }
 };
-
 
 /**
  * Sign the Data packet or byte array data based on the certificate name.
@@ -580,26 +623,29 @@ IdentityManager.prototype.selfSignPromise = function(keyName, useSync)
 {
   var certificate = new IdentityCertificate();
 
-  var keyBlob = this.identityStorage.getKey(keyName);
-  var publicKey = new PublicKey(keyBlob);
+  var thisManager = this;
+  return this.identityStorage.getKeyPromise(keyName, useSync)
+  .then(function(keyBlob) {
+    var publicKey = new PublicKey(keyBlob);
 
-  var notBefore = new Date().getTime();
-  var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
+    var notBefore = new Date().getTime();
+    var notAfter = notBefore + 2 * 365 * 24 * 3600 * 1000; // about 2 years
 
-  certificate.setNotBefore(notBefore);
-  certificate.setNotAfter(notAfter);
+    certificate.setNotBefore(notBefore);
+    certificate.setNotAfter(notAfter);
 
-  var certificateName = keyName.getPrefix(-1).append("KEY").append
-    (keyName.get(-1)).append("ID-CERT").appendVersion(certificate.getNotBefore());
-  certificate.setName(certificateName);
+    var certificateName = keyName.getPrefix(-1).append("KEY").append
+      (keyName.get(-1)).append("ID-CERT").appendVersion(certificate.getNotBefore());
+    certificate.setName(certificateName);
 
-  certificate.setPublicKeyInfo(publicKey);
-  certificate.addSubjectDescription(new CertificateSubjectDescription
-    ("2.5.4.41", keyName.toUri()));
-  certificate.encode();
+    certificate.setPublicKeyInfo(publicKey);
+    certificate.addSubjectDescription(new CertificateSubjectDescription
+      ("2.5.4.41", keyName.toUri()));
+    certificate.encode();
 
-  return this.signByCertificatePromise
-    (certificate, certificate.getName(), useSync);
+    return thisManager.signByCertificatePromise
+      (certificate, certificate.getName(), useSync);
+  })
 };
 
 /**
