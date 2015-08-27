@@ -84,23 +84,23 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   var mainPromise = this.identityStorage.addIdentityPromise(identityName, useSync)
   .then(function() {
     return thisManager.identityStorage.getDefaultKeyNameForIdentityPromise
-      (identityName, useSync);
-  })
-  .then(function(localKeyName) {
-    keyName = localKeyName;
+      (identityName, useSync)
+    .then(function(localKeyName) {
+      keyName = localKeyName;
 
-    // Set generateKey.
-    return thisManager.identityStorage.getKeyPromise(keyName, useSync)
-    .then(function(publicKeyDer) {
-      var key = new PublicKey(publicKeyDer);
-      if (key.getKeyType() == params.getKeyType())
-        // The key exists and has the same type, so don't need to generate one.
-        generateKey = false;
+      // Set generateKey.
+      return thisManager.identityStorage.getKeyPromise(keyName, useSync)
+      .then(function(publicKeyDer) {
+        var key = new PublicKey(publicKeyDer);
+        if (key.getKeyType() == params.getKeyType())
+          // The key exists and has the same type, so don't need to generate one.
+          generateKey = false;
+        return SyncPromise.resolve();
+      });
+    }, function(err) {
+      // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
-  }, function(err) {
-    // The key doesn't exist, so leave generateKey true.
-    return SyncPromise.resolve();
   })
   .then(function() {
     if (generateKey)
@@ -116,21 +116,21 @@ IdentityManager.prototype.createIdentityAndCertificate = function
   })
   .then(function() {
     return thisManager.identityStorage.getDefaultCertificateNameForKeyPromise
-        (keyName, useSync);
-  })
-  .then(function(certName) {
-    // The cert exists, so don't need to make it.
-    return SyncPromise.resolve(certName);
-  }, function(err) {
-    // The cert doesn't exist, so make one.
-    var certName;
-    return thisManager.selfSignPromise(keyName, useSync)
-    .then(function(selfCert) {
-      certName = selfCert.getName();
-      return thisManager.addCertificateAsIdentityDefaultPromise(selfCert, useSync);
-    })
-    .then(function() {
+      (keyName, useSync)
+    .then(function(certName) {
+      // The cert exists, so don't need to make it.
       return SyncPromise.resolve(certName);
+    }, function(err) {
+      // The cert doesn't exist, so make one.
+      var certName;
+      return thisManager.selfSignPromise(keyName, useSync)
+      .then(function(selfCert) {
+        certName = selfCert.getName();
+        return thisManager.addCertificateAsIdentityDefaultPromise(selfCert, useSync);
+      })
+      .then(function() {
+        return SyncPromise.resolve(certName);
+      });
     });
   });
 
