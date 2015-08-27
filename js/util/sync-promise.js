@@ -18,36 +18,88 @@
  */
 
 /**
- * A SyncPromise is a promise which is immediately fulfilled, used to return a
- * promise in synchronous code.
- * This private constructor creates a SyncPromise fulfilled with the given value.
- * You should normally not call this constructor but call SyncPromise.resolve.
- * Note that we don't need a constructor like
- * SyncPromise(function(resolve, reject)) because this is for scheduling the
+ * A SyncPromise is a promise which is immediately fulfilled or rejected, used
+ * to return a promise in synchronous code.
+ * This private constructor creates a SyncPromise fulfilled pr rejected with the
+ * given value. You should normally not call this constructor but call
+ * SyncPromise.resolve. Note that we don't need a constructor like
+ * SyncPromise(function(resolve, reject)) because this wpuld be for scheduling the
  * function to be called later, which we don't do.
- * @param {any} value The value of the promise.
+ * @param {any} value If isRejected is false, this is the value of the fulfilled
+ * promise, else if isRejected is true, this is the error.
+ * @param {boolean} isRejected True to create a promise in the rejected state,
+ * where value is the error.
  * @constructor
  */
-var SyncPromise = function SyncPromise(value)
+var SyncPromise = function SyncPromise(value, isRejected)
 {
   this.value = value;
+  this.isRejected = isRejected;
 };
 
 exports.SyncPromise = SyncPromise;
 
 /**
- * Immediately call onFulfilled with the value of this promise. 
- * @param {function} onFulfilled This calls onFulfilled(value) with the value of
- * this promise. The function should return a promise. To use all synchronous
- * code, onFulfilled should return SyncPromise.resolve(newValue).
- * @return {Promise|SyncPromise} The result of calling onFulfilled(value) which
- * should be a promise. Note that this does not create a promise which is
- * scheduled to execute later. Rather it immediately calls onFulfilled which
- * should return a promise.
+ * If this promise is fulfilled, immediately call onFulfilled with the fulfilled
+ * value as described below. Otherwise, if this promise is rejected, immediately
+ * call onRejected with the error as described below.
+ * @param {function} (optional) onFulfilled If this promise is fulfilled, this 
+ * calls onFulfilled(value) with the value of this promise and returns the 
+ * result. The function should return a promise. To use all synchronous code,
+ * onFulfilled should return SyncPromise.resolve(newValue).
+ * @param {function} (optional) onRejected If this promise is rejected, this
+ * calls onRejected(err) with the error value of this promise and returns the
+ * result. The function should return a promise. To use all synchronous code,
+ * onFulfilled should return SyncPromise.resolve(newValue) (or throw an
+ * exception).
+ * @return {Promise|SyncPromise} If this promise is fulfilled, return the result
+ * of calling onFulfilled(value). Note that this does not create a promise which
+ * is scheduled to execute later. Rather it immediately calls onFulfilled which
+ * should return a promise. But if onFulfilled is undefined, simply return this
+ * promise to pass it forward. If this promise is rejected, return the result of
+ * calling onRejected(err) with the error value. But if onRejected is undefined,
+ * simply return this promise to pass it forward. However, if onFulfilled or
+ * onRejected throws an exception, then return a new SyncPromise in the rejected
+ * state with the exception.
  */
-SyncPromise.prototype.then = function(onFulfilled)
+SyncPromise.prototype.then = function(onFulfilled, onRejected)
 {
-  return onFulfilled(this.value);
+  if (this.isRejected) {
+    if (onRejected) {
+      try {
+        return onRejected(this.value);
+      }
+      catch(err) {
+        return new SyncPromise(err, true);
+      }
+    }
+    else
+      // Pass the error forward.
+      return this;
+  }
+  else {
+    if (onFulfilled) {
+      try {
+        return onFulfilled(this.value);
+      }
+      catch(err) {
+        return new SyncPromise(err, true);
+      }
+    }
+    else
+      // Pass the fulfilled value forward.
+      return this;
+  }
+};
+
+/**
+ * Call this.then(undefined, onRejected) and return the result. If this promise
+ * is rejected then onRejected will process it. If this promise is fulfilled,
+ * this simply passes it forward.
+ */
+SyncPromise.prototype.catch = function(onRejected)
+{
+  return this.then(undefined, onRejected);
 };
 
 /**
@@ -56,23 +108,29 @@ SyncPromise.prototype.then = function(onFulfilled)
  */
 SyncPromise.resolve = function(value)
 {
-  return new SyncPromise(value);
+  return new SyncPromise(value, false);
 };
 
 /**
  * This static method checks if the promise is a SyncPromise and immediately
- * returns its value. If it is not a SyncPromise, this throws an exceptions
- * since it is not possible to immediately get the value. This can be used with
- * "promise-based" code which you expect to always return a SyncPromise to
- * operate in synchronous mode.
+ * returns its value or throws the error if promise is rejected. If promise is
+ * not a SyncPromise, this throws an exception since it is not possible to
+ * immediately get the value. This can be used with "promise-based" code which
+ * you expect to always return a SyncPromise to operate in synchronous mode.
  * @param {SyncPromise} promise The SyncPromise with the value to get.
  * @return {any} The value of the promise.
  * @throws {Error} If promise is not a SyncPromise.
+ * @throws {any} If promise is a SyncPromise in the rejected state, this throws
+ * the error.
  */
 SyncPromise.getValue = function(promise)
 {
-  if (promise instanceof SyncPromise)
-    return promise.value;
+  if (promise instanceof SyncPromise) {
+    if (promise.isRejected)
+      throw promise.value;
+    else
+      return promise.value;
+  }
   else
     throw new Error("Cannot return immediately because promise is not a SyncPromise");
 };
@@ -82,9 +140,9 @@ SyncPromise.getValue = function(promise)
  * onComplete(value) when fulfilled (possibly in asynchronous mode). If
  * onComplete is undefined, then we are in synchronous mode so return
  * SyncPromise.getValue(promise) which will throw an exception if the promise is
- * not a SyncPromise. This static method can be used to handle both
- * synchronous and asynchronous code based on whether the caller supplies the
- * onComlete callback.
+ * not a SyncPromise (or is a SyncPromise in the rejected state). This static
+ * method can be used to handle both synchronous and asynchronous code based on
+ * whether the caller supplies the onComlete callback.
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
@@ -92,11 +150,15 @@ SyncPromise.getValue = function(promise)
  * Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * @throws {Error} If onComplete is undefined and promise is not a SyncPromise.
+ * @throws {any} If onComplete is undefined and promise is a SyncPromise in the
+ * rejected state.
  */
 SyncPromise.complete = function(onComplete, promise)
 {
   if (onComplete)
-    promise.then(function(value) { onComplete(value); });
+    promise.then
+      (function(value) { onComplete(value); },
+       function(err) { throw err; });
   else
     return SyncPromise.getValue(promise);
 };
