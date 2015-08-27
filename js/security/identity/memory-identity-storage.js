@@ -104,7 +104,9 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @return {SyncPromise} A promise which fulfills when the key is added.
+ * @return {SyncPromise} A promise which fulfills when the key is added, or a
+ * promise rejected with SecurityException if a key with the keyName already
+ * exists.
  */
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
@@ -114,8 +116,8 @@ MemoryIdentityStorage.prototype.addKeyPromise = function
   this.addIdentity(identityName);
 
   if (this.doesKeyExist(keyName))
-    throw new SecurityException(new Error
-      ("A key with the same name already exists!"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("A key with the same name already exists!")));
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
@@ -156,7 +158,9 @@ MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
  * Add a certificate to the identity storage.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is added.
+ * @return {SyncPromise} A promise which fulfills when the certificate is added,
+ * or a promise rejected with SecurityException if the certificate is already
+ * installed.
  */
 MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
@@ -164,22 +168,22 @@ MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
   var keyName = certificate.getPublicKeyName();
 
   if (!this.doesKeyExist(keyName))
-    throw new SecurityException(new Error
+    return SyncPromise.reject(new SecurityException(new Error
       ("No corresponding Key record for certificate! " +
-       keyName.toUri() + " " + certificateName.toUri()));
+       keyName.toUri() + " " + certificateName.toUri())));
 
   // Check if the certificate already exists.
   if (this.doesCertificateExist(certificateName))
-    throw new SecurityException(new Error
-      ("Certificate has already been installed!"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Certificate has already been installed!")));
 
   // Check if the public key of the certificate is the same as the key record.
   var keyBlob = this.getKey(keyName);
   if (keyBlob.isNull() ||
       !DataUtils.arraysEqual(keyBlob.buf(),
         certificate.getPublicKeyInfo().getKeyDer().buf()))
-    throw new SecurityException(new Error
-      ("The certificate does not match the public key!"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("The certificate does not match the public key!")));
 
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.
@@ -200,8 +204,8 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
   (certificateName, allowAny)
 {
   if (!allowAny)
-    throw new Error
-      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented");
+    return SyncPromise.reject(new Error
+      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented"));
 
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
@@ -219,14 +223,15 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
 
 /**
  * Get the default identity.
- * @return {SyncPromise} A promise which returns the Name of default identity.
- * @throws SecurityException if the default identity is not set.
+ * @return {SyncPromise} A promise which returns the Name of default identity,
+ * or a promise rejected with SecurityException if the default identity is not
+ * set.
  */
 MemoryIdentityStorage.prototype.getDefaultIdentityPromise = function()
 {
   if (this.defaultIdentity.length === 0)
-    throw new SecurityException(new Error
-      ("MemoryIdentityStorage.getDefaultIdentity: The default identity is not defined"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage.getDefaultIdentity: The default identity is not defined")));
 
   return SyncPromise.resolve(new Name(this.defaultIdentity));
 };
@@ -234,8 +239,9 @@ MemoryIdentityStorage.prototype.getDefaultIdentityPromise = function()
 /**
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
- * @return {SyncPromise} A promise which returns the default key Name.
- * @throws SecurityException if the default key name for the identity is not set.
+ * @return {SyncPromise} A promise which returns the default key Name, or a
+ * promise rejected with SecurityException if the default key name for the
+ * identity is not set.
  */
 MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
   (identityName)
@@ -245,18 +251,19 @@ MemoryIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
     if (this.identityStore[identityUri].defaultKey != null)
       return SyncPromise.resolve(this.identityStore[identityUri].defaultKey);
     else
-      throw new SecurityException(new Error("No default key set."));
+      return SyncPromise.reject(new SecurityException(new Error
+        ("No default key set.")));
   }
   else
-    throw new SecurityException(new Error("Identity not found."));
+    return SyncPromise.reject(new SecurityException(new Error("Identity not found.")));
 };
 
 /**
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
- * @return {SyncPromise} A promise which returns the default certificate Name.
- * @throws SecurityException if the default certificate name for the key name
- * is not set.
+ * @return {SyncPromise} A promise which returns the default certificate Name,
+ * or a promise rejected with SecurityException if the default certificate name
+ * for the key name is not set.
  */
 MemoryIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
   (keyName)
@@ -266,10 +273,11 @@ MemoryIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = functio
     if (this.keyStore[keyUri].defaultCertificate != null)
       return SyncPromise.resolve(this.keyStore[keyUri].defaultCertificate);
     else
-      throw new SecurityException(new Error("No default certificate set."));
+      return SyncPromise.reject(new SecurityException(new Error
+        ("No default certificate set.")));
   }
   else
-    throw new SecurityException(new Error("Key not found."));
+    return SyncPromise.reject(new SecurityException(new Error("Key not found.")));
 };
 
 /**
@@ -308,8 +316,8 @@ MemoryIdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
 
   if (identityNameCheck != null && identityNameCheck.size() > 0 &&
       !identityNameCheck.equals(identityName))
-    throw new SecurityException(new Error
-      ("The specified identity name does not match the key name"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("The specified identity name does not match the key name")));
 
   var identityUri = identityName.toUri();
   if (this.identityStore[identityUri] !== undefined)
@@ -348,8 +356,8 @@ MemoryIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = functio
 MemoryIdentityStorage.prototype.deleteCertificateInfoPromise = function
   (certificateName)
 {
-  throw new Error
-    ("MemoryIdentityStorage.deleteCertificateInfoPromise is not implemented");
+  return SyncPromise.reject(new Error
+    ("MemoryIdentityStorage.deleteCertificateInfoPromise is not implemented"));
 };
 
 /**
@@ -360,8 +368,8 @@ MemoryIdentityStorage.prototype.deleteCertificateInfoPromise = function
  */
 MemoryIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName)
 {
-  throw new Error
-    ("MemoryIdentityStorage.deletePublicKeyInfoPromise is not implemented");
+  return SyncPromise.reject(new Error
+    ("MemoryIdentityStorage.deletePublicKeyInfoPromise is not implemented"));
 };
 
 /**
@@ -372,6 +380,6 @@ MemoryIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName)
  */
 MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
 {
-  throw new Error
-    ("MemoryIdentityStorage.deleteIdentityInfoPromise is not implemented");
+  return SyncPromise.reject(new Error
+    ("MemoryIdentityStorage.deleteIdentityInfoPromise is not implemented"));
 };

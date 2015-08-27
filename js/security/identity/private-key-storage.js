@@ -44,7 +44,8 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 PrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
-  throw new Error("PrivateKeyStorage.generateKeyPairPromise is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.generateKeyPairPromise is not implemented"));
 };
 
 /**
@@ -70,7 +71,8 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
  */
 PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
 {
-  throw new Error("PrivateKeyStorage.deleteKeyPairPromise is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.deleteKeyPairPromise is not implemented"));
 };
 
 /**
@@ -94,7 +96,8 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
  */
 PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  throw new Error("PrivateKeyStorage.getPublicKeyPromise is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.getPublicKeyPromise is not implemented"));
 };
 
 /**
@@ -124,7 +127,7 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
 PrivateKeyStorage.prototype.signPromise = function
   (data, keyName, digestAlgorithm, useSync)
 {
-  throw new Error("PrivateKeyStorage.sign is not implemented");
+  return SyncPromise.reject(Error("PrivateKeyStorage.sign is not implemented"));
 };
 
 /**
@@ -195,7 +198,8 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
 PrivateKeyStorage.prototype.doesKeyExistPromise = function
   (keyName, keyClass, useSync)
 {
-  throw new Error("PrivateKeyStorage.doesKeyExist is not implemented");
+  return SyncPromise.reject(Error
+    ("PrivateKeyStorage.doesKeyExist is not implemented"));
 };
 
 /**

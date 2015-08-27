@@ -81,17 +81,19 @@ FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params)
 {
   if (this.doesKeyExist(keyName, KeyClass.PUBLIC)) {
-    throw new SecurityException(new Error("Public key already exists"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Public key already exists")));
   }
   if (this.doesKeyExist(keyName, KeyClass.PRIVATE)) {
-    throw new SecurityException(new Error("Private key already exists"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Private key already exists")));
   }
 
   // build keys
   if (params.getKeyType() === KeyType.RSA) {
     if (!rsaKeygen)
-      throw new SecurityException(new Error
-        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+      return SyncPromise.reject(new SecurityException(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
     var keyPair = rsaKeygen.generate(params.getKeySize());
 
@@ -115,7 +117,8 @@ FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
     this.write(keyName, KeyClass.PUBLIC, publicKey);
   }
   else {
-    throw new SecurityException(new Error("Only RSA key generation currently supported"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("Only RSA key generation currently supported")));
   }
 
   return SyncPromise.resolve();
@@ -174,12 +177,12 @@ FilePrivateKeyStorage.prototype.signPromise = function
     digestAlgorithm = DigestAlgorithm.SHA256;
 
   if (!this.doesKeyExist(keyName, KeyClass.PRIVATE))
-    throw new SecurityException(new Error
-      ("FilePrivateKeyStorage.sign: private key doesn't exist"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("FilePrivateKeyStorage.sign: private key doesn't exist")));
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
-    throw new SecurityException(new Error
-      ("FilePrivateKeyStorage.sign: Unsupported digest algorithm"));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("FilePrivateKeyStorage.sign: Unsupported digest algorithm")));
 
   // Retrieve the private key.
   var keyType = [-1];
@@ -195,8 +198,8 @@ FilePrivateKeyStorage.prototype.signPromise = function
   }
   else
     // We don't expect this to happen since getPrivateKey checked it.
-    throw new SecurityException(new Error
-      ("FilePrivateKeyStorage: Unsupported signature key type " + keyType[0]));
+    return SyncPromise.reject(new SecurityException(new Error
+      ("FilePrivateKeyStorage: Unsupported signature key type " + keyType[0])));
 };
 
 /** PRIVATE METHODS **/
