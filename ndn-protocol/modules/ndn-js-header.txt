@@ -51,5 +51,5 @@ function clearTimeout(timer) {
     timer.cancel();
 }
 
-// Set window so that Dexie in ndn.min.js can set properties (although this add-on doesn't use Dexie).
-var window = {};
+// Set self so that Dexie in ndn.min.js can set properties (although this add-on doesn't use Dexie).
+var self = {};
