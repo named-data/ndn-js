@@ -750,9 +750,11 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
 IdentityManager.prototype.generateKeyPairPromise = function
   (identityName, isKsk, params, useSync)
 {
+  var keyName;
   var thisManager = this;
-  this.identityStorage.getNewKeyNamePromise(identityName, isKsk, useSync)
-  .then(function(keyName) {
+  return this.identityStorage.getNewKeyNamePromise(identityName, isKsk, useSync)
+  .then(function(localKeyName) {
+    keyName = localKeyName;
     return thisManager.privateKeyStorage.generateKeyPairPromise
       (keyName, params, useSync);
   })
