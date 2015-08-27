@@ -7244,6 +7244,8 @@ SyncPromise.getValue = function(promise)
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
+ * @param {Promise|SyncPromise} promise If onComplete is defined, this calls
+ * promise.then. Otherwise, this calls SyncPromise.getValue(promise).
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
  * Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
@@ -19218,18 +19220,21 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
 IdentityManager.prototype.generateKeyPairPromise = function
   (identityName, isKsk, params, useSync)
 {
-  var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
-
   var thisManager = this;
-  return this.privateKeyStorage.generateKeyPairPromise(keyName, params, useSync)
+  this.identityStorage.getNewKeyNamePromise(identityName, isKsk, useSync)
+  .then(function(keyName) {
+    return thisManager.privateKeyStorage.generateKeyPairPromise
+      (keyName, params, useSync);
+  })
   .then(function() {
     return thisManager.privateKeyStorage.getPublicKeyPromise
       (keyName, useSync);
   })
   .then(function(publicKey) {
-    thisManager.identityStorage.addKey
+    return thisManager.identityStorage.addKeyPromise
       (keyName, params.getKeyType(), publicKey.getKeyDer());
-
+  })
+  .then(function() {
     return SyncPromise.resolve(keyName);
   });
 };
