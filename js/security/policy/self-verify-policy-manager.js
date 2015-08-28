@@ -172,18 +172,20 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 SelfVerifyPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
 {
-  var publicKeyDer;
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
-    publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
-      (signatureInfo));
-    if (publicKeyDer.isNull()) {
-      onComplete(false);
-      return;
-    }
+    this.getPublicKeyDer
+      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer) {
+        if (publicKeyDer.isNull())
+          onComplete(false);
+        else
+          PolicyManager.verifySignature
+            (signatureInfo, signedBlob, publicKeyDer, onComplete);
+      });
   }
-
-  PolicyManager.verifySignature
-    (signatureInfo, signedBlob, publicKeyDer, onComplete);
+  else
+    // Assume that the signature type does not require a public key.
+    PolicyManager.verifySignature
+      (signatureInfo, signedBlob, null, onComplete);
 };
 
 /**
