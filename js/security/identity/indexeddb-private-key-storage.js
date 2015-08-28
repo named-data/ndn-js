@@ -113,6 +113,30 @@ IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
   });
 };
 
+
+/**
+ * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
+ * @param {Name} keyName The name of the key pair.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only support async code.
+ * @return {Promise} A promise that fulfills when the key pair is deleted.
+ */
+IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
+  (keyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbPrivateKeyStorage.deleteKeyPairPromise is only supported for async")));
+
+  // delete does nothing if the key doesn't exist.
+  return this.database.publicKey.delete
+    (IndexedDbPrivateKeyStorage.transformName(keyName))
+  .then(function() {
+    return this.database.privateKey.delete
+      (IndexedDbPrivateKeyStorage.transformName(keyName));
+  });
+};
+
 /**
  * Get the public key
  * @param {Name} keyName The name of public key.
