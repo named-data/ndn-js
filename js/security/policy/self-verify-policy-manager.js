@@ -201,15 +201,15 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
 {
   if (keyLocator.getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
-    return keyLocator.getKeyData();
+    onComplete(keyLocator.getKeyData());
   else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null)
     // Assume the key name is a certificate name.
-    return SyncPromise.complete
+    SyncPromise.complete
       (onComplete, this.identityStorage.getKeyPromise
        (IdentityCertificate.certificateNameToPublicKeyName
         (keyLocator.getKeyName())));
   else
     // Can't find a key to verify.
-    return new Blob();
+    onComplete(new Blob());
 };
