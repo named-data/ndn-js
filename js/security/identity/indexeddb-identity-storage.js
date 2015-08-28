@@ -474,7 +474,7 @@ IndexedDbIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = func
  * @return {Promise} A promise which fulfills when the certificate info is
  * deleted.
  */
-IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromiseDebugTodo = function
+IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromise = function
   (certificateName, useSync)
 {
   if (useSync)
@@ -495,7 +495,7 @@ IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromiseDebugTodo = funct
  * @return {Promise} A promise which fulfills when the public key info is
  * deleted.
  */
-IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromiseDebugTodo = function
+IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromise = function
   (keyName, useSync)
 {
   if (useSync)
@@ -514,7 +514,7 @@ IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromiseDebugTodo = functio
  * @return {Promise} A promise which fulfills when the identity info is
  * deleted.
  */
-IndexedDbIdentityStorage.prototype.deleteIdentityInfoPromiseDebugTodo = function
+IndexedDbIdentityStorage.prototype.deleteIdentityInfoPromise = function
   (identity, useSync)
 {
   if (useSync)
