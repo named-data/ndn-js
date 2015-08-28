@@ -20559,6 +20559,7 @@ var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -20722,9 +20723,11 @@ SelfVerifyPolicyManager.prototype.verify = function
  * IdentityStorage for the public key with the name in the KeyLocator (if
  * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @returns {Blob} The public key DER or an empty Blob if not found.
+ * @param onComplete {function} This calls onComplete(publicKeyDer) where
+ * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
  */
-SelfVerifyPolicyManager.prototype.getPublicKeyDer = function(keyLocator)
+SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
+  (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
@@ -20732,9 +20735,10 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function(keyLocator)
   else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null)
     // Assume the key name is a certificate name.
-    return this.identityStorage.getKey
-      (IdentityCertificate.certificateNameToPublicKeyName
-       (keyLocator.getKeyName()));
+    return SyncPromise.complete
+      (onComplete, this.identityStorage.getKeyPromise
+       (IdentityCertificate.certificateNameToPublicKeyName
+        (keyLocator.getKeyName())));
   else
     // Can't find a key to verify.
     return new Blob();
