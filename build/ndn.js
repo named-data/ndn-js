@@ -7256,9 +7256,17 @@ SyncPromise.getValue = function(promise)
 SyncPromise.complete = function(onComplete, promise)
 {
   if (onComplete)
-    promise.then
-      (function(value) { onComplete(value); },
-       function(err) { throw err; });
+    promise
+    .then(function(value) {
+      onComplete(value);
+    }, function(err) {
+      if (promise instanceof SyncPromise)
+        throw err;
+      else
+        // We are in an async promise callback, so a thrown exception won't
+        // reach the caller. Just log it.
+        console.log("Uncaught exception from a Promise: " + err);
+    });
   else
     return SyncPromise.getValue(promise);
 };
