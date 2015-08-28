@@ -27,6 +27,7 @@ var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -171,18 +172,20 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 SelfVerifyPolicyManager.prototype.verify = function
   (signatureInfo, signedBlob, onComplete)
 {
-  var publicKeyDer;
   if (KeyLocator.canGetFromSignature(signatureInfo)) {
-    publicKeyDer = this.getPublicKeyDer(KeyLocator.getFromSignature
-      (signatureInfo));
-    if (publicKeyDer.isNull()) {
-      onComplete(false);
-      return;
-    }
+    this.getPublicKeyDer
+      (KeyLocator.getFromSignature(signatureInfo), function(publicKeyDer) {
+        if (publicKeyDer.isNull())
+          onComplete(false);
+        else
+          PolicyManager.verifySignature
+            (signatureInfo, signedBlob, publicKeyDer, onComplete);
+      });
   }
-
-  PolicyManager.verifySignature
-    (signatureInfo, signedBlob, publicKeyDer, onComplete);
+  else
+    // Assume that the signature type does not require a public key.
+    PolicyManager.verifySignature
+      (signatureInfo, signedBlob, null, onComplete);
 };
 
 /**
@@ -190,20 +193,23 @@ SelfVerifyPolicyManager.prototype.verify = function
  * IdentityStorage for the public key with the name in the KeyLocator (if
  * available). If the public key can't be found, return and empty Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @returns {Blob} The public key DER or an empty Blob if not found.
+ * @param onComplete {function} This calls onComplete(publicKeyDer) where
+ * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
  */
-SelfVerifyPolicyManager.prototype.getPublicKeyDer = function(keyLocator)
+SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
+  (keyLocator, onComplete)
 {
   if (keyLocator.getType() == KeyLocatorType.KEY)
     // Use the public key DER directly.
-    return keyLocator.getKeyData();
+    onComplete(keyLocator.getKeyData());
   else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null)
     // Assume the key name is a certificate name.
-    return this.identityStorage.getKey
-      (IdentityCertificate.certificateNameToPublicKeyName
-       (keyLocator.getKeyName()));
+    SyncPromise.complete
+      (onComplete, this.identityStorage.getKeyPromise
+       (IdentityCertificate.certificateNameToPublicKeyName
+        (keyLocator.getKeyName())));
   else
     // Can't find a key to verify.
-    return new Blob();
+    onComplete(new Blob());
 };

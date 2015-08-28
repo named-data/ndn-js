@@ -98,6 +98,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
         return SyncPromise.resolve();
       });
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+      
       // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
@@ -121,6 +124,9 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       // The cert exists, so don't need to make it.
       return SyncPromise.resolve(certName);
     }, function(err) {
+      if (!(err instanceof SecurityException))
+        throw err;
+
       // The cert doesn't exist, so make one.
       var certName;
       return thisManager.selfSignPromise(keyName, useSync)
@@ -744,18 +750,23 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
 IdentityManager.prototype.generateKeyPairPromise = function
   (identityName, isKsk, params, useSync)
 {
-  var keyName = this.identityStorage.getNewKeyName(identityName, isKsk);
-
+  var keyName;
   var thisManager = this;
-  return this.privateKeyStorage.generateKeyPairPromise(keyName, params, useSync)
+  return this.identityStorage.getNewKeyNamePromise(identityName, isKsk, useSync)
+  .then(function(localKeyName) {
+    keyName = localKeyName;
+    return thisManager.privateKeyStorage.generateKeyPairPromise
+      (keyName, params, useSync);
+  })
   .then(function() {
     return thisManager.privateKeyStorage.getPublicKeyPromise
       (keyName, useSync);
   })
   .then(function(publicKey) {
-    thisManager.identityStorage.addKey
+    return thisManager.identityStorage.addKeyPromise
       (keyName, params.getKeyType(), publicKey.getKeyDer());
-
+  })
+  .then(function() {
     return SyncPromise.resolve(keyName);
   });
 };

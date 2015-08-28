@@ -50,3 +50,6 @@ function setTimeout(callback, delay) {
 function clearTimeout(timer) {
     timer.cancel();
 }
+
+// Set self so that Dexie in ndn.min.js can set properties (although this add-on doesn't use Dexie).
+var self = {};
