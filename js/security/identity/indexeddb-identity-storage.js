@@ -502,25 +502,62 @@ IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.deletePublicKeyInfoPromise is only supported for async")));
 
-  return Promise.reject(new Error
-    ("IndexedDbIdentityStorage.deletePublicKeyInfoPromise is not implemented"));
+  if (keyName.size() == 0)
+    return Promise.resolve();
+
+  var thisStorage = this;
+  return this.database.publicKey.delete(keyName.toUri())
+  .then(function() {
+    // Iterate through each certificate to find ones that match keyName. This is
+    // a little inefficient, but we don't expect the in-browswer database to be
+    // very big, we don't expect to delete often, and this is simpler than
+    // complicating the database schema to store the keyName with each certificate.
+    return thisStorage.database.certificate.each(function(certificateEntry) {
+      if (IdentityCertificate.certificateNameToPublicKeyName
+          (new Name(certificateEntry.certificateNameUri)).equals(keyName))
+        thisStorage.database.certificate.delete
+          (certificateEntry.certificateNameUri);
+    });
+  });
 };
 
 /**
  * Delete an identity and related public keys and certificates.
- * @param {Name} identity The identity name.
+ * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only support async code.
  * @return {Promise} A promise which fulfills when the identity info is
  * deleted.
  */
 IndexedDbIdentityStorage.prototype.deleteIdentityInfoPromise = function
-  (identity, useSync)
+  (identityName, useSync)
 {
   if (useSync)
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.deleteIdentityInfoPromise is only supported for async")));
 
-  return Promise.reject(new Error
-    ("IndexedDbIdentityStorage.deleteIdentityInfoPromise is not implemented"));
+  var thisStorage = this;
+  return this.database.identity.delete(identityName.toUri())
+  // Iterate through each publicKey and certificate to find ones that match
+  // identityName. This is a little inefficient, but we don't expect the
+  // in-browswer database to be very big, we don't expect to delete often, and
+  // this is simpler than complicating the database schema to store the
+  // identityName with each publicKey and certificate.
+  .then(function() {
+    return thisStorage.database.publicKey.each(function(publicKeyEntry) {
+      var keyIdentityName = new Name(publicKeyEntry.keyNameUri).getPrefix(-1);
+      if (keyIdentityName.equals(identityName))
+        thisStorage.database.publicKey.delete(publicKeyEntry.keyNameUri);
+    });
+  })
+  .then(function() {
+    return thisStorage.database.certificate.each(function(certificateEntry) {
+      var certificateKeyName = IdentityCertificate.certificateNameToPublicKeyName
+        (new Name(certificateEntry.certificateNameUri));
+      var certificateIdentityName = certificateKeyName.getPrefix(-1);
+      if (certificateIdentityName.equals(identityName))
+        thisStorage.database.certificate.delete
+          (certificateEntry.certificateNameUri);
+    });
+  });
 };
