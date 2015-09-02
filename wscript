@@ -1,6 +1,6 @@
 # -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
-VERSION='0.1'
+VERSION='0.8.1'
 APPNAME='ndnjs'
 
 YUICOMPRESSOR_URL="http://github.com/downloads/yui/yuicompressor/"
@@ -145,9 +145,11 @@ def build (bld):
                  "js/security/certificate/certificate.js",
                  "js/security/certificate/identity-certificate.js",
                  "js/security/identity/identity-storage.js",
+                 "js/security/identity/indexeddb-identity-storage.js",
                  "js/security/identity/memory-identity-storage.js",
                  "js/security/identity/private-key-storage.js",
                  "js/security/identity/memory-private-key-storage.js",
+                 "js/security/identity/indexeddb-private-key-storage.js",
                  "js/security/identity/identity-manager.js",
                  "js/security/policy/validation-request.js",
                  "js/security/policy/policy-manager.js",
