@@ -11,6 +11,8 @@ Changes
 * Firefox add-on: Increased the number of outstanding interests to help streaming video.
 * In security IdentityStorage and PrivateKeyStorage added promise-based methods
   like getKeyPromise, which the subclasses like MemoryIdentityStorage now implement.
+* In security, added IndexedDbIdentityStorage and IndexedDbPrivateKeyStorage for
+  persistent in-browser storage of user keys using IndexedDB.
 
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
