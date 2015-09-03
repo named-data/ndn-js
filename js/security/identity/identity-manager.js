@@ -193,10 +193,14 @@ IdentityManager.prototype.deleteIdentity = function(identityName)
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-IdentityManager.prototype.setDefaultIdentity = function(identityName)
+IdentityManager.prototype.setDefaultIdentity = function(identityName, onComplete)
 {
-  this.identityStorage.setDefaultIdentity(identityName);
+  return SyncPromise.complete(onComplete,
+    this.identityStorage.setDefaultIdentityPromise(identityName, !onComplete));
 };
 
 /**
@@ -232,13 +236,20 @@ IdentityManager.prototype.generateRSAKeyPair = function
  * @param {Name} keyName The name of the key.
  * @param {Name} identityName (optional) the name of the identity. If not
  * specified, the identity name is inferred from the keyName.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
 IdentityManager.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityName)
+  (keyName, identityName, onComplete)
 {
-  if (identityName == null)
-    identityName = new Name();
-  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+  onComplete = (typeof identityName === "function") ? identityName : onComplete;
+  identityName = (typeof identityName === "function" || !identityName) ?
+    new Name() : identityName;
+
+  return SyncPromise.complete(onComplete,
+    this.identityStorage.setDefaultKeyNameForIdentityPromise
+      (keyName, identityName, !onComplete));
 };
 
 /**
@@ -321,11 +332,15 @@ IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+IdentityManager.prototype.setDefaultCertificateForKey = function
+  (certificate, onComplete)
 {
-  return SyncPromise.getValue
-    (this.setDefaultCertificateForKeyPromise(certificate, true));
+  return SyncPromise.complete(onComplete,
+    this.setDefaultCertificateForKeyPromise(certificate, !onComplete));
 };
 
 /**

@@ -154,12 +154,15 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
  * @param {Name} keyName The name of the key.
  * @param {Name} identityName (optional) the name of the identity. If not
  * specified, the identity name is inferred from the keyName.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-KeyChain.prototype.setDefaultKeyForIdentity = function(keyName, identityName)
+KeyChain.prototype.setDefaultKeyForIdentity = function
+  (keyName, identityName, onComplete)
 {
-  if (identityName == null)
-    identityName = new Name();
-  return this.identityManager.setDefaultKeyForIdentity(keyName, identityName);
+  return this.identityManager.setDefaultKeyForIdentity
+    (keyName, identityName, onComplete);
 };
 
 /**
@@ -201,10 +204,14 @@ KeyChain.prototype.installIdentityCertificate = function(certificate)
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-KeyChain.prototype.setDefaultCertificateForKey = function(certificate)
+KeyChain.prototype.setDefaultCertificateForKey = function
+  (certificate, onComplete)
 {
-  this.identityManager.setDefaultCertificateForKey(certificate);
+  this.identityManager.setDefaultCertificateForKey(certificate, onComplete);
 };
 
 /**
