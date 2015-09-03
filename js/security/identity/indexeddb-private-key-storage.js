@@ -57,9 +57,9 @@ IndexedDbPrivateKeyStorage.prototype.name = "IndexedDbPrivateKeyStorage";
 IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
-  if (!(UseSubtleCrypto() && !useSync))
+  if (useSync)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbPrivateKeyStorage.generateKeyPairPromise is only supported for crypto.subtle and async")));
+      ("IndexedDbPrivateKeyStorage.generateKeyPairPromise is only supported for async")));
 
   var thisStorage = this;
 
@@ -175,9 +175,9 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
   useSync = (typeof digestAlgorithm === "boolean") ? digestAlgorithm : useSync;
   digestAlgorithm = (typeof digestAlgorithm === "boolean" || !digestAlgorithm) ? DigestAlgorithm.SHA256 : digestAlgorithm;
 
-  if (!(UseSubtleCrypto() && !useSync))
+  if (useSync)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbPrivateKeyStorage.signPromise is only supported for crypto.subtle and async")));
+      ("IndexedDbPrivateKeyStorage.signPromise is only supported for async")));
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return Promise.reject(new SecurityException(new Error

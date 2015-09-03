@@ -19461,9 +19461,9 @@ IndexedDbPrivateKeyStorage.prototype.name = "IndexedDbPrivateKeyStorage";
 IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
-  if (!(UseSubtleCrypto() && !useSync))
+  if (useSync)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbPrivateKeyStorage.generateKeyPairPromise is only supported for crypto.subtle and async")));
+      ("IndexedDbPrivateKeyStorage.generateKeyPairPromise is only supported for async")));
 
   var thisStorage = this;
 
@@ -19579,9 +19579,9 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
   useSync = (typeof digestAlgorithm === "boolean") ? digestAlgorithm : useSync;
   digestAlgorithm = (typeof digestAlgorithm === "boolean" || !digestAlgorithm) ? DigestAlgorithm.SHA256 : digestAlgorithm;
 
-  if (!(UseSubtleCrypto() && !useSync))
+  if (useSync)
     return Promise.reject(new SecurityException(new Error
-      ("IndexedDbPrivateKeyStorage.signPromise is only supported for crypto.subtle and async")));
+      ("IndexedDbPrivateKeyStorage.signPromise is only supported for async")));
 
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return Promise.reject(new SecurityException(new Error
@@ -19844,10 +19844,14 @@ IdentityManager.prototype.deleteIdentity = function(identityName)
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-IdentityManager.prototype.setDefaultIdentity = function(identityName)
+IdentityManager.prototype.setDefaultIdentity = function(identityName, onComplete)
 {
-  this.identityStorage.setDefaultIdentity(identityName);
+  return SyncPromise.complete(onComplete,
+    this.identityStorage.setDefaultIdentityPromise(identityName, !onComplete));
 };
 
 /**
@@ -19883,13 +19887,20 @@ IdentityManager.prototype.generateRSAKeyPair = function
  * @param {Name} keyName The name of the key.
  * @param {Name} identityName (optional) the name of the identity. If not
  * specified, the identity name is inferred from the keyName.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
 IdentityManager.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityName)
+  (keyName, identityName, onComplete)
 {
-  if (identityName == null)
-    identityName = new Name();
-  this.identityStorage.setDefaultKeyNameForIdentity(keyName, identityName);
+  onComplete = (typeof identityName === "function") ? identityName : onComplete;
+  identityName = (typeof identityName === "function" || !identityName) ?
+    new Name() : identityName;
+
+  return SyncPromise.complete(onComplete,
+    this.identityStorage.setDefaultKeyNameForIdentityPromise
+      (keyName, identityName, !onComplete));
 };
 
 /**
@@ -19972,11 +19983,15 @@ IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-IdentityManager.prototype.setDefaultCertificateForKey = function(certificate)
+IdentityManager.prototype.setDefaultCertificateForKey = function
+  (certificate, onComplete)
 {
-  return SyncPromise.getValue
-    (this.setDefaultCertificateForKeyPromise(certificate, true));
+  return SyncPromise.complete(onComplete,
+    this.setDefaultCertificateForKeyPromise(certificate, !onComplete));
 };
 
 /**
@@ -22082,12 +22097,15 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
  * @param {Name} keyName The name of the key.
  * @param {Name} identityName (optional) the name of the identity. If not
  * specified, the identity name is inferred from the keyName.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-KeyChain.prototype.setDefaultKeyForIdentity = function(keyName, identityName)
+KeyChain.prototype.setDefaultKeyForIdentity = function
+  (keyName, identityName, onComplete)
 {
-  if (identityName == null)
-    identityName = new Name();
-  return this.identityManager.setDefaultKeyForIdentity(keyName, identityName);
+  return this.identityManager.setDefaultKeyForIdentity
+    (keyName, identityName, onComplete);
 };
 
 /**
@@ -22129,10 +22147,14 @@ KeyChain.prototype.installIdentityCertificate = function(certificate)
 /**
  * Set the certificate as the default for its corresponding key.
  * @param {IdentityCertificate} certificate The certificate.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-KeyChain.prototype.setDefaultCertificateForKey = function(certificate)
+KeyChain.prototype.setDefaultCertificateForKey = function
+  (certificate, onComplete)
 {
-  this.identityManager.setDefaultCertificateForKey(certificate);
+  this.identityManager.setDefaultCertificateForKey(certificate, onComplete);
 };
 
 /**
