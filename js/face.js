@@ -795,12 +795,15 @@ Face.prototype.makeCommandInterest = function(interest, wireFormat)
  * signing.
  * @param {WireFormat} wireFormat A WireFormat object used to encode
  * the SignatureInfo and to encode the interest name for signing.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some crypto/database libraries only use a callback, so onComplete is
+ * required to use these.)
  */
 Face.prototype.nodeMakeCommandInterest = function
-  (interest, keyChain, certificateName, wireFormat)
+  (interest, keyChain, certificateName, wireFormat, onComplete)
 {
   this.commandInterestGenerator.generate
-    (interest, keyChain, certificateName, wireFormat);
+    (interest, keyChain, certificateName, wireFormat, onComplete);
 };
 
 /**
@@ -1227,25 +1230,25 @@ Face.prototype.nfdRegisterPrefix = function
       (controlParameters.wireEncode(TlvWireFormat.get()));
     thisFace.nodeMakeCommandInterest
       (commandInterest, commandKeyChain, commandCertificateName,
-       TlvWireFormat.get());
+       TlvWireFormat.get(), function() {
+      if (registeredPrefixId != 0) {
+        var interestFilterId = 0;
+        if (closure != null)
+          // registerPrefix was called with the "combined" form that includes the
+          // callback, so add an InterestFilterEntry.
+          interestFilterId = thisFace.setInterestFilter
+            (new InterestFilter(prefix), closure);
 
-    if (registeredPrefixId != 0) {
-      var interestFilterId = 0;
-      if (closure != null)
-        // registerPrefix was called with the "combined" form that includes the
-        // callback, so add an InterestFilterEntry.
-        interestFilterId = thisFace.setInterestFilter
-          (new InterestFilter(prefix), closure);
+        thisFace.registeredPrefixTable.push
+          (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+      }
 
-      thisFace.registeredPrefixTable.push
-        (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
-    }
-
-    // Send the registration interest.
-    thisFace.reconnectAndExpressInterest
-      (null, commandInterest, new Face.RegisterResponseClosure
-       (thisFace, prefix, closure, onRegisterFailed, flags,
-        TlvWireFormat.get(), true));
+      // Send the registration interest.
+      thisFace.reconnectAndExpressInterest
+        (null, commandInterest, new Face.RegisterResponseClosure
+         (thisFace, prefix, closure, onRegisterFailed, flags,
+          TlvWireFormat.get(), true));
+    });
   };
 
   this.isLocal
