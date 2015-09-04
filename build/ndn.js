@@ -18147,7 +18147,7 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
     // wireEncode returns the cached encoding if available.
     return thisStorage.database.certificate.put
       ({ certificateNameUri: certificateName.toUri(),
-         encoding: certificate.wireEncode() });
+         encoding: certificate.wireEncode().buf() });
   });
 };
 
@@ -18175,9 +18175,9 @@ IndexedDbIdentityStorage.prototype.getCertificatePromise = function
   return this.database.certificate.get(certificateName.toUri())
   .then(function(certificateEntry) {
     if (certificateEntry) {
-      var certificiate = new IdentityCertificate();
-      certificiate.wireDecode(certificateEntry.encoding);
-      return Promise.resolve(certificiate);
+      var certificate = new IdentityCertificate();
+      certificate.wireDecode(certificateEntry.encoding);
+      return Promise.resolve(certificate);
     }
     else
       // Not found.  Silently return null.
