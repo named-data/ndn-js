@@ -167,26 +167,59 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
  * @param identityName {Name} The name of the identity.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
  */
-IdentityManager.prototype.deleteIdentity = function(identityName)
+IdentityManager.prototype.deleteIdentity = function(identityName, onComplete)
 {
-  try {
-    if (this.identityStorage.getDefaultIdentity().equals(identityName))
+  var useSync = !onComplete;
+  var thisManager = this;
+
+  var doDelete = true;
+
+  var mainPromise = this.identityStorage.getDefaultIdentityPromise(identityName)
+  .then(function(defaultIdentityName) {
+    if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
-      return;
-  }
-  catch (ex) {
+      doDelete = false;
+    
+    return SyncPromise.resolve();
+  }, function(err) {
     // There is no default identity to check.
-  }
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (!doDelete)
+      return SyncPromise.resolve();
 
-  var keysToDelete = [];
-  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, true);
-  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, false);
+    var keysToDelete = [];
+    return thisManager.identityStorage.getAllKeyNamesOfIdentityPromise
+      (identityName, keysToDelete, true)
+    .then(function() {
+      return thisManager.identityStorage.getAllKeyNamesOfIdentityPromise
+        (identityName, keysToDelete, false);
+    })
+    .then(function() {
+      return thisManager.identityStorage.deleteIdentityInfoPromise(identityName);
+    })
+    .then(function() {
+      // Recursively loop through keysToDelete, calling deleteKeyPairPromise.
+      function deleteKeyLoop(i) {
+        if (i >= keysToDelete.length)
+          return SyncPromise.resolve();
 
-  this.identityStorage.deleteIdentityInfo(identityName);
+        return thisManager.privateKeyStorage.deleteKeyPairPromise(keysToDelete[i])
+        .then(function() {
+          return deleteKeyLoop(i + 1);
+        });
+      }
 
-  for (var i = 0; i < keysToDelete.length; ++i)
-    this.privateKeyStorage.deleteKeyPair(keysToDelete[i]);
+      return deleteKeyLoop(0);
+    });
+  });
+
+  return SyncPromise.complete(onComplete, mainPromise);
 };
 
 /**
