@@ -128,11 +128,12 @@ IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbPrivateKeyStorage.deleteKeyPairPromise is only supported for async")));
 
+  var thisStorage = this;
   // delete does nothing if the key doesn't exist.
   return this.database.publicKey.delete
     (IndexedDbPrivateKeyStorage.transformName(keyName))
   .then(function() {
-    return this.database.privateKey.delete
+    return thisStorage.database.privateKey.delete
       (IndexedDbPrivateKeyStorage.transformName(keyName));
   });
 };
