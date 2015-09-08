@@ -107,10 +107,13 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
  * @param identityName {Name} The name of the identity.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
  */
-KeyChain.prototype.deleteIdentity = function(identityName)
+KeyChain.prototype.deleteIdentity = function(identityName, onComplete)
 {
-  this.identityManager.deleteIdentity(identityName);
+  this.identityManager.deleteIdentity(identityName, onComplete);
 };
 
 /**

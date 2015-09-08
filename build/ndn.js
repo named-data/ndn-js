@@ -18268,6 +18268,56 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
 };
 
 /**
+ * Append all the key names of a particular identity to the nameList.
+ * @param identityName {Name} The identity name to search for.
+ * @param nameList {Array<Name>} Append result names to nameList.
+ * @param isDefault {boolean} If true, add only the default key name. If false,
+ * add only the non-default key names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only support async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
+  (identityName, nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbIdentityStorage.getAllKeyNamesOfIdentityPromise is only supported for async")));
+
+  var defaultKeyName = null;
+  var thisStorage = this;
+  return this.getDefaultKeyNameForIdentityPromise(identityName)
+  .then(function(localDefaultKeyName) {
+    defaultKeyName = localDefaultKeyName;
+    return SyncPromise.resolve();
+  }, function(err) {
+    // The default key name was not found.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    // Iterate through each publicKey a to find ones that match identityName.
+    // This is a little inefficient, but we don't expect the in-browswer
+    // database to be very big, we don't expect to use this function often (for
+    // deleting an identity), and this is simpler than complicating the database
+    // schema to store the identityName with each publicKey.
+    return thisStorage.database.publicKey.each(function(publicKeyEntry) {
+      var keyName = new Name(publicKeyEntry.keyNameUri);
+      var keyIdentityName = keyName.getPrefix(-1);
+      
+      if (keyIdentityName.equals(identityName)) {
+        var keyNameIsDefault = 
+          (defaultKeyName != null && keyName.equals(defaultKeyName));
+        if (isDefault && keyNameIsDefault)
+          nameList.push(keyName);
+        else if (!isDefault && !keyNameIsDefault)
+          nameList.push(keyName);
+      }
+    });
+  });
+};
+
+/**
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
@@ -19532,11 +19582,12 @@ IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbPrivateKeyStorage.deleteKeyPairPromise is only supported for async")));
 
+  var thisStorage = this;
   // delete does nothing if the key doesn't exist.
   return this.database.publicKey.delete
     (IndexedDbPrivateKeyStorage.transformName(keyName))
   .then(function() {
-    return this.database.privateKey.delete
+    return thisStorage.database.privateKey.delete
       (IndexedDbPrivateKeyStorage.transformName(keyName));
   });
 };
@@ -19818,26 +19869,59 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
  * @param identityName {Name} The name of the identity.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
  */
-IdentityManager.prototype.deleteIdentity = function(identityName)
+IdentityManager.prototype.deleteIdentity = function(identityName, onComplete)
 {
-  try {
-    if (this.identityStorage.getDefaultIdentity().equals(identityName))
+  var useSync = !onComplete;
+  var thisManager = this;
+
+  var doDelete = true;
+
+  var mainPromise = this.identityStorage.getDefaultIdentityPromise(identityName)
+  .then(function(defaultIdentityName) {
+    if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
-      return;
-  }
-  catch (ex) {
+      doDelete = false;
+    
+    return SyncPromise.resolve();
+  }, function(err) {
     // There is no default identity to check.
-  }
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    if (!doDelete)
+      return SyncPromise.resolve();
 
-  var keysToDelete = [];
-  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, true);
-  this.identityStorage.getAllKeyNamesOfIdentity(identityName, keysToDelete, false);
+    var keysToDelete = [];
+    return thisManager.identityStorage.getAllKeyNamesOfIdentityPromise
+      (identityName, keysToDelete, true)
+    .then(function() {
+      return thisManager.identityStorage.getAllKeyNamesOfIdentityPromise
+        (identityName, keysToDelete, false);
+    })
+    .then(function() {
+      return thisManager.identityStorage.deleteIdentityInfoPromise(identityName);
+    })
+    .then(function() {
+      // Recursively loop through keysToDelete, calling deleteKeyPairPromise.
+      function deleteKeyLoop(i) {
+        if (i >= keysToDelete.length)
+          return SyncPromise.resolve();
 
-  this.identityStorage.deleteIdentityInfo(identityName);
+        return thisManager.privateKeyStorage.deleteKeyPairPromise(keysToDelete[i])
+        .then(function() {
+          return deleteKeyLoop(i + 1);
+        });
+      }
 
-  for (var i = 0; i < keysToDelete.length; ++i)
-    this.privateKeyStorage.deleteKeyPair(keysToDelete[i]);
+      return deleteKeyLoop(0);
+    });
+  });
+
+  return SyncPromise.complete(onComplete, mainPromise);
 };
 
 /**
@@ -22050,10 +22134,13 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
  * @param identityName {Name} The name of the identity.
+ * @param {function} onComplete (optional) This calls onComplete() when the
+ * operation is complete. If omitted, do not use it. (Some database libraries
+ * only use a callback, so onComplete is required to use these.)
  */
-KeyChain.prototype.deleteIdentity = function(identityName)
+KeyChain.prototype.deleteIdentity = function(identityName, onComplete)
 {
-  this.identityManager.deleteIdentity(identityName);
+  this.identityManager.deleteIdentity(identityName, onComplete);
 };
 
 /**
