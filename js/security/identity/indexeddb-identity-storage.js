@@ -383,6 +383,56 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
 };
 
 /**
+ * Append all the key names of a particular identity to the nameList.
+ * @param identityName {Name} The identity name to search for.
+ * @param nameList {Array<Name>} Append result names to nameList.
+ * @param isDefault {boolean} If true, add only the default key name. If false,
+ * add only the non-default key names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only support async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
+  (identityName, nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbIdentityStorage.getAllKeyNamesOfIdentityPromise is only supported for async")));
+
+  var defaultKeyName = null;
+  var thisStorage = this;
+  return this.getDefaultKeyNameForIdentityPromise(identityName)
+  .then(function(localDefaultKeyName) {
+    defaultKeyName = localDefaultKeyName;
+    return SyncPromise.resolve();
+  }, function(err) {
+    // The default key name was not found.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    // Iterate through each publicKey a to find ones that match identityName.
+    // This is a little inefficient, but we don't expect the in-browswer
+    // database to be very big, we don't expect to use this function often (for
+    // deleting an identity), and this is simpler than complicating the database
+    // schema to store the identityName with each publicKey.
+    return thisStorage.database.publicKey.each(function(publicKeyEntry) {
+      var keyName = new Name(publicKeyEntry.keyNameUri);
+      var keyIdentityName = keyName.getPrefix(-1);
+      
+      if (keyIdentityName.equals(identityName)) {
+        var keyNameIsDefault = 
+          (defaultKeyName != null && keyName.equals(defaultKeyName));
+        if (isDefault && keyNameIsDefault)
+          nameList.push(keyName);
+        else if (!isDefault && !keyNameIsDefault)
+          nameList.push(keyName);
+      }
+    });
+  });
+};
+
+/**
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
