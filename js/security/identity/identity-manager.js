@@ -111,7 +111,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       .then(function(localKeyName) {
         keyName = localKeyName;
         return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
-          (keyName, identityName, useSync);
+          (keyName, useSync);
       });
     else
       // Don't generate a key pair. Use the existing keyName.
@@ -281,7 +281,7 @@ IdentityManager.prototype.setDefaultKeyForIdentity = function
     identityNameCheck : onComplete;
   identityNameCheck = (typeof identityNameCheck === "function" || !identityNameCheck) ?
     new Name() : identityNameCheck;
-
+s
   return SyncPromise.complete(onComplete,
     this.identityStorage.setDefaultKeyNameForIdentityPromise
       (keyName, identityNameCheck, !onComplete));
@@ -312,7 +312,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
   var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
-  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName, identityName);
+  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName);
   return newKeyName;
 };
 
@@ -397,7 +397,7 @@ IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
   .then(function() {
     var keyName = certificate.getPublicKeyName();
     return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
-      (keyName, null, useSync);
+      (keyName, useSync);
   })
   .then(function() {
     return thisManager.setDefaultCertificateForKeyPromise(certificate, useSync);
