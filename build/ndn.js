@@ -17732,10 +17732,11 @@ IdentityStorage.prototype.setDefaultIdentity = function(identityName)
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -17750,10 +17751,11 @@ IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @throws {Error} If setDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
@@ -18345,10 +18347,11 @@ IndexedDbIdentityStorage.prototype.setDefaultIdentityPromise = function
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only support async code.
  * @return {Promise} A promise which fulfills when the default key name is
@@ -18797,10 +18800,11 @@ MemoryIdentityStorage.prototype.setDefaultIdentityPromise = function
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @return {SyncPromise} A promise which fulfills when the default key name is
  * set.
  */
@@ -19813,7 +19817,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       .then(function(localKeyName) {
         keyName = localKeyName;
         return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
-          (keyName, identityName, useSync);
+          (keyName, useSync);
       });
     else
       // Don't generate a key pair. Use the existing keyName.
@@ -19967,24 +19971,26 @@ IdentityManager.prototype.generateRSAKeyPair = function
 };
 
 /**
- * Set a key as the default key of an identity.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
  * @param {Name} keyName The name of the key.
- * @param {Name} identityName (optional) the name of the identity. If not
- * specified, the identity name is inferred from the keyName.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
  */
 IdentityManager.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityName, onComplete)
+  (keyName, identityNameCheck, onComplete)
 {
-  onComplete = (typeof identityName === "function") ? identityName : onComplete;
-  identityName = (typeof identityName === "function" || !identityName) ?
-    new Name() : identityName;
-
+  onComplete = (typeof identityNameCheck === "function") ?
+    identityNameCheck : onComplete;
+  identityNameCheck = (typeof identityNameCheck === "function" || !identityNameCheck) ?
+    new Name() : identityNameCheck;
+s
   return SyncPromise.complete(onComplete,
     this.identityStorage.setDefaultKeyNameForIdentityPromise
-      (keyName, identityName, !onComplete));
+      (keyName, identityNameCheck, !onComplete));
 };
 
 /**
@@ -20012,7 +20018,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
   var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
-  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName, identityName);
+  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName);
   return newKeyName;
 };
 
@@ -20097,7 +20103,7 @@ IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
   .then(function() {
     var keyName = certificate.getPublicKeyName();
     return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
-      (keyName, null, useSync);
+      (keyName, useSync);
   })
   .then(function() {
     return thisManager.setDefaultCertificateForKeyPromise(certificate, useSync);
@@ -22180,19 +22186,20 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 };
 
 /**
- * Set a key as the default key of an identity.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
  * @param {Name} keyName The name of the key.
- * @param {Name} identityName (optional) the name of the identity. If not
- * specified, the identity name is inferred from the keyName.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
  */
 KeyChain.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityName, onComplete)
+  (keyName, identityNameCheck, onComplete)
 {
   return this.identityManager.setDefaultKeyForIdentity
-    (keyName, identityName, onComplete);
+    (keyName, identityNameCheck, onComplete);
 };
 
 /**
