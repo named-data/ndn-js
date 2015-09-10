@@ -153,19 +153,20 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 };
 
 /**
- * Set a key as the default key of an identity.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
  * @param {Name} keyName The name of the key.
- * @param {Name} identityName (optional) the name of the identity. If not
- * specified, the identity name is inferred from the keyName.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
  */
 KeyChain.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityName, onComplete)
+  (keyName, identityNameCheck, onComplete)
 {
   return this.identityManager.setDefaultKeyForIdentity
-    (keyName, identityName, onComplete);
+    (keyName, identityNameCheck, onComplete);
 };
 
 /**

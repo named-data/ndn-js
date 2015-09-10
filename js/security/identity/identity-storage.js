@@ -529,10 +529,11 @@ IdentityStorage.prototype.setDefaultIdentity = function(identityName)
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -547,10 +548,11 @@ IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @throws {Error} If setDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
