@@ -199,10 +199,13 @@ KeyChain.prototype.createSigningRequest = function(keyName)
 /**
  * Install an identity certificate into the public key identity storage.
  * @param {IdentityCertificate} certificate The certificate to to added.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some database libraries only use a callback, so onComplete is required to
+ * use these.)
  */
-KeyChain.prototype.installIdentityCertificate = function(certificate)
+KeyChain.prototype.installIdentityCertificate = function(certificate, onComplete)
 {
-  this.identityManager.addCertificate(certificate);
+  this.identityManager.addCertificate(certificate, onComplete);
 };
 
 /**
