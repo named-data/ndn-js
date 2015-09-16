@@ -562,6 +562,24 @@ IdentityManager.prototype.getAnyCertificate = function
 };
 
 /**
+ * Get the default certificate name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default certificate
+ * Name, or a promise rejected with SecurityException if the default key name
+ * for the identity is not set or the default certificate name for the key name
+ * is not set.
+ */
+IdentityManager.prototype.getDefaultCertificateNameForIdentityPromise = function
+  (identityName, useSync)
+{
+  return this.identityStorage.getDefaultCertificateNameForIdentityPromise
+    (identityName, useSync);
+}
+
+/**
  * Get the default certificate name for the specified identity, which will be
  * used when signing is performed based on identity.
  * @param {Name} identityName The name of the specified identity.
