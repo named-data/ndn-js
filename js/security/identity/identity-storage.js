@@ -420,15 +420,38 @@ IdentityStorage.prototype.getDefaultKeyNameForIdentity = function(identityName)
 /**
  * Get the default certificate name for the specified identity.
  * @param {Name} identityName The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default certificate
+ * Name, or a promise rejected with SecurityException if the default key name
+ * for the identity is not set or the default certificate name for the key name
+ * is not set.
+ */
+IdentityStorage.prototype.getDefaultCertificateNameForIdentityPromise = function
+  (identityName, useSync)
+{
+  var thisStorage = this;
+  return this.getDefaultKeyNameForIdentityPromise(identityName)
+  .then(function(keyName) {
+    return thisStorage.getDefaultCertificateNameForKeyPromise(keyName);
+  });
+};
+
+/**
+ * Get the default certificate name for the specified identity.
+ * @param {Name} identityName The identity name.
  * @returns {Name} The default certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
+ * @throws {Error} If getDefaultCertificateNameForIdentityPromise doesn't return
+ * a SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
   (identityName)
 {
-  var keyName = this.getDefaultKeyNameForIdentity(identityName);
-  return this.getDefaultCertificateNameForKey(keyName);
+  return SyncPromise.getValue
+    (this.getDefaultCertificateNameForIdentityPromise(identityName, true));
 };
 
 /**
