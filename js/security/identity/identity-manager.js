@@ -255,12 +255,26 @@ IdentityManager.prototype.setDefaultIdentity = function
 
 /**
  * Get the default identity.
- * @return {Name} The name of default identity.
- * @throws SecurityException if the default identity is not set.
+ * @param {function} onComplete (optional) This calls onComplete(identityName)
+ * with name of the default identity. If omitted, the return value is described
+ * below. (Some crypto libraries only use a callback, so onComplete is required
+ * to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @returns {Name} If onComplete is omitted, return the name of the default
+ * identity. Otherwise, if onComplete is supplied then return undefined and use
+ * onComplete as described above.
+ * @throws SecurityException if the default identity is not set. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
  */
-IdentityManager.prototype.getDefaultIdentity = function()
+IdentityManager.prototype.getDefaultIdentity = function(onComplete, onError)
 {
-  return this.identityStorage.getDefaultIdentity();
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getDefaultIdentityPromise(!onComplete));
 };
 
 /**
@@ -299,13 +313,12 @@ IdentityManager.prototype.generateRSAKeyPair = function
 IdentityManager.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
 {
+  onError = (typeof identityNameCheck === "function") ? onComplete : onError;
   onComplete = (typeof identityNameCheck === "function") ?
     identityNameCheck : onComplete;
-  onError = (typeof identityNameCheck === "function") ?
-    onComplete : onError;
   identityNameCheck = (typeof identityNameCheck === "function" || !identityNameCheck) ?
     new Name() : identityNameCheck;
-s
+
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.setDefaultKeyNameForIdentityPromise
       (keyName, identityNameCheck, !onComplete));
@@ -314,12 +327,28 @@ s
 /**
  * Get the default key for an identity.
  * @param {Name} identityName The name of the identity.
- * @return {Name} The default key name.
+ * @param {function} onComplete (optional) This calls onComplete(keyName)
+ * with name of the default key. If omitted, the return value is described
+ * below. (Some crypto libraries only use a callback, so onComplete is required
+ * to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {Name} If onComplete is omitted, return the default key name.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  * @throws SecurityException if the default key name for the identity is not set.
+ * However, if onComplete and onError are defined, then if there is an exception
+ * return undefined and call onError(exception).
  */
-IdentityManager.prototype.getDefaultKeyNameForIdentity = function(identityName)
+IdentityManager.prototype.getDefaultKeyNameForIdentity = function
+  (identityName, onComplete, onError)
 {
-  return this.identityStorage.getDefaultKeyNameForIdentity(identityName);
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getDefaultKeyNameForIdentityPromise
+      (identityName, !onComplete));
 };
 
 /**
@@ -343,11 +372,25 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
 /**
  * Get the public key with the specified name.
  * @param {Name} keyName The name of the key.
- * @return {PublicKey} The public key.
+ * @param {function} onComplete (optional) This calls onComplete(publicKey)
+ * with PublicKey. If omitted, the return value is described below. (Some crypto
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {PublicKey} If onComplete is omitted, return the public key.
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  */
-IdentityManager.prototype.getPublicKey = function(keyName)
+IdentityManager.prototype.getPublicKey = function(keyName, onComplete, onError)
 {
-  return PublicKey(this.identityStorage.getKey(keyName));
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getKeyPromise(keyName, !onComplete)
+    .then(function(keyDer) {
+      return SyncPromise.resolve(new PublicKey(keyDer));
+    }));
 };
 
 // TODO: Add two versions of createIdentityCertificate.
@@ -446,60 +489,139 @@ IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
 /**
  * Add a certificate into the public key identity storage and set the
  * certificate as the default of its corresponding key.
- * @param {IdentityCertificate} certificate The certificate to be added.  This makes a copy of the certificate.
+ * @param {IdentityCertificate} certificate The certificate to be added. This
+ * makes a copy of the certificate.
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some crypto libraries only use a callback, so onComplete is required to use
+ * these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
-IdentityManager.prototype.addCertificateAsDefault = function(certificate)
+IdentityManager.prototype.addCertificateAsDefault = function
+  (certificate, onComplete, onError)
 {
-  this.identityStorage.addCertificate(certificate);
-  this.setDefaultCertificateForKey(certificate);
+  var useSync = !onComplete;
+  var thisManager = this;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.addCertificatePromise(certificate, useSync)
+    .then(function() {
+      return thisManager.setDefaultCertificateForKeyPromise(certificate, useSync);
+    }));
 };
 
 /**
- * Get a certificate with the specified name.
+ * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
- * @return {IdentityCertificate} the requested certificate which is valid.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the requested IdentityCertificate which is valid. If omitted, the return
+ * value is described below. (Some crypto libraries only use a callback, so
+ * onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {IdentityCertificate} If onComplete is omitted, return the requested
+ * certificate which is valid. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
  */
-IdentityManager.prototype.getCertificate = function(certificateName)
+IdentityManager.prototype.getCertificate = function
+  (certificateName, onComplete, onError)
 {
-  return this.identityStorage.getCertificate(certificateName, false);
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getCertificatePromise
+      (certificateName, false, !onComplete));
 };
 
 /**
  * Get a certificate even if the certificate is not valid anymore.
  * @param {Name} certificateName The name of the requested certificate.
- * @return {IdentityCertificate} the requested certificate.
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the requested IdentityCertificate. If omitted, the return value is
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {IdentityCertificate} If onComplete is omitted, return the requested
+ * certificate. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
  */
-IdentityManager.prototype.getAnyCertificate = function(certificateName)
+IdentityManager.prototype.getAnyCertificate = function
+  (certificateName, onComplete, onError)
 {
-  return this.identityStorage.getCertificate(certificateName, true);
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getCertificatePromise
+      (certificateName, true, !onComplete));
 };
 
 /**
  * Get the default certificate name for the specified identity, which will be
  * used when signing is performed based on identity.
  * @param {Name} identityName The name of the specified identity.
- * @return {Name} The requested certificate name.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with name of the default certificate. If omitted, the return value is described
+ * below. (Some crypto libraries only use a callback, so onComplete is required
+ * to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {Name} If onComplete is omitted, return the default certificate name.
+ * Otherwise, if onComplete is supplied then return undefined and use
+ * onComplete as described above.
  * @throws SecurityException if the default key name for the identity is not
- * set or the default certificate name for the key name is not set.
+ * set or the default certificate name for the key name is not set. However, if
+ * onComplete and onError are defined, then if there is an exception return
+ * undefined and call onError(exception).
  */
 IdentityManager.prototype.getDefaultCertificateNameForIdentity = function
-  (identityName)
+  (identityName, onComplete, onError)
 {
-  return this.identityStorage.getDefaultCertificateNameForIdentity(identityName);
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getDefaultCertificateNameForIdentityPromise
+      (identityName, !onComplete));
 };
 
 /**
- * Get the default certificate name of the default identity, which will be used when signing is based on identity and
- * the identity is not specified.
- * @return {Name} The requested certificate name.
+ * Get the default certificate name of the default identity, which will be used
+ * when signing is based on identity and the identity is not specified.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with name of the default certificate. If omitted, the return value is described
+ * below. (Some crypto libraries only use a callback, so onComplete is required
+ * to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {Name} If onComplete is omitted, return the default certificate name.
+ * Otherwise, if onComplete is supplied then return undefined and use
+ * onComplete as described above.
  * @throws SecurityException if the default identity is not set or the default
  * key name for the identity is not set or the default certificate name for
- * the key name is not set.
+ * the key name is not set. However, if onComplete and onError are defined, then
+ * if there is an exception return undefined and call onError(exception).
  */
-IdentityManager.prototype.getDefaultCertificateName = function()
+IdentityManager.prototype.getDefaultCertificateName = function
+  (onComplete, onError)
 {
-  return this.identityStorage.getDefaultCertificateNameForIdentity
-    (this.getDefaultIdentity());
+  var useSync = !onComplete;
+  var thisManager = this;
+
+  return SyncPromise.complete(onComplete, onError,
+    this.getDefaultIdentityPromise(useSync)
+    .then(function(identityName) {
+      return thisManager.identityStorage.getDefaultCertificateNameForIdentityPromise
+        (identityName, useSync)     ;
+    }));
 };
 
 /**
@@ -591,8 +713,8 @@ IdentityManager.prototype.signByCertificatePromise = function
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete, onError)
 {
-  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   onError = (typeof wireFormat === "function") ? onComplete : onError;
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
   return SyncPromise.complete(onComplete, onError,
@@ -622,8 +744,8 @@ IdentityManager.prototype.signByCertificate = function
 IdentityManager.prototype.signInterestByCertificate = function
   (interest, certificateName, wireFormat, onComplete, onError)
 {
-  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   onError = (typeof wireFormat === "function") ? onComplete : onError;
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
   var useSync = !onComplete;

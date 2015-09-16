@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-08-27)
+Interim changes since NDN-JS v0.8.1 (2015-09-16)
 ------------------------------------------------
 
 Changes
@@ -13,6 +13,8 @@ Changes
   like getKeyPromise, which the subclasses like MemoryIdentityStorage now implement.
 * In security, added IndexedDbIdentityStorage and IndexedDbPrivateKeyStorage for
   persistent in-browser storage of user keys using IndexedDB.
+* In KeyChain, added optional onComplete and onError callbacks to all methods
+  which use (possibly async) IdentityStorage and PrivateKeyStorage.
 
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
