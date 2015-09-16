@@ -68,19 +68,25 @@ exports.KeyChain = KeyChain;
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  * @returns {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
 KeyChain.prototype.createIdentityAndCertificate = function
-  (identityName, params, onComplete)
+  (identityName, params, onComplete, onError)
 {
   onComplete = (typeof params === "function") ? params : onComplete;
+  onError = (typeof params === "function") ? onComplete : onError;
   params = (typeof params === "function" || !params) ?
     KeyChain.DEFAULT_KEY_PARAMS : params;
 
   return this.identityManager.createIdentityAndCertificate
-    (identityName, params, onComplete);
+    (identityName, params, onComplete, onError);
 };
 
 /**
@@ -110,10 +116,16 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
-KeyChain.prototype.deleteIdentity = function(identityName, onComplete)
+KeyChain.prototype.deleteIdentity = function
+  (identityName, onComplete, onError)
 {
-  this.identityManager.deleteIdentity(identityName, onComplete);
+  this.identityManager.deleteIdentity(identityName, onComplete, onError);
 };
 
 /**
@@ -161,12 +173,17 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
 KeyChain.prototype.setDefaultKeyForIdentity = function
-  (keyName, identityNameCheck, onComplete)
+  (keyName, identityNameCheck, onComplete, onError)
 {
   return this.identityManager.setDefaultKeyForIdentity
-    (keyName, identityNameCheck, onComplete);
+    (keyName, identityNameCheck, onComplete, onError);
 };
 
 /**
@@ -202,10 +219,16 @@ KeyChain.prototype.createSigningRequest = function(keyName)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
-KeyChain.prototype.installIdentityCertificate = function(certificate, onComplete)
+KeyChain.prototype.installIdentityCertificate = function
+  (certificate, onComplete, onError)
 {
-  this.identityManager.addCertificate(certificate, onComplete);
+  this.identityManager.addCertificate(certificate, onComplete, onError);
 };
 
 /**
@@ -214,11 +237,17 @@ KeyChain.prototype.installIdentityCertificate = function(certificate, onComplete
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
 KeyChain.prototype.setDefaultCertificateForKey = function
-  (certificate, onComplete)
+  (certificate, onComplete, onError)
 {
-  this.identityManager.setDefaultCertificateForKey(certificate, onComplete);
+  this.identityManager.setDefaultCertificateForKey
+    (certificate, onComplete, onError);
 };
 
 /**
@@ -327,22 +356,28 @@ KeyChain.prototype.getPolicyManager = function()
  * onComplete(signature) where signature is the produced Signature object. If
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or undefined (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
  */
-KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComplete)
+KeyChain.prototype.sign = function
+  (target, certificateName, wireFormat, onComplete, onError)
 {
   if (target instanceof Interest)
     return this.identityManager.signInterestByCertificate
-      (target, certificateName, wireFormat, onComplete);
+      (target, certificateName, wireFormat, onComplete, onError);
   else if (target instanceof Data)
     return this.identityManager.signByCertificate
-      (target, certificateName, wireFormat, onComplete);
+      (target, certificateName, wireFormat, onComplete, onError);
   else
     return this.identityManager.signByCertificate
-      (target, certificateName, onComplete);
+      (target, certificateName, onComplete, onError);
 };
 
 /**
@@ -365,9 +400,14 @@ KeyChain.prototype.sign = function(target, certificateName, wireFormat, onComple
  * object (if target is a Buffer) or undefined (if target is Data).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  */
 KeyChain.prototype.signByIdentity = function
-  (target, identityName, wireFormat, onComplete)
+  (target, identityName, wireFormat, onComplete, onError)
 {
   if (identityName == null)
     identityName = new Name();
@@ -399,7 +439,7 @@ KeyChain.prototype.signByIdentity = function
         ("Signing Cert name does not comply with signing policy"));
 
     return this.identityManager.signByCertificate
-      (data, signingCertificateName, wireFormat, onComplete);
+      (data, signingCertificateName, wireFormat, onComplete, onError);
   }
   else {
     var array = target;
@@ -411,7 +451,7 @@ KeyChain.prototype.signByIdentity = function
         ("No qualified certificate name found!"));
 
     return this.identityManager.signByCertificate
-      (array, signingCertificateName, onComplete);
+      (array, signingCertificateName, onComplete, onError);
   }
 };
 
