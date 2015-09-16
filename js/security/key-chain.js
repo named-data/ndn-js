@@ -29,6 +29,7 @@ var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
+var SyncPromise = require('../util/sync-promise').SyncPromise;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -491,49 +492,61 @@ KeyChain.prototype.signByIdentity = function
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
+  var useSync = !onComplete;
+  var thisKeyChain = this;
+  
   if (identityName == null)
     identityName = new Name();
 
   if (target instanceof Data) {
     var data = target;
-    var signingCertificateName;
-    if (identityName.size() == 0) {
-      var inferredIdentity = this.policyManager.inferSigningIdentity
-        (data.getName());
-      if (inferredIdentity.size() == 0)
-        signingCertificateName = this.identityManager.getDefaultCertificateName();
+
+    var mainPromise = SyncPromise.resolve()
+    .then(function() {
+      if (identityName.size() == 0) {
+        var inferredIdentity = thisKeyChain.policyManager.inferSigningIdentity
+          (data.getName());
+        if (inferredIdentity.size() == 0)
+          return thisKeyChain.identityManager.getDefaultCertificateNamePromise
+            (useSync);
+        else
+          return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+              (inferredIdentity, useSync);
+      }
       else
-        signingCertificateName =
-          this.identityManager.getDefaultCertificateNameForIdentity
-            (inferredIdentity);
-    }
-    else
-      signingCertificateName =
-        this.identityManager.getDefaultCertificateNameForIdentity(identityName);
+        return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+          (identityName, useSync);
+    })
+    .then(function(signingCertificateName) {
+      if (signingCertificateName.size() == 0)
+        throw new SecurityException(new Error
+          ("No qualified certificate name found!"));
 
-    if (signingCertificateName.size() == 0)
-      throw new SecurityException(new Error
-        ("No qualified certificate name found!"));
+      if (!thisKeyChain.policyManager.checkSigningPolicy
+           (data.getName(), signingCertificateName))
+        throw new SecurityException(new Error
+          ("Signing Cert name does not comply with signing policy"));
 
-    if (!this.policyManager.checkSigningPolicy
-         (data.getName(), signingCertificateName))
-      throw new SecurityException(new Error
-        ("Signing Cert name does not comply with signing policy"));
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (data, signingCertificateName, wireFormat, useSync);
+    });
 
-    return this.identityManager.signByCertificate
-      (data, signingCertificateName, wireFormat, onComplete, onError);
+    return SyncPromise.complete(onComplete, onError, mainPromise);
   }
   else {
     var array = target;
-    var signingCertificateName =
-      this.identityManager.getDefaultCertificateNameForIdentity(identityName);
 
-    if (signingCertificateName.size() == 0)
-      throw new SecurityException(new Error
-        ("No qualified certificate name found!"));
+    return SyncPromise.complete(onComplete, onError,
+      this.identityManager.getDefaultCertificateNameForIdentityPromise
+        (identityName, useSync)
+      .then(function(signingCertificateName) {
+        if (signingCertificateName.size() == 0)
+          throw new SecurityException(new Error
+            ("No qualified certificate name found!"));
 
-    return this.identityManager.signByCertificate
-      (array, signingCertificateName, onComplete, onError);
+        return thisKeyChain.identityManager.signByCertificatePromise
+          (array, signingCertificateName, wireFormat, useSync);
+      }));
   }
 };
 

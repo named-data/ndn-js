@@ -20060,10 +20060,9 @@ IdentityManager.prototype.generateRSAKeyPair = function
 IdentityManager.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
 {
+  onError = (typeof identityNameCheck === "function") ? onComplete : onError;
   onComplete = (typeof identityNameCheck === "function") ?
     identityNameCheck : onComplete;
-  onError = (typeof identityNameCheck === "function") ?
-    onComplete : onError;
   identityNameCheck = (typeof identityNameCheck === "function" || !identityNameCheck) ?
     new Name() : identityNameCheck;
 
@@ -20310,6 +20309,24 @@ IdentityManager.prototype.getAnyCertificate = function
 };
 
 /**
+ * Get the default certificate name for the specified identity.
+ * @param {Name} identityName The identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the default certificate
+ * Name, or a promise rejected with SecurityException if the default key name
+ * for the identity is not set or the default certificate name for the key name
+ * is not set.
+ */
+IdentityManager.prototype.getDefaultCertificateNameForIdentityPromise = function
+  (identityName, useSync)
+{
+  return this.identityStorage.getDefaultCertificateNameForIdentityPromise
+    (identityName, useSync);
+}
+
+/**
  * Get the default certificate name for the specified identity, which will be
  * used when signing is performed based on identity.
  * @param {Name} identityName The name of the specified identity.
@@ -20461,8 +20478,8 @@ IdentityManager.prototype.signByCertificatePromise = function
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete, onError)
 {
-  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   onError = (typeof wireFormat === "function") ? onComplete : onError;
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
   return SyncPromise.complete(onComplete, onError,
@@ -20492,8 +20509,8 @@ IdentityManager.prototype.signByCertificate = function
 IdentityManager.prototype.signInterestByCertificate = function
   (interest, certificateName, wireFormat, onComplete, onError)
 {
-  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   onError = (typeof wireFormat === "function") ? onComplete : onError;
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
   var useSync = !onComplete;
@@ -22282,6 +22299,7 @@ var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
+var SyncPromise = require('../util/sync-promise').SyncPromise;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -22333,8 +22351,8 @@ exports.KeyChain = KeyChain;
 KeyChain.prototype.createIdentityAndCertificate = function
   (identityName, params, onComplete, onError)
 {
-  onComplete = (typeof params === "function") ? params : onComplete;
   onError = (typeof params === "function") ? onComplete : onError;
+  onComplete = (typeof params === "function") ? params : onComplete;
   params = (typeof params === "function" || !params) ?
     KeyChain.DEFAULT_KEY_PARAMS : params;
 
@@ -22740,49 +22758,65 @@ KeyChain.prototype.sign = function
 KeyChain.prototype.signByIdentity = function
   (target, identityName, wireFormat, onComplete, onError)
 {
+  onError = (typeof wireFormat === "function") ? onComplete : onError;
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  var useSync = !onComplete;
+  var thisKeyChain = this;
+  
   if (identityName == null)
     identityName = new Name();
 
   if (target instanceof Data) {
     var data = target;
-    var signingCertificateName;
-    if (identityName.size() == 0) {
-      var inferredIdentity = this.policyManager.inferSigningIdentity
-        (data.getName());
-      if (inferredIdentity.size() == 0)
-        signingCertificateName = this.identityManager.getDefaultCertificateName();
+
+    var mainPromise = SyncPromise.resolve()
+    .then(function() {
+      if (identityName.size() == 0) {
+        var inferredIdentity = thisKeyChain.policyManager.inferSigningIdentity
+          (data.getName());
+        if (inferredIdentity.size() == 0)
+          return thisKeyChain.identityManager.getDefaultCertificateNamePromise
+            (useSync);
+        else
+          return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+              (inferredIdentity, useSync);
+      }
       else
-        signingCertificateName =
-          this.identityManager.getDefaultCertificateNameForIdentity
-            (inferredIdentity);
-    }
-    else
-      signingCertificateName =
-        this.identityManager.getDefaultCertificateNameForIdentity(identityName);
+        return thisKeyChain.identityManager.getDefaultCertificateNameForIdentityPromise
+          (identityName, useSync);
+    })
+    .then(function(signingCertificateName) {
+      if (signingCertificateName.size() == 0)
+        throw new SecurityException(new Error
+          ("No qualified certificate name found!"));
 
-    if (signingCertificateName.size() == 0)
-      throw new SecurityException(new Error
-        ("No qualified certificate name found!"));
+      if (!thisKeyChain.policyManager.checkSigningPolicy
+           (data.getName(), signingCertificateName))
+        throw new SecurityException(new Error
+          ("Signing Cert name does not comply with signing policy"));
 
-    if (!this.policyManager.checkSigningPolicy
-         (data.getName(), signingCertificateName))
-      throw new SecurityException(new Error
-        ("Signing Cert name does not comply with signing policy"));
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (data, signingCertificateName, wireFormat, useSync);
+    });
 
-    return this.identityManager.signByCertificate
-      (data, signingCertificateName, wireFormat, onComplete, onError);
+    return SyncPromise.complete(onComplete, onError, mainPromise);
   }
   else {
     var array = target;
-    var signingCertificateName =
-      this.identityManager.getDefaultCertificateNameForIdentity(identityName);
 
-    if (signingCertificateName.size() == 0)
-      throw new SecurityException(new Error
-        ("No qualified certificate name found!"));
+    return SyncPromise.complete(onComplete, onError,
+      this.identityManager.getDefaultCertificateNameForIdentityPromise
+        (identityName, useSync)
+      .then(function(signingCertificateName) {
+        if (signingCertificateName.size() == 0)
+          throw new SecurityException(new Error
+            ("No qualified certificate name found!"));
 
-    return this.identityManager.signByCertificate
-      (array, signingCertificateName, onComplete, onError);
+        return thisKeyChain.identityManager.signByCertificatePromise
+          (array, signingCertificateName, wireFormat, useSync);
+      }));
   }
 };
 
