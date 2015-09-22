@@ -26,7 +26,6 @@ var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var Name = require('./name.js').Name;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
@@ -170,12 +169,6 @@ MetaInfo.prototype.from_ndnb = function(decoder)
 {
   decoder.readElementStartDTag(this.getElementLabel());
 
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    if (LOG > 4) console.log('DECODING PUBLISHER KEY');
-    this.publisher = new PublisherPublicKeyDigest();
-    this.publisher.from_ndnb(decoder);
-  }
-
   if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
     if (LOG > 4) console.log('DECODING TIMESTAMP');
     this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
@@ -227,22 +220,6 @@ MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
     throw new Error("Cannot encode : field values missing.");
 
   encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.publisher) {
-    // We have a publisherPublicKeyDigest, so use it.
-    if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
-    this.publisher.to_ndnb(encoder);
-  }
-  else {
-    if (null != keyLocator &&
-        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-        !keyLocator.getKeyData().isNull() &&
-        keyLocator.getKeyData().size() > 0)
-      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
-      //   publisherPublicKeyDigest.
-      encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
-  }
 
   if (null != this.timestamp)
     encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
