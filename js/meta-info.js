@@ -28,7 +28,6 @@ var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var Name = require('./name.js').Name;
 var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var NDNTime = require('./util/ndn-time.js').NDNTime;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 

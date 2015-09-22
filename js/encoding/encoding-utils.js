@@ -21,7 +21,6 @@
 var DataUtils = require('./data-utils.js').DataUtils;
 var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
 var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
-var Key = require('../key.js').Key;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
