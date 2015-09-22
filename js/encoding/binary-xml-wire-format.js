@@ -26,7 +26,6 @@ var Name = require('../name.js').Name;
 var Exclude = require('../exclude.js').Exclude;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('../meta-info.js').MetaInfo;
-var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DataUtils = require('./data-utils.js').DataUtils;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 

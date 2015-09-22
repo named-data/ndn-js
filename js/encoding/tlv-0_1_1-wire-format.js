@@ -32,7 +32,6 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
-var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -544,20 +543,6 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
   if (interest.getKeyLocator().getType() != null)
     Tlv0_1_1WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
-  else {
-    // There is no keyLocator. If there is a publisherPublicKeyDigest, then
-    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated
-    //   publisherPublicKeyDigest, we don't need this.)
-    if (null != interest.publisherPublicKeyDigest) {
-      var savePublisherPublicKeyDigestLength = encoder.getLength();
-      encoder.writeBlobTlv
-        (Tlv.KeyLocatorDigest,
-         interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
-      encoder.writeTypeAndLength
-        (Tlv.PublisherPublicKeyLocator,
-         encoder.getLength() - savePublisherPublicKeyDigestLength);
-    }
-  }
 
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
@@ -578,18 +563,9 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
   interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.MaxSuffixComponents, endOffset));
 
-  // Initially set publisherPublicKeyDigest to none.
-  interest.publisherPublicKeyDigest = null;
-  if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset)) {
+  if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
     Tlv0_1_1WireFormat.decodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
-    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
-      // For backwards compatibility, also set the publisherPublicKeyDigest.
-      interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-      interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData().buf();
-    }
-  }
   else
     interest.getKeyLocator().clear();
 
