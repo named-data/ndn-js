@@ -30,11 +30,8 @@ var ControlParameters = require('./control-parameters.js').ControlParameters;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
 var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
@@ -1194,8 +1191,7 @@ Face.prototype.isLocal = function(onResult, onError)
 };
 
 /**
- * This is called when an entire binary XML element is received, such as a Data or Interest.
- * Look up in the PITTable and call the closure callback.
+ * This is called when an entire element is received, such as a Data or Interest.
  */
 Face.prototype.onReceivedElement = function(element)
 {
@@ -1203,9 +1199,6 @@ Face.prototype.onReceivedElement = function(element)
   // First, decode as Interest or Data.
   var interest = null;
   var data = null;
-  // The type codes for TLV Interest and Data packets are chosen to not
-  //   conflict with the first byte of a binary XML packet, so we can
-  //   just look at the first byte.
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
     var decoder = new TlvDecoder (element);
     if (decoder.peekType(Tlv.Interest, element.length)) {
@@ -1215,18 +1208,6 @@ Face.prototype.onReceivedElement = function(element)
     else if (decoder.peekType(Tlv.Data, element.length)) {
       data = new Data();
       data.wireDecode(element, TlvWireFormat.get());
-    }
-  }
-  else {
-    // Binary XML.
-    var decoder = new BinaryXMLDecoder(element);
-    if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
-      interest = new Interest();
-      interest.wireDecode(element, BinaryXmlWireFormat.get());
-    }
-    else if (decoder.peekDTag(NDNProtocolDTags.Data)) {
-      data = new Data();
-      data.wireDecode(element, BinaryXmlWireFormat.get());
     }
   }
 
