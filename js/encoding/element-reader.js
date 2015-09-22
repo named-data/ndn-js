@@ -26,10 +26,9 @@ var LOG = require('../log.js').Log.LOG;
 
 /**
  * A ElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder or TlvStructureDecoder to detect the end of a
- * binary XML or TLV element and calls elementListener.onReceivedElement(element)
- * with the element.  This handles the case where a single call to
- * onReceivedData may contain multiple elements.
+ * TlvStructureDecoder to detect the end of a TLV element and calls 
+ * elementListener.onReceivedElement(element) with the element.  This handles
+ * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
  * @param {{onReceivedElement:function}} elementListener
  */
@@ -64,7 +63,6 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     } catch (ex) {
       // Reset to read a new element on the next call.
       this.dataParts = [];
-      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
       this.tlvStructureDecoder = new TlvStructureDecoder();
 
       throw ex;

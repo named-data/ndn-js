@@ -22,8 +22,6 @@
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
@@ -219,8 +217,6 @@ Data.prototype.setContent = function(content)
   return this;
 };
 
-Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
-
 /**
  * Encode this Data for a particular wire format. If wireFormat is the default
  * wire format, also set the defaultWireEncoding field to the encoded result.
@@ -329,45 +325,6 @@ Data.prototype.getChangeCount = function()
     ++this.changeCount_;
 
   return this.changeCount_;
-};
-
-// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeData.
- */
-Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeData(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeData.
- */
-Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeData(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Data.prototype.encode = function(wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Data.prototype.decode = function(input, wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  wireFormat.decodeData(this, input);
 };
 
 Data.prototype.setDefaultWireEncoding = function

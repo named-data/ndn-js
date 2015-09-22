@@ -20,9 +20,6 @@
  */
 
 var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Blob = require('./util/blob.js').Blob;
 
@@ -99,50 +96,6 @@ Exclude.prototype.clear = function()
 {
   ++this.changeCount;
   this.values = [];
-};
-
-Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
-
-  while (true) {
-    if (decoder.peekDTag(NDNProtocolDTags.Component))
-      this.appendComponent(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
-    else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
-      decoder.readElementStartDTag(NDNProtocolDTags.Any);
-      decoder.readElementClose();
-      this.appendAny();
-    }
-    else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
-      // Skip the Bloom and treat it as Any.
-      decoder.readBinaryDTagElement(NDNProtocolDTags.Bloom);
-      this.appendAny();
-    }
-    else
-      break;
-  }
-
-  decoder.readElementClose();
-};
-
-Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  if (this.values == null || this.values.length == 0)
-    return;
-
-  encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
-
-  // TODO: Do we want to order the components (except for ANY)?
-  for (var i = 0; i < this.values.length; ++i) {
-    if (this.values[i] == Exclude.ANY) {
-      encoder.writeElementStartDTag(NDNProtocolDTags.Any);
-      encoder.writeElementClose();
-    }
-    else
-      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue().buf());
-  }
-
-  encoder.writeElementClose();
 };
 
 /**

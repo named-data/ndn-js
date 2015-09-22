@@ -556,44 +556,6 @@ Interest.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom
-// to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.encode = function(wireFormat)
-{
-  return this.wireEncode(BinaryXmlWireFormat.get()).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.decode = function(input, wireFormat)
-{
-  this.wireDecode(input, BinaryXmlWireFormat.get())
-};
-
 Interest.prototype.setDefaultWireEncoding = function
   (defaultWireEncoding, defaultWireEncodingFormat)
 {

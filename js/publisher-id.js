@@ -18,8 +18,6 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
 var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**

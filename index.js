@@ -18,7 +18,6 @@ exports.KeyName = require('./js/key-locator.js').KeyName;
 exports.KeyLocatorType = require('./js/key-locator.js').KeyLocatorType;
 exports.InterestFilter = require('./js/interest-filter.js').InterestFilter;
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
-exports.BinaryXmlWireFormat = require('./js/encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;
 exports.Tlv0_1_1WireFormat = require('./js/encoding/tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 exports.Tlv0_1WireFormat = require('./js/encoding/tlv-0_1-wire-format.js').Tlv0_1WireFormat;

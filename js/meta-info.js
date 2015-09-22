@@ -19,10 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var Blob = require('./util/blob.js').Blob;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var Name = require('./name.js').Name;
@@ -163,101 +160,6 @@ MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 {
   this.setFinalBlockId(finalBlockId);
-};
-
-MetaInfo.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
-    if (LOG > 4) console.log('DECODING TIMESTAMP');
-    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
-    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
-
-    if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
-
-    this.type = binType;
-
-    //TODO Implement type of Key Reading
-    if (null == this.type)
-      throw new Error("Cannot parse signedInfo type: bytes.");
-  }
-  else
-    this.type = ContentType.DATA; // default
-
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
-    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-    if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
-    if (LOG > 4) console.log('DECODING FINAL BLOCKID');
-    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
-    if (LOG > 4) console.log('DECODING KEY LOCATOR');
-    this.locator = new KeyLocator();
-    this.locator.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-  ++this.changeCount_;
-};
-
-/**
- * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
- * locator in this object.
- * @param {BinaryXMLEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator).
- */
-MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.timestamp)
-    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
-
-  if (null != this.type && this.type != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
-
-  if (null != this.freshnessSeconds)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-
-  if (null != this.finalBlockID)
-    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
-
-  if (null != keyLocator)
-    keyLocator.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-MetaInfo.prototype.valueToType = function()
-{
-  return null;
-};
-
-MetaInfo.prototype.getElementLabel = function() {
-  return NDNProtocolDTags.SignedInfo;
-};
-
-/**
- * @@deprecated This is only used with to_ndnb.
- */
-MetaInfo.prototype.validate = function()
-{
-  // We don't do partial matches any more, even though encoder/decoder
-  // is still pretty generous.
-  if (null == this.timestamp_)
-    return false;
-  return true;
 };
 
 /**

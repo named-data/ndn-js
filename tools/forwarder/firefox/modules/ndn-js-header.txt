@@ -21,7 +21,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var EXPORTED_SYMBOLS = ["BinaryXMLDecoder", "Data", "DataUtils", "Interest", "Face", "LOG", "Name", "NDNProtocolDTags",
+var EXPORTED_SYMBOLS = ["Data", "DataUtils", "Interest", "Face", "LOG", "Name",
   "XpcomTransport", "Buffer"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");

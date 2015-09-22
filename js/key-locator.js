@@ -22,7 +22,6 @@
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var PublisherID = require('./publisher-id.js').PublisherID;
 var LOG = require('./log.js').Log.LOG;
 
@@ -206,91 +205,6 @@ KeyLocator.getFromSignature = function(signature)
       ("KeyLocator.getFromSignature: Signature type does not have a KeyLocator");
 }
 
-KeyLocator.prototype.from_ndnb = function(decoder) {
-
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Key))
-  {
-    try {
-      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
-      // This is a DER-encoded SubjectPublicKeyInfo.
-
-      //TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-      this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-      this.type = KeyLocatorType.KEY;
-
-      if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-    }
-    catch (e) {
-      throw new Error("Cannot parse key: ", e);
-    }
-
-    if (null == this.publicKey)
-      throw new Error("Cannot parse key: ");
-  }
-  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
-    try {
-      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
-
-      /*
-       * Certificates not yet working
-       */
-
-      this.certificate = encodedCert;
-      this.type = KeyLocatorType.CERTIFICATE;
-
-      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-    }
-    catch (e) {
-      throw new Error("Cannot decode certificate: " +  e);
-    }
-    if (null == this.certificate)
-      throw new Error("Cannot parse certificate! ");
-  } else  {
-    this.type = KeyLocatorType.KEYNAME;
-
-    this.keyName_.set(new KeyName());
-    this.keyName_.get().from_ndnb(decoder);
-  }
-  decoder.readElementClose();
-};
-
-KeyLocator.prototype.to_ndnb = function(encoder)
-{
-  if (LOG > 4) console.log('type is is ' + this.type);
-
-  if (this.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-    // encodeSignedInfo already encoded this as the publisherPublicKeyDigest,
-    //   so do nothing here.
-    return;
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (this.type == KeyLocatorType.KEY) {
-    if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);
-  }
-  else if (this.type == KeyLocatorType.CERTIFICATE) {
-    try {
-      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
-    }
-    catch (e) {
-      throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-    }
-  }
-  else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName_.get().to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyLocator.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.KeyLocator;
-};
-
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
@@ -363,36 +277,6 @@ KeyName.prototype.setContentName = function(name)
     new Name(name) : new Name());
   ++this.changeCount_;
 };
-
-KeyName.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  this.contentName = new Name();
-  this.contentName.from_ndnb(decoder);
-
-  if (LOG > 4) console.log('KEY NAME FOUND: ');
-
-  if (PublisherID.peek(decoder)) {
-    this.publisherID = new PublisherID();
-    this.publisherID.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-};
-
-KeyName.prototype.to_ndnb = function(encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  this.contentName.to_ndnb(encoder);
-  if (null != this.publisherID)
-    this.publisherID.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
 
 /**
  * Get the change count, which is incremented each time this object (or a child
