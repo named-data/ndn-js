@@ -105,7 +105,6 @@ def build (bld):
                  "js/encoding/decoding-exception.js",
                  "js/encoding/binary-xml-encoder.js",
                  "js/encoding/binary-xml-decoder.js",
-                 "js/encoding/binary-xml-structure-decoder.js",
                  "js/encoding/tlv/tlv.js",
                  "js/encoding/tlv/tlv-encoder.js",
                  "js/encoding/tlv/tlv-decoder.js",
