@@ -163,12 +163,6 @@ var Face = function Face(transportOrSettings, connectionInfo)
   }
 
   this.readyStatus = Face.UNOPEN;
-  this.verify = (settings.verify !== undefined ? settings.verify : false);
-  if (this.verify) {
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-  }
 
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
@@ -180,7 +174,6 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
 
-  this.keyStore = new Array();
   this.pendingInterestTable = new Array();  // of Face.PendingInterest
   this.pitRemoveRequests = new Array();     // of number
   this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
@@ -246,36 +239,6 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
   // Deprecated: Set this.host and this.port for backwards compatibility.
   this.host = this.connectionInfo.host;
   this.host = this.connectionInfo.port;
-};
-
-var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
-{
-  this.keyName = name;  // KeyName
-  this.rsaKey = rsa;    // RSA key
-  this.timeStamp = time;  // Time Stamp
-};
-
-Face.prototype.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
-{
-  var result = this.getKeyByName(keyEntry.keyName);
-  if (result == null)
-    this.keyStore.push(keyEntry);
-  else
-    result = keyEntry;
-};
-
-Face.prototype.getKeyByName = function(/* KeyName */ name)
-{
-  var result = null;
-
-  for (var i = 0; i < this.keyStore.length; i++) {
-    if (this.keyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || this.keyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
-        result = this.keyStore[i];
-    }
-  }
-
-  return result;
 };
 
 Face.prototype.close = function()
@@ -1296,118 +1259,7 @@ Face.prototype.onReceivedElement = function(element)
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pitEntry = pendingInterests[i];
       var currentClosure = pitEntry.closure;
-
-      if (this.verify == false) {
-        // Pass content up without verifying the signature
-        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
-        continue;
-      }
-
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-      // Key verification
-
-      // Recursive key fetching & verification closure
-      var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-        this.data = content;  // unverified data packet object
-        this.closure = closure;  // closure corresponding to the data
-        this.keyName = key;  // name of current key to be fetched
-
-        Closure.call(this);
-      };
-
-      var thisFace = this;
-      KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-          console.log("In KeyFetchClosure.upcall: interest time out.");
-          console.log(this.keyName.contentName.toUri());
-        }
-        else if (kind == Closure.UPCALL_CONTENT) {
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          this.closure.upcall(flag, new UpcallInfo(thisFace, null, 0, this.data));
-
-          // Store key in cache
-          var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          this.addKeyEntry(keyEntry);
-        }
-        else if (kind == Closure.UPCALL_CONTENT_BAD)
-          console.log("In KeyFetchClosure.upcall: signature verification failed");
-      };
-
-      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
-        if (LOG > 3) console.log("Key verification...");
-        var sigHex = data.getSignature().getSignature().toHex();
-
-        var wit = null;
-        if (data.getSignature().witness != null)
-            //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-        var keylocator = data.getMetaInfo().locator;
-        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
-          if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-
-          if (keylocator.keyName.contentName.match(data.getName())) {
-            if (LOG > 3) console.log("Content is key itself");
-
-            var rsakey = new Key();
-            rsakey.readDerPublicKey(data.getContent().buf());
-            var verified = data.verify(rsakey);
-            var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-            // SWT: We don't need to store key here since the same key will be stored again in the closure.
-          }
-          else {
-            // Check local key store
-            var keyEntry = this.getKeyByName(keylocator.keyName);
-            if (keyEntry) {
-              // Key found, verify now
-              if (LOG > 3) console.log("Local key cache hit");
-              var rsakey = keyEntry.rsaKey;
-              var verified = data.verify(rsakey);
-              var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-              // Raise callback
-              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-            }
-            else {
-              // Not found, fetch now
-              if (LOG > 3) console.log("Fetch key according to keylocator");
-              var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
-              // TODO: Use expressInterest with callbacks, not Closure.
-              this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
-            }
-          }
-        }
-        else if (keylocator.getType() == KeyLocatorType.KEY) {
-          if (LOG > 3) console.log("Keylocator contains KEY");
-
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(keylocator.publicKey);
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          // Raise callback
-          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-          // Since KeyLocator does not contain key name for this key,
-          // we have no way to store it as a key entry in KeyStore.
-        }
-        else {
-          var cert = keylocator.certificate;
-          console.log("KeyLocator contains CERT");
-          console.log(cert);
-          // TODO: verify certificate
-        }
-      }
+      currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
     }
   }
 };
