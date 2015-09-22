@@ -47,14 +47,6 @@ EncodingUtils.encodeToHexData = function(data, wireFormat)
   return DataUtils.toHex(data.wireEncode(wireFormat).buf());
 };
 
-/**
- * @deprecated Use EncodingUtils.encodeToHexData(data).
- */
-EncodingUtils.encodeToHexContentObject = function(data, wireFormat)
-{
-  return EncodingUtils.encodeToHexData(data, wireFormat);
-}
-
 EncodingUtils.decodeHexInterest = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
@@ -70,14 +62,6 @@ EncodingUtils.decodeHexData = function(input, wireFormat)
   data.wireDecode(DataUtils.toNumbers(input), wireFormat);
   return data;
 };
-
-/**
- * @deprecated Use EncodingUtils.decodeHexData(input).
- */
-EncodingUtils.decodeHexContentObject = function(input, wireFormat)
-{
-  return EncodingUtils.decodeHexData(input, wireFormat);
-}
 
 /**
  * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
@@ -146,30 +130,15 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   return output;
 };
 
-/**
- * @deprecated Use return EncodingUtils.dataToHtml(data).
- */
-EncodingUtils.contentObjectToHtml = function(data)
-{
-  return EncodingUtils.dataToHtml(data);
-}
-
 //
 // Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
 //
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
-var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
-var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
-var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
  * @deprecated Use interest.wireEncode().
  */
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
-/**
- * @deprecated Use data.wireEncode().
- */
-function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }

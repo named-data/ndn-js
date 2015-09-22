@@ -6,7 +6,6 @@ exports.ForwardingFlags = require('./js/forwarding-flags.js').ForwardingFlags;
 exports.Interest = require('./js/interest.js').Interest;
 exports.Exclude = require('./js/exclude.js').Exclude;
 exports.Data = require('./js/data.js').Data;
-exports.ContentObject = require('./js/data.js').ContentObject; // deprecated
 exports.ContentType = require('./js/meta-info.js').ContentType;
 exports.MetaInfo = require('./js/meta-info.js').MetaInfo;
 exports.SignedInfo = require('./js/meta-info.js').SignedInfo; // deprecated

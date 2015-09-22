@@ -348,27 +348,8 @@ Object.defineProperty(Data.prototype, "signature",
   { get: function() { return this.getSignature(); },
     set: function(val) { this.setSignature(val); } });
 /**
- * @deprecated Use getMetaInfo and setMetaInfo.
- */
-Object.defineProperty(Data.prototype, "signedInfo",
-  { get: function() { return this.getMetaInfo(); },
-    set: function(val) { this.setMetaInfo(val); } });
-/**
  * @deprecated Use getContent and setContent.
  */
 Object.defineProperty(Data.prototype, "content",
   { get: function() { return this.getContentAsBuffer(); },
     set: function(val) { this.setContent(val); } });
-
-/**
- * @deprecated Use new Data.
- */
-var ContentObject = function ContentObject(name, signedInfo, content)
-{
-  // Call the base constructor.
-  Data.call(this, name, signedInfo, content);
-}
-
-ContentObject.prototype = new Data();
-
-exports.ContentObject = ContentObject;
