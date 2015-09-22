@@ -24,7 +24,6 @@ var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -38,9 +37,14 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {number} maxSuffixComponents
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce)
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, 
+    publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
+    interestLifetimeMilliseconds, nonce)
 {
+  if (publisherPublicKeyDigest)
+    throw new Error
+      ("Interest constructor: PublisherPublicKeyDigest support has been removed.");
+
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
@@ -49,7 +53,6 @@ var Interest = function Interest
     this.maxSuffixComponents_ = interest.maxSuffixComponents_;
     this.minSuffixComponents_ = interest.minSuffixComponents_;
 
-    this.publisherPublicKeyDigest_ = interest.publisherPublicKeyDigest_;
     this.keyLocator_ = new ChangeCounter(new KeyLocator(interest.getKeyLocator()));
     this.exclude_ = new ChangeCounter(new Exclude(interest.getExclude()));
     this.childSelector_ = interest.childSelector_;
@@ -67,7 +70,6 @@ var Interest = function Interest
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
-    this.publisherPublicKeyDigest_ = publisherPublicKeyDigest;
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
       new Exclude(exclude) : new Exclude());
@@ -466,8 +468,6 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.Scope=" + this.scope_;
   if (this.interestLifetimeMilliseconds_ != null)
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
-  if (this.publisherPublicKeyDigest_ != null)
-    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
   if (this.getNonce().size() > 0)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
@@ -644,9 +644,3 @@ Object.defineProperty(Interest.prototype, "answerOriginKind",
 Object.defineProperty(Interest.prototype, "nonce",
   { get: function() { return this.getNonceAsBuffer(); },
     set: function(val) { this.setNonce(val); } });
-/**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(Interest.prototype, "publisherPublicKeyDigest",
-  { get: function() { return this.publisherPublicKeyDigest_; },
-    set: function(val) { this.publisherPublicKeyDigest_ = val; ++this.changeCount_; } });
