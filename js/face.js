@@ -173,7 +173,6 @@ var Face = function Face(transportOrSettings, connectionInfo)
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
-  this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
   this.commandKeyChain = null;
@@ -236,8 +235,6 @@ Face.getSupported = function()
 };
 
 Face.supported = Face.getSupported();
-
-Face.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
 
 Face.prototype.createRoute = function(hostOrConnectionInfo, port)
 {
@@ -807,7 +804,9 @@ Face.prototype.nodeMakeCommandInterest = function
 };
 
 /**
- * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
+ * Register prefix with the connected NDN hub and call onInterest when a 
+ * matching interest is received. To register a prefix with NFD, you must
+ * first call setCommandSigningInfo.
  * This uses the form:
  * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
  * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
@@ -886,31 +885,9 @@ Face.prototype.registerPrefixWithClosure = function
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
-    // If we have an _ndndId, we know we already connected to NDNx.
-    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
-      // Assume we are connected to a legacy NDNx server.
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-      if (thisFace.ndndid == null) {
-        // Fetch ndndid first, then register.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-        thisFace.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
-      }
-      else
-        thisFace.registerPrefixHelper
-          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
-    }
-    else
-      // The application set the KeyChain for signing NFD interests.
-      thisFace.nfdRegisterPrefix
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
-         thisFace.commandKeyChain, thisFace.commandCertificateName);
+    thisFace.nfdRegisterPrefix
+      (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
+       thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -931,54 +908,6 @@ Face.prototype.registerPrefixWithClosure = function
  * @return {number} The maximum NDN packet size.
  */
 Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
-
-/**
- * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(registeredPrefixId, prefix, callerClosure, flags).
- */
-Face.FetchNdndidClosure = function FetchNdndidClosure
-  (face, registeredPrefixId, prefix, callerClosure, flags, onRegisterFailed)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.registeredPrefixId = registeredPrefixId;
-  this.prefix = prefix;
-  this.callerClosure = callerClosure;
-  this.flags = flags; // FOrwardingFlags
-  this.onRegisterFailed = onRegisterFailed;
-};
-
-Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (LOG > 0)
-      console.log
-        ("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
-         this.prefix.toUri() + " .");
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
-    return Closure.RESULT_OK;
-  }
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  if (LOG > 3) console.log('Got ndndid from ndnd.');
-  // Get the digest of the public key in the data packet content.
-  var hash = Crypto.createHash('sha256');
-  hash.update(upcallInfo.data.getContent().buf());
-  this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-  if (LOG > 3) console.log(this.face.ndndid);
-
-  this.face.registerPrefixHelper
-    (this.registeredPrefixId, this.prefix, this.callerClosure, this.flags,
-     this.onRegisterFailed);
-
-  return Closure.RESULT_OK;
-};
 
 /**
  * This is a closure to receive the response Data packet from the register
@@ -1004,172 +933,51 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
 {
   if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
     // We timed out waiting for the response.
-    if (this.isNfdCommand) {
-      // The application set the commandKeyChain, but we may be connected to NDNx.
-      if (LOG > 2)
-        console.log("Timeout for NFD register prefix command. Attempting an NDNx command...");
-      if (this.face.ndndid == null) {
-        // Fetch ndndid first, then register.
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        this.face.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
-      }
-      else
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        this.face.registerPrefixHelper
-          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
-    }
-    else {
-      // An NDNx command was sent because there is no commandKeyChain, so we
-      //   can't try an NFD command. Or it was sent from this callback after
-      //   trying an NFD command. Fail.
-      if (LOG > 0)
-        console.log("Register prefix failed: Timeout waiting for the response from the register prefix interest");
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-    }
+    if (LOG > 2)
+      console.log("Timeout for NFD register prefix command.");
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
 
     return Closure.RESULT_OK;
   }
+  
   if (!(kind == Closure.UPCALL_CONTENT ||
         kind == Closure.UPCALL_CONTENT_UNVERIFIED))
     // The upcall is not for us.  Don't expect this to happen.
     return Closure.RESULT_ERR;
 
-  if (this.isNfdCommand) {
-    // Decode responseData->getContent() and check for a success code.
-    // TODO: Move this into the TLV code.
-    var statusCode;
-    try {
-        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
-        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
-        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
-    }
-    catch (e) {
-      // Error decoding the ControlResponse.
-      if (LOG > 0)
-        console.log("Register prefix failed: Error decoding the NFD response: " + e);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    // Status code 200 is "OK".
-    if (statusCode != 200) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Expected NFD status code 200, got: " +
-                    statusCode);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NFD forwarder for prefix " +
-                  this.prefix.toUri());
+  // Decode responseData->getContent() and check for a success code.
+  // TODO: Move this into the TLV code.
+  var statusCode;
+  try {
+    var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
+    decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+    statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
   }
-  else {
-    var expectedName = new Name("/ndnx/.../selfreg");
-    // Got a response. Do a quick check of expected name components.
-    if (upcallInfo.data.getName().size() < 4 ||
-        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Unexpected name in NDNx response: " +
-                    upcallInfo.data.getName().toUri());
+  catch (e) {
+    // Error decoding the ControlResponse.
+    if (LOG > 0)
+      console.log("Register prefix failed: Error decoding the NFD response: " + e);
+    if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NDNx forwarder for prefix " +
-                  this.prefix.toUri());
+    return Closure.RESULT_OK;
   }
+
+  // Status code 200 is "OK".
+  if (statusCode != 200) {
+    if (LOG > 0)
+      console.log("Register prefix failed: Expected NFD status code 200, got: " +
+                  statusCode);
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+    return Closure.RESULT_OK;
+  }
+
+  if (LOG > 2)
+    console.log("Register prefix succeeded with the NFD forwarder for prefix " +
+                this.prefix.toUri());
 
   return Closure.RESULT_OK;
-};
-
-/**
- * Do the work of registerPrefix once we know we are connected with an ndndid.
- * @param {type} registeredPrefixId The Face.getNextEntryId() which
- * registerPrefix got so it could return it to the caller. If this is 0, then
- * don't add to registeredPrefixTable (assuming it has already been done).
- * @param {Name} prefix
- * @param {Closure} closure
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed
- * @returns {undefined}
- */
-Face.prototype.registerPrefixHelper = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
-{
-  var removeRequestIndex = -1;
-  if (removeRequestIndex != null)
-    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
-      (registeredPrefixId);
-  if (removeRequestIndex >= 0) {
-    // removeRegisteredPrefix was called with the registeredPrefixId returned by
-    //   registerPrefix before we got here, so don't add a registeredPrefixTable
-    //   entry.
-    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
-    return;
-  }
-
-  if (!WireFormat.ENABLE_NDNX)
-    // We can get here if the command signing info is set, but running NDNx.
-    throw new Error
-      ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-  // A ForwardingEntry is only used with NDNx.
-  var fe = new ForwardingEntry
-    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
-
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  var encoder = new BinaryXMLEncoder();
-  fe.to_ndnb(encoder);
-  var bytes = encoder.getReducedOstream();
-
-  var metaInfo = new MetaInfo();
-  metaInfo.setFields();
-  // Since we encode the register prefix message as BinaryXml, use the full
-  //   public key in the key locator to make the legacy NDNx happy.
-  metaInfo.locator.setType(KeyLocatorType.KEY);
-  metaInfo.locator.setKeyData(globalKeyManager.getKey().publicToDER());
-
-  var data = new Data(new Name(), metaInfo, bytes);
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  data.sign(BinaryXmlWireFormat.get());
-  var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
-
-  var nodename = this.ndndid;
-  var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
-
-  var interest = new Interest(interestName);
-  interest.setInterestLifetimeMilliseconds(4000.0);
-  interest.setScope(1);
-  if (LOG > 3) console.log('Send Interest registration packet.');
-
-  if (registeredPrefixId != 0) {
-    var interestFilterId = 0;
-    if (closure != null)
-      // registerPrefix was called with the "combined" form that includes the
-      // callback, so add an InterestFilterEntry.
-      interestFilterId = this.setInterestFilter
-        (new InterestFilter(prefix), closure);
-
-    this.registeredPrefixTable.push
-      (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
-  }
-
-  // Send the registration interest.
-  this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure
-     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
 };
 
 /**
