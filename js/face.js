@@ -876,7 +876,7 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * or a timeout, call onRegisterFailed.
  */
 Face.RegisterResponseClosure = function RegisterResponseClosure
-  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
+  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat)
 {
   // Inherit from Closure.
   Closure.call(this);
@@ -887,7 +887,6 @@ Face.RegisterResponseClosure = function RegisterResponseClosure
   this.onRegisterFailed = onRegisterFailed;
   this.flags = flags;
   this.wireFormat = wireFormat;
-  this.isNfdCommand = isNfdCommand;
 };
 
 Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
@@ -1016,7 +1015,7 @@ Face.prototype.nfdRegisterPrefix = function
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, new Face.RegisterResponseClosure
          (thisFace, prefix, closure, onRegisterFailed, flags,
-          TlvWireFormat.get(), true));
+          TlvWireFormat.get()));
     });
   };
 
