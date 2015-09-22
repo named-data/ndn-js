@@ -50,7 +50,7 @@ exports.ContentType = ContentType;
  * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
 {
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -72,18 +72,6 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
-
-    if (!skipSetFields) {
-      // Temporarily set ENABLE_NDNX so that setFields doesn't throw.
-      var saveEnableNdnx = WireFormat.ENABLE_NDNX;
-      try {
-        WireFormat.ENABLE_NDNX = true;
-        this.setFields();
-      }
-      finally {
-        WireFormat.ENABLE_NDNX = saveEnableNdnx;
-      }
-    }
   }
 
   this.changeCount_ = 0;
@@ -177,38 +165,6 @@ MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 {
   this.setFinalBlockId(finalBlockId);
-};
-
-/**
- * @deprecated This sets fields for NDNx signing. Use KeyChain.
- */
-MetaInfo.prototype.setFields = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("Signing with NDNx-style keys is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
-
-  var key = globalKeyManager.getKey();
-  this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
-
-  var d = new Date();
-
-  var time = d.getTime();
-
-  this.timestamp = new NDNTime(time);
-
-  if (LOG > 4) console.log('TIME msec is');
-
-  if (LOG > 4) console.log(this.timestamp.msec);
-
-  //DATA
-  this.type = ContentType.BLOB;
-
-  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
-  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
-
-  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
-  ++this.changeCount_;
 };
 
 MetaInfo.prototype.from_ndnb = function(decoder)
@@ -394,7 +350,6 @@ var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locat
   MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
 }
 
-// Set skipSetFields true since we only need the prototype functions.
-SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
+SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null);
 
 exports.SignedInfo = SignedInfo;
