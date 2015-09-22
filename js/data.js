@@ -19,7 +19,6 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
@@ -30,7 +29,6 @@ var Name = require('./name.js').Name;
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -219,63 +217,6 @@ Data.prototype.setContent = function(content)
     content : new Blob(content, true);
   ++this.changeCount_;
   return this;
-};
-
-/**
- * @deprecated Use KeyChain.sign. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.sign = function(wireFormat)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("NDNx-style Data packet signing is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
-
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
-      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
-    this.getMetaInfo().setFields();
-
-  // Encode once to get the signed portion.
-  var encoding = this.wireEncode(wireFormat);
-  var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(encoding.signedBuf());
-
-  var sig = new Buffer
-    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature_.get().setSignature(sig);
-  ++this.changeCount_;
-};
-
-// The first time verify is called, it sets this to determine if a signature
-//   buffer needs to be converted to a string for the crypto verifier.
-Data.verifyUsesString = null;
-
-/**
- * @deprecated Use KeyChain.verifyData. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.verify = function(/*Key*/ key)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("Data packet verify with an NDNx-style key is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-  if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify Data without a public key.');
-
-  if (Data.verifyUsesString == null) {
-    var hashResult = Crypto.createHash('sha256').digest();
-    // If the has result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    Data.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  // wireEncode returns the cached encoding if available.
-  var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncode().signedBuf());
-  var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
-  return verifier.verify(key.publicKeyPem, signatureBytes);
 };
 
 Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
