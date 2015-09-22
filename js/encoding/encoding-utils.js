@@ -24,7 +24,6 @@ var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
-var FaceInstance = require('../face-instance.js').FaceInstance;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
@@ -57,19 +56,6 @@ EncodingUtils.encodeToHexContentObject = function(data, wireFormat)
 {
   return EncodingUtils.encodeToHexData(data, wireFormat);
 }
-
-EncodingUtils.decodeHexFaceInstance = function(result)
-{
-  var numbers = DataUtils.toNumbers(result);
-  var decoder = new BinaryXMLDecoder(numbers);
-
-  if (LOG > 3) console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
-
-  var faceInstance = new FaceInstance();
-  faceInstance.from_ndnb(decoder);
-
-  return faceInstance;
-};
 
 EncodingUtils.decodeHexInterest = function(input, wireFormat)
 {
@@ -176,7 +162,6 @@ EncodingUtils.contentObjectToHtml = function(data)
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
 var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
-var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
 var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }

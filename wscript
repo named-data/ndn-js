@@ -158,7 +158,6 @@ def build (bld):
                  "js/security/key-chain.js",
                  "js/exclude.js",
                  "js/interest.js",
-                 "js/face-instance.js",
                  "js/forwarding-flags.js",
                  "js/control-parameters.js",
                  "js/interest-filter.js",
