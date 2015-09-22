@@ -25,7 +25,6 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var FaceInstance = require('../face-instance.js').FaceInstance;
-var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
@@ -58,15 +57,6 @@ EncodingUtils.encodeToHexContentObject = function(data, wireFormat)
 {
   return EncodingUtils.encodeToHexData(data, wireFormat);
 }
-
-EncodingUtils.encodeForwardingEntry = function(data)
-{
-  var enc = new BinaryXMLEncoder();
-  data.to_ndnb(enc);
-  var bytes = enc.getReducedOstream();
-
-  return bytes;
-};
 
 EncodingUtils.decodeHexFaceInstance = function(result)
 {
@@ -104,18 +94,6 @@ EncodingUtils.decodeHexContentObject = function(input, wireFormat)
 {
   return EncodingUtils.decodeHexData(input, wireFormat);
 }
-
-EncodingUtils.decodeHexForwardingEntry = function(result)
-{
-  var numbers = DataUtils.toNumbers(result);
-  var decoder = new BinaryXMLDecoder(numbers);
-
-  if (LOG > 3) console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
-
-  var forwardingEntry = new ForwardingEntry();
-  forwardingEntry.from_ndnb(decoder);
-  return forwardingEntry;
-};
 
 /**
  * Decode the Buffer array which holds SubjectPublicKeyInfo and return an RSAKey.
@@ -198,11 +176,9 @@ EncodingUtils.contentObjectToHtml = function(data)
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
 var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
-var encodeForwardingEntry = function(data) { return EncodingUtils.encodeForwardingEntry(data); }
 var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
 var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
-var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
 var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 

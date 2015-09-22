@@ -160,7 +160,6 @@ def build (bld):
                  "js/interest.js",
                  "js/face-instance.js",
                  "js/forwarding-flags.js",
-                 "js/forwarding-entry.js",
                  "js/control-parameters.js",
                  "js/interest-filter.js",
                  "js/encoding/binary-xml-wire-format.js",

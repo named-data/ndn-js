@@ -25,7 +25,6 @@ var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
@@ -801,14 +800,7 @@ Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
 
     if (arg3) {
       var flags;
-      if (typeof flags === 'number') {
-        // Assume this deprecated form is only called for NDNx.
-        flags = new ForwardingFlags();
-        flags.setForwardingEntryFlags(arg3);
-      }
-      else
-        // Assume arg3 is already a ForwardingFlags.
-        flags = arg3;
+      flags = arg3;
       return this.registerPrefixWithClosure(prefix, arg2, flags);
     }
     else

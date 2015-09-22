@@ -50,61 +50,8 @@ var ForwardingFlags = function ForwardingFlags(value)
 
 exports.ForwardingFlags = ForwardingFlags;
 
-ForwardingFlags.ForwardingEntryFlags_ACTIVE         = 1;
-ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT  = 2;
-ForwardingFlags.ForwardingEntryFlags_ADVERTISE      = 4;
-ForwardingFlags.ForwardingEntryFlags_LAST           = 8;
-ForwardingFlags.ForwardingEntryFlags_CAPTURE       = 16;
-ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
-ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
-ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
-
 ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
 ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
-
-/**
- * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
- * @returns {number} An integer with the bits set.
- */
-ForwardingFlags.prototype.getForwardingEntryFlags = function()
-{
-  var result = 0;
-
-  if (this.active)
-    result |= ForwardingFlags.ForwardingEntryFlags_ACTIVE;
-  if (this.childInherit)
-    result |= ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT;
-  if (this.advertise)
-    result |= ForwardingFlags.ForwardingEntryFlags_ADVERTISE;
-  if (this.last)
-    result |= ForwardingFlags.ForwardingEntryFlags_LAST;
-  if (this.capture)
-    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE;
-  if (this.local)
-    result |= ForwardingFlags.ForwardingEntryFlags_LOCAL;
-  if (this.tap)
-    result |= ForwardingFlags.ForwardingEntryFlags_TAP;
-  if (this.captureOk)
-    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK;
-
-  return result;
-};
-
-/**
- * Set the flags according to the bits in forwardingEntryFlags as used by the ForwardingEntry message.
- * @param {number} forwardingEntryFlags An integer with the bits set.
- */
-ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
-{
-  this.active = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ACTIVE) != 0);
-  this.childInherit = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT) != 0);
-  this.advertise = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ADVERTISE) != 0);
-  this.last = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LAST) != 0);
-  this.capture = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE) != 0);
-  this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
-  this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
-  this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
-};
 
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
