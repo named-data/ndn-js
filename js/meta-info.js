@@ -218,16 +218,3 @@ Object.defineProperty(MetaInfo.prototype, "timestamp",
 Object.defineProperty(MetaInfo.prototype, "locator",
   { get: function() { return this.locator_; },
     set: function(val) { this.locator_ = val; ++this.changeCount_; } });
-
-/**
- * @deprecated Use new MetaInfo.
- */
-var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
-{
-  // Call the base constructor.
-  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
-}
-
-SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null);
-
-exports.SignedInfo = SignedInfo;

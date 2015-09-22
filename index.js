@@ -8,7 +8,6 @@ exports.Exclude = require('./js/exclude.js').Exclude;
 exports.Data = require('./js/data.js').Data;
 exports.ContentType = require('./js/meta-info.js').ContentType;
 exports.MetaInfo = require('./js/meta-info.js').MetaInfo;
-exports.SignedInfo = require('./js/meta-info.js').SignedInfo; // deprecated
 exports.Sha256WithRsaSignature = require('./js/sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 exports.DigestSha256Signature = require('./js/digest-sha256-signature.js').DigestSha256Signature;
 exports.Signature = require('./js/sha256-with-rsa-signature.js').Signature; // deprecated
