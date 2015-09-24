@@ -42,12 +42,15 @@ exports.ContentType = ContentType;
  */
 var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
 {
+  if (timestamp)
+    throw new Error
+      ("MetaInfo constructor: timestamp support has been removed.");
+
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
     // Copy values.
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
-    this.timestamp_ = metaInfo.timestamp; // NDNTime // deprecated
     this.type_ = metaInfo.type_;
     this.locator_ = metaInfo.locator_ == null ?
       new KeyLocator() : new KeyLocator(metaInfo.locator_);
@@ -56,7 +59,6 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   }
   else {
     this.publisher = publisherOrMetaInfo; // deprecated
-    this.timestamp = timestamp; // NDNTime // deprecated
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
      // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
@@ -201,12 +203,6 @@ Object.defineProperty(MetaInfo.prototype, "publisher",
 Object.defineProperty(MetaInfo.prototype, "finalBlockID",
   { get: function() { return this.getFinalBlockIDAsBuffer(); },
     set: function(val) { this.setFinalBlockId(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(MetaInfo.prototype, "timestamp",
-  { get: function() { return this.timestamp_; },
-    set: function(val) { this.timestamp_ = val; ++this.changeCount_; } });
 /**
  * @deprecated
  */
