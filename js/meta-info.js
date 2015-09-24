@@ -58,7 +58,10 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; // deprecated
+    if (publisherOrMetaInfo)
+      throw new Error
+        ("MetaInfo constructor: publisher support has been removed.");
+
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
@@ -189,12 +192,6 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
         this.freshnessPeriod_ = val * 1000.0;
       ++this.changeCount_;
     } });
-/**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(MetaInfo.prototype, "publisher",
-  { get: function() { return this.publisher_; },
-    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
 /**
  * @deprecated Use getFinalBlockId and setFinalBlockId.
  */
