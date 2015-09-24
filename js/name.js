@@ -396,7 +396,7 @@ Name.prototype.clear = function()
 };
 
 /**
- * Return the escaped name string according to "NDNx URI Scheme".
+ * Return the escaped name string according to NDN URI Scheme.
  * @param {boolean} includeScheme (optional) If true, include the "ndn:" scheme
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
@@ -748,7 +748,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 
 /**
- * Return value as an escaped string according to "NDNx URI Scheme".
+ * Return value as an escaped string according to NDN URI Scheme.
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
  * @returns {string} The escaped string.
@@ -790,7 +790,7 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to NDN URI Scheme.
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
  * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
