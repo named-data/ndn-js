@@ -11664,7 +11664,7 @@ Name.prototype.clear = function()
 };
 
 /**
- * Return the escaped name string according to "NDNx URI Scheme".
+ * Return the escaped name string according to NDN URI Scheme.
  * @param {boolean} includeScheme (optional) If true, include the "ndn:" scheme
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
@@ -12016,7 +12016,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 
 /**
- * Return value as an escaped string according to "NDNx URI Scheme".
+ * Return value as an escaped string according to NDN URI Scheme.
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
  * @returns {string} The escaped string.
@@ -12058,7 +12058,7 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to NDN URI Scheme.
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
  * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
@@ -12382,6 +12382,9 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   if (timestamp)
     throw new Error
       ("MetaInfo constructor: timestamp support has been removed.");
+  if (locator)
+    throw new Error
+      ("MetaInfo constructor: locator support has been removed.");
 
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -12389,16 +12392,15 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
     this.type_ = metaInfo.type_;
-    this.locator_ = metaInfo.locator_ == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator_);
     this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; // deprecated
+    if (publisherOrMetaInfo)
+      throw new Error
+        ("MetaInfo constructor: publisher support has been removed.");
+
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
-     // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
-    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
   }
@@ -12529,23 +12531,11 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
       ++this.changeCount_;
     } });
 /**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(MetaInfo.prototype, "publisher",
-  { get: function() { return this.publisher_; },
-    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
-/**
  * @deprecated Use getFinalBlockId and setFinalBlockId.
  */
 Object.defineProperty(MetaInfo.prototype, "finalBlockID",
   { get: function() { return this.getFinalBlockIDAsBuffer(); },
     set: function(val) { this.setFinalBlockId(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(MetaInfo.prototype, "locator",
-  { get: function() { return this.locator_; },
-    set: function(val) { this.locator_ = val; ++this.changeCount_; } });
 /**
  * This class represents an NDN Data Signature object.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -13050,42 +13040,6 @@ Data.prototype.wireDecode = function(input, wireFormat)
       WireFormat.getDefaultWireFormat());
   else
     this.setDefaultWireEncoding(new SignedBlob(), null);
-};
-
-/**
- * If getSignature() has a key locator, return it.  Otherwise, use
- * the deprecated key locator from getMetaInfo() for backward compatibility and print
- * a warning to console.log that the key locator has moved to the Signature
- * object.  If neither has a key locator, return an empty key locator.
- * When we stop supporting the key locator in MetaInfo, this function is not
- * necessary and we will just use the key locator in the Signature.
- * @returns {KeyLocator} The key locator to use.
- */
-Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
-{
-  if (!KeyLocator.canGetFromSignature(this.getSignature()))
-    // The signature type doesn't support KeyLocator.
-    return new KeyLocator();
-
-  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
-      this.signature_.get().getKeyLocator().getType() != null &&
-      this.signature_.get().getKeyLocator().getType() >= 0)
-    // The application is using the key locator in the correct object.
-    return this.signature_.get().getKeyLocator();
-
-  if (this.metaInfo_.get() != null && this.metaInfo_.get().locator != null &&
-      this.metaInfo_.get().locator.getType() != null &&
-      this.metaInfo_.get().locator.getType() >= 0) {
-    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
-    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.metaInfo_.get().locator;
-  }
-
-  // Return the empty key locator from the Signature object if possible.
-  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null)
-    return this.signature_.get().getKeyLocator();
-  else
-    return new KeyLocator();
 };
 
 /**
@@ -21244,11 +21198,7 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
-  //   the key locator from the MetaInfo to the Signauture object. (Note that
-  //   getSignatureOrMetaInfoKeyLocator checks canGetFromSignature.)
-  Tlv0_1_1WireFormat.encodeSignatureInfo_
-    (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
@@ -21286,12 +21236,6 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
-  if (data.getSignature() != null &&
-      data.getSignature().getKeyLocator() != null &&
-      data.getMetaInfo() != null)
-    // Copy the key locator pointer to the MetaInfo object for the transition of
-    //   moving the key locator from the MetaInfo to the Signature object.
-    data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
@@ -21426,12 +21370,7 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-
-  // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
-  var keyLocator = null;
-  if (KeyLocator.canGetFromSignature(signature))
-    keyLocator = KeyLocator.getFromSignature(signature);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -21715,21 +21654,18 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
 
 /**
  * An internal method to encode signature as the appropriate form of
- * SignatureInfo in NDN-TLV. Use the given keyLocator instead of the
- * locator in this object.
+ * SignatureInfo in NDN-TLV.
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator). This may be null if the signature
- * does not support a KeyLocator.
  */
-Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
+Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+    Tlv0_1_1WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
@@ -22005,52 +21941,72 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 
 /**
  * Return a user friendly HTML string with the contents of data.
- * This also outputs to console.log.
  */
 EncodingUtils.dataToHtml = function(/* Data */ data)
 {
-  var output ="";
-
   if (data == -1)
-    output+= "NO CONTENT FOUND"
-  else if (data == -2)
-    output+= "CONTENT NAME IS EMPTY"
-  else {
-    if (data.getName() != null) {
-      output+= "NAME: " + data.getName().toUri();
+    return "NO CONTENT FOUND";
+  if (data == -2)
+    return "CONTENT NAME IS EMPTY";
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
+  var output = "";
+  function append(message) {
+    message = message.replace(/&/g, "&amp;");
+    message = message.replace(/</g, "&lt;");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(hex): "+ data.getContent().toHex();
+    output += message;
+    output += "<br/>";
+  }
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
-      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
+  // Imitate dumpData in examples/node/test-encode-decode-data.js
+  
+  append("name: " + data.getName().toUri());
+  if (data.getContent().size() > 0) {
+    append("content (raw): " + data.getContent().buf().toString('binary'));
+    append("content (hex): " + data.getContent().toHex());
+  }
+  else
+    append("content: <empty>");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-      output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
-      output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.getMetaInfo().locator.getKeyName().toUri() + "<br />";
-      else
-        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";
-    }
+  if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
+    if (data.getMetaInfo().getType() == ContentType.KEY)
+      append("metaInfo.type: KEY");
+    else if (data.getMetaInfo().getType() == ContentType.LINK)
+      append("metaInfo.type: LINK");
+    else if (data.getMetaInfo().getType() == ContentType.NACK)
+      append("metaInfo.type: NACK");
+  }
+  append("metaInfo.freshnessPeriod (milliseconds): " +
+    (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
+      "" + data.getMetaInfo().getFreshnessPeriod() : "<none>"));
+  append("metaInfo.finalBlockId: " +
+    (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+     data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
+
+  var keyLocator = null;
+  var signature = data.getSignature();
+  if (signature instanceof Sha256WithRsaSignature) {
+    var signature = data.getSignature();
+    append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof DigestSha256Signature) {
+    var signature = data.getSignature();
+    append("DigestSha256 signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+  }
+  if (keyLocator !== null) {
+    if (keyLocator.getType() == KeyLocatorType.NONE)
+      append("signature.keyLocator: <none>");
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      append("signature.keyLocator: KeyName: " + keyLocator.getKeyName().toUri());
+    else
+      append("signature.keyLocator: <unrecognized ndn_KeyLocatorType>");
   }
 
   return output;
