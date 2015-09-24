@@ -96,8 +96,6 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode backwards.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
-  // Access scope_ directy to avoid throwing the deprecated exception.
-  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.scope_);
 
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
@@ -162,9 +160,6 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
     Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
-  // Access scope_ directy to avoid throwing the deprecated exception.
-  interest.scope_ = decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.Scope, endOffset);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
 

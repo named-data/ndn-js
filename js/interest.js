@@ -47,6 +47,8 @@ var Interest = function Interest
   if (answerOriginKind)
     throw new Error
       ("Interest constructor: answerOriginKind support has been removed. Use setMustBeFresh().");
+  if (scope)
+    throw new Error("Interest constructor: scope support has been removed.");
 
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
@@ -60,7 +62,6 @@ var Interest = function Interest
     this.exclude_ = new ChangeCounter(new Exclude(interest.getExclude()));
     this.childSelector_ = interest.childSelector_;
     this.mustBeFresh_ = interest.mustBeFresh_;
-    this.scope_ = interest.scope_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
     this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
@@ -78,7 +79,6 @@ var Interest = function Interest
       new Exclude(exclude) : new Exclude());
     this.childSelector_ = childSelector;
     this.mustBeFresh_ = true;
-    this.scope_ = scope;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
@@ -225,18 +225,6 @@ Interest.prototype.getNonceAsBuffer = function()
 };
 
 /**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.getScope = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("getScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  return this.scope_;
-};
-
-/**
  * Get the interest lifetime.
  * @returns {number} The interest lifetime in milliseconds, or null if not
  * specified.
@@ -357,20 +345,6 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 };
 
 /**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.setScope = function(scope)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("setScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  this.scope_ = scope;
-  ++this.changeCount_;
-  return this;
-};
-
-/**
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
  * milliseconds. If not specified, set to -1.
@@ -416,8 +390,6 @@ Interest.prototype.toUri = function()
   if (this.childSelector_ != null)
     selectors += "&ndn.ChildSelector=" + this.childSelector_;
   selectors += "&ndn.MustBeFresh=" + (this.mustBeFresh_ ? 1 : 0);
-  if (this.scope_ != null)
-    selectors += "&ndn.Scope=" + this.scope_;
   if (this.interestLifetimeMilliseconds_ != null)
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
   if (this.getNonce().size() > 0)
@@ -537,9 +509,6 @@ Object.defineProperty(Interest.prototype, "exclude",
 Object.defineProperty(Interest.prototype, "childSelector",
   { get: function() { return this.getChildSelector(); },
     set: function(val) { this.setChildSelector(val); } });
-Object.defineProperty(Interest.prototype, "scope",
-  { get: function() { return this.getScope(); },
-    set: function(val) { this.setScope(val); } });
 /**
  * @deprecated Use getInterestLifetimeMilliseconds and setInterestLifetimeMilliseconds.
  */
