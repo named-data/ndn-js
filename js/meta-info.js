@@ -23,7 +23,6 @@ var Blob = require('./util/blob.js').Blob;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var Name = require('./name.js').Name;
-var NDNTime = require('./util/ndn-time.js').NDNTime;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 

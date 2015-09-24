@@ -24,7 +24,6 @@ exports.ProtobufTlv = require('./js/encoding/protobuf-tlv.js').ProtobufTlv;
 exports.Blob = require('./js/util/blob.js').Blob;
 exports.MemoryContentCache = require('./js/util/memory-content-cache.js').MemoryContentCache;
 exports.SegmentFetcher = require('./js/util/segment-fetcher.js').SegmentFetcher;
-exports.NDNTime = require('./js/util/ndn-time.js').NDNTime;
 exports.ExponentialReExpress = require('./js/util/exponential-re-express.js').ExponentialReExpress;
 exports.SecurityException = require('./js/security/security-exception.js').SecurityException;
 exports.KeyType = require('./js/security/security-types.js').KeyType;
