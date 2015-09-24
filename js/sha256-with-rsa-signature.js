@@ -40,18 +40,10 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
     // Copy the values.
     this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
     this.signature_ = value.signature_;
-    // witness is deprecated.
-    this.witness_ = value.witness_;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.signature_ = new Blob();
-    // witness is deprecated.
-    this.witness_ = null;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = null;
   }
 
   this.changeCount_ = 0;
@@ -144,40 +136,3 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
 Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
   { get: function() { return this.getSignatureAsBuffer(); },
     set: function(val) { this.setSignature(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.witness_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.witness_ = val; ++this.changeCount_;
-    } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.digestAlgorithm_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.digestAlgorithm_ = val;
-      ++this.changeCount_;
-    } });
