@@ -22,7 +22,6 @@
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
-var PublisherID = require('./publisher-id.js').PublisherID;
 var LOG = require('./log.js').Log.LOG;
 
 /**
