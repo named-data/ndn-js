@@ -156,7 +156,7 @@ XpcomTransport.prototype.connectByFace = function(face, onopenCallback)
  * XpcomTransport.ConnectionInfo(connectionInfoOrSocketTransport.host, connectionInfoOrSocketTransport.port).
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
- * Listen on the port to read an entire binary XML encoded element and call
+ * Listen on the port to read an entire element and call
  * elementListener.onReceivedElement(element).
  */
 XpcomTransport.prototype.connectHelper = function

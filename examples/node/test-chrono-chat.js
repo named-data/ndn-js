@@ -122,7 +122,6 @@ var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Interest = require('../..').Interest;
 var Data = require('../..').Data;
-var SignedInfo = require('../..').SignedInfo;
 
 var MemoryIdentityStorage = require('../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../..').MemoryPrivateKeyStorage;

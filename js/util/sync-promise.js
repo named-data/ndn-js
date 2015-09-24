@@ -145,16 +145,22 @@ SyncPromise.getValue = function(promise)
 };
 
 /**
+ * This can be called with complete(onComplete, promise) or
+ * complete(onComplete, onError, promise) to handle both synchronous and
+ * asynchronous code based on whether the caller supplies the onComlete callback.
  * If onComplete is defined, call promise.then with a function which calls
  * onComplete(value) when fulfilled (possibly in asynchronous mode). If
  * onComplete is undefined, then we are in synchronous mode so return
  * SyncPromise.getValue(promise) which will throw an exception if the promise is
- * not a SyncPromise (or is a SyncPromise in the rejected state). This static
- * method can be used to handle both synchronous and asynchronous code based on
- * whether the caller supplies the onComlete callback.
+ * not a SyncPromise (or is a SyncPromise in the rejected state).
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an error when this calls promise.then, this calls
+ * onError(err) with the value of the error. If onComplete is undefined, then
+ * onError is ignored and this will call SyncPromise.getValue(promise) which may
+ * throw an exception.
  * @param {Promise|SyncPromise} promise If onComplete is defined, this calls
  * promise.then. Otherwise, this calls SyncPromise.getValue(promise).
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
@@ -164,12 +170,32 @@ SyncPromise.getValue = function(promise)
  * @throws {any} If onComplete is undefined and promise is a SyncPromise in the
  * rejected state.
  */
-SyncPromise.complete = function(onComplete, promise)
+SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
 {
+  var onError;
+  if (promise)
+    onError = onErrorOrPromise;
+  else {
+    promise = onErrorOrPromise;
+    onError = null;
+  }
+  
   if (onComplete)
-    promise.then
-      (function(value) { onComplete(value); },
-       function(err) { throw err; });
+    promise
+    .then(function(value) {
+      onComplete(value);
+    }, function(err) {
+      if (onError)
+        onError(err);
+      else {
+        if (promise instanceof SyncPromise)
+          throw err;
+        else
+          // We are in an async promise callback, so a thrown exception won't
+          // reach the caller. Just log it.
+          console.log("Uncaught exception from a Promise: " + err);
+      }
+    });
   else
     return SyncPromise.getValue(promise);
 };

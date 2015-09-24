@@ -263,37 +263,6 @@ ContentContext.prototype.onData = function(interest, data) {
         }
         return result;
     }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        /*
-        var AsyncGetClosure = function AsyncGetClosure(T0) {
-          this.T0 = T0;  // Start time
-          // Inherit from Closure.
-      Closure.call(this);
-    };
-
-    AsyncGetClosure.prototype.upcall = function(kind, upcallInfo) {
-      //console.log("Closure.upcall() executed.");
-      if (kind == Closure.UPCALL_FINAL) {
-        // Do nothing.
-      } else if (kind == Closure.UPCALL_CONTENT) {
-        var T1 = new Date();
-
-        var content = upcallInfo.data;
-        nameStr = escape(content.getName().toUri());
-        document.getElementById('content').innerHTML += "<p>Time elapsed: " + (T1 - this.T0) + " ms</p>";
-        document.getElementById('content').innerHTML += "<p>Name string: " + nameStr + "</p>";
-        document.getElementById('content').innerHTML += "<p>Content buffer length: " + content.getContent().size() + "</p>";
-        //console.log("In callback, nameStr: " + nameStr);
-        //console.log("In callback, content: ");
-        //console.log(content.getContent().size());
-        //document.getElementById('content').innerHTML += EncodingUtils.dataToHtml(content);
-      } else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-        console.log("Closure.upcall called with interest time out.");
-      }
-      return Closure.RESULT_OK;
-    };
-    */
 
     function run() {
       document.getElementById('content').innerHTML += "<p>Started...</p>";

@@ -94,7 +94,6 @@ NdnProtocol.prototype = {
 
             var segmentTemplate = new Interest(new Name([]));
             // Only use the interest selectors which make sense for fetching further segments.
-            segmentTemplate.publisherPublicKeyDigest = template.publisherPublicKeyDigest;
             segmentTemplate.setInterestLifetimeMilliseconds(template.getInterestLifetimeMilliseconds());
 
             var requestContent = function(contentListener) {
@@ -638,8 +637,6 @@ function extractNdnSearch(search, template)
                     template.setChildSelector(nonNegativeInt);
                 else if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
                     template.setInterestLifetimeMilliseconds(nonNegativeInt);
-                else if (key == "ndn.PublisherPublicKeyDigest")
-                    template.publisherPublicKeyDigest = DataUtils.toNumbersFromString(unescape(value));
                 else if (key == "ndn.Nonce")
                     template.setNonce(DataUtils.toNumbersFromString(unescape(value)));
                 else if (key == "ndn.Exclude")

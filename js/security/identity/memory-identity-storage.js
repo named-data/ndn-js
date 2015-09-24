@@ -299,10 +299,11 @@ MemoryIdentityStorage.prototype.setDefaultIdentityPromise = function
 };
 
 /**
- * Set the default key name for the specified identity.
- * @param {Name} keyName The key name.
- * @param {Name} identityNameCheck (optional) The identity name to check the
- * keyName.
+ * Set a key as the default key of an identity. The identity name is inferred
+ * from keyName.
+ * @param {Name} keyName The name of the key.
+ * @param {Name} identityNameCheck (optional) The identity name to check that the
+ * keyName contains the same identity name. If an empty name, it is ignored.
  * @return {SyncPromise} A promise which fulfills when the default key name is
  * set.
  */

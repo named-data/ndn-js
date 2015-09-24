@@ -51,11 +51,16 @@ exports.CommandInterestGenerator = CommandInterestGenerator;
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode interest name for signing. If omitted, use
  * WireFormat.getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * (Some crypto/database libraries only use a callback, so onComplete is
+ * required to use these.)
  */
 CommandInterestGenerator.prototype.generate = function
-  (interest, keyChain, certificateName, wireFormat)
+  (interest, keyChain, certificateName, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
+    WireFormat.getDefaultWireFormat() : wireFormat;
 
   var timestamp = Math.round(new Date().getTime());
   while (timestamp <= this.lastTimestamp)
@@ -70,13 +75,16 @@ CommandInterestGenerator.prototype.generate = function
   // bytes, so we don't need to call the nonNegativeInteger encoder.
   interest.getName().append(new Blob(Crypto.randomBytes(8), false));
 
-  keyChain.sign(interest, certificateName, wireFormat);
-
-  if (interest.getInterestLifetimeMilliseconds() == null ||
-      interest.getInterestLifetimeMilliseconds() < 0)
-    // The caller has not set the interest lifetime, so set it here.
-    interest.setInterestLifetimeMilliseconds(1000.0);
-
-  // We successfully signed the interest, so update the timestamp.
+  // Update the timestamp before calling async sign.
   this.lastTimestamp = timestamp;
+
+  keyChain.sign(interest, certificateName, wireFormat, function() {
+    if (interest.getInterestLifetimeMilliseconds() == null ||
+        interest.getInterestLifetimeMilliseconds() < 0)
+      // The caller has not set the interest lifetime, so set it here.
+      interest.setInterestLifetimeMilliseconds(1000.0);
+
+    if (onComplete)
+      onComplete();
+  });
 };

@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.8.1 (2015-08-27)
+Interim changes since NDN-JS v0.8.1 (2015-09-24)
 ------------------------------------------------
 
 Changes
@@ -11,11 +11,35 @@ Changes
 * Firefox add-on: Increased the number of outstanding interests to help streaming video.
 * In security IdentityStorage and PrivateKeyStorage added promise-based methods
   like getKeyPromise, which the subclasses like MemoryIdentityStorage now implement.
+* In security, added IndexedDbIdentityStorage and IndexedDbPrivateKeyStorage for
+  persistent in-browser storage of user keys using IndexedDB.
+* In KeyChain, added optional onComplete and onError callbacks to all methods
+  which use (possibly async) IdentityStorage and PrivateKeyStorage.
+
+Changes to remove deprecated NDNx support
+* In Face.registerPrefix, removed deprecated support to register with NDNx.
+* In Face.expressInterest and registerPrefix, removed deprecated support for NDNx Closure.
+* In the Face constructor, removed deprecated support for the NDNx verify flag.
+* In Interest, removed deprecated NDNx get/setPublisherPublicKeyDigest,
+  get/setScope and get/setAnswerOriginKind.
+* In Data, removed deprecated NDNx methods sign and verify.
+* In Sha256WithRsaSignature, removed deprecated NDNx get/setPublisherPublicKeyDigest,
+  get/setWitness and get/setDigestAlgorithm.
+* In ForwardingFlags, removed deprecated NDNx flags active, advertise, last,
+  local, tap and captureOK.
+* In KeyLocator, removed deprecated NDNx types KEY and CERTIFICATE.
+* In MetaInfo, removed deprecated NDNx setFields and get/setTimestamp.
+* In MetaInfo get/setType, removed deprecated NDNx types DATA, ENCR and GONE.
+* Removed deprecated NDNx classes ForwardingEntry, FaceInstance, KeyManager,
+  NameEnumeration, ExponentialReExpressClosure, Closure, KeyName, KeyNameType,
+  PublisherID, PublisherType, NDNTime, SignedInfo (use MetaInfo),
+  Signature (use Sha256WithRsaSignature), ContentObject (use Data) and NDN (use Face).
+* Removed deprecated NDNx BinaryXmlWireFormat and support for binary XML packets.
+* In WireFormat, removed ENABLE_NDNX since all NDNx support is now removed.
 
 Deprecated
 * Deprecated KeyChain.createIdentity. Use createIdentityAndCertificate which
   returns the certificate name instead of the key name.
-* In Interest, deprecated get/setScope since it is for NDNx and NFD does not use it.
 
 Bug fixes
 * http://redmine.named-data.net/issues/2846 Self-signed cert name needs a version component.

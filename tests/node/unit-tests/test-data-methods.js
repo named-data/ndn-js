@@ -180,8 +180,7 @@ function dumpData(data)
   }
   else
     result.push(dump("content: <empty>"));
-  if (!(data.getMetaInfo().getType() == ContentType.BLOB ||
-        data.getMetaInfo().getType() == ContentType.DATA)) {
+  if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
     result.push(dump("metaInfo.type:",
       data.getMetaInfo().getType() == ContentType.LINK ? "LINK" :
       (data.getMetaInfo().getType() == ContentType.KEY ? "KEY" : "unknown")));

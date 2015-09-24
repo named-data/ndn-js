@@ -19,18 +19,14 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -222,65 +218,6 @@ Data.prototype.setContent = function(content)
 };
 
 /**
- * @deprecated Use KeyChain.sign. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.sign = function(wireFormat)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("NDNx-style Data packet signing is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
-
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
-      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
-    this.getMetaInfo().setFields();
-
-  // Encode once to get the signed portion.
-  var encoding = this.wireEncode(wireFormat);
-  var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(encoding.signedBuf());
-
-  var sig = new Buffer
-    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature_.get().setSignature(sig);
-  ++this.changeCount_;
-};
-
-// The first time verify is called, it sets this to determine if a signature
-//   buffer needs to be converted to a string for the crypto verifier.
-Data.verifyUsesString = null;
-
-/**
- * @deprecated Use KeyChain.verifyData. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.verify = function(/*Key*/ key)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("Data packet verify with an NDNx-style key is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-  if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify Data without a public key.');
-
-  if (Data.verifyUsesString == null) {
-    var hashResult = Crypto.createHash('sha256').digest();
-    // If the has result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    Data.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  // wireEncode returns the cached encoding if available.
-  var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncode().signedBuf());
-  var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
-  return verifier.verify(key.publicKeyPem, signatureBytes);
-};
-
-Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
-
-/**
  * Encode this Data for a particular wire format. If wireFormat is the default
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
@@ -390,45 +327,6 @@ Data.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeData.
- */
-Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeData(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeData.
- */
-Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeData(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Data.prototype.encode = function(wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Data.prototype.decode = function(input, wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  wireFormat.decodeData(this, input);
-};
-
 Data.prototype.setDefaultWireEncoding = function
   (defaultWireEncoding, defaultWireEncodingFormat)
 {
@@ -450,27 +348,8 @@ Object.defineProperty(Data.prototype, "signature",
   { get: function() { return this.getSignature(); },
     set: function(val) { this.setSignature(val); } });
 /**
- * @deprecated Use getMetaInfo and setMetaInfo.
- */
-Object.defineProperty(Data.prototype, "signedInfo",
-  { get: function() { return this.getMetaInfo(); },
-    set: function(val) { this.setMetaInfo(val); } });
-/**
  * @deprecated Use getContent and setContent.
  */
 Object.defineProperty(Data.prototype, "content",
   { get: function() { return this.getContentAsBuffer(); },
     set: function(val) { this.setContent(val); } });
-
-/**
- * @deprecated Use new Data.
- */
-var ContentObject = function ContentObject(name, signedInfo, content)
-{
-  // Call the base constructor.
-  Data.call(this, name, signedInfo, content);
-}
-
-ContentObject.prototype = new Data();
-
-exports.ContentObject = ContentObject;
