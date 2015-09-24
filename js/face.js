@@ -72,7 +72,6 @@ var LOG = require('./log.js').Log.LOG;
  *               // However, if connectionInfo is not null, use it instead.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
- *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
 var Face = function Face(transportOrSettings, connectionInfo)
@@ -348,16 +347,15 @@ Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
  * Create a new InterestFilterEntry with the given values.
  * @param {number} interestFilterId The ID from getNextEntryId().
  * @param {InterestFilter} filter The InterestFilter for this entry.
- * @param {Closure} closure The closure for calling upcall on interest. TODO:
- * Change to a function instead of a Closure object.
+ * @param {function} onInterest The callback to call.
  * @constructor
  */
 Face.InterestFilterEntry = function FaceInterestFilterEntry
-  (interestFilterId, filter, closure)
+  (interestFilterId, filter, onInterest)
 {
   this.interestFilterId = interestFilterId;
   this.filter = filter;
-  this.closure = closure;
+  this.onInterest = onInterest;
 };
 
 /**
@@ -376,6 +374,15 @@ Face.InterestFilterEntry.prototype.getInterestFilterId = function()
 Face.InterestFilterEntry.prototype.getFilter = function()
 {
   return this.filter;
+};
+
+/**
+ * Get the onInterest callback given to the constructor.
+ * @returns {function} The onInterest callback.
+ */
+Face.InterestFilterEntry.prototype.getOnInterest = function()
+{
+  return this.onInterest;
 };
 
 /**
@@ -764,8 +771,6 @@ Face.prototype.nodeMakeCommandInterest = function
  * matching interest is received. To register a prefix with NFD, you must
  * first call setCommandSigningInfo.
  * This uses the form:
- * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
- * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
  * @param {Name} prefix The Name prefix.
  * @param {function} onInterest (optional) If not None, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
@@ -777,65 +782,32 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
- * If omitted, use the default flags defined by the default ForwardingFlags constructor.
- * @param {number} intFlags (optional) (only for the deprecated form of
- * registerPrefix) The integer NDNx flags for finer control of which interests
- * are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
+ * finer control of which interests are forward to the application. If omitted,
+ * use the default flags defined by the default ForwardingFlags constructor.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
-Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
+Face.prototype.registerPrefix = function
+  (prefix, onInterest, onRegisterFailed, flags)
 {
-  // There are several overloaded versions of registerPrefix, each shown inline below.
-
-  // registerPrefix(Name prefix, Closure closure);            // deprecated
-  // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("registerPrefix with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    if (arg3) {
-      var flags;
-      flags = arg3;
-      return this.registerPrefixWithClosure(prefix, arg2, flags);
-    }
-    else
-      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
-  }
-
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
-  var onInterest = arg2;
-  var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var flags = (arg4 ? arg4 : new ForwardingFlags());
-  return this.registerPrefixWithClosure
+  if (!onRegisterFailed)
+    onRegisterFailed = function() {};
+  if (!flags)
+    flags = new ForwardingFlags();
+  
+  return this.connectAndRegisterPrefix
     (prefix, onInterest, flags, onRegisterFailed);
 };
 
-/**
- * A private method to register the prefix with the host, receive the data and call
- * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)).
- * @deprecated Use registerPrefix with callback functions, not Closure.
- * @param {Name} prefix
- * @param {Closure|function} closure or onInterest.
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed (optional) If called from the
- * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
- * fails.
- * @returns {number} The registered prefix ID which can be used with
- * removeRegisteredPrefix.
- */
-Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, flags, onRegisterFailed)
+Face.prototype.connectAndRegisterPrefix = function
+  (prefix, onInterest, flags, onRegisterFailed)
 {
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
-      (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
+      (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
        thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
@@ -859,46 +831,28 @@ Face.prototype.registerPrefixWithClosure = function
 Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
 
 /**
- * This is a closure to receive the response Data packet from the register
- * prefix interest sent to the connected NDN hub. If this gets a bad response
- * or a timeout, call onRegisterFailed.
+ * A RegisterResponse has onData to receive the response Data packet from the
+ * register prefix interest sent to the connected NDN hub. If this gets a bad
+ * response or onTimeout is called, then call onRegisterFailed.
  */
-Face.RegisterResponseClosure = function RegisterResponseClosure
-  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat)
+Face.RegisterResponse = function RegisterResponse
+  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
 {
-  // Inherit from Closure.
-  Closure.call(this);
-
   this.face = face;
   this.prefix = prefix;
-  this.callerClosure = callerClosure;
+  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
   this.flags = flags;
   this.wireFormat = wireFormat;
 };
 
-Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
+Face.RegisterResponse.prototype.onData = function(interest, responseData)
 {
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    // We timed out waiting for the response.
-    if (LOG > 2)
-      console.log("Timeout for NFD register prefix command.");
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
-
-    return Closure.RESULT_OK;
-  }
-  
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  // Decode responseData->getContent() and check for a success code.
+  // Decode responseData.getContent() and check for a success code.
   // TODO: Move this into the TLV code.
   var statusCode;
   try {
-    var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
+    var decoder = new TlvDecoder(responseData.getContent().buf());
     decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
     statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
   }
@@ -908,7 +862,7 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
       console.log("Register prefix failed: Error decoding the NFD response: " + e);
     if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
-    return Closure.RESULT_OK;
+    return;
   }
 
   // Status code 200 is "OK".
@@ -918,14 +872,23 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
                   statusCode);
     if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
-    return Closure.RESULT_OK;
+    return;
   }
 
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
+};
 
-  return Closure.RESULT_OK;
+/**
+ * We timed out waiting for the response.
+ */
+Face.RegisterResponse.prototype.onTimeout = function(interest)
+{
+  if (LOG > 2)
+    console.log("Timeout for NFD register prefix command.");
+  if (this.onRegisterFailed)
+    this.onRegisterFailed(this.prefix);
 };
 
 /**
@@ -934,14 +897,14 @@ Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
  * registerPrefix got so it could return it to the caller. If this is 0, then
  * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
- * @param {Closure} closure
+ * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
    commandCertificateName)
 {
   var removeRequestIndex = -1;
@@ -989,21 +952,29 @@ Face.prototype.nfdRegisterPrefix = function
        TlvWireFormat.get(), function() {
       if (registeredPrefixId != 0) {
         var interestFilterId = 0;
-        if (closure != null)
+        if (onInterest != null)
           // registerPrefix was called with the "combined" form that includes the
           // callback, so add an InterestFilterEntry.
           interestFilterId = thisFace.setInterestFilter
-            (new InterestFilter(prefix), closure);
+            (new InterestFilter(prefix), onInterest);
 
         thisFace.registeredPrefixTable.push
           (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
       }
 
       // Send the registration interest.
+      var response = new Face.RegisterResponse
+         (thisFace, prefix, onInterest, onRegisterFailed, flags,
+          TlvWireFormat.get());
+      /* Debug: Change to use reconnectAndExpressInterest.
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, new Face.RegisterResponseClosure
          (thisFace, prefix, closure, onRegisterFailed, flags,
           TlvWireFormat.get()));
+       */
+      thisFace.expressInterest
+        (commandInterest, response.onData.bind(response),
+         response.onTimeout.bind(response));
     });
   };
 
@@ -1087,16 +1058,9 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     filter = new InterestFilter(filterOrPrefix);
 
   var interestFilterId = this.getNextEntryId();
-  var closure;
-  if (onInterest.upcall && typeof onInterest.upcall == 'function')
-    // Assume it is the deprecated use with Closure.
-    closure = onInterest;
-  else
-    closure = new Face.CallbackClosure
-      (null, null, onInterest, this, interestFilterId, filter);
 
   this.interestFilterTable.push(new Face.InterestFilterEntry
-    (interestFilterId, filter, closure));
+    (interestFilterId, filter, onInterest));
 
   return interestFilterId;
 };
@@ -1212,11 +1176,9 @@ Face.prototype.onReceivedElement = function(element)
       if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
-        // TODO: Use a callback function instead of Closure.
-        var info = new UpcallInfo(this, interest, 0, null);
-        var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-        if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
-          this.transport.send(info.data.wireEncode().buf());
+        entry.getOnInterest()
+          (entry.getFilter().getPrefix(), interest, this,
+           entry.getInterestFilterId(), entry.getFilter());
       }
     }
   }
@@ -1276,7 +1238,8 @@ Face.prototype.connectAndExecute = function(onConnected)
       thisFace.connectAndExecute(onConnected);
   }, 3000);
 
-  this.reconnectAndExpressInterest(null, interest, new Face.ConnectClosure(this, onConnected, timerID));
+  this.reconnectAndExpressInterest
+    (null, interest, new Face.ConnectClosure(this, onConnected, timerID));
 };
 
 /**
