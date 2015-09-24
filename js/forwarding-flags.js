@@ -27,24 +27,12 @@ var ForwardingFlags = function ForwardingFlags(value)
 {
   if (typeof value === 'object' && value instanceof ForwardingFlags) {
     // Make a copy.
-    this.active = value.active;
     this.childInherit = value.childInherit;
-    this.advertise = value.advertise;
-    this.last = value.last;
     this.capture = value.capture;
-    this.local = value.local;
-    this.tap = value.tap;
-    this.captureOk = value.captureOk;
   }
   else {
-    this.active = true;
     this.childInherit = true;
-    this.advertise = false;
-    this.last = false;
     this.capture = false;
-    this.local = false;
-    this.tap = false;
-    this.captureOk = false;
   }
 };
 
@@ -84,28 +72,10 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 };
 
 /**
- * Get the value of the "active" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getActive = function() { return this.active; };
-
-/**
  * Get the value of the "childInherit" flag.
  * @returns {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
-
-/**
- * Get the value of the "advertise" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getAdvertise = function() { return this.advertise; };
-
-/**
- * Get the value of the "last" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getLast = function() { return this.last; };
 
 /**
  * Get the value of the "capture" flag.
@@ -114,67 +84,13 @@ ForwardingFlags.prototype.getLast = function() { return this.last; };
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
 /**
- * Get the value of the "local" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getLocal = function() { return this.local; };
-
-/**
- * Get the value of the "tap" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getTap = function() { return this.tap; };
-
-/**
- * Get the value of the "captureOk" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getCaptureOk = function() { return this.captureOk; };
-
-/**
- * Set the value of the "active" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setActive = function(value) { this.active = value; };
-
-/**
  * Set the value of the "childInherit" flag
  * @param {number} value true to set the flag, false to clear it.
  */
 ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
 
 /**
- * Set the value of the "advertise" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setAdvertise = function(value) { this.advertise = value; };
-
-/**
- * Set the value of the "last" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setLast = function(value) { this.last = value; };
-
-/**
  * Set the value of the "capture" flag
  * @param {number} value true to set the flag, false to clear it.
  */
 ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
-
-/**
- * Set the value of the "local" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setLocal = function(value) { this.local = value; };
-
-/**
- * Set the value of the "tap" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
-
-/**
- * Set the value of the "captureOk" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
