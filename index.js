@@ -10,7 +10,6 @@ exports.Sha256WithRsaSignature = require('./js/sha256-with-rsa-signature.js').Sh
 exports.DigestSha256Signature = require('./js/digest-sha256-signature.js').DigestSha256Signature;
 exports.Signature = require('./js/sha256-with-rsa-signature.js').Signature; // deprecated
 exports.KeyLocator = require('./js/key-locator.js').KeyLocator;
-exports.KeyName = require('./js/key-locator.js').KeyName;
 exports.KeyLocatorType = require('./js/key-locator.js').KeyLocatorType;
 exports.InterestFilter = require('./js/interest-filter.js').InterestFilter;
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
