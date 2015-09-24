@@ -120,7 +120,6 @@ def build (bld):
                  "js/transport/transport.js",
                  "js/transport/web-socket-transport.js",
                  "js/browserify-tcp-transport.js",
-                 "js/closure.js", # deprecated
                  "js/publisher-id.js",
                  "js/name.js",
                  "js/key-locator.js",
