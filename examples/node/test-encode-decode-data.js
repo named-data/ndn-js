@@ -178,13 +178,12 @@ function dumpData(data)
     console.log("content: <empty>");
 
   if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
-    System.out.print("metaInfo.type: ");
     if (data.getMetaInfo().getType() == ContentType.KEY)
-      console.log("KEY");
+      console.log("metaInfo.type: KEY");
     else if (data.getMetaInfo().getType() == ContentType.LINK)
-      console.log("LINK");
+      console.log("metaInfo.type: LINK");
     else if (data.getMetaInfo().getType() == ContentType.NACK)
-      console.log("NACK");
+      console.log("metaInfo.type: NACK");
   }
   console.log("metaInfo.freshnessPeriod (milliseconds): " +
     (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
