@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.8.1 (2015-09-24)
-------------------------------------------------
+NDN-JS v0.9 (2015-09-24)
+------------------------
 
 Changes
 * In security, added KeyChain.createIdentityAndCertificate which returns the
