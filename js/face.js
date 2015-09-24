@@ -33,8 +33,6 @@ var Tlv = require('./encoding/tlv/tlv.js').Tlv;
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Closure = require('./closure.js').Closure;
-var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
@@ -256,14 +254,18 @@ Face.prototype.getNextEntryId = function()
 };
 
 /**
+ * A PendingInterestTable is an internal class to hold a list of pending
+ * interests with their callbacks.
  * @constructor
  */
-Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest, closure)
+Face.PendingInterest = function FacePendingInterest
+  (pendingInterestId, interest, onData, onTimeout)
 {
   this.pendingInterestId = pendingInterestId;
-  this.interest = interest;  // Interest
-  this.closure = closure;    // Closure
-  this.timerID = -1;  // Timer ID
+  this.interest = interest;
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+  this.timerID = -1;
 };
 
 /**
@@ -416,7 +418,6 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
  * a name and optional interest template:
  * expressInterest(name [, template], onData [, onTimeout]).
- * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -434,32 +435,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
-  // There are several overloaded versions of expressInterest, each shown inline below.
-
   var interest;
-  // expressInterest(Name name, Closure closure);                      // deprecated
-  // expressInterest(Name name, Closure closure,   Interest template); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("expressInterest with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    // The first argument is a name. Make the interest from the name and possible template.
-    if (arg3) {
-      var template = arg3;
-      // Copy the template.
-      interest = new Interest(template);
-      interest.setName(interestOrName);
-    }
-    else {
-      interest = new Interest(interestOrName);
-      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
-    }
-
-    return this.expressInterestWithClosure(interest, arg2);
-  }
-
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
@@ -494,49 +470,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     }
   }
 
-  // Make a Closure from the callbacks so we can use expressInterestWithClosure.
-  // TODO: Convert the PIT to use callbacks, not a closure.
-  return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
-};
-
-Face.CallbackClosure = function FaceCallbackClosure
-  (onData, onTimeout, onInterest, face, interestFilterId, filter) {
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.onInterest = onInterest;
-  this.face = face;
-  this.interestFilterId = interestFilterId;
-  this.filter = filter;
-};
-
-Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
-  if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED)
-    this.onData(upcallInfo.interest, upcallInfo.data);
-  else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
-    this.onTimeout(upcallInfo.interest);
-  else if (kind == Closure.UPCALL_INTEREST)
-    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
-    this.onInterest
-      (this.filter.getPrefix(), upcallInfo.interest, this.face,
-       this.interestFilterId, this.filter)
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * A private method to send the the interest to host:port, read the entire response and call
- * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, data)).
- * @deprecated Use expressInterest with callback functions, not Closure.
- * @param {Interest} the interest, already processed with a template (if supplied).
- * @param {Closure} closure
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
- */
-Face.prototype.expressInterestWithClosure = function(interest, closure)
-{
   var pendingInterestId = this.getNextEntryId();
 
   if (this.connectionInfo == null) {
@@ -545,12 +478,13 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
     else {
       var thisFace = this;
       this.connectAndExecute(function() {
-        thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+        thisFace.reconnectAndExpressInterest
+          (pendingInterestId, interest, onData, onTimeout);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
 
   return pendingInterestId;
 };
@@ -560,13 +494,16 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
  */
-Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
+Face.prototype.reconnectAndExpressInterest = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { 
+        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -592,9 +529,11 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+        (function() { 
+          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, closure);
+      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -602,53 +541,45 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
 };
 
 /**
- * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
- *   this.transport.send to send the interest.
+ * Do the work of reconnectAndExpressInterest once we know we are connected.
+ * Add the PendingInterest and call this.transport.send to send the interest.
  */
-Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
+Face.prototype.expressInterestHelper = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var binaryInterest = interest.wireEncode();
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
-  var thisFace = this;
-  if (closure != null) {
-    var removeRequestIndex = -1;
-    if (removeRequestIndex != null)
-      removeRequestIndex = this.pitRemoveRequests.indexOf(pendingInterestId);
-    if (removeRequestIndex >= 0)
-      // removePendingInterest was called with the pendingInterestId returned by
-      //   expressInterest before we got here, so don't add a PIT entry.
-      this.pitRemoveRequests.splice(removeRequestIndex, 1);
-    else {
-      var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
-      this.pendingInterestTable.push(pitEntry);
-      closure.pitEntry = pitEntry;
+  var removeRequestIndex = removeRequestIndex = this.pitRemoveRequests.indexOf
+    (pendingInterestId);
+  if (removeRequestIndex >= 0)
+    // removePendingInterest was called with the pendingInterestId returned by
+    //   expressInterest before we got here, so don't add a PIT entry.
+    this.pitRemoveRequests.splice(removeRequestIndex, 1);
+  else {
+    var pitEntry = new Face.PendingInterest
+      (pendingInterestId, interest, onData, onTimeout);
+    this.pendingInterestTable.push(pitEntry);
 
-      // Set interest timer.
-      var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-      var thisFace = this;
-      var timeoutCallback = function() {
-        if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
+    // Set interest timer.
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+    var thisFace = this;
+    var timeoutCallback = function() {
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from thisFace.pendingInterestTable, even if we add it again later to re-express
-        //   the interest because we don't want to match it in the mean time.
-        var index = thisFace.pendingInterestTable.indexOf(pitEntry);
-        if (index >= 0)
-          thisFace.pendingInterestTable.splice(index, 1);
+      // Remove PIT entry from thisFace.pendingInterestTable.
+      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
+      if (index >= 0)
+        thisFace.pendingInterestTable.splice(index, 1);
 
-        // Raise closure callback
-        if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-          if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
-          pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          thisFace.pendingInterestTable.push(pitEntry);
-          thisFace.transport.send(binaryInterest.buf());
-        }
-      };
+      // Call onTimeout.
+      if (pitEntry.onTimeout)
+        pitEntry.onTimeout(pitEntry.interest);
+    };
 
-      pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-    }
+    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
   }
 
   // Special case: For timeoutPrefix we don't actually send the interest.
@@ -796,13 +727,6 @@ Face.prototype.registerPrefix = function
   if (!flags)
     flags = new ForwardingFlags();
   
-  return this.connectAndRegisterPrefix
-    (prefix, onInterest, flags, onRegisterFailed);
-};
-
-Face.prototype.connectAndRegisterPrefix = function
-  (prefix, onInterest, flags, onRegisterFailed)
-{
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
@@ -966,14 +890,8 @@ Face.prototype.nfdRegisterPrefix = function
       var response = new Face.RegisterResponse
          (thisFace, prefix, onInterest, onRegisterFailed, flags,
           TlvWireFormat.get());
-      /* Debug: Change to use reconnectAndExpressInterest.
       thisFace.reconnectAndExpressInterest
-        (null, commandInterest, new Face.RegisterResponseClosure
-         (thisFace, prefix, closure, onRegisterFailed, flags,
-          TlvWireFormat.get()));
-       */
-      thisFace.expressInterest
-        (commandInterest, response.onData.bind(response),
+        (null, commandInterest, response.onData.bind(response),
          response.onTimeout.bind(response));
     });
   };
@@ -1188,9 +1106,8 @@ Face.prototype.onReceivedElement = function(element)
     var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
-      var pitEntry = pendingInterests[i];
-      var currentClosure = pitEntry.closure;
-      currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
+      var pendingInterest = pendingInterests[i];
+      pendingInterest.onData(pendingInterest.interest, data);
     }
   }
 };
@@ -1239,7 +1156,16 @@ Face.prototype.connectAndExecute = function(onConnected)
   }, 3000);
 
   this.reconnectAndExpressInterest
-    (null, interest, new Face.ConnectClosure(this, onConnected, timerID));
+    (null, interest,
+     function(localInterest, localData) {
+        // The host is alive, so cancel the timeout and continue with onConnected().
+        clearTimeout(timerID);
+
+        if (LOG>0)
+          console.log("connectAndExecute: connected to host " + thisFace.host);
+        onConnected();
+     },
+     function(localInterest) { /* Ignore timeout */ });
 };
 
 /**
@@ -1249,30 +1175,4 @@ Face.prototype.closeByTransport = function()
 {
   this.readyStatus = Face.CLOSED;
   this.onclose();
-};
-
-Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.onConnected = onConnected;
-  this.timerID = timerID;
-};
-
-Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.
-    return Closure.RESULT_ERR;
-
-  // The host is alive, so cancel the timeout and continue with onConnected().
-  clearTimeout(this.timerID);
-
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
-  this.onConnected();
-
-  return Closure.RESULT_OK;
 };
