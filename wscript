@@ -93,7 +93,6 @@ def build (bld):
                  "js/log.js",
                  "js/util/ndn-common.js",
                  "js/util/ndn-time.js",
-                 "js/util/exponential-re-express-closure.js", # deprecated
                  "js/util/exponential-re-express.js",
                  "js/util/blob.js",
                  "js/util/signed-blob.js",
