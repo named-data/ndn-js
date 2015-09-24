@@ -1276,23 +1276,3 @@ Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
 
   return Closure.RESULT_OK;
 };
-
-/**
- * @deprecated Use new Face.
- */
-var NDN = function NDN(settings)
-{
-  // Call the base constructor.
-  Face.call(this, settings);
-}
-
-// Use dummy functions so that the Face constructor will not try to set its own defaults.
-NDN.prototype = new Face({ getTransport: function(){}, getConnectionInfo: function(){} });
-
-exports.NDN = NDN;
-
-NDN.supported = Face.supported;
-NDN.UNOPEN = Face.UNOPEN;
-NDN.OPEN_REQUESTED = Face.OPEN_REQUESTED;
-NDN.OPENED = Face.OPENED;
-NDN.CLOSED = Face.CLOSED;
