@@ -30,6 +30,8 @@ Changes to remove deprecated NDNx support
 * In KeyLocator, removed deprecated NDNx types KEY and CERTIFICATE.
 * In MetaInfo, removed deprecated NDNx setFields and get/setTimestamp.
 * In MetaInfo get/setType, removed deprecated NDNx types DATA, ENCR and GONE.
+* In MetaInfo, removed NDNx locator. You should use get/setKeyLocator in the
+     Signature object get/setKeyLocator().
 * Removed deprecated NDNx classes ForwardingEntry, FaceInstance, KeyManager,
   NameEnumeration, ExponentialReExpressClosure, Closure, KeyName, KeyNameType,
   PublisherID, PublisherType, NDNTime, SignedInfo (use MetaInfo),

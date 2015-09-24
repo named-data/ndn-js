@@ -251,9 +251,6 @@ describe ("TestPolicyMatching", function() {
        "Verification success called " + successCount + " times instead of 1");
     
     data = new Data(new Name("/TestData/2"));
-    // Make sure the locator is null in this empty Data, so it won't be encoded.
-    // TODO: After removing NDNX support, delete this line.
-    data.metaInfo.locator = null;
     
     failureCount = 0;
     successCount = 0;

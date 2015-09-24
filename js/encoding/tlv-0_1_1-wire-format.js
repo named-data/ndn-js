@@ -189,11 +189,7 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
-  //   the key locator from the MetaInfo to the Signauture object. (Note that
-  //   getSignatureOrMetaInfoKeyLocator checks canGetFromSignature.)
-  Tlv0_1_1WireFormat.encodeSignatureInfo_
-    (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
@@ -231,12 +227,6 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
-  if (data.getSignature() != null &&
-      data.getSignature().getKeyLocator() != null &&
-      data.getMetaInfo() != null)
-    // Copy the key locator pointer to the MetaInfo object for the transition of
-    //   moving the key locator from the MetaInfo to the Signature object.
-    data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
@@ -371,12 +361,7 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-
-  // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
-  var keyLocator = null;
-  if (KeyLocator.canGetFromSignature(signature))
-    keyLocator = KeyLocator.getFromSignature(signature);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -660,21 +645,18 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
 
 /**
  * An internal method to encode signature as the appropriate form of
- * SignatureInfo in NDN-TLV. Use the given keyLocator instead of the
- * locator in this object.
+ * SignatureInfo in NDN-TLV.
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator). This may be null if the signature
- * does not support a KeyLocator.
  */
-Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
+Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+    Tlv0_1_1WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
