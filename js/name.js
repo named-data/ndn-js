@@ -20,9 +20,6 @@
 
 var Blob = require('./util/blob.js').Blob;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -352,73 +349,6 @@ Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
   ++this.changeCount;
-};
-
-Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = decoder.offset;
-  // In case there are no components, set signedPortionEndOffset arbitrarily.
-  var signedPortionEndOffset = signedPortionBeginOffset;
-
-  this.components = [];
-
-  while (decoder.peekDTag(NDNProtocolDTags.Component)) {
-    signedPortionEndOffset = decoder.offset;
-    this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
-  }
-
-  decoder.readElementClose();
-  ++this.changeCount;
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-
-/**
- * Encode this name to the encoder.
- * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion. The signed portion starts from the first
- * name component and ends just before the final name component (which is
- * assumed to be a signature for a signed interest).
- */
-Name.prototype.to_ndnb = function(encoder)
-{
-  if (this.components == null)
-    throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = encoder.offset;
-  var signedPortionEndOffset;
-
-  var count = this.size();
-  if (count == 0)
-    // There is no "final component", so set signedPortionEndOffset arbitrarily.
-    signedPortionEndOffset = signedPortionBeginOffset;
-  else {
-    for (var i = 0; i < count; i++) {
-      if (i == count - 1)
-        // We will begin the final component.
-        signedPortionEndOffset = encoder.offset;
-
-      encoder.writeDTagElement
-        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
-    }
-  }
-
-  encoder.writeElementClose();
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-
-Name.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.Name;
 };
 
 /**

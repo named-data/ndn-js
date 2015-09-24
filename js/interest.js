@@ -24,7 +24,6 @@ var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -38,9 +37,19 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {number} maxSuffixComponents
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce)
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, 
+    publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
+    interestLifetimeMilliseconds, nonce)
 {
+  if (publisherPublicKeyDigest)
+    throw new Error
+      ("Interest constructor: PublisherPublicKeyDigest support has been removed.");
+  if (answerOriginKind)
+    throw new Error
+      ("Interest constructor: answerOriginKind support has been removed. Use setMustBeFresh().");
+  if (scope)
+    throw new Error("Interest constructor: scope support has been removed.");
+
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
@@ -49,12 +58,10 @@ var Interest = function Interest
     this.maxSuffixComponents_ = interest.maxSuffixComponents_;
     this.minSuffixComponents_ = interest.minSuffixComponents_;
 
-    this.publisherPublicKeyDigest_ = interest.publisherPublicKeyDigest_;
     this.keyLocator_ = new ChangeCounter(new KeyLocator(interest.getKeyLocator()));
     this.exclude_ = new ChangeCounter(new Exclude(interest.getExclude()));
     this.childSelector_ = interest.childSelector_;
-    this.answerOriginKind_ = interest.answerOriginKind_;
-    this.scope_ = interest.scope_;
+    this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
     this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
@@ -67,13 +74,11 @@ var Interest = function Interest
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
-    this.publisherPublicKeyDigest_ = publisherPublicKeyDigest;
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
       new Exclude(exclude) : new Exclude());
     this.childSelector_ = childSelector;
-    this.answerOriginKind_ = answerOriginKind;
-    this.scope_ = scope;
+    this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
@@ -92,14 +97,6 @@ Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
-
-Interest.ANSWER_NO_CONTENT_STORE = 0;
-Interest.ANSWER_CONTENT_STORE = 1;
-Interest.ANSWER_GENERATED = 2;
-Interest.ANSWER_STALE = 4;    // Stale answer OK
-Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
-
-Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
 /**
  * Check if this interest's name matches the given name (using Name.match) and
@@ -194,27 +191,12 @@ Interest.prototype.getChildSelector = function()
 };
 
 /**
- * @deprecated Use getMustBeFresh.
- */
-Interest.prototype.getAnswerOriginKind = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("getAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's getMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
-
-  return this.answerOriginKind_;
-};
-
-/**
  * Get the must be fresh flag. If not specified, the default is true.
  * @returns {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
 {
-  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0)
-    return true;
-  else
-    return (this.answerOriginKind_ & Interest.ANSWER_STALE) == 0;
+  return this.mustBeFresh_;
 };
 
 /**
@@ -240,18 +222,6 @@ Interest.prototype.getNonce = function()
 Interest.prototype.getNonceAsBuffer = function()
 {
   return this.getNonce().buf();
-};
-
-/**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.getScope = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("getScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  return this.scope_;
 };
 
 /**
@@ -362,20 +332,6 @@ Interest.prototype.setChildSelector = function(childSelector)
 };
 
 /**
- * @deprecated Use setMustBeFresh.
- */
-Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("setAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's setMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
-
-  this.answerOriginKind_ = answerOriginKind;
-  ++this.changeCount_;
-  return this;
-};
-
-/**
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
  * false. If you do not set this flag, the default value is true.
@@ -383,34 +339,7 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
-    // It is is already the default where MustBeFresh is true.
-    if (!mustBeFresh)
-      // Set answerOriginKind_ so that getMustBeFresh returns false.
-      this.answerOriginKind_ = Interest.ANSWER_STALE;
-  }
-  else {
-    if (mustBeFresh)
-      // Clear the stale bit.
-      this.answerOriginKind_ &= ~Interest.ANSWER_STALE;
-    else
-      // Set the stale bit.
-      this.answerOriginKind_ |= Interest.ANSWER_STALE;
-  }
-  ++this.changeCount_;
-  return this;
-};
-
-/**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.setScope = function(scope)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("setScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  this.scope_ = scope;
+  this.mustBeFresh_ = (mustBeFresh ? true : false);
   ++this.changeCount_;
   return this;
 };
@@ -460,14 +389,9 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents_;
   if (this.childSelector_ != null)
     selectors += "&ndn.ChildSelector=" + this.childSelector_;
-  if (this.answerOriginKind_ != null)
-    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind_;
-  if (this.scope_ != null)
-    selectors += "&ndn.Scope=" + this.scope_;
+  selectors += "&ndn.MustBeFresh=" + (this.mustBeFresh_ ? 1 : 0);
   if (this.interestLifetimeMilliseconds_ != null)
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
-  if (this.publisherPublicKeyDigest_ != null)
-    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
   if (this.getNonce().size() > 0)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
@@ -556,44 +480,6 @@ Interest.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom
-// to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.encode = function(wireFormat)
-{
-  return this.wireEncode(BinaryXmlWireFormat.get()).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.decode = function(input, wireFormat)
-{
-  this.wireDecode(input, BinaryXmlWireFormat.get())
-};
-
 Interest.prototype.setDefaultWireEncoding = function
   (defaultWireEncoding, defaultWireEncodingFormat)
 {
@@ -623,9 +509,6 @@ Object.defineProperty(Interest.prototype, "exclude",
 Object.defineProperty(Interest.prototype, "childSelector",
   { get: function() { return this.getChildSelector(); },
     set: function(val) { this.setChildSelector(val); } });
-Object.defineProperty(Interest.prototype, "scope",
-  { get: function() { return this.getScope(); },
-    set: function(val) { this.setScope(val); } });
 /**
  * @deprecated Use getInterestLifetimeMilliseconds and setInterestLifetimeMilliseconds.
  */
@@ -633,20 +516,8 @@ Object.defineProperty(Interest.prototype, "interestLifetime",
   { get: function() { return this.getInterestLifetimeMilliseconds(); },
     set: function(val) { this.setInterestLifetimeMilliseconds(val); } });
 /**
- * @deprecated Use getMustBeFresh and setMustBeFresh.
- */
-Object.defineProperty(Interest.prototype, "answerOriginKind",
-  { get: function() { return this.getAnswerOriginKind(); },
-    set: function(val) { this.setAnswerOriginKind(val); } });
-/**
  * @deprecated Use getNonce and setNonce.
  */
 Object.defineProperty(Interest.prototype, "nonce",
   { get: function() { return this.getNonceAsBuffer(); },
     set: function(val) { this.setNonce(val); } });
-/**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(Interest.prototype, "publisherPublicKeyDigest",
-  { get: function() { return this.publisherPublicKeyDigest_; },
-    set: function(val) { this.publisherPublicKeyDigest_ = val; ++this.changeCount_; } });

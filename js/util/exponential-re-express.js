@@ -1,5 +1,4 @@
 /**
- * This is the closure class for use in expressInterest to re express with exponential falloff.
  * Copyright (C) 2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -19,13 +18,13 @@
  */
 
 /**
- * An ExponentialReExpress is used by onTimeout to express the interest again
+ * An ExponentialReExpress uses an internal onTimeout to express the interest again
  * with double the interestLifetime. See ExponentialReExpress.makeOnTimeout,
  * which you should call instead of the private constructor.
- * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
- *   by expressing the interest again with double the interestLifetime. If the interesLifetime goes
- *   over maxInterestLifetime, then call callerClosure.upcall with UPCALL_INTEREST_TIMED_OUT.
- * When upcall is not UPCALL_INTEREST_TIMED_OUT, just call callerClosure.upcall.
+ * Create a new ExponentialReExpress where onTimeout expresses the interest
+ * again with double the interestLifetime. If the interesLifetime goes
+ * over settings.maxInterestLifetime, then call the given onTimeout. If this
+ * internally gets onData, just call the given onData.
  */
 var ExponentialReExpress = function ExponentialReExpress
   (face, onData, onTimeout, settings)

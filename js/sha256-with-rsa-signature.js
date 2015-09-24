@@ -21,9 +21,6 @@
 
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
@@ -43,18 +40,10 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
     // Copy the values.
     this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
     this.signature_ = value.signature_;
-    // witness is deprecated.
-    this.witness_ = value.witness_;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.signature_ = new Blob();
-    // witness is deprecated.
-    this.witness_ = null;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = null;
   }
 
   this.changeCount_ = 0;
@@ -121,50 +110,6 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
   ++this.changeCount_;
 };
 
-Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
-
-  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
-    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
-    if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness);
-  }
-
-  //FORCE TO READ A SIGNATURE
-
-  if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
-
-  decoder.readElementClose();
-};
-
-Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-
-  if (null != this.witness)
-    // needs to handle null witness
-    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
-
-  if (this.getSignature().size() > 0)
-    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
-  else
-    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, new Buffer([]));
-
-  encoder.writeElementClose();
-};
-
-Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
@@ -191,79 +136,3 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
 Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
   { get: function() { return this.getSignatureAsBuffer(); },
     set: function(val) { this.setSignature(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.witness_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.witness_ = val; ++this.changeCount_;
-    } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.digestAlgorithm_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.digestAlgorithm_ = val;
-      ++this.changeCount_;
-    } });
-
-/**
- * Note: This Signature class is not the same as the base Signature class of
- * the Common Client Libraries API. It is a deprecated name for
- * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
- * we may implement the CCL version of Signature.
- * @deprecated Use new Sha256WithRsaSignature.
- */
-var Signature = function Signature
-  (witnessOrSignatureObject, signature, digestAlgorithm)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("The NDNx style of Signature is deprecated. To enable while you upgrade your code to use Sha256WithRsaSignature, set WireFormat.ENABLE_NDNX = true");
-
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
-    // Call the base copy constructor.
-    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
-  else {
-    // Call the base default constructor.
-    Sha256WithRsaSignature.call(this);
-
-    // Set the given fields (if supplied).
-    if (witnessOrSignatureObject != null)
-      // witness is deprecated.
-      this.witness_ = witnessOrSignatureObject;
-    if (signature != null)
-      this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
-        signature : new Blob(signature);
-    if (digestAlgorithm != null)
-      // digestAlgorithm is deprecated.
-      this.digestAlgorithm_ = digestAlgorithm;
-  }
-}
-
-Signature.prototype = new Sha256WithRsaSignature();
-
-exports.Signature = Signature;

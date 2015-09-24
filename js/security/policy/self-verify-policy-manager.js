@@ -31,8 +31,7 @@ var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
- * A SelfVerifyPolicyManager implements a PolicyManager to use the public key
- * DER in the data packet's KeyLocator (if available) or look in the
+ * A SelfVerifyPolicyManager implements a PolicyManager to look in the
  * IdentityStorage for the public key with the name in the KeyLocator (if
  * available) and use it to verify the data packet, without searching a
  * certificate chain.  If the public key can't be found, the verification fails.
@@ -80,10 +79,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Use the public key DER in the KeyLocator (if available) or look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the data packet.  If the public key can't
-   * be found, call onVerifyFailed.
+ * Look in the IdentityStorage for the public key with the name in the
+ * KeyLocator (if available) and use it to verify the data packet.  If the
+ * public key can't be found, call onVerifyFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -156,12 +154,11 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Use the public key
- * DER in the KeyLocator (if available) or look in the IdentityStorage for the
- * public key with the name in the KeyLocator (if available) and use it to
- * verify the signedBlob. If the public key can't be found, return false.
- * (This is a generalized method which can verify both a Data packet and an
- * interest.)
+ * Check the type of signatureInfo to get the KeyLocator. Look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available) and use it to verify the signedBlob. If the public key can't be
+ * found, return false. (This is a generalized method which can verify both a
+ * Data packet and an interest.)
  * @param {Signature} signatureInfo An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
@@ -189,9 +186,9 @@ SelfVerifyPolicyManager.prototype.verify = function
 };
 
 /**
- * Return the public key DER in the KeyLocator (if available) or look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available). If the public key can't be found, return and empty Blob.
+ * Look in the IdentityStorage for the public key with the name in the
+ * KeyLocator (if available). If the public key can't be found, return and empty
+ * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
  * @param onComplete {function} This calls onComplete(publicKeyDer) where
  * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
@@ -199,10 +196,7 @@ SelfVerifyPolicyManager.prototype.verify = function
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
-  if (keyLocator.getType() == KeyLocatorType.KEY)
-    // Use the public key DER directly.
-    onComplete(keyLocator.getKeyData());
-  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+  if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null)
     // Assume the key name is a certificate name.
     SyncPromise.complete

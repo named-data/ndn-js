@@ -24,7 +24,6 @@ var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
 // Library namespace
 var ndn = ndn || {};
-ndn.Key = require("./key.js").Key
 
 var exports = ndn;
 

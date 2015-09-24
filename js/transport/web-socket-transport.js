@@ -150,7 +150,7 @@ WebSocketTransport.prototype.connect = function
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
       try {
-        // Find the end of the binary XML element and call onReceivedElement.
+        // Find the end of the element and call onReceivedElement.
         self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);

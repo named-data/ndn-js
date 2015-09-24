@@ -4665,7 +4665,6 @@ var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
 // Library namespace
 var ndn = ndn || {};
-ndn.Key = require("./key.js").Key
 
 var exports = ndn;
 
@@ -6250,286 +6249,6 @@ exports.NdnCommon = NdnCommon;
  */
 NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 /**
- * This class contains all NDNx tags
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-
-var NDNProtocolDTags = {
-
-  /**
-   * Note if you add one of these, add it to the reverse string map as well.
-   * Emphasize getting the work done at compile time over trying to make something
-   * flexible and developer error-proof.
-   */
-
-   Any : 13,
-   Name : 14,
-   Component : 15,
-   Certificate : 16,
-   Collection : 17,
-   CompleteName : 18,
-   Content : 19,
-   SignedInfo : 20,
-   ContentDigest : 21,
-   ContentHash : 22,
-   Count : 24,
-   Header : 25,
-   Interest : 26,  /* 20090915 */
-   Key : 27,
-   KeyLocator : 28,
-   KeyName : 29,
-   Length : 30,
-   Link : 31,
-   LinkAuthenticator : 32,
-   NameComponentCount : 33,  /* DeprecatedInInterest */
-   RootDigest : 36,
-   Signature : 37,
-   Start : 38,
-   Timestamp : 39,
-   Type : 40,
-   Nonce : 41,
-   Scope : 42,
-   Exclude : 43,
-   Bloom : 44,
-   BloomSeed : 45,
-   AnswerOriginKind : 47,
-   InterestLifetime : 48,
-   Witness : 53,
-   SignatureBits : 54,
-   DigestAlgorithm : 55,
-   BlockSize : 56,
-   FreshnessSeconds : 58,
-   FinalBlockID : 59,
-   PublisherPublicKeyDigest : 60,
-   PublisherCertificateDigest : 61,
-   PublisherIssuerKeyDigest : 62,
-   PublisherIssuerCertificateDigest : 63,
-   Data : 64,  /* 20090915 */
-   WrappedKey : 65,
-   WrappingKeyIdentifier : 66,
-   WrapAlgorithm : 67,
-   KeyAlgorithm : 68,
-   Label : 69,
-   EncryptedKey : 70,
-   EncryptedNonceKey : 71,
-   WrappingKeyName : 72,
-   Action : 73,
-   FaceID : 74,
-   IPProto : 75,
-   Host : 76,
-   Port : 77,
-   MulticastInterface : 78,
-   ForwardingFlags : 79,
-   FaceInstance : 80,
-   ForwardingEntry : 81,
-   MulticastTTL : 82,
-   MinSuffixComponents : 83,
-   MaxSuffixComponents : 84,
-   ChildSelector : 85,
-   RepositoryInfo : 86,
-   Version : 87,
-   RepositoryVersion : 88,
-   GlobalPrefix : 89,
-   LocalName : 90,
-   Policy : 91,
-   Namespace : 92,
-   GlobalPrefixName : 93,
-   PolicyVersion : 94,
-   KeyValueSet : 95,
-   KeyValuePair : 96,
-   IntegerValue : 97,
-   DecimalValue : 98,
-   StringValue : 99,
-   BinaryValue : 100,
-   NameValue : 101,
-   Entry : 102,
-   ACL : 103,
-   ParameterizedName : 104,
-   Prefix : 105,
-   Suffix : 106,
-   Root : 107,
-   ProfileName : 108,
-   Parameters : 109,
-   InfoString : 110,
-  // 111 unallocated
-   StatusResponse : 112,
-   StatusCode : 113,
-   StatusText : 114,
-
-  // Sync protocol
-   SyncNode : 115,
-   SyncNodeKind : 116,
-   SyncNodeElement : 117,
-   SyncVersion : 118,
-   SyncNodeElements : 119,
-   SyncContentHash : 120,
-   SyncLeafCount : 121,
-   SyncTreeDepth : 122,
-   SyncByteCount : 123,
-   ConfigSlice : 124,
-   ConfigSliceList : 125,
-   ConfigSliceOp : 126,
-
-  // Remember to keep in sync with schema/tagnames.csvsdict
-   NDNProtocolDataUnit : 17702112,
-   NDNPROTOCOL_DATA_UNIT : "NDNProtocolDataUnit"
-};
-
-exports.NDNProtocolDTags = NDNProtocolDTags;
-
-var NDNProtocolDTagsStrings = [
-  null, null, null, null, null, null, null, null, null, null, null,
-  null, null,
-  "Any", "Name", "Component", "Certificate", "Collection", "CompleteName",
-  "Content", "SignedInfo", "ContentDigest", "ContentHash", null, "Count", "Header",
-  "Interest", "Key", "KeyLocator", "KeyName", "Length", "Link", "LinkAuthenticator",
-  "NameComponentCount", null, null, "RootDigest", "Signature", "Start", "Timestamp", "Type",
-  "Nonce", "Scope", "Exclude", "Bloom", "BloomSeed", null, "AnswerOriginKind",
-  "InterestLifetime", null, null, null, null, "Witness", "SignatureBits", "DigestAlgorithm", "BlockSize",
-  null, "FreshnessSeconds", "FinalBlockID", "PublisherPublicKeyDigest", "PublisherCertificateDigest",
-  "PublisherIssuerKeyDigest", "PublisherIssuerCertificateDigest", "Data",
-  "WrappedKey", "WrappingKeyIdentifier", "WrapAlgorithm", "KeyAlgorithm", "Label",
-  "EncryptedKey", "EncryptedNonceKey", "WrappingKeyName", "Action", "FaceID", "IPProto",
-  "Host", "Port", "MulticastInterface", "ForwardingFlags", "FaceInstance",
-  "ForwardingEntry", "MulticastTTL", "MinSuffixComponents", "MaxSuffixComponents", "ChildSelector",
-  "RepositoryInfo", "Version", "RepositoryVersion", "GlobalPrefix", "LocalName",
-  "Policy", "Namespace", "GlobalPrefixName", "PolicyVersion", "KeyValueSet", "KeyValuePair",
-  "IntegerValue", "DecimalValue", "StringValue", "BinaryValue", "NameValue", "Entry",
-  "ACL", "ParameterizedName", "Prefix", "Suffix", "Root", "ProfileName", "Parameters",
-  "InfoString", null,
-    "StatusResponse", "StatusCode", "StatusText", "SyncNode", "SyncNodeKind", "SyncNodeElement",
-    "SyncVersion", "SyncNodeElements", "SyncContentHash", "SyncLeafCount", "SyncTreeDepth", "SyncByteCount",
-    "ConfigSlice", "ConfigSliceList", "ConfigSliceOp" ];
-
-exports.NDNProtocolDTagsStrings = NDNProtocolDTagsStrings;
-/**
- * This class represents NDNTime Objects
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var LOG = require('../log.js').Log.LOG;
-
-/**
- * @deprecated This is only used for NDNx support which is deprecated.
- */
-var NDNTime = function NDNTime(input)
-{
-  this.NANOS_MAX = 999877929;
-
-  if (typeof input =='number')
-    this.msec = input;
-  else {
-    if (LOG > 1) console.log('UNRECOGNIZED TYPE FOR TIME');
-  }
-};
-
-exports.NDNTime = NDNTime;
-
-NDNTime.prototype.getJavascriptDate = function()
-{
-  var d = new Date();
-  d.setTime(this.msec);
-  return d
-};
-/**
- * This is the closure class for use in expressInterest to re express with exponential falloff.
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var Closure = require('../closure.js').Closure;
-
-/**
- * @deprecated Use ExponentialReExpress.makeOnTimeout().
- */
-var ExponentialReExpressClosure = function ExponentialReExpressClosure(callerClosure, settings)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.callerClosure = callerClosure;
-  settings = (settings || {});
-  this.maxInterestLifetime = (settings.maxInterestLifetime || 16000);
-};
-
-exports.ExponentialReExpressClosure = ExponentialReExpressClosure;
-
-/**
- * Wrap this.callerClosure to responds to UPCALL_INTEREST_TIMED_OUT
- *   by expressing the interest again as described in the constructor.
- */
-ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  try {
-    if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-      var interestLifetime = upcallInfo.interest.getInterestLifetimeMilliseconds();
-      if (interestLifetime == null)
-        return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
-
-      var nextInterestLifetime = interestLifetime * 2;
-      if (nextInterestLifetime > this.maxInterestLifetime)
-        return this.callerClosure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, upcallInfo);
-
-      var nextInterest = upcallInfo.interest.clone();
-      nextInterest.setInterestLifetimeMilliseconds(nextInterestLifetime);
-      // TODO: Use expressInterest with callbacks, not Closure.
-      upcallInfo.face.expressInterest(nextInterest.getName(), this, nextInterest);
-      return Closure.RESULT_OK;
-    }
-    else
-      return this.callerClosure.upcall(kind, upcallInfo);
-  } catch (ex) {
-    console.log("ExponentialReExpressClosure.upcall exception: " + ex);
-    return Closure.RESULT_ERR;
-  }
-};
-/**
- * This is the closure class for use in expressInterest to re express with exponential falloff.
  * Copyright (C) 2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -6549,13 +6268,13 @@ ExponentialReExpressClosure.prototype.upcall = function(kind, upcallInfo)
  */
 
 /**
- * An ExponentialReExpress is used by onTimeout to express the interest again
+ * An ExponentialReExpress uses an internal onTimeout to express the interest again
  * with double the interestLifetime. See ExponentialReExpress.makeOnTimeout,
  * which you should call instead of the private constructor.
- * Create a new ExponentialReExpressClosure where upcall responds to UPCALL_INTEREST_TIMED_OUT
- *   by expressing the interest again with double the interestLifetime. If the interesLifetime goes
- *   over maxInterestLifetime, then call callerClosure.upcall with UPCALL_INTEREST_TIMED_OUT.
- * When upcall is not UPCALL_INTEREST_TIMED_OUT, just call callerClosure.upcall.
+ * Create a new ExponentialReExpress where onTimeout expresses the interest
+ * again with double the interestLifetime. If the interesLifetime goes
+ * over settings.maxInterestLifetime, then call the given onTimeout. If this
+ * internally gets onData, just call the given onData.
  */
 var ExponentialReExpress = function ExponentialReExpress
   (face, onData, onTimeout, settings)
@@ -7666,1382 +7385,6 @@ DecodingException.prototype.name = "DecodingException";
 
 exports.DecodingException = DecodingException;
 /**
- * This class is used to encode ndnb binary elements (blob, type/value pairs).
- *
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var LOG = require('../log.js').Log.LOG;
-
-var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
-var DataUtils = require('./data-utils.js').DataUtils;
-var LOG = require('../log.js').Log.LOG;
-
-var XML_EXT = 0x00;
-
-var XML_TAG = 0x01;
-
-var XML_DTAG = 0x02;
-
-var XML_ATTR = 0x03;
-
-var XML_DATTR = 0x04;
-
-var XML_BLOB = 0x05;
-
-var XML_UDATA = 0x06;
-
-var XML_CLOSE = 0x0;
-
-var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16;
-
-
-var XML_TT_BITS = 3;
-var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
-var XML_TT_VAL_BITS = XML_TT_BITS + 1;
-var XML_TT_VAL_MASK = ((1 << (XML_TT_VAL_BITS)) - 1);
-var XML_REG_VAL_BITS = 7;
-var XML_REG_VAL_MASK = ((1 << XML_REG_VAL_BITS) - 1);
-var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
-var BYTE_MASK = 0xFF;
-var LONG_BYTES = 8;
-var LONG_BITS = 64;
-
-var bits_11 = 0x0000007FF;
-var bits_18 = 0x00003FFFF;
-var bits_32 = 0x0FFFFFFFF;
-
-/**
- * @constructor
- */
-var BinaryXMLEncoder = function BinaryXMLEncoder(initiaLength)
-{
-  if (!initiaLength)
-    initiaLength = 16;
-
-  this.ostream = new DynamicBuffer(initiaLength);
-  this.offset = 0;
-  this.CODEC_NAME = "Binary";
-};
-
-exports.BinaryXMLEncoder = BinaryXMLEncoder;
-
-/**
- * Encode utf8Content as utf8 and write to the output buffer as a UDATA.
- * @param {string} utf8Content The string to convert to utf8.
- */
-BinaryXMLEncoder.prototype.writeUString = function(utf8Content)
-{
-  this.encodeUString(utf8Content, XML_UDATA);
-};
-
-BinaryXMLEncoder.prototype.writeBlob = function(
-    /*Buffer*/ binaryContent)
-{
-  if (LOG >3) console.log(binaryContent);
-
-  this.encodeBlob(binaryContent, binaryContent.length);
-};
-
-/**
- * Write an element start header using DTAG with the tag to the output buffer.
- * @param {number} tag The DTAG tag.
- */
-BinaryXMLEncoder.prototype.writeElementStartDTag = function(tag)
-{
-  this.encodeTypeAndVal(XML_DTAG, tag);
-};
-
-/**
- * @deprecated Use writeElementStartDTag.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLEncoder.prototype.writeStartElement = function(
-  /*String*/ tag,
-  /*TreeMap<String,String>*/ attributes)
-{
-  /*Long*/ var dictionaryVal = tag; //stringToTag(tag);
-
-  if (null == dictionaryVal)
-    this.encodeUString(tag, XML_TAG);
-  else
-    this.encodeTypeAndVal(XML_DTAG, dictionaryVal);
-
-  if (null != attributes)
-    this.writeAttributes(attributes);
-};
-
-/**
- * Write an element close to the output buffer.
- */
-BinaryXMLEncoder.prototype.writeElementClose = function()
-{
-  this.ostream.ensureLength(this.offset + 1);
-  this.ostream.array[this.offset] = XML_CLOSE;
-  this.offset += 1;
-};
-
-/**
- * @deprecated Use writeElementClose.
- */
-BinaryXMLEncoder.prototype.writeEndElement = function()
-{
-  this.writeElementClose();
-};
-
-/**
- * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
- */
-BinaryXMLEncoder.prototype.writeAttributes = function(/*TreeMap<String,String>*/ attributes)
-{
-  if (null == attributes)
-    return;
-
-  // the keySet of a TreeMap is sorted.
-
-  for (var i = 0; i< attributes.length;i++) {
-    var strAttr = attributes[i].k;
-    var strValue = attributes[i].v;
-
-    var dictionaryAttr = stringToTag(strAttr);
-    if (null == dictionaryAttr)
-      // not in dictionary, encode as attr
-      // compressed format wants length of tag represented as length-1
-      // to save that extra bit, as tag cannot be 0 length.
-      // encodeUString knows to do that.
-      this.encodeUString(strAttr, XML_ATTR);
-    else
-      this.encodeTypeAndVal(XML_DATTR, dictionaryAttr);
-
-    // Write value
-    this.encodeUString(strValue);
-  }
-};
-
-//returns a string
-stringToTag = function(/*long*/ tagVal)
-{
-  if (tagVal >= 0 && tagVal < NDNProtocolDTagsStrings.length)
-    return NDNProtocolDTagsStrings[tagVal];
-  else if (tagVal == NDNProtocolDTags.NDNProtocolDataUnit)
-    return NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT;
-
-  return null;
-};
-
-//returns a Long
-tagToString =  function(/*String*/ tagName)
-{
-  // the slow way, but right now we don't care.... want a static lookup for the forward direction
-  for (var i = 0; i < NDNProtocolDTagsStrings.length; ++i) {
-    if (null != NDNProtocolDTagsStrings[i] && NDNProtocolDTagsStrings[i] == tagName)
-      return i;
-  }
-
-  if (NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT == tagName)
-    return NDNProtocolDTags.NDNProtocolDataUnit;
-
-  return null;
-};
-
-/**
- * Write an element start header using DTAG with the tag to the output buffer, then the content as explained below,
- * then an element close.
- * @param {number} tag The DTAG tag.
- * @param {number|string|Buffer} content If contentis a number, convert it to a string and call writeUString.  If content is a string,
- * call writeUString.  Otherwise, call writeBlob.
- */
-BinaryXMLEncoder.prototype.writeDTagElement = function(tag, content)
-{
-  this.writeElementStartDTag(tag);
-
-  if (typeof content === 'number')
-    this.writeUString(content.toString());
-  else if (typeof content === 'string')
-    this.writeUString(content);
-  else
-    this.writeBlob(content);
-
-  this.writeElementClose();
-};
-
-/**
- * @deprecated Use writeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- * If Content is a string, then encode as utf8 and write UDATA.
- */
-BinaryXMLEncoder.prototype.writeElement = function(
-    //long
-    tag,
-    //byte[]
-    Content,
-    //TreeMap<String, String>
-    attributes)
-{
-  this.writeStartElement(tag, attributes);
-  // Will omit if 0-length
-
-  if (typeof Content === 'number') {
-    if (LOG > 4) console.log('GOING TO WRITE THE NUMBER .charCodeAt(0) ' + Content.toString().charCodeAt(0));
-    if (LOG > 4) console.log('GOING TO WRITE THE NUMBER ' + Content.toString());
-    if (LOG > 4) console.log('type of number is ' + typeof Content.toString());
-
-    this.writeUString(Content.toString());
-  }
-  else if (typeof Content === 'string') {
-    if (LOG > 4) console.log('GOING TO WRITE THE STRING  ' + Content);
-    if (LOG > 4) console.log('type of STRING is ' + typeof Content);
-
-    this.writeUString(Content);
-  }
-  else {
-    if (LOG > 4) console.log('GOING TO WRITE A BLOB  ' + Content);
-
-    this.writeBlob(Content);
-  }
-
-  this.writeElementClose();
-};
-
-var TypeAndVal = function TypeAndVal(_type,_val)
-{
-  this.type = _type;
-  this.val = _val;
-};
-
-BinaryXMLEncoder.prototype.encodeTypeAndVal = function(
-    //int
-    type,
-    //long
-    val)
-{
-  if (LOG > 4) console.log('Encoding type '+ type+ ' and value '+ val);
-
-  if (LOG > 4) console.log('OFFSET IS ' + this.offset);
-
-  if (type > XML_UDATA || type < 0 || val < 0)
-    throw new Error("Tag and value must be positive, and tag valid.");
-
-  // Encode backwards. Calculate how many bytes we need:
-  var numEncodingBytes = this.numEncodingBytes(val);
-  this.ostream.ensureLength(this.offset + numEncodingBytes);
-
-  // Bottom 4 bits of val go in last byte with tag.
-  this.ostream.array[this.offset + numEncodingBytes - 1] =
-    //(byte)
-      (BYTE_MASK &
-          (((XML_TT_MASK & type) |
-           ((XML_TT_VAL_MASK & val) << XML_TT_BITS))) |
-           XML_TT_NO_MORE); // set top bit for last byte
-  val = val >>> XML_TT_VAL_BITS;
-
-  // Rest of val goes into preceding bytes, 7 bits per byte, top bit
-  // is "more" flag.
-  var i = this.offset + numEncodingBytes - 2;
-  while (0 != val && i >= this.offset) {
-    this.ostream.array[i] = //(byte)
-        (BYTE_MASK & (val & XML_REG_VAL_MASK)); // leave top bit unset
-    val = val >>> XML_REG_VAL_BITS;
-    --i;
-  }
-
-  if (val != 0)
-    throw new Error("This should not happen: miscalculated encoding");
-
-  this.offset+= numEncodingBytes;
-
-  return numEncodingBytes;
-};
-
-/**
- * Encode ustring as utf8.
- */
-BinaryXMLEncoder.prototype.encodeUString = function(
-    //String
-    ustring,
-    //byte
-    type)
-{
-  if (null == ustring)
-    return;
-  if (type == XML_TAG || type == XML_ATTR && ustring.length == 0)
-    return;
-
-  if (LOG > 3) console.log("The string to write is ");
-  if (LOG > 3) console.log(ustring);
-
-  var strBytes = DataUtils.stringToUtf8Array(ustring);
-
-  this.encodeTypeAndVal(type,
-            (((type == XML_TAG) || (type == XML_ATTR)) ?
-                (strBytes.length-1) :
-                strBytes.length));
-
-  if (LOG > 3) console.log("THE string to write is ");
-
-  if (LOG > 3) console.log(strBytes);
-
-  this.writeString(strBytes);
-  this.offset+= strBytes.length;
-};
-
-
-BinaryXMLEncoder.prototype.encodeBlob = function(
-    //Buffer
-    blob,
-    //int
-    length)
-{
-  if (null == blob)
-    return;
-
-  if (LOG > 4) console.log('LENGTH OF XML_BLOB IS '+length);
-
-  this.encodeTypeAndVal(XML_BLOB, length);
-  this.writeBlobArray(blob);
-  this.offset += length;
-};
-
-var ENCODING_LIMIT_1_BYTE = ((1 << (XML_TT_VAL_BITS)) - 1);
-var ENCODING_LIMIT_2_BYTES = ((1 << (XML_TT_VAL_BITS + XML_REG_VAL_BITS)) - 1);
-var ENCODING_LIMIT_3_BYTES = ((1 << (XML_TT_VAL_BITS + 2 * XML_REG_VAL_BITS)) - 1);
-
-BinaryXMLEncoder.prototype.numEncodingBytes = function(
-    //long
-    x)
-{
-  if (x <= ENCODING_LIMIT_1_BYTE) return (1);
-  if (x <= ENCODING_LIMIT_2_BYTES) return (2);
-  if (x <= ENCODING_LIMIT_3_BYTES) return (3);
-
-  var numbytes = 1;
-
-  // Last byte gives you XML_TT_VAL_BITS
-  // Remainder each give you XML_REG_VAL_BITS
-  x = x >>> XML_TT_VAL_BITS;
-  while (x != 0) {
-        numbytes++;
-    x = x >>> XML_REG_VAL_BITS;
-  }
-  return (numbytes);
-};
-
-/**
- * Write an element start header using DTAG with the tag to the output buffer, then the dateTime
-   * as a big endian BLOB converted to 4096 ticks per second, then an element close.
- * @param {number} tag The DTAG tag.
- * @param {NDNTime} dateTime
- */
-BinaryXMLEncoder.prototype.writeDateTimeDTagElement = function(tag, dateTime)
-{
-  //parse to hex
-  var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
-  if (binarydate.length % 2 == 1)
-    binarydate = '0' + binarydate;
-
-  this.writeDTagElement(tag, DataUtils.toNumbers(binarydate));
-};
-
-/**
- * @deprecated Use writeDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLEncoder.prototype.writeDateTime = function(
-    //String
-    tag,
-    //NDNTime
-    dateTime)
-{
-  //parse to hex
-  var binarydate =  Math.round((dateTime.msec/1000) * 4096).toString(16)  ;
-  if (binarydate.length % 2 == 1)
-    binarydate = '0' + binarydate;
-
-  this.writeElement(tag, DataUtils.toNumbers(binarydate));
-};
-
-// This does not update this.offset.
-BinaryXMLEncoder.prototype.writeString = function(input)
-{
-  if (typeof input === 'string') {
-    if (LOG > 4) console.log('GOING TO WRITE A STRING');
-    if (LOG > 4) console.log(input);
-
-    this.ostream.ensureLength(this.offset + input.length);
-    for (var i = 0; i < input.length; i++) {
-      if (LOG > 4) console.log('input.charCodeAt(i)=' + input.charCodeAt(i));
-      this.ostream.array[this.offset + i] = (input.charCodeAt(i));
-    }
-  }
-  else
-  {
-    if (LOG > 4) console.log('GOING TO WRITE A STRING IN BINARY FORM');
-    if (LOG > 4) console.log(input);
-
-    this.writeBlobArray(input);
-  }
-};
-
-BinaryXMLEncoder.prototype.writeBlobArray = function(
-    //Buffer
-    blob)
-{
-  if (LOG > 4) console.log('GOING TO WRITE A BLOB');
-
-  this.ostream.copy(blob, this.offset);
-};
-
-BinaryXMLEncoder.prototype.getReducedOstream = function()
-{
-  return this.ostream.slice(0, this.offset);
-};
-/**
- * This class is used to decode ndnb binary elements (blob, type/value pairs).
- *
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNTime = require('../util/ndn-time.js').NDNTime;
-var DataUtils = require('./data-utils.js').DataUtils;
-var DecodingException = require('./decoding-exception.js').DecodingException;
-var LOG = require('../log.js').Log.LOG;
-
-var XML_EXT = 0x00;
-
-var XML_TAG = 0x01;
-
-var XML_DTAG = 0x02;
-
-var XML_ATTR = 0x03;
-
-var XML_DATTR = 0x04;
-
-var XML_BLOB = 0x05;
-
-var XML_UDATA = 0x06;
-
-var XML_CLOSE = 0x0;
-
-var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16;
-
-
-var XML_TT_BITS = 3;
-var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
-var XML_TT_VAL_BITS = XML_TT_BITS + 1;
-var XML_TT_VAL_MASK = ((1 << (XML_TT_VAL_BITS)) - 1);
-var XML_REG_VAL_BITS = 7;
-var XML_REG_VAL_MASK = ((1 << XML_REG_VAL_BITS) - 1);
-var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
-var BYTE_MASK = 0xFF;
-var LONG_BYTES = 8;
-var LONG_BITS = 64;
-
-var bits_11 = 0x0000007FF;
-var bits_18 = 0x00003FFFF;
-var bits_32 = 0x0FFFFFFFF;
-
-
-
-//returns a string
-tagToString = function(/*long*/ tagVal)
-{
-  if (tagVal >= 0 && tagVal < NDNProtocolDTagsStrings.length) {
-    return NDNProtocolDTagsStrings[tagVal];
-  }
-  else if (tagVal == NDNProtocolDTags.NDNProtocolDataUnit) {
-    return NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT;
-  }
-
-  return null;
-};
-
-//returns a Long
-stringToTag =  function(/*String*/ tagName)
-{
-  // the slow way, but right now we don't care.... want a static lookup for the forward direction
-  for (var i=0; i < NDNProtocolDTagsStrings.length; ++i) {
-    if (null != NDNProtocolDTagsStrings[i] && NDNProtocolDTagsStrings[i] == tagName)
-      return i;
-  }
-  if (NDNProtocolDTags.NDNPROTOCOL_DATA_UNIT == tagName) {
-    return NDNProtocolDTags.NDNProtocolDataUnit;
-  }
-
-  return null;
-};
-
-/**
- * @constructor
- */
-var BinaryXMLDecoder = function BinaryXMLDecoder(input)
-{
-  var MARK_LEN=512;
-  var DEBUG_MAX_LEN =  32768;
-
-  this.input = input;
-  this.offset = 0;
-  // peekDTag sets and checks this, and readElementStartDTag uses it to avoid reading again.
-  this.previouslyPeekedDTagStartOffset = -1;
-};
-
-exports.BinaryXMLDecoder = BinaryXMLDecoder;
-
-/**
- * Decode the header from the input starting at its position, expecting the type to be DTAG and the value to be expectedTag.
-   * Update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- */
-BinaryXMLDecoder.prototype.readElementStartDTag = function(expectedTag)
-{
-  if (this.offset == this.previouslyPeekedDTagStartOffset) {
-    // peekDTag already decoded this DTag.
-    if (this.previouslyPeekedDTag != expectedTag)
-      throw new DecodingException(new Error("Did not get the expected DTAG " + expectedTag + ", got " + this.previouslyPeekedDTag));
-
-    // Fast forward past the header.
-    this.offset = this.previouslyPeekedDTagEndOffset;
-  }
-  else {
-    var typeAndValue = this.decodeTypeAndVal();
-    if (typeAndValue == null || typeAndValue.type() != XML_DTAG)
-      throw new DecodingException(new Error("Header type is not a DTAG"));
-
-    if (typeAndValue.val() != expectedTag)
-      throw new DecodingException(new Error("Expected start element: " + expectedTag + " got: " + typeAndValue.val()));
-  }
-};
-
-/**
- * @deprecated Use readElementStartDTag. Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readStartElement = function(
-    //String
-    startTag,
-    //TreeMap<String, String>
-    attributes)
-{
-  //TypeAndVal
-  var tv = this.decodeTypeAndVal();
-
-  if (null == tv)
-    throw new DecodingException(new Error("Expected start element: " + startTag + " got something not a tag."));
-
-  //String
-  var decodedTag = null;
-
-  if (tv.type() == XML_TAG) {
-    // Tag value represents length-1 as tags can never be empty.
-    var valval;
-
-    if (typeof tv.val() == 'string')
-      valval = (parseInt(tv.val())) + 1;
-    else
-      valval = (tv.val())+ 1;
-
-    decodedTag = this.decodeUString(valval);
-  }
-  else if (tv.type() == XML_DTAG)
-    decodedTag = tv.val();
-
-  if (null ==  decodedTag || decodedTag != startTag) {
-    console.log('expecting '+ startTag + ' but got '+ decodedTag);
-    throw new DecodingException(new Error("Expected start element: " + startTag + " got: " + decodedTag + "(" + tv.val() + ")"));
-  }
-
-  // DKS: does not read attributes out of stream if caller doesn't
-  // ask for them. Should possibly peek and skip over them regardless.
-  // TODO: fix this
-  if (null != attributes)
-    readAttributes(attributes);
-};
-
-/**
- * @deprecated Binary XML string tags and attributes are not used by any NDN encodings and support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readAttributes = function(
-  // array of [attributeName, attributeValue]
-  attributes)
-{
-  if (null == attributes)
-    return;
-
-  try {
-    // Now need to get attributes.
-    //TypeAndVal
-    var nextTV = this.peekTypeAndVal();
-
-    while (null != nextTV && (XML_ATTR == nextTV.type() || XML_DATTR == nextTV.type())) {
-      // Decode this attribute. First, really read the type and value.
-      //this.TypeAndVal
-      var thisTV = this.decodeTypeAndVal();
-
-      //String
-      var attributeName = null;
-      if (XML_ATTR == thisTV.type()) {
-        // Tag value represents length-1 as attribute names cannot be empty.
-        var valval ;
-        if (typeof thisTV.val() == 'string')
-          valval = (parseInt(thisTV.val())) + 1;
-        else
-          valval = (thisTV.val())+ 1;
-
-        attributeName = this.decodeUString(valval);
-      }
-      else if (XML_DATTR == thisTV.type()) {
-        // DKS TODO are attributes same or different dictionary?
-        attributeName = tagToString(thisTV.val());
-        if (null == attributeName)
-          throw new DecodingException(new Error("Unknown DATTR value" + thisTV.val()));
-      }
-
-      // Attribute values are always UDATA
-      //String
-      var attributeValue = this.decodeUString();
-
-      attributes.push([attributeName, attributeValue]);
-      nextTV = this.peekTypeAndVal();
-    }
-  }
-  catch (e) {
-    throw new DecodingException(new Error("readStartElement", e));
-  }
-};
-
-/**
- * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.peekStartElementAsString = function()
-{
-  //String
-  var decodedTag = null;
-  var previousOffset = this.offset;
-  try {
-    // Have to distinguish genuine errors from wrong tags. Could either use
-    // a special exception subtype, or redo the work here.
-    //this.TypeAndVal
-    var tv = this.decodeTypeAndVal();
-
-    if (null != tv) {
-      if (tv.type() == XML_TAG) {
-        // Tag value represents length-1 as tags can never be empty.
-        var valval ;
-        if (typeof tv.val() == 'string')
-          valval = (parseInt(tv.val())) + 1;
-        else
-          valval = (tv.val())+ 1;
-
-        decodedTag = this.decodeUString(valval);
-      }
-      else if (tv.type() == XML_DTAG)
-        decodedTag = tagToString(tv.val());
-    } // else, not a type and val, probably an end element. rewind and return false.
-  }
-  catch (e) {
-  }
-  finally {
-    try {
-      this.offset = previousOffset;
-    }
-    catch (e) {
-      Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-      throw new DecodingException(new Error("Cannot reset stream! " + e.getMessage(), e));
-    }
-  }
-
-  return decodedTag;
-};
-
-/**
- * Decode the header from the input starting at its position, and if it is a DTAG where the value is the expectedTag,
- * then set return true.  Do not update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- * @returns {boolean} True if the tag is the expected tag, otherwise false.
- */
-BinaryXMLDecoder.prototype.peekDTag = function(expectedTag)
-{
-  if (this.offset == this.previouslyPeekedDTagStartOffset)
-    // We already decoded this DTag.
-    return this.previouslyPeekedDTag == expectedTag;
-  else {
-    // First check if it is an element close (which cannot be the expected tag).
-    if (this.input[this.offset] == XML_CLOSE)
-      return false;
-
-    var saveOffset = this.offset;
-    var typeAndValue = this.decodeTypeAndVal();
-    // readElementStartDTag will use this to fast forward.
-    this.previouslyPeekedDTagEndOffset = this.offset;
-    // Restore the position.
-    this.offset = saveOffset;
-
-    if (typeAndValue != null && typeAndValue.type() == XML_DTAG) {
-      this.previouslyPeekedDTagStartOffset = saveOffset;
-      this.previouslyPeekedDTag = typeAndValue.val();
-
-      return typeAndValue.val() == expectedTag;
-    }
-    else
-      return false;
-  }
-};
-
-/**
- * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.peekStartElement = function(
-    //String
-    startTag)
-{
-  //String
-  if (typeof startTag == 'string') {
-    var decodedTag = this.peekStartElementAsString();
-
-    if (null !=  decodedTag && decodedTag == startTag)
-      return true;
-
-    return false;
-  }
-  else if (typeof startTag == 'number') {
-    var decodedTag = this.peekStartElementAsLong();
-    if (null !=  decodedTag && decodedTag == startTag)
-      return true;
-
-    return false;
-  }
-  else
-    throw new DecodingException(new Error("SHOULD BE STRING OR NUMBER"));
-};
-
-/**
- * @deprecated Use peekDTag.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.peekStartElementAsLong = function()
-{
-  //Long
-  var decodedTag = null;
-  var previousOffset = this.offset;
-
-  try {
-    // Have to distinguish genuine errors from wrong tags. Could either use
-    // a special exception subtype, or redo the work here.
-    //this.TypeAndVal
-    var tv = this.decodeTypeAndVal();
-
-    if (null != tv) {
-      if (tv.type() == XML_TAG) {
-        if (tv.val() + 1 > DEBUG_MAX_LEN)
-          throw new DecodingException(new Error("Decoding error: length " + tv.val()+1 + " longer than expected maximum length!"));
-
-        var valval;
-        if (typeof tv.val() == 'string')
-          valval = (parseInt(tv.val())) + 1;
-        else
-          valval = (tv.val())+ 1;
-
-        // Tag value represents length-1 as tags can never be empty.
-        //String
-        var strTag = this.decodeUString(valval);
-
-        decodedTag = stringToTag(strTag);
-      }
-      else if (tv.type() == XML_DTAG)
-        decodedTag = tv.val();
-    } // else, not a type and val, probably an end element. rewind and return false.
-
-  }
-  catch (e) {
-  }
-  finally {
-    try {
-      //this.input.reset();
-      this.offset = previousOffset;
-    } catch (e) {
-      Log.logStackTrace(Log.FAC_ENCODING, Level.WARNING, e);
-      throw new Error("Cannot reset stream! " + e.getMessage(), e);
-    }
-  }
-
-  return decodedTag;
-};
-
-/**
- * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
- * Then read one item of any type (presumably BLOB, UDATA, TAG or ATTR) and return a
- * Buffer. However, if allowNull is true, then the item may be absent.
- * Finally, read the element close.  Update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- * @param {boolean} allowNull True if the binary item may be missing.
- * @returns {Buffer} A Buffer which is a slice on the data inside the input buffer. However,
- * if allowNull is true and the binary data item is absent, then return null.
- */
-BinaryXMLDecoder.prototype.readBinaryDTagElement = function(expectedTag, allowNull)
-{
-  this.readElementStartDTag(expectedTag);
-  return this.readBlob(allowNull);
-};
-
-/**
- * @deprecated Use readBinaryDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readBinaryElement = function(
-    //long
-    startTag,
-    //TreeMap<String, String>
-    attributes,
-    //boolean
-    allowNull)
-{
-  this.readStartElement(startTag, attributes);
-  return this.readBlob(allowNull);
-};
-
-/**
- * Read one byte from the input starting at its offset, expecting it to be the element close.
- * Update the input's offset.
- */
-BinaryXMLDecoder.prototype.readElementClose = function()
-{
-  var next = this.input[this.offset++];
-  if (next != XML_CLOSE)
-    throw new DecodingException(new Error("Expected end element, got: " + next));
-};
-
-/**
- * @deprecated Use readElementClose.
- */
-BinaryXMLDecoder.prototype.readEndElement = function()
-{
-  if (LOG > 4) console.log('this.offset is '+this.offset);
-
-  var next = this.input[this.offset];
-
-  this.offset++;
-
-  if (LOG > 4) console.log('XML_CLOSE IS '+XML_CLOSE);
-  if (LOG > 4) console.log('next is '+next);
-
-  if (next != XML_CLOSE) {
-    console.log("Expected end element, got: " + next);
-    throw new DecodingException(new Error("Expected end element, got: " + next));
-  }
-};
-
-//String
-BinaryXMLDecoder.prototype.readUString = function()
-{
-  //String
-  var ustring = this.decodeUString();
-  this.readElementClose();
-  return ustring;
-};
-
-/**
- * Read a blob as well as the end element. Returns a Buffer (or null for missing blob).
- * If the blob is missing and allowNull is false (default), throw an exception.  Otherwise,
- *   just read the end element and return null.
- */
-BinaryXMLDecoder.prototype.readBlob = function(allowNull)
-{
-  if (this.input[this.offset] == XML_CLOSE && allowNull) {
-    this.readElementClose();
-    return null;
-  }
-
-  var blob = this.decodeBlob();
-  this.readElementClose();
-  return blob;
-};
-
-/**
- * Decode the header from the input starting at its offset, expecting the type to be
- * DTAG and the value to be expectedTag.  Then read one item, parse it as an unsigned
- * big endian integer in 4096 ticks per second, and convert it to and NDNTime object.
- * Finally, read the element close.  Update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- * @returns {NDNTime} The dateTime value.
- */
-BinaryXMLDecoder.prototype.readDateTimeDTagElement = function(expectedTag)
-{
-  var byteTimestamp = this.readBinaryDTagElement(expectedTag);
-  byteTimestamp = DataUtils.toHex(byteTimestamp);
-  byteTimestamp = parseInt(byteTimestamp, 16);
-
-  var lontimestamp = (byteTimestamp/ 4096) * 1000;
-
-  var timestamp = new NDNTime(lontimestamp);
-  if (null == timestamp)
-    throw new DecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
-
-  return timestamp;
-};
-
-/**
- * @deprecated Use readDateTimeDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readDateTime = function(
-  //long
-  startTag)
-{
-  var byteTimestamp = this.readBinaryElement(startTag);
-  byteTimestamp = DataUtils.toHex(byteTimestamp);
-  byteTimestamp = parseInt(byteTimestamp, 16);
-
-  var lontimestamp = (byteTimestamp/ 4096) * 1000;
-
-  if (LOG > 4) console.log('DECODED DATE WITH VALUE');
-  if (LOG > 4) console.log(lontimestamp);
-
-  //NDNTime
-  var timestamp = new NDNTime(lontimestamp);
-  if (null == timestamp)
-    throw new DecodingException(new Error("Cannot parse timestamp: " + DataUtils.printHexBytes(byteTimestamp)));
-
-  return timestamp;
-};
-
-BinaryXMLDecoder.prototype.decodeTypeAndVal = function()
-{
-
-  /*int*/ var type = -1;
-  /*long*/ var val = 0;
-  /*boolean*/ var more = true;
-
-  do {
-    var next = this.input[this.offset ];
-    if (next == null)
-      // Quit the loop.
-      return null;
-
-    if (next < 0)
-      return null;
-
-    if (0 == next && 0 == val)
-      return null;
-
-    more = (0 == (next & XML_TT_NO_MORE));
-
-    if  (more) {
-      val = val << XML_REG_VAL_BITS;
-      val |= (next & XML_REG_VAL_MASK);
-    }
-    else {
-      type = next & XML_TT_MASK;
-      val = val << XML_TT_VAL_BITS;
-      val |= ((next >>> XML_TT_BITS) & XML_TT_VAL_MASK);
-    }
-
-    this.offset++;
-  } while (more);
-
-  if (LOG > 4) console.log('TYPE is '+ type + ' VAL is '+ val);
-
-  return new TypeAndVal(type, val);
-};
-
-//TypeAndVal
-BinaryXMLDecoder.prototype.peekTypeAndVal = function()
-{
-  //TypeAndVal
-  var tv = null;
-  var previousOffset = this.offset;
-
-  try {
-    tv = this.decodeTypeAndVal();
-  }
-  finally {
-    this.offset = previousOffset;
-  }
-
-  return tv;
-};
-
-//Buffer
-BinaryXMLDecoder.prototype.decodeBlob = function(
-    //int
-    blobLength)
-{
-  if (null == blobLength) {
-    //TypeAndVal
-    var tv = this.decodeTypeAndVal();
-
-    var valval ;
-    if (typeof tv.val() == 'string')
-      valval = (parseInt(tv.val()));
-    else
-      valval = (tv.val());
-
-    return this.decodeBlob(valval);
-  }
-
-  //Buffer
-  var bytes = new Buffer(this.input.slice(this.offset, this.offset+ blobLength));
-  this.offset += blobLength;
-
-  return bytes;
-};
-
-//String
-BinaryXMLDecoder.prototype.decodeUString = function(
-    //int
-    byteLength)
-{
-  if (null == byteLength) {
-    var tempStreamPosition = this.offset;
-
-    //TypeAndVal
-    var tv = this.decodeTypeAndVal();
-
-    if (LOG > 4) console.log('TV is '+tv);
-    if (LOG > 4) console.log(tv);
-
-    if (LOG > 4) console.log('Type of TV is '+typeof tv);
-
-    // if we just have closers left, will get back null
-    if (null == tv || XML_UDATA != tv.type()) {
-      this.offset = tempStreamPosition;
-      return "";
-    }
-
-    return this.decodeUString(tv.val());
-  }
-  else {
-    //Buffer
-    var stringBytes = this.decodeBlob(byteLength);
-
-    // TODO: Should this parse as UTF8?
-    return DataUtils.toString(stringBytes);
-  }
-};
-
-//OBject containg a pair of type and value
-var TypeAndVal = function TypeAndVal(_type,_val)
-{
-  this.t = _type;
-  this.v = _val;
-};
-
-TypeAndVal.prototype.type = function()
-{
-  return this.t;
-};
-
-TypeAndVal.prototype.val = function()
-{
-  return this.v;
-};
-
-/**
- * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
- * Then read one UDATA item, parse it as a decimal integer and return the integer. Finally, read the element close.  Update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- * @returns {number} The parsed integer.
- */
-BinaryXMLDecoder.prototype.readIntegerDTagElement = function(expectedTag)
-{
-  return parseInt(this.readUTF8DTagElement(expectedTag));
-};
-
-/**
- * @deprecated Use readIntegerDTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readIntegerElement = function(
-  //String
-  startTag)
-{
-  //String
-  if (LOG > 4) console.log('READING INTEGER '+ startTag);
-  if (LOG > 4) console.log('TYPE OF '+ typeof startTag);
-
-  var strVal = this.readUTF8Element(startTag);
-
-  return parseInt(strVal);
-};
-
-/**
- * Decode the header from the input starting its offset, expecting the type to be DTAG and the value to be expectedTag.
- * Then read one UDATA item and return a string. Finally, read the element close.  Update the input's offset.
- * @param {number} expectedTag The expected value for DTAG.
- * @returns {string} The UDATA string.
- */
-BinaryXMLDecoder.prototype.readUTF8DTagElement = function(expectedTag)
-{
-  this.readElementStartDTag(expectedTag);
-  return this.readUString();;
-};
-
-/**
- * @deprecated Use readUTF8DTagElement.  Binary XML string tags and attributes are not used by any NDN encodings and
- * support is not maintained in the code base.
- */
-BinaryXMLDecoder.prototype.readUTF8Element = function(
-    //String
-    startTag,
-    //TreeMap<String, String>
-    attributes)
-{
-  //throws Error where name == "DecodingException"
-
-  // can't use getElementText, can't get attributes
-  this.readStartElement(startTag, attributes);
-  //String
-  var strElementText = this.readUString();
-  return strElementText;
-};
-
-/**
- * Set the offset into the input, used for the next read.
- * @param {number} offset The new offset.
- */
-BinaryXMLDecoder.prototype.seek = function(offset)
-{
-  this.offset = offset;
-};
-/**
- * This class uses BinaryXMLDecoder to follow the structure of a ndnb binary element to
- * determine its end.
- *
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
-var DynamicBuffer = require('../util/dynamic-buffer.js').DynamicBuffer;
-
-var XML_EXT = 0x00;
-var XML_TAG = 0x01;
-var XML_DTAG = 0x02;
-var XML_ATTR = 0x03;
-var XML_DATTR = 0x04;
-var XML_BLOB = 0x05;
-var XML_UDATA = 0x06;
-var XML_CLOSE = 0x0;
-
-var XML_SUBTYPE_PROCESSING_INSTRUCTIONS = 16;
-
-var XML_TT_BITS = 3;
-var XML_TT_MASK = ((1 << XML_TT_BITS) - 1);
-var XML_TT_VAL_BITS = XML_TT_BITS + 1;
-var XML_TT_VAL_MASK = ((1 << (XML_TT_VAL_BITS)) - 1);
-var XML_REG_VAL_BITS = 7;
-var XML_REG_VAL_MASK = ((1 << XML_REG_VAL_BITS) - 1);
-var XML_TT_NO_MORE = (1 << XML_REG_VAL_BITS); // 0x80
-
-/**
- * @constructor
- */
-var BinaryXMLStructureDecoder = function BinaryXMLDecoder()
-{
-  this.gotElementEnd = false;
-  this.offset = 0;
-  this.level = 0;
-  this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
-  this.headerLength = 0;
-  this.useHeaderBuffer = false;
-  this.headerBuffer = new DynamicBuffer(5);
-  this.nBytesToRead = 0;
-};
-
-exports.BinaryXMLStructureDecoder = BinaryXMLStructureDecoder;
-
-BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE = 0;
-BinaryXMLStructureDecoder.READ_BYTES = 1;
-
-/**
- * Continue scanning input starting from this.offset.  If found the end of the element
- *   which started at offset 0 then return true, else false.
- * If this returns false, you should read more into input and call again.
- * You have to pass in input each time because the array could be reallocated.
- * This throws an exception for badly formed ndnb.
- */
-BinaryXMLStructureDecoder.prototype.findElementEnd = function(
-  // Buffer
-  input)
-{
-  if (this.gotElementEnd)
-    // Someone is calling when we already got the end.
-    return true;
-
-  var decoder = new BinaryXMLDecoder(input);
-
-  while (true) {
-    if (this.offset >= input.length)
-      // All the cases assume we have some input.
-      return false;
-
-    switch (this.state) {
-      case BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE:
-        // First check for XML_CLOSE.
-        if (this.headerLength == 0 && input[this.offset] == XML_CLOSE) {
-          ++this.offset;
-          // Close the level.
-          --this.level;
-          if (this.level == 0) {
-            // Finished.
-            this.gotElementEnd = true;
-            return true;
-          }
-          if (this.level < 0)
-            throw new Error("BinaryXMLStructureDecoder: Unexpected close tag at offset " + (this.offset - 1));
-
-          // Get ready for the next header.
-          this.startHeader();
-          break;
-        }
-
-        var startingHeaderLength = this.headerLength;
-        while (true) {
-          if (this.offset >= input.length) {
-            // We can't get all of the header bytes from this input. Save in headerBuffer.
-            this.useHeaderBuffer = true;
-            var nNewBytes = this.headerLength - startingHeaderLength;
-            this.headerBuffer.copy(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
-
-            return false;
-          }
-          var headerByte = input[this.offset++];
-          ++this.headerLength;
-          if (headerByte & XML_TT_NO_MORE)
-            // Break and read the header.
-            break;
-        }
-
-        var typeAndVal;
-        if (this.useHeaderBuffer) {
-          // Copy the remaining bytes into headerBuffer.
-          nNewBytes = this.headerLength - startingHeaderLength;
-          this.headerBuffer.copy(input.slice(this.offset - nNewBytes, nNewBytes), startingHeaderLength);
-
-          typeAndVal = new BinaryXMLDecoder(this.headerBuffer.array).decodeTypeAndVal();
-        }
-        else {
-          // We didn't have to use the headerBuffer.
-          decoder.seek(this.offset - this.headerLength);
-          typeAndVal = decoder.decodeTypeAndVal();
-        }
-
-        if (typeAndVal == null)
-          throw new Error("BinaryXMLStructureDecoder: Can't read header starting at offset " +
-                          (this.offset - this.headerLength));
-
-        // Set the next state based on the type.
-        var type = typeAndVal.t;
-        if (type == XML_DATTR)
-          // We already consumed the item. READ_HEADER_OR_CLOSE again.
-          // ndnb has rules about what must follow an attribute, but we are just scanning.
-          this.startHeader();
-        else if (type == XML_DTAG || type == XML_EXT) {
-          // Start a new level and READ_HEADER_OR_CLOSE again.
-          ++this.level;
-          this.startHeader();
-        }
-        else if (type == XML_TAG || type == XML_ATTR) {
-          if (type == XML_TAG)
-            // Start a new level and read the tag.
-            ++this.level;
-          // Minimum tag or attribute length is 1.
-          this.nBytesToRead = typeAndVal.v + 1;
-          this.state = BinaryXMLStructureDecoder.READ_BYTES;
-          // ndnb has rules about what must follow an attribute, but we are just scanning.
-        }
-        else if (type == XML_BLOB || type == XML_UDATA) {
-          this.nBytesToRead = typeAndVal.v;
-          this.state = BinaryXMLStructureDecoder.READ_BYTES;
-        }
-        else
-          throw new Error("BinaryXMLStructureDecoder: Unrecognized header type " + type);
-        break;
-
-      case BinaryXMLStructureDecoder.READ_BYTES:
-        var nRemainingBytes = input.length - this.offset;
-        if (nRemainingBytes < this.nBytesToRead) {
-          // Need more.
-          this.offset += nRemainingBytes;
-          this.nBytesToRead -= nRemainingBytes;
-          return false;
-        }
-        // Got the bytes.  Read a new header or close.
-        this.offset += this.nBytesToRead;
-        this.startHeader();
-        break;
-
-      default:
-        // We don't expect this to happen.
-        throw new Error("BinaryXMLStructureDecoder: Unrecognized state " + this.state);
-    }
-  }
-};
-
-/**
- * Set the state to READ_HEADER_OR_CLOSE and set up to start reading the header
- */
-BinaryXMLStructureDecoder.prototype.startHeader = function()
-{
-  this.headerLength = 0;
-  this.useHeaderBuffer = false;
-  this.state = BinaryXMLStructureDecoder.READ_HEADER_OR_CLOSE;
-};
-
-/**
- *  Set the offset into the input, used for the next read.
- */
-BinaryXMLStructureDecoder.prototype.seek = function(offset)
-{
-  this.offset = offset;
-};
-/**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -9076,7 +7419,7 @@ Tlv.Name =             7;
 Tlv.NameComponent =    8;
 Tlv.Selectors =        9;
 Tlv.Nonce =            10;
-Tlv.Scope =            11;
+// <Unassigned> =      11;
 Tlv.InterestLifetime = 12;
 Tlv.MinSuffixComponents = 13;
 Tlv.MaxSuffixComponents = 14;
@@ -10269,13 +8612,6 @@ var WireFormat = function WireFormat() {
 
 exports.WireFormat = WireFormat;
 
-/** NDNx support and binary XML (ccnb or ndnb) encoding is deprecated and code
- * with throw an exception. To enable support while you upgrade your code to
- * use NFD, set WireFormat.ENABLE_NDNX = true . NDNx support will be
- * completely removed in an upcoming release.
- */
-WireFormat.ENABLE_NDNX = false;
-
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
@@ -10481,7 +8817,6 @@ var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
-var BinaryXMLStructureDecoder = require('./binary-xml-structure-decoder.js').BinaryXMLStructureDecoder;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
 var DecodingException = require('./decoding-exception.js').DecodingException;
@@ -10490,10 +8825,9 @@ var LOG = require('../log.js').Log.LOG;
 
 /**
  * A ElementReader lets you call onReceivedData multiple times which uses a
- * BinaryXMLStructureDecoder or TlvStructureDecoder to detect the end of a
- * binary XML or TLV element and calls elementListener.onReceivedElement(element)
- * with the element.  This handles the case where a single call to
- * onReceivedData may contain multiple elements.
+ * TlvStructureDecoder to detect the end of a TLV element and calls 
+ * elementListener.onReceivedElement(element) with the element.  This handles
+ * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
  * @param {{onReceivedElement:function}} elementListener
  */
@@ -10501,9 +8835,7 @@ var ElementReader = function ElementReader(elementListener)
 {
   this.elementListener = elementListener;
   this.dataParts = [];
-  this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
   this.tlvStructureDecoder = new TlvStructureDecoder();
-  this.useTlv = null;
 };
 
 exports.ElementReader = ElementReader;
@@ -10517,37 +8849,19 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 
     try {
       if (this.dataParts.length == 0) {
-        // This is the beginning of an element.  Check whether it is binaryXML or TLV.
+        // This is the beginning of an element.
         if (data.length <= 0)
           // Wait for more data.
           return;
-
-        // The type codes for TLV Interest and Data packets are chosen to not
-        //   conflict with the first byte of a binary XML packet, so we can
-        //   just look at the first byte.
-        if (data[0] == Tlv.Interest || data[0] == Tlv.Data || data[0] == 80 || data[0] == 100)
-          this.useTlv = true;
-        else
-          // Binary XML.
-          this.useTlv = false;
       }
 
-      if (this.useTlv) {
-        // Scan the input to check if a whole TLV object has been read.
-        this.tlvStructureDecoder.seek(0);
-        gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
-        offset = this.tlvStructureDecoder.getOffset();
-      }
-      else {
-        // Scan the input to check if a whole Binary XML object has been read.
-        this.binaryXmlStructureDecoder.seek(0);
-        gotElementEnd = this.binaryXmlStructureDecoder.findElementEnd(data);
-        offset = this.binaryXmlStructureDecoder.offset;
-      }
+      // Scan the input to check if a whole TLV object has been read.
+      this.tlvStructureDecoder.seek(0);
+      gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
+      offset = this.tlvStructureDecoder.getOffset();
     } catch (ex) {
       // Reset to read a new element on the next call.
       this.dataParts = [];
-      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
       this.tlvStructureDecoder = new TlvStructureDecoder();
 
       throw ex;
@@ -10562,7 +8876,6 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       // Reset to read a new object. Do this before calling onReceivedElement
       // in case it throws an exception.
       data = data.slice(offset, data.length);
-      this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
       this.tlvStructureDecoder = new TlvStructureDecoder();
 
       this.elementListener.onReceivedElement(element);
@@ -10580,7 +8893,6 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
       if (totalLength > NdnCommon.MAX_NDN_PACKET_SIZE) {
         // Reset to read a new element on the next call.
         this.dataParts = [];
-        this.binaryXmlStructureDecoder = new BinaryXMLStructureDecoder();
         this.tlvStructureDecoder = new TlvStructureDecoder();
 
         throw new DecodingException(new Error
@@ -11892,157 +10204,6 @@ BoostInfoParser.prototype.parseLine = function(line, context)
   throw runtime_error("BoostInfoParser: input line is malformed");
 };
 /**
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var DataUtils = require('../encoding/data-utils.js').DataUtils;
-var BinaryXMLDecoder = require('../encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Name = require('../name.js').Name;
-
-/**
- * Create a context for getting the response from the name enumeration command, as needed by getComponents.
- * (To do name enumeration, call the static method NameEnumeration.getComponents.)
- * @param {Face} face The Face object for using expressInterest.
- * @param {function} onComponents The onComponents callback given to getComponents.
- */
-var NameEnumeration = function NameEnumeration(face, onComponents)
-{
-  this.face = face;
-  this.onComponents = onComponents;
-  this.contentParts = [];
-
-  var self = this;
-  this.onData = function(interest, data) { self.processData(data); };
-  this.onTimeout = function(interest) { self.processTimeout(); };
-};
-
-exports.NameEnumeration = NameEnumeration;
-
-/**
- * Use the name enumeration protocol to get the child components of the name prefix.
- * @param {Face} face The Face object for using expressInterest.
- * @param {Name} name The name prefix for finding the child components.
- * @param {function} onComponents On getting the response, this calls onComponents(components) where
- * components is an array of Buffer name components.  If there is no response, this calls onComponents(null).
- */
-NameEnumeration.getComponents = function(face, prefix, onComponents)
-{
-  var command = new Name(prefix);
-  // Add %C1.E.be
-  command.add([0xc1, 0x2e, 0x45, 0x2e, 0x62, 0x65])
-
-  var enumeration = new NameEnumeration(face, onComponents);
-  face.expressInterest(command, enumeration.onData, enumeration.onTimeout);
-};
-
-/**
- * Parse the response from the name enumeration command and call this.onComponents.
- * @param {Data} data
- */
-NameEnumeration.prototype.processData = function(data)
-{
-  try {
-    if (!NameEnumeration.endsWithSegmentNumber(data.getName()))
-      // We don't expect a name without a segment number.  Treat it as a bad packet.
-      this.onComponents(null);
-    else {
-      var segmentNumber = data.getName().get(-1).toSegment();
-
-      // Each time we get a segment, we put it in contentParts, so its length follows the segment numbers.
-      var expectedSegmentNumber = this.contentParts.length;
-      if (segmentNumber != expectedSegmentNumber)
-        // Try again to get the expected segment.  This also includes the case where the first segment is not segment 0.
-        this.face.expressInterest
-          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber), this.onData, this.onTimeout);
-      else {
-        // Save the content and check if we are finished.
-        this.contentParts.push(data.getContent().buf());
-
-        if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-          var finalSegmentNumber = data.getMetaInfo().getFinalBlockId().toSegment();
-          if (segmentNumber == finalSegmentNumber) {
-            // We are finished.  Parse and return the result.
-            this.onComponents(NameEnumeration.parseComponents(Buffer.concat(this.contentParts)));
-            return;
-          }
-        }
-
-        // Fetch the next segment.
-        this.face.expressInterest
-          (data.getName().getPrefix(-1).appendSegment(expectedSegmentNumber + 1), this.onData, this.onTimeout);
-      }
-    }
-  } catch (ex) {
-    console.log("NameEnumeration: ignoring exception: " + ex);
-  }
-};
-
-/**
- * Just call onComponents(null).
- */
-NameEnumeration.prototype.processTimeout = function()
-{
-  try {
-    this.onComponents(null);
-  } catch (ex) {
-    console.log("NameEnumeration: ignoring exception: " + ex);
-  }
-};
-
-/**
- * Parse the content as a name enumeration response and return an array of components.  This makes a copy of the component.
- * @param {Buffer} content The content to parse.
- * @returns {Array<Buffer>} The array of components.
- */
-NameEnumeration.parseComponents = function(content)
-{
-  var components = [];
-  var decoder = new BinaryXMLDecoder(content);
-
-  decoder.readElementStartDTag(NDNProtocolDTags.Collection);
-
-  while (decoder.peekDTag(NDNProtocolDTags.Link)) {
-    decoder.readElementStartDTag(NDNProtocolDTags.Link);
-    decoder.readElementStartDTag(NDNProtocolDTags.Name);
-
-    components.push(new Buffer(decoder.readBinaryDTagElement(NDNProtocolDTags.Component)));
-
-    decoder.readElementClose();
-    decoder.readElementClose();
-  }
-
-  decoder.readElementClose();
-  return components;
-};
-
-/**
- * Check if the last component in the name is a segment number.
- * TODO: Move to Name class.
- * @param {Name} name
- * @returns {Boolean} True if the name ends with a segment number, otherwise false.
- */
-NameEnumeration.endsWithSegmentNumber = function(name) {
-  return name.size() >= 1 &&
-         name.get(-1).getValue().size() >= 1 &&
-         name.get(-1).getValue().buf()[0] == 0;
-};
-/**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -13010,7 +11171,7 @@ WebSocketTransport.prototype.connect = function
       if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
 
       try {
-        // Find the end of the binary XML element and call onReceivedElement.
+        // Find the end of the element and call onReceivedElement.
         self.elementReader.onReceivedData(bytearray);
       } catch (ex) {
         console.log("NDN.ws.onmessage exception: " + ex);
@@ -13106,306 +11267,6 @@ WebSocketTransport.prototype.close = function()
 // The Face constructor uses TcpTransport by default which is not available in the browser, so override to WebSocketTransport.
 exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTransport;
 /**
- * Provide the callback closure for the async communication methods in the Face class.
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * This is a port of Closure.py from PyNDN, written by:
- * Derek Kulinski <takeda@takeda.tk>
- * Jeff Burke <jburke@ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-/**
- * A subclass of Closure is passed to expressInterest and registerPrefix.
- * @deprecated You should use the forms of expressInterest and registerPrefix which use callbacks instead of Closure.
- * @constructor
- */
-var Closure = function Closure()
-{
-  // I don't think storing Face's closure is needed
-  // and it creates a reference loop, as of now both
-  // of those variables are never set -- Derek
-  //
-  // Use instance variables to return data to callback
-  this.ndn_data = null;  // this holds the ndn_closure
-  this.ndn_data_dirty = false;
-};
-
-exports.Closure = Closure;
-
-// Upcall result
-Closure.RESULT_ERR               = -1; // upcall detected an error
-Closure.RESULT_OK                =  0; // normal upcall return
-Closure.RESULT_REEXPRESS         =  1; // reexpress the same interest again
-Closure.RESULT_INTEREST_CONSUMED =  2; // upcall claims to consume interest
-Closure.RESULT_VERIFY            =  3; // force an unverified result to be verified
-Closure.RESULT_FETCHKEY          =  4; // get the key in the key locator and re-call the interest
-                                       //   with the key available in the local storage
-
-// Upcall kind
-Closure.UPCALL_FINAL              = 0; // handler is about to be deregistered
-Closure.UPCALL_INTEREST           = 1; // incoming interest
-Closure.UPCALL_CONSUMED_INTEREST  = 2; // incoming interest, someone has answered
-Closure.UPCALL_CONTENT            = 3; // incoming verified content
-Closure.UPCALL_INTEREST_TIMED_OUT = 4; // interest timed out
-Closure.UPCALL_CONTENT_UNVERIFIED = 5; // content that has not been verified
-Closure.UPCALL_CONTENT_BAD        = 6; // verification failed
-
-/**
- * Override this in your subclass.
- * If you're getting strange errors in upcall()
- * check your code whether you're returning a value.
- */
-Closure.prototype.upcall = function(kind, upcallInfo)
-{
-  //dump('upcall ' + this + " " + kind + " " + upcallInfo + "\n");
-  return Closure.RESULT_OK;
-};
-
-/**
- * An UpcallInfo is passed to Closure.upcall.
- * @constructor
- */
-var UpcallInfo = function UpcallInfo(face, interest, matchedComps, data)
-{
-  this.face = face;  // Face object (not used)
-  this.ndn = face;   // deprecated
-  this.interest = interest;  // Interest object
-  this.matchedComps = matchedComps;  // int
-  this.data = data;  // Data
-  this.contentObject = data; // deprecated.  Include for backward compatibility.
-};
-
-UpcallInfo.prototype.toString = function()
-{
-  var ret = "face = " + this.face;
-  ret += "\nInterest = " + this.interest;
-  ret += "\nmatchedComps = " + this.matchedComps;
-  ret += "\nData: " + this.data;
-  return ret;
-};
-
-exports.UpcallInfo = UpcallInfo;
-/**
- * This class represents PublisherPublicKeyDigest Objects
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var LOG = require('./log.js').Log.LOG;
-
-/**
- * @deprecated This is only used for NDNx support which is deprecated.
- */
-var PublisherPublicKeyDigest = function PublisherPublicKeyDigest(pkd)
-{
-  this.PUBLISHER_ID_LEN = 512/8;
-  this.publisherPublicKeyDigest = pkd;
-
-  this.changeCount = 0;
-};
-
-exports.PublisherPublicKeyDigest = PublisherPublicKeyDigest;
-
-PublisherPublicKeyDigest.prototype.from_ndnb = function(decoder)
-{
-  this.publisherPublicKeyDigest = decoder.readBinaryDTagElement(this.getElementLabel());
-
-  if (LOG > 4) console.log('Publisher public key digest is ' + this.publisherPublicKeyDigest);
-
-  if (null == this.publisherPublicKeyDigest)
-    throw new Error("Cannot parse publisher key digest.");
-
-  //TODO check if the length of the PublisherPublicKeyDigest is correct (Security reason)
-
-  if (this.publisherPublicKeyDigest.length != this.PUBLISHER_ID_LEN) {
-    if (LOG > 0)
-      console.log('LENGTH OF PUBLISHER ID IS WRONG! Expected ' + this.PUBLISHER_ID_LEN + ", got " + this.publisherPublicKeyDigest.length);
-
-    //this.publisherPublicKeyDigest = new PublisherPublicKeyDigest(this.PublisherPublicKeyDigest).PublisherKeyDigest;
-  }
-  ++this.changeCount;
-};
-
-PublisherPublicKeyDigest.prototype.to_ndnb= function(encoder)
-{
-  //TODO Check that the ByteArray for the key is present
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-
-  if (LOG > 3) console.log('PUBLISHER KEY DIGEST IS'+this.publisherPublicKeyDigest);
-  encoder.writeDTagElement(this.getElementLabel(), this.publisherPublicKeyDigest);
-};
-
-PublisherPublicKeyDigest.prototype.getElementLabel = function() { return NDNProtocolDTags.PublisherPublicKeyDigest; };
-
-PublisherPublicKeyDigest.prototype.validate = function()
-{
-    return null != this.publisherPublicKeyDigest;
-};
-
-/**
- * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
- */
-PublisherPublicKeyDigest.prototype.getChangeCount = function()
-{
-  return this.changeCount;
-};
-/**
- * This class represents Publisher and PublisherType Objects
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var NDNProtocolDTagsStrings = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTagsStrings;
-var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
-
-/**
- * @constructor
- */
-var PublisherType = function PublisherType(tag)
-{
-  this.KEY = NDNProtocolDTags.PublisherPublicKeyDigest;
-  this.CERTIFICATE = NDNProtocolDTags.PublisherCertificateDigest;
-  this.ISSUER_KEY = NDNProtocolDTags.PublisherIssuerKeyDigest;
-  this.ISSUER_CERTIFICATE = NDNProtocolDTags.PublisherIssuerCertificateDigest;
-
-  this.Tag = tag;
-};
-
-/**
- * @deprecated Use KeyLocator getKeyData and setKeyData.
- */
-var PublisherID = function PublisherID()
-{
-  this.PUBLISHER_ID_DIGEST_ALGORITHM = "SHA-256";
-  this.PUBLISHER_ID_LEN = 256/8;
-
-  //TODO, implement publisherID creation and key creation
-
-  //TODO implement generatePublicKeyDigest
-  this.publisherID =null;//= generatePublicKeyDigest(key);//ByteArray
-
-  //TODO implement generate key
-  //CryptoUtil.generateKeyID(PUBLISHER_ID_DIGEST_ALGORITHM, key);
-  this.publisherType = null;//isIssuer ? PublisherType.ISSUER_KEY : PublisherType.KEY;//publisher Type
-
-  this.changeCount = 0;
-};
-
-exports.PublisherID = PublisherID;
-
-PublisherID.prototype.from_ndnb = function(decoder)
-{
-  // We have a choice here of one of 4 binary element types.
-  var nextTag = PublisherID.peekAndGetNextDTag(decoder);
-
-  this.publisherType = new PublisherType(nextTag);
-
-  if (nextTag < 0)
-    throw new Error("Invalid publisher ID, got unexpected type");
-
-  this.publisherID = decoder.readBinaryDTagElement(nextTag);
-  if (null == this.publisherID)
-    throw new DecodingException(new Error("Cannot parse publisher ID of type : " + nextTag + "."));
-  ++this.changeCount;
-};
-
-PublisherID.prototype.to_ndnb = function(encoder)
-{
-  if (!this.validate())
-    throw new Error("Cannot encode " + this.getClass().getName() + ": field values missing.");
-
-  encoder.writeDTagElement(this.getElementLabel(), this.publisherID);
-};
-
-/**
- * Peek the next DTag in the decoder and return it if it is a PublisherID DTag.
- * @param {BinaryXMLDecoder} decoder The BinaryXMLDecoder with the input to decode.
- * @returns {number} The PublisherID DTag or -1 if it is not one of them.
- */
-PublisherID.peekAndGetNextDTag = function(decoder)
-{
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest))
-    return             NDNProtocolDTags.PublisherPublicKeyDigest;
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherCertificateDigest))
-    return             NDNProtocolDTags.PublisherCertificateDigest;
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerKeyDigest))
-    return             NDNProtocolDTags.PublisherIssuerKeyDigest;
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherIssuerCertificateDigest))
-    return             NDNProtocolDTags.PublisherIssuerCertificateDigest;
-
-  return -1;
-};
-
-PublisherID.peek = function(/* XMLDecoder */ decoder)
-{
-  return PublisherID.peekAndGetNextDTag(decoder) >= 0;
-};
-
-PublisherID.prototype.getElementLabel = function()
-{
-  return this.publisherType.Tag;
-};
-
-PublisherID.prototype.validate = function()
-{
-  return null != id() && null != type();
-};
-
-/**
- * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
- */
-PublisherID.prototype.getChangeCount = function()
-{
-  return this.changeCount;
-};
-/**
  * This class represents a Name as an array of components where each is a byte array.
  * Copyright (C) 2013-2015 Regents of the University of California.
  * @author: Meki Cheraoui, Jeff Thompson <jefft0@remap.ucla.edu>
@@ -13427,9 +11288,6 @@ PublisherID.prototype.getChangeCount = function()
 
 var Blob = require('./util/blob.js').Blob;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -13759,73 +11617,6 @@ Name.prototype.set = function(uri)
 {
   this.components = Name.createNameArray(uri);
   ++this.changeCount;
-};
-
-Name.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = decoder.offset;
-  // In case there are no components, set signedPortionEndOffset arbitrarily.
-  var signedPortionEndOffset = signedPortionBeginOffset;
-
-  this.components = [];
-
-  while (decoder.peekDTag(NDNProtocolDTags.Component)) {
-    signedPortionEndOffset = decoder.offset;
-    this.append(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
-  }
-
-  decoder.readElementClose();
-  ++this.changeCount;
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-
-/**
- * Encode this name to the encoder.
- * @param {BinaryXMLEncoder} encoder The encoder to receive the encoding.
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion. The signed portion starts from the first
- * name component and ends just before the final name component (which is
- * assumed to be a signature for a signed interest).
- */
-Name.prototype.to_ndnb = function(encoder)
-{
-  if (this.components == null)
-    throw new Error("CANNOT ENCODE EMPTY CONTENT NAME");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-  var signedPortionBeginOffset = encoder.offset;
-  var signedPortionEndOffset;
-
-  var count = this.size();
-  if (count == 0)
-    // There is no "final component", so set signedPortionEndOffset arbitrarily.
-    signedPortionEndOffset = signedPortionBeginOffset;
-  else {
-    for (var i = 0; i < count; i++) {
-      if (i == count - 1)
-        // We will begin the final component.
-        signedPortionEndOffset = encoder.offset;
-
-      encoder.writeDTagElement
-        (NDNProtocolDTags.Component, this.components[i].getValue().buf());
-    }
-  }
-
-  encoder.writeElementClose();
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-
-Name.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.Name;
 };
 
 /**
@@ -14338,160 +12129,6 @@ Name.prototype.getChangeCount = function()
 var TlvEncoder = require('./encoding/tlv/tlv-encoder.js').TlvEncoder;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 /**
- * This class represents Key Objects
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-// Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var LOG = require('./log.js').Log.LOG;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-
-/**
- * @deprecated NDNx-style key management is deprecated. Use KeyChain.
- * @constructor
- */
-var Key = function Key()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
-
-  this.publicKeyDer = null;     // Buffer
-  this.publicKeyDigest = null;  // Buffer
-  this.publicKeyPem = null;     // String
-  this.privateKeyPem = null;    // String
-};
-
-exports.Key = Key;
-
-/**
- * Helper functions to read Key fields
- * TODO: generateRSA()
- */
-
-Key.prototype.publicToDER = function()
-{
-  return this.publicKeyDer;  // Buffer
-};
-
-Key.prototype.privateToDER = function()
-{
-  // Remove the '-----XXX-----' from the beginning and the end of the key
-  // and also remove any \n in the key string
-  var lines = this.privateKeyPem.split('\n');
-  priKey = "";
-  for (var i = 1; i < lines.length - 1; i++)
-    priKey += lines[i];
-
-  return new Buffer(priKey, 'base64');
-};
-
-Key.prototype.publicToPEM = function()
-{
-  return this.publicKeyPem;
-};
-
-Key.prototype.privateToPEM = function()
-{
-  return this.privateKeyPem;
-};
-
-Key.prototype.getKeyID = function()
-{
-  return this.publicKeyDigest;
-};
-
-exports.Key = Key;
-
-Key.prototype.readDerPublicKey = function(/*Buffer*/pub_der)
-{
-  if (LOG > 4) console.log("Encode DER public key:\n" + pub_der.toString('hex'));
-
-  this.publicKeyDer = pub_der;
-
-  var hash = Crypto.createHash('sha256');
-  hash.update(this.publicKeyDer);
-  this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-
-  var keyStr = pub_der.toString('base64');
-  var keyPem = "-----BEGIN PUBLIC KEY-----\n";
-  for (var i = 0; i < keyStr.length; i += 64)
-  keyPem += (keyStr.substr(i, 64) + "\n");
-  keyPem += "-----END PUBLIC KEY-----";
-  this.publicKeyPem = keyPem;
-
-  if (LOG > 4) console.log("Convert public key to PEM format:\n" + this.publicKeyPem);
-};
-
-/**
- * Load RSA key pair from PEM-encoded strings.
- * Will throw an Error if both 'pub' and 'pri' are null.
- */
-Key.prototype.fromPemString = function(pub, pri)
-{
-  if (pub == null && pri == null)
-    throw new Error('Cannot create Key object if both public and private PEM string is empty.');
-
-  // Read public key
-  if (pub != null) {
-    this.publicKeyPem = pub;
-    if (LOG > 4) console.log("Key.publicKeyPem: \n" + this.publicKeyPem);
-
-    // Remove the '-----XXX-----' from the beginning and the end of the public key
-    // and also remove any \n in the public key string
-    var lines = pub.split('\n');
-    pub = "";
-    for (var i = 1; i < lines.length - 1; i++)
-      pub += lines[i];
-    this.publicKeyDer = new Buffer(pub, 'base64');
-    if (LOG > 4) console.log("Key.publicKeyDer: \n" + this.publicKeyDer.toString('hex'));
-
-    var hash = Crypto.createHash('sha256');
-    hash.update(this.publicKeyDer);
-    this.publicKeyDigest = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-    if (LOG > 4) console.log("Key.publicKeyDigest: \n" + this.publicKeyDigest.toString('hex'));
-  }
-
-  // Read private key
-  if (pri != null) {
-    this.privateKeyPem = pri;
-    if (LOG > 4) console.log("Key.privateKeyPem: \n" + this.privateKeyPem);
-  }
-};
-
-Key.prototype.fromPem = Key.prototype.fromPemString;
-
-/**
- * Static method that create a Key object.
- * Parameter 'obj' is a JSON object that has two properties:
- *   pub: the PEM string for the public key
- *   pri: the PEM string for the private key
- * Will throw an Error if both obj.pub and obj.pri are null.
- */
-Key.createFromPEM = function(obj)
-{
-    var key = new Key();
-    key.fromPemString(obj.pub, obj.pri);
-    return key;
-};
-/**
  * This class represents an NDN KeyLocator object.
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Meki Cheraoui
@@ -14515,8 +12152,6 @@ Key.createFromPEM = function(obj)
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherID = require('./publisher-id.js').PublisherID;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -14524,10 +12159,7 @@ var LOG = require('./log.js').Log.LOG;
  */
 var KeyLocatorType = {
   KEYNAME: 1,
-  KEY_LOCATOR_DIGEST: 2,
-  // KeyLocatorType KEY and CERTIFICATE are not supported in NDN-TLV encoding and are deprecated.
-  KEY: 3,
-  CERTIFICATE: 4
+  KEY_LOCATOR_DIGEST: 2
 };
 
 exports.KeyLocatorType = KeyLocatorType;
@@ -14540,32 +12172,19 @@ var KeyLocator = function KeyLocator(input, type)
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
     this.type_ = input.type_;
-    this.keyName_ = new ChangeCounter(new KeyName());
-    this.keyName_.get().setContentName(input.keyName_.get().getContentName());
-    this.keyName_.get().publisherID = input.keyName_.get().publisherID;
+    this.keyName_ = new ChangeCounter(new Name(input.getKeyName()));
     this.keyData_ = input.keyData_;
-    this.publicKey_ = input.publicKey_ == null ? null : new Buffer(input.publicKey_);
-    this.certificate_ = input.certificate_ == null ? null : new Buffer(input.certificate_);
   }
   else {
     this.type_ = type;
-    this.keyName_ = new ChangeCounter(new KeyName());
+    this.keyName_ = new ChangeCounter(new Name());
     this.keyData_ = new Blob();
 
     if (type == KeyLocatorType.KEYNAME)
-      this.keyName_.set(input);
+      this.keyName_.set(typeof input === 'object' && input instanceof Name ?
+        new Name(input) : new Name());
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
       this.keyData_ = new Blob(input);
-    else if (type == KeyLocatorType.KEY) {
-      this.keyData_ = new Blob(input);
-      // Set for backwards compatibility.
-      this.publicKey_ = this.keyData_;
-    }
-    else if (type == KeyLocatorType.CERTIFICATE) {
-      this.keyData_ = new Blob(input);
-      // Set for backwards compatibility.
-      this.certificate_ = this.keyData_;
-    }
   }
 
   this.changeCount_ = 0;
@@ -14587,24 +12206,17 @@ KeyLocator.prototype.getType = function() { return this.type_; };
  */
 KeyLocator.prototype.getKeyName = function()
 {
-  return this.keyName_.get().getContentName();
+  return this.keyName_.get();
 };
 
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
- * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER
- * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the
- * DER encoded certificate.
+ * the digest bytes.
  * @returns {Blob} The key data, or null if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
-  if (this.type_ == KeyLocatorType.KEY)
-    return new Blob(this.publicKey_);
-  else if (this.type_ == KeyLocatorType.CERTIFICATE)
-    return new Blob(this.certificate_);
-  else
-    return this.keyData_;
+  return this.keyData_;
 };
 
 /**
@@ -14635,7 +12247,8 @@ KeyLocator.prototype.setType = function(type)
  */
 KeyLocator.prototype.setKeyName = function(name)
 {
-  this.keyName_.get().setContentName(name);
+  this.keyName_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
   ++this.changeCount_;
 };
 
@@ -14648,9 +12261,6 @@ KeyLocator.prototype.setKeyData = function(keyData)
 {
   this.keyData_ = typeof keyData === 'object' && keyData instanceof Blob ?
     keyData : new Blob(keyData);
-  // Set for backwards compatibility.
-  this.publicKey_ = this.keyData_.buf();
-  this.certificate_ = this.keyData_.buf();
   ++this.changeCount_;
 };
 
@@ -14660,10 +12270,8 @@ KeyLocator.prototype.setKeyData = function(keyData)
 KeyLocator.prototype.clear = function()
 {
   this.type_ = null;
-  this.keyName_.set(new KeyName());
+  this.keyName_.set(new Name());
   this.keyData_ = new Blob();
-  this.publicKey_ = null;
-  this.certificate_ = null;
   ++this.changeCount_;
 };
 
@@ -14699,91 +12307,6 @@ KeyLocator.getFromSignature = function(signature)
       ("KeyLocator.getFromSignature: Signature type does not have a KeyLocator");
 }
 
-KeyLocator.prototype.from_ndnb = function(decoder) {
-
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Key))
-  {
-    try {
-      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
-      // This is a DER-encoded SubjectPublicKeyInfo.
-
-      //TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-      this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-      this.type = KeyLocatorType.KEY;
-
-      if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-    }
-    catch (e) {
-      throw new Error("Cannot parse key: ", e);
-    }
-
-    if (null == this.publicKey)
-      throw new Error("Cannot parse key: ");
-  }
-  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
-    try {
-      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
-
-      /*
-       * Certificates not yet working
-       */
-
-      this.certificate = encodedCert;
-      this.type = KeyLocatorType.CERTIFICATE;
-
-      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-    }
-    catch (e) {
-      throw new Error("Cannot decode certificate: " +  e);
-    }
-    if (null == this.certificate)
-      throw new Error("Cannot parse certificate! ");
-  } else  {
-    this.type = KeyLocatorType.KEYNAME;
-
-    this.keyName_.set(new KeyName());
-    this.keyName_.get().from_ndnb(decoder);
-  }
-  decoder.readElementClose();
-};
-
-KeyLocator.prototype.to_ndnb = function(encoder)
-{
-  if (LOG > 4) console.log('type is is ' + this.type);
-
-  if (this.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-    // encodeSignedInfo already encoded this as the publisherPublicKeyDigest,
-    //   so do nothing here.
-    return;
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (this.type == KeyLocatorType.KEY) {
-    if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);
-  }
-  else if (this.type == KeyLocatorType.CERTIFICATE) {
-    try {
-      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
-    }
-    catch (e) {
-      throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-    }
-  }
-  else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName_.get().to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyLocator.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.KeyLocator;
-};
-
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
@@ -14805,218 +12328,14 @@ Object.defineProperty(KeyLocator.prototype, "type",
   { get: function() { return this.getType(); },
     set: function(val) { this.setType(val); } });
 /**
- * @deprecated Use getKeyName and setKeyName.
- */
-Object.defineProperty(KeyLocator.prototype, "keyName",
-  { get: function() { return this.keyName_.get(); },
-    set: function(val) {
-      this.keyName_.set(val == null ? new KeyName() : val);
-      ++this.changeCount_;
-    } });
-/**
  * @@deprecated Use getKeyData and setKeyData.
  */
 Object.defineProperty(KeyLocator.prototype, "keyData",
   { get: function() { return this.getKeyDataAsBuffer(); },
     set: function(val) { this.setKeyData(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(KeyLocator.prototype, "publicKey",
-  { get: function() { return this.publicKey_; },
-    set: function(val) { this.publicKey_ = val; ++this.changeCount_; } });
-/**
- * @deprecated
- */
-Object.defineProperty(KeyLocator.prototype, "certificate",
-  { get: function() { return this.certificate_; },
-    set: function(val) { this.certificate_ = val; ++this.changeCount_; } });
-
-/**
- * @deprecated Use KeyLocator getKeyName and setKeyName. This is only needed to
- * support NDNx and will be removed.
- */
-var KeyName = function KeyName()
-{
-  this.contentName_ = new ChangeCounter(new Name());
-  this.publisherID = this.publisherID;  //publisherID
-  this.changeCount_ = 0;
-};
-
-exports.KeyName = KeyName;
-
-KeyName.prototype.getContentName = function()
-{
-  return this.contentName_.get();
-};
-
-KeyName.prototype.setContentName = function(name)
-{
-  this.contentName_.set(typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name());
-  ++this.changeCount_;
-};
-
-KeyName.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  this.contentName = new Name();
-  this.contentName.from_ndnb(decoder);
-
-  if (LOG > 4) console.log('KEY NAME FOUND: ');
-
-  if (PublisherID.peek(decoder)) {
-    this.publisherID = new PublisherID();
-    this.publisherID.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-};
-
-KeyName.prototype.to_ndnb = function(encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  this.contentName.to_ndnb(encoder);
-  if (null != this.publisherID)
-    this.publisherID.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
-
-/**
- * Get the change count, which is incremented each time this object (or a child
- * object) is changed.
- * @returns {number} The change count.
- */
-KeyName.prototype.getChangeCount = function()
-{
-  // Make sure each of the checkChanged is called.
-  var changed = this.contentName_.checkChanged();
-  if (changed)
-    // A child object has changed, so update the change count.
-    ++this.changeCount_;
-
-  return this.changeCount_;
-};
-
-// Define properties so we can change member variable types and implement changeCount_.
-Object.defineProperty(KeyName.prototype, "contentName",
-  { get: function() { return this.getContentName(); },
-    set: function(val) { this.setContentName(val); } });
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-/**
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var Key = require('../key.js').Key;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-
-/**
- * @deprecated NDNx-style key management is deprecated. Use KeyChain.
- * @constructor
- */
-var KeyManager = function KeyManager()
-{
-  // Public Key
-    this.publicKey_ =
-  "-----BEGIN PUBLIC KEY-----\n" +
-  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuAmnWYKE7E8G+hyy4TiT\n"	+
-  "U7t91KyIGvglEeT6HWEkW4LKzXLO22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+\n" +
-  "O85u6gfbvwp+67zJe2I89eHO4dmNnP4fx/j7WcCUCyzZfbyW67h5IoouoBIdQge2\n" +
-  "Xdvh9rFdex9UUhyjEZv5676zlcqlhz8xGBrJmQHsqpD9ijY1XhKBvoSIoQ0ZKkpm\n" +
-  "wVk8QYM9PbjUqzSQBj4aYXS+BPV6aRudVvyDt2DBXp2FNP0CGrosCXKnSl4Yv8BY\n" +
-  "p0k0RmFZDuJuntLb/XIvPEfMX5li7g3zHzAlIJIVSwT+FRkd3H5cECFSIZFUYIuS\n" +
-  "QQIDAQAB\n" +
-  "-----END PUBLIC KEY-----";
-  // Private Key
-    this.privateKey_ =
-  "-----BEGIN RSA PRIVATE KEY-----\n" +
-  "MIIEpQIBAAKCAQEAuAmnWYKE7E8G+hyy4TiTU7t91KyIGvglEeT6HWEkW4LKzXLO\n"	+
-  "22a1jVS9+yP96I6vp7N5vpS1t7oXtgWuzkO+O85u6gfbvwp+67zJe2I89eHO4dmN\n" +
-  "nP4fx/j7WcCUCyzZfbyW67h5IoouoBIdQge2Xdvh9rFdex9UUhyjEZv5676zlcql\n" +
-  "hz8xGBrJmQHsqpD9ijY1XhKBvoSIoQ0ZKkpmwVk8QYM9PbjUqzSQBj4aYXS+BPV6\n" +
-  "aRudVvyDt2DBXp2FNP0CGrosCXKnSl4Yv8BYp0k0RmFZDuJuntLb/XIvPEfMX5li\n" +
-  "7g3zHzAlIJIVSwT+FRkd3H5cECFSIZFUYIuSQQIDAQABAoIBAQCKBftzfxavn6lM\n" +
-  "5T8m+GZN0vzRBsBg8Z/jpsYKSLOayiHNKYCIPaSFpXuCIYEo6/JDJLB2xVLvwupL\n" +
-  "gkGSwm2mrvCyJkihI38Cz6iQF6I+iia9bYrupgwxzsK7klm1c+J9kXXivYxj4hyL\n" +
-  "wmoc/mnARMtYV7cTQvDbUEzgRQmPykWKBv6Y0SL1WprfiRfKIMwSqQk91ffj6whK\n" +
-  "xBLAuUdseVBmo/ivLPq0a+wDrcvaJAxSB4eIwCHzAugkRA/NoK0vG3mra0lK5jvQ\n" +
-  "rcNIuffxNAnresDVDTnYRc42etjePLAhlpeK/4sjYE/wPdeP8yzLHUg/hsSpAPIj\n" +
-  "LXJNZqUBAoGBANxPmUQNf1lGHo/nLY3dVMD3+kYNnTUD8XwS81qdg8/dNyF8t+7D\n" +
-  "OdJ1j7Itb+zGA1XXAGfTm6JoUG+eKKR2OSuyZcxygpOgzxAFanXKhTWZsKbG70xN\n" +
-  "mX0sOAEhtTGsgFTEGEv977MwIlFa6n2bsp3Luj/AGmvNsOYvBDPXOklxAoGBANXZ\n" +
-  "yXAaE7M5JALusLuEFxLGvWVz6TRdQ//c+FWvKrnh+nFlTlAPpDvlaPJJca8ViNev\n" +
-  "xJ2UhGtbENXAqgwTYpnAi/yQD4dATViIveK6Pn4t12mpPAlkMbbMTR8jtp5l1oHc\n" +
-  "hcwe8QuEOKuTX5+STpNGlWs+tsMb12mhCpc3eO3RAoGAMxjDE2WOA8afkACuMBkF\n" +
-  "bzwUb+r4azNe7sf2aS3fRHaqMroabuYYoxdhHJItQ10pqN8U2P/bOO+4uCqWgo5o\n" +
-  "9BmMQr7MSjEh1TVsW6V8/9GFhyjcl3XoA4Ad/SU0QTEhEofomrdqwMSJMRVFDZzu\n" +
-  "8Gov6FlFx3sNbFW7Q8rHWgECgYEAq/TVz3iIgsLdvCXmosHSM9zvCpcr3FlqhmFO\n" +
-  "pseVmaamVWxajnIlY6xSuRBpg5nTUWwas4Nq/1BYtyiXE+K6lFuJtOq6Mc145EoA\n" +
-  "NkIAYkHGR0Y36m1QtGaPVQzImZHV7NJAHCR9Ov90+jIk4BErca1+FKB3IWhPzLYb\n" +
-  "6ABJEyECgYEAthhzWSxPkqyiLl+2vnhdR3EEkvDX6MV6hGu4tDAf2A1Y0GSApyEa\n" +
-  "SAA31hlxu5EgneLD7Ns2HMpIfQMydB5lcwKQc9g/tVI1eRzuk6Myi+2JmPEM2BLy\n" +
-  "iX8yI+xnZlKDiZleQitCS4RQGz5HbXT70aYQIGxuvkQ/uf68jdrL6o8=\n" +
-  "-----END RSA PRIVATE KEY-----";
-
-  this.key = null;
-};
-
-/**
- * Return a Key object for the keys in this KeyManager.  This creates the Key on the first
- * call and returns a cached copy after that.
- * @returns {Key}
- * @deprecated NDNx-style key management is deprecated. Use KeyChain.
- */
-KeyManager.prototype.getKey = function()
-{
-  if (this.key === null) {
-    this.key = new Key();
-    this.key.fromPemString(this.publicKey_, this.privateKey_);
-  }
-
-  return this.key;
-}
-
-Object.defineProperty(KeyManager.prototype, "publicKey",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
-
-      return this.publicKey_;
-    } });
-Object.defineProperty(KeyManager.prototype, "privateKey",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("NDNx-style key management is deprecated. To enable while you upgrade your code to use KeyChain, set WireFormat.ENABLE_NDNX = true");
-
-      return this.privateKey_;
-    } });
-
-var globalKeyManager = globalKeyManager || new KeyManager();
-exports.globalKeyManager = globalKeyManager;
 /**
  * This class represents an NDN Data MetaInfo object.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -15038,29 +12357,18 @@ exports.globalKeyManager = globalKeyManager;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var Blob = require('./util/blob.js').Blob;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var Name = require('./name.js').Name;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var NDNTime = require('./util/ndn-time.js').NDNTime;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var LOG = require('./log.js').Log.LOG;
 
 var ContentType = {
   BLOB:0,
-  // ContentType DATA is deprecated.  Use ContentType.BLOB .
-  DATA:0,
   LINK:1,
   KEY: 2,
-  // ContentType ENCR, GONE and NACK are not supported in NDN-TLV encoding and are deprecated.
-  ENCR:3,
-  GONE:4,
-  NACK:5
+  NACK:3
 };
 
 exports.ContentType = ContentType;
@@ -15069,14 +12377,17 @@ exports.ContentType = ContentType;
  * Create a new MetaInfo with the optional values.
  * @constructor
  */
-var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId, skipSetFields)
+var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
 {
+  if (timestamp)
+    throw new Error
+      ("MetaInfo constructor: timestamp support has been removed.");
+
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
     // Copy values.
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
-    this.timestamp_ = metaInfo.timestamp; // NDNTime // deprecated
     this.type_ = metaInfo.type_;
     this.locator_ = metaInfo.locator_ == null ?
       new KeyLocator() : new KeyLocator(metaInfo.locator_);
@@ -15085,24 +12396,11 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   }
   else {
     this.publisher = publisherOrMetaInfo; // deprecated
-    this.timestamp = timestamp; // NDNTime // deprecated
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
      // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
     this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
-
-    if (!skipSetFields) {
-      // Temporarily set ENABLE_NDNX so that setFields doesn't throw.
-      var saveEnableNdnx = WireFormat.ENABLE_NDNX;
-      try {
-        WireFormat.ENABLE_NDNX = true;
-        this.setFields();
-      }
-      finally {
-        WireFormat.ENABLE_NDNX = saveEnableNdnx;
-      }
-    }
   }
 
   this.changeCount_ = 0;
@@ -15199,155 +12497,6 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 };
 
 /**
- * @deprecated This sets fields for NDNx signing. Use KeyChain.
- */
-MetaInfo.prototype.setFields = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("Signing with NDNx-style keys is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
-
-  var key = globalKeyManager.getKey();
-  this.publisher = new PublisherPublicKeyDigest(key.getKeyID());
-
-  var d = new Date();
-
-  var time = d.getTime();
-
-  this.timestamp = new NDNTime(time);
-
-  if (LOG > 4) console.log('TIME msec is');
-
-  if (LOG > 4) console.log(this.timestamp.msec);
-
-  //DATA
-  this.type = ContentType.BLOB;
-
-  if (LOG > 4) console.log('PUBLIC KEY TO WRITE TO DATA PACKET IS ');
-  if (LOG > 4) console.log(key.publicToDER().toString('hex'));
-
-  this.locator = new KeyLocator(key.getKeyID(), KeyLocatorType.KEY_LOCATOR_DIGEST);
-  ++this.changeCount_;
-};
-
-MetaInfo.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    if (LOG > 4) console.log('DECODING PUBLISHER KEY');
-    this.publisher = new PublisherPublicKeyDigest();
-    this.publisher.from_ndnb(decoder);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Timestamp)) {
-    if (LOG > 4) console.log('DECODING TIMESTAMP');
-    this.timestamp = decoder.readDateTimeDTagElement(NDNProtocolDTags.Timestamp);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Type)) {
-    var binType = decoder.readBinaryDTagElement(NDNProtocolDTags.Type);
-
-    if (LOG > 4) console.log('Binary Type of of Signed Info is '+binType);
-
-    this.type = binType;
-
-    //TODO Implement type of Key Reading
-    if (null == this.type)
-      throw new Error("Cannot parse signedInfo type: bytes.");
-  }
-  else
-    this.type = ContentType.DATA; // default
-
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds)) {
-    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-    if (LOG > 4) console.log('FRESHNESS IN SECONDS IS '+ this.freshnessSeconds);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.FinalBlockID)) {
-    if (LOG > 4) console.log('DECODING FINAL BLOCKID');
-    this.finalBlockID = decoder.readBinaryDTagElement(NDNProtocolDTags.FinalBlockID);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.KeyLocator)) {
-    if (LOG > 4) console.log('DECODING KEY LOCATOR');
-    this.locator = new KeyLocator();
-    this.locator.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-  ++this.changeCount_;
-};
-
-/**
- * Encode this MetaInfo in ndnb, using the given keyLocator instead of the
- * locator in this object.
- * @param {BinaryXMLEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator).
- */
-MetaInfo.prototype.to_ndnb = function(encoder, keyLocator)  {
-  if (!this.validate())
-    throw new Error("Cannot encode : field values missing.");
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.publisher) {
-    // We have a publisherPublicKeyDigest, so use it.
-    if (LOG > 3) console.log('ENCODING PUBLISHER KEY' + this.publisher.publisherPublicKeyDigest);
-    this.publisher.to_ndnb(encoder);
-  }
-  else {
-    if (null != keyLocator &&
-        keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-        !keyLocator.getKeyData().isNull() &&
-        keyLocator.getKeyData().size() > 0)
-      // We have a TLV-style KEY_LOCATOR_DIGEST, so encode as the
-      //   publisherPublicKeyDigest.
-      encoder.writeDTagElement
-        (NDNProtocolDTags.PublisherPublicKeyDigest, keyLocator.getKeyData().buf());
-  }
-
-  if (null != this.timestamp)
-    encoder.writeDateTimeDTagElement(NDNProtocolDTags.Timestamp, this.timestamp);
-
-  if (null != this.type && this.type != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.type, this.type);
-
-  if (null != this.freshnessSeconds)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-
-  if (null != this.finalBlockID)
-    encoder.writeDTagElement(NDNProtocolDTags.FinalBlockID, this.finalBlockID);
-
-  if (null != keyLocator)
-    keyLocator.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-MetaInfo.prototype.valueToType = function()
-{
-  return null;
-};
-
-MetaInfo.prototype.getElementLabel = function() {
-  return NDNProtocolDTags.SignedInfo;
-};
-
-/**
- * @@deprecated This is only used with to_ndnb.
- */
-MetaInfo.prototype.validate = function()
-{
-  // We don't do partial matches any more, even though encoder/decoder
-  // is still pretty generous.
-  if (null == this.timestamp_)
-    return false;
-  return true;
-};
-
-/**
  * Get the change count, which is incremented each time this object is changed.
  * @returns {number} The change count.
  */
@@ -15394,29 +12543,9 @@ Object.defineProperty(MetaInfo.prototype, "finalBlockID",
 /**
  * @deprecated
  */
-Object.defineProperty(MetaInfo.prototype, "timestamp",
-  { get: function() { return this.timestamp_; },
-    set: function(val) { this.timestamp_ = val; ++this.changeCount_; } });
-/**
- * @deprecated
- */
 Object.defineProperty(MetaInfo.prototype, "locator",
   { get: function() { return this.locator_; },
     set: function(val) { this.locator_ = val; ++this.changeCount_; } });
-
-/**
- * @deprecated Use new MetaInfo.
- */
-var SignedInfo = function SignedInfo(publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId)
-{
-  // Call the base constructor.
-  MetaInfo.call(this, publisherOrMetaInfo, timestamp, type, locator, freshnessSeconds, finalBlockId);
-}
-
-// Set skipSetFields true since we only need the prototype functions.
-SignedInfo.prototype = new MetaInfo(null, null, null, null, null, null, true);
-
-exports.SignedInfo = SignedInfo;
 /**
  * This class represents an NDN Data Signature object.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -15440,9 +12569,6 @@ exports.SignedInfo = SignedInfo;
 
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var LOG = require('./log.js').Log.LOG;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
@@ -15462,18 +12588,10 @@ var Sha256WithRsaSignature = function Sha256WithRsaSignature(value)
     // Copy the values.
     this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
     this.signature_ = value.signature_;
-    // witness is deprecated.
-    this.witness_ = value.witness_;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = value.digestAlgorithm_;
   }
   else {
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.signature_ = new Blob();
-    // witness is deprecated.
-    this.witness_ = null;
-    // digestAlgorithm is deprecated.
-    this.digestAlgorithm_ = null;
   }
 
   this.changeCount_ = 0;
@@ -15540,50 +12658,6 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
   ++this.changeCount_;
 };
 
-Sha256WithRsaSignature.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (LOG > 4) console.log('STARTED DECODING SIGNATURE');
-
-  if (decoder.peekDTag(NDNProtocolDTags.DigestAlgorithm)) {
-    if (LOG > 4) console.log('DIGIEST ALGORITHM FOUND');
-    this.digestAlgorithm = decoder.readUTF8DTagElement(NDNProtocolDTags.DigestAlgorithm);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.Witness)) {
-    if (LOG > 4) console.log('WITNESS FOUND');
-    this.witness = decoder.readBinaryDTagElement(NDNProtocolDTags.Witness);
-  }
-
-  //FORCE TO READ A SIGNATURE
-
-  if (LOG > 4) console.log('SIGNATURE FOUND');
-  this.signature = decoder.readBinaryDTagElement(NDNProtocolDTags.SignatureBits);
-
-  decoder.readElementClose();
-};
-
-Sha256WithRsaSignature.prototype.to_ndnb = function(encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.digestAlgorithm && !this.digestAlgorithm.equals(NDNDigestHelper.DEFAULT_DIGEST_ALGORITHM))
-    encoder.writeDTagElement(NDNProtocolDTags.DigestAlgorithm, OIDLookup.getDigestOID(this.DigestAlgorithm));
-
-  if (null != this.witness)
-    // needs to handle null witness
-    encoder.writeDTagElement(NDNProtocolDTags.Witness, this.witness);
-
-  if (this.getSignature().size() > 0)
-    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, this.signature);
-  else
-    encoder.writeDTagElement(NDNProtocolDTags.SignatureBits, new Buffer([]));
-
-  encoder.writeElementClose();
-};
-
-Sha256WithRsaSignature.prototype.getElementLabel = function() { return NDNProtocolDTags.Signature; };
-
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
@@ -15610,82 +12684,6 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
 Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
   { get: function() { return this.getSignatureAsBuffer(); },
     set: function(val) { this.setSignature(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "witness",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.witness_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Witness is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.witness_ = val; ++this.changeCount_;
-    } });
-/**
- * @deprecated
- */
-Object.defineProperty(Sha256WithRsaSignature.prototype, "digestAlgorithm",
-  { get: function() {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      return this.digestAlgorithm_;
-    },
-    set: function(val) {
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("The Digest Algorithm is for the NDNx wire format and is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-
-      this.digestAlgorithm_ = val;
-      ++this.changeCount_;
-    } });
-
-/**
- * Note: This Signature class is not the same as the base Signature class of
- * the Common Client Libraries API. It is a deprecated name for
- * Sha256WithRsaSignature. In the future, after we remove this deprecated class,
- * we may implement the CCL version of Signature.
- * @deprecated Use new Sha256WithRsaSignature.
- */
-var Signature = function Signature
-  (witnessOrSignatureObject, signature, digestAlgorithm)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("The NDNx style of Signature is deprecated. To enable while you upgrade your code to use Sha256WithRsaSignature, set WireFormat.ENABLE_NDNX = true");
-
-  if (typeof witnessOrSignatureObject === 'object' &&
-      witnessOrSignatureObject instanceof Sha256WithRsaSignature)
-    // Call the base copy constructor.
-    Sha256WithRsaSignature.call(this, witnessOrSignatureObject);
-  else {
-    // Call the base default constructor.
-    Sha256WithRsaSignature.call(this);
-
-    // Set the given fields (if supplied).
-    if (witnessOrSignatureObject != null)
-      // witness is deprecated.
-      this.witness_ = witnessOrSignatureObject;
-    if (signature != null)
-      this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
-        signature : new Blob(signature);
-    if (digestAlgorithm != null)
-      // digestAlgorithm is deprecated.
-      this.digestAlgorithm_ = digestAlgorithm;
-  }
-}
-
-Signature.prototype = new Sha256WithRsaSignature();
-
-exports.Signature = Signature;
 /**
  * This class represents an NDN Data Signature object.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -15800,18 +12798,14 @@ Object.defineProperty(DigestSha256Signature.prototype, "signature",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require("./crypto.js");
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var MetaInfo = require('./meta-info.js').MetaInfo;
 var KeyLocator = require('./key-locator.js').KeyLocator;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -16003,65 +12997,6 @@ Data.prototype.setContent = function(content)
 };
 
 /**
- * @deprecated Use KeyChain.sign. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.sign = function(wireFormat)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("NDNx-style Data packet signing is deprecated. To enable while you upgrade your code to use KeyChain.sign, set WireFormat.ENABLE_NDNX = true");
-
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-
-  if (this.getSignatureOrMetaInfoKeyLocator() == null ||
-      this.getSignatureOrMetaInfoKeyLocator().getType() == null)
-    this.getMetaInfo().setFields();
-
-  // Encode once to get the signed portion.
-  var encoding = this.wireEncode(wireFormat);
-  var rsa = Crypto.createSign('RSA-SHA256');
-  rsa.update(encoding.signedBuf());
-
-  var sig = new Buffer
-    (DataUtils.toNumbersIfString(rsa.sign(globalKeyManager.privateKey)));
-  this.signature_.get().setSignature(sig);
-  ++this.changeCount_;
-};
-
-// The first time verify is called, it sets this to determine if a signature
-//   buffer needs to be converted to a string for the crypto verifier.
-Data.verifyUsesString = null;
-
-/**
- * @deprecated Use KeyChain.verifyData. See examples/node/test-encode-decode-data.js .
- */
-Data.prototype.verify = function(/*Key*/ key)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("Data packet verify with an NDNx-style key is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-  if (key == null || key.publicKeyPem == null)
-    throw new Error('Cannot verify Data without a public key.');
-
-  if (Data.verifyUsesString == null) {
-    var hashResult = Crypto.createHash('sha256').digest();
-    // If the has result is a string, we assume that this is a version of
-    //   crypto where verify also uses a string signature.
-    Data.verifyUsesString = (typeof hashResult === 'string');
-  }
-
-  // wireEncode returns the cached encoding if available.
-  var verifier = Crypto.createVerify('RSA-SHA256');
-  verifier.update(this.wireEncode().signedBuf());
-  var signatureBytes = Data.verifyUsesString ?
-    DataUtils.toString(this.signature_.get().getSignature().buf()) : this.signature_.get().getSignature().buf();
-  return verifier.verify(key.publicKeyPem, signatureBytes);
-};
-
-Data.prototype.getElementLabel = function() { return NDNProtocolDTags.Data; };
-
-/**
  * Encode this Data for a particular wire format. If wireFormat is the default
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
@@ -16171,45 +13106,6 @@ Data.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use BinaryXmlWireFormat.decodeData.
- */
-Data.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeData(this, decoder);
-};
-
-/**
- * @deprecated Use BinaryXmlWireFormat.encodeData.
- */
-Data.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeData(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Data.prototype.encode = function(wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  return wireFormat.encodeData(this).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Data.prototype.decode = function(input, wireFormat)
-{
-  wireFormat = (wireFormat || BinaryXmlWireFormat.get());
-  wireFormat.decodeData(this, input);
-};
-
 Data.prototype.setDefaultWireEncoding = function
   (defaultWireEncoding, defaultWireEncodingFormat)
 {
@@ -16231,30 +13127,11 @@ Object.defineProperty(Data.prototype, "signature",
   { get: function() { return this.getSignature(); },
     set: function(val) { this.setSignature(val); } });
 /**
- * @deprecated Use getMetaInfo and setMetaInfo.
- */
-Object.defineProperty(Data.prototype, "signedInfo",
-  { get: function() { return this.getMetaInfo(); },
-    set: function(val) { this.setMetaInfo(val); } });
-/**
  * @deprecated Use getContent and setContent.
  */
 Object.defineProperty(Data.prototype, "content",
   { get: function() { return this.getContentAsBuffer(); },
     set: function(val) { this.setContent(val); } });
-
-/**
- * @deprecated Use new Data.
- */
-var ContentObject = function ContentObject(name, signedInfo, content)
-{
-  // Call the base constructor.
-  Data.call(this, name, signedInfo, content);
-}
-
-ContentObject.prototype = new Data();
-
-exports.ContentObject = ContentObject;
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -22086,8 +18963,7 @@ var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
- * A SelfVerifyPolicyManager implements a PolicyManager to use the public key
- * DER in the data packet's KeyLocator (if available) or look in the
+ * A SelfVerifyPolicyManager implements a PolicyManager to look in the
  * IdentityStorage for the public key with the name in the KeyLocator (if
  * available) and use it to verify the data packet, without searching a
  * certificate chain.  If the public key can't be found, the verification fails.
@@ -22135,10 +19011,9 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 };
 
 /**
- * Use the public key DER in the KeyLocator (if available) or look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available) and use it to verify the data packet.  If the public key can't
-   * be found, call onVerifyFailed.
+ * Look in the IdentityStorage for the public key with the name in the
+ * KeyLocator (if available) and use it to verify the data packet.  If the
+ * public key can't be found, call onVerifyFailed.
  *
  * @param {Data|Interest} dataOrInterest The Data object or interest with the
  * signature to check.
@@ -22211,12 +19086,11 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 };
 
 /**
- * Check the type of signatureInfo to get the KeyLocator. Use the public key
- * DER in the KeyLocator (if available) or look in the IdentityStorage for the
- * public key with the name in the KeyLocator (if available) and use it to
- * verify the signedBlob. If the public key can't be found, return false.
- * (This is a generalized method which can verify both a Data packet and an
- * interest.)
+ * Check the type of signatureInfo to get the KeyLocator. Look in the
+ * IdentityStorage for the public key with the name in the KeyLocator (if
+ * available) and use it to verify the signedBlob. If the public key can't be
+ * found, return false. (This is a generalized method which can verify both a
+ * Data packet and an interest.)
  * @param {Signature} signatureInfo An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
@@ -22244,9 +19118,9 @@ SelfVerifyPolicyManager.prototype.verify = function
 };
 
 /**
- * Return the public key DER in the KeyLocator (if available) or look in the
- * IdentityStorage for the public key with the name in the KeyLocator (if
- * available). If the public key can't be found, return and empty Blob.
+ * Look in the IdentityStorage for the public key with the name in the
+ * KeyLocator (if available). If the public key can't be found, return and empty
+ * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
  * @param onComplete {function} This calls onComplete(publicKeyDer) where
  * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
@@ -22254,10 +19128,7 @@ SelfVerifyPolicyManager.prototype.verify = function
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
   (keyLocator, onComplete)
 {
-  if (keyLocator.getType() == KeyLocatorType.KEY)
-    // Use the public key DER directly.
-    onComplete(keyLocator.getKeyData());
-  else if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
+  if (keyLocator.getType() == KeyLocatorType.KEYNAME &&
            this.identityStorage != null)
     // Assume the key name is a certificate name.
     SyncPromise.complete
@@ -22970,9 +19841,6 @@ KeyChain.prototype.onCertificateInterestTimeout = function
  */
 
 var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Blob = require('./util/blob.js').Blob;
 
@@ -23049,50 +19917,6 @@ Exclude.prototype.clear = function()
 {
   ++this.changeCount;
   this.values = [];
-};
-
-Exclude.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  decoder.readElementStartDTag(NDNProtocolDTags.Exclude);
-
-  while (true) {
-    if (decoder.peekDTag(NDNProtocolDTags.Component))
-      this.appendComponent(decoder.readBinaryDTagElement(NDNProtocolDTags.Component));
-    else if (decoder.peekDTag(NDNProtocolDTags.Any)) {
-      decoder.readElementStartDTag(NDNProtocolDTags.Any);
-      decoder.readElementClose();
-      this.appendAny();
-    }
-    else if (decoder.peekDTag(NDNProtocolDTags.Bloom)) {
-      // Skip the Bloom and treat it as Any.
-      decoder.readBinaryDTagElement(NDNProtocolDTags.Bloom);
-      this.appendAny();
-    }
-    else
-      break;
-  }
-
-  decoder.readElementClose();
-};
-
-Exclude.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  if (this.values == null || this.values.length == 0)
-    return;
-
-  encoder.writeElementStartDTag(NDNProtocolDTags.Exclude);
-
-  // TODO: Do we want to order the components (except for ANY)?
-  for (var i = 0; i < this.values.length; ++i) {
-    if (this.values[i] == Exclude.ANY) {
-      encoder.writeElementStartDTag(NDNProtocolDTags.Any);
-      encoder.writeElementClose();
-    }
-    else
-      encoder.writeDTagElement(NDNProtocolDTags.Component, this.values[i].getValue().buf());
-  }
-
-  encoder.writeElementClose();
 };
 
 /**
@@ -23225,7 +20049,6 @@ var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -23239,9 +20062,19 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {number} maxSuffixComponents
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, publisherPublicKeyDigest, exclude,
-    childSelector, answerOriginKind, scope, interestLifetimeMilliseconds, nonce)
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents, 
+    publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
+    interestLifetimeMilliseconds, nonce)
 {
+  if (publisherPublicKeyDigest)
+    throw new Error
+      ("Interest constructor: PublisherPublicKeyDigest support has been removed.");
+  if (answerOriginKind)
+    throw new Error
+      ("Interest constructor: answerOriginKind support has been removed. Use setMustBeFresh().");
+  if (scope)
+    throw new Error("Interest constructor: scope support has been removed.");
+
   if (typeof nameOrInterest === 'object' && nameOrInterest instanceof Interest) {
     // Special case: this is a copy constructor.  Ignore all but the first argument.
     var interest = nameOrInterest;
@@ -23250,12 +20083,10 @@ var Interest = function Interest
     this.maxSuffixComponents_ = interest.maxSuffixComponents_;
     this.minSuffixComponents_ = interest.minSuffixComponents_;
 
-    this.publisherPublicKeyDigest_ = interest.publisherPublicKeyDigest_;
     this.keyLocator_ = new ChangeCounter(new KeyLocator(interest.getKeyLocator()));
     this.exclude_ = new ChangeCounter(new Exclude(interest.getExclude()));
     this.childSelector_ = interest.childSelector_;
-    this.answerOriginKind_ = interest.answerOriginKind_;
-    this.scope_ = interest.scope_;
+    this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
     this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
@@ -23268,13 +20099,11 @@ var Interest = function Interest
     this.maxSuffixComponents_ = maxSuffixComponents;
     this.minSuffixComponents_ = minSuffixComponents;
 
-    this.publisherPublicKeyDigest_ = publisherPublicKeyDigest;
     this.keyLocator_ = new ChangeCounter(new KeyLocator());
     this.exclude_ = new ChangeCounter(typeof exclude === 'object' && exclude instanceof Exclude ?
       new Exclude(exclude) : new Exclude());
     this.childSelector_ = childSelector;
-    this.answerOriginKind_ = answerOriginKind;
-    this.scope_ = scope;
+    this.mustBeFresh_ = true;
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
@@ -23293,14 +20122,6 @@ Interest.RECURSIVE_POSTFIX = "*";
 
 Interest.CHILD_SELECTOR_LEFT = 0;
 Interest.CHILD_SELECTOR_RIGHT = 1;
-
-Interest.ANSWER_NO_CONTENT_STORE = 0;
-Interest.ANSWER_CONTENT_STORE = 1;
-Interest.ANSWER_GENERATED = 2;
-Interest.ANSWER_STALE = 4;    // Stale answer OK
-Interest.MARK_STALE = 16;    // Must have scope 0.  Michael calls this a "hack"
-
-Interest.DEFAULT_ANSWER_ORIGIN_KIND = Interest.ANSWER_CONTENT_STORE | Interest.ANSWER_GENERATED;
 
 /**
  * Check if this interest's name matches the given name (using Name.match) and
@@ -23395,27 +20216,12 @@ Interest.prototype.getChildSelector = function()
 };
 
 /**
- * @deprecated Use getMustBeFresh.
- */
-Interest.prototype.getAnswerOriginKind = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("getAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's getMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
-
-  return this.answerOriginKind_;
-};
-
-/**
  * Get the must be fresh flag. If not specified, the default is true.
  * @returns {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
 {
-  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0)
-    return true;
-  else
-    return (this.answerOriginKind_ & Interest.ANSWER_STALE) == 0;
+  return this.mustBeFresh_;
 };
 
 /**
@@ -23441,18 +20247,6 @@ Interest.prototype.getNonce = function()
 Interest.prototype.getNonceAsBuffer = function()
 {
   return this.getNonce().buf();
-};
-
-/**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.getScope = function()
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("getScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  return this.scope_;
 };
 
 /**
@@ -23563,20 +20357,6 @@ Interest.prototype.setChildSelector = function(childSelector)
 };
 
 /**
- * @deprecated Use setMustBeFresh.
- */
-Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("setAnswerOriginKind is for NDNx and is deprecated. To enable while you upgrade your code to use NFD's setMustBeFresh(), set WireFormat.ENABLE_NDNX = true");
-
-  this.answerOriginKind_ = answerOriginKind;
-  ++this.changeCount_;
-  return this;
-};
-
-/**
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
  * false. If you do not set this flag, the default value is true.
@@ -23584,34 +20364,7 @@ Interest.prototype.setAnswerOriginKind = function(answerOriginKind)
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
-  if (this.answerOriginKind_ == null || this.answerOriginKind_ < 0) {
-    // It is is already the default where MustBeFresh is true.
-    if (!mustBeFresh)
-      // Set answerOriginKind_ so that getMustBeFresh returns false.
-      this.answerOriginKind_ = Interest.ANSWER_STALE;
-  }
-  else {
-    if (mustBeFresh)
-      // Clear the stale bit.
-      this.answerOriginKind_ &= ~Interest.ANSWER_STALE;
-    else
-      // Set the stale bit.
-      this.answerOriginKind_ |= Interest.ANSWER_STALE;
-  }
-  ++this.changeCount_;
-  return this;
-};
-
-/**
- * @deprecated Scope is not used by NFD.
- */
-Interest.prototype.setScope = function(scope)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("setScope is for NDNx and is deprecated. To enable while you upgrade your code to not use Scope, set WireFormat.ENABLE_NDNX = true");
-
-  this.scope_ = scope;
+  this.mustBeFresh_ = (mustBeFresh ? true : false);
   ++this.changeCount_;
   return this;
 };
@@ -23661,14 +20414,9 @@ Interest.prototype.toUri = function()
     selectors += "&ndn.MaxSuffixComponents=" + this.maxSuffixComponents_;
   if (this.childSelector_ != null)
     selectors += "&ndn.ChildSelector=" + this.childSelector_;
-  if (this.answerOriginKind_ != null)
-    selectors += "&ndn.AnswerOriginKind=" + this.answerOriginKind_;
-  if (this.scope_ != null)
-    selectors += "&ndn.Scope=" + this.scope_;
+  selectors += "&ndn.MustBeFresh=" + (this.mustBeFresh_ ? 1 : 0);
   if (this.interestLifetimeMilliseconds_ != null)
     selectors += "&ndn.InterestLifetime=" + this.interestLifetimeMilliseconds_;
-  if (this.publisherPublicKeyDigest_ != null)
-    selectors += "&ndn.PublisherPublicKeyDigest=" + Name.toEscapedString(this.publisherPublicKeyDigest_.publisherPublicKeyDigest_);
   if (this.getNonce().size() > 0)
     selectors += "&ndn.Nonce=" + Name.toEscapedString(this.getNonce().buf());
   if (this.getExclude() != null && this.getExclude().size() > 0)
@@ -23757,44 +20505,6 @@ Interest.prototype.getChangeCount = function()
   return this.changeCount_;
 };
 
-// Since binary-xml-wire-format.js includes this file, put these at the bottom
-// to avoid problems with cycles of require.
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
-
-/**
- * @deprecated Use wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.from_ndnb = function(/*XMLDecoder*/ decoder)
-{
-  BinaryXmlWireFormat.decodeInterest(this, decoder);
-};
-
-/**
- * @deprecated Use wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.to_ndnb = function(/*XMLEncoder*/ encoder)
-{
-  BinaryXmlWireFormat.encodeInterest(this, encoder);
-};
-
-/**
- * @deprecated Use wireEncode.  If you need binary XML, use
- * wireEncode(BinaryXmlWireFormat.get()).
- */
-Interest.prototype.encode = function(wireFormat)
-{
-  return this.wireEncode(BinaryXmlWireFormat.get()).buf();
-};
-
-/**
- * @deprecated Use wireDecode.  If you need binary XML, use
- * wireDecode(input, BinaryXmlWireFormat.get()).
- */
-Interest.prototype.decode = function(input, wireFormat)
-{
-  this.wireDecode(input, BinaryXmlWireFormat.get())
-};
-
 Interest.prototype.setDefaultWireEncoding = function
   (defaultWireEncoding, defaultWireEncodingFormat)
 {
@@ -23824,9 +20534,6 @@ Object.defineProperty(Interest.prototype, "exclude",
 Object.defineProperty(Interest.prototype, "childSelector",
   { get: function() { return this.getChildSelector(); },
     set: function(val) { this.setChildSelector(val); } });
-Object.defineProperty(Interest.prototype, "scope",
-  { get: function() { return this.getScope(); },
-    set: function(val) { this.setScope(val); } });
 /**
  * @deprecated Use getInterestLifetimeMilliseconds and setInterestLifetimeMilliseconds.
  */
@@ -23834,148 +20541,11 @@ Object.defineProperty(Interest.prototype, "interestLifetime",
   { get: function() { return this.getInterestLifetimeMilliseconds(); },
     set: function(val) { this.setInterestLifetimeMilliseconds(val); } });
 /**
- * @deprecated Use getMustBeFresh and setMustBeFresh.
- */
-Object.defineProperty(Interest.prototype, "answerOriginKind",
-  { get: function() { return this.getAnswerOriginKind(); },
-    set: function(val) { this.setAnswerOriginKind(val); } });
-/**
  * @deprecated Use getNonce and setNonce.
  */
 Object.defineProperty(Interest.prototype, "nonce",
   { get: function() { return this.getNonceAsBuffer(); },
     set: function(val) { this.setNonce(val); } });
-/**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(Interest.prototype, "publisherPublicKeyDigest",
-  { get: function() { return this.publisherPublicKeyDigest_; },
-    set: function(val) { this.publisherPublicKeyDigest_ = val; ++this.changeCount_; } });
-/**
- * This class represents Face Instances
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-
-/**
- * @deprecated This is only used for NDNx support which is deprecated.
- */
-var FaceInstance  = function FaceInstance(action, publisherPublicKeyDigest, faceID, ipProto, host, port, multicastInterface,
-    multicastTTL, freshnessSeconds)
-{
-  this.action = action;
-  this.publisherPublicKeyDigest = publisherPublicKeyDigest;
-  this.faceID = faceID;
-  this.ipProto = ipProto;
-  this.host = host;
-  this.Port = port;
-  this.multicastInterface =multicastInterface;
-  this.multicastTTL =multicastTTL;
-  this.freshnessSeconds = freshnessSeconds;
-};
-
-exports.FaceInstance = FaceInstance;
-
-FaceInstance.NetworkProtocol = { TCP:6, UDP:17};
-
-/**
- * Used by NetworkObject to decode the object from a network stream.
- */
-FaceInstance.prototype.from_ndnb = function(
-  //XMLDecoder
-  decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    this.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-    this.publisherPublicKeyDigest.from_ndnb(decoder);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekDTag(NDNProtocolDTags.IPProto)) {
-    //int
-    var pI = decoder.readIntegerDTagElement(NDNProtocolDTags.IPProto);
-
-    this.ipProto = null;
-
-    if (FaceInstance.NetworkProtocol.TCP == pI)
-      this.ipProto = FaceInstance.NetworkProtocol.TCP;
-    else if (FaceInstance.NetworkProtocol.UDP == pI)
-      this.ipProto = FaceInstance.NetworkProtocol.UDP;
-    else
-      throw new Error("FaceInstance.decoder.  Invalid NDNProtocolDTags.IPProto field: " + pI);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Host))
-    this.host = decoder.readUTF8DTagElement(NDNProtocolDTags.Host);
-  if (decoder.peekDTag(NDNProtocolDTags.Port))
-    this.Port = decoder.readIntegerDTagElement(NDNProtocolDTags.Port);
-  if (decoder.peekDTag(NDNProtocolDTags.MulticastInterface))
-    this.multicastInterface = decoder.readUTF8DTagElement(NDNProtocolDTags.MulticastInterface);
-  if (decoder.peekDTag(NDNProtocolDTags.MulticastTTL))
-    this.multicastTTL = decoder.readIntegerDTagElement(NDNProtocolDTags.MulticastTTL);
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.freshnessSeconds = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-
-  decoder.readElementClose();
-};
-
-/**
- * Used by NetworkObject to encode the object to a network stream.
- */
-FaceInstance.prototype.to_ndnb = function(
-  //XMLEncoder
-  encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
-  if (null != this.publisherPublicKeyDigest)
-    this.publisherPublicKeyDigest.to_ndnb(encoder);
-  if (null != this.faceID)
-    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
-  if (null != this.ipProto)
-    encoder.writeDTagElement(NDNProtocolDTags.IPProto, this.ipProto);
-  if (null != this.host && this.host.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Host, this.host);
-  if (null != this.Port)
-    encoder.writeDTagElement(NDNProtocolDTags.Port, this.Port);
-  if (null != this.multicastInterface && this.multicastInterface.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.MulticastInterface, this.multicastInterface);
-  if (null !=  this.multicastTTL)
-    encoder.writeDTagElement(NDNProtocolDTags.MulticastTTL, this.multicastTTL);
-  if (null != this.freshnessSeconds)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.freshnessSeconds);
-
-  encoder.writeElementClose();
-};
-
-FaceInstance.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.FaceInstance;
-};
-
 /**
  * Copyright (C) 2013-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -24005,84 +20575,19 @@ var ForwardingFlags = function ForwardingFlags(value)
 {
   if (typeof value === 'object' && value instanceof ForwardingFlags) {
     // Make a copy.
-    this.active = value.active;
     this.childInherit = value.childInherit;
-    this.advertise = value.advertise;
-    this.last = value.last;
     this.capture = value.capture;
-    this.local = value.local;
-    this.tap = value.tap;
-    this.captureOk = value.captureOk;
   }
   else {
-    this.active = true;
     this.childInherit = true;
-    this.advertise = false;
-    this.last = false;
     this.capture = false;
-    this.local = false;
-    this.tap = false;
-    this.captureOk = false;
   }
 };
 
 exports.ForwardingFlags = ForwardingFlags;
 
-ForwardingFlags.ForwardingEntryFlags_ACTIVE         = 1;
-ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT  = 2;
-ForwardingFlags.ForwardingEntryFlags_ADVERTISE      = 4;
-ForwardingFlags.ForwardingEntryFlags_LAST           = 8;
-ForwardingFlags.ForwardingEntryFlags_CAPTURE       = 16;
-ForwardingFlags.ForwardingEntryFlags_LOCAL         = 32;
-ForwardingFlags.ForwardingEntryFlags_TAP           = 64;
-ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK   = 128;
-
 ForwardingFlags.NfdForwardingFlags_CHILD_INHERIT = 1;
 ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
-
-/**
- * Get an integer with the bits set according to the flags as used by the ForwardingEntry message.
- * @returns {number} An integer with the bits set.
- */
-ForwardingFlags.prototype.getForwardingEntryFlags = function()
-{
-  var result = 0;
-
-  if (this.active)
-    result |= ForwardingFlags.ForwardingEntryFlags_ACTIVE;
-  if (this.childInherit)
-    result |= ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT;
-  if (this.advertise)
-    result |= ForwardingFlags.ForwardingEntryFlags_ADVERTISE;
-  if (this.last)
-    result |= ForwardingFlags.ForwardingEntryFlags_LAST;
-  if (this.capture)
-    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE;
-  if (this.local)
-    result |= ForwardingFlags.ForwardingEntryFlags_LOCAL;
-  if (this.tap)
-    result |= ForwardingFlags.ForwardingEntryFlags_TAP;
-  if (this.captureOk)
-    result |= ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK;
-
-  return result;
-};
-
-/**
- * Set the flags according to the bits in forwardingEntryFlags as used by the ForwardingEntry message.
- * @param {number} forwardingEntryFlags An integer with the bits set.
- */
-ForwardingFlags.prototype.setForwardingEntryFlags = function(forwardingEntryFlags)
-{
-  this.active = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ACTIVE) != 0);
-  this.childInherit = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CHILD_INHERIT) != 0);
-  this.advertise = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_ADVERTISE) != 0);
-  this.last = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LAST) != 0);
-  this.capture = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE) != 0);
-  this.local = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_LOCAL) != 0);
-  this.tap = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_TAP) != 0);
-  this.captureOk = ((forwardingEntryFlags & ForwardingFlags.ForwardingEntryFlags_CAPTURE_OK) != 0);
-};
 
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
@@ -24115,28 +20620,10 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 };
 
 /**
- * Get the value of the "active" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getActive = function() { return this.active; };
-
-/**
  * Get the value of the "childInherit" flag.
  * @returns {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
-
-/**
- * Get the value of the "advertise" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getAdvertise = function() { return this.advertise; };
-
-/**
- * Get the value of the "last" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getLast = function() { return this.last; };
 
 /**
  * Get the value of the "capture" flag.
@@ -24145,170 +20632,16 @@ ForwardingFlags.prototype.getLast = function() { return this.last; };
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
 /**
- * Get the value of the "local" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getLocal = function() { return this.local; };
-
-/**
- * Get the value of the "tap" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getTap = function() { return this.tap; };
-
-/**
- * Get the value of the "captureOk" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
- */
-ForwardingFlags.prototype.getCaptureOk = function() { return this.captureOk; };
-
-/**
- * Set the value of the "active" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setActive = function(value) { this.active = value; };
-
-/**
  * Set the value of the "childInherit" flag
  * @param {number} value true to set the flag, false to clear it.
  */
 ForwardingFlags.prototype.setChildInherit = function(value) { this.childInherit = value; };
 
 /**
- * Set the value of the "advertise" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setAdvertise = function(value) { this.advertise = value; };
-
-/**
- * Set the value of the "last" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setLast = function(value) { this.last = value; };
-
-/**
  * Set the value of the "capture" flag
  * @param {number} value true to set the flag, false to clear it.
  */
 ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; };
-
-/**
- * Set the value of the "local" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setLocal = function(value) { this.local = value; };
-
-/**
- * Set the value of the "tap" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setTap = function(value) { this.tap = value; };
-
-/**
- * Set the value of the "captureOk" flag
- * @param {number} value true to set the flag, false to clear it.
- */
-ForwardingFlags.prototype.setCaptureOk = function(value) { this.captureOk = value; };
-/**
- * This class represents Forwarding Entries
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Meki Cheraoui
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherPublicKeyDigest = require('./publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var Name = require('./name.js').Name;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-
-/**
- * Create a new ForwardingEntry with the optional arguments.
- * @constructor
- * @param {String} action
- * @param {Name} prefixName
- * @param {PublisherPublicKeyDigest} ndndId
- * @param {number} faceID
- * @param {number} flags
- * @param {number} lifetime in seconds
- */
-var ForwardingEntry = function ForwardingEntry(action, prefixName, ndndId, faceID, flags, lifetime)
-{
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("ForwardingEntry is for NDNx and is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-  this.action = action;
-  this.prefixName = prefixName;
-  this.ndndID = ndndId;
-  this.faceID = faceID;
-  this.flags = flags;
-  this.lifetime = lifetime;
-};
-
-exports.ForwardingEntry = ForwardingEntry;
-
-ForwardingEntry.prototype.from_ndnb = function(
-  //XMLDecoder
-  decoder)
-  //throws DecodingException
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-  if (decoder.peekDTag(NDNProtocolDTags.Action))
-    this.action = decoder.readUTF8DTagElement(NDNProtocolDTags.Action);
-  if (decoder.peekDTag(NDNProtocolDTags.Name)) {
-    this.prefixName = new Name();
-    this.prefixName.from_ndnb(decoder) ;
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    this.NdndId = new PublisherPublicKeyDigest();
-    this.NdndId.from_ndnb(decoder);
-  }
-  if (decoder.peekDTag(NDNProtocolDTags.FaceID))
-    this.faceID = decoder.readIntegerDTagElement(NDNProtocolDTags.FaceID);
-  if (decoder.peekDTag(NDNProtocolDTags.ForwardingFlags))
-    this.flags = decoder.readIntegerDTagElement(NDNProtocolDTags.ForwardingFlags);
-  if (decoder.peekDTag(NDNProtocolDTags.FreshnessSeconds))
-    this.lifetime = decoder.readIntegerDTagElement(NDNProtocolDTags.FreshnessSeconds);
-
-  decoder.readElementClose();
-};
-
-ForwardingEntry.prototype.to_ndnb = function(
-  //XMLEncoder
-  encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-  if (null != this.action && this.action.length != 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Action, this.action);
-  if (null != this.prefixName)
-    this.prefixName.to_ndnb(encoder);
-  if (null != this.NdndId)
-    this.NdndId.to_ndnb(encoder);
-  if (null != this.faceID)
-    encoder.writeDTagElement(NDNProtocolDTags.FaceID, this.faceID);
-  if (null != this.flags)
-    encoder.writeDTagElement(NDNProtocolDTags.ForwardingFlags, this.flags);
-  if (null != this.lifetime)
-    encoder.writeDTagElement(NDNProtocolDTags.FreshnessSeconds, this.lifetime);
-
-  encoder.writeElementClose();
-};
-
-ForwardingEntry.prototype.getElementLabel = function() { return NDNProtocolDTags.ForwardingEntry; }
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -24739,413 +21072,6 @@ InterestFilter.makePattern = function(regexFilter)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('../util/blob.js').Blob;
-var NDNProtocolDTags = require('../util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
-var WireFormat = require('./wire-format.js').WireFormat;
-var Name = require('../name.js').Name;
-var Exclude = require('../exclude.js').Exclude;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var MetaInfo = require('../meta-info.js').MetaInfo;
-var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
-var DataUtils = require('./data-utils.js').DataUtils;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-
-/**
- * A BinaryXmlWireFormat implements the WireFormat interface for encoding and decoding in binary XML.
- * @constructor
- */
-var BinaryXmlWireFormat = function BinaryXmlWireFormat()
-{
-  // Inherit from WireFormat.
-  WireFormat.call(this);
-
-  if (!WireFormat.ENABLE_NDNX)
-    throw new Error
-      ("BinaryXmlWireFormat (NDNx) is deprecated. To enable while you upgrade your code to use NDN-TLV, set WireFormat.ENABLE_NDNX = true");
-};
-
-exports.BinaryXmlWireFormat = BinaryXmlWireFormat;
-
-// Default object.
-BinaryXmlWireFormat.instance = null;
-
-/**
- * Encode interest as Binary XML and return the encoding.
- * @param {Name} interest The Name to encode.
- * @returns {Blobl} A Blob containing the encoding.
- */
-BinaryXmlWireFormat.prototype.encodeName = function(name)
-{
-  var encoder = new BinaryXMLEncoder();
-  name.to_ndnb(encoder);
-  return new Blob(encoder.getReducedOstream(), false);
-};
-
-/**
- * Decode input as a Binary XML name and set the fields of the Name object.
- * @param {Name} name The Name object whose fields are updated.
- * @param {Buffer} input The buffer with the bytes to decode.
- */
-BinaryXmlWireFormat.prototype.decodeName = function(name, input)
-{
-  var decoder = new BinaryXMLDecoder(input);
-  name.from_ndnb(decoder);
-};
-
-/**
- * Encode interest as Binary XML and return the encoding.
- * @param {Interest} interest The Interest to encode.
- * @returns {object} An associative array with fields
- * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
- * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
- * the encoding of the beginning of the signed portion, and
- * signedPortionEndOffset is the offset in the encoding of the end of the signed
- * portion. The signed portion starts from the first name component and ends
- * just before the final name component (which is assumed to be a signature for
- * a signed interest).
- */
-BinaryXmlWireFormat.prototype.encodeInterest = function(interest)
-{
-  var encoder = new BinaryXMLEncoder();
-  var offsets = BinaryXmlWireFormat.encodeInterest(interest, encoder);
-  return { encoding: new Blob(encoder.getReducedOstream(), false),
-           signedPortionBeginOffset: offsets.signedPortionBeginOffset,
-           signedPortionEndOffset: offsets.signedPortionEndOffset };
-};
-
-/**
- * Decode input as a Binary XML interest and set the fields of the interest object.
- * @param {Interest} interest The Interest object whose fields are updated.
- * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion. The signed portion starts from the first
- * name component and ends just before the final name component (which is
- * assumed to be a signature for a signed interest).
- */
-BinaryXmlWireFormat.prototype.decodeInterest = function(interest, input)
-{
-  var decoder = new BinaryXMLDecoder(input);
-  return BinaryXmlWireFormat.decodeInterest(interest, decoder);
-};
-
-/**
- * Encode data as Binary XML and return the encoding and signed offsets.
- * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
- * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
- * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
- * the encoding of the beginning of the signed portion, and
- * signedPortionEndOffset is the offset in the encoding of the end of the
- * signed portion.
- */
-BinaryXmlWireFormat.prototype.encodeData = function(data)
-{
-  var encoder = new BinaryXMLEncoder(1500);
-  var result = BinaryXmlWireFormat.encodeData(data, encoder);
-  result.encoding = new Blob(encoder.getReducedOstream(), false);
-  return result;
-};
-
-/**
- * @deprecated Use encodeData(data).
- */
-BinaryXmlWireFormat.prototype.encodeContentObject = function(data)
-{
-  return this.encodeData(data);
-};
-
-/**
- * Decode input as a Binary XML data packet, set the fields in the data object, and return
- * the signed offsets.
- * @param {Data} data The Data object whose fields are updated.
- * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion.
- */
-BinaryXmlWireFormat.prototype.decodeData = function(data, input)
-{
-  var decoder = new BinaryXMLDecoder(input);
-  return BinaryXmlWireFormat.decodeData(data, decoder);
-};
-
-/**
- * @deprecated Use decodeData(data, input).
- */
-BinaryXmlWireFormat.prototype.decodeContentObject = function(data, input)
-{
-  this.decodeData(data, input);
-};
-
-/**
- * Get a singleton instance of a BinaryXmlWireFormat.  Assuming that the default
- * wire format was set with
- * WireFormat.setDefaultWireFormat(BinaryXmlWireFormat.get()), you can check if
- * this is the default wire encoding with
- * if WireFormat.getDefaultWireFormat() == BinaryXmlWireFormat.get().
- * @returns {BinaryXmlWireFormat} The singleton instance.
- */
-BinaryXmlWireFormat.get = function()
-{
-  if (BinaryXmlWireFormat.instance === null)
-    BinaryXmlWireFormat.instance = new BinaryXmlWireFormat();
-  return BinaryXmlWireFormat.instance;
-};
-
-/**
- * Encode the interest by calling the operations on the encoder.
- * @param {Interest} interest
- * @param {BinaryXMLEncoder} encoder
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion. The signed portion starts from the first
- * name component and ends just before the final name component (which is
- * assumed to be a signature for a signed interest).
- */
-BinaryXmlWireFormat.encodeInterest = function(interest, encoder)
-{
-  encoder.writeElementStartDTag(NDNProtocolDTags.Interest);
-
-  var offsets = interest.getName().to_ndnb(encoder);
-
-  if (null != interest.getMinSuffixComponents())
-    encoder.writeDTagElement(NDNProtocolDTags.MinSuffixComponents, interest.getMinSuffixComponents());
-
-  if (null != interest.getMaxSuffixComponents())
-    encoder.writeDTagElement(NDNProtocolDTags.MaxSuffixComponents, interest.getMaxSuffixComponents());
-
-  if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
-      !interest.getKeyLocator().getKeyData().isNull() &&
-      interest.getKeyLocator().getKeyData().size() > 0)
-    // There is a KEY_LOCATOR_DIGEST. Use this instead of the publisherPublicKeyDigest.
-    encoder.writeDTagElement
-      (NDNProtocolDTags.PublisherPublicKeyDigest,
-       interest.getKeyLocator().getKeyData());
-  else {
-    if (null != interest.publisherPublicKeyDigest)
-      interest.publisherPublicKeyDigest.to_ndnb(encoder);
-  }
-
-  if (null != interest.getExclude())
-    interest.getExclude().to_ndnb(encoder);
-
-  if (null != interest.getChildSelector())
-    encoder.writeDTagElement(NDNProtocolDTags.ChildSelector, interest.getChildSelector());
-
-  if (interest.DEFAULT_ANSWER_ORIGIN_KIND != interest.getAnswerOriginKind() && interest.getAnswerOriginKind()!=null)
-    encoder.writeDTagElement(NDNProtocolDTags.AnswerOriginKind, interest.getAnswerOriginKind());
-
-  if (null != interest.getScope())
-    encoder.writeDTagElement(NDNProtocolDTags.Scope, interest.getScope());
-
-  if (null != interest.getInterestLifetimeMilliseconds())
-    encoder.writeDTagElement(NDNProtocolDTags.InterestLifetime,
-                DataUtils.nonNegativeIntToBigEndian((interest.getInterestLifetimeMilliseconds() / 1000.0) * 4096));
-
-  if (interest.getNonce().size() > 0)
-    encoder.writeDTagElement(NDNProtocolDTags.Nonce, interest.getNonce());
-
-  encoder.writeElementClose();
-  return offsets;
-};
-
-/**
- * Use the decoder to place the result in interest.
- * @param {Interest} interest
- * @param {BinaryXMLDecoder} decoder
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion. The signed portion starts from the first
- * name component and ends just before the final name component (which is
- * assumed to be a signature for a signed interest).
- */
-BinaryXmlWireFormat.decodeInterest = function(interest, decoder)
-{
-  decoder.readElementStartDTag(NDNProtocolDTags.Interest);
-
-  interest.setName(new Name());
-  var offsets = interest.getName().from_ndnb(decoder);
-
-  if (decoder.peekDTag(NDNProtocolDTags.MinSuffixComponents))
-    interest.setMinSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MinSuffixComponents));
-  else
-    interest.setMinSuffixComponents(null);
-
-  if (decoder.peekDTag(NDNProtocolDTags.MaxSuffixComponents))
-    interest.setMaxSuffixComponents(decoder.readIntegerDTagElement(NDNProtocolDTags.MaxSuffixComponents));
-  else
-    interest.setMaxSuffixComponents(null);
-
-  // Initially clear the keyLocator.
-  interest.getKeyLocator().clear();
-  if (decoder.peekDTag(NDNProtocolDTags.PublisherPublicKeyDigest)) {
-    interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-    interest.publisherPublicKeyDigest.from_ndnb(decoder);
-  }
-  else
-    interest.publisherPublicKeyDigest = null;
-  if (interest.publisherPublicKeyDigest != null &&
-      interest.publisherPublicKeyDigest.publisherPublicKeyDigest != null &&
-      interest.publisherPublicKeyDigest.publisherPublicKeyDigest.length > 0) {
-    // We keep the deprecated publisherPublicKeyDigest for backwards
-    //   compatibility.  Also set the key locator.
-    interest.getKeyLocator().setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
-    interest.getKeyLocator().setKeyData
-      (interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
-  }
-
-  if (decoder.peekDTag(NDNProtocolDTags.Exclude)) {
-    interest.setExclude(new Exclude());
-    interest.getExclude().from_ndnb(decoder);
-  }
-  else
-    interest.setExclude(new Exclude());
-
-  if (decoder.peekDTag(NDNProtocolDTags.ChildSelector))
-    interest.setChildSelector(decoder.readIntegerDTagElement(NDNProtocolDTags.ChildSelector));
-  else
-    interest.setChildSelector(null);
-
-  if (decoder.peekDTag(NDNProtocolDTags.AnswerOriginKind))
-    interest.setAnswerOriginKind(decoder.readIntegerDTagElement(NDNProtocolDTags.AnswerOriginKind));
-  else
-    interest.setAnswerOriginKind(null);
-
-  if (decoder.peekDTag(NDNProtocolDTags.Scope))
-    interest.setScope(decoder.readIntegerDTagElement(NDNProtocolDTags.Scope));
-  else
-    interest.setScope(null);
-
-  if (decoder.peekDTag(NDNProtocolDTags.InterestLifetime))
-    interest.setInterestLifetimeMilliseconds(1000.0 * DataUtils.bigEndianToUnsignedInt
-               (decoder.readBinaryDTagElement(NDNProtocolDTags.InterestLifetime)) / 4096);
-  else
-    interest.setInterestLifetimeMilliseconds(null);
-
-  if (decoder.peekDTag(NDNProtocolDTags.Nonce))
-    interest.setNonce(decoder.readBinaryDTagElement(NDNProtocolDTags.Nonce));
-  else
-    interest.setNonce(null);
-
-  decoder.readElementClose();
-  return offsets;
-};
-
-/**
- * Encode the data by calling the operations on the encoder.
- * @param {Data} data
- * @param {BinaryXMLEncoder} encoder
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion.
- */
-BinaryXmlWireFormat.encodeData = function(data, encoder)
-{
-  //TODO verify name, MetaInfo and Signature is present
-  encoder.writeElementStartDTag(data.getElementLabel());
-
-  if (null != data.getSignature())
-    data.getSignature().to_ndnb(encoder);
-
-  var signedPortionBeginOffset = encoder.offset;
-
-  if (null != data.getName())
-    data.getName().to_ndnb(encoder);
-
-  if (null != data.getMetaInfo())
-    // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
-    //   the key locator from the MetaInfo to the Signauture object.
-    data.getMetaInfo().to_ndnb(encoder, data.getSignatureOrMetaInfoKeyLocator());
-
-  encoder.writeDTagElement(NDNProtocolDTags.Content, data.getContent().buf());
-
-  var signedPortionEndOffset = encoder.offset;
-
-  encoder.writeElementClose();
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-
-/**
- * Use the decoder to place the result in data.
- * @param {Data} data
- * @param {BinaryXMLDecoder} decoder
- * @returns {object} An associative array with fields
- * (signedPortionBeginOffset, signedPortionEndOffset) where
- * signedPortionBeginOffset is the offset in the encoding of the beginning of
- * the signed portion, and signedPortionEndOffset is the offset in the encoding
- * of the end of the signed portion.
- */
-BinaryXmlWireFormat.decodeData = function(data, decoder)
-{
-  // TODO VALIDATE THAT ALL FIELDS EXCEPT SIGNATURE ARE PRESENT
-  decoder.readElementStartDTag(data.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Signature)) {
-    data.setSignature(new Sha256WithRsaSignature());
-    data.getSignature().from_ndnb(decoder);
-  }
-  else
-    data.setSignature(new Sha256WithRsaSignature());
-
-  var signedPortionBeginOffset = decoder.offset;
-
-  data.setName(new Name());
-  data.getName().from_ndnb(decoder);
-
-  if (decoder.peekDTag(NDNProtocolDTags.SignedInfo)) {
-    data.setMetaInfo(new MetaInfo());
-    data.getMetaInfo().from_ndnb(decoder);
-    if (data.getMetaInfo().locator != null && data.getSignature() != null)
-      // Copy the key locator pointer to the Signature object for the transition
-      //   of moving the key locator from the MetaInfo to the Signature object.
-      data.getSignature().setKeyLocator(data.getMetaInfo().locator);
-  }
-  else
-    data.setMetaInfo(new MetaInfo());
-
-  data.setContent(decoder.readBinaryDTagElement(NDNProtocolDTags.Content, true));
-
-  var signedPortionEndOffset = decoder.offset;
-
-  decoder.readElementClose();
-
-  return { signedPortionBeginOffset: signedPortionBeginOffset,
-           signedPortionEndOffset: signedPortionEndOffset };
-};
-/**
- * Copyright (C) 2013-2015 Regents of the University of California.
- * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * A copy of the GNU Lesser General Public License is in the file COPYING.
- */
-
 var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
 var Name = require('../name').Name;
@@ -25161,7 +21087,6 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
-var PublisherPublicKeyDigest = require('../publisher-public-key-digest.js').PublisherPublicKeyDigest;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -25226,8 +21151,6 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
   // Encode backwards.
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
-  // Access scope_ directy to avoid throwing the deprecated exception.
-  encoder.writeOptionalNonNegativeIntegerTlv(Tlv.Scope, interest.scope_);
 
   // Encode the Nonce as 4 bytes.
   if (interest.getNonce().isNull() || interest.getNonce().size() == 0)
@@ -25292,9 +21215,6 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
     Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
-  // Access scope_ directy to avoid throwing the deprecated exception.
-  interest.scope_ = decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.Scope, endOffset);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
 
@@ -25673,20 +21593,6 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
   if (interest.getKeyLocator().getType() != null)
     Tlv0_1_1WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
-  else {
-    // There is no keyLocator. If there is a publisherPublicKeyDigest, then
-    //   encode as KEY_LOCATOR_DIGEST. (When we remove the deprecated
-    //   publisherPublicKeyDigest, we don't need this.)
-    if (null != interest.publisherPublicKeyDigest) {
-      var savePublisherPublicKeyDigestLength = encoder.getLength();
-      encoder.writeBlobTlv
-        (Tlv.KeyLocatorDigest,
-         interest.publisherPublicKeyDigest.publisherPublicKeyDigest);
-      encoder.writeTypeAndLength
-        (Tlv.PublisherPublicKeyLocator,
-         encoder.getLength() - savePublisherPublicKeyDigestLength);
-    }
-  }
 
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.MaxSuffixComponents, interest.getMaxSuffixComponents());
@@ -25707,18 +21613,9 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
   interest.setMaxSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
     (Tlv.MaxSuffixComponents, endOffset));
 
-  // Initially set publisherPublicKeyDigest to none.
-  interest.publisherPublicKeyDigest = null;
-  if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset)) {
+  if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
     Tlv0_1_1WireFormat.decodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
-    if (interest.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST) {
-      // For backwards compatibility, also set the publisherPublicKeyDigest.
-      interest.publisherPublicKeyDigest = new PublisherPublicKeyDigest();
-      interest.publisherPublicKeyDigest.publisherPublicKeyDigest =
-        interest.getKeyLocator().getKeyData().buf();
-    }
-  }
   else
     interest.getKeyLocator().clear();
 
@@ -26050,14 +21947,9 @@ WireFormat.setDefaultWireFormat(TlvWireFormat.get());
  */
 
 var DataUtils = require('./data-utils.js').DataUtils;
-var BinaryXMLEncoder = require('./binary-xml-encoder.js').BinaryXMLEncoder;
-var BinaryXMLDecoder = require('./binary-xml-decoder.js').BinaryXMLDecoder;
-var Key = require('../key.js').Key;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
-var FaceInstance = require('../face-instance.js').FaceInstance;
-var ForwardingEntry = require('../forwarding-entry.js').ForwardingEntry;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
@@ -26083,36 +21975,6 @@ EncodingUtils.encodeToHexData = function(data, wireFormat)
   return DataUtils.toHex(data.wireEncode(wireFormat).buf());
 };
 
-/**
- * @deprecated Use EncodingUtils.encodeToHexData(data).
- */
-EncodingUtils.encodeToHexContentObject = function(data, wireFormat)
-{
-  return EncodingUtils.encodeToHexData(data, wireFormat);
-}
-
-EncodingUtils.encodeForwardingEntry = function(data)
-{
-  var enc = new BinaryXMLEncoder();
-  data.to_ndnb(enc);
-  var bytes = enc.getReducedOstream();
-
-  return bytes;
-};
-
-EncodingUtils.decodeHexFaceInstance = function(result)
-{
-  var numbers = DataUtils.toNumbers(result);
-  var decoder = new BinaryXMLDecoder(numbers);
-
-  if (LOG > 3) console.log('DECODING HEX FACE INSTANCE  \n'+numbers);
-
-  var faceInstance = new FaceInstance();
-  faceInstance.from_ndnb(decoder);
-
-  return faceInstance;
-};
-
 EncodingUtils.decodeHexInterest = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
@@ -26127,26 +21989,6 @@ EncodingUtils.decodeHexData = function(input, wireFormat)
   var data = new Data();
   data.wireDecode(DataUtils.toNumbers(input), wireFormat);
   return data;
-};
-
-/**
- * @deprecated Use EncodingUtils.decodeHexData(input).
- */
-EncodingUtils.decodeHexContentObject = function(input, wireFormat)
-{
-  return EncodingUtils.decodeHexData(input, wireFormat);
-}
-
-EncodingUtils.decodeHexForwardingEntry = function(result)
-{
-  var numbers = DataUtils.toNumbers(result);
-  var decoder = new BinaryXMLDecoder(numbers);
-
-  if (LOG > 3) console.log('DECODED HEX FORWARDING ENTRY \n'+numbers);
-
-  var forwardingEntry = new ForwardingEntry();
-  forwardingEntry.from_ndnb(decoder);
-  return forwardingEntry;
 };
 
 /**
@@ -26204,10 +22046,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
     }
     if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
       output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.CERTIFICATE)
-        output += "Certificate: " + DataUtils.toHex(data.getMetaInfo().locator.certificate).toLowerCase() + "<br />";
-      else if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.getMetaInfo().locator.keyName.contentName.to_uri() + "<br />";
+      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
+        output += "KeyName: " + data.getMetaInfo().locator.getKeyName().toUri() + "<br />";
       else
         output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";
     }
@@ -26216,36 +22056,18 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   return output;
 };
 
-/**
- * @deprecated Use return EncodingUtils.dataToHtml(data).
- */
-EncodingUtils.contentObjectToHtml = function(data)
-{
-  return EncodingUtils.dataToHtml(data);
-}
-
 //
 // Deprecated: For the browser, define these in the global scope.  Applications should access as member of EncodingUtils.
 //
 
 var encodeToHexInterest = function(interest) { return EncodingUtils.encodeToHexInterest(interest); }
-var encodeToHexContentObject = function(data) { return EncodingUtils.encodeToHexData(data); }
-var encodeForwardingEntry = function(data) { return EncodingUtils.encodeForwardingEntry(data); }
-var decodeHexFaceInstance = function(input) { return EncodingUtils.decodeHexFaceInstance(input); }
 var decodeHexInterest = function(input) { return EncodingUtils.decodeHexInterest(input); }
-var decodeHexContentObject = function(input) { return EncodingUtils.decodeHexData(input); }
-var decodeHexForwardingEntry = function(input) { return EncodingUtils.decodeHexForwardingEntry(input); }
 var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSubjectPublicKeyInfo(input); }
-var contentObjectToHtml = function(data) { return EncodingUtils.dataToHtml(data); }
 
 /**
  * @deprecated Use interest.wireEncode().
  */
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
-/**
- * @deprecated Use data.wireEncode().
- */
-function encodeToBinaryContentObject(data) { return data.wireEncode().buf(); }
 /**
  * This class represents the digest tree for chrono-sync2013.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -27291,23 +23113,14 @@ var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Closure = require('./closure.js').Closure;
-var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
@@ -27345,7 +23158,6 @@ var LOG = require('./log.js').Log.LOG;
  *               // However, if connectionInfo is not null, use it instead.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
- *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
 var Face = function Face(transportOrSettings, connectionInfo)
@@ -27429,17 +23241,10 @@ var Face = function Face(transportOrSettings, connectionInfo)
   }
 
   this.readyStatus = Face.UNOPEN;
-  this.verify = (settings.verify !== undefined ? settings.verify : false);
-  if (this.verify) {
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-  }
 
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
-  this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
   this.commandKeyChain = null;
@@ -27447,7 +23252,6 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
 
-  this.keyStore = new Array();
   this.pendingInterestTable = new Array();  // of Face.PendingInterest
   this.pitRemoveRequests = new Array();     // of number
   this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
@@ -27503,8 +23307,6 @@ Face.getSupported = function()
 
 Face.supported = Face.getSupported();
 
-Face.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
-
 Face.prototype.createRoute = function(hostOrConnectionInfo, port)
 {
   if (hostOrConnectionInfo instanceof Transport.ConnectionInfo)
@@ -27515,36 +23317,6 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
   // Deprecated: Set this.host and this.port for backwards compatibility.
   this.host = this.connectionInfo.host;
   this.host = this.connectionInfo.port;
-};
-
-var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
-{
-  this.keyName = name;  // KeyName
-  this.rsaKey = rsa;    // RSA key
-  this.timeStamp = time;  // Time Stamp
-};
-
-Face.prototype.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
-{
-  var result = this.getKeyByName(keyEntry.keyName);
-  if (result == null)
-    this.keyStore.push(keyEntry);
-  else
-    result = keyEntry;
-};
-
-Face.prototype.getKeyByName = function(/* KeyName */ name)
-{
-  var result = null;
-
-  for (var i = 0; i < this.keyStore.length; i++) {
-    if (this.keyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || this.keyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
-        result = this.keyStore[i];
-    }
-  }
-
-  return result;
 };
 
 Face.prototype.close = function()
@@ -27570,14 +23342,18 @@ Face.prototype.getNextEntryId = function()
 };
 
 /**
+ * A PendingInterestTable is an internal class to hold a list of pending
+ * interests with their callbacks.
  * @constructor
  */
-Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest, closure)
+Face.PendingInterest = function FacePendingInterest
+  (pendingInterestId, interest, onData, onTimeout)
 {
   this.pendingInterestId = pendingInterestId;
-  this.interest = interest;  // Interest
-  this.closure = closure;    // Closure
-  this.timerID = -1;  // Timer ID
+  this.interest = interest;
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+  this.timerID = -1;
 };
 
 /**
@@ -27661,16 +23437,15 @@ Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
  * Create a new InterestFilterEntry with the given values.
  * @param {number} interestFilterId The ID from getNextEntryId().
  * @param {InterestFilter} filter The InterestFilter for this entry.
- * @param {Closure} closure The closure for calling upcall on interest. TODO:
- * Change to a function instead of a Closure object.
+ * @param {function} onInterest The callback to call.
  * @constructor
  */
 Face.InterestFilterEntry = function FaceInterestFilterEntry
-  (interestFilterId, filter, closure)
+  (interestFilterId, filter, onInterest)
 {
   this.interestFilterId = interestFilterId;
   this.filter = filter;
-  this.closure = closure;
+  this.onInterest = onInterest;
 };
 
 /**
@@ -27689,6 +23464,15 @@ Face.InterestFilterEntry.prototype.getInterestFilterId = function()
 Face.InterestFilterEntry.prototype.getFilter = function()
 {
   return this.filter;
+};
+
+/**
+ * Get the onInterest callback given to the constructor.
+ * @returns {function} The onInterest callback.
+ */
+Face.InterestFilterEntry.prototype.getOnInterest = function()
+{
+  return this.onInterest;
 };
 
 /**
@@ -27722,7 +23506,6 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
  * a name and optional interest template:
  * expressInterest(name [, template], onData [, onTimeout]).
- * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -27740,32 +23523,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
-  // There are several overloaded versions of expressInterest, each shown inline below.
-
   var interest;
-  // expressInterest(Name name, Closure closure);                      // deprecated
-  // expressInterest(Name name, Closure closure,   Interest template); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("expressInterest with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    // The first argument is a name. Make the interest from the name and possible template.
-    if (arg3) {
-      var template = arg3;
-      // Copy the template.
-      interest = new Interest(template);
-      interest.setName(interestOrName);
-    }
-    else {
-      interest = new Interest(interestOrName);
-      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
-    }
-
-    return this.expressInterestWithClosure(interest, arg2);
-  }
-
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
@@ -27800,49 +23558,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     }
   }
 
-  // Make a Closure from the callbacks so we can use expressInterestWithClosure.
-  // TODO: Convert the PIT to use callbacks, not a closure.
-  return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
-};
-
-Face.CallbackClosure = function FaceCallbackClosure
-  (onData, onTimeout, onInterest, face, interestFilterId, filter) {
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.onInterest = onInterest;
-  this.face = face;
-  this.interestFilterId = interestFilterId;
-  this.filter = filter;
-};
-
-Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
-  if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED)
-    this.onData(upcallInfo.interest, upcallInfo.data);
-  else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
-    this.onTimeout(upcallInfo.interest);
-  else if (kind == Closure.UPCALL_INTEREST)
-    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
-    this.onInterest
-      (this.filter.getPrefix(), upcallInfo.interest, this.face,
-       this.interestFilterId, this.filter)
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * A private method to send the the interest to host:port, read the entire response and call
- * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, data)).
- * @deprecated Use expressInterest with callback functions, not Closure.
- * @param {Interest} the interest, already processed with a template (if supplied).
- * @param {Closure} closure
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
- */
-Face.prototype.expressInterestWithClosure = function(interest, closure)
-{
   var pendingInterestId = this.getNextEntryId();
 
   if (this.connectionInfo == null) {
@@ -27851,12 +23566,13 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
     else {
       var thisFace = this;
       this.connectAndExecute(function() {
-        thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+        thisFace.reconnectAndExpressInterest
+          (pendingInterestId, interest, onData, onTimeout);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
 
   return pendingInterestId;
 };
@@ -27866,13 +23582,16 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
  */
-Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
+Face.prototype.reconnectAndExpressInterest = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { 
+        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -27898,9 +23617,11 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+        (function() { 
+          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, closure);
+      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -27908,53 +23629,45 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
 };
 
 /**
- * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
- *   this.transport.send to send the interest.
+ * Do the work of reconnectAndExpressInterest once we know we are connected.
+ * Add the PendingInterest and call this.transport.send to send the interest.
  */
-Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
+Face.prototype.expressInterestHelper = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var binaryInterest = interest.wireEncode();
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
-  var thisFace = this;
-  if (closure != null) {
-    var removeRequestIndex = -1;
-    if (removeRequestIndex != null)
-      removeRequestIndex = this.pitRemoveRequests.indexOf(pendingInterestId);
-    if (removeRequestIndex >= 0)
-      // removePendingInterest was called with the pendingInterestId returned by
-      //   expressInterest before we got here, so don't add a PIT entry.
-      this.pitRemoveRequests.splice(removeRequestIndex, 1);
-    else {
-      var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
-      this.pendingInterestTable.push(pitEntry);
-      closure.pitEntry = pitEntry;
+  var removeRequestIndex = removeRequestIndex = this.pitRemoveRequests.indexOf
+    (pendingInterestId);
+  if (removeRequestIndex >= 0)
+    // removePendingInterest was called with the pendingInterestId returned by
+    //   expressInterest before we got here, so don't add a PIT entry.
+    this.pitRemoveRequests.splice(removeRequestIndex, 1);
+  else {
+    var pitEntry = new Face.PendingInterest
+      (pendingInterestId, interest, onData, onTimeout);
+    this.pendingInterestTable.push(pitEntry);
 
-      // Set interest timer.
-      var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-      var thisFace = this;
-      var timeoutCallback = function() {
-        if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
+    // Set interest timer.
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+    var thisFace = this;
+    var timeoutCallback = function() {
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from thisFace.pendingInterestTable, even if we add it again later to re-express
-        //   the interest because we don't want to match it in the mean time.
-        var index = thisFace.pendingInterestTable.indexOf(pitEntry);
-        if (index >= 0)
-          thisFace.pendingInterestTable.splice(index, 1);
+      // Remove PIT entry from thisFace.pendingInterestTable.
+      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
+      if (index >= 0)
+        thisFace.pendingInterestTable.splice(index, 1);
 
-        // Raise closure callback
-        if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-          if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
-          pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          thisFace.pendingInterestTable.push(pitEntry);
-          thisFace.transport.send(binaryInterest.buf());
-        }
-      };
+      // Call onTimeout.
+      if (pitEntry.onTimeout)
+        pitEntry.onTimeout(pitEntry.interest);
+    };
 
-      pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-    }
+    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
   }
 
   // Special case: For timeoutPrefix we don't actually send the interest.
@@ -28073,10 +23786,10 @@ Face.prototype.nodeMakeCommandInterest = function
 };
 
 /**
- * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
+ * Register prefix with the connected NDN hub and call onInterest when a 
+ * matching interest is received. To register a prefix with NFD, you must
+ * first call setCommandSigningInfo.
  * This uses the form:
- * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
- * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
  * @param {Name} prefix The Name prefix.
  * @param {function} onInterest (optional) If not None, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
@@ -28088,95 +23801,26 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
- * If omitted, use the default flags defined by the default ForwardingFlags constructor.
- * @param {number} intFlags (optional) (only for the deprecated form of
- * registerPrefix) The integer NDNx flags for finer control of which interests
- * are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
+ * finer control of which interests are forward to the application. If omitted,
+ * use the default flags defined by the default ForwardingFlags constructor.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
-Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
+Face.prototype.registerPrefix = function
+  (prefix, onInterest, onRegisterFailed, flags)
 {
-  // There are several overloaded versions of registerPrefix, each shown inline below.
-
-  // registerPrefix(Name prefix, Closure closure);            // deprecated
-  // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("registerPrefix with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    if (arg3) {
-      var flags;
-      if (typeof flags === 'number') {
-        // Assume this deprecated form is only called for NDNx.
-        flags = new ForwardingFlags();
-        flags.setForwardingEntryFlags(arg3);
-      }
-      else
-        // Assume arg3 is already a ForwardingFlags.
-        flags = arg3;
-      return this.registerPrefixWithClosure(prefix, arg2, flags);
-    }
-    else
-      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
-  }
-
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
-  var onInterest = arg2;
-  var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var flags = (arg4 ? arg4 : new ForwardingFlags());
-  return this.registerPrefixWithClosure
-    (prefix, onInterest, flags, onRegisterFailed);
-};
-
-/**
- * A private method to register the prefix with the host, receive the data and call
- * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)).
- * @deprecated Use registerPrefix with callback functions, not Closure.
- * @param {Name} prefix
- * @param {Closure|function} closure or onInterest.
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed (optional) If called from the
- * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
- * fails.
- * @returns {number} The registered prefix ID which can be used with
- * removeRegisteredPrefix.
- */
-Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, flags, onRegisterFailed)
-{
+  if (!onRegisterFailed)
+    onRegisterFailed = function() {};
+  if (!flags)
+    flags = new ForwardingFlags();
+  
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
-    // If we have an _ndndId, we know we already connected to NDNx.
-    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
-      // Assume we are connected to a legacy NDNx server.
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-      if (thisFace.ndndid == null) {
-        // Fetch ndndid first, then register.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-        thisFace.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
-      }
-      else
-        thisFace.registerPrefixHelper
-          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
-    }
-    else
-      // The application set the KeyChain for signing NFD interests.
-      thisFace.nfdRegisterPrefix
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
-         thisFace.commandKeyChain, thisFace.commandCertificateName);
+    thisFace.nfdRegisterPrefix
+      (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+       thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -28199,243 +23843,64 @@ Face.prototype.registerPrefixWithClosure = function
 Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
 
 /**
- * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(registeredPrefixId, prefix, callerClosure, flags).
+ * A RegisterResponse has onData to receive the response Data packet from the
+ * register prefix interest sent to the connected NDN hub. If this gets a bad
+ * response or onTimeout is called, then call onRegisterFailed.
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure
-  (face, registeredPrefixId, prefix, callerClosure, flags, onRegisterFailed)
+Face.RegisterResponse = function RegisterResponse
+  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
 {
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.registeredPrefixId = registeredPrefixId;
-  this.prefix = prefix;
-  this.callerClosure = callerClosure;
-  this.flags = flags; // FOrwardingFlags
-  this.onRegisterFailed = onRegisterFailed;
-};
-
-Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (LOG > 0)
-      console.log
-        ("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
-         this.prefix.toUri() + " .");
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
-    return Closure.RESULT_OK;
-  }
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  if (LOG > 3) console.log('Got ndndid from ndnd.');
-  // Get the digest of the public key in the data packet content.
-  var hash = Crypto.createHash('sha256');
-  hash.update(upcallInfo.data.getContent().buf());
-  this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-  if (LOG > 3) console.log(this.face.ndndid);
-
-  this.face.registerPrefixHelper
-    (this.registeredPrefixId, this.prefix, this.callerClosure, this.flags,
-     this.onRegisterFailed);
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * This is a closure to receive the response Data packet from the register
- * prefix interest sent to the connected NDN hub. If this gets a bad response
- * or a timeout, call onRegisterFailed.
- */
-Face.RegisterResponseClosure = function RegisterResponseClosure
-  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
   this.face = face;
   this.prefix = prefix;
-  this.callerClosure = callerClosure;
+  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
   this.flags = flags;
   this.wireFormat = wireFormat;
-  this.isNfdCommand = isNfdCommand;
 };
 
-Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
+Face.RegisterResponse.prototype.onData = function(interest, responseData)
 {
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    // We timed out waiting for the response.
-    if (this.isNfdCommand) {
-      // The application set the commandKeyChain, but we may be connected to NDNx.
-      if (LOG > 2)
-        console.log("Timeout for NFD register prefix command. Attempting an NDNx command...");
-      if (this.face.ndndid == null) {
-        // Fetch ndndid first, then register.
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        this.face.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
-      }
-      else
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        this.face.registerPrefixHelper
-          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
-    }
-    else {
-      // An NDNx command was sent because there is no commandKeyChain, so we
-      //   can't try an NFD command. Or it was sent from this callback after
-      //   trying an NFD command. Fail.
-      if (LOG > 0)
-        console.log("Register prefix failed: Timeout waiting for the response from the register prefix interest");
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-    }
-
-    return Closure.RESULT_OK;
+  // Decode responseData.getContent() and check for a success code.
+  // TODO: Move this into the TLV code.
+  var statusCode;
+  try {
+    var decoder = new TlvDecoder(responseData.getContent().buf());
+    decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+    statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
   }
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  if (this.isNfdCommand) {
-    // Decode responseData->getContent() and check for a success code.
-    // TODO: Move this into the TLV code.
-    var statusCode;
-    try {
-        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
-        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
-        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
-    }
-    catch (e) {
-      // Error decoding the ControlResponse.
-      if (LOG > 0)
-        console.log("Register prefix failed: Error decoding the NFD response: " + e);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    // Status code 200 is "OK".
-    if (statusCode != 200) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Expected NFD status code 200, got: " +
-                    statusCode);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NFD forwarder for prefix " +
-                  this.prefix.toUri());
-  }
-  else {
-    var expectedName = new Name("/ndnx/.../selfreg");
-    // Got a response. Do a quick check of expected name components.
-    if (upcallInfo.data.getName().size() < 4 ||
-        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Unexpected name in NDNx response: " +
-                    upcallInfo.data.getName().toUri());
+  catch (e) {
+    // Error decoding the ControlResponse.
+    if (LOG > 0)
+      console.log("Register prefix failed: Error decoding the NFD response: " + e);
+    if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NDNx forwarder for prefix " +
-                  this.prefix.toUri());
-  }
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * Do the work of registerPrefix once we know we are connected with an ndndid.
- * @param {type} registeredPrefixId The Face.getNextEntryId() which
- * registerPrefix got so it could return it to the caller. If this is 0, then
- * don't add to registeredPrefixTable (assuming it has already been done).
- * @param {Name} prefix
- * @param {Closure} closure
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed
- * @returns {undefined}
- */
-Face.prototype.registerPrefixHelper = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
-{
-  var removeRequestIndex = -1;
-  if (removeRequestIndex != null)
-    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
-      (registeredPrefixId);
-  if (removeRequestIndex >= 0) {
-    // removeRegisteredPrefix was called with the registeredPrefixId returned by
-    //   registerPrefix before we got here, so don't add a registeredPrefixTable
-    //   entry.
-    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
-  if (!WireFormat.ENABLE_NDNX)
-    // We can get here if the command signing info is set, but running NDNx.
-    throw new Error
-      ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-  // A ForwardingEntry is only used with NDNx.
-  var fe = new ForwardingEntry
-    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
-
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  var encoder = new BinaryXMLEncoder();
-  fe.to_ndnb(encoder);
-  var bytes = encoder.getReducedOstream();
-
-  var metaInfo = new MetaInfo();
-  metaInfo.setFields();
-  // Since we encode the register prefix message as BinaryXml, use the full
-  //   public key in the key locator to make the legacy NDNx happy.
-  metaInfo.locator.setType(KeyLocatorType.KEY);
-  metaInfo.locator.setKeyData(globalKeyManager.getKey().publicToDER());
-
-  var data = new Data(new Name(), metaInfo, bytes);
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  data.sign(BinaryXmlWireFormat.get());
-  var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
-
-  var nodename = this.ndndid;
-  var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
-
-  var interest = new Interest(interestName);
-  interest.setInterestLifetimeMilliseconds(4000.0);
-  interest.setScope(1);
-  if (LOG > 3) console.log('Send Interest registration packet.');
-
-  if (registeredPrefixId != 0) {
-    var interestFilterId = 0;
-    if (closure != null)
-      // registerPrefix was called with the "combined" form that includes the
-      // callback, so add an InterestFilterEntry.
-      interestFilterId = this.setInterestFilter
-        (new InterestFilter(prefix), closure);
-
-    this.registeredPrefixTable.push
-      (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+  // Status code 200 is "OK".
+  if (statusCode != 200) {
+    if (LOG > 0)
+      console.log("Register prefix failed: Expected NFD status code 200, got: " +
+                  statusCode);
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+    return;
   }
 
-  // Send the registration interest.
-  this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure
-     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
+  if (LOG > 2)
+    console.log("Register prefix succeeded with the NFD forwarder for prefix " +
+                this.prefix.toUri());
+};
+
+/**
+ * We timed out waiting for the response.
+ */
+Face.RegisterResponse.prototype.onTimeout = function(interest)
+{
+  if (LOG > 2)
+    console.log("Timeout for NFD register prefix command.");
+  if (this.onRegisterFailed)
+    this.onRegisterFailed(this.prefix);
 };
 
 /**
@@ -28444,14 +23909,14 @@ Face.prototype.registerPrefixHelper = function
  * registerPrefix got so it could return it to the caller. If this is 0, then
  * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
- * @param {Closure} closure
+ * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
    commandCertificateName)
 {
   var removeRequestIndex = -1;
@@ -28499,21 +23964,23 @@ Face.prototype.nfdRegisterPrefix = function
        TlvWireFormat.get(), function() {
       if (registeredPrefixId != 0) {
         var interestFilterId = 0;
-        if (closure != null)
+        if (onInterest != null)
           // registerPrefix was called with the "combined" form that includes the
           // callback, so add an InterestFilterEntry.
           interestFilterId = thisFace.setInterestFilter
-            (new InterestFilter(prefix), closure);
+            (new InterestFilter(prefix), onInterest);
 
         thisFace.registeredPrefixTable.push
           (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
       }
 
       // Send the registration interest.
+      var response = new Face.RegisterResponse
+         (thisFace, prefix, onInterest, onRegisterFailed, flags,
+          TlvWireFormat.get());
       thisFace.reconnectAndExpressInterest
-        (null, commandInterest, new Face.RegisterResponseClosure
-         (thisFace, prefix, closure, onRegisterFailed, flags,
-          TlvWireFormat.get(), true));
+        (null, commandInterest, response.onData.bind(response),
+         response.onTimeout.bind(response));
     });
   };
 
@@ -28597,16 +24064,9 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     filter = new InterestFilter(filterOrPrefix);
 
   var interestFilterId = this.getNextEntryId();
-  var closure;
-  if (onInterest.upcall && typeof onInterest.upcall == 'function')
-    // Assume it is the deprecated use with Closure.
-    closure = onInterest;
-  else
-    closure = new Face.CallbackClosure
-      (null, null, onInterest, this, interestFilterId, filter);
 
   this.interestFilterTable.push(new Face.InterestFilterEntry
-    (interestFilterId, filter, closure));
+    (interestFilterId, filter, onInterest));
 
   return interestFilterId;
 };
@@ -28692,8 +24152,7 @@ Face.prototype.isLocal = function(onResult, onError)
 };
 
 /**
- * This is called when an entire binary XML element is received, such as a Data or Interest.
- * Look up in the PITTable and call the closure callback.
+ * This is called when an entire element is received, such as a Data or Interest.
  */
 Face.prototype.onReceivedElement = function(element)
 {
@@ -28701,9 +24160,6 @@ Face.prototype.onReceivedElement = function(element)
   // First, decode as Interest or Data.
   var interest = null;
   var data = null;
-  // The type codes for TLV Interest and Data packets are chosen to not
-  //   conflict with the first byte of a binary XML packet, so we can
-  //   just look at the first byte.
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
     var decoder = new TlvDecoder (element);
     if (decoder.peekType(Tlv.Interest, element.length)) {
@@ -28713,18 +24169,6 @@ Face.prototype.onReceivedElement = function(element)
     else if (decoder.peekType(Tlv.Data, element.length)) {
       data = new Data();
       data.wireDecode(element, TlvWireFormat.get());
-    }
-  }
-  else {
-    // Binary XML.
-    var decoder = new BinaryXMLDecoder(element);
-    if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
-      interest = new Interest();
-      interest.wireDecode(element, BinaryXmlWireFormat.get());
-    }
-    else if (decoder.peekDTag(NDNProtocolDTags.Data)) {
-      data = new Data();
-      data.wireDecode(element, BinaryXmlWireFormat.get());
     }
   }
 
@@ -28738,11 +24182,9 @@ Face.prototype.onReceivedElement = function(element)
       if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
-        // TODO: Use a callback function instead of Closure.
-        var info = new UpcallInfo(this, interest, 0, null);
-        var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-        if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
-          this.transport.send(info.data.wireEncode().buf());
+        entry.getOnInterest()
+          (entry.getFilter().getPrefix(), interest, this,
+           entry.getInterestFilterId(), entry.getFilter());
       }
     }
   }
@@ -28752,120 +24194,8 @@ Face.prototype.onReceivedElement = function(element)
     var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
-      var pitEntry = pendingInterests[i];
-      var currentClosure = pitEntry.closure;
-
-      if (this.verify == false) {
-        // Pass content up without verifying the signature
-        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
-        continue;
-      }
-
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-      // Key verification
-
-      // Recursive key fetching & verification closure
-      var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-        this.data = content;  // unverified data packet object
-        this.closure = closure;  // closure corresponding to the data
-        this.keyName = key;  // name of current key to be fetched
-
-        Closure.call(this);
-      };
-
-      var thisFace = this;
-      KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-          console.log("In KeyFetchClosure.upcall: interest time out.");
-          console.log(this.keyName.contentName.toUri());
-        }
-        else if (kind == Closure.UPCALL_CONTENT) {
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          this.closure.upcall(flag, new UpcallInfo(thisFace, null, 0, this.data));
-
-          // Store key in cache
-          var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          this.addKeyEntry(keyEntry);
-        }
-        else if (kind == Closure.UPCALL_CONTENT_BAD)
-          console.log("In KeyFetchClosure.upcall: signature verification failed");
-      };
-
-      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
-        if (LOG > 3) console.log("Key verification...");
-        var sigHex = data.getSignature().getSignature().toHex();
-
-        var wit = null;
-        if (data.getSignature().witness != null)
-            //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-        var keylocator = data.getMetaInfo().locator;
-        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
-          if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-
-          if (keylocator.keyName.contentName.match(data.getName())) {
-            if (LOG > 3) console.log("Content is key itself");
-
-            var rsakey = new Key();
-            rsakey.readDerPublicKey(data.getContent().buf());
-            var verified = data.verify(rsakey);
-            var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-            // SWT: We don't need to store key here since the same key will be stored again in the closure.
-          }
-          else {
-            // Check local key store
-            var keyEntry = this.getKeyByName(keylocator.keyName);
-            if (keyEntry) {
-              // Key found, verify now
-              if (LOG > 3) console.log("Local key cache hit");
-              var rsakey = keyEntry.rsaKey;
-              var verified = data.verify(rsakey);
-              var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-              // Raise callback
-              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-            }
-            else {
-              // Not found, fetch now
-              if (LOG > 3) console.log("Fetch key according to keylocator");
-              var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
-              // TODO: Use expressInterest with callbacks, not Closure.
-              this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
-            }
-          }
-        }
-        else if (keylocator.getType() == KeyLocatorType.KEY) {
-          if (LOG > 3) console.log("Keylocator contains KEY");
-
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(keylocator.publicKey);
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          // Raise callback
-          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-          // Since KeyLocator does not contain key name for this key,
-          // we have no way to store it as a key entry in KeyStore.
-        }
-        else {
-          var cert = keylocator.certificate;
-          console.log("KeyLocator contains CERT");
-          console.log(cert);
-          // TODO: verify certificate
-        }
-      }
+      var pendingInterest = pendingInterests[i];
+      pendingInterest.onData(pendingInterest.interest, data);
     }
   }
 };
@@ -28913,7 +24243,17 @@ Face.prototype.connectAndExecute = function(onConnected)
       thisFace.connectAndExecute(onConnected);
   }, 3000);
 
-  this.reconnectAndExpressInterest(null, interest, new Face.ConnectClosure(this, onConnected, timerID));
+  this.reconnectAndExpressInterest
+    (null, interest,
+     function(localInterest, localData) {
+        // The host is alive, so cancel the timeout and continue with onConnected().
+        clearTimeout(timerID);
+
+        if (LOG>0)
+          console.log("connectAndExecute: connected to host " + thisFace.host);
+        onConnected();
+     },
+     function(localInterest) { /* Ignore timeout */ });
 };
 
 /**
@@ -28924,51 +24264,5 @@ Face.prototype.closeByTransport = function()
   this.readyStatus = Face.CLOSED;
   this.onclose();
 };
-
-Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.onConnected = onConnected;
-  this.timerID = timerID;
-};
-
-Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.
-    return Closure.RESULT_ERR;
-
-  // The host is alive, so cancel the timeout and continue with onConnected().
-  clearTimeout(this.timerID);
-
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
-  this.onConnected();
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * @deprecated Use new Face.
- */
-var NDN = function NDN(settings)
-{
-  // Call the base constructor.
-  Face.call(this, settings);
-}
-
-// Use dummy functions so that the Face constructor will not try to set its own defaults.
-NDN.prototype = new Face({ getTransport: function(){}, getConnectionInfo: function(){} });
-
-exports.NDN = NDN;
-
-NDN.supported = Face.supported;
-NDN.UNOPEN = Face.UNOPEN;
-NDN.OPEN_REQUESTED = Face.OPEN_REQUESTED;
-NDN.OPENED = Face.OPENED;
-NDN.CLOSED = Face.CLOSED;
 (function(n,t,i){"use strict";function s(n,t){return typeof t!="object"&&(t=t()),Object.keys(t).forEach(function(i){n[i]=t[i]}),n}function y(n){return{from:function(t){return n.prototype=Object.create(t.prototype),n.prototype.constructor=n,{extend:function(i){s(n.prototype,typeof i!="object"?i(t.prototype):i)}}}}}function p(n,t){return t(n)}function u(n,t){function cr(){w.on("versionchange",function(){w.close();w.on("error").fire(new g("Database version changed by other database connection."))})}function di(n){this._cfg={version:n,storesSource:null,dbschema:{},tables:{},contentUpgrade:null};this.stores({})}function lr(n,t,i,u){var e,f,s,h,l,c;if(n===0)Object.keys(st).forEach(function(n){gi(t,n,st[n].primKey,st[n].indexes)}),e=w._createTransaction(yt,ui,st),e.idbtrans=t,e.idbtrans.onerror=o(i,["populating database"]),e.on("error").subscribe(i),r.newPSD(function(){r.PSD.trans=e;try{w.on("populate").fire(e)}catch(n){u.onerror=t.onerror=function(n){n.preventDefault()};try{t.abort()}catch(f){}t.db.close();i(n)}});else{if(f=[],s=ri.filter(function(t){return t._cfg.version===n})[0],!s)throw new g("Dexie specification of currently installed DB version is missing");st=w._dbSchema=s._cfg.dbschema;h=!1;l=ri.filter(function(t){return t._cfg.version>n});l.forEach(function(n){var e=st,r=n._cfg.dbschema,u;fr(e,t);fr(r,t);st=w._dbSchema=r;u=ar(e,r);u.add.forEach(function(n){f.push(function(t,i){gi(t,n[0],n[1].primKey,n[1].indexes);i()})});u.change.forEach(function(n){if(n.recreate)throw new g("Not yet support for changing primary key");else f.push(function(t,i){var r=t.objectStore(n.name);n.add.forEach(function(n){nr(r,n)});n.change.forEach(function(n){r.deleteIndex(n.name);nr(r,n)});n.del.forEach(function(n){r.deleteIndex(n)});i()})});n._cfg.contentUpgrade&&f.push(function(t,u){var f,e;h=!0;f=w._createTransaction(yt,[].slice.call(t.db.objectStoreNames,0),r);f.idbtrans=t;e=0;f._promise=p(f._promise,function(n){return function(t,i,r){function f(n){return function(){n.apply(this,arguments);--e==0&&u()}}return++e,n.call(this,t,function(n,t){arguments[0]=f(n);arguments[1]=f(t);i.apply(this,arguments)},r)}});t.onerror=o(i,["running upgrader function for version",n._cfg.version]);f.on("error").subscribe(i);n._cfg.contentUpgrade(f);e===0&&u()});h&&dr()||f.push(function(n,t){yr(r,n);t()})});c=function(){try{f.length?f.shift()(t,c):vr(st,t)}catch(n){u.onerror=t.onerror=function(n){n.preventDefault()};try{t.abort()}catch(r){}t.db.close();i(n)}};c()}}function ar(n,t){var f={del:[],add:[],change:[]},r,e,o,i,c,s,u,l,h;for(r in n)t[r]||f.del.push(r);for(r in t)if(e=n[r],o=t[r],e)if(i={name:r,def:t[r],recreate:!1,del:[],add:[],change:[]},e.primKey.src!==o.primKey.src)i.recreate=!0,f.change.push(i);else{c=e.indexes.reduce(function(n,t){return n[t.name]=t,n},{});s=o.indexes.reduce(function(n,t){return n[t.name]=t,n},{});for(u in c)s[u]||i.del.push(u);for(u in s)l=c[u],h=s[u],l?l.src!==h.src&&i.change.push(h):i.add.push(h);(i.recreate||i.del.length>0||i.add.length>0||i.change.length>0)&&f.change.push(i)}else f.add.push([r,o]);return f}function gi(n,t,i,r){var u=n.db.createObjectStore(t,i.keyPath?{keyPath:i.keyPath,autoIncrement:i.auto}:{autoIncrement:i.auto});return r.forEach(function(n){nr(u,n)}),u}function vr(n,t){Object.keys(n).forEach(function(i){t.db.objectStoreNames.contains(i)||gi(t,i,n[i].primKey,n[i].indexes)})}function yr(n,t){for(var u,r=0;r<t.db.objectStoreNames.length;++r)u=t.db.objectStoreNames[r],(n[u]===null||n[u]===i)&&t.db.deleteObjectStore(u)}function nr(n,t){n.createIndex(t.name,t.keyPath,{unique:t.unique,multiEntry:t.multi})}function pr(n,t){throw new g("Table "+t[0]+" not part of transaction. Original Scope Function Source: "+u.Promise.PSD.trans.scopeFunc.toString());}function ei(n,t,i,r){this.name=n;this.schema=i;this.hook=ni[n]?ni[n].hook:v(null,{creating:[at,f],reading:[lt,nt],updating:[vt,f],deleting:[wt,f]});this._tpf=t;this._collClass=r||li}function tr(n,t,i,r){ei.call(this,n,t,i,r||rr)}function ir(n,t,i,r){function o(n,t,i,r){return s._promise(n,i,r)}var s=this,f,u,e;for(this.db=w,this.mode=n,this.storeNames=t,this.idbtrans=null,this.on=v(this,["complete","error"],"abort"),this._reculock=0,this._blockedFuncs=[],this._psd=null,this.active=!0,this._dbschema=i,r&&(this.parent=r),this._tpf=o,this.tables=Object.create(ki),f=t.length-1;f!==-1;--f)u=t[f],e=w._tableFactory(n,i[u],o),this.tables[u]=e,this[u]||(this[u]=e)}function ci(n,t,i){this._ctx={table:n,index:t===":id"?null:t,collClass:n._collClass,or:i}}function li(n,t){var r=null,u=null,i;if(t)try{r=t()}catch(f){u=f}i=n._ctx;this._ctx={table:i.table,index:i.index,isPrimKey:!i.index||i.table.schema.primKey.keyPath&&i.index===i.table.schema.primKey.name,range:r,op:"openCursor",dir:"next",unique:"",algorithm:null,filter:null,isMatch:null,offset:0,limit:Infinity,error:u,or:i.or}}function rr(){li.apply(this,arguments)}function wr(n,t){return n._cfg.version-t._cfg.version}function ur(n,t,i,u,f,e){i.forEach(function(i){var o=w._tableFactory(u,f[i],t);n.forEach(function(n){n[i]||(e?Object.defineProperty(n,i,{configurable:!0,enumerable:!0,get:function(){var n=r.PSD&&r.PSD.trans;return n&&n.db===w?n.tables[i]:o}}):n[i]=o)})})}function br(n){n.forEach(function(n){for(var t in n)n[t]instanceof ei&&delete n[t]})}function pi(n,t,i,u,f,e){var s=r.PSD;e=e||nt;n.onerror||(n.onerror=o(f));n.onsuccess=t?k(function(){var r=n.result,o;r?(o=function(){r.continue()},t(r,function(n){o=n},u,f)&&i(e(r.value),r,function(n){o=n}),o()):u()},f,s):k(function(){var t=n.result,r;t?(r=function(){t.continue()},i(e(t.value),t,function(n){r=n}),r()):u()},f,s)}function kr(n){var t=[];return n.split(",").forEach(function(n){n=n.trim();var i=n.replace("&","").replace("++","").replace("*",""),r=i.indexOf("[")!==0?i:n.substring(n.indexOf("[")+1,n.indexOf("]")).split("+");t.push(new a(i,r||null,n.indexOf("&")!==-1,n.indexOf("*")!==-1,n.indexOf("++")!==-1,Array.isArray(r),r.indexOf(".")!==-1))}),t}function wi(n,t){return n<t?-1:n>t?1:0}function or(n,t){return n<t?1:n>t?-1:0}function sr(n){return function(t,i){for(var r=0,u;;){if(u=n(t[r],i[r]),u!==0)return u;if(++r,r===t.length||r===i.length)return n(t.length,i.length)}}}function bi(n,t){return n?t?function(){return n.apply(this,arguments)&&t.apply(this,arguments)}:n:t}function dr(){return navigator.userAgent.indexOf("Trident")>=0||navigator.userAgent.indexOf("MSIE")>=0}function gr(){if(w.verno=et.version/10,w._dbSchema=st={},ui=[].slice.call(et.objectStoreNames,0),ui.length!==0){var n=et.transaction(ft(ui),"readonly");ui.forEach(function(t){for(var u,s,r=n.objectStore(t),i=r.keyPath,f=i&&typeof i=="string"&&i.indexOf(".")!==-1,h=new a(i,i||"",!1,!1,!!r.autoIncrement,i&&typeof i!="string",f),o=[],e=0;e<r.indexNames.length;++e)u=r.index(r.indexNames[e]),i=u.keyPath,f=i&&typeof i=="string"&&i.indexOf(".")!==-1,s=new a(u.name,i,!!u.unique,!!u.multiEntry,!1,i&&typeof i!="string",f),o.push(s);st[t]=new ut(t,h,o,{})});ur([ni],w._transPromiseFactory,Object.keys(st),yt,st)}}function fr(n,t){for(var i,r,u,o,s=t.db.objectStoreNames,f=0;f<s.length;++f)for(i=s[f],r=t.objectStore(i),u=0;u<r.indexNames.length;++u){var h=r.indexNames[u],e=r.index(h).keyPath,c=typeof e=="string"?e:"["+[].slice.call(e).join("+")+"]";n[i]&&(o=n[i].idxByName[c],o&&(o.name=h))}}var hr=t&&t.addons||u.addons,oi=u.dependencies,ai=oi.indexedDB,kt=oi.IDBKeyRange,nu=oi.IDBTransaction,tu=oi.DOMError,yi=oi.TypeError,g=oi.Error,st=this._dbSchema={},ri=[],ui=[],ni={},ki={},et=null,si=!0,fi=null,vi=!1,ti="readonly",yt="readwrite",w=this,ii=[],hi=!1,er=!!ct();this.version=function(n){if(et)throw new g("Cannot add version when database is open");this.verno=Math.max(this.verno,n);var t=ri.filter(function(t){return t._cfg.version===n})[0];return t?t:(t=new di(n),ri.push(t),ri.sort(wr),t)};s(di.prototype,{stores:function(n){var i,t;return this._cfg.storesSource=this._cfg.storesSource?s(this._cfg.storesSource,n):n,i={},ri.forEach(function(n){s(i,n._cfg.storesSource)}),t=this._cfg.dbschema={},this._parseStoresSpec(i,t),st=w._dbSchema=t,br([ni,w,ki]),ur([ki],pr,Object.keys(t),yt,t),ur([ni,w,this._cfg.tables],w._transPromiseFactory,Object.keys(t),yt,t,!0),ui=Object.keys(t),this},upgrade:function(n){var t=this;return e(function(){n(w._createTransaction(yt,Object.keys(t._cfg.dbschema),t._cfg.dbschema))}),this._cfg.contentUpgrade=n,this},_parseStoresSpec:function(n,t){Object.keys(n).forEach(function(i){if(n[i]!==null){var u={},f=kr(n[i]),r=f.shift();if(r.multi)throw new g("Primary key cannot be multi-valued");r.keyPath&&r.auto&&h(u,r.keyPath,0);f.forEach(function(n){if(n.auto)throw new g("Only primary key can be marked as autoIncrement (++)");if(!n.keyPath)throw new g("Index must have a name and cannot be an empty string");h(u,n.keyPath,n.compound?n.keyPath.map(function(){return""}):"")});t[i]=new ut(i,r,f,u)}})}});this._allTables=ni;this._tableFactory=function(n,t,i){return n===ti?new ei(t.name,i,t,li):new tr(t.name,i,t)};this._createTransaction=function(n,t,i,r){return new ir(n,t,i,r)};this._transPromiseFactory=function(n,t,i){var f,u;return!si||r.PSD&&r.PSD.letThrough?(u=w._createTransaction(n,t,st),u._promise(n,function(n,t){u.error(function(n){w.on("error").fire(n)});i(function(t){u.complete(function(){n(t)})},t,u)})):f=new r(function(r,u){ii.push({resume:function(){var e=w._transPromiseFactory(n,t,i);f.onuncatched=e.onuncatched;e.then(r,u)}})})};this._whenReady=function(n){return si&&(!r.PSD||!r.PSD.letThrough)?new r(function(t,i){e(function(){new r(function(){n(t,i)})});ii.push({resume:function(){n(t,i)}})}):new r(n)};this.verno=0;this.open=function(){return new r(function(t,i){function f(n){try{u.transaction.abort()}catch(t){}vi=!1;fi=n;si=!1;i(fi);ii.forEach(function(n){n.resume()});ii=[]}if(et||vi)throw new g("Database already opened or being opened");var u,e=!1;try{if(fi=null,vi=!0,ri.length===0&&(hi=!0),!ai)throw new g("indexedDB API not found. If using IE10+, make sure to run your code on a server URL (not locally). If using Safari, make sure to include indexedDB polyfill.");u=hi?ai.open(n):ai.open(n,Math.round(w.verno*10));u.onerror=o(f,["opening database",n]);u.onblocked=function(n){w.on("blocked").fire(n)};u.onupgradeneeded=k(function(t){var i,r;hi&&!w._allowEmptyDB?(u.onerror=function(n){n.preventDefault()},u.transaction.abort(),u.result.close(),i=ai.deleteDatabase(n),i.onsuccess=i.onerror=function(){f(new g("Database '"+n+"' doesnt exist"))}):(t.oldVersion===0&&(e=!0),u.transaction.onerror=o(f),r=t.oldVersion>Math.pow(2,62)?0:t.oldVersion,lr(r/10,u.transaction,f,u))},f);u.onsuccess=k(function(){vi=!1;et=u.result;hi?gr():et.objectStoreNames.length>0&&fr(st,et.transaction(ft(et.objectStoreNames),ti));et.onversionchange=w.on("versionchange").fire;er||rt(function(t){if(t.indexOf(n)===-1)return t.push(n)});r.newPSD(function(){function i(){si=!1;ii.forEach(function(n){n.resume()});ii=[];t()}r.PSD.letThrough=!0;try{var n=w.on.ready.fire();n&&typeof n.then=="function"?n.then(i,function(n){et.close();et=null;f(n)}):b(i)}catch(u){f(u)}})},f)}catch(s){f(s)}})};this.close=function(){et&&(et.close(),et=null,si=!0,fi=null)};this.delete=function(){var t=arguments;return new r(function(i,r){function u(){w.close();var t=ai.deleteDatabase(n);t.onsuccess=function(){er||rt(function(t){var i=t.indexOf(n);if(i>=0)return t.splice(i,1)});i()};t.onerror=o(r,["deleting",n]);t.onblocked=function(){w.on("blocked").fire()}}if(t.length>0)throw new g("Arguments not allowed in db.delete()");vi?ii.push({resume:u}):u()})};this.backendDB=function(){return et};this.isOpen=function(){return et!==null};this.hasFailed=function(){return fi!==null};this.dynamicallyOpened=function(){return hi};this.name=n;Object.defineProperty(this,"tables",{get:function(){return Object.keys(ni).map(function(n){return ni[n]})}});this.on=v(this,"error","populate","blocked",{ready:[bt,f],versionchange:[pt,f]});this.on.ready.subscribe=p(this.on.ready.subscribe,function(n){return function(t,i){function r(){return i||w.on.ready.unsubscribe(r),t.apply(this,arguments)}n.call(this,r);w.isOpen()&&(si?ii.push({resume:r}):r())}});e(function(){w.on("populate").fire(w._createTransaction(yt,ui,st));w.on("error").fire(new g)});this.transaction=function(n,t,i){function s(t,e){var s=null,c,a,h;try{if(f)throw f;s=w._createTransaction(n,o,st,u);c=o.map(function(n){return s.tables[n]});c.push(s);h=0;r.newPSD(function(){r.PSD.trans=s;s.scopeFunc=i;u&&(s.idbtrans=u.idbtrans,s._promise=p(s._promise,function(n){return function(t,i,u){function f(n){return function(t){var i;return r._rootExec(function(){i=n(t);r._tickFinalize(function(){--h==0&&s.active&&(s.active=!1,s.on.complete.fire())})}),i}}return++h,n.call(this,t,function(n,t,r){return i(f(n),f(t),r)},u)}}));s.complete(function(){t(a)});s.error(function(n){s.idbtrans&&(s.idbtrans.onerror=ht);try{s.abort()}catch(i){}u&&(u.active=!1,u.on.error.fire(n));var t=e(n);u||t||w.on.error.fire(n)});r._rootExec(function(){a=i.apply(s,c)})});(!s.idbtrans||u&&h===0)&&s._nop()}catch(l){s&&s.idbtrans&&(s.idbtrans.onerror=ht);s&&s.abort();u&&u.on.error.fire(l);b(function(){e(l)||w.on("error").fire(l)})}}var u,e;t=[].slice.call(arguments,1,arguments.length-1);i=arguments[arguments.length-1];u=r.PSD&&r.PSD.trans;u&&u.db===w&&n.indexOf("!")===-1||(u=null);e=n.indexOf("?")!==-1;n=n.replace("!","").replace("?","");var h=Array.isArray(t[0])?t.reduce(function(n,t){return n.concat(t)}):t,f=null,o=h.map(function(n){return typeof n=="string"?n:(n instanceof ei||(f=f||new yi("Invalid type. Arguments following mode must be instances of Table or String")),n.name)});return n=="r"||n==ti?n=ti:n=="rw"||n==yt?n=yt:f=new g("Invalid transaction mode: "+n),u&&(f||(u&&u.mode===ti&&n===yt&&(e?u=null:f=f||new g("Cannot enter a sub-transaction with READWRITE mode when parent transaction is READONLY")),u&&o.forEach(function(n){u.tables.hasOwnProperty(n)||(e?u=null:f=f||new g("Table "+n+" not included in parent transaction. Parent Transaction function: "+u.scopeFunc.toString()))}))),u?u._promise(n,s,"lock"):w._whenReady(s)};this.table=function(n){if(!hi&&!ni.hasOwnProperty(n))throw new g("Table does not exist");return ni[n]};s(ei.prototype,function(){function n(){throw new g("Current Transaction is READONLY");}return{_trans:function(n,t,i){return this._tpf(n,[this.name],t,i)},_idbstore:function(n,t,i){var r=this;return this._tpf(n,[this.name],function(n,i,u){t(n,i,u.idbtrans.objectStore(r.name),u)},i)},get:function(n,t){var i=this;return e(function(){t(i.schema.instanceTemplate)}),this._idbstore(ti,function(t,r,u){var f=u.get(n);f.onerror=o(r,["getting",n,"from",i.name]);f.onsuccess=function(){t(i.hook.reading.fire(f.result))}}).then(t)},where:function(n){return new ci(this,n)},count:function(n){return this.toCollection().count(n)},offset:function(n){return this.toCollection().offset(n)},limit:function(n){return this.toCollection().limit(n)},reverse:function(){return this.toCollection().reverse()},filter:function(n){return this.toCollection().and(n)},each:function(n){var t=this;return e(function(){n(t.schema.instanceTemplate)}),this._idbstore(ti,function(i,r,u){var f=u.openCursor();f.onerror=o(r,["calling","Table.each()","on",t.name]);pi(f,null,n,i,r,t.hook.reading.fire)})},toArray:function(n){var t=this;return e(function(){n([t.schema.instanceTemplate])}),this._idbstore(ti,function(n,i,r){var u=[],f=r.openCursor();f.onerror=o(i,["calling","Table.toArray()","on",t.name]);pi(f,null,function(n){u.push(n)},function(){n(u)},i,t.hook.reading.fire)}).then(n)},orderBy:function(n){return new this._collClass(new ci(this,n))},toCollection:function(){return new this._collClass(new ci(this))},mapToClass:function(n,t){var i,r;return this.schema.mappedClass=n,i=Object.create(n.prototype),this.schema.primKey.keyPath&&(h(i,this.schema.primKey.keyPath,this.schema.primKey.auto?0:""),ot(n.prototype,this.schema.primKey.keyPath)),t&&it(i,t),this.schema.instanceTemplate=i,r=Object.setPrototypeOf?function(t){return t?(Object.setPrototypeOf(t,n.prototype),t):t}:function(t){var r,i;if(!t)return t;r=Object.create(n.prototype);for(i in t)t.hasOwnProperty(i)&&(r[i]=t[i]);return r},this.schema.readHook&&this.hook.reading.unsubscribe(this.schema.readHook),this.schema.readHook=r,this.hook("reading",r),n},defineClass:function(n){return this.mapToClass(u.defineClass(n),n)},add:n,put:n,"delete":n,clear:n,update:n}});y(tr).from(ei).extend(function(){return{add:function(n,t){var u=this,r=this.hook.creating.fire;return this._idbstore(yt,function(e,s,l,a){var v={},w,y,p;r!==f&&(w=t||(l.keyPath?c(n,l.keyPath):i),y=r.call(v,w,n,a),w===i&&y!==i&&(l.keyPath?h(n,l.keyPath,y):t=y));p=t?l.add(n,t):l.add(n);p.onerror=o(function(n){if(v.onerror)v.onerror(n);return s(n)},["adding",n,"into",u.name]);p.onsuccess=function(t){var i=l.keyPath;if(i&&h(n,i,t.target.result),v.onsuccess)v.onsuccess(t.target.result);e(p.result)}})},put:function(n,t){var r=this,u=this.hook.creating.fire,e=this.hook.updating.fire;return u!==f||e!==f?this._trans(yt,function(u,f,e){var o=t||r.schema.primKey.keyPath&&c(n,r.schema.primKey.keyPath);o===i?e.tables[r.name].add(n).then(u,f):(e._lock(),n=l(n),e.tables[r.name].where(":id").equals(o).modify(function(){this.value=n}).then(function(i){return i===0?e.tables[r.name].add(n,t):o}).finally(function(){e._unlock()}).then(u,f))}):this._idbstore(yt,function(i,u,f){var e=t?f.put(n,t):f.put(n);e.onerror=o(u,["putting",n,"into",r.name]);e.onsuccess=function(t){var r=f.keyPath;r&&h(n,r,t.target.result);i(e.result)}})},"delete":function(n){return this.hook.deleting.subscribers.length?this.where(":id").equals(n).delete():this._idbstore(yt,function(t,i,r){var u=r.delete(n);u.onerror=o(i,["deleting",n,"from",r.name]);u.onsuccess=function(){t(u.result)}})},clear:function(){return this.hook.deleting.subscribers.length?this.toCollection().delete():this._idbstore(yt,function(n,t,i){var r=i.clear();r.onerror=o(t,["clearing",i.name]);r.onsuccess=function(){n(r.result)}})},update:function(n,t){if(typeof t!="object"||Array.isArray(t))throw new g("db.update(keyOrObject, modifications). modifications must be an object.");if(typeof n!="object"||Array.isArray(n))return this.where(":id").equals(n).modify(t);Object.keys(t).forEach(function(i){h(n,i,t[i])});var u=c(n,this.schema.primKey.keyPath);return u===i&&r.reject(new g("Object does not contain its primary key")),this.where(":id").equals(u).modify(t)}}});s(ir.prototype,{_lock:function(){return++this._reculock,this._reculock===1&&r.PSD&&(r.PSD.lockOwnerFor=this),this},_unlock:function(){if(--this._reculock==0)for(r.PSD&&(r.PSD.lockOwnerFor=null);this._blockedFuncs.length>0&&!this._locked();){var n=this._blockedFuncs.shift();try{n()}catch(t){}}return this},_locked:function(){return this._reculock&&(!r.PSD||r.PSD.lockOwnerFor!==this)},_nop:function(n){this.tables[this.storeNames[0]].get(0).then(n)},_promise:function(n,t,i){var f=this;return r.newPSD(function(){var e;return f._locked()?e=new r(function(r,u){f._blockedFuncs.push(function(){f._promise(n,t,i).then(r,u)})}):(e=f.active?new r(function(r,e){if(!f.idbtrans&&n){if(!et)throw fi?new g("Database not open. Following error in populate, ready or upgrade function made Dexie.open() fail: "+fi):new g("Database not open");var o=f.idbtrans=et.transaction(ft(f.storeNames),f.mode);o.onerror=function(n){f.on("error").fire(n&&n.target.error);n.preventDefault();f.abort()};o.onabort=function(n){f.active=!1;f.on("abort").fire(n)};o.oncomplete=function(n){f.active=!1;f.on("complete").fire(n)}}i&&f._lock();try{t(r,e,f)}catch(s){u.ignoreTransaction(function(){f.on("error").fire(s)});f.abort();e(s)}}):r.reject(gt(new g("Transaction is inactive. Original Scope Function Source: "+f.scopeFunc.toString()))),f.active&&i&&e.finally(function(){f._unlock()})),e.onuncatched=function(n){u.ignoreTransaction(function(){f.on("error").fire(n)});f.abort()},e})},complete:function(n){return this.on("complete",n)},error:function(n){return this.on("error",n)},abort:function(){if(this.idbtrans&&this.active)try{this.active=!1;this.idbtrans.abort();this.on.error.fire(new g("Transaction Aborted"))}catch(n){}},table:function(n){if(!this.tables.hasOwnProperty(n))throw new g("Table "+n+" not in transaction");return this.tables[n]}});s(ci.prototype,function(){function n(n,t){try{throw t;}catch(i){n._ctx.error=i}return n}function i(n){return Array.prototype.slice.call(n.length===1&&Array.isArray(n[0])?n[0]:n)}function r(n){return n==="next"?function(n){return n.toUpperCase()}:function(n){return n.toLowerCase()}}function u(n){return n==="next"?function(n){return n.toLowerCase()}:function(n){return n.toUpperCase()}}function f(n,t,i,r,u,f){for(var h,s=Math.min(n.length,r.length),o=-1,e=0;e<s;++e){if(h=t[e],h!==r[e])return u(n[e],i[e])<0?n.substr(0,e)+i[e]+i.substr(e+1):u(n[e],r[e])<0?n.substr(0,e)+r[e]+i.substr(e+1):o>=0?n.substr(0,o)+t[o]+i.substr(o+1):null;u(n[e],h)<0&&(o=e)}return s<r.length&&f==="next"?n+i.substr(n.length):s<n.length&&f==="prev"?n.substr(0,i.length):o<0?null:n.substr(0,o)+r[o]+i.substr(o+1)}function t(n,t,i){function a(n){s=r(n);e=u(n);h=n==="next"?wi:or;c=s(i);o=e(i);l=n}var s,e,h,c,o,l;a("next");n._ondirectionchange=function(n){a(n)};n._addAlgorithm(function(n,i,r){var u=n.key,s,a;return typeof u!="string"?!1:(s=e(u),t(s,o)?(i(function(){n.continue()}),!0):(a=f(u,s,c,o,h,l),a?i(function(){n.continue(a)}):i(r),!1))})}return{between:function(n,t,i,r){return(i=i!==!1,r=r===!0,n>t||n===t&&(i||r)&&!(i&&r))?new this._ctx.collClass(this,function(){return kt.only(n)}).limit(0):new this._ctx.collClass(this,function(){return kt.bound(n,t,!i,!r)})},equals:function(n){return new this._ctx.collClass(this,function(){return kt.only(n)})},above:function(n){return new this._ctx.collClass(this,function(){return kt.lowerBound(n,!0)})},aboveOrEqual:function(n){return new this._ctx.collClass(this,function(){return kt.lowerBound(n)})},below:function(n){return new this._ctx.collClass(this,function(){return kt.upperBound(n,!0)})},belowOrEqual:function(n){return new this._ctx.collClass(this,function(){return kt.upperBound(n)})},startsWith:function(t){return typeof t!="string"?n(new this._ctx.collClass(this),new yi("String expected")):this.between(t,t+String.fromCharCode(65535),!0,!0)},startsWithIgnoreCase:function(i){if(typeof i!="string")return n(new this._ctx.collClass(this),new yi("String expected"));if(i==="")return this.startsWith(i);var r=new this._ctx.collClass(this,function(){return kt.bound(i.toUpperCase(),i.toLowerCase()+String.fromCharCode(65535))});return t(r,function(n,t){return n.indexOf(t)===0},i),r._ondirectionchange=function(){n(r,new g("reverse() not supported with WhereClause.startsWithIgnoreCase()"))},r},equalsIgnoreCase:function(i){if(typeof i!="string")return n(new this._ctx.collClass(this),new yi("String expected"));var r=new this._ctx.collClass(this,function(){return kt.bound(i.toUpperCase(),i.toLowerCase())});return t(r,function(n,t){return n===t},i),r},anyOf:function(){var f=this._ctx,e=f.table.schema,o=f.index?e.idxByName[f.index]:e.primKey,s=o&&o.compound,n=i(arguments),t=s?sr(wi):wi,u,r;return(n.sort(t),n.length===0)?new this._ctx.collClass(this,function(){return kt.only("")}).limit(0):(u=new this._ctx.collClass(this,function(){return kt.bound(n[0],n[n.length-1])}),u._ondirectionchange=function(i){t=i==="next"?wi:or;s&&(t=sr(t));n.sort(t)},r=0,u._addAlgorithm(function(i,u,f){for(var e=i.key;t(e,n[r])>0;)if(++r,r===n.length)return u(f),!1;return t(e,n[r])===0?(u(function(){i.continue()}),!0):(u(function(){i.continue(n[r])}),!1)}),u)}}});s(li.prototype,function(){function t(n,t){n.filter=bi(n.filter,t)}function f(n,t){n.isMatch=bi(n.isMatch,t)}function r(n,t){if(n.isPrimKey)return t;var i=n.table.schema.idxByName[n.index];if(!i)throw new g("KeyPath "+n.index+" on object store "+t.name+" is not indexed");return n.isPrimKey?t:t.index(i.name)}function u(n,t){return r(n,t)[n.op](n.range||null,n.dir+n.unique)}function i(n,t,i,r,f){n.or?function(){function e(){++c==2&&i()}function h(n,i,u){if(!o||o(i,u,e,r)){var f=i.primaryKey.toString();s.hasOwnProperty(f)||(s[f]=!0,t(n,i,u))}}var o=n.filter,s={},l=n.table.schema.primKey.keyPath,c=0;n.or._iterate(h,e,r,f);pi(u(n,f),n.algorithm,h,e,r,n.table.hook.reading.fire)}():pi(u(n,f),bi(n.algorithm,n.filter),t,i,r,n.table.hook.reading.fire)}function n(n){return n.table.schema.instanceTemplate}return{_read:function(n,t){var i=this._ctx;return i.error?i.table._trans(null,function(n,t){t(i.error)}):i.table._idbstore(ti,n).then(t)},_write:function(n){var t=this._ctx;return t.error?t.table._trans(null,function(n,i){i(t.error)}):t.table._idbstore(yt,n,"locked")},_addAlgorithm:function(n){var t=this._ctx;t.algorithm=bi(t.algorithm,n)},_iterate:function(n,t,r,u){return i(this._ctx,n,t,r,u)},each:function(t){var r=this._ctx;return e(function(){t(n(r))}),this._read(function(n,u,f){i(r,t,n,u,f)})},count:function(n){var f,t,u;return e(function(){n(0)}),f=this,t=this._ctx,t.filter||t.algorithm||t.or?(u=0,this._read(function(n,r,f){i(t,function(){return++u,!1},function(){n(u)},r,f)},n)):this._read(function(n,i,u){var e=r(t,u),s=t.range?e.count(t.range):e.count();s.onerror=o(i,["calling","count()","on",f.name]);s.onsuccess=function(i){n(Math.min(i.target.result,Math.max(0,t.limit-t.offset)))}},n)},sortBy:function(t,i){function u(n,t){return t?u(n[r[t]],t-1):n[h]}function c(n,t){var i=u(n,o),r=u(t,o);return i<r?-f:i>r?f:0}var s=this._ctx,f;e(function(){i([n(s)])});var r=t.split(".").reverse(),h=r[0],o=r.length-1;return f=this._ctx.dir==="next"?1:-1,this.toArray(function(n){return n.sort(c)}).then(i)},toArray:function(t){var r=this._ctx;return e(function(){t([n(r)])}),this._read(function(n,t,u){var f=[];i(r,function(n){f.push(n)},function(){n(f)},t,u)},t)},offset:function(n){var i=this._ctx;return n<=0?this:(i.offset+=n,i.or||i.algorithm||i.filter?t(i,function(){return--n<0}):t(i,function(t,i){return n===0?!0:n===1?(--n,!1):(i(function(){t.advance(n);n=0}),!1)}),this)},limit:function(n){return this._ctx.limit=Math.min(this._ctx.limit,n),t(this._ctx,function(t,i,r){return--n<=0&&i(r),n>=0}),this},until:function(i,r){var u=this._ctx;return e(function(){i(n(u))}),t(this._ctx,function(n,t,u){return i(n.value)?(t(u),r):!0}),this},first:function(t){var i=this;return e(function(){t(n(i._ctx))}),this.limit(1).toArray(function(n){return n[0]}).then(t)},last:function(n){return this.reverse().first(n)},and:function(i){var r=this;return e(function(){i(n(r._ctx))}),t(this._ctx,function(n){return i(n.value)}),f(this._ctx,i),this},or:function(n){return new ci(this._ctx.table,n,this)},reverse:function(){return this._ctx.dir=this._ctx.dir==="prev"?"next":"prev",this._ondirectionchange&&this._ondirectionchange(this._ctx.dir),this},desc:function(){return this.reverse()},eachKey:function(t){var i=this,r=this._ctx;return e(function(){t(n(i._ctx)[i._ctx.index])}),r.isPrimKey||(r.op="openKeyCursor"),this.each(function(n,i){t(i.key,i)})},eachUniqueKey:function(n){return this._ctx.unique="unique",this.eachKey(n)},keys:function(t){var u,i,r;return e(function(){t([n(i)[u._ctx.index]])}),u=this,i=this._ctx,i.isPrimKey||(i.op="openKeyCursor"),r=[],this.each(function(n,t){r.push(t.key)}).then(function(){return r}).then(t)},uniqueKeys:function(n){return this._ctx.unique="unique",this.keys(n)},firstKey:function(n){var t=this;return this.limit(1).keys(function(n){return n[0]}).then(n)},lastKey:function(n){return this.reverse().firstKey(n)},distinct:function(){var n={};return t(this._ctx,function(t){var i=t.primaryKey.toString(),r=n.hasOwnProperty(i);return n[i]=!0,!r}),this}}});y(rr).from(li).extend({modify:function(n){var a=this,t=this._ctx,r=t.table.hook,i=r.updating.fire,u=r.deleting.fire;return e(function(){typeof n=="function"&&n.call({value:t.table.schema.instanceTemplate},t.table.schema.instanceTemplate)}),this._write(function(r,e,v,y){function st(n,i){var r,u,f;if(et=i.primaryKey,r={primKey:i.primaryKey,value:n},w.call(r,n)!==!1)u=!r.hasOwnProperty("value"),f=u?i.delete():i.update(r.value),++ut,f.onerror=o(function(n){if(p.push(n),nt.push(r.primKey),r.onerror)r.onerror(n);return it(),!0},u?["deleting",n,"from",t.table.name]:["modifying",n,"on",t.table.name]),f.onsuccess=function(){if(r.onsuccess)r.onsuccess(r.value);++b;it()};else if(r.onsuccess)r.onsuccess(r.value)}function ot(n){return n&&(p.push(n),nt.push(et)),e(new d("Error modifying one or more objects",p,b,nt))}function it(){ft&&b+p.length===ut&&(p.length>0?ot():r(b))}var w,k,rt,g;typeof n=="function"?w=i===f&&u===f?n:function(t){var f=l(t),e,r;if(n.call(this,t)===!1)return!1;this.hasOwnProperty("value")?(e=dt(f,this.value),r=i.call(this,e,this.primKey,f,y),r&&(t=this.value,Object.keys(r).forEach(function(n){h(t,n,r[n])}))):u.call(this,this.primKey,t,y)}:i===f?(k=Object.keys(n),rt=k.length,w=function(t){for(var i,u,f=!1,r=0;r<rt;++r)i=k[r],u=n[i],c(t,i)!==u&&(h(t,i,u),f=!0);return f}):(g=n,n=tt(g),w=function(t){var u=!1,r=i.call(this,n,this.primKey,l(t),y);return r&&s(n,r),Object.keys(n).forEach(function(i){var r=n[i];c(t,i)!==r&&(h(t,i,r),u=!0)}),r&&(n=tt(g)),u});var ut=0,b=0,ft=!1,p=[],nt=[],et=null;a._iterate(st,function(){ft=!0;it()},ot,v)})},"delete":function(){return this.modify(function(){delete this.value})}});s(this,{Collection:li,Table:ei,Transaction:ir,Version:di,WhereClause:ci,WriteableCollection:rr,WriteableTable:tr});cr();hr.forEach(function(n){n(w)})}function f(){}function nt(n){return n}function lt(n,t){return n===nt?t:function(i){return t(n(i))}}function w(n,t){return function(){n.apply(this,arguments);t.apply(this,arguments)}}function at(n,t){return n===f?t:function(){var f=n.apply(this,arguments),r,u,e;return f!==i&&(arguments[0]=f),r=this.onsuccess,u=this.onerror,delete this.onsuccess,delete this.onerror,e=t.apply(this,arguments),r&&(this.onsuccess=this.onsuccess?w(r,this.onsuccess):r),u&&(this.onerror=this.onerror?w(u,this.onerror):u),e!==i?e:f}}function vt(n,t){return n===f?t:function(){var r=n.apply(this,arguments),f,e,u;return r!==i&&s(arguments[0],r),f=this.onsuccess,e=this.onerror,delete this.onsuccess,delete this.onerror,u=t.apply(this,arguments),f&&(this.onsuccess=this.onsuccess?w(f,this.onsuccess):f),e&&(this.onerror=this.onerror?w(e,this.onerror):e),r===i?u===i?i:u:u===i?r:s(r,u)}}function yt(n,t){return n===f?t:function(){return n.apply(this,arguments)===!1?!1:t.apply(this,arguments)}}function pt(n,t){return n===f?t:function(){return t.apply(this,arguments)===!1?!1:n.apply(this,arguments)}}function wt(n,t){return n===f?t:function(){n.apply(this,arguments);t.apply(this,arguments)}}function bt(n,t){return n===f?t:function(){var i=n.apply(this,arguments),r,u;return i&&typeof i.then=="function"?(r=this,u=arguments,i.then(function(){return t.apply(r,u)})):t.apply(this,arguments)}}function v(t){function i(n,t,i){if(Array.isArray(n))return c(n);if(typeof n=="object")return h(n);t||(t=yt);i||(i=f);var r={subscribers:[],fire:i,subscribe:function(n){r.subscribers.push(n);r.fire=t(r.fire,n)},unsubscribe:function(n){r.subscribers=r.subscribers.filter(function(t){return t!==n});r.fire=r.subscribers.reduce(t,i)}};return u[n]=e[n]=r,r}function h(t){Object.keys(t).forEach(function(r){var f=t[r],u;if(Array.isArray(f))i(r,t[r][0],t[r][1]);else if(f==="asap")u=i(r,null,function(){var t=arguments;u.subscribers.forEach(function(i){b(function(){i.apply(n,t)})})}),u.subscribe=function(n){u.subscribers.indexOf(n)===-1&&u.subscribers.push(n)},u.unsubscribe=function(n){var t=u.subscribers.indexOf(n);t!==-1&&u.subscribers.splice(t,1)};else throw new Error("Invalid event config");})}function c(n){function r(){if(t)return!1;t=!0}var t=!1;n.forEach(function(n){i(n).subscribe(r)})}var o=arguments,u={},e=function(n,i){if(i){var f=[].slice.call(arguments,1),r=u[n];return r.subscribe.apply(r,f),t}if(typeof n=="string")return u[n]},r,s;for(e.addEventType=i,r=1,s=o.length;r<s;++r)i(o[r]);return e}function kt(n){if(!n)throw new Error("Assertion failed");}function b(t){n.setImmediate?setImmediate(t):setTimeout(t,0)}function et(n){var t=setTimeout(n,1e3);clearTimeout(t)}function k(n,t,i){return function(){var u=r.PSD;r.PSD=i;try{n.apply(this,arguments)}catch(f){t(f)}finally{r.PSD=u}}}function c(n,t){var f,r,o,s,u,e;if(n.hasOwnProperty(t))return n[t];if(!t)return n;if(typeof t!="string"){for(f=[],r=0,o=t.length;r<o;++r)s=c(n,t[r]),f.push(s);return f}return(u=t.indexOf("."),u!==-1)?(e=n[t.substr(0,u)],e===i?i:c(e,t.substr(u+1))):i}function h(n,t,r){var u,c,e,f,s,o;if(n&&t!==i)if(typeof t!="string"&&"length"in t)for(kt(typeof r!="string"&&"length"in r),u=0,c=t.length;u<c;++u)h(n,t[u],r[u]);else e=t.indexOf("."),e!==-1?(f=t.substr(0,e),s=t.substr(e+1),s===""?r===i?delete n[f]:n[f]=r:(o=n[f],o||(o=n[f]={}),h(o,s,r))):r===i?delete n[t]:n[t]=r}function ot(n,t){h(n,t,i)}function tt(n){var i={};for(var t in n)n.hasOwnProperty(t)&&(i[t]=n[t]);return i}function l(n){var t,i,u,r;if(!n||typeof n!="object")return n;if(Array.isArray(n))for(t=[],i=0,u=n.length;i<u;++i)t.push(l(n[i]));else if(n instanceof Date)t=new Date,t.setTime(n.getTime());else{t=n.constructor?Object.create(n.constructor.prototype):{};for(r in n)n.hasOwnProperty(r)&&(t[r]=l(n[r]))}return t}function dt(n,t){var u={};for(var r in n)n.hasOwnProperty(r)&&(t.hasOwnProperty(r)?n[r]!==t[r]&&JSON.stringify(n[r])!=JSON.stringify(t[r])&&(u[r]=t[r]):u[r]=i);for(r in t)t.hasOwnProperty(r)&&!n.hasOwnProperty(r)&&(u[r]=t[r]);return u}function st(n){if(typeof n=="function")return new n;if(Array.isArray(n))return[st(n[0])];if(n&&typeof n=="object"){var t={};return it(t,n),t}return n}function it(n,t){Object.keys(t).forEach(function(i){var r=st(t[i]);n[i]=r})}function o(n,t){return function(i){var r=i&&i.target.error||new Error,u;return t&&(u=" occurred when "+t.map(function(n){switch(typeof n){case"function":return n();case"string":return n;default:return JSON.stringify(n)}}).join(" "),r.name?r.toString=function(){return r.name+u+(r.message?". "+r.message:"")}:r=r+u),n(r),i&&(i.stopPropagation&&i.stopPropagation(),i.preventDefault&&i.preventDefault()),!1}}function gt(n){try{throw n;}catch(t){return t}}function ht(n){n.preventDefault()}function rt(n){var t,i=u.dependencies.localStorage;if(!i)return n([]);try{t=JSON.parse(i.getItem("Dexie.DatabaseNames")||"[]")}catch(r){t=[]}n(t)&&i.setItem("Dexie.DatabaseNames",JSON.stringify(t))}function a(n,t,i,r,u,f,e){this.name=n;this.keyPath=t;this.unique=i;this.multi=r;this.auto=u;this.compound=f;this.dotted=e;var o=typeof t=="string"?t:t&&"["+[].join.call(t,"+")+"]";this.src=(i?"&":"")+(r?"*":"")+(u?"++":"")+o}function ut(n,t,i,r){this.name=n;this.primKey=t||new a;this.indexes=i||[new a];this.instanceTemplate=r;this.mappedClass=null;this.idxByName=i.reduce(function(n,t){return n[t.name]=t,n},{})}function d(n,t,i,r){this.name="ModifyError";this.failures=t;this.failedKeys=r;this.successCount=i;this.message=t.join("\n")}function ft(n){return n.length===1?n[0]:n}function ct(){var n=u.dependencies.indexedDB,t=n&&(n.getDatabaseNames||n.webkitGetDatabaseNames);return t&&t.bind(n)}var r=function(){function y(n){u.push([n,a.call(arguments,1)])}function p(){var r=u,t,f,i;for(u=[],t=0,f=r.length;t<f;++t)i=r[t],i[0].apply(n,i[1])}function t(n){if(typeof this!="object")throw new TypeError("Promises must be constructed via new");if(typeof n!="function")throw new TypeError("not a function");this._state=null;this._value=null;this._deferreds=[];this._catched=!1;var r=this,u=!0;this._PSD=t.PSD;try{k(this,n,function(n){u?i(c,r,n):c(r,n)},function(n){return u?(i(s,r,n),!1):s(r,n)})}finally{u=!1}}function o(n,f){var s,o,l,a,b,c;if(n._state===null){n._deferreds.push(f);return}if(s=n._state?f.onFulfilled:f.onRejected,s===null)return(n._state?f.resolve:f.reject)(n._value);l=r;r=!1;i=y;try{a=t.PSD;t.PSD=n._PSD;o=s(n._value);n._state||o&&typeof o.then=="function"&&o._state===!1||w(n);f.resolve(o)}catch(v){if(b=f.reject(v),!b&&n.onuncatched)try{n.onuncatched(v)}catch(v){}}finally{if(t.PSD=a,l){do{while(u.length>0)p();if(c=e.pop(),c)try{c()}catch(v){}}while(e.length>0||u.length>0);i=h;r=!0}}}function d(n){var f=r,t;r=!1;i=y;try{n()}finally{if(f){do{while(u.length>0)p();if(t=e.pop(),t)try{t()}catch(o){}}while(e.length>0||u.length>0);i=h;r=!0}}}function w(n){n._catched=!0;n._parent&&w(n._parent)}function c(n,i){var r=t.PSD;t.PSD=n._PSD;try{if(i===n)throw new TypeError("A promise cannot be resolved with itself.");if(i&&(typeof i=="object"||typeof i=="function")&&typeof i.then=="function"){k(n,function(n,t){i.then(n,t)},function(t){c(n,t)},function(t){s(n,t)});return}n._state=!0;n._value=i;b.call(n)}catch(u){s(u)}finally{t.PSD=r}}function s(n,i){var r=t.PSD;if(t.PSD=n._PSD,n._state=!1,n._value=i,b.call(n),!n._catched)try{if(n.onuncatched)n.onuncatched(n._value);t.on.error.fire(n._value)}catch(u){}return t.PSD=r,n._catched}function b(){for(var n=0,t=this._deferreds.length;n<t;n++)o(this,this._deferreds[n]);this._deferreds=[]}function l(n,t,i,r){this.onFulfilled=typeof n=="function"?n:null;this.onRejected=typeof t=="function"?t:null;this.resolve=i;this.reject=r}function k(n,t,i,r){var u=!1;try{t(function(n){u||(u=!0,i(n))},function(t){return u?n._catched:(u=!0,r(t))})}catch(f){return u?void 0:r(f)}}var a=[].slice,h=typeof setImmediate=="undefined"?function(t){var i=arguments;setTimeout(function(){t.apply(n,a.call(i,1))},0)}:setImmediate,i=h,r=!0,u=[],e=[];return t.on=v(null,"error"),t.all=function(){var n=Array.prototype.slice.call(arguments.length===1&&Array.isArray(arguments[0])?arguments[0]:arguments);return new t(function(t,i){function f(r,e){try{if(e&&(typeof e=="object"||typeof e=="function")){var o=e.then;if(typeof o=="function"){o.call(e,function(n){f(r,n)},i);return}}n[r]=e;--u==0&&t(n)}catch(s){i(s)}}var u,r;if(n.length===0)return t([]);for(u=n.length,r=0;r<n.length;r++)f(r,n[r])})},t.prototype.then=function(n,r){var f=this,u=new t(function(t,u){f._state===null?o(f,new l(n,r,t,u)):i(o,f,new l(n,r,t,u))});return u._PSD=this._PSD,u.onuncatched=this.onuncatched,u._parent=this,u},t.prototype._then=function(n,t){o(this,new l(n,t,f,f))},t.prototype["catch"]=function(n){if(arguments.length===1)return this.then(null,n);var i=arguments[0],r=arguments[1];return typeof i=="function"?this.then(null,function(n){return n instanceof i?r(n):t.reject(n)}):this.then(null,function(n){return n&&n.name===i?r(n):t.reject(n)})},t.prototype["finally"]=function(n){return this.then(function(t){return n(),t},function(i){return n(),t.reject(i)})},t.prototype.onuncatched=null,t.resolve=function(n){var i=new t(function(){});return i._state=!0,i._value=n,i},t.reject=function(n){var i=new t(function(){});return i._state=!1,i._value=n,i},t.race=function(n){return new t(function(t,i){n.map(function(n){n.then(t,i)})})},t.PSD=null,t.newPSD=function(n){var i=t.PSD;t.PSD=i?Object.create(i):{};try{return n()}finally{t.PSD=i}},t._rootExec=d,t._tickFinalize=function(n){if(r)throw new Error("Not in a virtual tick");e.push(n)},t}(),e=function(){},g;y(d).from(Error);u.delete=function(n){var t=new u(n),i=t.delete();return i.onblocked=function(n){t.on("blocked",n);return this},i};u.getDatabaseNames=function(n){return new r(function(n,t){var r=ct(),i;r?(i=r(),i.onsuccess=function(t){n([].slice.call(t.target.result,0))},i.onerror=o(t)):rt(function(t){return n(t),!1})}).then(n)};u.defineClass=function(n){function t(n){n&&s(this,n)}return it(t.prototype,n),t};u.ignoreTransaction=function(n){return r.newPSD(function(){return r.PSD.trans=null,n()})};u.spawn=function(){return n.console&&console.warn("Dexie.spawn() is deprecated. Use Dexie.ignoreTransaction() instead."),u.ignoreTransaction.apply(this,arguments)};u.vip=function(n){return r.newPSD(function(){return r.PSD.letThrough=!0,n()})};Object.defineProperty(u,"currentTransaction",{get:function(){return r.PSD&&r.PSD.trans||null}});u.Promise=r;u.derive=y;u.extend=s;u.override=p;u.events=v;u.getByKeyPath=c;u.setByKeyPath=h;u.delByKeyPath=ot;u.shallowClone=tt;u.deepClone=l;u.addons=[];u.fakeAutoComplete=e;u.asap=b;u.ModifyError=d;u.MultiModifyError=d;u.IndexSpec=a;u.TableSchema=ut;g=n.idbModules&&n.idbModules.shimIndexedDB?n.idbModules:{};u.dependencies={indexedDB:g.shimIndexedDB||n.indexedDB||n.mozIndexedDB||n.webkitIndexedDB||n.msIndexedDB,IDBKeyRange:g.IDBKeyRange||n.IDBKeyRange||n.webkitIDBKeyRange,IDBTransaction:g.IDBTransaction||n.IDBTransaction||n.webkitIDBTransaction,Error:n.Error||String,SyntaxError:n.SyntaxError||String,TypeError:n.TypeError||String,DOMError:n.DOMError||String,localStorage:(typeof chrome!="undefined"&&chrome!==null?chrome.storage:void 0)!=null?null:n.localStorage};u.version=1.1;t("Dexie",u);et(function(){e=et})}).apply(null,typeof define=="function"&&define.amd?[self||window,function(n,t){define(n,function(){return t})}]:typeof global!="undefined"&&typeof module!="undefined"&&module.exports?[global,function(n,t){module.exports=t}]:[self||window,function(n,t){(self||window)[n]=t}]);
 //# sourceMappingURL=Dexie.min.js.map

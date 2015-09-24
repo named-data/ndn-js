@@ -177,14 +177,9 @@ function dumpData(data)
   else
     console.log("content: <empty>");
 
-  if (!(data.getMetaInfo().getType() == ContentType.BLOB ||
-        data.getMetaInfo().getType() == ContentType.DATA)) {
+  if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
     System.out.print("metaInfo.type: ");
-    if (data.getMetaInfo().getType() == ContentType.ENCR)
-      console.log("ENCR");
-    else if (data.getMetaInfo().getType() == ContentType.GONE)
-      console.log("GONE");
-    else if (data.getMetaInfo().getType() == ContentType.KEY)
+    if (data.getMetaInfo().getType() == ContentType.KEY)
       console.log("KEY");
     else if (data.getMetaInfo().getType() == ContentType.LINK)
       console.log("LINK");

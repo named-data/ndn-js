@@ -22,7 +22,6 @@ var Blob = require('../..').Blob;
 var MetaInfo = require('../..').MetaInfo;
 var KeyLocator = require('../..').KeyLocator;
 var KeyLocatorType = require('../..').KeyLocatorType;
-var KeyName = require('../..').KeyName;
 var KeyType = require('../..').KeyType;
 var MemoryIdentityStorage = require('../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../..').MemoryPrivateKeyStorage;

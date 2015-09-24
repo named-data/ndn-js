@@ -22,8 +22,6 @@
 var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var PublisherID = require('./publisher-id.js').PublisherID;
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -31,10 +29,7 @@ var LOG = require('./log.js').Log.LOG;
  */
 var KeyLocatorType = {
   KEYNAME: 1,
-  KEY_LOCATOR_DIGEST: 2,
-  // KeyLocatorType KEY and CERTIFICATE are not supported in NDN-TLV encoding and are deprecated.
-  KEY: 3,
-  CERTIFICATE: 4
+  KEY_LOCATOR_DIGEST: 2
 };
 
 exports.KeyLocatorType = KeyLocatorType;
@@ -47,32 +42,19 @@ var KeyLocator = function KeyLocator(input, type)
   if (typeof input === 'object' && input instanceof KeyLocator) {
     // Copy from the input KeyLocator.
     this.type_ = input.type_;
-    this.keyName_ = new ChangeCounter(new KeyName());
-    this.keyName_.get().setContentName(input.keyName_.get().getContentName());
-    this.keyName_.get().publisherID = input.keyName_.get().publisherID;
+    this.keyName_ = new ChangeCounter(new Name(input.getKeyName()));
     this.keyData_ = input.keyData_;
-    this.publicKey_ = input.publicKey_ == null ? null : new Buffer(input.publicKey_);
-    this.certificate_ = input.certificate_ == null ? null : new Buffer(input.certificate_);
   }
   else {
     this.type_ = type;
-    this.keyName_ = new ChangeCounter(new KeyName());
+    this.keyName_ = new ChangeCounter(new Name());
     this.keyData_ = new Blob();
 
     if (type == KeyLocatorType.KEYNAME)
-      this.keyName_.set(input);
+      this.keyName_.set(typeof input === 'object' && input instanceof Name ?
+        new Name(input) : new Name());
     else if (type == KeyLocatorType.KEY_LOCATOR_DIGEST)
       this.keyData_ = new Blob(input);
-    else if (type == KeyLocatorType.KEY) {
-      this.keyData_ = new Blob(input);
-      // Set for backwards compatibility.
-      this.publicKey_ = this.keyData_;
-    }
-    else if (type == KeyLocatorType.CERTIFICATE) {
-      this.keyData_ = new Blob(input);
-      // Set for backwards compatibility.
-      this.certificate_ = this.keyData_;
-    }
   }
 
   this.changeCount_ = 0;
@@ -94,24 +76,17 @@ KeyLocator.prototype.getType = function() { return this.type_; };
  */
 KeyLocator.prototype.getKeyName = function()
 {
-  return this.keyName_.get().getContentName();
+  return this.keyName_.get();
 };
 
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
- * the digest bytes. If getType() is KeyLocatorType.KEY, this is the DER
- * encoded public key. If getType() is KeyLocatorType.CERTIFICATE, this is the
- * DER encoded certificate.
+ * the digest bytes.
  * @returns {Blob} The key data, or null if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
-  if (this.type_ == KeyLocatorType.KEY)
-    return new Blob(this.publicKey_);
-  else if (this.type_ == KeyLocatorType.CERTIFICATE)
-    return new Blob(this.certificate_);
-  else
-    return this.keyData_;
+  return this.keyData_;
 };
 
 /**
@@ -142,7 +117,8 @@ KeyLocator.prototype.setType = function(type)
  */
 KeyLocator.prototype.setKeyName = function(name)
 {
-  this.keyName_.get().setContentName(name);
+  this.keyName_.set(typeof name === 'object' && name instanceof Name ?
+    new Name(name) : new Name());
   ++this.changeCount_;
 };
 
@@ -155,9 +131,6 @@ KeyLocator.prototype.setKeyData = function(keyData)
 {
   this.keyData_ = typeof keyData === 'object' && keyData instanceof Blob ?
     keyData : new Blob(keyData);
-  // Set for backwards compatibility.
-  this.publicKey_ = this.keyData_.buf();
-  this.certificate_ = this.keyData_.buf();
   ++this.changeCount_;
 };
 
@@ -167,10 +140,8 @@ KeyLocator.prototype.setKeyData = function(keyData)
 KeyLocator.prototype.clear = function()
 {
   this.type_ = null;
-  this.keyName_.set(new KeyName());
+  this.keyName_.set(new Name());
   this.keyData_ = new Blob();
-  this.publicKey_ = null;
-  this.certificate_ = null;
   ++this.changeCount_;
 };
 
@@ -206,91 +177,6 @@ KeyLocator.getFromSignature = function(signature)
       ("KeyLocator.getFromSignature: Signature type does not have a KeyLocator");
 }
 
-KeyLocator.prototype.from_ndnb = function(decoder) {
-
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  if (decoder.peekDTag(NDNProtocolDTags.Key))
-  {
-    try {
-      var encodedKey = decoder.readBinaryDTagElement(NDNProtocolDTags.Key);
-      // This is a DER-encoded SubjectPublicKeyInfo.
-
-      //TODO FIX THIS, This should create a Key Object instead of keeping bytes
-
-      this.publicKey =   encodedKey;//CryptoUtil.getPublicKey(encodedKey);
-      this.type = KeyLocatorType.KEY;
-
-      if (LOG > 4) console.log('PUBLIC KEY FOUND: '+ this.publicKey);
-    }
-    catch (e) {
-      throw new Error("Cannot parse key: ", e);
-    }
-
-    if (null == this.publicKey)
-      throw new Error("Cannot parse key: ");
-  }
-  else if (decoder.peekDTag(NDNProtocolDTags.Certificate)) {
-    try {
-      var encodedCert = decoder.readBinaryDTagElement(NDNProtocolDTags.Certificate);
-
-      /*
-       * Certificates not yet working
-       */
-
-      this.certificate = encodedCert;
-      this.type = KeyLocatorType.CERTIFICATE;
-
-      if (LOG > 4) console.log('CERTIFICATE FOUND: '+ this.certificate);
-    }
-    catch (e) {
-      throw new Error("Cannot decode certificate: " +  e);
-    }
-    if (null == this.certificate)
-      throw new Error("Cannot parse certificate! ");
-  } else  {
-    this.type = KeyLocatorType.KEYNAME;
-
-    this.keyName_.set(new KeyName());
-    this.keyName_.get().from_ndnb(decoder);
-  }
-  decoder.readElementClose();
-};
-
-KeyLocator.prototype.to_ndnb = function(encoder)
-{
-  if (LOG > 4) console.log('type is is ' + this.type);
-
-  if (this.type == KeyLocatorType.KEY_LOCATOR_DIGEST)
-    // encodeSignedInfo already encoded this as the publisherPublicKeyDigest,
-    //   so do nothing here.
-    return;
-
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  if (this.type == KeyLocatorType.KEY) {
-    if (LOG > 5) console.log('About to encode a public key' +this.publicKey);
-    encoder.writeDTagElement(NDNProtocolDTags.Key, this.publicKey);
-  }
-  else if (this.type == KeyLocatorType.CERTIFICATE) {
-    try {
-      encoder.writeDTagElement(NDNProtocolDTags.Certificate, this.certificate);
-    }
-    catch (e) {
-      throw new Error("CertificateEncodingException attempting to write key locator: " + e);
-    }
-  }
-  else if (this.type == KeyLocatorType.KEYNAME)
-    this.keyName_.get().to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyLocator.prototype.getElementLabel = function()
-{
-  return NDNProtocolDTags.KeyLocator;
-};
-
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
@@ -312,108 +198,11 @@ Object.defineProperty(KeyLocator.prototype, "type",
   { get: function() { return this.getType(); },
     set: function(val) { this.setType(val); } });
 /**
- * @deprecated Use getKeyName and setKeyName.
- */
-Object.defineProperty(KeyLocator.prototype, "keyName",
-  { get: function() { return this.keyName_.get(); },
-    set: function(val) {
-      this.keyName_.set(val == null ? new KeyName() : val);
-      ++this.changeCount_;
-    } });
-/**
  * @@deprecated Use getKeyData and setKeyData.
  */
 Object.defineProperty(KeyLocator.prototype, "keyData",
   { get: function() { return this.getKeyDataAsBuffer(); },
     set: function(val) { this.setKeyData(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(KeyLocator.prototype, "publicKey",
-  { get: function() { return this.publicKey_; },
-    set: function(val) { this.publicKey_ = val; ++this.changeCount_; } });
-/**
- * @deprecated
- */
-Object.defineProperty(KeyLocator.prototype, "certificate",
-  { get: function() { return this.certificate_; },
-    set: function(val) { this.certificate_ = val; ++this.changeCount_; } });
-
-/**
- * @deprecated Use KeyLocator getKeyName and setKeyName. This is only needed to
- * support NDNx and will be removed.
- */
-var KeyName = function KeyName()
-{
-  this.contentName_ = new ChangeCounter(new Name());
-  this.publisherID = this.publisherID;  //publisherID
-  this.changeCount_ = 0;
-};
-
-exports.KeyName = KeyName;
-
-KeyName.prototype.getContentName = function()
-{
-  return this.contentName_.get();
-};
-
-KeyName.prototype.setContentName = function(name)
-{
-  this.contentName_.set(typeof name === 'object' && name instanceof Name ?
-    new Name(name) : new Name());
-  ++this.changeCount_;
-};
-
-KeyName.prototype.from_ndnb = function(decoder)
-{
-  decoder.readElementStartDTag(this.getElementLabel());
-
-  this.contentName = new Name();
-  this.contentName.from_ndnb(decoder);
-
-  if (LOG > 4) console.log('KEY NAME FOUND: ');
-
-  if (PublisherID.peek(decoder)) {
-    this.publisherID = new PublisherID();
-    this.publisherID.from_ndnb(decoder);
-  }
-
-  decoder.readElementClose();
-};
-
-KeyName.prototype.to_ndnb = function(encoder)
-{
-  encoder.writeElementStartDTag(this.getElementLabel());
-
-  this.contentName.to_ndnb(encoder);
-  if (null != this.publisherID)
-    this.publisherID.to_ndnb(encoder);
-
-  encoder.writeElementClose();
-};
-
-KeyName.prototype.getElementLabel = function() { return NDNProtocolDTags.KeyName; };
-
-/**
- * Get the change count, which is incremented each time this object (or a child
- * object) is changed.
- * @returns {number} The change count.
- */
-KeyName.prototype.getChangeCount = function()
-{
-  // Make sure each of the checkChanged is called.
-  var changed = this.contentName_.checkChanged();
-  if (changed)
-    // A child object has changed, so update the change count.
-    ++this.changeCount_;
-
-  return this.changeCount_;
-};
-
-// Define properties so we can change member variable types and implement changeCount_.
-Object.defineProperty(KeyName.prototype, "contentName",
-  { get: function() { return this.getContentName(); },
-    set: function(val) { this.setContentName(val); } });
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;

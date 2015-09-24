@@ -25,23 +25,14 @@ var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var MetaInfo = require('./meta-info.js').MetaInfo;
-var ForwardingEntry = require('./forwarding-entry.js').ForwardingEntry;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var BinaryXmlWireFormat = require('./encoding/binary-xml-wire-format.js').BinaryXmlWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var BinaryXMLDecoder = require('./encoding/binary-xml-decoder.js').BinaryXMLDecoder;
-var BinaryXMLEncoder = require('./encoding/binary-xml-encoder.js').BinaryXMLEncoder;
-var NDNProtocolDTags = require('./util/ndn-protoco-id-tags.js').NDNProtocolDTags;
-var Key = require('./key.js').Key;
 var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var globalKeyManager = require('./security/key-manager.js').globalKeyManager;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Closure = require('./closure.js').Closure;
-var UpcallInfo = require('./closure.js').UpcallInfo;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
@@ -79,7 +70,6 @@ var LOG = require('./log.js').Log.LOG;
  *               // However, if connectionInfo is not null, use it instead.
  *   onopen: function() { if (LOG > 3) console.log("NDN connection established."); },
  *   onclose: function() { if (LOG > 3) console.log("NDN connection closed."); },
- *   verify: false // If false, don't verify and call upcall with Closure.UPCALL_CONTENT_UNVERIFIED.
  * }
  */
 var Face = function Face(transportOrSettings, connectionInfo)
@@ -163,17 +153,10 @@ var Face = function Face(transportOrSettings, connectionInfo)
   }
 
   this.readyStatus = Face.UNOPEN;
-  this.verify = (settings.verify !== undefined ? settings.verify : false);
-  if (this.verify) {
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-  }
 
   // Event handler
   this.onopen = (settings.onopen || function() { if (LOG > 3) console.log("Face connection established."); });
   this.onclose = (settings.onclose || function() { if (LOG > 3) console.log("Face connection closed."); });
-  this.ndndid = null;
   // This is used by reconnectAndExpressInterest.
   this.onConnectedCallbacks = [];
   this.commandKeyChain = null;
@@ -181,7 +164,6 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
 
-  this.keyStore = new Array();
   this.pendingInterestTable = new Array();  // of Face.PendingInterest
   this.pitRemoveRequests = new Array();     // of number
   this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
@@ -237,8 +219,6 @@ Face.getSupported = function()
 
 Face.supported = Face.getSupported();
 
-Face.ndndIdFetcher = new Name('/%C1.M.S.localhost/%C1.M.SRV/ndnd/KEY');
-
 Face.prototype.createRoute = function(hostOrConnectionInfo, port)
 {
   if (hostOrConnectionInfo instanceof Transport.ConnectionInfo)
@@ -249,36 +229,6 @@ Face.prototype.createRoute = function(hostOrConnectionInfo, port)
   // Deprecated: Set this.host and this.port for backwards compatibility.
   this.host = this.connectionInfo.host;
   this.host = this.connectionInfo.port;
-};
-
-var KeyStoreEntry = function KeyStoreEntry(name, rsa, time)
-{
-  this.keyName = name;  // KeyName
-  this.rsaKey = rsa;    // RSA key
-  this.timeStamp = time;  // Time Stamp
-};
-
-Face.prototype.addKeyEntry = function(/* KeyStoreEntry */ keyEntry)
-{
-  var result = this.getKeyByName(keyEntry.keyName);
-  if (result == null)
-    this.keyStore.push(keyEntry);
-  else
-    result = keyEntry;
-};
-
-Face.prototype.getKeyByName = function(/* KeyName */ name)
-{
-  var result = null;
-
-  for (var i = 0; i < this.keyStore.length; i++) {
-    if (this.keyStore[i].keyName.contentName.match(name.contentName)) {
-      if (result == null || this.keyStore[i].keyName.contentName.size() > result.keyName.contentName.size())
-        result = this.keyStore[i];
-    }
-  }
-
-  return result;
 };
 
 Face.prototype.close = function()
@@ -304,14 +254,18 @@ Face.prototype.getNextEntryId = function()
 };
 
 /**
+ * A PendingInterestTable is an internal class to hold a list of pending
+ * interests with their callbacks.
  * @constructor
  */
-Face.PendingInterest = function FacePendingInterest(pendingInterestId, interest, closure)
+Face.PendingInterest = function FacePendingInterest
+  (pendingInterestId, interest, onData, onTimeout)
 {
   this.pendingInterestId = pendingInterestId;
-  this.interest = interest;  // Interest
-  this.closure = closure;    // Closure
-  this.timerID = -1;  // Timer ID
+  this.interest = interest;
+  this.onData = onData;
+  this.onTimeout = onTimeout;
+  this.timerID = -1;
 };
 
 /**
@@ -395,16 +349,15 @@ Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
  * Create a new InterestFilterEntry with the given values.
  * @param {number} interestFilterId The ID from getNextEntryId().
  * @param {InterestFilter} filter The InterestFilter for this entry.
- * @param {Closure} closure The closure for calling upcall on interest. TODO:
- * Change to a function instead of a Closure object.
+ * @param {function} onInterest The callback to call.
  * @constructor
  */
 Face.InterestFilterEntry = function FaceInterestFilterEntry
-  (interestFilterId, filter, closure)
+  (interestFilterId, filter, onInterest)
 {
   this.interestFilterId = interestFilterId;
   this.filter = filter;
-  this.closure = closure;
+  this.onInterest = onInterest;
 };
 
 /**
@@ -423,6 +376,15 @@ Face.InterestFilterEntry.prototype.getInterestFilterId = function()
 Face.InterestFilterEntry.prototype.getFilter = function()
 {
   return this.filter;
+};
+
+/**
+ * Get the onInterest callback given to the constructor.
+ * @returns {function} The onInterest callback.
+ */
+Face.InterestFilterEntry.prototype.getOnInterest = function()
+{
+  return this.onInterest;
 };
 
 /**
@@ -456,7 +418,6 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
  * a name and optional interest template:
  * expressInterest(name [, template], onData [, onTimeout]).
- * This also supports the deprecated form expressInterest(name, closure [, template]), but you should use the other forms.
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -474,32 +435,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  */
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 {
-  // There are several overloaded versions of expressInterest, each shown inline below.
-
   var interest;
-  // expressInterest(Name name, Closure closure);                      // deprecated
-  // expressInterest(Name name, Closure closure,   Interest template); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("expressInterest with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    // The first argument is a name. Make the interest from the name and possible template.
-    if (arg3) {
-      var template = arg3;
-      // Copy the template.
-      interest = new Interest(template);
-      interest.setName(interestOrName);
-    }
-    else {
-      interest = new Interest(interestOrName);
-      interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout value in milliseconds.
-    }
-
-    return this.expressInterestWithClosure(interest, arg2);
-  }
-
   var onData;
   var onTimeout;
   // expressInterest(Interest interest, function onData);
@@ -534,49 +470,6 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
     }
   }
 
-  // Make a Closure from the callbacks so we can use expressInterestWithClosure.
-  // TODO: Convert the PIT to use callbacks, not a closure.
-  return this.expressInterestWithClosure(interest, new Face.CallbackClosure(onData, onTimeout));
-};
-
-Face.CallbackClosure = function FaceCallbackClosure
-  (onData, onTimeout, onInterest, face, interestFilterId, filter) {
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.onInterest = onInterest;
-  this.face = face;
-  this.interestFilterId = interestFilterId;
-  this.filter = filter;
-};
-
-Face.CallbackClosure.prototype.upcall = function(kind, upcallInfo) {
-  if (kind == Closure.UPCALL_CONTENT || kind == Closure.UPCALL_CONTENT_UNVERIFIED)
-    this.onData(upcallInfo.interest, upcallInfo.data);
-  else if (kind == Closure.UPCALL_INTEREST_TIMED_OUT)
-    this.onTimeout(upcallInfo.interest);
-  else if (kind == Closure.UPCALL_INTEREST)
-    // Note: We never return INTEREST_CONSUMED because onInterest will send the result to the face.
-    this.onInterest
-      (this.filter.getPrefix(), upcallInfo.interest, this.face,
-       this.interestFilterId, this.filter)
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * A private method to send the the interest to host:port, read the entire response and call
- * closure.upcall(Closure.UPCALL_CONTENT (or Closure.UPCALL_CONTENT_UNVERIFIED),
- *                 new UpcallInfo(this, interest, 0, data)).
- * @deprecated Use expressInterest with callback functions, not Closure.
- * @param {Interest} the interest, already processed with a template (if supplied).
- * @param {Closure} closure
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
- */
-Face.prototype.expressInterestWithClosure = function(interest, closure)
-{
   var pendingInterestId = this.getNextEntryId();
 
   if (this.connectionInfo == null) {
@@ -585,12 +478,13 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
     else {
       var thisFace = this;
       this.connectAndExecute(function() {
-        thisFace.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+        thisFace.reconnectAndExpressInterest
+          (pendingInterestId, interest, onData, onTimeout);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, closure);
+    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
 
   return pendingInterestId;
 };
@@ -600,13 +494,16 @@ Face.prototype.expressInterestWithClosure = function(interest, closure)
  *   this.transport.connect to change the connection (or connect for the first time).
  * Then call expressInterestHelper.
  */
-Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interest, closure)
+Face.prototype.reconnectAndExpressInterest = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+      (function() { 
+        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      });
 
     this.transport.connect
      (this.connectionInfo, this,
@@ -632,9 +529,11 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { thisFace.expressInterestHelper(pendingInterestId, interest, closure); });
+        (function() { 
+          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, closure);
+      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -642,53 +541,45 @@ Face.prototype.reconnectAndExpressInterest = function(pendingInterestId, interes
 };
 
 /**
- * Do the work of reconnectAndExpressInterest once we know we are connected.  Set the PITTable and call
- *   this.transport.send to send the interest.
+ * Do the work of reconnectAndExpressInterest once we know we are connected.
+ * Add the PendingInterest and call this.transport.send to send the interest.
  */
-Face.prototype.expressInterestHelper = function(pendingInterestId, interest, closure)
+Face.prototype.expressInterestHelper = function
+  (pendingInterestId, interest, onData, onTimeout)
 {
   var binaryInterest = interest.wireEncode();
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
-  var thisFace = this;
-  if (closure != null) {
-    var removeRequestIndex = -1;
-    if (removeRequestIndex != null)
-      removeRequestIndex = this.pitRemoveRequests.indexOf(pendingInterestId);
-    if (removeRequestIndex >= 0)
-      // removePendingInterest was called with the pendingInterestId returned by
-      //   expressInterest before we got here, so don't add a PIT entry.
-      this.pitRemoveRequests.splice(removeRequestIndex, 1);
-    else {
-      var pitEntry = new Face.PendingInterest(pendingInterestId, interest, closure);
-      this.pendingInterestTable.push(pitEntry);
-      closure.pitEntry = pitEntry;
+  var removeRequestIndex = removeRequestIndex = this.pitRemoveRequests.indexOf
+    (pendingInterestId);
+  if (removeRequestIndex >= 0)
+    // removePendingInterest was called with the pendingInterestId returned by
+    //   expressInterest before we got here, so don't add a PIT entry.
+    this.pitRemoveRequests.splice(removeRequestIndex, 1);
+  else {
+    var pitEntry = new Face.PendingInterest
+      (pendingInterestId, interest, onData, onTimeout);
+    this.pendingInterestTable.push(pitEntry);
 
-      // Set interest timer.
-      var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-      var thisFace = this;
-      var timeoutCallback = function() {
-        if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
+    // Set interest timer.
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+    var thisFace = this;
+    var timeoutCallback = function() {
+      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
 
-        // Remove PIT entry from thisFace.pendingInterestTable, even if we add it again later to re-express
-        //   the interest because we don't want to match it in the mean time.
-        var index = thisFace.pendingInterestTable.indexOf(pitEntry);
-        if (index >= 0)
-          thisFace.pendingInterestTable.splice(index, 1);
+      // Remove PIT entry from thisFace.pendingInterestTable.
+      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
+      if (index >= 0)
+        thisFace.pendingInterestTable.splice(index, 1);
 
-        // Raise closure callback
-        if (closure.upcall(Closure.UPCALL_INTEREST_TIMED_OUT, new UpcallInfo(thisFace, interest, 0, null)) == Closure.RESULT_REEXPRESS) {
-          if (LOG > 1) console.log("Re-express interest: " + interest.getName().toUri());
-          pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-          thisFace.pendingInterestTable.push(pitEntry);
-          thisFace.transport.send(binaryInterest.buf());
-        }
-      };
+      // Call onTimeout.
+      if (pitEntry.onTimeout)
+        pitEntry.onTimeout(pitEntry.interest);
+    };
 
-      pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
-    }
+    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
   }
 
   // Special case: For timeoutPrefix we don't actually send the interest.
@@ -807,10 +698,10 @@ Face.prototype.nodeMakeCommandInterest = function
 };
 
 /**
- * Register prefix with the connected NDN hub and call onInterest when a matching interest is received.
+ * Register prefix with the connected NDN hub and call onInterest when a 
+ * matching interest is received. To register a prefix with NFD, you must
+ * first call setCommandSigningInfo.
  * This uses the form:
- * registerPrefix(name, onInterest, onRegisterFailed [, flags]).
- * This also supports the deprecated form registerPrefix(name, closure [, intFlags]), but you should use the main form.
  * @param {Name} prefix The Name prefix.
  * @param {function} onInterest (optional) If not None, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
@@ -822,95 +713,26 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for finer control of which interests are forward to the application.
- * If omitted, use the default flags defined by the default ForwardingFlags constructor.
- * @param {number} intFlags (optional) (only for the deprecated form of
- * registerPrefix) The integer NDNx flags for finer control of which interests
- * are forward to the application.
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
+ * finer control of which interests are forward to the application. If omitted,
+ * use the default flags defined by the default ForwardingFlags constructor.
  * @returns {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
-Face.prototype.registerPrefix = function(prefix, arg2, arg3, arg4)
+Face.prototype.registerPrefix = function
+  (prefix, onInterest, onRegisterFailed, flags)
 {
-  // There are several overloaded versions of registerPrefix, each shown inline below.
-
-  // registerPrefix(Name prefix, Closure closure);            // deprecated
-  // registerPrefix(Name prefix, Closure closure, int flags); // deprecated
-  if (arg2 && arg2.upcall && typeof arg2.upcall == 'function') {
-    // Assume arg2 is the deprecated use with Closure.
-    if (!WireFormat.ENABLE_NDNX)
-      throw new Error
-        ("registerPrefix with NDNx-style Closure is deprecated. To enable while you upgrade your code to use function callbacks, set WireFormat.ENABLE_NDNX = true");
-
-    if (arg3) {
-      var flags;
-      if (typeof flags === 'number') {
-        // Assume this deprecated form is only called for NDNx.
-        flags = new ForwardingFlags();
-        flags.setForwardingEntryFlags(arg3);
-      }
-      else
-        // Assume arg3 is already a ForwardingFlags.
-        flags = arg3;
-      return this.registerPrefixWithClosure(prefix, arg2, flags);
-    }
-    else
-      return this.registerPrefixWithClosure(prefix, arg2, new ForwardingFlags());
-  }
-
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed);
-  // registerPrefix(Name prefix, function onInterest, function onRegisterFailed, ForwardingFlags flags);
-  var onInterest = arg2;
-  var onRegisterFailed = (arg3 ? arg3 : function() {});
-  var flags = (arg4 ? arg4 : new ForwardingFlags());
-  return this.registerPrefixWithClosure
-    (prefix, onInterest, flags, onRegisterFailed);
-};
-
-/**
- * A private method to register the prefix with the host, receive the data and call
- * closure.upcall(Closure.UPCALL_INTEREST, new UpcallInfo(this, interest, 0, null)).
- * @deprecated Use registerPrefix with callback functions, not Closure.
- * @param {Name} prefix
- * @param {Closure|function} closure or onInterest.
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed (optional) If called from the
- * non-deprecated registerPrefix, call onRegisterFailed(prefix) if registration
- * fails.
- * @returns {number} The registered prefix ID which can be used with
- * removeRegisteredPrefix.
- */
-Face.prototype.registerPrefixWithClosure = function
-  (prefix, closure, flags, onRegisterFailed)
-{
+  if (!onRegisterFailed)
+    onRegisterFailed = function() {};
+  if (!flags)
+    flags = new ForwardingFlags();
+  
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
-    // If we have an _ndndId, we know we already connected to NDNx.
-    if (thisFace.ndndid != null || thisFace.commandKeyChain == null) {
-      // Assume we are connected to a legacy NDNx server.
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-      if (thisFace.ndndid == null) {
-        // Fetch ndndid first, then register.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        if (LOG > 3) console.log('Expressing interest for ndndid from ndnd.');
-        thisFace.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (thisFace, registeredPrefixId, prefix, closure, flags, onRegisterFailed));
-      }
-      else
-        thisFace.registerPrefixHelper
-          (registeredPrefixId, prefix, closure, flags, onRegisterFailed);
-    }
-    else
-      // The application set the KeyChain for signing NFD interests.
-      thisFace.nfdRegisterPrefix
-        (registeredPrefixId, prefix, closure, flags, onRegisterFailed,
-         thisFace.commandKeyChain, thisFace.commandCertificateName);
+    thisFace.nfdRegisterPrefix
+      (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
+       thisFace.commandKeyChain, thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -933,243 +755,64 @@ Face.prototype.registerPrefixWithClosure = function
 Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
 
 /**
- * This is a closure to receive the Data for Face.ndndIdFetcher and call
- *   registerPrefixHelper(registeredPrefixId, prefix, callerClosure, flags).
+ * A RegisterResponse has onData to receive the response Data packet from the
+ * register prefix interest sent to the connected NDN hub. If this gets a bad
+ * response or onTimeout is called, then call onRegisterFailed.
  */
-Face.FetchNdndidClosure = function FetchNdndidClosure
-  (face, registeredPrefixId, prefix, callerClosure, flags, onRegisterFailed)
+Face.RegisterResponse = function RegisterResponse
+  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
 {
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.registeredPrefixId = registeredPrefixId;
-  this.prefix = prefix;
-  this.callerClosure = callerClosure;
-  this.flags = flags; // FOrwardingFlags
-  this.onRegisterFailed = onRegisterFailed;
-};
-
-Face.FetchNdndidClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    if (LOG > 0)
-      console.log
-        ("Timeout while requesting the ndndid.  Cannot registerPrefix for " +
-         this.prefix.toUri() + " .");
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
-    return Closure.RESULT_OK;
-  }
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  if (LOG > 3) console.log('Got ndndid from ndnd.');
-  // Get the digest of the public key in the data packet content.
-  var hash = Crypto.createHash('sha256');
-  hash.update(upcallInfo.data.getContent().buf());
-  this.face.ndndid = new Buffer(DataUtils.toNumbersIfString(hash.digest()));
-  if (LOG > 3) console.log(this.face.ndndid);
-
-  this.face.registerPrefixHelper
-    (this.registeredPrefixId, this.prefix, this.callerClosure, this.flags,
-     this.onRegisterFailed);
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * This is a closure to receive the response Data packet from the register
- * prefix interest sent to the connected NDN hub. If this gets a bad response
- * or a timeout, call onRegisterFailed.
- */
-Face.RegisterResponseClosure = function RegisterResponseClosure
-  (face, prefix, callerClosure, onRegisterFailed, flags, wireFormat, isNfdCommand)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
   this.face = face;
   this.prefix = prefix;
-  this.callerClosure = callerClosure;
+  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
   this.flags = flags;
   this.wireFormat = wireFormat;
-  this.isNfdCommand = isNfdCommand;
 };
 
-Face.RegisterResponseClosure.prototype.upcall = function(kind, upcallInfo)
+Face.RegisterResponse.prototype.onData = function(interest, responseData)
 {
-  if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-    // We timed out waiting for the response.
-    if (this.isNfdCommand) {
-      // The application set the commandKeyChain, but we may be connected to NDNx.
-      if (LOG > 2)
-        console.log("Timeout for NFD register prefix command. Attempting an NDNx command...");
-      if (this.face.ndndid == null) {
-        // Fetch ndndid first, then register.
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        var interest = new Interest(Face.ndndIdFetcher);
-        interest.setInterestLifetimeMilliseconds(4000);
-        this.face.reconnectAndExpressInterest
-          (null, interest, new Face.FetchNdndidClosure
-           (this.face, 0, this.prefix, this.closure, this.flags, this.onRegisterFailed));
-      }
-      else
-        // Pass 0 for registeredPrefixId since the entry was already added to
-        //   registeredPrefixTable_ on the first try.
-        this.face.registerPrefixHelper
-          (0, this.prefix, this.closure, this.flags, this.onRegisterFailed);
-    }
-    else {
-      // An NDNx command was sent because there is no commandKeyChain, so we
-      //   can't try an NFD command. Or it was sent from this callback after
-      //   trying an NFD command. Fail.
-      if (LOG > 0)
-        console.log("Register prefix failed: Timeout waiting for the response from the register prefix interest");
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-    }
-
-    return Closure.RESULT_OK;
+  // Decode responseData.getContent() and check for a success code.
+  // TODO: Move this into the TLV code.
+  var statusCode;
+  try {
+    var decoder = new TlvDecoder(responseData.getContent().buf());
+    decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+    statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
   }
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.  Don't expect this to happen.
-    return Closure.RESULT_ERR;
-
-  if (this.isNfdCommand) {
-    // Decode responseData->getContent() and check for a success code.
-    // TODO: Move this into the TLV code.
-    var statusCode;
-    try {
-        var decoder = new TlvDecoder(upcallInfo.data.getContent().buf());
-        decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
-        statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
-    }
-    catch (e) {
-      // Error decoding the ControlResponse.
-      if (LOG > 0)
-        console.log("Register prefix failed: Error decoding the NFD response: " + e);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    // Status code 200 is "OK".
-    if (statusCode != 200) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Expected NFD status code 200, got: " +
-                    statusCode);
-      if (this.onRegisterFailed)
-        this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NFD forwarder for prefix " +
-                  this.prefix.toUri());
-  }
-  else {
-    var expectedName = new Name("/ndnx/.../selfreg");
-    // Got a response. Do a quick check of expected name components.
-    if (upcallInfo.data.getName().size() < 4 ||
-        !upcallInfo.data.getName().get(0).equals(expectedName.get(0)) ||
-        !upcallInfo.data.getName().get(2).equals(expectedName.get(2))) {
-      if (LOG > 0)
-        console.log("Register prefix failed: Unexpected name in NDNx response: " +
-                    upcallInfo.data.getName().toUri());
+  catch (e) {
+    // Error decoding the ControlResponse.
+    if (LOG > 0)
+      console.log("Register prefix failed: Error decoding the NFD response: " + e);
+    if (this.onRegisterFailed)
       this.onRegisterFailed(this.prefix);
-      return Closure.RESULT_OK;
-    }
-
-    if (LOG > 2)
-      console.log("Register prefix succeeded with the NDNx forwarder for prefix " +
-                  this.prefix.toUri());
-  }
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * Do the work of registerPrefix once we know we are connected with an ndndid.
- * @param {type} registeredPrefixId The Face.getNextEntryId() which
- * registerPrefix got so it could return it to the caller. If this is 0, then
- * don't add to registeredPrefixTable (assuming it has already been done).
- * @param {Name} prefix
- * @param {Closure} closure
- * @param {ForwardingFlags} flags
- * @param {function} onRegisterFailed
- * @returns {undefined}
- */
-Face.prototype.registerPrefixHelper = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed)
-{
-  var removeRequestIndex = -1;
-  if (removeRequestIndex != null)
-    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
-      (registeredPrefixId);
-  if (removeRequestIndex >= 0) {
-    // removeRegisteredPrefix was called with the registeredPrefixId returned by
-    //   registerPrefix before we got here, so don't add a registeredPrefixTable
-    //   entry.
-    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
     return;
   }
 
-  if (!WireFormat.ENABLE_NDNX)
-    // We can get here if the command signing info is set, but running NDNx.
-    throw new Error
-      ("registerPrefix with NDNx is deprecated. To enable while you upgrade your code to use NFD, set WireFormat.ENABLE_NDNX = true");
-
-  // A ForwardingEntry is only used with NDNx.
-  var fe = new ForwardingEntry
-    ('selfreg', prefix, null, null, flags.getForwardingEntryFlags(), null);
-
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  var encoder = new BinaryXMLEncoder();
-  fe.to_ndnb(encoder);
-  var bytes = encoder.getReducedOstream();
-
-  var metaInfo = new MetaInfo();
-  metaInfo.setFields();
-  // Since we encode the register prefix message as BinaryXml, use the full
-  //   public key in the key locator to make the legacy NDNx happy.
-  metaInfo.locator.setType(KeyLocatorType.KEY);
-  metaInfo.locator.setKeyData(globalKeyManager.getKey().publicToDER());
-
-  var data = new Data(new Name(), metaInfo, bytes);
-  // Always encode as BinaryXml until we support TLV for ForwardingEntry.
-  data.sign(BinaryXmlWireFormat.get());
-  var coBinary = data.wireEncode(BinaryXmlWireFormat.get());;
-
-  var nodename = this.ndndid;
-  var interestName = new Name(['ndnx', nodename, 'selfreg', coBinary]);
-
-  var interest = new Interest(interestName);
-  interest.setInterestLifetimeMilliseconds(4000.0);
-  interest.setScope(1);
-  if (LOG > 3) console.log('Send Interest registration packet.');
-
-  if (registeredPrefixId != 0) {
-    var interestFilterId = 0;
-    if (closure != null)
-      // registerPrefix was called with the "combined" form that includes the
-      // callback, so add an InterestFilterEntry.
-      interestFilterId = this.setInterestFilter
-        (new InterestFilter(prefix), closure);
-
-    this.registeredPrefixTable.push
-      (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+  // Status code 200 is "OK".
+  if (statusCode != 200) {
+    if (LOG > 0)
+      console.log("Register prefix failed: Expected NFD status code 200, got: " +
+                  statusCode);
+    if (this.onRegisterFailed)
+      this.onRegisterFailed(this.prefix);
+    return;
   }
 
-  // Send the registration interest.
-  this.reconnectAndExpressInterest
-    (null, interest, new Face.RegisterResponseClosure
-     (this, prefix, closure, onRegisterFailed, flags, BinaryXmlWireFormat.get(), false));
+  if (LOG > 2)
+    console.log("Register prefix succeeded with the NFD forwarder for prefix " +
+                this.prefix.toUri());
+};
+
+/**
+ * We timed out waiting for the response.
+ */
+Face.RegisterResponse.prototype.onTimeout = function(interest)
+{
+  if (LOG > 2)
+    console.log("Timeout for NFD register prefix command.");
+  if (this.onRegisterFailed)
+    this.onRegisterFailed(this.prefix);
 };
 
 /**
@@ -1178,14 +821,14 @@ Face.prototype.registerPrefixHelper = function
  * registerPrefix got so it could return it to the caller. If this is 0, then
  * don't add to registeredPrefixTable (assuming it has already been done).
  * @param {Name} prefix
- * @param {Closure} closure
+ * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, closure, flags, onRegisterFailed, commandKeyChain,
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
    commandCertificateName)
 {
   var removeRequestIndex = -1;
@@ -1233,21 +876,23 @@ Face.prototype.nfdRegisterPrefix = function
        TlvWireFormat.get(), function() {
       if (registeredPrefixId != 0) {
         var interestFilterId = 0;
-        if (closure != null)
+        if (onInterest != null)
           // registerPrefix was called with the "combined" form that includes the
           // callback, so add an InterestFilterEntry.
           interestFilterId = thisFace.setInterestFilter
-            (new InterestFilter(prefix), closure);
+            (new InterestFilter(prefix), onInterest);
 
         thisFace.registeredPrefixTable.push
           (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
       }
 
       // Send the registration interest.
+      var response = new Face.RegisterResponse
+         (thisFace, prefix, onInterest, onRegisterFailed, flags,
+          TlvWireFormat.get());
       thisFace.reconnectAndExpressInterest
-        (null, commandInterest, new Face.RegisterResponseClosure
-         (thisFace, prefix, closure, onRegisterFailed, flags,
-          TlvWireFormat.get(), true));
+        (null, commandInterest, response.onData.bind(response),
+         response.onTimeout.bind(response));
     });
   };
 
@@ -1331,16 +976,9 @@ Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
     filter = new InterestFilter(filterOrPrefix);
 
   var interestFilterId = this.getNextEntryId();
-  var closure;
-  if (onInterest.upcall && typeof onInterest.upcall == 'function')
-    // Assume it is the deprecated use with Closure.
-    closure = onInterest;
-  else
-    closure = new Face.CallbackClosure
-      (null, null, onInterest, this, interestFilterId, filter);
 
   this.interestFilterTable.push(new Face.InterestFilterEntry
-    (interestFilterId, filter, closure));
+    (interestFilterId, filter, onInterest));
 
   return interestFilterId;
 };
@@ -1426,8 +1064,7 @@ Face.prototype.isLocal = function(onResult, onError)
 };
 
 /**
- * This is called when an entire binary XML element is received, such as a Data or Interest.
- * Look up in the PITTable and call the closure callback.
+ * This is called when an entire element is received, such as a Data or Interest.
  */
 Face.prototype.onReceivedElement = function(element)
 {
@@ -1435,9 +1072,6 @@ Face.prototype.onReceivedElement = function(element)
   // First, decode as Interest or Data.
   var interest = null;
   var data = null;
-  // The type codes for TLV Interest and Data packets are chosen to not
-  //   conflict with the first byte of a binary XML packet, so we can
-  //   just look at the first byte.
   if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
     var decoder = new TlvDecoder (element);
     if (decoder.peekType(Tlv.Interest, element.length)) {
@@ -1447,18 +1081,6 @@ Face.prototype.onReceivedElement = function(element)
     else if (decoder.peekType(Tlv.Data, element.length)) {
       data = new Data();
       data.wireDecode(element, TlvWireFormat.get());
-    }
-  }
-  else {
-    // Binary XML.
-    var decoder = new BinaryXMLDecoder(element);
-    if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
-      interest = new Interest();
-      interest.wireDecode(element, BinaryXmlWireFormat.get());
-    }
-    else if (decoder.peekDTag(NDNProtocolDTags.Data)) {
-      data = new Data();
-      data.wireDecode(element, BinaryXmlWireFormat.get());
     }
   }
 
@@ -1472,11 +1094,9 @@ Face.prototype.onReceivedElement = function(element)
       if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
-        // TODO: Use a callback function instead of Closure.
-        var info = new UpcallInfo(this, interest, 0, null);
-        var ret = entry.closure.upcall(Closure.UPCALL_INTEREST, info);
-        if (ret == Closure.RESULT_INTEREST_CONSUMED && info.data != null)
-          this.transport.send(info.data.wireEncode().buf());
+        entry.getOnInterest()
+          (entry.getFilter().getPrefix(), interest, this,
+           entry.getInterestFilterId(), entry.getFilter());
       }
     }
   }
@@ -1486,120 +1106,8 @@ Face.prototype.onReceivedElement = function(element)
     var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
-      var pitEntry = pendingInterests[i];
-      var currentClosure = pitEntry.closure;
-
-      if (this.verify == false) {
-        // Pass content up without verifying the signature
-        currentClosure.upcall(Closure.UPCALL_CONTENT_UNVERIFIED, new UpcallInfo(this, pitEntry.interest, 0, data));
-        continue;
-      }
-
-      if (!WireFormat.ENABLE_NDNX)
-        throw new Error
-          ("NDNx-style verification in Closure.upcall is deprecated. To enable while you upgrade your code to use KeyChain.verifyData, set WireFormat.ENABLE_NDNX = true");
-
-      // Key verification
-
-      // Recursive key fetching & verification closure
-      var KeyFetchClosure = function KeyFetchClosure(content, closure, key, sig, wit) {
-        this.data = content;  // unverified data packet object
-        this.closure = closure;  // closure corresponding to the data
-        this.keyName = key;  // name of current key to be fetched
-
-        Closure.call(this);
-      };
-
-      var thisFace = this;
-      KeyFetchClosure.prototype.upcall = function(kind, upcallInfo) {
-        if (kind == Closure.UPCALL_INTEREST_TIMED_OUT) {
-          console.log("In KeyFetchClosure.upcall: interest time out.");
-          console.log(this.keyName.contentName.toUri());
-        }
-        else if (kind == Closure.UPCALL_CONTENT) {
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(upcallInfo.data.getContent().buf());
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          this.closure.upcall(flag, new UpcallInfo(thisFace, null, 0, this.data));
-
-          // Store key in cache
-          var keyEntry = new KeyStoreEntry(keylocator.keyName, rsakey, new Date().getTime());
-          this.addKeyEntry(keyEntry);
-        }
-        else if (kind == Closure.UPCALL_CONTENT_BAD)
-          console.log("In KeyFetchClosure.upcall: signature verification failed");
-      };
-
-      if (data.getMetaInfo() && data.getMetaInfo().locator && data.getSignature()) {
-        if (LOG > 3) console.log("Key verification...");
-        var sigHex = data.getSignature().getSignature().toHex();
-
-        var wit = null;
-        if (data.getSignature().witness != null)
-            //SWT: deprecate support for Witness decoding and Merkle hash tree verification
-            currentClosure.upcall(Closure.UPCALL_CONTENT_BAD, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-        var keylocator = data.getMetaInfo().locator;
-        if (keylocator.getType() == KeyLocatorType.KEYNAME) {
-          if (LOG > 3) console.log("KeyLocator contains KEYNAME");
-
-          if (keylocator.keyName.contentName.match(data.getName())) {
-            if (LOG > 3) console.log("Content is key itself");
-
-            var rsakey = new Key();
-            rsakey.readDerPublicKey(data.getContent().buf());
-            var verified = data.verify(rsakey);
-            var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-            currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-            // SWT: We don't need to store key here since the same key will be stored again in the closure.
-          }
-          else {
-            // Check local key store
-            var keyEntry = this.getKeyByName(keylocator.keyName);
-            if (keyEntry) {
-              // Key found, verify now
-              if (LOG > 3) console.log("Local key cache hit");
-              var rsakey = keyEntry.rsaKey;
-              var verified = data.verify(rsakey);
-              var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-
-              // Raise callback
-              currentClosure.upcall(flag, new UpcallInfo(this, pitEntry.interest, 0, data));
-            }
-            else {
-              // Not found, fetch now
-              if (LOG > 3) console.log("Fetch key according to keylocator");
-              var nextClosure = new KeyFetchClosure(data, currentClosure, keylocator.keyName, sigHex, wit);
-              // TODO: Use expressInterest with callbacks, not Closure.
-              this.expressInterest(keylocator.keyName.contentName.getPrefix(4), nextClosure);
-            }
-          }
-        }
-        else if (keylocator.getType() == KeyLocatorType.KEY) {
-          if (LOG > 3) console.log("Keylocator contains KEY");
-
-          var rsakey = new Key();
-          rsakey.readDerPublicKey(keylocator.publicKey);
-          var verified = data.verify(rsakey);
-
-          var flag = (verified == true) ? Closure.UPCALL_CONTENT : Closure.UPCALL_CONTENT_BAD;
-          // Raise callback
-          currentClosure.upcall(Closure.UPCALL_CONTENT, new UpcallInfo(this, pitEntry.interest, 0, data));
-
-          // Since KeyLocator does not contain key name for this key,
-          // we have no way to store it as a key entry in KeyStore.
-        }
-        else {
-          var cert = keylocator.certificate;
-          console.log("KeyLocator contains CERT");
-          console.log(cert);
-          // TODO: verify certificate
-        }
-      }
+      var pendingInterest = pendingInterests[i];
+      pendingInterest.onData(pendingInterest.interest, data);
     }
   }
 };
@@ -1647,7 +1155,17 @@ Face.prototype.connectAndExecute = function(onConnected)
       thisFace.connectAndExecute(onConnected);
   }, 3000);
 
-  this.reconnectAndExpressInterest(null, interest, new Face.ConnectClosure(this, onConnected, timerID));
+  this.reconnectAndExpressInterest
+    (null, interest,
+     function(localInterest, localData) {
+        // The host is alive, so cancel the timeout and continue with onConnected().
+        clearTimeout(timerID);
+
+        if (LOG>0)
+          console.log("connectAndExecute: connected to host " + thisFace.host);
+        onConnected();
+     },
+     function(localInterest) { /* Ignore timeout */ });
 };
 
 /**
@@ -1658,49 +1176,3 @@ Face.prototype.closeByTransport = function()
   this.readyStatus = Face.CLOSED;
   this.onclose();
 };
-
-Face.ConnectClosure = function ConnectClosure(face, onConnected, timerID)
-{
-  // Inherit from Closure.
-  Closure.call(this);
-
-  this.face = face;
-  this.onConnected = onConnected;
-  this.timerID = timerID;
-};
-
-Face.ConnectClosure.prototype.upcall = function(kind, upcallInfo)
-{
-  if (!(kind == Closure.UPCALL_CONTENT ||
-        kind == Closure.UPCALL_CONTENT_UNVERIFIED))
-    // The upcall is not for us.
-    return Closure.RESULT_ERR;
-
-  // The host is alive, so cancel the timeout and continue with onConnected().
-  clearTimeout(this.timerID);
-
-  if (LOG>0) console.log("connectAndExecute: connected to host " + this.face.host);
-  this.onConnected();
-
-  return Closure.RESULT_OK;
-};
-
-/**
- * @deprecated Use new Face.
- */
-var NDN = function NDN(settings)
-{
-  // Call the base constructor.
-  Face.call(this, settings);
-}
-
-// Use dummy functions so that the Face constructor will not try to set its own defaults.
-NDN.prototype = new Face({ getTransport: function(){}, getConnectionInfo: function(){} });
-
-exports.NDN = NDN;
-
-NDN.supported = Face.supported;
-NDN.UNOPEN = Face.UNOPEN;
-NDN.OPEN_REQUESTED = Face.OPEN_REQUESTED;
-NDN.OPENED = Face.OPENED;
-NDN.CLOSED = Face.CLOSED;
