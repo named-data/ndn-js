@@ -33,6 +33,15 @@ describe('TestNameComponentMethods', function() {
     assert.equal(comp1.toEscapedString(), expected, "Unicode URI not decoded correctly");
   });
 
+  it('Compare', function() {
+    var c7f = new Name("/%7F").get(0);
+    var c80 = new Name("/%80").get(0);
+    var c81 = new Name("/%81").get(0);
+
+    assert.ok(c81.compare(c80) > 0, "%81 should be greater than %80");
+    assert.ok(c80.compare(c7f) > 0, "%80 should be greater than %7f");
+  });
+
   // Many more component methods to be tested!
 });
 
