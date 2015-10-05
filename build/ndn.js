@@ -20523,7 +20523,7 @@ Object.defineProperty(Interest.prototype, "nonce",
  * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
  * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
  * bits are changed, amended or deprecated.
- * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
+ * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
  */
 var ForwardingFlags = function ForwardingFlags(value)
 {
@@ -22468,6 +22468,10 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
       var str = new Uint8Array(content_t.toArrayBuffer());
       var co = new Data(interest.getName());
       co.setContent(new Blob(str, false));
+      if (interest.getName().get(-1).toEscapedString() == "00")
+        // Limit the lifetime of replies to interest for "00" since they can be different.
+        co.getMetaInfo().setFreshnessPeriod(1000);
+
       this.keyChain.sign(co, this.certificateName);
       try {
         face.putData(co);
