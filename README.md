@@ -3,7 +3,7 @@ NDN-JS:  A javascript client library for Named Data Networking
 --------------------------------------------------------------
 
 NDN-JS is the first native version of the NDN protocol written in JavaScript.  It
-implements the NDN-TLV wire format and is also wire format compatible with PARC's CCNx.
+implements the NDN-TLV wire format.
 
 The project by the UCLA NDN team - for more information on NDN, see
 	http://named-data.net/
@@ -42,11 +42,8 @@ Additional goals for the project:
 - Websockets transport for the browser (rather than TCP or UDP, which are not directly supported in
 the browser).
 - Relatively lightweight and compact, to enable efficient use on the web.
-- Implement the NDN-TLV wire format and be wire format compatible with the PARC's CCNx implementation of NDN.
 
-The library currently requires a remote NDN forwarder, and has been tested with ndnd, from
-the's NDNx package: http://ndnx.org/ , ndnd-tlv from the package
-https://github.com/named-data/ndnd-tlv and with NFD from the package
+The library currently requires a remote NDN forwarder, and has been tested with NFD from the package
 https://github.com/named-data/NFD .
 
 Currently, the library has two APIs for developers:
