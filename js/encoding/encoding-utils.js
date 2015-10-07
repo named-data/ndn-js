@@ -22,6 +22,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ContentType = require('../meta-info.js').ContentType;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
