@@ -95,7 +95,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
         else
           console.log
             ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
-        console.log("Using " + this.connectionInfo.toString());
+        if (LOG > 0)
+          console.log("Using " + this.connectionInfo.toString());
       }
     }
   }
@@ -713,6 +714,12 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
+ * @param {function} onRegisterSuccess (optional) When this receives a success
+ * message, this calls onRegisterSuccess(prefix, registeredPrefixId) where
+ * prefix is the prefix given to registerPrefix and registeredPrefixId is
+ * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
+ * this does not use it. (The onRegisterSuccess parameter comes after
+ * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
@@ -720,19 +727,52 @@ Face.prototype.nodeMakeCommandInterest = function
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, flags)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
 {
+  // Temporarlity reassign to resolve the different overloaded forms.
+  arg4 = onRegisterSuccess;
+  arg5 = flags;
+  arg6 = wireFormat;
+  // arg4, arg5, arg6 may be:
+  // OnRegisterSuccess, ForwardingFlags, WireFormat
+  // OnRegisterSuccess, ForwardingFlags, null
+  // OnRegisterSuccess, WireFormat,      null
+  // OnRegisterSuccess, null,            null
+  // ForwardingFlags,   WireFormat,      null
+  // ForwardingFlags,   null,            null
+  // WireFormat,        null,            null
+  // null,              null,            None
+  if (typeof arg4 === "function")
+    onRegisterSuccess = arg4
+  else
+    onRegisterSuccess = null
+
+  if (arg4 instanceof ForwardingFlags)
+    flags = arg4
+  else if (arg5 instanceof ForwardingFlags)
+    flags = arg5
+  else
+    flags = ForwardingFlags()
+
+  if (arg4 instanceof WireFormat)
+    wireFormat = arg4
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5
+  else if (arg6 instanceof WireFormat)
+    wireFormat = arg6
+  else
+    wireFormat = WireFormat.getDefaultWireFormat()
+
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
-  if (!flags)
-    flags = new ForwardingFlags();
   
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
       (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
-       thisFace.commandKeyChain, thisFace.commandCertificateName);
+       onRegisterSuccess, thisFace.commandKeyChain,
+       thisFace.commandCertificateName);
   };
 
   if (this.connectionInfo == null) {
@@ -760,14 +800,17 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
+  (face, prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags,
+   wireFormat, registeredPrefixId)
 {
   this.face = face;
   this.prefix = prefix;
   this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
+  this.onRegisterSuccess= onRegisterSuccess;
   this.flags = flags;
   this.wireFormat = wireFormat;
+  this.registeredPrefixId = registeredPrefixId;
 };
 
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
@@ -802,6 +845,8 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
+  if (this.onRegisterSuccess != null)
+      this.onRegisterSuccess(this.prefix, this.registeredPrefixId);
 };
 
 /**
@@ -824,12 +869,13 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
+ * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
-   commandCertificateName)
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
+   onRegisterSuccess, commandKeyChain, commandCertificateName)
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
@@ -888,8 +934,8 @@ Face.prototype.nfdRegisterPrefix = function
 
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (thisFace, prefix, onInterest, onRegisterFailed, flags,
-          TlvWireFormat.get());
+         (thisFace, prefix, onInterest, onRegisterFailed, onRegisterSuccess, 
+          flags, TlvWireFormat.get(), registeredPrefixId);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
          response.onTimeout.bind(response));
