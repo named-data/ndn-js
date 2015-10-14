@@ -24,8 +24,8 @@
  * the target's targets) has been changed. The target object must have a method
  * getChangeCount.
  *
- * Create a new ChangeCounter to track the given target.  This sets the local
- * change counter to target.getChangeCount().
+ * Create a new ChangeCounter to track the given target. If target is not null,
+ * this sets the local change counter to target.getChangeCount().
  * @param {object} target The target to track, as an object with the method
  * getChangeCount().
  * @constructor
@@ -33,7 +33,7 @@
 var ChangeCounter = function ChangeCounter(target)
 {
   this.target = target;
-  this.changeCount = target.getChangeCount();
+  this.changeCount = (target == null ? 0 : target.getChangeCount());
 };
 
 exports.ChangeCounter = ChangeCounter;
@@ -50,26 +50,30 @@ ChangeCounter.prototype.get = function()
 };
 
 /**
- * Set the target to the given target. This sets the local change counter to
- * target.getChangeCount().
+ * Set the target to the given target. If target is not null, this sets the
+ * local change counter to target.getChangeCount().
  * @param {object} target The target to track, as an object with the method
  * getChangeCount().
  */
 ChangeCounter.prototype.set = function(target)
 {
   this.target = target;
-  this.changeCount = target.getChangeCount();
+  this.changeCount = (target == null ? 0 : target.getChangeCount());
 };
 
 /**
  * If the target's change count is different than the local change count, then
  * update the local change count and return true. Otherwise return false,
- * meaning that the target has not changed. This is useful since the target (or
- * one of the target's targets) may be changed and you need to find out.
+ * meaning that the target has not changed. Also, if the target is null,
+ * simply return false. This is useful since the target (or one of the target's
+ * targets) may be changed and you need to find out.
  * @returns {boolean} True if the change count has been updated, false if not.
  */
 ChangeCounter.prototype.checkChanged = function()
 {
+  if (this.target == null)
+    return false;
+  
   var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;
