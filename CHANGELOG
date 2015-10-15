@@ -4,6 +4,7 @@ Interim changes since NDN-JS v0.9 (2015-10-09)
 Changes
 * http://redmine.named-data.net/issues/3005 In Face.registerPrefix, added the
   optional onRegisterSuccess callback.
+* In Name, added method toString() which calls toUri().
 * In integration-tests, added test-registration-callbacks.
 
 NDN-JS v0.9 (2015-09-24)

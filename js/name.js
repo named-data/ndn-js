@@ -424,6 +424,8 @@ Name.prototype.to_uri = function()
   return this.toUri();
 };
 
+Name.prototype.toString = function() { return this.toUri(); }
+
 /**
  * Append a component with the encoded segment number according to NDN
  * naming conventions for "Segment number" (marker 0x00).
