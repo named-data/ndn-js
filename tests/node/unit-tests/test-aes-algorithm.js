@@ -62,29 +62,37 @@ describe('TestAesAlgorithm', function() {
   it('EncryptionDecryption', function() {
     var encryptParams = new EncryptParams(EncryptAlgorithmType.AesEcb, 16);
 
-    var decryptKey = new DecryptKey(new Blob(KEY, false));
+    var key = new Blob(KEY, false);
+    var decryptKey = new DecryptKey(key);
     var encryptKey = AesAlgorithm.deriveEncryptKey(decryptKey.getKeyBits());
+
+    // Check key loading and key derivation.
+    assert.ok(encryptKey.getKeyBits().equals(key));
+    assert.ok(decryptKey.getKeyBits().equals(key));
 
     var plainBlob = new Blob(PLAINTEXT, false);
 
+    // Encrypt data in AES_ECB.
     var cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     assert.ok(cipherBlob.equals(new Blob(CIPHERTEXT_ECB, false)));
 
+    // Decrypt data in AES_ECB.
     var receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
 
+    // Encrypt/decrypt data in AES_CBC with auto-generated IV.
     encryptParams.setAlgorithmType(EncryptAlgorithmType.AesCbc);
-
     cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
 
+    // Encrypt data in AES_CBC with specified IV.
     var initialVector = new Blob(INITIAL_VECTOR, false);
     encryptParams.setInitialVector(initialVector);
-
     cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     assert.ok(cipherBlob.equals(new Blob(CIPHERTEXT_CBC_IV, false)));
 
+    // Decrypt data in AES_CBC with specified IV.
     receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
   });
