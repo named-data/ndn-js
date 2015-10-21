@@ -287,7 +287,7 @@ Certificate.prototype.toString = function()
 
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
- * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
+ * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 GMT.
  * @returns {string} The string representation.
  */
 Certificate.toIsoString = function(msSince1970)
@@ -311,4 +311,24 @@ Certificate.to2DigitString = function(x)
 {
   var result = x.toString();
   return result.length === 1 ? "0" + result : result;
+};
+
+/**
+ * Convert an ISO time representation with the "T" in the middle to a UNIX
+ * timestamp.
+ * @param {string} timeString The ISO time representation.
+ * @returns {number} The timestamp as milliseconds since Jan 1, 1970 GMT.
+ */
+Certificate.fromIsoString = function(timeString)
+{
+  if (timeString.length != 15 || timeString.substr(8, 1) != 'T')
+    throw new Error("fromIsoString: Format is not the expected yyyymmddThhmmss");
+  
+  return Date.UTC
+    (parseInt(timeString.substr(0, 4)),
+     parseInt(timeString.substr(4, 2) - 1),
+     parseInt(timeString.substr(6, 2)),
+     parseInt(timeString.substr(9, 2)),
+     parseInt(timeString.substr(11, 2)),
+     parseInt(timeString.substr(13, 2)));
 };
