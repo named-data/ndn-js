@@ -21,41 +21,31 @@
 var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 
-var EncryptionMode = function EncryptionMode()
+var EncryptAlgorithmType = function EncryptAlgorithmType()
 {
 }
 
-exports.EncryptionMode = EncryptionMode;
+exports.EncryptAlgorithmType = EncryptAlgorithmType;
 
-EncryptionMode.ECB_AES = 0;
-EncryptionMode.CBC_AES = 1;
-EncryptionMode.RSA = 2;
-
-var PaddingScheme = function PaddingScheme()
-{
-}
-
-exports.PaddingScheme = PaddingScheme;
-
-PaddingScheme.PKCS7 = 0;
-PaddingScheme.PKCS1v15 = 1;
-PaddingScheme.OAEP_SHA = 2;
+// These correspond to the TLV codes.
+EncryptAlgorithmType.AesEcb = 0;
+EncryptAlgorithmType.AesCbc = 1;
+EncryptAlgorithmType.RsaPkcs = 2;
+EncryptAlgorithmType.RsaOaep = 3;
 
 /**
- * An EncryptParams holds an encryption mode and other parameters used to
+ * An EncryptParams holds an algorithm type and other parameters used to
  * encrypt and decrypt. Create an EncryptParams with the given parameters.
- * @param {number} encryptionMode The encryption mode from EncryptionMode.
- * @param {number} paddingScheme The padding scheme from PaddingScheme.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType,
+ * or null if not specified.
  * @param {number} The initial vector length, or 0 if the initial vector is not
  * specified.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
-var EncryptParams = function EncryptParams
-  (encryptionMode, paddingScheme, initialVectorLength)
+var EncryptParams = function EncryptParams(algorithmType, initialVectorLength)
 {
-  this.encryptionMode_ = encryptionMode;
-  this.paddingScheme_ = paddingScheme;
+  this.algorithmType_ = algorithmType;
 
   if (initialVectorLength != null && initialVectorLength > 0) {
     var initialVector = Crypto.randomBytes(initialVectorLength);
@@ -68,21 +58,13 @@ var EncryptParams = function EncryptParams
 exports.EncryptParams = EncryptParams;
 
 /**
- * Get the encryption mode.
- * @return {number} The encryption mode from EncryptionMode.
+ * Get the algorithmType.
+ * @return {number} The algorithm type from EncryptAlgorithmType, or null if not
+ * specified.
  */
-EncryptParams.prototype.getEncryptionMode = function()
+EncryptParams.prototype.getAlgorithmType = function()
 {
-  return this.encryptionMode_;
-};
-
-/**
- * Get the padding scheme.
- * @return {number} The padding scheme from PaddingScheme.
- */
-EncryptParams.prototype.getPaddingScheme = function()
-{
-  return this.paddingScheme_;
+  return this.algorithmType_;
 };
 
 /**
@@ -95,26 +77,15 @@ EncryptParams.prototype.getInitialVector = function()
 };
 
 /**
- * Set the encryption mode.
- * @param {number} encryptionMode The encryption mode from EncryptionMode.
+ * Set the algorithm type.
+ * @param {number} encryptionMode The algorithm type from EncryptAlgorithmType.
+ * If not specified, set to null.
  * @return {EncryptParams} This EncryptParams so that you can chain calls to
  * update values.
  */
-EncryptParams.prototype.setEncryptionMode = function(encryptionMode)
+EncryptParams.prototype.setAlgorithmType = function(algorithmType)
 {
-  this.encryptionMode_ = encryptionMode;
-  return this;
-};
-
-/**
- * Set the padding scheme.
- * @param {number} paddingScheme The padding scheme from PaddingScheme.
- * @return {EncryptParams} This EncryptParams so that you can chain calls to
- * update values.
- */
-EncryptParams.prototype.setPaddingScheme = function(paddingScheme)
-{
-  this.paddingScheme_ = paddingScheme;
+  this.algorithmType_ = algorithmType;
   return this;
 };
 

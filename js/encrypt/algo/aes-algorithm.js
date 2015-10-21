@@ -25,7 +25,7 @@ var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DecryptKey = require('../decrypt-key.js').DecryptKey;
 var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var EncryptionMode = require('./encrypt-params.js').EncryptionMode;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 
 /**
@@ -68,7 +68,7 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
  * @param keyBits {Blob} The key value.
  * @param encryptedData {Blob} The data to decrypt.
  * @param params {EncryptParams} This decrypts according to
- * params.getEncryptionMode() and other params as needed such as
+ * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @param {function} onComplete (optional) This calls onComplete(plainData) with
  * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
@@ -80,8 +80,8 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
   if (UseSubtleCrypto() && onComplete &&
       // Crypto.subtle doesn't implement ECB.
-      params.getEncryptionMode() != EncryptionMode.ECB_AES) {
-    if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       crypto.subtle.importKey
         ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
          ["encrypt", "decrypt"])
@@ -99,14 +99,14 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
   }
   else {
     var result;
-    if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       // ECB ignores the initial vector.
       var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
       var result = new Blob
         (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
          false);
     }
-    else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       var cipher = Crypto.createDecipheriv
         ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
       var result = new Blob
@@ -128,7 +128,7 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * @param keyBits {Blob} The key value.
  * @param plainData {Blob} The data to encrypt.
  * @param params {EncryptParams} This encrypts according to
- * params.getEncryptionMode() and other params as needed such as
+ * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @param {function} onComplete (optional) This calls onComplete(encryptedData)
  * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
@@ -139,15 +139,15 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  */
 AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
-  if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+  if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
     if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
       throw new Error("incorrect initial vector size");
   }
 
   if (UseSubtleCrypto() && onComplete &&
       // Crypto.subtle doesn't implement ECB.
-      params.getEncryptionMode() != EncryptionMode.ECB_AES) {
-    if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       crypto.subtle.importKey
         ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
          ["encrypt", "decrypt"])
@@ -165,14 +165,14 @@ AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
   }
   else {
     var result;
-    if (params.getEncryptionMode() == EncryptionMode.ECB_AES) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
       // ECB ignores the initial vector.
       var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
       result = new Blob
         (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
          false);
     }
-    else if (params.getEncryptionMode() == EncryptionMode.CBC_AES) {
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
       var cipher = Crypto.createCipheriv
         ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
       result = new Blob

@@ -26,7 +26,7 @@ var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DecryptKey = require('../decrypt-key.js').DecryptKey;
 var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var PaddingScheme = require('./encrypt-params.js').PaddingScheme;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
@@ -92,7 +92,7 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
  * @param keyBits {Blob} The key value (PKCS8-encoded private key).
  * @param encryptedData {Blob} The data to decrypt.
  * @param params {EncryptParams} This decrypts according to
- * params.getPaddingScheme().
+ * params.getAlgorithmType().
  * @param {function} onComplete (optional) This calls onComplete(plainData) with
  * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
  * crypto libraries only use a callback, so onComplete is required to use these.)
@@ -103,8 +103,8 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
 {
   if (UseSubtleCrypto() && onComplete &&
       // Crypto.subtle doesn't implement PKCS1 padding.
-      params.getPaddingScheme() != PaddingScheme.PKCS1v15) {
-    if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA) {
+      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
       crypto.subtle.importKey
         ("pkcs8", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
          false, ["decrypt"])
@@ -131,9 +131,9 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     keyPem += "-----END RSA PRIVATE KEY-----";
 
     var padding;
-    if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
       padding = constants.RSA_PKCS1_PADDING;
-    else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
       padding = constants.RSA_PKCS1_OAEP_PADDING;
     else
       throw new Error("unsupported padding scheme");
@@ -155,7 +155,7 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * @param keyBits {Blob} The key value (DER-encoded public key).
  * @param plainData {Blob} The data to encrypt.
  * @param params {EncryptParams} This encrypts according to
- * params.getPaddingScheme().
+ * params.getAlgorithmType().
  * @param {function} onComplete (optional) This calls onComplete(encryptedData)
  * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
  * (Some crypto libraries only use a callback, so onComplete is required to use
@@ -167,8 +167,8 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
 {
   if (UseSubtleCrypto() && onComplete &&
       // Crypto.subtle doesn't implement PKCS1 padding.
-      params.getPaddingScheme() != PaddingScheme.PKCS1v15) {
-    if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA) {
+      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
       crypto.subtle.importKey
         ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
          false, ["encrypt"])
@@ -192,9 +192,9 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     keyPem += "-----END PUBLIC KEY-----";
 
     var padding;
-    if (params.getPaddingScheme() == PaddingScheme.PKCS1v15)
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
       padding = constants.RSA_PKCS1_PADDING;
-    else if (params.getPaddingScheme() == PaddingScheme.OAEP_SHA)
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
       padding = constants.RSA_PKCS1_OAEP_PADDING;
     else
       throw new Error("unsupported padding scheme");
