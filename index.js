@@ -33,6 +33,8 @@ exports.RsaKeyParams = require('./js/security/key-params.js').RsaKeyParams;
 exports.EcdsaKeyParams = require('./js/security/key-params.js').EcdsaKeyParams;
 exports.DigestAlgorithm = require('./js/security/security-types.js').DigestAlgorithm;
 exports.EncryptMode = require('./js/security/security-types.js').EncryptMode;
+exports.Certificate = require('./js/security/certificate/certificate.js').Certificate;
+exports.IdentityCertificate = require('./js/security/certificate/identity-certificate.js').IdentityCertificate;
 exports.IdentityStorage = require('./js/security/identity/identity-storage.js').IdentityStorage;
 exports.MemoryIdentityStorage = require('./js/security/identity/memory-identity-storage.js').MemoryIdentityStorage;
 exports.MemoryPrivateKeyStorage = require('./js/security/identity/memory-private-key-storage.js').MemoryPrivateKeyStorage;
@@ -51,5 +53,6 @@ exports.RsaAlgorithm = require('./js/encrypt/algo/rsa-algorithm.js').RsaAlgorith
 exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
 exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
+exports.Interval = require('./js/encrypt/interval.js').Interval;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
