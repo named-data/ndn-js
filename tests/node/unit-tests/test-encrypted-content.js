@@ -138,10 +138,10 @@ describe('TestEncryptedContent', function() {
 
     sha256RsaContent = new EncryptedContent();
     sha256RsaContent.wireDecode(encryptedBlob);
-    contentPayload = sha256RsaContent.getPayload();
+    var contentPayloadNoIV = sha256RsaContent.getPayload();
 
     assert.ok(sha256RsaContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
-    assert.ok(sha256RsaContent.getPayload().equals(payload));
+    assert.ok(contentPayloadNoIV.equals(payload));
     assert.ok(sha256RsaContent.getInitialVector().isNull());
     assert.ok(sha256RsaContent.getKeyLocator().getType() != null);
     assert.ok(sha256RsaContent.getKeyLocator().getKeyName().equals
