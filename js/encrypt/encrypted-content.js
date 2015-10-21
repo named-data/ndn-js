@@ -48,7 +48,7 @@ var EncryptedContent = function EncryptedContent(value)
 exports.EncryptedContent = EncryptedContent;
 
 /**
- * Get the algorithm type.
+ * Get the algorithm type from EncryptAlgorithmType.
  * @returns {number} The algorithm type, or null if not specified.
  */
 EncryptedContent.prototype.getAlgorithmType = function()
@@ -85,7 +85,8 @@ EncryptedContent.prototype.getPayload = function()
 
 /**
  * Set the algorithm type.
- * @param {number} algorithmType The algorithm type. If not specified, set to null.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
+ * If not specified, set to null.
  * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
