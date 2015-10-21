@@ -22,8 +22,7 @@
 
 var assert = require("assert");
 var Blob = require('../../..').Blob;
-var EncryptionMode = require('../../..').EncryptionMode;
-var PaddingScheme = require('../../..').PaddingScheme;
+var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
 var EncryptParams = require('../../..').EncryptParams;
 var DecryptKey = require('../../..').DecryptKey;
 var EncryptKey = require('../../..').EncryptKey;
@@ -61,8 +60,7 @@ var CIPHERTEXT_CBC_IV = new Buffer([
 
 describe('TestAesAlgorithm', function() {
   it('EncryptionDecryption', function() {
-    var encryptParams = new EncryptParams
-      (EncryptionMode.ECB_AES, PaddingScheme.PKCS7, 16);
+    var encryptParams = new EncryptParams(EncryptAlgorithmType.AesEcb, 16);
 
     var decryptKey = new DecryptKey(new Blob(KEY, false));
     var encryptKey = AesAlgorithm.deriveEncryptKey(decryptKey.getKeyBits());
@@ -75,7 +73,7 @@ describe('TestAesAlgorithm', function() {
     var receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);
     assert.ok(receivedBlob.equals(plainBlob));
 
-    encryptParams.setEncryptionMode(EncryptionMode.CBC_AES);
+    encryptParams.setAlgorithmType(EncryptAlgorithmType.AesCbc);
 
     cipherBlob = AesAlgorithm.encrypt(encryptKey.getKeyBits(), plainBlob, encryptParams);
     receivedBlob = AesAlgorithm.decrypt(decryptKey.getKeyBits(), cipherBlob, encryptParams);

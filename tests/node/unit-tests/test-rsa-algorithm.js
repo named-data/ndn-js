@@ -22,8 +22,7 @@
 
 var assert = require("assert");
 var Blob = require('../../..').Blob;
-var EncryptionMode = require('../../..').EncryptionMode;
-var PaddingScheme = require('../../..').PaddingScheme;
+var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
 var EncryptParams = require('../../..').EncryptParams;
 var DecryptKey = require('../../..').DecryptKey;
 var EncryptKey = require('../../..').EncryptKey;
@@ -75,8 +74,7 @@ var CIPHERTEXT = new Buffer([
 
 describe('TestRsaAlgorithm', function() {
   it('EncryptionDecryption', function() {
-    var encryptParams = new EncryptParams
-      (EncryptionMode.RSA, PaddingScheme.OAEP_SHA, 0);
+    var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep, 0);
 
     var privateKeyBlob = new Blob(new Buffer(PRIVATE_KEY, 'base64'), false);
     var publicKeyBlob = new Blob(new Buffer(PUBLIC_KEY, 'base64'), false);
