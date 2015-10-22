@@ -22,15 +22,15 @@
 
 var assert = require("assert");
 var Interval = require('../../..').Interval;
-var Certificate = require('../../..').Certificate;
+var Common = require('./unit-tests-common.js').UnitTestsCommon;
 
 describe('TestInterval', function() {
   it('Construction', function() {
     // Construct with the right parameters.
-    var interval1 = new Interval(Certificate.fromIsoString("20150825T120000"),
-                                 Certificate.fromIsoString("20150825T160000"));
-    assert.ok("20150825T120000" == Certificate.toIsoString(interval1.getStartTime()));
-    assert.ok("20150825T160000" == Certificate.toIsoString(interval1.getEndTime()));
+    var interval1 = new Interval(Common.fromIsoString("20150825T120000"),
+                                 Common.fromIsoString("20150825T160000"));
+    assert.ok("20150825T120000" == Common.toIsoString(interval1.getStartTime()));
+    assert.ok("20150825T160000" == Common.toIsoString(interval1.getEndTime()));
     assert.ok(interval1.isValid());
 
     // Construct with the invalid interval.
@@ -44,13 +44,13 @@ describe('TestInterval', function() {
   });
 
   it('CoverTimePoint', function() {
-    var interval = new Interval(Certificate.fromIsoString("20150825T120000"),
-                                Certificate.fromIsoString("20150825T160000"));
+    var interval = new Interval(Common.fromIsoString("20150825T120000"),
+                                Common.fromIsoString("20150825T160000"));
 
-    var timePoint1 = Certificate.fromIsoString("20150825T120000");
-    var timePoint2 = Certificate.fromIsoString("20150825T130000");
-    var timePoint3 = Certificate.fromIsoString("20150825T170000");
-    var timePoint4 = Certificate.fromIsoString("20150825T110000");
+    var timePoint1 = Common.fromIsoString("20150825T120000");
+    var timePoint2 = Common.fromIsoString("20150825T130000");
+    var timePoint3 = Common.fromIsoString("20150825T170000");
+    var timePoint4 = Common.fromIsoString("20150825T110000");
 
     assert.ok(interval.covers(timePoint1));
     assert.ok(interval.covers(timePoint2));
@@ -59,23 +59,23 @@ describe('TestInterval', function() {
   });
 
   it('IntersectionAndUnion', function() {
-    var interval1 = new Interval(Certificate.fromIsoString("20150825T030000"),
-                                 Certificate.fromIsoString("20150825T050000"));
+    var interval1 = new Interval(Common.fromIsoString("20150825T030000"),
+                                 Common.fromIsoString("20150825T050000"));
     // No intersection.
-    var interval2 = new Interval(Certificate.fromIsoString("20150825T050000"),
-                                 Certificate.fromIsoString("20150825T070000"));
+    var interval2 = new Interval(Common.fromIsoString("20150825T050000"),
+                                 Common.fromIsoString("20150825T070000"));
     // No intersection.
-    var interval3 = new Interval(Certificate.fromIsoString("20150825T060000"),
-                                 Certificate.fromIsoString("20150825T070000"));
+    var interval3 = new Interval(Common.fromIsoString("20150825T060000"),
+                                 Common.fromIsoString("20150825T070000"));
     // There's an intersection.
-    var interval4 = new Interval(Certificate.fromIsoString("20150825T010000"),
-                                 Certificate.fromIsoString("20150825T040000"));
+    var interval4 = new Interval(Common.fromIsoString("20150825T010000"),
+                                 Common.fromIsoString("20150825T040000"));
     // Right in interval1, there's an intersection.
-    var interval5 = new Interval(Certificate.fromIsoString("20150825T030000"),
-                                 Certificate.fromIsoString("20150825T040000"));
+    var interval5 = new Interval(Common.fromIsoString("20150825T030000"),
+                                 Common.fromIsoString("20150825T040000"));
     // Wrap interval1, there's an intersection.
-    var interval6 = new Interval(Certificate.fromIsoString("20150825T010000"),
-                                 Certificate.fromIsoString("20150825T050000"));
+    var interval6 = new Interval(Common.fromIsoString("20150825T010000"),
+                                 Common.fromIsoString("20150825T050000"));
     // Empty interval.
     var interval7 = new Interval(true);
 
@@ -108,38 +108,38 @@ describe('TestInterval', function() {
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval4);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T040000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T040000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval4);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T010000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T010000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval5);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T040000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T040000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval5);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval6);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval6);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T010000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T010000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval7);
@@ -148,7 +148,7 @@ describe('TestInterval', function() {
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval7);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Certificate.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Certificate.toIsoString(tempInterval.getEndTime()));
+    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
+    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
   });
 });
