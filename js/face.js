@@ -800,16 +800,11 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (face, prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags,
-   wireFormat, registeredPrefixId)
+  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId)
 {
-  this.face = face;
   this.prefix = prefix;
-  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
   this.onRegisterSuccess= onRegisterSuccess;
-  this.flags = flags;
-  this.wireFormat = wireFormat;
   this.registeredPrefixId = registeredPrefixId;
 };
 
@@ -934,8 +929,7 @@ Face.prototype.nfdRegisterPrefix = function
 
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (thisFace, prefix, onInterest, onRegisterFailed, onRegisterSuccess, 
-          flags, TlvWireFormat.get(), registeredPrefixId);
+         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
          response.onTimeout.bind(response));
