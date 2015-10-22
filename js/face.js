@@ -416,9 +416,9 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * Send the interest through the transport, read the entire response and call onData.
  * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
  * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
- * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
+ * expressInterest(interest, onData [, onTimeout] [, wireFormat]).  The second form creates the interest from
  * a name and optional interest template:
- * expressInterest(name [, template], onData [, onTimeout]).
+ * expressInterest(name [, template], onData [, onTimeout] [, wireFormat]).
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -430,28 +430,34 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
+ * @param {WireFormat} (optional) A WireFormat object used to encode the message. 
+ * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
 
  */
-Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
+Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
 {
   var interest;
   var onData;
   var onTimeout;
+  var wireFormat;
   // expressInterest(Interest interest, function onData);
   // expressInterest(Interest interest, function onData, function onTimeout);
+  // expressInterest(Interest interest, function onData, function onTimeout, WireFormat wireFormat);
   if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
     // Just use a copy of the interest.
     interest = new Interest(interestOrName);
     onData = arg2;
     onTimeout = (arg3 ? arg3 : function() {});
+    wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
   }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
 
     // expressInterest(Name name, Interest template, function onData);
     // expressInterest(Name name, Interest template, function onData, function onTimeout);
+    // expressInterest(Name name, Interest template, function onData, function onTimeout, WireFormat wireFormat);
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
       // Copy the template.
@@ -460,14 +466,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
+      wireFormat = (arg5 ? arg5 : WireFormat.getDefaultWireFormat());
     }
     // expressInterest(Name name, function onData);
-    // expressInterest(Name name, function onData,   function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout, WireFormat wireFormat);
     else {
       interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
+      wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
     }
   }
 
@@ -480,12 +489,13 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       var thisFace = this;
       this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest
-          (pendingInterestId, interest, onData, onTimeout);
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
+    this.reconnectAndExpressInterest
+      (pendingInterestId, interest, onData, onTimeout, wireFormat);
 
   return pendingInterestId;
 };
@@ -496,14 +506,15 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
  * Then call expressInterestHelper.
  */
 Face.prototype.reconnectAndExpressInterest = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
       (function() { 
-        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        thisFace.expressInterestHelper
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
 
     this.transport.connect
@@ -531,10 +542,12 @@ Face.prototype.reconnectAndExpressInterest = function
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
         (function() { 
-          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+          thisFace.expressInterestHelper
+            (pendingInterestId, interest, onData, onTimeout, wireFormat);
         });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      this.expressInterestHelper
+        (pendingInterestId, interest, onData, onTimeout, wireFormat);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -546,9 +559,9 @@ Face.prototype.reconnectAndExpressInterest = function
  * Add the PendingInterest and call this.transport.send to send the interest.
  */
 Face.prototype.expressInterestHelper = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var binaryInterest = interest.wireEncode();
+  var binaryInterest = interest.wireEncode(wireFormat);
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
@@ -772,7 +785,7 @@ Face.prototype.registerPrefix = function
     thisFace.nfdRegisterPrefix
       (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
        onRegisterSuccess, thisFace.commandKeyChain,
-       thisFace.commandCertificateName);
+       thisFace.commandCertificateName, wireFormat);
   };
 
   if (this.connectionInfo == null) {
@@ -867,10 +880,11 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
+ * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
   (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
-   onRegisterSuccess, commandKeyChain, commandCertificateName)
+   onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
@@ -932,7 +946,7 @@ Face.prototype.nfdRegisterPrefix = function
          (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
-         response.onTimeout.bind(response));
+         response.onTimeout.bind(response), wireFormat);
     });
   };
 
@@ -1205,7 +1219,8 @@ Face.prototype.connectAndExecute = function(onConnected)
           console.log("connectAndExecute: connected to host " + thisFace.host);
         onConnected();
      },
-     function(localInterest) { /* Ignore timeout */ });
+     function(localInterest) { /* Ignore timeout */ },
+     WireFormat.getDefaultWireFormat());
 };
 
 /**
