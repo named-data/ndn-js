@@ -447,17 +447,17 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 
   // Encode backwards.
   encoder.writeBlobTlv
-    (Tlv.EncryptedContent_EncryptedPayload, encryptedContent.getPayload().buf());
+    (Tlv.Encrypt_EncryptedPayload, encryptedContent.getPayload().buf());
   encoder.writeOptionalBlobTlv
-    (Tlv.EncryptedContent_InitialVector, encryptedContent.getInitialVector().buf());
+    (Tlv.Encrypt_InitialVector, encryptedContent.getInitialVector().buf());
   // Assume the algorithmType value is the same as the TLV type.
   encoder.writeNonNegativeIntegerTlv
-    (Tlv.EncryptedContent_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
+    (Tlv.Encrypt_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
   Tlv0_1_1WireFormat.encodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
 
   encoder.writeTypeAndLength
-    (Tlv.EncryptedContent_EncryptedContent, encoder.getLength() - saveLength);
+    (Tlv.Encrypt_EncryptedContent, encoder.getLength() - saveLength);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -474,17 +474,17 @@ Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
 {
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
-    readNestedTlvsStart(Tlv.EncryptedContent_EncryptedContent);
+    readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
   Tlv0_1_1WireFormat.decodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
   encryptedContent.setAlgorithmType
-    (decoder.readNonNegativeIntegerTlv(Tlv.EncryptedContent_EncryptionAlgorithm));
+    (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
   encryptedContent.setInitialVector
     (new Blob(decoder.readOptionalBlobTlv
-     (Tlv.EncryptedContent_InitialVector, endOffset), true));
+     (Tlv.Encrypt_InitialVector, endOffset), true));
   encryptedContent.setPayload
-    (new Blob(decoder.readBlobTlv(Tlv.EncryptedContent_EncryptedPayload), true));
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), true));
 
   decoder.finishNestedTlvs(endOffset);
 };
