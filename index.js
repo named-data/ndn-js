@@ -53,5 +53,6 @@ exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
 exports.Interval = require('./js/encrypt/interval.js').Interval;
 exports.RepetitiveInterval = require('./js/encrypt/repetitive-interval.js').RepetitiveInterval;
+exports.Schedule = require('./js/encrypt/schedule.js').Schedule;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
