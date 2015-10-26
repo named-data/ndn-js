@@ -99,6 +99,20 @@ Tlv.Encrypt_EncryptionAlgorithm = 131;
 Tlv.Encrypt_EncryptedPayload = 132;
 Tlv.Encrypt_InitialVector = 133;
 
+// For RepetitiveInterval.
+Tlv.Encrypt_StartDate = 134;
+Tlv.Encrypt_EndDate = 135;
+Tlv.Encrypt_IntervalStartHour = 136;
+Tlv.Encrypt_IntervalEndHour = 137;
+Tlv.Encrypt_NRepeats = 138;
+Tlv.Encrypt_RepeatUnit = 139;
+Tlv.Encrypt_RepetitiveInterval = 140;
+
+// For Schedule.
+Tlv.Encrypt_WhiteIntervalList = 141;
+Tlv.Encrypt_BlackIntervalList = 142;
+Tlv.Encrypt_Schedule = 143;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
