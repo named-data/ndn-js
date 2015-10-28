@@ -65,7 +65,8 @@ exports.Interval = Interval;
 
 /**
  * Check if the time point is in this interval.
- * @param {number} timePoint The time point to check.
+ * @param {number} timePoint The time point to check as milliseconds since
+ * Jan 1, 1970 GMT.
  * @return {boolean} True if timePoint is in this interval.
  * @throws Error if this Interval is invalid.
  */
