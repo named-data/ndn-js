@@ -38,8 +38,9 @@ EncryptAlgorithmType.RsaOaep = 3;
  * encrypt and decrypt. Create an EncryptParams with the given parameters.
  * @param {number} algorithmType The algorithm type from EncryptAlgorithmType,
  * or null if not specified.
- * @param {number} The initial vector length, or 0 if the initial vector is not
- * specified.
+ * @param {number} initialVectorLength (optional) The initial vector length, or
+ * 0 if the initial vector is not specified. If ommitted, the initial vector is
+ * not specified.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
