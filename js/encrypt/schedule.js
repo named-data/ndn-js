@@ -280,9 +280,9 @@ Schedule.encodeRepetitiveInterval_ = function(repetitiveInterval, encoder)
     (Tlv.Encrypt_IntervalStartHour, repetitiveInterval.getIntervalStartHour());
   // Use Blob to convert the string to UTF8 encoding.
   encoder.writeBlobTlv(Tlv.Encrypt_EndDate,
-    new Blob(Schedule.formatDate_(repetitiveInterval.getEndDate())).buf());
+    new Blob(Schedule.toIsoString(repetitiveInterval.getEndDate())).buf());
   encoder.writeBlobTlv(Tlv.Encrypt_StartDate,
-    new Blob(Schedule.formatDate_(repetitiveInterval.getStartDate())).buf());
+    new Blob(Schedule.toIsoString(repetitiveInterval.getStartDate())).buf());
 
   encoder.writeTypeAndLength
     (Tlv.Encrypt_RepetitiveInterval, encoder.getLength() - saveLength);
@@ -298,9 +298,9 @@ Schedule.decodeRepetitiveInterval_ = function(decoder)
   var endOffset = decoder.readNestedTlvsStart(Tlv.Encrypt_RepetitiveInterval);
 
   // Use Blob to convert UTF8 to a string.
-  var startDate = Schedule.parseDate_
+  var startDate = Schedule.fromIsoString
     (new Blob(decoder.readBlobTlv(Tlv.Encrypt_StartDate), true).toString());
-  var endDate = Schedule.parseDate_
+  var endDate = Schedule.fromIsoString
     (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EndDate), true).toString());
   var startHour = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_IntervalStartHour);
   var endHour = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_IntervalEndHour);
@@ -319,7 +319,7 @@ Schedule.decodeRepetitiveInterval_ = function(decoder)
  * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 GMT.
  * @returns {string} The string representation.
  */
-Schedule.formatDate_ = function(msSince1970)
+Schedule.toIsoString = function(msSince1970)
 {
   var utcTime = new Date(Math.round(msSince1970));
   return utcTime.getUTCFullYear() +
@@ -348,7 +348,7 @@ Schedule.to2DigitString = function(x)
  * @param {string} timeString The ISO time representation.
  * @returns {number} The timestamp as milliseconds since Jan 1, 1970 GMT.
  */
-Schedule.parseDate_ = function(timeString)
+Schedule.fromIsoString = function(timeString)
 {
   if (timeString.length != 15 || timeString.substr(8, 1) != 'T')
     throw new Error("fromIsoString: Format is not the expected yyyymmddThhmmss");
