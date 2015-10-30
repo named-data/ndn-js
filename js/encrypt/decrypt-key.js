@@ -23,7 +23,7 @@ var Blob = require('../util/blob.js').Blob;
 /**
  * A DecryptKey supplies the key for decrypt.
  * Create a DecryptKey with the given key value.
- * @param {number|DecryptKey} value If value is another DecryptKey then copy it.
+ * @param {Blob|DecryptKey} value If value is another DecryptKey then copy it.
  * Otherwise, value is the key value.
  * @note This class is an experimental feature. The API may change.
  * @constructor
