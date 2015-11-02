@@ -29,7 +29,14 @@ var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
+var FilePrivateKeyStorage = require('../../security/identity/file-private-key-storage').FilePrivateKeyStorage;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
 
 /**
  * The RsaAlgorithm class provides static methods to manipulate keys, encrypt
@@ -49,8 +56,21 @@ exports.RsaAlgorithm = RsaAlgorithm;
  */
 RsaAlgorithm.generateKey = function(params)
 {
-  // TODO: Implement.
-  throw new Error("RsaAlgorithm.generateKey is not implemented");
+  if (!rsaKeygen)
+    throw new SecurityException(new Error
+      ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+  var keyPair = rsaKeygen.generate(params.getKeySize());
+  // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
+  var privateKeyBase64 = keyPair.private_key.toString().replace
+    ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+    ("-----END RSA PRIVATE KEY-----", "");
+  var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+  var privateKey = FilePrivateKeyStorage.encodePkcs8PrivateKey
+    (pkcs1PrivateKeyDer, new OID(FilePrivateKeyStorage.RSA_ENCRYPTION_OID),
+     new DerNode.DerNull()).buf();
+
+  return new DecryptKey(privateKey);
 };
 
 /**
