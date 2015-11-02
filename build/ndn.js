@@ -6752,8 +6752,8 @@ DynamicBuffer.prototype.slice = function(begin, end)
  * the target's targets) has been changed. The target object must have a method
  * getChangeCount.
  *
- * Create a new ChangeCounter to track the given target.  This sets the local
- * change counter to target.getChangeCount().
+ * Create a new ChangeCounter to track the given target. If target is not null,
+ * this sets the local change counter to target.getChangeCount().
  * @param {object} target The target to track, as an object with the method
  * getChangeCount().
  * @constructor
@@ -6761,7 +6761,7 @@ DynamicBuffer.prototype.slice = function(begin, end)
 var ChangeCounter = function ChangeCounter(target)
 {
   this.target = target;
-  this.changeCount = target.getChangeCount();
+  this.changeCount = (target == null ? 0 : target.getChangeCount());
 };
 
 exports.ChangeCounter = ChangeCounter;
@@ -6778,26 +6778,30 @@ ChangeCounter.prototype.get = function()
 };
 
 /**
- * Set the target to the given target. This sets the local change counter to
- * target.getChangeCount().
+ * Set the target to the given target. If target is not null, this sets the
+ * local change counter to target.getChangeCount().
  * @param {object} target The target to track, as an object with the method
  * getChangeCount().
  */
 ChangeCounter.prototype.set = function(target)
 {
   this.target = target;
-  this.changeCount = target.getChangeCount();
+  this.changeCount = (target == null ? 0 : target.getChangeCount());
 };
 
 /**
  * If the target's change count is different than the local change count, then
  * update the local change count and return true. Otherwise return false,
- * meaning that the target has not changed. This is useful since the target (or
- * one of the target's targets) may be changed and you need to find out.
+ * meaning that the target has not changed. Also, if the target is null,
+ * simply return false. This is useful since the target (or one of the target's
+ * targets) may be changed and you need to find out.
  * @returns {boolean} True if the change count has been updated, false if not.
  */
 ChangeCounter.prototype.checkChanged = function()
 {
+  if (this.target == null)
+    return false;
+  
   var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;
@@ -11664,7 +11668,7 @@ Name.prototype.clear = function()
 };
 
 /**
- * Return the escaped name string according to "NDNx URI Scheme".
+ * Return the escaped name string according to NDN URI Scheme.
  * @param {boolean} includeScheme (optional) If true, include the "ndn:" scheme
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
@@ -11691,6 +11695,8 @@ Name.prototype.to_uri = function()
 {
   return this.toUri();
 };
+
+Name.prototype.toString = function() { return this.toUri(); }
 
 /**
  * Append a component with the encoded segment number according to NDN
@@ -12016,7 +12022,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 
 /**
- * Return value as an escaped string according to "NDNx URI Scheme".
+ * Return value as an escaped string according to NDN URI Scheme.
  * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
  * @returns {string} The escaped string.
@@ -12058,7 +12064,7 @@ Name.toEscapedString = function(value)
 };
 
 /**
- * Make a blob value by decoding the escapedString according to "NDNx URI Scheme".
+ * Make a blob value by decoding the escapedString according to NDN URI Scheme.
  * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
  * @param {string} escapedString The escaped string to decode.
  * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
@@ -12382,6 +12388,9 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   if (timestamp)
     throw new Error
       ("MetaInfo constructor: timestamp support has been removed.");
+  if (locator)
+    throw new Error
+      ("MetaInfo constructor: locator support has been removed.");
 
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -12389,16 +12398,15 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
     this.type_ = metaInfo.type_;
-    this.locator_ = metaInfo.locator_ == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator_);
     this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; // deprecated
+    if (publisherOrMetaInfo)
+      throw new Error
+        ("MetaInfo constructor: publisher support has been removed.");
+
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
-     // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
-    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
   }
@@ -12529,23 +12537,11 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
       ++this.changeCount_;
     } });
 /**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(MetaInfo.prototype, "publisher",
-  { get: function() { return this.publisher_; },
-    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
-/**
  * @deprecated Use getFinalBlockId and setFinalBlockId.
  */
 Object.defineProperty(MetaInfo.prototype, "finalBlockID",
   { get: function() { return this.getFinalBlockIDAsBuffer(); },
     set: function(val) { this.setFinalBlockId(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(MetaInfo.prototype, "locator",
-  { get: function() { return this.locator_; },
-    set: function(val) { this.locator_ = val; ++this.changeCount_; } });
 /**
  * This class represents an NDN Data Signature object.
  * Copyright (C) 2014-2015 Regents of the University of California.
@@ -13053,42 +13049,6 @@ Data.prototype.wireDecode = function(input, wireFormat)
 };
 
 /**
- * If getSignature() has a key locator, return it.  Otherwise, use
- * the deprecated key locator from getMetaInfo() for backward compatibility and print
- * a warning to console.log that the key locator has moved to the Signature
- * object.  If neither has a key locator, return an empty key locator.
- * When we stop supporting the key locator in MetaInfo, this function is not
- * necessary and we will just use the key locator in the Signature.
- * @returns {KeyLocator} The key locator to use.
- */
-Data.prototype.getSignatureOrMetaInfoKeyLocator = function()
-{
-  if (!KeyLocator.canGetFromSignature(this.getSignature()))
-    // The signature type doesn't support KeyLocator.
-    return new KeyLocator();
-
-  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null &&
-      this.signature_.get().getKeyLocator().getType() != null &&
-      this.signature_.get().getKeyLocator().getType() >= 0)
-    // The application is using the key locator in the correct object.
-    return this.signature_.get().getKeyLocator();
-
-  if (this.metaInfo_.get() != null && this.metaInfo_.get().locator != null &&
-      this.metaInfo_.get().locator.getType() != null &&
-      this.metaInfo_.get().locator.getType() >= 0) {
-    console.log("WARNING: Temporarily using the key locator found in the MetaInfo - expected it in the Signature object.");
-    console.log("WARNING: In the future, the key locator in the Signature object will not be supported.");
-    return this.metaInfo_.get().locator;
-  }
-
-  // Return the empty key locator from the Signature object if possible.
-  if (this.signature_.get() != null && this.signature_.get().getKeyLocator() != null)
-    return this.signature_.get().getKeyLocator();
-  else
-    return new KeyLocator();
-};
-
-/**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
  * @returns {number} The change count.
@@ -13358,7 +13318,7 @@ EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -16040,7 +16000,7 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
@@ -16394,7 +16354,7 @@ MemoryPrivateKeyStorage.prototype.doesKeyExistPromise = function
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('../../crypto.js');
 // Don't require other modules since this is meant for the browser, not Node.js.
 
 /**
@@ -16643,7 +16603,7 @@ IndexedDbPrivateKeyStorage.transformName = function(keyName)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Blob = require('../../util/blob.js').Blob;
@@ -17707,7 +17667,7 @@ exports.ValidationRequest = ValidationRequest;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -20569,7 +20529,7 @@ Object.defineProperty(Interest.prototype, "nonce",
  * A ForwardingFlags object holds the flags which specify how the forwarding daemon should forward an interest for
  * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
  * bits are changed, amended or deprecated.
- * Create a new ForwardingFlags with "active" and "childInherit" set and all other flags cleared.
+ * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
  */
 var ForwardingFlags = function ForwardingFlags(value)
 {
@@ -21244,11 +21204,7 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  // Use getSignatureOrMetaInfoKeyLocator for the transition of moving
-  //   the key locator from the MetaInfo to the Signauture object. (Note that
-  //   getSignatureOrMetaInfoKeyLocator checks canGetFromSignature.)
-  Tlv0_1_1WireFormat.encodeSignatureInfo_
-    (data.getSignature(), encoder, data.getSignatureOrMetaInfoKeyLocator());
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
   Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
   Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
@@ -21286,12 +21242,6 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
   Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
   Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
-  if (data.getSignature() != null &&
-      data.getSignature().getKeyLocator() != null &&
-      data.getMetaInfo() != null)
-    // Copy the key locator pointer to the MetaInfo object for the transition of
-    //   moving the key locator from the MetaInfo to the Signature object.
-    data.getMetaInfo().locator = data.getSignature().getKeyLocator();
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
@@ -21426,12 +21376,7 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-
-  // For now, encodeSignatureInfo_ needs to be passed the keyLocator.
-  var keyLocator = null;
-  if (KeyLocator.canGetFromSignature(signature))
-    keyLocator = KeyLocator.getFromSignature(signature);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder, keyLocator);
+  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
@@ -21715,21 +21660,18 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
 
 /**
  * An internal method to encode signature as the appropriate form of
- * SignatureInfo in NDN-TLV. Use the given keyLocator instead of the
- * locator in this object.
+ * SignatureInfo in NDN-TLV.
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
- * @param {KeyLocator} keyLocator The key locator to use (from
- * Data.getSignatureOrMetaInfoKeyLocator). This may be null if the signature
- * does not support a KeyLocator.
  */
-Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder, keyLocator)
+Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator(Tlv.KeyLocator, keyLocator, encoder);
+    Tlv0_1_1WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
@@ -21950,6 +21892,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ContentType = require('../meta-info.js').ContentType;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
@@ -22005,52 +21949,72 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 
 /**
  * Return a user friendly HTML string with the contents of data.
- * This also outputs to console.log.
  */
 EncodingUtils.dataToHtml = function(/* Data */ data)
 {
-  var output ="";
-
   if (data == -1)
-    output+= "NO CONTENT FOUND"
-  else if (data == -2)
-    output+= "CONTENT NAME IS EMPTY"
-  else {
-    if (data.getName() != null) {
-      output+= "NAME: " + data.getName().toUri();
+    return "NO CONTENT FOUND";
+  if (data == -2)
+    return "CONTENT NAME IS EMPTY";
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
+  var output = "";
+  function append(message) {
+    message = message.replace(/&/g, "&amp;");
+    message = message.replace(/</g, "&lt;");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(hex): "+ data.getContent().toHex();
+    output += message;
+    output += "<br/>";
+  }
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
-      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
+  // Imitate dumpData in examples/node/test-encode-decode-data.js
+  
+  append("name: " + data.getName().toUri());
+  if (data.getContent().size() > 0) {
+    append("content (raw): " + data.getContent().buf().toString('binary'));
+    append("content (hex): " + data.getContent().toHex());
+  }
+  else
+    append("content: <empty>");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-      output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
-      output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.getMetaInfo().locator.getKeyName().toUri() + "<br />";
-      else
-        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";
-    }
+  if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
+    if (data.getMetaInfo().getType() == ContentType.KEY)
+      append("metaInfo.type: KEY");
+    else if (data.getMetaInfo().getType() == ContentType.LINK)
+      append("metaInfo.type: LINK");
+    else if (data.getMetaInfo().getType() == ContentType.NACK)
+      append("metaInfo.type: NACK");
+  }
+  append("metaInfo.freshnessPeriod (milliseconds): " +
+    (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
+      "" + data.getMetaInfo().getFreshnessPeriod() : "<none>"));
+  append("metaInfo.finalBlockId: " +
+    (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+     data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
+
+  var keyLocator = null;
+  var signature = data.getSignature();
+  if (signature instanceof Sha256WithRsaSignature) {
+    var signature = data.getSignature();
+    append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof DigestSha256Signature) {
+    var signature = data.getSignature();
+    append("DigestSha256 signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+  }
+  if (keyLocator !== null) {
+    if (keyLocator.getType() == KeyLocatorType.NONE)
+      append("signature.keyLocator: <none>");
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      append("signature.keyLocator: KeyName: " + keyLocator.getKeyName().toUri());
+    else
+      append("signature.keyLocator: <unrecognized ndn_KeyLocatorType>");
   }
 
   return output;
@@ -22512,6 +22476,10 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
       var str = new Uint8Array(content_t.toArrayBuffer());
       var co = new Data(interest.getName());
       co.setContent(new Blob(str, false));
+      if (interest.getName().get(-1).toEscapedString() == "00")
+        // Limit the lifetime of replies to interest for "00" since they can be different.
+        co.getMetaInfo().setFreshnessPeriod(1000);
+
       this.keyChain.sign(co, this.certificateName);
       try {
         face.putData(co);
@@ -22718,7 +22686,7 @@ ChronoSync2013.prototype.dummyOnData = function(interest, data)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../crypto.js');
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 var DigestTree = function DigestTree()
@@ -23016,7 +22984,7 @@ exports.SyncStateProto = SyncStateProto;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../crypto.js');
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var Blob = require('./blob.js').Blob;
@@ -23107,7 +23075,7 @@ CommandInterestGenerator.prototype.generate = function
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -23183,7 +23151,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
         else
           console.log
             ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
-        console.log("Using " + this.connectionInfo.toString());
+        if (LOG > 0)
+          console.log("Using " + this.connectionInfo.toString());
       }
     }
   }
@@ -23503,9 +23472,9 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * Send the interest through the transport, read the entire response and call onData.
  * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
  * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
- * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
+ * expressInterest(interest, onData [, onTimeout] [, wireFormat]).  The second form creates the interest from
  * a name and optional interest template:
- * expressInterest(name [, template], onData [, onTimeout]).
+ * expressInterest(name [, template], onData [, onTimeout] [, wireFormat]).
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -23517,28 +23486,34 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
+ * @param {WireFormat} (optional) A WireFormat object used to encode the message. 
+ * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
 
  */
-Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
+Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
 {
   var interest;
   var onData;
   var onTimeout;
+  var wireFormat;
   // expressInterest(Interest interest, function onData);
   // expressInterest(Interest interest, function onData, function onTimeout);
+  // expressInterest(Interest interest, function onData, function onTimeout, WireFormat wireFormat);
   if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
     // Just use a copy of the interest.
     interest = new Interest(interestOrName);
     onData = arg2;
     onTimeout = (arg3 ? arg3 : function() {});
+    wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
   }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
 
     // expressInterest(Name name, Interest template, function onData);
     // expressInterest(Name name, Interest template, function onData, function onTimeout);
+    // expressInterest(Name name, Interest template, function onData, function onTimeout, WireFormat wireFormat);
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
       // Copy the template.
@@ -23547,14 +23522,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
+      wireFormat = (arg5 ? arg5 : WireFormat.getDefaultWireFormat());
     }
     // expressInterest(Name name, function onData);
-    // expressInterest(Name name, function onData,   function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout, WireFormat wireFormat);
     else {
       interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
+      wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
     }
   }
 
@@ -23567,12 +23545,13 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       var thisFace = this;
       this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest
-          (pendingInterestId, interest, onData, onTimeout);
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
+    this.reconnectAndExpressInterest
+      (pendingInterestId, interest, onData, onTimeout, wireFormat);
 
   return pendingInterestId;
 };
@@ -23583,14 +23562,15 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
  * Then call expressInterestHelper.
  */
 Face.prototype.reconnectAndExpressInterest = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
       (function() { 
-        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        thisFace.expressInterestHelper
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
 
     this.transport.connect
@@ -23618,10 +23598,12 @@ Face.prototype.reconnectAndExpressInterest = function
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
         (function() { 
-          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+          thisFace.expressInterestHelper
+            (pendingInterestId, interest, onData, onTimeout, wireFormat);
         });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      this.expressInterestHelper
+        (pendingInterestId, interest, onData, onTimeout, wireFormat);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -23633,9 +23615,9 @@ Face.prototype.reconnectAndExpressInterest = function
  * Add the PendingInterest and call this.transport.send to send the interest.
  */
 Face.prototype.expressInterestHelper = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var binaryInterest = interest.wireEncode();
+  var binaryInterest = interest.wireEncode(wireFormat);
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
@@ -23801,6 +23783,12 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
+ * @param {function} onRegisterSuccess (optional) When this receives a success
+ * message, this calls onRegisterSuccess(prefix, registeredPrefixId) where
+ * prefix is the prefix given to registerPrefix and registeredPrefixId is
+ * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
+ * this does not use it. (The onRegisterSuccess parameter comes after
+ * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
@@ -23808,19 +23796,52 @@ Face.prototype.nodeMakeCommandInterest = function
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, flags)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
 {
+  // Temporarlity reassign to resolve the different overloaded forms.
+  arg4 = onRegisterSuccess;
+  arg5 = flags;
+  arg6 = wireFormat;
+  // arg4, arg5, arg6 may be:
+  // OnRegisterSuccess, ForwardingFlags, WireFormat
+  // OnRegisterSuccess, ForwardingFlags, null
+  // OnRegisterSuccess, WireFormat,      null
+  // OnRegisterSuccess, null,            null
+  // ForwardingFlags,   WireFormat,      null
+  // ForwardingFlags,   null,            null
+  // WireFormat,        null,            null
+  // null,              null,            None
+  if (typeof arg4 === "function")
+    onRegisterSuccess = arg4
+  else
+    onRegisterSuccess = null
+
+  if (arg4 instanceof ForwardingFlags)
+    flags = arg4
+  else if (arg5 instanceof ForwardingFlags)
+    flags = arg5
+  else
+    flags = ForwardingFlags()
+
+  if (arg4 instanceof WireFormat)
+    wireFormat = arg4
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5
+  else if (arg6 instanceof WireFormat)
+    wireFormat = arg6
+  else
+    wireFormat = WireFormat.getDefaultWireFormat()
+
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
-  if (!flags)
-    flags = new ForwardingFlags();
   
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
       (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
-       thisFace.commandKeyChain, thisFace.commandCertificateName);
+       onRegisterSuccess, thisFace.commandKeyChain,
+       thisFace.commandCertificateName, wireFormat);
   };
 
   if (this.connectionInfo == null) {
@@ -23848,14 +23869,12 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
+  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId)
 {
-  this.face = face;
   this.prefix = prefix;
-  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
-  this.flags = flags;
-  this.wireFormat = wireFormat;
+  this.onRegisterSuccess= onRegisterSuccess;
+  this.registeredPrefixId = registeredPrefixId;
 };
 
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
@@ -23890,6 +23909,8 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
+  if (this.onRegisterSuccess != null)
+      this.onRegisterSuccess(this.prefix, this.registeredPrefixId);
 };
 
 /**
@@ -23912,12 +23933,14 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
+ * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
+ * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
-   commandCertificateName)
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
+   onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
@@ -23976,11 +23999,10 @@ Face.prototype.nfdRegisterPrefix = function
 
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (thisFace, prefix, onInterest, onRegisterFailed, flags,
-          TlvWireFormat.get());
+         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
-         response.onTimeout.bind(response));
+         response.onTimeout.bind(response), wireFormat);
     });
   };
 
@@ -24253,7 +24275,8 @@ Face.prototype.connectAndExecute = function(onConnected)
           console.log("connectAndExecute: connected to host " + thisFace.host);
         onConnected();
      },
-     function(localInterest) { /* Ignore timeout */ });
+     function(localInterest) { /* Ignore timeout */ },
+     WireFormat.getDefaultWireFormat());
 };
 
 /**

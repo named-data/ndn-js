@@ -44,6 +44,9 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
   if (timestamp)
     throw new Error
       ("MetaInfo constructor: timestamp support has been removed.");
+  if (locator)
+    throw new Error
+      ("MetaInfo constructor: locator support has been removed.");
 
   if (typeof publisherOrMetaInfo === 'object' &&
       publisherOrMetaInfo instanceof MetaInfo) {
@@ -51,16 +54,15 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
     this.type_ = metaInfo.type_;
-    this.locator_ = metaInfo.locator_ == null ?
-      new KeyLocator() : new KeyLocator(metaInfo.locator_);
     this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
   else {
-    this.publisher = publisherOrMetaInfo; // deprecated
+    if (publisherOrMetaInfo)
+      throw new Error
+        ("MetaInfo constructor: publisher support has been removed.");
+
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
-     // The KeyLocator in MetaInfo is deprecated. Use the one in the Signature.
-    this.locator = locator == null ? new KeyLocator() : new KeyLocator(locator);
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
   }
@@ -191,20 +193,8 @@ Object.defineProperty(MetaInfo.prototype, "freshnessSeconds",
       ++this.changeCount_;
     } });
 /**
- * @deprecated Use KeyLocator where keyLocatorType is KEY_LOCATOR_DIGEST.
- */
-Object.defineProperty(MetaInfo.prototype, "publisher",
-  { get: function() { return this.publisher_; },
-    set: function(val) { this.publisher_ = val; ++this.changeCount_; } });
-/**
  * @deprecated Use getFinalBlockId and setFinalBlockId.
  */
 Object.defineProperty(MetaInfo.prototype, "finalBlockID",
   { get: function() { return this.getFinalBlockIDAsBuffer(); },
     set: function(val) { this.setFinalBlockId(val); } });
-/**
- * @deprecated
- */
-Object.defineProperty(MetaInfo.prototype, "locator",
-  { get: function() { return this.locator_; },
-    set: function(val) { this.locator_ = val; ++this.changeCount_; } });

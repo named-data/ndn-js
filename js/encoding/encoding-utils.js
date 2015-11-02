@@ -22,6 +22,8 @@ var DataUtils = require('./data-utils.js').DataUtils;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var ContentType = require('../meta-info.js').ContentType;
 var WireFormat = require('./wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
@@ -77,52 +79,72 @@ EncodingUtils.decodeSubjectPublicKeyInfo = function(array)
 
 /**
  * Return a user friendly HTML string with the contents of data.
- * This also outputs to console.log.
  */
 EncodingUtils.dataToHtml = function(/* Data */ data)
 {
-  var output ="";
-
   if (data == -1)
-    output+= "NO CONTENT FOUND"
-  else if (data == -2)
-    output+= "CONTENT NAME IS EMPTY"
-  else {
-    if (data.getName() != null) {
-      output+= "NAME: " + data.getName().toUri();
+    return "NO CONTENT FOUND";
+  if (data == -2)
+    return "CONTENT NAME IS EMPTY";
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(ASCII): "+ DataUtils.toString(data.getContent().buf());
+  var output = "";
+  function append(message) {
+    message = message.replace(/&/g, "&amp;");
+    message = message.replace(/</g, "&lt;");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (!data.getContent().isNull()) {
-      output += "CONTENT(hex): "+ data.getContent().toHex();
+    output += message;
+    output += "<br/>";
+  }
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getSignature() != null && data.getSignature().getSignature() != null) {
-      output += "Signature(hex): "+ data.getSignature().getSignature().toHex();
+  // Imitate dumpData in examples/node/test-encode-decode-data.js
+  
+  append("name: " + data.getName().toUri());
+  if (data.getContent().size() > 0) {
+    append("content (raw): " + data.getContent().buf().toString('binary'));
+    append("content (hex): " + data.getContent().toHex());
+  }
+  else
+    append("content: <empty>");
 
-      output+= "<br />";
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().getFinalBlockId().getValue().size() > 0) {
-      output += "FinalBlockId: "+ data.getMetaInfo().getFinalBlockId().getValue().toHex();
-      output+= "<br />";
-    }
-    if (data.getMetaInfo() != null && data.getMetaInfo().locator != null && data.getMetaInfo().locator.getType()) {
-      output += "keyLocator: ";
-      if (data.getMetaInfo().locator.getType() == KeyLocatorType.KEYNAME)
-        output += "KeyName: " + data.getMetaInfo().locator.getKeyName().toUri() + "<br />";
-      else
-        output += "[unrecognized ndn_KeyLocatorType " + data.getMetaInfo().locator.getType() + "]<br />";
-    }
+  if (!(data.getMetaInfo().getType() == ContentType.BLOB)) {
+    if (data.getMetaInfo().getType() == ContentType.KEY)
+      append("metaInfo.type: KEY");
+    else if (data.getMetaInfo().getType() == ContentType.LINK)
+      append("metaInfo.type: LINK");
+    else if (data.getMetaInfo().getType() == ContentType.NACK)
+      append("metaInfo.type: NACK");
+  }
+  append("metaInfo.freshnessPeriod (milliseconds): " +
+    (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
+      "" + data.getMetaInfo().getFreshnessPeriod() : "<none>"));
+  append("metaInfo.finalBlockId: " +
+    (data.getMetaInfo().getFinalBlockId().getValue().size() > 0 ?
+     data.getMetaInfo().getFinalBlockId().getValue().toHex() : "<none>"));
+
+  var keyLocator = null;
+  var signature = data.getSignature();
+  if (signature instanceof Sha256WithRsaSignature) {
+    var signature = data.getSignature();
+    append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof DigestSha256Signature) {
+    var signature = data.getSignature();
+    append("DigestSha256 signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+  }
+  if (keyLocator !== null) {
+    if (keyLocator.getType() == KeyLocatorType.NONE)
+      append("signature.keyLocator: <none>");
+    else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
+      append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
+    else if (keyLocator.getType() == KeyLocatorType.KEYNAME)
+      append("signature.keyLocator: KeyName: " + keyLocator.getKeyName().toUri());
+    else
+      append("signature.keyLocator: <unrecognized ndn_KeyLocatorType>");
   }
 
   return output;

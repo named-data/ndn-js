@@ -19,7 +19,7 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
@@ -95,7 +95,8 @@ var Face = function Face(transportOrSettings, connectionInfo)
         else
           console.log
             ("Face constructor: Cannot determine the default Unix socket file path for UnixTransport");
-        console.log("Using " + this.connectionInfo.toString());
+        if (LOG > 0)
+          console.log("Using " + this.connectionInfo.toString());
       }
     }
   }
@@ -415,9 +416,9 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * Send the interest through the transport, read the entire response and call onData.
  * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
  * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
- * expressInterest(interest, onData [, onTimeout]).  The second form creates the interest from
+ * expressInterest(interest, onData [, onTimeout] [, wireFormat]).  The second form creates the interest from
  * a name and optional interest template:
- * expressInterest(name [, template], onData [, onTimeout]).
+ * expressInterest(name [, template], onData [, onTimeout] [, wireFormat]).
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -429,28 +430,34 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
+ * @param {WireFormat} (optional) A WireFormat object used to encode the message. 
+ * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
 
  */
-Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
+Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
 {
   var interest;
   var onData;
   var onTimeout;
+  var wireFormat;
   // expressInterest(Interest interest, function onData);
   // expressInterest(Interest interest, function onData, function onTimeout);
+  // expressInterest(Interest interest, function onData, function onTimeout, WireFormat wireFormat);
   if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
     // Just use a copy of the interest.
     interest = new Interest(interestOrName);
     onData = arg2;
     onTimeout = (arg3 ? arg3 : function() {});
+    wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
   }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
 
     // expressInterest(Name name, Interest template, function onData);
     // expressInterest(Name name, Interest template, function onData, function onTimeout);
+    // expressInterest(Name name, Interest template, function onData, function onTimeout, WireFormat wireFormat);
     if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
       var template = arg2;
       // Copy the template.
@@ -459,14 +466,17 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
 
       onData = arg3;
       onTimeout = (arg4 ? arg4 : function() {});
+      wireFormat = (arg5 ? arg5 : WireFormat.getDefaultWireFormat());
     }
     // expressInterest(Name name, function onData);
-    // expressInterest(Name name, function onData,   function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout);
+    // expressInterest(Name name, function onData, function onTimeout, WireFormat wireFormat);
     else {
       interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
       onData = arg2;
       onTimeout = (arg3 ? arg3 : function() {});
+      wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
     }
   }
 
@@ -479,12 +489,13 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
       var thisFace = this;
       this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest
-          (pendingInterestId, interest, onData, onTimeout);
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
     }
   }
   else
-    this.reconnectAndExpressInterest(pendingInterestId, interest, onData, onTimeout);
+    this.reconnectAndExpressInterest
+      (pendingInterestId, interest, onData, onTimeout, wireFormat);
 
   return pendingInterestId;
 };
@@ -495,14 +506,15 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4)
  * Then call expressInterestHelper.
  */
 Face.prototype.reconnectAndExpressInterest = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
       (function() { 
-        thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+        thisFace.expressInterestHelper
+          (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
 
     this.transport.connect
@@ -530,10 +542,12 @@ Face.prototype.reconnectAndExpressInterest = function
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
         (function() { 
-          thisFace.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+          thisFace.expressInterestHelper
+            (pendingInterestId, interest, onData, onTimeout, wireFormat);
         });
     else if (this.readyStatus === Face.OPENED)
-      this.expressInterestHelper(pendingInterestId, interest, onData, onTimeout);
+      this.expressInterestHelper
+        (pendingInterestId, interest, onData, onTimeout, wireFormat);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -545,9 +559,9 @@ Face.prototype.reconnectAndExpressInterest = function
  * Add the PendingInterest and call this.transport.send to send the interest.
  */
 Face.prototype.expressInterestHelper = function
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var binaryInterest = interest.wireEncode();
+  var binaryInterest = interest.wireEncode(wireFormat);
   if (binaryInterest.size() > Face.getMaxNdnPacketSize())
     throw new Error
       ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
@@ -713,6 +727,12 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
+ * @param {function} onRegisterSuccess (optional) When this receives a success
+ * message, this calls onRegisterSuccess(prefix, registeredPrefixId) where
+ * prefix is the prefix given to registerPrefix and registeredPrefixId is
+ * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
+ * this does not use it. (The onRegisterSuccess parameter comes after
+ * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
@@ -720,19 +740,52 @@ Face.prototype.nodeMakeCommandInterest = function
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
-  (prefix, onInterest, onRegisterFailed, flags)
+  (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
 {
+  // Temporarlity reassign to resolve the different overloaded forms.
+  arg4 = onRegisterSuccess;
+  arg5 = flags;
+  arg6 = wireFormat;
+  // arg4, arg5, arg6 may be:
+  // OnRegisterSuccess, ForwardingFlags, WireFormat
+  // OnRegisterSuccess, ForwardingFlags, null
+  // OnRegisterSuccess, WireFormat,      null
+  // OnRegisterSuccess, null,            null
+  // ForwardingFlags,   WireFormat,      null
+  // ForwardingFlags,   null,            null
+  // WireFormat,        null,            null
+  // null,              null,            None
+  if (typeof arg4 === "function")
+    onRegisterSuccess = arg4
+  else
+    onRegisterSuccess = null
+
+  if (arg4 instanceof ForwardingFlags)
+    flags = arg4
+  else if (arg5 instanceof ForwardingFlags)
+    flags = arg5
+  else
+    flags = ForwardingFlags()
+
+  if (arg4 instanceof WireFormat)
+    wireFormat = arg4
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5
+  else if (arg6 instanceof WireFormat)
+    wireFormat = arg6
+  else
+    wireFormat = WireFormat.getDefaultWireFormat()
+
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
-  if (!flags)
-    flags = new ForwardingFlags();
   
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
     thisFace.nfdRegisterPrefix
       (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
-       thisFace.commandKeyChain, thisFace.commandCertificateName);
+       onRegisterSuccess, thisFace.commandKeyChain,
+       thisFace.commandCertificateName, wireFormat);
   };
 
   if (this.connectionInfo == null) {
@@ -760,14 +813,12 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (face, prefix, onInterest, onRegisterFailed, flags, wireFormat)
+  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId)
 {
-  this.face = face;
   this.prefix = prefix;
-  this.onInterest = onInterest;
   this.onRegisterFailed = onRegisterFailed;
-  this.flags = flags;
-  this.wireFormat = wireFormat;
+  this.onRegisterSuccess= onRegisterSuccess;
+  this.registeredPrefixId = registeredPrefixId;
 };
 
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
@@ -802,6 +853,8 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
+  if (this.onRegisterSuccess != null)
+      this.onRegisterSuccess(this.prefix, this.registeredPrefixId);
 };
 
 /**
@@ -824,12 +877,14 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {function} onInterest
  * @param {ForwardingFlags} flags
  * @param {function} onRegisterFailed
+ * @param {function} onRegisterSuccess
  * @param {KeyChain} commandKeyChain
  * @param {Name} commandCertificateName
+ * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, commandKeyChain,
-   commandCertificateName)
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
+   onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   var removeRequestIndex = -1;
   if (removeRequestIndex != null)
@@ -888,11 +943,10 @@ Face.prototype.nfdRegisterPrefix = function
 
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (thisFace, prefix, onInterest, onRegisterFailed, flags,
-          TlvWireFormat.get());
+         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
-         response.onTimeout.bind(response));
+         response.onTimeout.bind(response), wireFormat);
     });
   };
 
@@ -1165,7 +1219,8 @@ Face.prototype.connectAndExecute = function(onConnected)
           console.log("connectAndExecute: connected to host " + thisFace.host);
         onConnected();
      },
-     function(localInterest) { /* Ignore timeout */ });
+     function(localInterest) { /* Ignore timeout */ },
+     WireFormat.getDefaultWireFormat());
 };
 
 /**

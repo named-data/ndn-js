@@ -442,6 +442,10 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
       var str = new Uint8Array(content_t.toArrayBuffer());
       var co = new Data(interest.getName());
       co.setContent(new Blob(str, false));
+      if (interest.getName().get(-1).toEscapedString() == "00")
+        // Limit the lifetime of replies to interest for "00" since they can be different.
+        co.getMetaInfo().setFreshnessPeriod(1000);
+
       this.keyChain.sign(co, this.certificateName);
       try {
         face.putData(co);

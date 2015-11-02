@@ -1,5 +1,14 @@
-Interim changes since NDN-JS v0.8.1 (2015-09-24)
-------------------------------------------------
+Interim changes since NDN-JS v0.9 (2015-10-09)
+----------------------------------------------
+
+Changes
+* http://redmine.named-data.net/issues/3005 In Face.registerPrefix, added the
+  optional onRegisterSuccess callback.
+* In Name, added method toString() which calls toUri().
+* In integration-tests, added test-registration-callbacks.
+
+NDN-JS v0.9 (2015-09-24)
+------------------------
 
 Changes
 * In security, added KeyChain.createIdentityAndCertificate which returns the
@@ -30,6 +39,8 @@ Changes to remove deprecated NDNx support
 * In KeyLocator, removed deprecated NDNx types KEY and CERTIFICATE.
 * In MetaInfo, removed deprecated NDNx setFields and get/setTimestamp.
 * In MetaInfo get/setType, removed deprecated NDNx types DATA, ENCR and GONE.
+* In MetaInfo, removed NDNx locator. You should use get/setKeyLocator in the
+     Signature object get/setKeyLocator().
 * Removed deprecated NDNx classes ForwardingEntry, FaceInstance, KeyManager,
   NameEnumeration, ExponentialReExpressClosure, Closure, KeyName, KeyNameType,
   PublisherID, PublisherType, NDNTime, SignedInfo (use MetaInfo),
