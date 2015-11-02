@@ -18,7 +18,7 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('../../crypto.js');
 // Don't require other modules since this is meant for the browser, not Node.js.
 
 /**

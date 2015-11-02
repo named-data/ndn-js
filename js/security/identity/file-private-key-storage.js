@@ -31,7 +31,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var util = require('util');
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('../../crypto.js');
 var fs = require('fs');
 var path = require('path');
 var rsaKeygen = null;

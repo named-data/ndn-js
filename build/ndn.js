@@ -13318,7 +13318,7 @@ EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
@@ -16000,7 +16000,7 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var SecurityException = require('../security-exception.js').SecurityException;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
@@ -16354,7 +16354,7 @@ MemoryPrivateKeyStorage.prototype.doesKeyExistPromise = function
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('../../crypto.js');
 // Don't require other modules since this is meant for the browser, not Node.js.
 
 /**
@@ -16603,7 +16603,7 @@ IndexedDbPrivateKeyStorage.transformName = function(keyName)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Name = require('../../name.js').Name;
 var Data = require('../../data.js').Data;
 var Blob = require('../../util/blob.js').Blob;
@@ -17667,7 +17667,7 @@ exports.ValidationRequest = ValidationRequest;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../../crypto.js');
 var Blob = require('../../util/blob.js').Blob;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
@@ -22686,7 +22686,7 @@ ChronoSync2013.prototype.dummyOnData = function(interest, data)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../crypto.js');
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 var DigestTree = function DigestTree()
@@ -22984,7 +22984,7 @@ exports.SyncStateProto = SyncStateProto;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require("crypto");
+var Crypto = require('../crypto.js');
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var Blob = require('./blob.js').Blob;
@@ -23075,7 +23075,7 @@ CommandInterestGenerator.prototype.generate = function
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;

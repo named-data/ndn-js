@@ -19,7 +19,7 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('crypto');
+var Crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
