@@ -19,6 +19,7 @@
  */
 
 var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var DerNode = require('../../encoding/der/der-node').DerNode;
 
 /**
  * PrivateKeyStorage is an abstract class which declares methods for working
@@ -215,3 +216,29 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
 {
   return SyncPromise.getValue(this.doesKeyExistPromise(keyName, keyClass, true));
 };
+
+/**
+ * Encode the private key to a PKCS #8 private key. We do this explicitly here
+ * to avoid linking to extra OpenSSL libraries.
+ * @param {Buffer} privateKeyDer The input private key DER.
+ * @param {OID} oid The OID of the privateKey.
+ * @param {DerNode} parameters The DerNode of the parameters for the OID.
+ * @return {Blob} The PKCS #8 private key DER.
+ */
+PrivateKeyStorage.encodePkcs8PrivateKey = function
+  (privateKeyDer, oid, parameters)
+{
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
+  algorithmIdentifier.addChild(parameters);
+
+  var result = new DerNode.DerSequence();
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerOctetString(privateKeyDer));
+
+  return result.encode();
+};
+
+PrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
