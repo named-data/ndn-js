@@ -27,6 +27,7 @@ var DecryptKey = require('../decrypt-key.js').DecryptKey;
 var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 
 /**
  * The AesAlgorithm class provides static methods to manipulate keys, encrypt
@@ -70,19 +71,18 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
  * @param params {EncryptParams} This decrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
- * @param {function} onComplete (optional) This calls onComplete(plainData) with
- * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
- * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
- * return undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted Blob.
  */
-AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
+AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 {
-  if (UseSubtleCrypto() && onComplete &&
+  if (UseSubtleCrypto() && !useSync &&
       // Crypto.subtle doesn't implement ECB.
       params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
-      crypto.subtle.importKey
+      return crypto.subtle.importKey
         ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
          ["encrypt", "decrypt"])
       .then(function(key) {
@@ -91,35 +91,112 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
            key, encryptedData.buf());
       })
       .then(function(result) {
-        onComplete(new Blob(new Uint8Array(result), false));
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
       });
     }
     else
-      throw new Error("unsupported encryption mode");
+      return Promise.reject(new Error("unsupported encryption mode"));
   }
   else {
-    var result;
     if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
-      // ECB ignores the initial vector.
-      var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
-      var result = new Blob
-        (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
-         false);
+      try {
+        // ECB ignores the initial vector.
+        var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
+        return SyncPromise.resolve(new Blob
+          (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+           false));
+      } catch (err) {
+        return SyncPromise.reject(err);
+      }
     }
     else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
-      var cipher = Crypto.createDecipheriv
-        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-      var result = new Blob
-        (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
-         false);
+      try {
+        var cipher = Crypto.createDecipheriv
+          ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+        return SyncPromise.resolve(new Blob
+          (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+           false));
+      } catch (err) {
+        return SyncPromise.reject(err);
+      }
     }
     else
-      throw new Error("unsupported encryption mode");
+      return SyncPromise.reject(new Error("unsupported encryption mode"));
+  }
+};
 
-    if (onComplete)
-      onComplete(result);
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param keyBits {Blob} The key value.
+ * @param encryptedData {Blob} The data to decrypt.
+ * @param params {EncryptParams} This decrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @return {Blob} The decrypted data.
+ * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
+{
+  return SyncPromise.getValue(this.decryptPromise
+    (keyBits, encryptedData, params, true));
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param keyBits {Blob} The key value.
+ * @param plainData {Blob} The data to encrypt.
+ * @param params {EncryptParams} This encrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
+ */
+AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
+{
+  if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
+      return SyncPromise.reject(new Error("incorrect initial vector size"));
+  }
+
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement ECB.
+      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      return crypto.subtle.importKey
+        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
+         ["encrypt", "decrypt"])
+      .then(function(key) {
+        return crypto.subtle.encrypt
+          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
+           key, plainData.buf());
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
     else
-      return result;
+      return Promise.reject(new Error("unsupported encryption mode"));
+  }
+  else {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
+      // ECB ignores the initial vector.
+      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
+      return SyncPromise.resolve(new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false));
+    }
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      var cipher = Crypto.createCipheriv
+        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+      return SyncPromise.resolve(new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false));
+    }
+    else
+      return SyncPromise.reject(new Error("unsupported encryption mode"));
   }
 };
 
@@ -130,63 +207,14 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * @param params {EncryptParams} This encrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
- * @param {function} onComplete (optional) This calls onComplete(encryptedData)
- * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
- * (Some crypto libraries only use a callback, so onComplete is required to use
- * these.)
- * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
- * return undefined and use onComplete as described above.
+ * @return {Blob} The encrypted data.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
  */
-AesAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
+AesAlgorithm.encrypt = function(keyBits, plainData, params)
 {
-  if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
-    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
-      throw new Error("incorrect initial vector size");
-  }
-
-  if (UseSubtleCrypto() && onComplete &&
-      // Crypto.subtle doesn't implement ECB.
-      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
-    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
-      crypto.subtle.importKey
-        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
-         ["encrypt", "decrypt"])
-      .then(function(key) {
-        return crypto.subtle.encrypt
-          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
-           key, plainData.buf());
-      })
-      .then(function(result) {
-        onComplete(new Blob(new Uint8Array(result), false));
-      });
-    }
-    else
-      throw new Error("unsupported encryption mode");
-  }
-  else {
-    var result;
-    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
-      // ECB ignores the initial vector.
-      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
-      result = new Blob
-        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
-         false);
-    }
-    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
-      var cipher = Crypto.createCipheriv
-        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
-      result = new Blob
-        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
-         false);
-    }
-    else
-      throw new Error("unsupported encryption mode");
-
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
-  }
+  return SyncPromise.getValue(this.encryptPromise
+    (keyBits, plainData, params, true));
 };
 
 AesAlgorithm.BLOCK_SIZE = 16;

@@ -31,6 +31,7 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
 var PrivateKeyStorage = require('../../security/identity/private-key-storage').PrivateKeyStorage;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+var SyncPromise = require('../../util/sync-promise').SyncPromise;
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -52,12 +53,16 @@ exports.RsaAlgorithm = RsaAlgorithm;
 /**
  * Generate a new random decrypt key for RSA based on the given params.
  * @param {RsaKeyParams} params The key params with the key size (in bits).
- * @return {DecryptKey} The new decrypt key (PKCS8-encoded private key).
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the new DecryptKey
+ * (containing a PKCS8-encoded private key).
  */
-RsaAlgorithm.generateKey = function(params)
+RsaAlgorithm.generateKeyPromise = function(params, useSync)
 {
   if (!rsaKeygen)
-    throw new SecurityException(new Error
+    return SyncPromise.reject(new Error
       ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
 
   var keyPair = rsaKeygen.generate(params.getKeySize());
@@ -70,7 +75,20 @@ RsaAlgorithm.generateKey = function(params)
     (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
      new DerNode.DerNull()).buf();
 
-  return new DecryptKey(privateKey);
+  return SyncPromise.resolve(new DecryptKey(privateKey));
+};
+
+/**
+ * Generate a new random decrypt key for RSA based on the given params.
+ * @param {RsaKeyParams} params The key params with the key size (in bits).
+ * @return {DecryptKey} The new decrypt key (containing a PKCS8-encoded private
+ * key).
+ * @throws {Error} If generateKeyPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.generateKey = function(params)
+{
+  return SyncPromise.getValue(this.generateKeyPromise(params, true));
 };
 
 /**
@@ -113,19 +131,18 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
  * @param encryptedData {Blob} The data to decrypt.
  * @param params {EncryptParams} This decrypts according to
  * params.getAlgorithmType().
- * @param {function} onComplete (optional) This calls onComplete(plainData) with
- * the decrypted Blob. If omitted, the return value is the decrypted Blob. (Some
- * crypto libraries only use a callback, so onComplete is required to use these.)
- * @return {Blob} If onComplete is omitted, return the decrypted data. Otherwise,
- * return undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted Blob.
  */
-RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
+RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 {
-  if (UseSubtleCrypto() && onComplete &&
+  if (UseSubtleCrypto() && !useSync &&
       // Crypto.subtle doesn't implement PKCS1 padding.
       params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
     if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
-      crypto.subtle.importKey
+      return crypto.subtle.importKey
         ("pkcs8", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
          false, ["decrypt"])
       .then(function(privateKey) {
@@ -133,11 +150,11 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
           ({ name: "RSA-OAEP" }, privateKey, encryptedData.buf());
       })
       .then(function(result) {
-        onComplete(new Blob(new Uint8Array(result), false));
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
       });
     }
     else
-      throw new Error("unsupported padding scheme");
+      return Promise.reject(new Error("unsupported padding scheme"));
   }
   else {
     // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
@@ -156,18 +173,33 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
     else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
       padding = constants.RSA_PKCS1_OAEP_PADDING;
     else
-      throw new Error("unsupported padding scheme");
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
 
-    // In Node.js, privateDecrypt requires version v0.12.
-    var result = new Blob
-      (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
-       false);
-
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    try {
+      // In Node.js, privateDecrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
   }
+};
+
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param keyBits {Blob} The key value (PKCS8-encoded private key).
+ * @param encryptedData {Blob} The data to decrypt.
+ * @param params {EncryptParams} This decrypts according to
+ * params.getAlgorithmType().
+ * @return {Blob} The decrypted data.
+ * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
+{
+  return SyncPromise.getValue(this.decryptPromise
+    (keyBits, encryptedData, params, true));
 };
 
 /**
@@ -176,20 +208,18 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params, onComplete)
  * @param plainData {Blob} The data to encrypt.
  * @param params {EncryptParams} This encrypts according to
  * params.getAlgorithmType().
- * @param {function} onComplete (optional) This calls onComplete(encryptedData)
- * with the encrypted Blob. If omitted, the return value is the encrypted Blob.
- * (Some crypto libraries only use a callback, so onComplete is required to use
- * these.)
- * @return {Blob} If onComplete is omitted, return the encrypted data. Otherwise,
- * return undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
  */
-RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
+RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
 {
-  if (UseSubtleCrypto() && onComplete &&
+  if (UseSubtleCrypto() && !useSync &&
       // Crypto.subtle doesn't implement PKCS1 padding.
       params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
     if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
-      crypto.subtle.importKey
+      return crypto.subtle.importKey
         ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
          false, ["encrypt"])
       .then(function(publicKey) {
@@ -197,11 +227,11 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
           ({ name: "RSA-OAEP" }, publicKey, plainData.buf());
       })
       .then(function(result) {
-        onComplete(new Blob(new Uint8Array(result), false));
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
       });
     }
     else
-      throw new Error("unsupported padding scheme");
+      return Promise.reject(new Error("unsupported padding scheme"));
   }
   else {
     // Encode the key DER as a PEM public key as needed by Crypto.
@@ -217,18 +247,33 @@ RsaAlgorithm.encrypt = function(keyBits, plainData, params, onComplete)
     else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
       padding = constants.RSA_PKCS1_OAEP_PADDING;
     else
-      throw new Error("unsupported padding scheme");
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
 
-    // In Node.js, publicEncrypt requires version v0.12.
-    var result = new Blob
-      (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
-       false);
-
-    if (onComplete)
-      onComplete(result);
-    else
-      return result;
+    try {
+      // In Node.js, publicEncrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
   }
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param keyBits {Blob} The key value (DER-encoded public key).
+ * @param plainData {Blob} The data to encrypt.
+ * @param params {EncryptParams} This encrypts according to
+ * params.getAlgorithmType().
+ * @return {Blob} The encrypted data.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.encrypt = function(keyBits, plainData, params)
+{
+  return SyncPromise.getValue(this.encryptPromise
+    (keyBits, plainData, params, true));
 };
 
 /**
