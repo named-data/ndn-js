@@ -27,7 +27,7 @@ var DecryptKey = require('../decrypt-key.js').DecryptKey;
 var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * The AesAlgorithm class provides static methods to manipulate keys, encrypt

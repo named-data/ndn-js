@@ -29,7 +29,7 @@ var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
-var SyncPromise = require('../util/sync-promise').SyncPromise;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
  * Encryptor has static utility methods for encryption, such as encryptData.

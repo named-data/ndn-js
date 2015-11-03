@@ -29,9 +29,9 @@ var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
-var PrivateKeyStorage = require('../../security/identity/private-key-storage').PrivateKeyStorage;
+var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
