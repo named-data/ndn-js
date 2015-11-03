@@ -20,7 +20,7 @@
 
 var Name = require('../../name.js').Name;
 var SecurityException = require('../security-exception.js').SecurityException;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * IdentityStorage is a base class for the storage of identity, public keys and

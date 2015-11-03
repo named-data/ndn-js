@@ -18,8 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
-var DerNode = require('../../encoding/der/der-node').DerNode;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
  * PrivateKeyStorage is an abstract class which declares methods for working

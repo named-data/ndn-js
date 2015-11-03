@@ -28,9 +28,9 @@ var KeyType = require('../security-types').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
-var DerNode = require('../../encoding/der/der-node').DerNode;
-var OID = require('../../encoding/oid').OID;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var OID = require('../../encoding/oid.js').OID;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {

@@ -24,7 +24,7 @@ var Data = require('../data.js').Data;
 var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
-var SyncStateProto = require('./sync-state').SyncStateProto;
+var SyncStateProto = require('./sync-state.js').SyncStateProto;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
