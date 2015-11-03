@@ -29,7 +29,7 @@ var EncryptKey = require('../encrypt-key.js').EncryptKey;
 var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 var OID = require('../../encoding/oid.js').OID;
-var FilePrivateKeyStorage = require('../../security/identity/file-private-key-storage').FilePrivateKeyStorage;
+var PrivateKeyStorage = require('../../security/identity/private-key-storage').PrivateKeyStorage;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {
@@ -66,8 +66,8 @@ RsaAlgorithm.generateKey = function(params)
     ("-----BEGIN RSA PRIVATE KEY-----", "").replace
     ("-----END RSA PRIVATE KEY-----", "");
   var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
-  var privateKey = FilePrivateKeyStorage.encodePkcs8PrivateKey
-    (pkcs1PrivateKeyDer, new OID(FilePrivateKeyStorage.RSA_ENCRYPTION_OID),
+  var privateKey = PrivateKeyStorage.encodePkcs8PrivateKey
+    (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
      new DerNode.DerNull()).buf();
 
   return new DecryptKey(privateKey);
