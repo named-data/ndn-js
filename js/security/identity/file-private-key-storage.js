@@ -108,8 +108,8 @@ FilePrivateKeyStorage.prototype.generateKeyPairPromise = function
       ("-----BEGIN RSA PRIVATE KEY-----", "").replace
       ("-----END RSA PRIVATE KEY-----", "");
     var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
-    var privateKey = FilePrivateKeyStorage.encodePkcs8PrivateKey
-      (pkcs1PrivateKeyDer, new OID(FilePrivateKeyStorage.RSA_ENCRYPTION_OID),
+    var privateKey = PrivateKeyStorage.encodePkcs8PrivateKey
+      (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
        new DerNode.DerNull()).buf();
 
     // save
@@ -225,7 +225,7 @@ FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
   // Get the value of the 3rd child which is the octet string.
   var privateKeyDer = pkcs8Children[2].toVal();
 
-  if (oidString == FilePrivateKeyStorage.RSA_ENCRYPTION_OID) {
+  if (oidString == PrivateKeyStorage.RSA_ENCRYPTION_OID) {
     keyType[0] = KeyType.RSA;
 
     // Encode the DER as PEM.
@@ -241,32 +241,6 @@ FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
     throw new SecurityException(new Error
       ("FilePrivateKeyStorage::sign: Unrecognized private key OID: " + oidString));
 };
-
-/**
- * Encode the private key to a PKCS #8 private key. We do this explicitly here
- * to avoid linking to extra OpenSSL libraries.
- * @param {Buffer} privateKeyDer The input private key DER.
- * @param {OID} oid The OID of the privateKey.
- * @param {DerNode} parameters The DerNode of the parameters for the OID.
- * @return {Blob} The PKCS #8 private key DER.
- */
-FilePrivateKeyStorage.encodePkcs8PrivateKey = function
-  (privateKeyDer, oid, parameters)
-{
-  var algorithmIdentifier = new DerNode.DerSequence();
-  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
-  algorithmIdentifier.addChild(parameters);
-
-  var result = new DerNode.DerSequence();
-  result.addChild(new DerNode.DerInteger(0));
-  result.addChild(algorithmIdentifier);
-  result.addChild(new DerNode.DerOctetString(privateKeyDer));
-
-  return result.encode();
-};
-
-FilePrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
-FilePrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 
 /**
  * File extensions by KeyClass type

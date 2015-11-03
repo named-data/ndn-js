@@ -15783,6 +15783,7 @@ MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
  */
 
 var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var DerNode = require('../../encoding/der/der-node').DerNode;
 
 /**
  * PrivateKeyStorage is an abstract class which declares methods for working
@@ -15979,6 +15980,32 @@ PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
 {
   return SyncPromise.getValue(this.doesKeyExistPromise(keyName, keyClass, true));
 };
+
+/**
+ * Encode the private key to a PKCS #8 private key. We do this explicitly here
+ * to avoid linking to extra OpenSSL libraries.
+ * @param {Buffer} privateKeyDer The input private key DER.
+ * @param {OID} oid The OID of the privateKey.
+ * @param {DerNode} parameters The DerNode of the parameters for the OID.
+ * @return {Blob} The PKCS #8 private key DER.
+ */
+PrivateKeyStorage.encodePkcs8PrivateKey = function
+  (privateKeyDer, oid, parameters)
+{
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
+  algorithmIdentifier.addChild(parameters);
+
+  var result = new DerNode.DerSequence();
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerOctetString(privateKeyDer));
+
+  return result.encode();
+};
+
+PrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
+PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -16221,32 +16248,6 @@ MemoryPrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName)
 };
 
 /**
- * Encode the private key to a PKCS #8 private key. We do this explicitly here
- * to avoid linking to extra OpenSSL libraries.
- * @param {Buffer} privateKeyDer The input private key DER.
- * @param {OID} oid The OID of the privateKey.
- * @param {DerNode} parameters The DerNode of the parameters for the OID.
- * @return {Blob} The PKCS #8 private key DER.
- */
-MemoryPrivateKeyStorage.encodePkcs8PrivateKey = function
-  (privateKeyDer, oid, parameters)
-{
-  var algorithmIdentifier = new DerNode.DerSequence();
-  algorithmIdentifier.addChild(new DerNode.DerOid(oid));
-  algorithmIdentifier.addChild(parameters);
-
-  var result = new DerNode.DerSequence();
-  result.addChild(new DerNode.DerInteger(0));
-  result.addChild(algorithmIdentifier);
-  result.addChild(new DerNode.DerOctetString(privateKeyDer));
-
-  return result.encode();
-};
-
-
-MemoryPrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
-
-/**
  * Fetch the private key for keyName and sign the data to produce a signature Blob.
  * @param {Buffer} data Pointer to the input byte array.
  * @param {Name} keyName The name of the signing key.
@@ -16285,8 +16286,8 @@ MemoryPrivateKeyStorage.prototype.signPromise = function
       //assigning it to privateKey.subtleKey means we only have to do this once per session,
       //giving us a small, but not insignificant, performance boost.
       var privateDER = DataUtils.privateKeyPemToDer(privateKey.privateKey);
-      var pkcs8 = MemoryPrivateKeyStorage.encodePkcs8PrivateKey
-        (privateDER, new OID(MemoryPrivateKeyStorage.RSA_ENCRYPTION_OID),
+      var pkcs8 = PrivateKeyStorage.encodePkcs8PrivateKey
+        (privateDER, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
          new DerNode.DerNull()).buf();
 
       var promise = crypto.subtle.importKey("pkcs8", pkcs8.buffer, algo, true, ["sign"]).then(function(subtleKey){
