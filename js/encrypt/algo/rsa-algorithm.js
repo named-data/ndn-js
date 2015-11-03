@@ -61,21 +61,42 @@ exports.RsaAlgorithm = RsaAlgorithm;
  */
 RsaAlgorithm.generateKeyPromise = function(params, useSync)
 {
-  if (!rsaKeygen)
-    return SyncPromise.reject(new Error
-      ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+  if (UseSubtleCrypto() && !useSync) {
+    return crypto.subtle.generateKey
+      ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
+         publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+         hash: {name: "SHA-256"} },
+       true, ["sign", "verify"])
+    .then(function(key) {
+      // Export the private key to DER.
+      return crypto.subtle.exportKey("pkcs8", key.privateKey);
+    })
+    .then(function(pkcs8Der) {
+      return Promise.resolve(new DecryptKey
+        (new Blob(new Uint8Array(pkcs8Der), false)));
+    });
+  }
+  else {
+    if (!rsaKeygen)
+      return SyncPromise.reject(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
 
-  var keyPair = rsaKeygen.generate(params.getKeySize());
-  // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
-  var privateKeyBase64 = keyPair.private_key.toString().replace
-    ("-----BEGIN RSA PRIVATE KEY-----", "").replace
-    ("-----END RSA PRIVATE KEY-----", "");
-  var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
-  var privateKey = PrivateKeyStorage.encodePkcs8PrivateKey
-    (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
-     new DerNode.DerNull()).buf();
+    try {
+      var keyPair = rsaKeygen.generate(params.getKeySize());
+      // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
+      var privateKeyBase64 = keyPair.private_key.toString().replace
+        ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+        ("-----END RSA PRIVATE KEY-----", "");
+      var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+      var privateKey = PrivateKeyStorage.encodePkcs8PrivateKey
+        (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
+         new DerNode.DerNull()).buf();
 
-  return SyncPromise.resolve(new DecryptKey(privateKey));
+      return SyncPromise.resolve(new DecryptKey(privateKey));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
 };
 
 /**
