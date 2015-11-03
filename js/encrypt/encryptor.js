@@ -29,6 +29,7 @@ var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
+var SyncPromise = require('../util/sync-promise').SyncPromise;
 
 /**
  * Encryptor has static utility methods for encryption, such as encryptData.
@@ -54,59 +55,97 @@ exports.Encryptor = Encryptor;
  * @param {Name} keyName The key name for the EncryptedContent.
  * @param {Blob} key The encryption key value.
  * @param {EncryptParams} params The parameters for encryption.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the data packet
+ * is updated.
  */
-Encryptor.encryptData = function(data, payload, keyName, key, params)
+Encryptor.encryptDataPromise = function
+  (data, payload, keyName, key, params, useSync)
 {
   var algorithmType = params.getAlgorithmType();
 
   if (algorithmType == EncryptAlgorithmType.AesCbc ||
       algorithmType == EncryptAlgorithmType.AesEcb) {
-    var content = Encryptor.encryptSymmetric_(payload, key, keyName, params);
-    data.setContent(content.wireEncode(TlvWireFormat.get()));
+    return Encryptor.encryptSymmetricPromise_
+      (payload, key, keyName, params, useSync)
+    .then(function(content) {
+      data.setContent(content.wireEncode(TlvWireFormat.get()));
+      return SyncPromise.resolve();
+    });
   }
   else if (algorithmType == EncryptAlgorithmType.RsaPkcs ||
            algorithmType == EncryptAlgorithmType.RsaOaep) {
     // Node.js doesn't have a direct way to get the maximum plain text size, so
     // try to encrypt the payload first and catch the error if it is too big.
-    try {
-      var content = Encryptor.encryptAsymmetric_(payload, key, keyName, params);
+    return Encryptor.encryptAsymmetricPromise_
+      (payload, key, keyName, params, useSync)
+    .then(function(content) {
       data.setContent(content.wireEncode(TlvWireFormat.get()));
-      return;
-    } catch (ex) {
-      if (ex.message.indexOf("data too large for key size") < 0)
+      return SyncPromise.resolve();
+    }, function(err) {
+      if (err.message.indexOf("data too large for key size") < 0)
         // Not the expected error.
-        throw ex;
+        throw err;
       
-      // The payload is larger than the maximum plaintext size. Continue.
-    }
+      // The payload is larger than the maximum plaintext size.
+      // 128-bit nonce.
+      var nonceKeyBuffer = Crypto.randomBytes(16);
+      var nonceKey = new Blob(nonceKeyBuffer, false);
 
-    // 128-bit nonce.
-    var nonceKeyBuffer = Crypto.randomBytes(16);
-    var nonceKey = new Blob(nonceKeyBuffer, false);
+      var nonceKeyName = new Name(keyName);
+      nonceKeyName.append("nonce");
 
-    var nonceKeyName = new Name(keyName);
-    nonceKeyName.append("nonce");
+      var symmetricParams = new EncryptParams
+        (EncryptAlgorithmType.AesCbc, AesAlgorithm.BLOCK_SIZE);
 
-    var symmetricParams = new EncryptParams
-      (EncryptAlgorithmType.AesCbc, AesAlgorithm.BLOCK_SIZE);
+      var nonceContent;
+      return Encryptor.encryptSymmetricPromise_
+        (payload, nonceKey, nonceKeyName, symmetricParams, useSync)
+      .then(function(localNonceContent) {
+        nonceContent = localNonceContent;
+        return Encryptor.encryptAsymmetricPromise_
+          (nonceKey, key, keyName, params, useSync);
+      })
+      .then(function(payloadContent) {
+        var nonceContentEncoding = nonceContent.wireEncode();
+        var payloadContentEncoding = payloadContent.wireEncode();
+        var content = new Buffer
+          (nonceContentEncoding.size() + payloadContentEncoding.size());
+        payloadContentEncoding.buf().copy(content, 0);
+        nonceContentEncoding.buf().copy(content, payloadContentEncoding.size());
 
-    var nonceContent = Encryptor.encryptSymmetric_
-      (payload, nonceKey, nonceKeyName, symmetricParams);
-
-    var payloadContent = Encryptor.encryptAsymmetric_
-      (nonceKey, key, keyName, params);
-
-    var nonceContentEncoding = nonceContent.wireEncode();
-    var payloadContentEncoding = payloadContent.wireEncode();
-    var content = new Buffer
-      (nonceContentEncoding.size() + payloadContentEncoding.size());
-    payloadContentEncoding.buf().copy(content, 0);
-    nonceContentEncoding.buf().copy(content, payloadContentEncoding.size());
-
-    data.setContent(new Blob(content, false));
+        data.setContent(new Blob(content, false));
+        return SyncPromise.resolve();
+      });
+    });
   }
   else
-    throw new Error("Unsupported encryption method");
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
+};
+
+/**
+ * Prepare an encrypted data packet by encrypting the payload using the key
+ * according to the params. In addition, this prepares the encoded
+ * EncryptedContent with the encryption result using keyName and params. The
+ * encoding is set as the content of the data packet. If params defines an
+ * asymmetric encryption algorithm and the payload is larger than the maximum
+ * plaintext size, this encrypts the payload with a symmetric key that is
+ * asymmetrically encrypted and provided as a nonce in the content of the data
+ * packet.
+ * @param {Data} data The data packet which is updated.
+ * @param {Blob} payload The payload to encrypt.
+ * @param {Name} keyName The key name for the EncryptedContent.
+ * @param {Blob} key The encryption key value.
+ * @param {EncryptParams} params The parameters for encryption.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+Encryptor.encryptData = function(data, payload, keyName, key, params)
+{
+  return SyncPromise.getValue(Encryptor.encryptDataPromise
+    (data, payload, keyName, key, params, true));
 };
 
 /**
@@ -116,9 +155,13 @@ Encryptor.encryptData = function(data, payload, keyName, key, params)
  * @param {Blob} key The key value.
  * @param {Name} keyName The key name for the EncryptedContent key locator.
  * @param {EncryptParams} params The parameters for encryption.
- * @return {EncryptedContent} A new EncryptedContent.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new EncryptedContent.
  */
-Encryptor.encryptSymmetric_ = function(payload, key, keyName, params)
+Encryptor.encryptSymmetricPromise_ = function
+  (payload, key, keyName, params, useSync)
 {
   var algorithmType = params.getAlgorithmType();
   var initialVector = params.getInitialVector();
@@ -128,17 +171,18 @@ Encryptor.encryptSymmetric_ = function(payload, key, keyName, params)
 
   if (algorithmType == EncryptAlgorithmType.AesCbc ||
       algorithmType == EncryptAlgorithmType.AesEcb) {
-    var encryptedPayload = AesAlgorithm.encrypt(key, payload, params);
-
-    var result = new EncryptedContent();
-    result.setAlgorithmType(algorithmType);
-    result.setKeyLocator(keyLocator);
-    result.setPayload(encryptedPayload);
-    result.setInitialVector(initialVector);
-    return result;
+    return AesAlgorithm.encryptPromise(key, payload, params, useSync)
+    .then(function(encryptedPayload) {
+      var result = new EncryptedContent();
+      result.setAlgorithmType(algorithmType);
+      result.setKeyLocator(keyLocator);
+      result.setPayload(encryptedPayload);
+      result.setInitialVector(initialVector);
+      return SyncPromise.resolve(result);
+    });
   }
   else
-    throw new Error("Unsupported encryption method");
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
 };
 
 /**
@@ -149,9 +193,13 @@ Encryptor.encryptSymmetric_ = function(payload, key, keyName, params)
  * @param key The key value.
  * @param keyName The key name for the EncryptedContent key locator.
  * @param params The parameters for encryption.
- * @return A new EncryptedContent.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new EncryptedContent.
  */
-Encryptor.encryptAsymmetric_ = function(payload, key, keyName, params)
+Encryptor.encryptAsymmetricPromise_ = function
+  (payload, key, keyName, params, useSync)
 {
   var algorithmType = params.getAlgorithmType();
   var keyLocator = new KeyLocator();
@@ -160,14 +208,15 @@ Encryptor.encryptAsymmetric_ = function(payload, key, keyName, params)
 
   if (algorithmType == EncryptAlgorithmType.RsaPkcs ||
       algorithmType == EncryptAlgorithmType.RsaOaep) {
-    var encryptedPayload = RsaAlgorithm.encrypt(key, payload, params);
-
-    var result = new EncryptedContent();
-    result.setAlgorithmType(algorithmType);
-    result.setKeyLocator(keyLocator);
-    result.setPayload(encryptedPayload);
-    return result;
+    return RsaAlgorithm.encryptPromise(key, payload, params, useSync)
+    .then(function(encryptedPayload) {
+      var result = new EncryptedContent();
+      result.setAlgorithmType(algorithmType);
+      result.setKeyLocator(keyLocator);
+      result.setPayload(encryptedPayload);
+      return SyncPromise.resolve(result);
+    });
   }
   else
-    throw new Error("Unsupported encryption method");
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
 };
