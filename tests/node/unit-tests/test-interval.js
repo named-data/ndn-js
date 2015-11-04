@@ -90,7 +90,7 @@ describe('TestInterval', function() {
       gotError = false;
     } catch (ex) {}
     if (!gotError)
-      fail("Expected error in unionWith(interval2)");
+      assert.fail("Expected error in unionWith(interval2)");
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval3);
@@ -103,7 +103,7 @@ describe('TestInterval', function() {
       gotError = false;
     } catch (ex) {}
     if (!gotError)
-      fail("Expected error in unionWith(interval3)");
+      assert.fail("Expected error in unionWith(interval3)");
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval4);
