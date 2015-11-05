@@ -55,6 +55,7 @@ exports.Encryptor = require('./js/encrypt/encryptor.js').Encryptor;
 exports.Interval = require('./js/encrypt/interval.js').Interval;
 exports.GroupManagerDb = require('./js/encrypt/group-manager-db.js').GroupManagerDb;
 exports.GroupManagerDbSqlite3 = require('./js/encrypt/group-manager-db-sqlite3.js').GroupManagerDbSqlite3;
+exports.GroupManager = require('./js/encrypt/group-manager.js').GroupManager;
 exports.RepetitiveInterval = require('./js/encrypt/repetitive-interval.js').RepetitiveInterval;
 exports.Schedule = require('./js/encrypt/schedule.js').Schedule;
 
