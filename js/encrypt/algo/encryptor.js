@@ -18,18 +18,18 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../crypto.js');
-var Name = require('../name.js').Name;
-var KeyLocator = require('../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var TlvWireFormat = require('../encoding/tlv-wire-format.js').TlvWireFormat;
-var Blob = require('../util/blob.js').Blob;
-var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
-var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var Crypto = require('../../crypto.js');
+var Name = require('../../name.js').Name;
+var KeyLocator = require('../../key-locator.js').KeyLocator;
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
+var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat;
+var Blob = require('../../util/blob.js').Blob;
+var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm;
+var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm;
+var EncryptParams = require('./encrypt-params.js').EncryptParams;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
+var EncryptedContent = require('../encrypted-content.js').EncryptedContent;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * Encryptor has static utility methods for encryption, such as encryptData.

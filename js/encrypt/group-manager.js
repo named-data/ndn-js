@@ -24,7 +24,7 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var SecurityException = require('../security/security-exception.js').SecurityException;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var Encryptor = require('./encryptor.js').Encryptor;
+var Encryptor = require('./algo/encryptor.js').Encryptor;
 
 /**
  * A GroupManager manages keys and schedules for group members in a particular
