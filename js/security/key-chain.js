@@ -174,7 +174,7 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  */
 KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultCertificateName();
+  return this.identityManager.getDefaultCertificateName(onComplete, onError);
 };
 
 /**
