@@ -51,7 +51,7 @@ IndexedDbPrivateKeyStorage.prototype.name = "IndexedDbPrivateKeyStorage";
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that fulfills when the pair is generated.
  */
 IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
@@ -118,7 +118,7 @@ IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that fulfills when the key pair is deleted.
  */
 IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
@@ -142,7 +142,7 @@ IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that returns the PublicKey.
  */
 IndexedDbPrivateKeyStorage.prototype.getPublicKeyPromise = function
@@ -167,7 +167,7 @@ IndexedDbPrivateKeyStorage.prototype.getPublicKeyPromise = function
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that returns the signature Blob.
  */
 IndexedDbPrivateKeyStorage.prototype.signPromise = function
@@ -208,7 +208,7 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the key exists.
  */
 IndexedDbPrivateKeyStorage.prototype.doesKeyExistPromise = function

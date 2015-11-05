@@ -62,7 +62,7 @@ IndexedDbIdentityStorage.prototype.name = "IndexedDbIdentityStorage";
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @returns {Promise} A promise which returns true if the identity exists.
  */
 IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
@@ -84,7 +84,7 @@ IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity is added.
  */
 IndexedDbIdentityStorage.prototype.addIdentityPromise = function
@@ -110,7 +110,7 @@ IndexedDbIdentityStorage.prototype.addIdentityPromise = function
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the key exists.
  */
 IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
@@ -135,7 +135,7 @@ IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the key is added, or a
  * promise rejected with SecurityException if a key with the keyName already
  * exists.
@@ -170,7 +170,7 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the DER Blob, or a Blob with a
  * null pointer if not found.
  */
@@ -194,7 +194,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the certificate exists.
  */
 IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
@@ -217,7 +217,7 @@ IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate is added,
  * or a promise rejected with SecurityException if the certificate is already
  * installed.
@@ -272,7 +272,7 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
  * @param {boolean} allowAny If false, only a valid certificate will
  * be returned, otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the requested
  * IdentityCertificate or null if not found.
  */
@@ -307,7 +307,7 @@ IndexedDbIdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get the default identity.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the Name of default identity,
  * or a promise rejected with SecurityException if the default identity is not
  * set.
@@ -328,7 +328,7 @@ IndexedDbIdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the default key Name, or a
  * promise rejected with SecurityException if the default key name for the
  * identity is not set.
@@ -357,7 +357,7 @@ IndexedDbIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = functio
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the default certificate Name,
  * or a promise rejected with SecurityException if the default certificate name
  * for the key name is not set.
@@ -389,7 +389,7 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
  * @param isDefault {boolean} If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the names are added to
  * nameList.
  */
@@ -437,7 +437,7 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default identity is set.
  */
 IndexedDbIdentityStorage.prototype.setDefaultIdentityPromise = function
@@ -466,7 +466,7 @@ IndexedDbIdentityStorage.prototype.setDefaultIdentityPromise = function
  * @param {Name} identityNameCheck (optional) The identity name to check that the
  * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default key name is
  * set.
  */
@@ -497,7 +497,7 @@ IndexedDbIdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = functio
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default certificate
  * name is set.
  */
@@ -521,7 +521,7 @@ IndexedDbIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = func
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate info is
  * deleted.
  */
@@ -542,7 +542,7 @@ IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromise = function
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the public key info is
  * deleted.
  */
@@ -576,7 +576,7 @@ IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromise = function
  * Delete an identity and related public keys and certificates.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity info is
  * deleted.
  */

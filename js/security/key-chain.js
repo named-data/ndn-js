@@ -29,7 +29,7 @@ var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../util/sync-promise').SyncPromise;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -174,7 +174,7 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  */
 KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultCertificateName();
+  return this.identityManager.getDefaultCertificateName(onComplete, onError);
 };
 
 /**

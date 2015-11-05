@@ -24,7 +24,8 @@ var Blob = require('../../util/blob.js').Blob;
 var KeyType = require('../security-types.js').KeyType;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 
 /**

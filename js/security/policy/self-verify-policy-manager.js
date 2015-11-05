@@ -27,7 +27,7 @@ var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**

@@ -19,7 +19,7 @@
 
 var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
-var Name = require('../name').Name;
+var Name = require('../name.js').Name;
 var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;

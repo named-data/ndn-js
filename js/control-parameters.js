@@ -20,7 +20,7 @@
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Name = require('./name.js').Name;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
-var Blob = require('./util/blob').Blob;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * A ControlParameters which holds a Name and other fields for a
