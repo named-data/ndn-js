@@ -46,7 +46,7 @@ var Encryptor = require('./algo/encryptor.js').Encryptor;
 var GroupManager = function GroupManager
   (prefix, dataType, database, keySize, freshnessHours, keyChain)
 {
-  this.namespace_ = new Name(prefix).append(GroupManager.READ_COMPONENT)
+  this.namespace_ = new Name(prefix).append(Encryptor.NAME_COMPONENT_READ)
     .append(dataType);
   this.database_ = database;
   this.keySize_ = keySize;
@@ -77,9 +77,9 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey, useSync)
 {
   var name = new Name(this.namespace_);
-  name.append(GroupManager.D_KEY_COMPONENT);
+  name.append(Encryptor.NAME_COMPONENT_D_KEY);
   name.append(startTimeStamp).append(endTimeStamp)
-    .append(GroupManager.FOR_COMPONENT).append(keyName);
+    .append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
   var data = new Data(name);
   data.getMetaInfo().setFreshnessPeriod
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
@@ -115,8 +115,4 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   });
 };
 
-GroupManager.E_KEY_COMPONENT = new Name.Component("E-KEY");
-GroupManager.D_KEY_COMPONENT = new Name.Component("D-KEY");
-GroupManager.READ_COMPONENT = new Name.Component("read");
-GroupManager.FOR_COMPONENT = new Name.Component("FOR");
 GroupManager.MILLISECONDS_IN_HOUR = 3600 * 1000;

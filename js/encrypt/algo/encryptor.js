@@ -32,7 +32,8 @@ var EncryptedContent = require('../encrypted-content.js').EncryptedContent;
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
- * Encryptor has static utility methods for encryption, such as encryptData.
+ * Encryptor has static constants and utility methods for encryption, such as
+ * encryptData.
  * @constructor
  */
 var Encryptor = function Encryptor(value)
@@ -40,6 +41,14 @@ var Encryptor = function Encryptor(value)
 };
 
 exports.Encryptor = Encryptor;
+
+Encryptor.NAME_COMPONENT_FOR = new Name.Component("FOR");
+Encryptor.NAME_COMPONENT_READ = new Name.Component("READ");
+Encryptor.NAME_COMPONENT_SAMPLE = new Name.Component("SAMPLE");
+Encryptor.NAME_COMPONENT_ACCESS = new Name.Component("ACCESS");
+Encryptor.NAME_COMPONENT_E_KEY = new Name.Component("E-KEY");
+Encryptor.NAME_COMPONENT_D_KEY = new Name.Component("D-KEY");
+Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
 
 /**
  * Prepare an encrypted data packet by encrypting the payload using the key
