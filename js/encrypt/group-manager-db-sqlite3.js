@@ -37,6 +37,7 @@ catch (e) {}
  * Create a GroupManagerDbSqlite3 to use the given SQLite3 file.
  * @param {string} databaseFilePath The path of the SQLite file.
  * @throws GroupManagerDb.Error for a database error.
+ * @note This class is an experimental feature. The API may change.
  * @constructor
  */
 var GroupManagerDbSqlite3 = function GroupManagerDbSqlite3(databaseFilePath)
