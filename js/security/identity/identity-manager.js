@@ -635,10 +635,10 @@ IdentityManager.prototype.getDefaultCertificateName = function
   var thisManager = this;
 
   return SyncPromise.complete(onComplete, onError,
-    this.getDefaultIdentityPromise(useSync)
+    this.identityStorage.getDefaultIdentityPromise(useSync)
     .then(function(identityName) {
       return thisManager.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName, useSync)     ;
+        (identityName, useSync);
     }));
 };
 
