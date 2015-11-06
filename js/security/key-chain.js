@@ -494,7 +494,7 @@ KeyChain.prototype.signByIdentity = function
 
   var useSync = !onComplete;
   var thisKeyChain = this;
-  
+
   if (identityName == null)
     identityName = new Name();
 

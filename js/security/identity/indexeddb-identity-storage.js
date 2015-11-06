@@ -419,9 +419,9 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
     return thisStorage.database.publicKey.each(function(publicKeyEntry) {
       var keyName = new Name(publicKeyEntry.keyNameUri);
       var keyIdentityName = keyName.getPrefix(-1);
-      
+
       if (keyIdentityName.equals(identityName)) {
-        var keyNameIsDefault = 
+        var keyNameIsDefault =
           (defaultKeyName != null && keyName.equals(defaultKeyName));
         if (isDefault && keyNameIsDefault)
           nameList.push(keyName);

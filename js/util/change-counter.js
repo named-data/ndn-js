@@ -73,7 +73,7 @@ ChangeCounter.prototype.checkChanged = function()
 {
   if (this.target == null)
     return false;
-  
+
   var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;

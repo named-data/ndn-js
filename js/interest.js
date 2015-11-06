@@ -37,7 +37,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {number} maxSuffixComponents
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, 
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents,
     publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
     interestLifetimeMilliseconds, nonce)
 {

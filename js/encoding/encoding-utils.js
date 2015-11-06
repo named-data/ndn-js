@@ -97,7 +97,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   }
 
   // Imitate dumpData in examples/node/test-encode-decode-data.js
-  
+
   append("name: " + data.getName().toUri());
   if (data.getContent().size() > 0) {
     append("content (raw): " + data.getContent().buf().toString('binary'));

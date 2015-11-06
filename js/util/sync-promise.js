@@ -43,8 +43,8 @@ exports.SyncPromise = SyncPromise;
  * If this promise is fulfilled, immediately call onFulfilled with the fulfilled
  * value as described below. Otherwise, if this promise is rejected, immediately
  * call onRejected with the error as described below.
- * @param {function} (optional) onFulfilled If this promise is fulfilled, this 
- * calls onFulfilled(value) with the value of this promise and returns the 
+ * @param {function} (optional) onFulfilled If this promise is fulfilled, this
+ * calls onFulfilled(value) with the value of this promise and returns the
  * result. The function should return a promise. To use all synchronous code,
  * onFulfilled should return SyncPromise.resolve(newValue).
  * @param {function} (optional) onRejected If this promise is rejected, this
@@ -179,7 +179,7 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
     promise = onErrorOrPromise;
     onError = null;
   }
-  
+
   if (onComplete)
     promise
     .then(function(value) {
