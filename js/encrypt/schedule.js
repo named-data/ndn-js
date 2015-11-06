@@ -89,7 +89,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 GMT.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
- * isPositive is True if the returned interval is positive or false if negative, 
+ * isPositive is True if the returned interval is positive or false if negative,
  * and interval is the Interval covering the time point, or a negative interval
  * if not found.
  */
@@ -252,7 +252,7 @@ Schedule.sortedSetAdd_ = function(list, element)
       return;
     if (!(comparison < 0))
       break;
-    
+
     ++i;
   }
 

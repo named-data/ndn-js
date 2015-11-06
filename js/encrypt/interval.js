@@ -44,7 +44,7 @@ var Interval = function Interval(value, endTime)
   }
   else if (typeof value === 'number') {
     var startTime = value;
-    
+
     if (!(startTime < endTime))
       throw new Error("Interval start time must be less than the end time");
 
@@ -167,7 +167,7 @@ Interval.prototype.unionWith = function(interval)
  * @throws Error if this Interval is invalid.
  */
 Interval.prototype.getStartTime = function()
-{ 
+{
   if (!this.isValid_)
     throw new Error("Interval.getStartTime: This Interval is invalid");
   return this.startTime_;

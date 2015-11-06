@@ -101,7 +101,7 @@ Encryptor.encryptDataPromise = function
       if (err.message.indexOf("data too large for key size") < 0)
         // Not the expected error.
         throw err;
-      
+
       // The payload is larger than the maximum plaintext size.
       // 128-bit nonce.
       var nonceKeyBuffer = Crypto.randomBytes(16);
@@ -188,7 +188,7 @@ Encryptor.encryptSymmetricPromise_ = function
       if (initialVector.size() != AesAlgorithm.BLOCK_SIZE)
         return SyncPromise.reject(new Error("incorrect initial vector size"));
     }
-    
+
     return AesAlgorithm.encryptPromise(key, payload, params, useSync)
     .then(function(encryptedPayload) {
       var result = new EncryptedContent();

@@ -27,7 +27,7 @@ var Common = require('./unit-tests-common.js').UnitTestsCommon;
 describe('TestRepetitiveInterval', function() {
   it('Construction', function() {
     var repetitiveInterval1 = new RepetitiveInterval
-      (Common.fromIsoString("20150825T000000"), 
+      (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20150825T000000"), 5, 10);
     assert.ok("20150825T000000" == Common.toIsoString(repetitiveInterval1.getStartDate()));
     assert.ok("20150825T000000" == Common.toIsoString(repetitiveInterval1.getEndDate()));

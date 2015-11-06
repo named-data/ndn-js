@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
- 
+
 var assert = require("assert");
 var fs = require("fs");
 var Blob = require('../../..').Blob;
@@ -94,7 +94,7 @@ var database;
 
 describe ("TestGroupManagerDb", function() {
   before(function(done) {
-    databaseFilePath = "policy_config/test.db";    
+    databaseFilePath = "policy_config/test.db";
     try {
       fs.unlinkSync(databaseFilePath);
     }
@@ -103,7 +103,7 @@ describe ("TestGroupManagerDb", function() {
     database = new GroupManagerDbSqlite3(databaseFilePath);
     done();
   });
-  
+
   after(function(done) {
     try {
       fs.unlinkSync(databaseFilePath);
@@ -399,7 +399,7 @@ describe ("TestGroupManagerDb", function() {
       }, function(err) {
         assert.fail("Unexpected error deleting a non-existing schedule: " + err);
       });
-    })    
+    })
     // When done is called, Mocha displays errors from assert.ok.
     .then(done, done);
   });

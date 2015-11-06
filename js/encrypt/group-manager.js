@@ -93,7 +93,7 @@ GroupManager.prototype.getGroupKeyPromise = function(timeSlot, useSync)
   .then(function(finalInterval) {
     if (finalInterval.isValid() == false)
       return SyncPromise.resolve(result);
-  
+
     startTimeStamp = Schedule.toIsoString(finalInterval.getStartTime());
     endTimeStamp = Schedule.toIsoString(finalInterval.getEndTime());
 
@@ -260,7 +260,7 @@ GroupManager.prototype.updateMemberSchedulePromise = function
  * Calculate an Interval that covers the timeSlot.
  * @param {number} timeSlot The time slot to cover as milliseconds since
  * Jan 1, 1970 GMT.
- * @param {Array<object>} memberKeys First clear memberKeys then fill it with 
+ * @param {Array<object>} memberKeys First clear memberKeys then fill it with
  * the info of members who are allowed to access the interval. memberKeys is an
  * array of object where "keyName" is the Name of the public key and "publicKey"
  * is the Blob of the public key DER. The memberKeys entries are sorted by
@@ -292,7 +292,7 @@ GroupManager.prototype.calculateIntervalPromise_ = function
       if (i >= scheduleNames.length)
         // Finished.
         return SyncPromise.resolve();
-      
+
       var scheduleName = scheduleNames[i];
 
       return thisManager.database_.getSchedulePromise(scheduleName, useSync)
@@ -358,7 +358,7 @@ GroupManager.memberKeysAdd_ = function(memberKeys, entry)
     if (comparison == 0)
       // A duplicate, so don't add.
       return;
-    
+
     if (comparison > 0)
       break;
     i += 1;
@@ -465,7 +465,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
   var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
   var identityManger = this.keyChain_.getIdentityManager();
-  
+
   return Encryptor.encryptDataPromise
     (data, privateKeyBlob, keyName, certificateKey, encryptParams, useSync)
   .catch(function(ex) {

@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
- 
+
 var assert = require("assert");
 var fs = require("fs");
 var RepetitiveInterval = require('../../..').RepetitiveInterval;
@@ -208,7 +208,7 @@ describe ("TestGroupManager", function() {
 
     done();
   });
-  
+
   after(function(done) {
     try {
       fs.unlinkSync(dKeyDatabaseFilePath);
@@ -362,7 +362,7 @@ describe ("TestGroupManager", function() {
     var dataContent;
     var encryptedNonce;
     var decryptParams;
-    
+
     return setManagerPromise(manager)
     .then(function() {
       // Get the data list from the group manager.

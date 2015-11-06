@@ -149,7 +149,7 @@ GroupManagerDbSqlite3.prototype.getSchedulePromise = function(name, useSync)
  * @param {string} name The name of the schedule.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise that returns a new array of object (where 
+ * @return {Promise} A promise that returns a new array of object (where
  * "keyName" is the Name of the public key and "publicKey" is the Blob of the
  * public key DER), or that is rejected with GroupManagerDb.Error for a database
  * error. Note that the member's identity name is keyName.getPrefix(-1). If the
@@ -194,7 +194,7 @@ GroupManagerDbSqlite3.prototype.getScheduleMembersPromise = function
  * @param {Schedule} schedule The Schedule to add.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise that fulfills when the schedule is added, or that 
+ * @return {Promise} A promise that fulfills when the schedule is added, or that
  * is rejected with GroupManagerDb.Error if a schedule with the same name
  * already exists, if the name is empty, or other database error.
  */
@@ -270,7 +270,7 @@ GroupManagerDbSqlite3.prototype.renameSchedulePromise = function
  * @param {Schedule} schedule The Schedule to update or add.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise that fulfills when the schedule is updated, or 
+ * @return {Promise} A promise that fulfills when the schedule is updated, or
  * that is rejected with GroupManagerDb.Error if the name is empty, or other
  * database error.
  */
@@ -508,7 +508,7 @@ GroupManagerDbSqlite3.prototype.runPromise_ = function(sql, params)
 {
   if (!params)
     params = [];
-  
+
   var thisManager = this;
   return this.establishDatabasePromise_()
   .then(function() {
@@ -610,7 +610,7 @@ GroupManagerDbSqlite3.prototype.runWithoutEstablishPromise_ = function(sql, para
 
 /**
  * If this.database_ is still null, set up this.database_ and create the
- * database tables if they don't exist. Each method which uses the database must 
+ * database tables if they don't exist. Each method which uses the database must
  * call this first. We can't do this in the constructor because it is async.
  * @return {Promise} A promise that fulfills when this.database_ is set up.
  */

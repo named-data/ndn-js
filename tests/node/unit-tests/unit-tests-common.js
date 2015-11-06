@@ -64,7 +64,7 @@ UnitTestsCommon.fromIsoString = function(timeString)
 {
   if (timeString.length != 15 || timeString.substr(8, 1) != 'T')
     throw new Error("fromIsoString: Format is not the expected yyyymmddThhmmss");
-  
+
   return Date.UTC
     (parseInt(timeString.substr(0, 4)),
      parseInt(timeString.substr(4, 2) - 1),

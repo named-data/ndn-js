@@ -61,7 +61,7 @@ var RepetitiveInterval = function RepetitiveInterval
       nRepeats = 0;
     if (repeatUnit == undefined)
       repeatUnit = RepetitiveInterval.RepeatUnit.NONE;
-    
+
     this.startDate_ = RepetitiveInterval.toDateOnlyMilliseconds(startDate);
     this.endDate_ = RepetitiveInterval.toDateOnlyMilliseconds(endDate);
     this.intervalStartHour_ = Math.round(intervalStartHour);
@@ -200,7 +200,7 @@ RepetitiveInterval.prototype.compare = function(other)
  * @return {number} The start date as milliseconds since Jan 1, 1970 GMT.
  */
 RepetitiveInterval.prototype.getStartDate = function()
-{ 
+{
   return this.startDate_;
 };
 
@@ -209,7 +209,7 @@ RepetitiveInterval.prototype.getStartDate = function()
  * @return {number} The end date as milliseconds since Jan 1, 1970 GMT.
  */
 RepetitiveInterval.prototype.getEndDate = function()
-{ 
+{
   return this.endDate_;
 };
 
@@ -218,7 +218,7 @@ RepetitiveInterval.prototype.getEndDate = function()
  * @return {number} The interval start hour.
  */
 RepetitiveInterval.prototype.getIntervalStartHour = function()
-{ 
+{
   return this.intervalStartHour_;
 }
 
@@ -227,7 +227,7 @@ RepetitiveInterval.prototype.getIntervalStartHour = function()
  * @return {number} The interval end hour.
  */
 RepetitiveInterval.prototype.getIntervalEndHour = function()
-{ 
+{
   return this.intervalEndHour_;
 };
 
@@ -236,7 +236,7 @@ RepetitiveInterval.prototype.getIntervalEndHour = function()
  * @return {number} The number of repeats.
  */
 RepetitiveInterval.prototype.getNRepeats = function()
-{ 
+{
   return this.nRepeats_;
 };
 
@@ -245,7 +245,7 @@ RepetitiveInterval.prototype.getNRepeats = function()
  * @return {number} The repeat unit, from RepetitiveInterval.RepeatUnit.
  */
 RepetitiveInterval.prototype.getRepeatUnit = function()
-{ 
+{
   return this.repeatUnit_;
 };
 

@@ -92,7 +92,7 @@ var SCHEDULE = new Buffer([
 describe('TestSchedule', function() {
   it('CalculateCoveringInterval', function() {
     var schedule = new Schedule();
-    
+
     var interval1 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20150827T000000"), 5, 10, 2,
@@ -114,7 +114,7 @@ describe('TestSchedule', function() {
     schedule.addBlackInterval(interval3);
 
     var result;
-    
+
     // timePoint1 --> positive 8.25 4-10
     var timePoint1 = Common.fromIsoString("20150825T063000");
     result = schedule.getCoveringInterval(timePoint1);
