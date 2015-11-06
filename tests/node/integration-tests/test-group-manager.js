@@ -179,10 +179,10 @@ describe ("TestGroupManager", function() {
       encryptedNonce = new EncryptedContent();
       encryptedNonce.wireDecode(dataContent);
       assert.ok(0 == encryptedNonce.getInitialVector().size());
-      assert.ok(EncryptAlgorithmType.RsaPkcs == encryptedNonce.getAlgorithmType());
+      assert.ok(EncryptAlgorithmType.RsaOaep == encryptedNonce.getAlgorithmType());
 
       var blobNonce = encryptedNonce.getPayload();
-      decryptParams = new EncryptParams(EncryptAlgorithmType.RsaPkcs);
+      decryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
       return RsaAlgorithm.decryptPromise(decryptKeyBlob, blobNonce, decryptParams);
     })
     .then(function(nonce) {

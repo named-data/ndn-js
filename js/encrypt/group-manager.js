@@ -84,7 +84,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   var data = new Data(name);
   data.getMetaInfo().setFreshnessPeriod
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
-  var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaPkcs);
+  var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
   var identityManger = this.keyChain_.getIdentityManager();
   
   return Encryptor.encryptDataPromise
