@@ -184,6 +184,11 @@ Encryptor.encryptSymmetricPromise_ = function
 
   if (algorithmType == EncryptAlgorithmType.AesCbc ||
       algorithmType == EncryptAlgorithmType.AesEcb) {
+    if (algorithmType == EncryptAlgorithmType.AesCbc) {
+      if (initialVector.size() != AesAlgorithm.BLOCK_SIZE)
+        return SyncPromise.reject(new Error("incorrect initial vector size"));
+    }
+    
     return AesAlgorithm.encryptPromise(key, payload, params, useSync)
     .then(function(encryptedPayload) {
       var result = new EncryptedContent();
