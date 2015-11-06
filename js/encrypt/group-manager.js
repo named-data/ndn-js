@@ -21,10 +21,15 @@
 var Name = require('../name.js').Name;
 var Data = require('../data.js').Data;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate;
 var SecurityException = require('../security/security-exception.js').SecurityException;
+var RsaKeyParams = require('../security/key-params.js').RsaKeyParams;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
 var Encryptor = require('./algo/encryptor.js').Encryptor;
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
+var Interval = require('./interval.js').Interval;
+var Schedule = require('./schedule.js').Schedule;
 
 /**
  * A GroupManager manages keys and schedules for group members in a particular
@@ -57,7 +62,380 @@ var GroupManager = function GroupManager
 
 exports.GroupManager = GroupManager;
 
+/**
+ * Create a group key for the interval into which timeSlot falls. This creates
+ * a group key if it doesn't exist, and encrypts the key using the public key of
+ * each eligible member.
+ * @param Pnumber} timeSlot The time slot to cover as milliseconds since
+ * Jan 1, 1970 GMT.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a List of Data packets
+ * (where the first is the E-KEY data packet with the group's public key and the
+ * rest are the D-KEY data packets with the group's private key encrypted with
+ * the public key of each eligible member), or that is rejected with
+ * GroupManagerDb.Error for a database error or SecurityException for an error
+ * using the security KeyChain.
+ */
+GroupManager.prototype.getGroupKeyPromise = function(timeSlot, useSync)
+{
+  var memberKeys = [];
+  var result = [];
+  var thisManager = this;
+  var privateKeyBlob;
+  var publicKeyBlob;
+  var startTimeStamp;
+  var endTimeStamp;
 
+  // Get the time interval.
+  return this.calculateIntervalPromise_(timeSlot, memberKeys, useSync)
+  .then(function(finalInterval) {
+    if (finalInterval.isValid() == false)
+      return SyncPromise.resolve(result);
+  
+    startTimeStamp = Schedule.toIsoString(finalInterval.getStartTime());
+    endTimeStamp = Schedule.toIsoString(finalInterval.getEndTime());
+
+    // Generate the private and public keys.
+    return thisManager.generateKeyPairPromise_(useSync)
+    .then(function(keyPair) {
+      privateKeyBlob = keyPair.privateKeyBlob;
+      publicKeyBlob = keyPair.publicKeyBlob;
+
+      // Add the first element to the result.
+      // The E-KEY (public key) data packet name convention is:
+      // /<data_type>/E-KEY/[start-ts]/[end-ts]
+      return thisManager.createEKeyDataPromise_
+        (startTimeStamp, endTimeStamp, publicKeyBlob, useSync);
+    })
+    .then(function(data) {
+      result.push(data);
+
+      // Encrypt the private key with the public key from each member's certificate.
+
+      // Process the memberKeys entry at i, and recursively call to process the
+      // next entry. Return a promise which is resolved when all are processed.
+      // (We have to make a recursive function to use Promises.)
+      function processMemberKey(i) {
+        if (i >= memberKeys.length)
+          // Finished.
+          return SyncPromise.resolve();
+
+        var keyName = memberKeys[i].keyName;
+        var certificateKey = memberKeys[i].publicKey;
+
+        return thisManager.createDKeyDataPromise_
+          (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey,
+           useSync)
+        .then(function(data) {
+          result.push(data);
+
+          return processMemberKey(i + 1);
+        });
+      }
+
+      return processMemberKey(0);
+    })
+    .then(function() {
+      return SyncPromise.resolve(result);
+    });
+  });
+};
+
+/**
+ * Add a schedule with the given scheduleName.
+ * @param {string} scheduleName The name of the schedule. The name cannot be
+ * empty.
+ * @param {Schedule} schedule The Schedule to add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * added, or that is rejected with GroupManagerDb.Error if a schedule with the
+ * same name already exists, if the name is empty, or other database error.
+ */
+GroupManager.prototype.addSchedulePromise = function
+  (scheduleName, schedule, useSync)
+{
+  return this.database_.addSchedulePromise(scheduleName, schedule, useSync);
+};
+
+/**
+ * Delete the schedule with the given scheduleName. Also delete members which
+ * use this schedule. If there is no schedule with the name, then do nothing.
+ * @param {string} scheduleName The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * deleted (or there is no such schedule), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.deleteSchedulePromise = function(scheduleName, useSync)
+{
+  return this.database_.deleteSchedulePromise(scheduleName, useSync);
+};
+
+/**
+ * Update the schedule with scheduleName and replace the old object with the
+ * given schedule. Otherwise, if no schedule with name exists, a new schedule
+ * with name and the given schedule will be added to database.
+ * @param {string} scheduleName The name of the schedule. The name cannot be
+ * empty.
+ * @param {Schedule} schedule The Schedule to update or add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * updated, or that is rejected with GroupManagerDb.Error if the name is empty,
+ * or other database error.
+ */
+GroupManager.prototype.updateSchedulePromise = function
+  (name, scheduleName, useSync)
+{
+  return this.database_.updateSchedulePromise(scheduleName, schedule, useSync);
+};
+
+/**
+ * Add a new member with the given memberCertificate into a schedule named
+ * scheduleName. If cert is an IdentityCertificate made from memberCertificate,
+ * then the member's identity name is cert.getPublicKeyName().getPrefix(-1).
+ * @param {string} scheduleName The schedule name.
+ * @param {Data} memberCertificate The member's certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * added, or that is rejected with GroupManagerDb.Error if there's no schedule
+ * named scheduleName, if the member's identity name already exists, or other
+ * database error. Or a promise that is rejected with DerDecodingException for
+ * an error decoding memberCertificate as a certificate.
+ */
+GroupManager.prototype.addMemberPromise = function
+  (scheduleName, memberCertificate, useSync)
+{
+  var cert = new IdentityCertificate(memberCertificate);
+  return this.database_.addMemberPromise
+    (scheduleName, cert.getPublicKeyName(), cert.getPublicKeyInfo().getKeyDer(),
+     useSync);
+};
+
+/**
+ * Remove a member with the given identity name. If there is no member with
+ * the identity name, then do nothing.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * removed (or there is no such member), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.removeMemberPromise = function(identity, useSync)
+{
+  return this.database_.deleteMemberPromise(identity, useSync);
+};
+
+/**
+ * Change the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {string} scheduleName The new schedule name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * updated, or that is rejected with GroupManagerDb.Error if there's no member
+ * with the given identity name in the database, or there's no schedule named
+ * scheduleName.
+ */
+GroupManager.prototype.updateMemberSchedulePromise = function
+  (identity, scheduleName, useSync)
+{
+  return this.database_.updateMemberSchedulePromise
+    (identity, scheduleName, useSync);
+};
+
+/**
+ * Calculate an Interval that covers the timeSlot.
+ * @param {number} timeSlot The time slot to cover as milliseconds since
+ * Jan 1, 1970 GMT.
+ * @param {Array<object>} memberKeys First clear memberKeys then fill it with 
+ * the info of members who are allowed to access the interval. memberKeys is an
+ * array of object where "keyName" is the Name of the public key and "publicKey"
+ * is the Blob of the public key DER. The memberKeys entries are sorted by
+ * the entry keyName.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new nterval covering
+ * the time slot, or that is rejected with GroupManagerDb.Error for a database
+ * error.
+ */
+GroupManager.prototype.calculateIntervalPromise_ = function
+  (timeSlot, memberKeys, useSync)
+{
+  // Prepare.
+  var positiveResult = new Interval();
+  var negativeResult = new Interval();
+  // Clear memberKeys.
+  memberKeys.splice(0, memberKeys.length);
+  var thisManager = this;
+
+  // Get the all intervals from the schedules.
+  return this.database_.listAllScheduleNamesPromise(useSync)
+  .then(function(scheduleNames) {
+    // Process the scheduleNames entry at i, and recursively call to process the
+    // next entry. Return a promise which is resolved when all are processed.
+    // (We have to make a recursive function to use Promises.)
+    function processSchedule(i) {
+      if (i >= scheduleNames.length)
+        // Finished.
+        return SyncPromise.resolve();
+      
+      var scheduleName = scheduleNames[i];
+
+      return thisManager.database_.getSchedulePromise(scheduleName, useSync)
+      .then(function(schedule) {
+        var result = schedule.getCoveringInterval(timeSlot);
+        var tempInterval = result.interval;
+
+        if (result.isPositive) {
+          if (!positiveResult.isValid())
+            positiveResult = tempInterval;
+          positiveResult.intersectWith(tempInterval);
+
+          return thisManager.database_.getScheduleMembersPromise
+            (scheduleName, useSync)
+          .then(function(map) {
+            // Add each entry in map to memberKeys.
+            for (var iMap = 0; iMap < map.length; ++iMap)
+              GroupManager.memberKeysAdd_(memberKeys, map[iMap]);
+
+            return processSchedule(i + 1);
+          });
+        }
+        else {
+          if (!negativeResult.isValid())
+            negativeResult = tempInterval;
+          negativeResult.intersectWith(tempInterval);
+
+          return processSchedule(i + 1);
+        }
+      });
+    }
+
+    return processSchedule(0);
+  })
+  .then(function() {
+    if (!positiveResult.isValid())
+      // Return an invalid interval when there is no member which has an
+      // interval covering the time slot.
+      return SyncPromise.resolve(new Interval(false));
+
+    // Get the final interval result.
+    var finalInterval;
+    if (negativeResult.isValid())
+      finalInterval = positiveResult.intersectWith(negativeResult);
+    else
+      finalInterval = positiveResult;
+
+    return SyncPromise.resolve(finalInterval);
+  });
+};
+
+/**
+ * Add entry to memberKeys, sorted by entry.keyName. If there is already an
+ * entry with keyName, then don't add.
+ */
+GroupManager.memberKeysAdd_ = function(memberKeys, entry)
+{
+  // Find the index of the first node where the keyName is not less than
+  // entry.keyName.
+  var i = 0;
+  while (i < memberKeys.length) {
+    var comparison = memberKeys[i].keyName.compare(entry.keyName);
+    if (comparison == 0)
+      // A duplicate, so don't add.
+      return;
+    
+    if (comparison > 0)
+      break;
+    i += 1;
+  }
+
+  memberKeys.splice(i, 0, entry);
+};
+
+/**
+ * Generate an RSA key pair according to keySize_.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns an object where
+ * "privateKeyBlob" is the encoding Blob of the private key and "publicKeyBlob"
+ * is the encoding Blob of the public key.
+ */
+GroupManager.prototype.generateKeyPairPromise_ = function(useSync)
+{
+  var params = new RsaKeyParams(this.keySize_);
+
+  return RsaAlgorithm.generateKeyPromise(params)
+  .then(function(privateKey) {
+    var privateKeyBlob = privateKey.getKeyBits();
+    var publicKey = RsaAlgorithm.deriveEncryptKey(privateKeyBlob);
+    var publicKeyBlob = publicKey.getKeyBits();
+
+    return SyncPromise.resolve
+      ({ privateKeyBlob: privateKeyBlob, publicKeyBlob: publicKeyBlob });
+  });
+};
+
+/**
+ * Create an E-KEY Data packet for the given public key.
+ * @param {string} startTimeStamp The start time stamp string to put in the name.
+ * @param {string} endTimeStamp The end time stamp string to put in the name.
+ * @param {Blob} publicKeyBlob A Blob of the public key DER.
+ * @return The Data packet.
+ * @throws SecurityException for an error using the security KeyChain.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the Data packet, or that
+ * is rejected with SecurityException for an error using the security KeyChain.
+ */
+GroupManager.prototype.createEKeyDataPromise_ = function
+  (startTimeStamp, endTimeStamp, publicKeyBlob, useSync)
+{
+  var name = new Name(this.namespace_);
+  name.append(Encryptor.NAME_COMPONENT_E_KEY).append(startTimeStamp)
+    .append(endTimeStamp);
+
+  var data = new Data(name);
+  data.getMetaInfo().setFreshnessPeriod
+    (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
+  data.setContent(publicKeyBlob);
+
+  // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
+  var identityManger = this.keyChain_.getIdentityManager();
+  return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
+  .then(function(identityName) {
+    return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
+      (identityName, useSync)
+    .then(function(defaultCertificateName) {
+      return identityManger.identityStorage.getCertificatePromise
+        (defaultCertificateName, true, useSync);
+    })
+    .then(function(certificate) {
+      var certificateName = certificate.getName().getPrefix(-1);
+      return identityManger.signByCertificatePromise
+        (data, certificateName, useSync);
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(data);
+  });
+};
 
 /**
  * Create a D-KEY Data packet with an EncryptedContent for the given private
@@ -76,7 +454,8 @@ exports.GroupManager = GroupManager;
  * is rejected with SecurityException for an error using the security KeyChain.
  */
 GroupManager.prototype.createDKeyDataPromise_ = function
-  (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey, useSync)
+  (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey,
+   useSync)
 {
   var name = new Name(this.namespace_);
   name.append(Encryptor.NAME_COMPONENT_D_KEY);
