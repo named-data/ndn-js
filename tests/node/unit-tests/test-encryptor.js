@@ -30,7 +30,6 @@ var EncryptedContent = require('../../..').EncryptedContent;
 var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
 var EncryptParams = require('../../..').EncryptParams;
 var RsaKeyParams = require('../../..').RsaKeyParams;
-var DecryptKey = require('../../..').DecryptKey; // debug
 var Encryptor = require('../../..').Encryptor;
 
 describe('TestEncryptor', function() {
