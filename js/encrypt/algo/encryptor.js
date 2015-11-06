@@ -58,7 +58,7 @@ Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
  * asymmetric encryption algorithm and the payload is larger than the maximum
  * plaintext size, this encrypts the payload with a symmetric key that is
  * asymmetrically encrypted and provided as a nonce in the content of the data
- * packet.
+ * packet. The packet's /<dataName>/ is updated to be <dataName>/FOR/<keyName>.
  * @param {Data} data The data packet which is updated.
  * @param {Blob} payload The payload to encrypt.
  * @param {Name} keyName The key name for the EncryptedContent.
@@ -73,6 +73,10 @@ Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
 Encryptor.encryptDataPromise = function
   (data, payload, keyName, key, params, useSync)
 {
+  var dataName = data.getName();
+  dataName.append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
+  data.setName(dataName);
+
   var algorithmType = params.getAlgorithmType();
 
   if (algorithmType == EncryptAlgorithmType.AesCbc ||

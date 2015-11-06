@@ -107,6 +107,9 @@ describe('TestEncryptor', function() {
       Encryptor.encryptData
         (data, input.plainText, input.keyName, input.key, input.encryptParams);
 
+      assert.ok(data.getName().equals(new Name("/FOR").append(input.keyName)),
+                input.testName);
+
       assert.ok(input.encryptedContent.equals(data.getContent()), input.testName);
 
       var content = new EncryptedContent();
@@ -154,6 +157,9 @@ describe('TestEncryptor', function() {
       var encryptParams = new EncryptParams(input.type);
 
       Encryptor.encryptData(data, raw_content, keyName, eKey, encryptParams);
+
+      assert.ok(data.getName().equals(new Name("/FOR").append(keyName)),
+                input.testName);
 
       var extractContent = new EncryptedContent();
       extractContent.wireDecode(data.getContent());
@@ -223,6 +229,9 @@ describe('TestEncryptor', function() {
 
       var encryptParams = new EncryptParams(input.type);
       Encryptor.encryptData(data, large_content, keyName, eKey, encryptParams);
+
+      assert.ok(data.getName().equals(new Name("/FOR").append(keyName)),
+                input.testName);
 
       var largeDataContent = data.getContent();
 

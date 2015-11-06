@@ -57,6 +57,8 @@ var GroupManager = function GroupManager
 
 exports.GroupManager = GroupManager;
 
+
+
 /**
  * Create a D-KEY Data packet with an EncryptedContent for the given private
  * key, encrypted with the certificate key.
@@ -78,8 +80,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
 {
   var name = new Name(this.namespace_);
   name.append(Encryptor.NAME_COMPONENT_D_KEY);
-  name.append(startTimeStamp).append(endTimeStamp)
-    .append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
+  name.append(startTimeStamp).append(endTimeStamp);
   var data = new Data(name);
   data.getMetaInfo().setFreshnessPeriod
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
