@@ -22,6 +22,8 @@
  
 var assert = require("assert");
 var fs = require("fs");
+var RepetitiveInterval = require('../../..').RepetitiveInterval;
+var Schedule = require('../../..').Schedule;
 var GroupManager = require('../../..').GroupManager;
 var GroupManagerDbSqlite3 = require('../../..').GroupManagerDbSqlite3;
 var EncryptedContent = require('../../..').EncryptedContent;
@@ -31,7 +33,10 @@ var RsaKeyParams = require('../../..').RsaKeyParams;
 var RsaAlgorithm = require('../../..').RsaAlgorithm;
 var AesAlgorithm = require('../../..').AesAlgorithm;
 var PublicKey = require('../../..').PublicKey;
+var EncryptKey = require('../../..').EncryptKey;
+var DecryptKey = require('../../..').DecryptKey;
 var Name = require('../../..').Name;
+var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
 var TlvWireFormat = require('../../..').TlvWireFormat;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
@@ -78,6 +83,75 @@ var decryptKeyBlob;
 var encryptKeyBlob;
 var certificate = new IdentityCertificate();
 var keyChain;
+
+function setManagerPromise(manager)
+{
+  // Set up the first schedule.
+  var schedule1 = new Schedule();
+  var interval11 = new RepetitiveInterval
+    (Common.fromIsoString("20150825T000000"),
+     Common.fromIsoString("20150827T000000"), 5, 10, 2,
+     RepetitiveInterval.RepeatUnit.DAY);
+  var interval12 = new RepetitiveInterval
+    (Common.fromIsoString("20150825T000000"),
+     Common.fromIsoString("20150827T000000"), 6, 8, 1,
+     RepetitiveInterval.RepeatUnit.DAY);
+  var interval13 = new RepetitiveInterval
+    (Common.fromIsoString("20150827T000000"),
+     Common.fromIsoString("20150827T000000"), 7, 8);
+  schedule1.addWhiteInterval(interval11);
+  schedule1.addWhiteInterval(interval12);
+  schedule1.addBlackInterval(interval13);
+
+  // Set up the second schedule.
+  var schedule2 = new Schedule();
+  var interval21 = new RepetitiveInterval
+    (Common.fromIsoString("20150825T000000"),
+     Common.fromIsoString("20150827T000000"), 9, 12, 1,
+     RepetitiveInterval.RepeatUnit.DAY);
+  var interval22 = new RepetitiveInterval
+    (Common.fromIsoString("20150827T000000"),
+     Common.fromIsoString("20150827T000000"), 6, 8);
+  var interval23 = new RepetitiveInterval
+    (Common.fromIsoString("20150827T000000"),
+     Common.fromIsoString("20150827T000000"), 2, 4);
+  schedule2.addWhiteInterval(interval21);
+  schedule2.addWhiteInterval(interval22);
+  schedule2.addBlackInterval(interval23);
+
+  var memberA;
+  var memberB;
+  var memberC;
+
+  // Add them to the group manager database.
+  return manager.addSchedulePromise("schedule1", schedule1)
+  .then(function() {
+    return manager.addSchedulePromise("schedule2", schedule2);
+  })
+  .then(function() {
+    // Make some adaptions to certificate.
+    var dataBlob = certificate.wireEncode();
+
+    memberA = new Data();
+    memberA.wireDecode(dataBlob, TlvWireFormat.get());
+    memberA.setName(new Name("/ndn/memberA/KEY/ksk-123/ID-CERT/123"));
+    memberB = new Data();
+    memberB.wireDecode(dataBlob, TlvWireFormat.get());
+    memberB.setName(new Name("/ndn/memberB/KEY/ksk-123/ID-CERT/123"));
+    memberC = new Data();
+    memberC.wireDecode(dataBlob, TlvWireFormat.get());
+    memberC.setName(new Name("/ndn/memberC/KEY/ksk-123/ID-CERT/123"));
+
+    // Add the members to the database.
+    return manager.addMemberPromise("schedule1", memberA);
+  })
+  .then(function() {
+    return manager.addMemberPromise("schedule1", memberB);
+  })
+  .then(function() {
+    return manager.addMemberPromise("schedule2", memberC);
+  });
+}
 
 describe ("TestGroupManager", function() {
   before(function(done) {
@@ -202,6 +276,180 @@ describe ("TestGroupManager", function() {
     })
     .then(function(largePayload) {
       assert.ok(largePayload.equals(decryptKeyBlob));
+
+      return Promise.resolve();
+    })
+    // When done is called, Mocha displays errors from assert.ok.
+    .then(done, done);
+  });
+
+  it("CreateEKeyData", function(done) {
+    // Create the group manager.
+    var manager = new GroupManager
+      (new Name("Alice"), new Name("data_type"),
+       new GroupManagerDbSqlite3(eKeyDatabaseFilePath), 1024, 1, keyChain);
+
+    return setManagerPromise(manager)
+    .then(function() {
+      return manager.createEKeyDataPromise_
+        ("20150825T090000", "20150825T110000", encryptKeyBlob);
+    })
+    .then(function(data) {
+      assert.ok("/Alice/READ/data_type/E-KEY/20150825T090000/20150825T110000" ==
+                data.getName().toUri())
+
+      var contentBlob = data.getContent();
+      assert.ok(encryptKeyBlob.equals(contentBlob));
+
+      return Promise.resolve();
+    })
+    // When done is called, Mocha displays errors from assert.ok.
+    .then(done, done);
+  });
+
+  it("CalculateInterval", function(done) {
+    // Create the group manager.
+    var manager = new GroupManager
+      (new Name("Alice"), new Name("data_type"),
+       new GroupManagerDbSqlite3(intervalDatabaseFilePath), 1024, 1, keyChain);
+
+    var memberKeys = [];
+
+    return setManagerPromise(manager)
+    .then(function() {
+      var timePoint1 = Common.fromIsoString("20150825T093000");
+      return manager.calculateIntervalPromise_(timePoint1, memberKeys);
+    })
+    .then(function(result) {
+      assert.ok("20150825T090000" == Common.toIsoString(result.getStartTime()));
+      assert.ok("20150825T100000" == Common.toIsoString(result.getEndTime()));
+
+      var timePoint2 = Common.fromIsoString("20150827T073000");
+      return manager.calculateIntervalPromise_(timePoint2, memberKeys);
+    })
+    .then(function(result) {
+      assert.ok("20150827T070000" == Common.toIsoString(result.getStartTime()));
+      assert.ok("20150827T080000" == Common.toIsoString(result.getEndTime()));
+
+      var timePoint3 = Common.fromIsoString("20150827T043000");
+      return manager.calculateIntervalPromise_(timePoint3, memberKeys);
+    })
+    .then(function(result) {
+      assert.ok(false == result.isValid());
+
+      var timePoint4 = Common.fromIsoString("20150827T053000");
+      return manager.calculateIntervalPromise_(timePoint4, memberKeys);
+    })
+    .then(function(result) {
+      assert.ok("20150827T050000" == Common.toIsoString(result.getStartTime()));
+      assert.ok("20150827T060000" == Common.toIsoString(result.getEndTime()));
+
+      return Promise.resolve();
+    })
+    // When done is called, Mocha displays errors from assert.ok.
+    .then(done, done);
+  });
+
+  it("GetGroupKey", function(done) {
+    // Create the group manager.
+    var manager = new GroupManager
+      (new Name("Alice"), new Name("data_type"),
+       new GroupManagerDbSqlite3(groupKeyDatabaseFilePath), 1024, 1, keyChain);
+
+    var result;
+    var data;
+    var groupEKey;
+    var dataContent;
+    var encryptedNonce;
+    var decryptParams;
+    
+    return setManagerPromise(manager)
+    .then(function() {
+      // Get the data list from the group manager.
+      var timePoint1 = Common.fromIsoString("20150825T093000");
+      return manager.getGroupKeyPromise(timePoint1);
+    })
+    .then(function(localResult) {
+      result = localResult;
+      assert.ok(4 == result.length);
+
+      // The first data packet contains the group's encryption key (public key).
+      data = result[0];
+      assert.ok
+        ("/Alice/READ/data_type/E-KEY/20150825T090000/20150825T100000" ==
+         data.getName().toUri());
+      groupEKey = new EncryptKey(data.getContent());
+
+      // Get the second data packet and decrypt.
+      data = result[1];
+      assert.ok
+        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberA/ksk-123" ==
+         data.getName().toUri());
+
+      /////////////////////////////////////////////////////// Start decryption.
+      dataContent = data.getContent();
+
+      // Get the nonce key.
+      // dataContent is a sequence of the two EncryptedContent.
+      encryptedNonce = new EncryptedContent();
+      encryptedNonce.wireDecode(dataContent);
+      assert.ok(0 == encryptedNonce.getInitialVector().size());
+      assert.ok(EncryptAlgorithmType.RsaOaep == encryptedNonce.getAlgorithmType());
+
+      decryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
+      var blobNonce = encryptedNonce.getPayload();
+      return RsaAlgorithm.decryptPromise(decryptKeyBlob, blobNonce, decryptParams);
+    })
+    .then(function(nonce) {
+      // Get the payload.
+      // Use the size of encryptedNonce to find the start of encryptedPayload.
+      var payloadContent = dataContent.buf().slice
+        (encryptedNonce.wireEncode().size());
+      var encryptedPayload = new EncryptedContent();
+      encryptedPayload.wireDecode(payloadContent);
+      assert.ok(16 == encryptedPayload.getInitialVector().size());
+      assert.ok(EncryptAlgorithmType.AesCbc == encryptedPayload.getAlgorithmType());
+
+      decryptParams.setAlgorithmType(EncryptAlgorithmType.AesCbc);
+      decryptParams.setInitialVector(encryptedPayload.getInitialVector());
+      var blobPayload = encryptedPayload.getPayload();
+      return AesAlgorithm.decryptPromise(nonce, blobPayload, decryptParams);
+    })
+    .then(function(largePayload) {
+      // Get the group D-KEY.
+      var groupDKey = new DecryptKey(largePayload);
+
+      /////////////////////////////////////////////////////// End decryption.
+
+      // Check the D-KEY.
+      var derivedGroupEKey = RsaAlgorithm.deriveEncryptKey
+        (groupDKey.getKeyBits());
+      assert.ok(groupEKey.getKeyBits().equals(derivedGroupEKey.getKeyBits()));
+
+      // Check the third data packet.
+      data = result[2];
+      assert.ok
+        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberB/ksk-123" ==
+         data.getName().toUri());
+
+      // Check the fourth data packet.
+      data = result[3];
+      assert.ok
+        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberC/ksk-123" ==
+         data.getName().toUri());
+
+      // Check invalid time stamps for getting the group key.
+      var timePoint2 = Common.fromIsoString("20150826T083000");
+      return manager.getGroupKeyPromise(timePoint2);
+    })
+    .then(function(localResult) {
+      assert.ok(0 == localResult.length);
+
+      var timePoint3 = Common.fromIsoString("20150827T023000");
+      return manager.getGroupKeyPromise(timePoint3);
+    })
+    .then(function(localResult) {
+      assert.ok(0 == localResult.length);
 
       return Promise.resolve();
     })
