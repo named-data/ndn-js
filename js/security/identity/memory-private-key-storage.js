@@ -133,11 +133,11 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 
   if (UseSubtleCrypto() && !useSync) {
     var thisStore = this;
-    
+
     if (params.getKeyType() === KeyType.RSA) {
       var privateKey = null;
       var publicKeyDer = null;
-      
+
       return crypto.subtle.generateKey
         ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),

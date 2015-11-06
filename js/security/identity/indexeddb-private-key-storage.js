@@ -183,7 +183,7 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbPrivateKeyStorage.sign: Unsupported digest algorithm")));
-  
+
   // TODO: Support non-RSA keys.
   var algo = { name: "RSASSA-PKCS1-v1_5", hash: {name: "SHA-256" }};
 

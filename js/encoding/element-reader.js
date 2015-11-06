@@ -26,7 +26,7 @@ var LOG = require('../log.js').Log.LOG;
 
 /**
  * A ElementReader lets you call onReceivedData multiple times which uses a
- * TlvStructureDecoder to detect the end of a TLV element and calls 
+ * TlvStructureDecoder to detect the end of a TLV element and calls
  * elementListener.onReceivedElement(element) with the element.  This handles
  * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor

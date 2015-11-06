@@ -105,7 +105,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     }, function(err) {
       if (!(err instanceof SecurityException))
         throw err;
-      
+
       // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
@@ -194,7 +194,7 @@ IdentityManager.prototype.deleteIdentity = function
     if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
       doDelete = false;
-    
+
     return SyncPromise.resolve();
   }, function(err) {
     // There is no default identity to check.
@@ -428,7 +428,7 @@ IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
   (certificate, useSync)
 {
   var thisManager = this;
-  
+
   var keyName = certificate.getPublicKeyName();
   return this.identityStorage.doesKeyExistPromise(keyName, useSync)
   .then(function(exists) {

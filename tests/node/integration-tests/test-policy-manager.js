@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
- 
+
 var assert = require("assert");
 var fs = require("fs");
 var Name = require('../../..').Name;
@@ -138,7 +138,7 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
   0x7a, 0x0a
 ]);
 
-var CERT_DUMP = 
+var CERT_DUMP =
 "Bv0C4AcxCAR0ZW1wCANLRVkIEWtzay0xNDE0MTk1Nzc5NjY1CAdJRC1DRVJUCAgA" +
 "AAFJRKMe3BQDGAECFf0BcDCCAWwwIhgPMjAxNDEwMjUwMDA5NDFaGA8yMDM0MTAy" +
 "MDAwMDk0MVowIDAeBgNVBCkTFy90ZW1wL2tzay0xNDE0MTk1Nzc5NjY1MIIBIjAN" +
@@ -178,136 +178,136 @@ describe ("TestPolicyMatching", function() {
     identityStorage_ = new MemoryIdentityStorage();
     privateKeyStorage_ = new MemoryPrivateKeyStorage();
 
-    identityManager_ = new IdentityManager(identityStorage_, privateKeyStorage_);  
-    policyManager_ = new ConfigPolicyManager("policy_config/simple_rules.conf");    
-    
+    identityManager_ = new IdentityManager(identityStorage_, privateKeyStorage_);
+    policyManager_ = new ConfigPolicyManager("policy_config/simple_rules.conf");
+
     identityName_ = new Name("/TestConfigPolicyManager/temp");
     keyName_ = new Name(identityName_).append("ksk-1416010123");
     identityStorage_.addKey
       (keyName_, KeyType.RSA, new Blob(DEFAULT_RSA_PUBLIC_KEY_DER, false));
     privateKeyStorage_.setKeyPairForKeyName
       (keyName_, KeyType.RSA, DEFAULT_RSA_PUBLIC_KEY_DER, DEFAULT_RSA_PRIVATE_KEY_DER);
-      
+
     var cert = identityManager_.selfSign(keyName_);
-    
-    identityStorage_.setDefaultKeyNameForIdentity(keyName_); 
+
+    identityStorage_.setDefaultKeyNameForIdentity(keyName_);
     identityManager_.addCertificateAsDefault(cert);
-    
+
     face_ = new Face("localhost");
     keyChain_ = new KeyChain(identityManager_, policyManager_);
   });
-  
+
   afterEach(function() {
     try {
       fs.unlinkSync('policy_config/certs/testData.cert');
     }
     catch (e) {}
-    
+
     face_.close();
   });
-  
+
   it("NoVerify", function() {
     var policyManager = new NoVerifyPolicyManager();
     var identityName = new Name("TestValidator/Null").appendVersion(getNowSeconds());
-    
+
     var keyChain = new KeyChain(identityManager_, policyManager);
     keyChain.createIdentityAndCertificate(identityName);
     var data = new Data(new Name(identityName).append("data"));
     keyChain.signByIdentity(data, identityName);
-    
+
     var failureCount = 0;
     var successCount = 0;
-    var vr = policyManager.checkVerificationPolicy(data, 0, 
+    var vr = policyManager.checkVerificationPolicy(data, 0,
       function() { ++successCount; }, function() { ++failureCount; });
-      
+
     assert.equal(vr, null, "NoVerifyPolicyManager returned a ValidationRequest");
     assert.equal
       (failureCount, 0, "Verification failed with NoVerifyPolicyManager");
     assert.equal
-      (successCount, 1, 
+      (successCount, 1,
        "Verification success called " + successCount + " times instead of 1");
   });
-  
+
   it("SelfVerification", function() {
     var policyManager = new SelfVerifyPolicyManager(identityStorage_);
     var identityName = new Name("TestValidator/RsaSignatureVerification");
-    
+
     var keyChain = new KeyChain(identityManager_, policyManager);
     keyChain.createIdentityAndCertificate(identityName);
-    
+
     var data = new Data(new Name("/TestData/1"));
     keyChain.signByIdentity(data, identityName);
-    
+
     var failureCount = 0;
     var successCount = 0;
-    var vr = policyManager.checkVerificationPolicy(data, 0, 
+    var vr = policyManager.checkVerificationPolicy(data, 0,
       function() { ++successCount; }, function() { ++failureCount; });
-      
+
     assert.equal(vr, null, "SelfVerifyPolicyManager returned a ValidationRequest");
     assert.equal
       (failureCount, 0, "Verification of identity-signed data failed");
     assert.equal
-      (successCount, 1, 
+      (successCount, 1,
        "Verification success called " + successCount + " times instead of 1");
-    
+
     data = new Data(new Name("/TestData/2"));
-    
+
     failureCount = 0;
     successCount = 0;
-    vr = policyManager.checkVerificationPolicy(data, 0, 
+    vr = policyManager.checkVerificationPolicy(data, 0,
       function() { ++successCount; }, function() { ++failureCount; });
-    
+
     assert.equal(vr, null, "SelfVerifyPolicyManager returned a ValidationRequest");
     assert.equal
       (successCount, 0, "Verification of unsigned data succeeded");
     assert.equal
-      (failureCount, 1, 
-       "Verification failure callback called " + failureCount + " times instead of 1");  
+      (failureCount, 1,
+       "Verification failure callback called " + failureCount + " times instead of 1");
   });
-  
+
   it("InterestTimestamp", function(done) {
     var interestName = new Name("/ndn/ucla/edu/something");
     var certName = identityManager_.getDefaultCertificateNameForIdentity(identityName_);
     face_.setCommandSigningInfo(keyChain_, certName);
-    
+
     var oldInterest = new Interest(interestName);
     face_.makeCommandInterest(oldInterest);
-    
-    setTimeout(function() { 
+
+    setTimeout(function() {
       var newInterest = new Interest(interestName);
       face_.makeCommandInterest(newInterest);
-    
+
       var failureCount = 0;
       var successCount = 0;
       var vr = policyManager_.checkVerificationPolicy(newInterest, 0,
         function() { ++successCount; }, function() { ++failureCount; });
-    
+
       assert.equal
         (vr, null, "ConfigPolicyManager returned ValidationRequest but certificate is known");
       assert.equal
         (failureCount, 0, "Verification of valid interest failed");
       assert.equal
-        (successCount, 1, 
+        (successCount, 1,
          "Verification success called " + successCount + " times instead of 1");
-    
+
       failureCount = 0;
       successCount = 0;
       vr = policyManager_.checkVerificationPolicy(oldInterest, 0,
         function() { ++successCount; }, function() { ++failureCount; });
-    
+
       assert.equal
         (vr, null, "ConfigPolicyManager returned ValidationRequest but certificate is known");
       assert.equal
         (successCount, 0, "Verification of stale interest succeeded");
       assert.equal
-        (failureCount, 1, 
+        (failureCount, 1,
          "Verification failure callback called " + failureCount + " times instead of 1");
 
       done();
     }, 100);
-    
+
   });
-  
+
   it("Refresh10s", function(done) {
     this.timeout(10000);
 
@@ -317,22 +317,22 @@ describe ("TestPolicyMatching", function() {
     var decodedData = new Buffer(encodedData.toString(), 'base64');
     var data = new Data();
     data.wireDecode(new Blob(decodedData));
-    
+
     var failureCount = 0;
     var successCount = 0;
     var vr = policyManager_.checkVerificationPolicy(data, 0,
       function() { ++successCount; }, function() { ++failureCount; });
 
     assert.notEqual
-      (vr, null, 
+      (vr, null,
        "ConfigPolicyManager did not create ValidationRequest for unknown certificate");
     assert.equal
-      (successCount, 0, 
+      (successCount, 0,
        "ConfigPolicyManager called success callback with pending ValidationRequest");
     assert.equal
-      (failureCount, 0, 
+      (failureCount, 0,
        "ConfigPolicyManager called failure callback with pending ValidationRequest");
-    
+
     // Now save the cert data to our anchor directory, and wait.
     // We have to sign it with the current identity or the policy manager will
     //  create an interest for the signing certificate.
@@ -341,26 +341,26 @@ describe ("TestPolicyMatching", function() {
 
     cert.wireDecode(new Blob(certData));
     keyChain_.signByIdentity(cert, identityName_);
-    
+
     var signedCertBlob = cert.wireEncode();
     var encodedCert = signedCertBlob.buf().toString('base64');
     fs.write
       (fs.openSync('policy_config/certs/testData.cert', 'w'), encodedCert);
-    
+
     failureCount = 0;
     successCount = 0;
     vr = policyManager_.checkVerificationPolicy(data, 0,
       function() { ++successCount; }, function() { ++failureCount; });
-   
+
     assert.notEqual
       (vr, null, "ConfigPolicyManager refresh occured sooner than specified");
     assert.equal
-      (successCount, 0, 
+      (successCount, 0,
        "ConfigPolicyManager called success callback with pending ValidationRequest");
     assert.equal
-      (failureCount, 0, 
+      (failureCount, 0,
        "ConfigPolicyManager called failure callback with pending ValidationRequest");
-    
+
     setTimeout(function() {
       failureCount = 0;
       successCount = 0;
@@ -372,12 +372,12 @@ describe ("TestPolicyMatching", function() {
       assert.equal
         (failureCount, 0, "ConfigPolicyManager did not verify valid signed data");
       assert.equal
-        (successCount, 1, 
+        (successCount, 1,
          "Verification success called " + successCount + " times instead of 1");
 
       done();
     }, 6000);
-    
+
   });
-  
+
 });

@@ -430,7 +430,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
- * @param {WireFormat} (optional) A WireFormat object used to encode the message. 
+ * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
@@ -512,7 +512,7 @@ Face.prototype.reconnectAndExpressInterest = function
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { 
+      (function() {
         thisFace.expressInterestHelper
           (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
@@ -541,7 +541,7 @@ Face.prototype.reconnectAndExpressInterest = function
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { 
+        (function() {
           thisFace.expressInterestHelper
             (pendingInterestId, interest, onData, onTimeout, wireFormat);
         });
@@ -712,7 +712,7 @@ Face.prototype.nodeMakeCommandInterest = function
 };
 
 /**
- * Register prefix with the connected NDN hub and call onInterest when a 
+ * Register prefix with the connected NDN hub and call onInterest when a
  * matching interest is received. To register a prefix with NFD, you must
  * first call setCommandSigningInfo.
  * This uses the form:
@@ -733,7 +733,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
  * this does not use it. (The onRegisterSuccess parameter comes after
  * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
  * @returns {number} The registered prefix ID which can be used with
@@ -778,7 +778,7 @@ Face.prototype.registerPrefix = function
 
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
-  
+
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
@@ -883,7 +883,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
    onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   var removeRequestIndex = -1;
