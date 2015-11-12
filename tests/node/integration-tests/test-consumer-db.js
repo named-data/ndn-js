@@ -68,7 +68,7 @@ function generateAesKeys()
   return result;
 }
 
-describe ("TestGroupManagerDb", function() {
+describe ("TestConsumerDb", function() {
   before(function(done) {
     databaseFilePath = "policy_config/test.db";
     try {
