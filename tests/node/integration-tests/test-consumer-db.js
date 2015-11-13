@@ -127,7 +127,7 @@ describe ("TestConsumerDb", function() {
     var keyName;
 
     // Generate key blobs.
-    return generateRsaKeysPromise()
+    generateRsaKeysPromise()
     .then(function(localKeys) {
       keys = localKeys;
 
