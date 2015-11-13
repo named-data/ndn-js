@@ -241,7 +241,7 @@ describe ("TestGroupManager", function() {
     var decryptParams;
 
     // Encrypt the D-KEY.
-    return manager.createDKeyDataPromise_
+    manager.createDKeyDataPromise_
       ("20150825T000000", "20150827T000000", new Name("/ndn/memberA/KEY"),
        decryptKeyBlob, newCertificate.getPublicKeyInfo().getKeyDer())
     .then(function(data) {
@@ -289,7 +289,7 @@ describe ("TestGroupManager", function() {
       (new Name("Alice"), new Name("data_type"),
        new GroupManagerDbSqlite3(eKeyDatabaseFilePath), 1024, 1, keyChain);
 
-    return setManagerPromise(manager)
+    setManagerPromise(manager)
     .then(function() {
       return manager.createEKeyDataPromise_
         ("20150825T090000", "20150825T110000", encryptKeyBlob);
@@ -315,7 +315,7 @@ describe ("TestGroupManager", function() {
 
     var memberKeys = [];
 
-    return setManagerPromise(manager)
+    setManagerPromise(manager)
     .then(function() {
       var timePoint1 = Common.fromIsoString("20150825T093000");
       return manager.calculateIntervalPromise_(timePoint1, memberKeys);
@@ -363,7 +363,7 @@ describe ("TestGroupManager", function() {
     var encryptedNonce;
     var decryptParams;
 
-    return setManagerPromise(manager)
+    setManagerPromise(manager)
     .then(function() {
       // Get the data list from the group manager.
       var timePoint1 = Common.fromIsoString("20150825T093000");
