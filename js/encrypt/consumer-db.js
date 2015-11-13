@@ -66,7 +66,7 @@ ConsumerDb.Error.prototype.name = "ConsumerDbError";
  */
 ConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("ConsumerDb.getKeyPromise is not implemented"));
 };
 
@@ -83,7 +83,7 @@ ConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
  */
 ConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("ConsumerDb.addKeyPromise is not implemented"));
 };
 
@@ -100,6 +100,6 @@ ConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
  */
 ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("ConsumerDb.addKeyPromise is not implemented"));
 };

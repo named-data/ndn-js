@@ -70,7 +70,7 @@ GroupManagerDb.Error.prototype.name = "GroupManagerDbError";
  */
 GroupManagerDb.prototype.hasSchedulePromise = function(name, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.hasSchedulePromise is not implemented"));
 };
 
@@ -85,7 +85,7 @@ GroupManagerDb.prototype.hasSchedulePromise = function(name, useSync)
  */
 GroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.listAllScheduleNamesPromise is not implemented"));
 };
 
@@ -101,7 +101,7 @@ GroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
  */
 GroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.getSchedulePromise is not implemented"));
 };
 
@@ -121,7 +121,7 @@ GroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
 GroupManagerDb.prototype.getScheduleMembersPromise = function
   (name, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.getScheduleMembersPromise is not implemented"));
 };
 
@@ -138,7 +138,7 @@ GroupManagerDb.prototype.getScheduleMembersPromise = function
  */
 GroupManagerDb.prototype.addSchedulePromise = function(name, schedule, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.addSchedulePromise is not implemented"));
 };
 
@@ -155,7 +155,7 @@ GroupManagerDb.prototype.addSchedulePromise = function(name, schedule, useSync)
  */
 GroupManagerDb.prototype.deleteSchedulePromise = function(name, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.deleteSchedulePromise is not implemented"));
 };
 
@@ -174,7 +174,7 @@ GroupManagerDb.prototype.deleteSchedulePromise = function(name, useSync)
 GroupManagerDb.prototype.renameSchedulePromise = function
   (oldName, newName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.renameSchedulePromise is not implemented"));
 };
 
@@ -194,7 +194,7 @@ GroupManagerDb.prototype.renameSchedulePromise = function
 GroupManagerDb.prototype.updateSchedulePromise = function
   (name, schedule, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.updateSchedulePromise is not implemented"));
 };
 
@@ -212,7 +212,7 @@ GroupManagerDb.prototype.updateSchedulePromise = function
  */
 GroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.hasMemberPromise is not implemented"));
 };
 
@@ -227,7 +227,7 @@ GroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
  */
 GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.listAllMembersPromise is not implemented"));
 };
 
@@ -243,7 +243,7 @@ GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
  */
 GroupManagerDb.prototype.getMemberSchedulePromise = function(identity, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.getMemberSchedulePromise is not implemented"));
 };
 
@@ -264,7 +264,7 @@ GroupManagerDb.prototype.getMemberSchedulePromise = function(identity, useSync)
 GroupManagerDb.prototype.addMemberPromise = function
   (scheduleName, keyName, key, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.addMemberPromise is not implemented"));
 };
 
@@ -283,7 +283,7 @@ GroupManagerDb.prototype.addMemberPromise = function
 GroupManagerDb.prototype.updateMemberSchedulePromise = function
   (identity, scheduleName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.updateMemberSchedulePromise is not implemented"));
 };
 
@@ -300,6 +300,6 @@ GroupManagerDb.prototype.updateMemberSchedulePromise = function
  */
 GroupManagerDb.prototype.deleteMemberPromise = function(identity, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("GroupManagerDb.deleteMemberPromise is not implemented"));
 };
