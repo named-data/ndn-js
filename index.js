@@ -55,6 +55,7 @@ exports.EncryptAlgorithmType = require('./js/encrypt/algo/encrypt-params.js').En
 exports.EncryptParams = require('./js/encrypt/algo/encrypt-params.js').EncryptParams;
 exports.Encryptor = require('./js/encrypt/algo/encryptor.js').Encryptor;
 exports.RsaAlgorithm = require('./js/encrypt/algo/rsa-algorithm.js').RsaAlgorithm;
+exports.Consumer = require('./js/encrypt/consumer.js').Consumer;
 exports.ConsumerDb = require('./js/encrypt/consumer-db.js').ConsumerDb;
 exports.ConsumerDbSqlite3 = require('./js/encrypt/consumer-db-sqlite3.js').ConsumerDbSqlite3;
 exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
