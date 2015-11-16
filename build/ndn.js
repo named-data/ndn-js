@@ -6801,7 +6801,7 @@ ChangeCounter.prototype.checkChanged = function()
 {
   if (this.target == null)
     return false;
-  
+
   var targetChangeCount = this.target.getChangeCount();
   if (this.changeCount != targetChangeCount) {
     this.changeCount = targetChangeCount;
@@ -6855,8 +6855,8 @@ exports.SyncPromise = SyncPromise;
  * If this promise is fulfilled, immediately call onFulfilled with the fulfilled
  * value as described below. Otherwise, if this promise is rejected, immediately
  * call onRejected with the error as described below.
- * @param {function} (optional) onFulfilled If this promise is fulfilled, this 
- * calls onFulfilled(value) with the value of this promise and returns the 
+ * @param {function} (optional) onFulfilled If this promise is fulfilled, this
+ * calls onFulfilled(value) with the value of this promise and returns the
  * result. The function should return a promise. To use all synchronous code,
  * onFulfilled should return SyncPromise.resolve(newValue).
  * @param {function} (optional) onRejected If this promise is rejected, this
@@ -6991,7 +6991,7 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
     promise = onErrorOrPromise;
     onError = null;
   }
-  
+
   if (onComplete)
     promise
     .then(function(value) {
@@ -8829,7 +8829,7 @@ var LOG = require('../log.js').Log.LOG;
 
 /**
  * A ElementReader lets you call onReceivedData multiple times which uses a
- * TlvStructureDecoder to detect the end of a TLV element and calls 
+ * TlvStructureDecoder to detect the end of a TLV element and calls
  * elementListener.onReceivedElement(element) with the element.  This handles
  * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
@@ -14078,7 +14078,7 @@ IdentityCertificate.prototype.setPublicKeyName = function()
 
 var Name = require('../../name.js').Name;
 var SecurityException = require('../security-exception.js').SecurityException;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * IdentityStorage is a base class for the storage of identity, public keys and
@@ -14827,7 +14827,7 @@ IndexedDbIdentityStorage.prototype.name = "IndexedDbIdentityStorage";
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @returns {Promise} A promise which returns true if the identity exists.
  */
 IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
@@ -14849,7 +14849,7 @@ IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity is added.
  */
 IndexedDbIdentityStorage.prototype.addIdentityPromise = function
@@ -14875,7 +14875,7 @@ IndexedDbIdentityStorage.prototype.addIdentityPromise = function
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the key exists.
  */
 IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
@@ -14900,7 +14900,7 @@ IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the key is added, or a
  * promise rejected with SecurityException if a key with the keyName already
  * exists.
@@ -14935,7 +14935,7 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the DER Blob, or a Blob with a
  * null pointer if not found.
  */
@@ -14959,7 +14959,7 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the certificate exists.
  */
 IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
@@ -14982,7 +14982,7 @@ IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate is added,
  * or a promise rejected with SecurityException if the certificate is already
  * installed.
@@ -15037,7 +15037,7 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
  * @param {boolean} allowAny If false, only a valid certificate will
  * be returned, otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the requested
  * IdentityCertificate or null if not found.
  */
@@ -15072,7 +15072,7 @@ IndexedDbIdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get the default identity.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the Name of default identity,
  * or a promise rejected with SecurityException if the default identity is not
  * set.
@@ -15093,7 +15093,7 @@ IndexedDbIdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the default key Name, or a
  * promise rejected with SecurityException if the default key name for the
  * identity is not set.
@@ -15122,7 +15122,7 @@ IndexedDbIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = functio
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns the default certificate Name,
  * or a promise rejected with SecurityException if the default certificate name
  * for the key name is not set.
@@ -15154,7 +15154,7 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
  * @param isDefault {boolean} If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the names are added to
  * nameList.
  */
@@ -15184,9 +15184,9 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
     return thisStorage.database.publicKey.each(function(publicKeyEntry) {
       var keyName = new Name(publicKeyEntry.keyNameUri);
       var keyIdentityName = keyName.getPrefix(-1);
-      
+
       if (keyIdentityName.equals(identityName)) {
-        var keyNameIsDefault = 
+        var keyNameIsDefault =
           (defaultKeyName != null && keyName.equals(defaultKeyName));
         if (isDefault && keyNameIsDefault)
           nameList.push(keyName);
@@ -15202,7 +15202,7 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default identity is set.
  */
 IndexedDbIdentityStorage.prototype.setDefaultIdentityPromise = function
@@ -15231,7 +15231,7 @@ IndexedDbIdentityStorage.prototype.setDefaultIdentityPromise = function
  * @param {Name} identityNameCheck (optional) The identity name to check that the
  * keyName contains the same identity name. If an empty name, it is ignored.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default key name is
  * set.
  */
@@ -15262,7 +15262,7 @@ IndexedDbIdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = functio
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the default certificate
  * name is set.
  */
@@ -15286,7 +15286,7 @@ IndexedDbIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = func
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the certificate info is
  * deleted.
  */
@@ -15307,7 +15307,7 @@ IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromise = function
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the public key info is
  * deleted.
  */
@@ -15341,7 +15341,7 @@ IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromise = function
  * Delete an identity and related public keys and certificates.
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which fulfills when the identity info is
  * deleted.
  */
@@ -15403,7 +15403,8 @@ var Blob = require('../../util/blob.js').Blob;
 var KeyType = require('../security-types.js').KeyType;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var SecurityException = require('../security-exception.js').SecurityException;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 
 /**
@@ -15782,8 +15783,8 @@ MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
-var DerNode = require('../../encoding/der/der-node').DerNode;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
  * PrivateKeyStorage is an abstract class which declares methods for working
@@ -16036,9 +16037,9 @@ var KeyType = require('../security-types').KeyType;
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 var DataUtils = require('../../encoding/data-utils.js').DataUtils;
 var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
-var DerNode = require('../../encoding/der/der-node').DerNode;
-var OID = require('../../encoding/oid').OID;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var OID = require('../../encoding/oid.js').OID;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
 var rsaKeygen = null;
 try {
@@ -16141,11 +16142,11 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
 
   if (UseSubtleCrypto() && !useSync) {
     var thisStore = this;
-    
+
     if (params.getKeyType() === KeyType.RSA) {
       var privateKey = null;
       var publicKeyDer = null;
-      
+
       return crypto.subtle.generateKey
         ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
@@ -16388,7 +16389,7 @@ IndexedDbPrivateKeyStorage.prototype.name = "IndexedDbPrivateKeyStorage";
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that fulfills when the pair is generated.
  */
 IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
@@ -16455,7 +16456,7 @@ IndexedDbPrivateKeyStorage.prototype.generateKeyPairPromise = function
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that fulfills when the key pair is deleted.
  */
 IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
@@ -16479,7 +16480,7 @@ IndexedDbPrivateKeyStorage.prototype.deleteKeyPairPromise = function
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that returns the PublicKey.
  */
 IndexedDbPrivateKeyStorage.prototype.getPublicKeyPromise = function
@@ -16504,7 +16505,7 @@ IndexedDbPrivateKeyStorage.prototype.getPublicKeyPromise = function
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise that returns the signature Blob.
  */
 IndexedDbPrivateKeyStorage.prototype.signPromise = function
@@ -16520,7 +16521,7 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
   if (digestAlgorithm != DigestAlgorithm.SHA256)
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbPrivateKeyStorage.sign: Unsupported digest algorithm")));
-  
+
   // TODO: Support non-RSA keys.
   var algo = { name: "RSASSA-PKCS1-v1_5", hash: {name: "SHA-256" }};
 
@@ -16545,7 +16546,7 @@ IndexedDbPrivateKeyStorage.prototype.signPromise = function
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
- * since this only support async code.
+ * since this only supports async code.
  * @return {Promise} A promise which returns true if the key exists.
  */
 IndexedDbPrivateKeyStorage.prototype.doesKeyExistPromise = function
@@ -16619,7 +16620,7 @@ var RsaKeyParams = require('../key-params.js').RsaKeyParams;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
@@ -16690,7 +16691,7 @@ IdentityManager.prototype.createIdentityAndCertificate = function
     }, function(err) {
       if (!(err instanceof SecurityException))
         throw err;
-      
+
       // The key doesn't exist, so leave generateKey true.
       return SyncPromise.resolve();
     });
@@ -16779,7 +16780,7 @@ IdentityManager.prototype.deleteIdentity = function
     if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
       doDelete = false;
-    
+
     return SyncPromise.resolve();
   }, function(err) {
     // There is no default identity to check.
@@ -17013,7 +17014,7 @@ IdentityManager.prototype.setDefaultCertificateForKeyPromise = function
   (certificate, useSync)
 {
   var thisManager = this;
-  
+
   var keyName = certificate.getPublicKeyName();
   return this.identityStorage.doesKeyExistPromise(keyName, useSync)
   .then(function(exists) {
@@ -17220,10 +17221,10 @@ IdentityManager.prototype.getDefaultCertificateName = function
   var thisManager = this;
 
   return SyncPromise.complete(onComplete, onError,
-    this.getDefaultIdentityPromise(useSync)
+    this.identityStorage.getDefaultIdentityPromise(useSync)
     .then(function(identityName) {
       return thisManager.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName, useSync)     ;
+        (identityName, useSync);
     }));
 };
 
@@ -18920,7 +18921,7 @@ var KeyLocator = require('../../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SyncPromise = require('../../util/sync-promise').SyncPromise;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
 
 /**
@@ -19131,7 +19132,7 @@ var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../util/sync-promise').SyncPromise;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -19276,7 +19277,7 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  */
 KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
 {
-  return this.identityManager.getDefaultCertificateName();
+  return this.identityManager.getDefaultCertificateName(onComplete, onError);
 };
 
 /**
@@ -19596,7 +19597,7 @@ KeyChain.prototype.signByIdentity = function
 
   var useSync = !onComplete;
   var thisKeyChain = this;
-  
+
   if (identityName == null)
     identityName = new Name();
 
@@ -20023,7 +20024,7 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * @param {number} maxSuffixComponents
  */
 var Interest = function Interest
-   (nameOrInterest, minSuffixComponents, maxSuffixComponents, 
+   (nameOrInterest, minSuffixComponents, maxSuffixComponents,
     publisherPublicKeyDigest, exclude, childSelector, answerOriginKind, scope,
     interestLifetimeMilliseconds, nonce)
 {
@@ -20625,7 +20626,7 @@ ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; }
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Name = require('./name.js').Name;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
-var Blob = require('./util/blob').Blob;
+var Blob = require('./util/blob.js').Blob;
 
 /**
  * A ControlParameters which holds a Name and other fields for a
@@ -21035,7 +21036,7 @@ InterestFilter.makePattern = function(regexFilter)
 
 var Crypto = require('../crypto.js');
 var Blob = require('../util/blob.js').Blob;
-var Name = require('../name').Name;
+var Name = require('../name.js').Name;
 var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
 var Tlv = require('./tlv/tlv.js').Tlv;
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
@@ -21968,7 +21969,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   }
 
   // Imitate dumpData in examples/node/test-encode-decode-data.js
-  
+
   append("name: " + data.getName().toUri());
   if (data.getContent().size() > 0) {
     append("content (raw): " + data.getContent().buf().toString('binary'));
@@ -22059,7 +22060,7 @@ var Data = require('../data.js').Data;
 var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
-var SyncStateProto = require('./sync-state').SyncStateProto;
+var SyncStateProto = require('./sync-state.js').SyncStateProto;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
@@ -23487,7 +23488,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
- * @param {WireFormat} (optional) A WireFormat object used to encode the message. 
+ * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
@@ -23569,7 +23570,7 @@ Face.prototype.reconnectAndExpressInterest = function
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
     this.readyStatus = Face.OPEN_REQUESTED;
     this.onConnectedCallbacks.push
-      (function() { 
+      (function() {
         thisFace.expressInterestHelper
           (pendingInterestId, interest, onData, onTimeout, wireFormat);
       });
@@ -23598,7 +23599,7 @@ Face.prototype.reconnectAndExpressInterest = function
     if (this.readyStatus === Face.OPEN_REQUESTED)
       // The connection is still opening, so add to the interests to express.
       this.onConnectedCallbacks.push
-        (function() { 
+        (function() {
           thisFace.expressInterestHelper
             (pendingInterestId, interest, onData, onTimeout, wireFormat);
         });
@@ -23769,7 +23770,7 @@ Face.prototype.nodeMakeCommandInterest = function
 };
 
 /**
- * Register prefix with the connected NDN hub and call onInterest when a 
+ * Register prefix with the connected NDN hub and call onInterest when a
  * matching interest is received. To register a prefix with NFD, you must
  * first call setCommandSigningInfo.
  * This uses the form:
@@ -23790,7 +23791,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
  * this does not use it. (The onRegisterSuccess parameter comes after
  * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
- * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for 
+ * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
  * @returns {number} The registered prefix ID which can be used with
@@ -23835,7 +23836,7 @@ Face.prototype.registerPrefix = function
 
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
-  
+
   var registeredPrefixId = this.getNextEntryId();
   var thisFace = this;
   var onConnected = function() {
@@ -23940,7 +23941,7 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
  * @param {WireFormat} wireFormat
  */
 Face.prototype.nfdRegisterPrefix = function
-  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed, 
+  (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
    onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
   var removeRequestIndex = -1;
