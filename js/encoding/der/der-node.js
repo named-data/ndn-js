@@ -471,6 +471,10 @@ DerNode.DerInteger = function DerInteger(integer)
     // JavaScript doesn't distinguish int from float, so round.
     integer = Math.round(integer);
 
+    if (integer < 0)
+      throw new DerEncodingException(new Error
+        ("DerInteger: Negative integers are not currently supported"));
+
     // Convert the integer to bytes the easy/slow way.
     var temp = new DynamicBuffer(10);
     // We encode backwards from the back.
@@ -486,6 +490,13 @@ DerNode.DerInteger = function DerInteger(integer)
         break;
     }
 
+    if (temp.array[temp.array.length - length] >= 0x80) {
+      // Make it a non-negative integer.
+      ++length;
+      temp.ensureLengthFromBack(length);
+      temp.array[temp.array.length - length] = 0;
+    }
+
     this.payloadAppend(temp.slice(temp.array.length - length));
     this.encodeHeader(this.payloadPosition);
   }
@@ -495,6 +506,10 @@ DerNode.DerInteger.prototype.name = "DerInteger";
 
 DerNode.DerInteger.prototype.toVal = function()
 {
+  if (this.payloadPosition > 0 && this.payload.array[0] >= 0x80)
+    throw new DerDecodingException(new Error
+      ("DerInteger: Negative integers are not currently supported"));
+
   var result = 0;
   for (var i = 0; i < this.payloadPosition; ++i) {
     result <<= 8;
