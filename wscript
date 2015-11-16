@@ -74,6 +74,8 @@ def build (bld):
         securityLib = ["contrib/securityLib/core.js",
                        "contrib/securityLib/sha256.js",
                        "contrib/securityLib/base64.js",
+                       "contrib/securityLib/prng4.js",
+                       "contrib/securityLib/rng.js",
                        "contrib/securityLib/rsa.js",
                        "contrib/securityLib/rsa2.js",
                        "contrib/securityLib/crypto-1.0.js",
