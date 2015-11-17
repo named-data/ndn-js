@@ -137,9 +137,9 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
     return SyncPromise.reject(new SecurityException(new Error
       ("Private key already exists")));
 
-  if (UseSubtleCrypto() && !useSync) {
-    var thisStore = this;
+  var thisStore = this;
 
+  if (UseSubtleCrypto() && !useSync) {
     if (params.getKeyType() === KeyType.RSA) {
       var privateKey = null;
       var publicKeyDer = null;
@@ -224,8 +224,8 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
           return SyncPromise.reject(new SecurityException(new Error
             ("Only RSA key generation currently supported")));
 
-        this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
-        this.privateKeyStore[keyName.toUri()] =
+        thisStore.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+        thisStore.privateKeyStore[keyName.toUri()] =
           { keyType: params.getKeyType(), privateKey: privateKeyPem };
       }
 
