@@ -38,6 +38,12 @@ try {
   rsaKeygen = require('rsa-keygen');
 }
 catch (e) {}
+var RSAKey = null;
+try {
+  // This is included in ndn.js for the browser.
+  RSAKey = require().RSAKey;
+}
+catch (e) {}
 
 /**
  * MemoryPrivateKeyStorage class extends PrivateKeyStorage to implement private
@@ -178,33 +184,53 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
         ("Only RSA key generation currently supported")));
   }
   else {
-    var publicKeyDer;
-    var privateKeyPem;
+    return SyncPromise.resolve()
+    .then(function() {
+      if (RSAKey) {
+        // Assume we are in the browser.
+        if (params.getKeyType() === KeyType.RSA) {
+          var rsaKey = new (require().RSAKey)();
+          rsaKey.generate(params.getKeySize(), '010001');
+          thisStore.setKeyPairForKeyName
+            (keyName, params.getKeyType(),
+             PrivateKeyStorage.encodePublicKeyFromRSAKey(rsaKey).buf(),
+             PrivateKeyStorage.encodePkcs1PrivateKeyFromRSAKey(rsaKey).buf());
+        }
+        else
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Only RSA key generation currently supported")));
+      }
+      else {
+        // Assume we are in Node.js.
+        var publicKeyDer;
+        var privateKeyPem;
 
-    if (params.getKeyType() === KeyType.RSA) {
-      if (!rsaKeygen)
-        return SyncPromise.reject(new SecurityException(new Error
-          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+        if (params.getKeyType() === KeyType.RSA) {
+          if (!rsaKeygen)
+            return SyncPromise.reject(new SecurityException(new Error
+              ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
-      var keyPair = rsaKeygen.generate(params.getKeySize());
+          var keyPair = rsaKeygen.generate(params.getKeySize());
 
-      // Get the public key DER from the PEM string.
-      var publicKeyBase64 = keyPair.public_key.toString().replace
-        ("-----BEGIN PUBLIC KEY-----", "").replace
-        ("-----END PUBLIC KEY-----", "");
-      publicKeyDer = new Buffer(publicKeyBase64, 'base64');
+          // Get the public key DER from the PEM string.
+          var publicKeyBase64 = keyPair.public_key.toString().replace
+            ("-----BEGIN PUBLIC KEY-----", "").replace
+            ("-----END PUBLIC KEY-----", "");
+          publicKeyDer = new Buffer(publicKeyBase64, 'base64');
 
-      privateKeyPem = keyPair.private_key.toString();
-    }
-    else
-      return SyncPromise.reject(new SecurityException(new Error
-        ("Only RSA key generation currently supported")));
+          privateKeyPem = keyPair.private_key.toString();
+        }
+        else
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Only RSA key generation currently supported")));
 
-    this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
-    this.privateKeyStore[keyName.toUri()] =
-      { keyType: params.getKeyType(), privateKey: privateKeyPem };
+        this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+        this.privateKeyStore[keyName.toUri()] =
+          { keyType: params.getKeyType(), privateKey: privateKeyPem };
+      }
 
-    return SyncPromise.resolve();
+      return SyncPromise.resolve();
+    });
   }
 };
 

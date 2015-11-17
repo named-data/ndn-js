@@ -9627,7 +9627,9 @@ DerNode.DerBoolean.prototype.toVal = function()
 /**
  * DerInteger extends DerNode to encode an integer value.
  * Create a new DerInteger for the value.
- * @param {number} integer The value to encode.
+ * @param {number|Buffer} integer The value to encode. If integer is a Buffer
+ * byte array of a positive integer, you must ensure that the first byte is less
+ * than 0x7f.
  */
 DerNode.DerInteger = function DerInteger(integer)
 {
@@ -9635,25 +9637,49 @@ DerNode.DerInteger = function DerInteger(integer)
   DerNode.call(this, DerNodeType.Integer);
 
   if (integer != undefined) {
-    // JavaScript doesn't distinguish int from float, so round.
-    integer = Math.round(integer);
+    if (Buffer.isBuffer(integer)) {
+      if (integer.length > 0 && integer[0] >= 0x80)
+        throw new DerEncodingException(new Error
+          ("DerInteger: Negative integers are not currently supported"));
 
-    // Convert the integer to bytes the easy/slow way.
-    var temp = new DynamicBuffer(10);
-    // We encode backwards from the back.
-    var length = 0;
-    while (true) {
-      ++length;
-      temp.ensureLengthFromBack(length);
-      temp.array[temp.array.length - length] = integer & 0xff;
-      integer >>= 8;
-
-      if (integer <= 0)
-        // We check for 0 at the end so we encode one byte if it is 0.
-        break;
+      if (integer.length == 0)
+        this.payloadAppend(new Buffer([0]));
+      else
+        this.payloadAppend(integer);
     }
+    else {
+      // JavaScript doesn't distinguish int from float, so round.
+      integer = Math.round(integer);
 
-    this.payloadAppend(temp.slice(temp.array.length - length));
+      if (integer < 0)
+        throw new DerEncodingException(new Error
+          ("DerInteger: Negative integers are not currently supported"));
+
+      // Convert the integer to bytes the easy/slow way.
+      var temp = new DynamicBuffer(10);
+      // We encode backwards from the back.
+      var length = 0;
+      while (true) {
+        ++length;
+        temp.ensureLengthFromBack(length);
+        temp.array[temp.array.length - length] = integer & 0xff;
+        integer >>= 8;
+
+        if (integer <= 0)
+          // We check for 0 at the end so we encode one byte if it is 0.
+          break;
+      }
+
+      if (temp.array[temp.array.length - length] >= 0x80) {
+        // Make it a non-negative integer.
+        ++length;
+        temp.ensureLengthFromBack(length);
+        temp.array[temp.array.length - length] = 0;
+      }
+
+      this.payloadAppend(temp.slice(temp.array.length - length));
+    }
+    
     this.encodeHeader(this.payloadPosition);
   }
 };
@@ -9662,6 +9688,10 @@ DerNode.DerInteger.prototype.name = "DerInteger";
 
 DerNode.DerInteger.prototype.toVal = function()
 {
+  if (this.payloadPosition > 0 && this.payload.array[0] >= 0x80)
+    throw new DerDecodingException(new Error
+      ("DerInteger: Negative integers are not currently supported"));
+
   var result = 0;
   for (var i = 0; i < this.payloadPosition; ++i) {
     result <<= 8;
@@ -16122,6 +16152,80 @@ PrivateKeyStorage.encodePkcs8PrivateKey = function
   return result.encode();
 };
 
+/**
+ * Encode the RSAKey private key as a PKCS #1 private key.
+ * @param {RSAKey} rsaKey The RSAKey private key.
+ * @return {Blob} The PKCS #1 private key DER.
+ */
+PrivateKeyStorage.encodePkcs1PrivateKeyFromRSAKey = function(rsaKey)
+{
+  // Imitate KJUR getEncryptedPKCS5PEMFromRSAKey.
+  var result = new DerNode.DerSequence();
+
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.n)));
+  result.addChild(new DerNode.DerInteger(rsaKey.e));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.d)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.p)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.q)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.dmp1)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.dmq1)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.coeff)));
+
+  return result.encode();
+};
+
+/**
+ * Encode the public key values in the RSAKey private key as a
+ * SubjectPublicKeyInfo.
+ * @param {RSAKey} rsaKey The RSAKey private key with the public key values.
+ * @return {Blob} The SubjectPublicKeyInfo DER.
+ */
+PrivateKeyStorage.encodePublicKeyFromRSAKey = function(rsaKey)
+{
+  var rsaPublicKey = new DerNode.DerSequence();
+
+  rsaPublicKey.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.n)));
+  rsaPublicKey.addChild(new DerNode.DerInteger(rsaKey.e));
+
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild
+    (new DerNode.DerOid(new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID)));
+  algorithmIdentifier.addChild(new DerNode.DerNull());
+
+  var result = new DerNode.DerSequence();
+
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerBitString(rsaPublicKey.encode().buf(), 0));
+
+  return result.encode();
+};
+
+/**
+ * Convert a BigInteger to a Buffer.
+ * @param {BigInteger} bigInteger The BigInteger.
+ * @return {Buffer} The Buffer.
+ */
+PrivateKeyStorage.bigIntegerToBuffer = function(bigInteger)
+{
+  // Imitate KJUR.asn1.ASN1Util.bigIntToMinTwosComplementsHex.
+  var hex = bigInteger.toString(16);
+  if (hex.substr(0, 1) == "-")
+    throw new Error
+      ("PrivateKeyStorage.bigIntegerToBuffer: Negative integers are not currently supported");
+
+  if (hex.length % 2 == 1)
+    // Odd number of characters.
+    hex = "0" + hex;
+  else {
+    if (! hex.match(/^[0-7]/))
+      // The first byte is >= 0x80, so prepend a zero to keep it positive.
+      hex = "00" + hex;
+  }
+
+  return new Buffer(hex, 'hex');
+};
+
 PrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
 /**
@@ -16162,6 +16266,12 @@ var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
   rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
+var RSAKey = null;
+try {
+  // This is included in ndn.js for the browser.
+  RSAKey = require().RSAKey;
 }
 catch (e) {}
 
@@ -16257,9 +16367,9 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
     return SyncPromise.reject(new SecurityException(new Error
       ("Private key already exists")));
 
-  if (UseSubtleCrypto() && !useSync) {
-    var thisStore = this;
+  var thisStore = this;
 
+  if (UseSubtleCrypto() && !useSync) {
     if (params.getKeyType() === KeyType.RSA) {
       var privateKey = null;
       var publicKeyDer = null;
@@ -16304,33 +16414,53 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
         ("Only RSA key generation currently supported")));
   }
   else {
-    var publicKeyDer;
-    var privateKeyPem;
+    return SyncPromise.resolve()
+    .then(function() {
+      if (RSAKey) {
+        // Assume we are in the browser.
+        if (params.getKeyType() === KeyType.RSA) {
+          var rsaKey = new (require().RSAKey)();
+          rsaKey.generate(params.getKeySize(), '010001');
+          thisStore.setKeyPairForKeyName
+            (keyName, params.getKeyType(),
+             PrivateKeyStorage.encodePublicKeyFromRSAKey(rsaKey).buf(),
+             PrivateKeyStorage.encodePkcs1PrivateKeyFromRSAKey(rsaKey).buf());
+        }
+        else
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Only RSA key generation currently supported")));
+      }
+      else {
+        // Assume we are in Node.js.
+        var publicKeyDer;
+        var privateKeyPem;
 
-    if (params.getKeyType() === KeyType.RSA) {
-      if (!rsaKeygen)
-        return SyncPromise.reject(new SecurityException(new Error
-          ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
+        if (params.getKeyType() === KeyType.RSA) {
+          if (!rsaKeygen)
+            return SyncPromise.reject(new SecurityException(new Error
+              ("Need to install rsa-keygen: sudo npm install rsa-keygen")));
 
-      var keyPair = rsaKeygen.generate(params.getKeySize());
+          var keyPair = rsaKeygen.generate(params.getKeySize());
 
-      // Get the public key DER from the PEM string.
-      var publicKeyBase64 = keyPair.public_key.toString().replace
-        ("-----BEGIN PUBLIC KEY-----", "").replace
-        ("-----END PUBLIC KEY-----", "");
-      publicKeyDer = new Buffer(publicKeyBase64, 'base64');
+          // Get the public key DER from the PEM string.
+          var publicKeyBase64 = keyPair.public_key.toString().replace
+            ("-----BEGIN PUBLIC KEY-----", "").replace
+            ("-----END PUBLIC KEY-----", "");
+          publicKeyDer = new Buffer(publicKeyBase64, 'base64');
 
-      privateKeyPem = keyPair.private_key.toString();
-    }
-    else
-      return SyncPromise.reject(new SecurityException(new Error
-        ("Only RSA key generation currently supported")));
+          privateKeyPem = keyPair.private_key.toString();
+        }
+        else
+          return SyncPromise.reject(new SecurityException(new Error
+            ("Only RSA key generation currently supported")));
 
-    this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
-    this.privateKeyStore[keyName.toUri()] =
-      { keyType: params.getKeyType(), privateKey: privateKeyPem };
+        this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+        this.privateKeyStore[keyName.toUri()] =
+          { keyType: params.getKeyType(), privateKey: privateKeyPem };
+      }
 
-    return SyncPromise.resolve();
+      return SyncPromise.resolve();
+    });
   }
 };
 
