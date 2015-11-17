@@ -240,5 +240,79 @@ PrivateKeyStorage.encodePkcs8PrivateKey = function
   return result.encode();
 };
 
+/**
+ * Encode the RSAKey private key as a PKCS #1 private key.
+ * @param {RSAKey} rsaKey The RSAKey private key.
+ * @return {Blob} The PKCS #1 private key DER.
+ */
+PrivateKeyStorage.encodePkcs1PrivateKeyFromRSAKey = function(rsaKey)
+{
+  // Imitate KJUR getEncryptedPKCS5PEMFromRSAKey.
+  var result = new DerNode.DerSequence();
+
+  result.addChild(new DerNode.DerInteger(0));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.n)));
+  result.addChild(new DerNode.DerInteger(rsaKey.e));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.d)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.p)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.q)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.dmp1)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.dmq1)));
+  result.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.coeff)));
+
+  return result.encode();
+};
+
+/**
+ * Encode the public key values in the RSAKey private key as a
+ * SubjectPublicKeyInfo.
+ * @param {RSAKey} rsaKey The RSAKey private key with the public key values.
+ * @return {Blob} The SubjectPublicKeyInfo DER.
+ */
+PrivateKeyStorage.encodePublicKeyFromRSAKey = function(rsaKey)
+{
+  var rsaPublicKey = new DerNode.DerSequence();
+
+  rsaPublicKey.addChild(new DerNode.DerInteger(PrivateKeyStorage.bigIntegerToBuffer(rsaKey.n)));
+  rsaPublicKey.addChild(new DerNode.DerInteger(rsaKey.e));
+
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild
+    (new DerNode.DerOid(new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID)));
+  algorithmIdentifier.addChild(new DerNode.DerNull());
+
+  var result = new DerNode.DerSequence();
+
+  result.addChild(algorithmIdentifier);
+  result.addChild(new DerNode.DerBitString(rsaPublicKey.encode().buf(), 0));
+
+  return result.encode();
+};
+
+/**
+ * Convert a BigInteger to a Buffer.
+ * @param {BigInteger} bigInteger The BigInteger.
+ * @return {Buffer} The Buffer.
+ */
+PrivateKeyStorage.bigIntegerToBuffer = function(bigInteger)
+{
+  // Imitate KJUR.asn1.ASN1Util.bigIntToMinTwosComplementsHex.
+  var hex = bigInteger.toString(16);
+  if (hex.substr(0, 1) == "-")
+    throw new Error
+      ("PrivateKeyStorage.bigIntegerToBuffer: Negative integers are not currently supported");
+
+  if (hex.length % 2 == 1)
+    // Odd number of characters.
+    hex = "0" + hex;
+  else {
+    if (! hex.match(/^[0-7]/))
+      // The first byte is >= 0x80, so prepend a zero to keep it positive.
+      hex = "00" + hex;
+  }
+
+  return new Buffer(hex, 'hex');
+};
+
 PrivateKeyStorage.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
 PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
