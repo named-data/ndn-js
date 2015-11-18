@@ -280,10 +280,9 @@ IdentityManager.prototype.getDefaultIdentity = function(onComplete, onError)
 /**
  * Generate a pair of RSA keys for the specified identity.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
- * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
- * @param {number} keySize (optional) The size of the key. If omitted, use a
- * default secure key size.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
  * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPair = function
@@ -355,18 +354,45 @@ IdentityManager.prototype.getDefaultKeyNameForIdentity = function
  * Generate a pair of RSA keys for the specified identity and set it as default
  * key for the identity.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
- * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
- * @param {number} keySize (optional) The size of the key. If omitted, use a
- * default secure key size.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which returns the generated key name.
+ */
+IdentityManager.prototype.generateRSAKeyPairAsDefaultPromise = function
+  (identityName, isKsk, keySize, useSync)
+{
+  var newKeyName;
+  var thisManager = this;
+  return this.generateKeyPairPromise(identityName, isKsk, new RsaKeyParams(keySize))
+  .then(function(localKeyName) {
+    newKeyName = localKeyName;
+
+    return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+      (newKeyName);
+  })
+  .then(function() {
+    return SyncPromise.resolve(newKeyName);
+  });
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity and set it as default
+ * key for the identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
  * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
-  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName);
-  return newKeyName;
+  return SyncPromise.getValue
+    (this.generateRSAKeyPairAsDefaultPromise(identityName, isKsk, keySize, true));
 };
 
 /**
