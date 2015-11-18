@@ -188,6 +188,12 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
+  keySize = (typeof isKsk === "boolean") ? isKsk : keySize;
+  isKsk = (typeof isKsk === "boolean") ? isKsk : false;
+
+  if (!keySize)
+    keySize = 2048;
+
   return this.identityManager.generateRSAKeyPair(identityName, isKsk, keySize);
 };
 
