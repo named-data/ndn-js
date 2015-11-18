@@ -42,6 +42,10 @@ try {
  */
 var BasicIdentityStorage = function BasicIdentityStorage(databaseFilePath)
 {
+  if (!sqlite3)
+    throw new SecurityException(new Error
+      ("Need to install sqlite3: sudo npm install sqlite3"));
+      
   // Call the base constructor.
   IdentityStorage.call(this);
 
