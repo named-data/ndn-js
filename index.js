@@ -39,6 +39,7 @@ exports.Certificate = require('./js/security/certificate/certificate.js').Certif
 exports.IdentityCertificate = require('./js/security/certificate/identity-certificate.js').IdentityCertificate;
 exports.PublicKey = require('./js/security/certificate/public-key.js').PublicKey;
 exports.IdentityStorage = require('./js/security/identity/identity-storage.js').IdentityStorage;
+exports.BasicIdentityStorage = require('./js/security/identity/basic-identity-storage.js').BasicIdentityStorage;
 exports.MemoryIdentityStorage = require('./js/security/identity/memory-identity-storage.js').MemoryIdentityStorage;
 exports.MemoryPrivateKeyStorage = require('./js/security/identity/memory-private-key-storage.js').MemoryPrivateKeyStorage;
 exports.FilePrivateKeyStorage = require('./js/security/identity/file-private-key-storage.js').FilePrivateKeyStorage;
