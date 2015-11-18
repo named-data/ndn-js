@@ -678,14 +678,15 @@ IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
 
 /**
  * Delete an identity and related public keys and certificates.
- * @param {Name} identity The identity name.
+ * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the identity info
  * is deleted.
  */
-IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync)
+IdentityStorage.prototype.deleteIdentityInfoPromise = function
+  (identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.deleteIdentityInfoPromise is not implemented"));
@@ -693,14 +694,14 @@ IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync
 
 /**
  * Delete an identity and related public keys and certificates.
- * @param {Name} identity The identity name.
+ * @param {Name} identityName The identity name.
  * @throws {Error} If deleteIdentityInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
-IdentityStorage.prototype.deleteIdentityInfo = function(identity)
+IdentityStorage.prototype.deleteIdentityInfo = function(identityName)
 {
   return SyncPromise.getValue
-    (this.deleteIdentityInfoPromise(identity, true));
+    (this.deleteIdentityInfoPromise(identityName, true));
 };
 
 // Track the lastTimestamp so that each timestamp is unique.
