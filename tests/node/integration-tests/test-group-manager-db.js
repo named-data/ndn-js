@@ -159,7 +159,7 @@ describe ("TestGroupManagerDb", function() {
       // Get an error when adding a schedule with an existing name.
       return database.addSchedulePromise("boelter-time", schedule)
       .then(function() {
-        assert.fail("Expected an error adding a duplicate schedule");
+        assert.fail('', '', "Expected an error adding a duplicate schedule");
       }, function(err) {
         // Got the expected error.
         return Promise.resolve();
@@ -185,7 +185,7 @@ describe ("TestGroupManagerDb", function() {
       // Get an error when adding a member with a non-existing schedule name.
       return database.addMemberPromise("false-time", name5, keyBlob)
       .then(function() {
-        assert.fail("Expected an error adding a member with non-existing schedule");
+        assert.fail('', '', "Expected an error adding a member with non-existing schedule");
       }, function(err) {
         // Got the expected error.
         return Promise.resolve();
@@ -199,7 +199,7 @@ describe ("TestGroupManagerDb", function() {
       // Get an error when adding a member having an existing identity.
       return database.addMemberPromise("work-time", name5, keyBlob)
       .then(function() {
-        assert.fail("Expected an error adding a member with an existing identity");
+        assert.fail('', '', "Expected an error adding a member with an existing identity");
       }, function(err) {
         // Got the expected error.
         return Promise.resolve();
@@ -253,7 +253,7 @@ describe ("TestGroupManagerDb", function() {
       // Get an error when when there is no such schedule in the database.
       return database.getSchedulePromise("work-time-11")
       .then(function() {
-        assert.fail("Expected an error getting a non-existing schedule");
+        assert.fail('', '', "Expected an error getting a non-existing schedule");
       }, function(err) {
         // Got the expected error.
         return Promise.resolve();
@@ -370,7 +370,7 @@ describe ("TestGroupManagerDb", function() {
         // No error, as expected.
         return Promise.resolve();
       }, function(err) {
-        assert.fail("Unexpected error deleting a non-existing member: " + err);
+        assert.fail('', '', "Unexpected error deleting a non-existing member: " + err);
       });
     })
     .then(function() {
@@ -397,7 +397,7 @@ describe ("TestGroupManagerDb", function() {
         // No error, as expected.
         return Promise.resolve();
       }, function(err) {
-        assert.fail("Unexpected error deleting a non-existing schedule: " + err);
+        assert.fail('', '', "Unexpected error deleting a non-existing schedule: " + err);
       });
     })
     // When done is called, Mocha displays errors from assert.ok.
