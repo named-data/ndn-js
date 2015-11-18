@@ -230,7 +230,7 @@ IdentityManager.prototype.deleteIdentity = function
     });
   });
 
-  return SyncPromise.complete(onComplete, mainPromise, onError);
+  return SyncPromise.complete(onComplete, onError, mainPromise);
 };
 
 /**
