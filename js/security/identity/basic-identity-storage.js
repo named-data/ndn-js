@@ -20,16 +20,12 @@
 
 var Name = require('../../name.js').Name;
 var Blob = require('../../util/blob.js').Blob;
+var Sqlite3Promise = require('../../util/sqlite3-promise.js').Sqlite3Promise;
 var KeyLocator = require('../../key-locator.js').KeyLocator;
 var SecurityException = require('../security-exception.js').SecurityException;
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 var path = require('path');
-var sqlite3 = null;
-try {
-  // This should be installed with: sudo npm install sqlite3
-  sqlite3 = require('sqlite3').verbose();
-} catch (e) {}
 
 /**
  * BasicIdentityStorage extends IdentityStorage to implement basic storage of
@@ -42,16 +38,13 @@ try {
  */
 var BasicIdentityStorage = function BasicIdentityStorage(databaseFilePath)
 {
-  if (!sqlite3)
-    throw new SecurityException(new Error
-      ("Need to install sqlite3: sudo npm install sqlite3"));
-      
   // Call the base constructor.
   IdentityStorage.call(this);
 
-  this.databaseFilePath_ = databaseFilePath || path.join
+  var databaseFilePath_= databaseFilePath || path.join
     (BasicIdentityStorage.getUserHomePath(), ".ndn", "ndnsec-public-info.db");
-  this.database_ = null;
+  this.database_ = new Sqlite3Promise
+    (databaseFilePath, BasicIdentityStorage.initializeDatabasePromise_);
 };
 
 BasicIdentityStorage.prototype = new IdentityStorage();
@@ -73,7 +66,7 @@ BasicIdentityStorage.prototype.doesIdentityExistPromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.doesIdentityExistPromise is only supported for async")));
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT count(*) FROM Identity WHERE identity_name=?", identityName.toUri())
   .then(function(row) {
     if (row["count(*)"] > 0)
@@ -103,7 +96,7 @@ BasicIdentityStorage.prototype.addIdentityPromise = function(identityName, useSy
     if (exists)
       return Promise.resolve();
 
-    return thisStorage.runPromise_
+    return thisStorage.database_.runPromise
       ("INSERT INTO Identity (identity_name) VALUES(?)", identityUri);
   });
 };
@@ -124,7 +117,7 @@ BasicIdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
   var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT count(*) FROM Key WHERE identity_name=? AND key_identifier=?",
      [identityName.toUri(), keyId])
   .then(function(row) {
@@ -173,7 +166,7 @@ BasicIdentityStorage.prototype.addKeyPromise = function
       var keyId = keyName.get(-1).toEscapedString();
       var keyBuffer = publicKeyDer.buf();
       
-      return thisStorage.runPromise_
+      return thisStorage.database_.runPromise
         ("INSERT INTO Key (identity_name, key_identifier, key_type, public_key) VALUES(?,?,?,?)",
          [identityUri, keyId, keyType, keyBuffer]);
     });
@@ -203,7 +196,7 @@ BasicIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
     var identityUri = keyName.getPrefix(-1).toUri();
     var keyId = keyName.get(-1).toEscapedString();
 
-    return thisStorage.getPromise_
+    return thisStorage.database_.getPromise
       ("SELECT public_key FROM Key WHERE identity_name=? AND key_identifier=?",
        [identityUri, keyId])
     .then(function(row) {
@@ -226,7 +219,7 @@ BasicIdentityStorage.prototype.doesCertificateExistPromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.doesCertificateExistPromise is only supported for async")));
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT count(*) FROM Certificate WHERE cert_name=?", certificateName.toUri())
   .then(function(row) {
     if (row["count(*)"] > 0)
@@ -290,7 +283,7 @@ BasicIdentityStorage.prototype.addCertificatePromise = function(certificate, use
         var notAfter = Math.floor(certificate.getNotAfter() / 1000.0);
         var encodedCert = certificate.wireEncode().buf();
 
-        return thisStorage.runPromise_
+        return thisStorage.database_.runPromise
           ("INSERT INTO Certificate (cert_name, cert_issuer, identity_name, key_identifier, not_before, not_after, certificate_data) " +
            "VALUES (?,?,?,?,?,?,?)",
            [certificateName.toUri(), signerName.toUri(), identity.toUri(), keyId,
@@ -327,7 +320,7 @@ BasicIdentityStorage.prototype.getCertificatePromise = function
       return Promise.reject(new Error
         ("BasicIdentityStorage.getCertificate for not allowAny is not implemented"));
 
-    return thisStorage.getPromise_
+    return thisStorage.database_.getPromise
       ("SELECT certificate_data FROM Certificate WHERE cert_name=?",
        certificateName.toUri())
     .then(function(row) {
@@ -355,7 +348,7 @@ BasicIdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.getDefaultIdentityPromise is only supported for async")));
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT identity_name FROM Identity WHERE default_identity=1")
   .then(function(row) {
     if (row)
@@ -382,7 +375,7 @@ BasicIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.getDefaultKeyNameForIdentityPromise is only supported for async")));
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT key_identifier FROM Key WHERE identity_name=? AND default_key=1",
      identityName.toUri())
   .then(function(row) {
@@ -413,7 +406,7 @@ BasicIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
   var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
-  return this.getPromise_
+  return this.database_.getPromise
     ("SELECT cert_name FROM Certificate WHERE identity_name=? AND key_identifier=? AND default_cert=1",
      [identityName.toUri(), keyId])
   .then(function(row) {
@@ -449,9 +442,9 @@ BasicIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
   else
     query = "SELECT key_identifier FROM Key WHERE default_key=0 and identity_name=?";
 
-  return this.eachPromise_(query, identityName.toUri(), function(err, row) {
-      nameList.push(new Name(identityName).append(row.key_identifier))
-    });
+  return this.database_.eachPromise(query, identityName.toUri(), function(err, row) {
+    nameList.push(new Name(identityName).append(row.key_identifier))
+  });
 };
 
 /**
@@ -472,11 +465,11 @@ BasicIdentityStorage.prototype.setDefaultIdentityPromise = function
   var thisStorage = this;
 
   // Reset the previous default identity.
-  return this.runPromise_
+  return this.database_.runPromise
     ("UPDATE Identity SET default_identity=0 WHERE default_identity=1")
   .then(function() {
     // Set the current default identity.
-    return thisStorage.runPromise_
+    return thisStorage.database_.runPromise
       ("UPDATE Identity SET default_identity=1 WHERE identity_name=?",
        identityName.toUri());
   });
@@ -514,12 +507,12 @@ BasicIdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
 
   // Reset the previous default key.
   var identityUri = identityName.toUri();
-  return this.runPromise_
+  return this.database_.runPromise
     ("UPDATE Key SET default_key=0 WHERE default_key=1 and identity_name=?",
      identityUri)
   .then(function() {
     // Set the current default key.
-    return thisStorage.runPromise_
+    return thisStorage.database_.runPromise
       ("UPDATE Key SET default_key=1 WHERE identity_name=? AND key_identifier=?",
        [identityUri, keyId]);
   });
@@ -547,12 +540,12 @@ BasicIdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
 
   // Reset the previous default certificate.
   var identityUri = identityName.toUri();
-  return this.runPromise_
+  return this.database_.runPromise
     ("UPDATE Certificate SET default_cert=0 WHERE default_cert=1 AND identity_name=? AND key_identifier=?",
      [identityUri, keyId])
   .then(function() {
     // Set the current default certificate.
-    return thisStorage.runPromise_
+    return thisStorage.database_.runPromise
       ("UPDATE Certificate SET default_cert=1 WHERE identity_name=? AND key_identifier=? AND cert_name=?",
        [identityUri, keyId, certificateName.toUri()]);
   });
@@ -580,7 +573,7 @@ BasicIdentityStorage.prototype.deleteCertificateInfoPromise = function
   if (certificateName.size() == 0)
     return
 
-  return this.runPromise_
+  return this.database_.runPromise
     ("DELETE FROM Certificate WHERE cert_name=?", certificateName.toUri());
 };
 
@@ -592,7 +585,8 @@ BasicIdentityStorage.prototype.deleteCertificateInfoPromise = function
  * @return {Promise} A promise which fulfills when the public key info is
  * deleted.
  */
-BasicIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, useSync)
+BasicIdentityStorage.prototype.deletePublicKeyInfoPromise = function
+  (keyName, useSync)
 {
   if (useSync)
     return Promise.reject(new SecurityException(new Error
@@ -605,11 +599,11 @@ BasicIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, us
   var keyId = keyName.get(-1).toEscapedString();
   var identityName = keyName.getPrefix(-1);
 
-  return this.runPromise_
+  return this.database_.runPromise
     ("DELETE FROM Certificate WHERE identity_name=? AND key_identifier=?",
      [identityName.toUri(), keyId])
   .then(function() {
-    return thisStorage.runPromise_
+    return thisStorage.database_.runPromise
       ("DELETE FROM Key WHERE identity_name=? and key_identifier=?",
        [identityName.toUri(), keyId]);
   });
@@ -632,13 +626,15 @@ BasicIdentityStorage.prototype.deleteIdentityInfoPromise = function
   var thisStorage = this;
   var identity = identityName.toUri();
 
-  return this.runPromise_
+  return this.database_.runPromise
     ("DELETE FROM Certificate WHERE identity_name=?", identity)
   .then(function() {
-    return thisStorage.runPromise_("DELETE FROM Key WHERE identity_name=?", identity);
+    return thisStorage.database_.runPromise
+      ("DELETE FROM Key WHERE identity_name=?", identity);
   })
   .then(function() {
-    return thisStorage.runPromise_("DELETE FROM Identity WHERE identity_name=?", identity);
+    return thisStorage.database_.runPromise
+      ("DELETE FROM Identity WHERE identity_name=?", identity);
   });
 };
 
@@ -650,212 +646,51 @@ BasicIdentityStorage.getUserHomePath = function() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
 };
 
-/**
- * First call establishDatabasePromise_, then call
- * this.database_.run(sql, params) to execute the SQL command.
- * @param {string} sql The SQL command to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the command.
- * @return {Promise} A promise that fulfills when the SQL command is complete,
- * or that is rejected with SecurityException if there is a database error.
- */
-BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
+BasicIdentityStorage.initializeDatabasePromise_ = function(database)
 {
-  if (!params)
-    params = [];
-
-  var thisStorage = this;
-  return this.establishDatabasePromise_()
-  .then(function() {
-    return thisStorage.runWithoutEstablishPromise_(sql, params);
-  });
-};
-
-/**
- * First call establishDatabasePromise_, then call
- * this.database_.get(sql, params) to execute the SQL query and get a single row.
- * @param {string} sql The SQL query to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the query.
- * @return {Promise} A promise that returns the query result, or that is rejected
- * with SecurityException if there is a database error. The query result is an
- * object containing the values for the first matching row where the object
- * property names correspond to the column names. If no rows are found, the
- * query result is the undefined value.
- */
-BasicIdentityStorage.prototype.getPromise_ = function(sql, params)
-{
-  if (!params)
-    params = [];
-
-  var thisStorage = this;
-  return this.establishDatabasePromise_()
-  .then(function() {
-    return thisStorage.getWithoutEstablishPromise_(sql, params);
-  });
-};
-
-/**
- * First call establishDatabasePromise_, then call
- * this.database_.each(sql, params, onRow) to execute the SQL query.
- * @param {string} sql The SQL command to query.
- * @param {object|Array<object>} params The single parameter or array of
- * parameters for the query. If there are no parameters, pass [].
- * @param {function} onRow For each matched row, this calls onRow(err, row)
- * where row is an object containing the values for the row where the object
- * property names correspond to the column names. If no rows match the query,
- * this is not called.
- * @return {Promise} A promise that fulfills when the SQL query is complete,
- * or that is rejected with SecurityException if there is a database error.
- */
-BasicIdentityStorage.prototype.eachPromise_ = function(sql, params, onRow)
-{
-  if (!params)
-    params = [];
-
-  var thisStorage = this;
-  return this.establishDatabasePromise_()
-  .then(function() {
-    return new Promise(function(resolve, reject) {
-      thisStorage.database_.each(sql, params, onRow, function(err) {
-        if (err)
-          reject(new SecurityException(new Error
-            ("BasicIdentityStorage: SQLite error: " + err)));
-        else
-          resolve();
-      });
-    });
-  });
-};
-
-/**
- * Call this.database_.run(sql, params) to execute the SQL command. This should
- * only be called by helper methods which have already called
- * establishDatabasePromise_; normally you would just call runPromise_.
- * @param {string} sql The SQL command to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the command.
- * @return {Promise} A promise that fulfills when the SQL command is complete,
- * or that is rejected with SecurityException if there is a database error.
- */
-BasicIdentityStorage.prototype.runWithoutEstablishPromise_ = function(sql, params)
-{
-  if (!params)
-    params = [];
-
-  var thisStorage = this;
-  return new Promise(function(resolve, reject) {
-    thisStorage.database_.run(sql, params, function(err) {
-      if (err)
-        reject(new SecurityException(new Error
-          ("BasicIdentityStorage: SQLite error: " + err)));
-      else
-        resolve();
-    });
-  });
-};
-
-/**
- * Call this.database_.get(sql, params) to execute the SQL query and get a
- * single row. This should only be called by helper methods which have already
- * called establishDatabasePromise_; normally you would just call getPromise_.
- * @param {string} sql The SQL query to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the query.
- * @return {Promise} A promise that returns the query result, or that is rejected
- * with SecurityException if there is a database error. The query result is an
- * object containing the values for the first matching row where the object
- * property names correspond to the column names. If no rows are found, the
- * query result is the undefined value.
- */
-BasicIdentityStorage.prototype.getWithoutEstablishPromise_ = function(sql, params)
-{
-  if (!params)
-    params = [];
-
-  var thisStorage = this;
-  return new Promise(function(resolve, reject) {
-    thisStorage.database_.get(sql, params, function(err, row) {
-      if (err)
-        reject(new SecurityException(new Error
-          ("BasicIdentityStorage: SQLite error: " + err)));
-      else
-        resolve(row);
-    });
-  });
-};
-
-/**
- * If this.database_ is still null, set up this.database_ and create the
- * database tables if they don't exist. Each method which uses the database must
- * call this first. We can't do this in the constructor because it is async.
- * @return {Promise} A promise that fulfills when this.database_ is set up.
- */
-BasicIdentityStorage.prototype.establishDatabasePromise_ = function()
-{
-  if (this.database_ != null)
-    // Already set up.
-    return Promise.resolve();
-
-  try {
-    this.database_ = new sqlite3.Database(this.databaseFilePath_);
-  } catch (ex) {
-    return Promise.reject(new SecurityException(new Error
-      ("BasicIdentityStorage: Error creating sqlite3 " + ex.message)));
-  }
-
-  var thisStorage = this;
-
   // Check if the ID table exists.
-  return this.getWithoutEstablishPromise_
+  return database.getPromise
     ("SELECT name FROM sqlite_master WHERE type='table' And name='Identity'")
   .then(function(row) {
     if (row)
       return Promise.resolve();
     else {
-      return thisStorage.runWithoutEstablishPromise_
-        (BasicIdentityStorage.INIT_ID_TABLE1)
+      return database.runPromise(BasicIdentityStorage.INIT_ID_TABLE1)
       .then(function() {
-        return thisStorage.runWithoutEstablishPromise_
-          (BasicIdentityStorage.INIT_ID_TABLE2);
+        return database.runPromise(BasicIdentityStorage.INIT_ID_TABLE2);
       });
     }
   })
   .then(function() {
     // Check if the Key table exists.
-    return thisStorage.getWithoutEstablishPromise_
+    return database.getPromise
       ("SELECT name FROM sqlite_master WHERE type='table' And name='Key'");
   })
   .then(function(row) {
     if (row)
       return Promise.resolve();
     else {
-      return thisStorage.runWithoutEstablishPromise_
-        (BasicIdentityStorage.INIT_KEY_TABLE1)
+      return database.runPromise(BasicIdentityStorage.INIT_KEY_TABLE1)
       .then(function() {
-        return thisStorage.runWithoutEstablishPromise_
-          (BasicIdentityStorage.INIT_KEY_TABLE2);
+        return database.runPromise(BasicIdentityStorage.INIT_KEY_TABLE2);
       });
     }
   })
   .then(function() {
     // Check if the Certificate table exists.
-    return thisStorage.getWithoutEstablishPromise_
+    return database.getPromise
       ("SELECT name FROM sqlite_master WHERE type='table' And name='Certificate'");
   })
   .then(function(row) {
     if (row)
       return Promise.resolve();
     else {
-      return thisStorage.runWithoutEstablishPromise_
-        (BasicIdentityStorage.INIT_CERT_TABLE1)
+      return database.runPromise(BasicIdentityStorage.INIT_CERT_TABLE1)
       .then(function() {
-        return thisStorage.runWithoutEstablishPromise_
-          (BasicIdentityStorage.INIT_CERT_TABLE2);
+        return database.runPromise(BasicIdentityStorage.INIT_CERT_TABLE2);
       })
       .then(function() {
-        return thisStorage.runWithoutEstablishPromise_
-          (BasicIdentityStorage.INIT_CERT_TABLE3);
+        return database.runPromise(BasicIdentityStorage.INIT_CERT_TABLE3);
       });
     }
   });
