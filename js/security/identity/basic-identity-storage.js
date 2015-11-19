@@ -649,7 +649,9 @@ BasicIdentityStorage.getUserHomePath = function() {
 BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
 {
   return this.database_.runPromise(sql, params)
-  .catch(function(error) { throw new SecurityException(error); } );
+  .catch(function(error) { 
+    return Promise.reject(new SecurityException(error));
+  });
 };
 
 /**
@@ -658,7 +660,9 @@ BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
 BasicIdentityStorage.prototype.getPromise_ = function(sql, params)
 {
   return this.database_.getPromise(sql, params)
-  .catch(function(error) { throw new SecurityException(error); } );
+  .catch(function(error) { 
+    return Promise.reject(new SecurityException(error));
+  });
 };
 
 /**
@@ -667,7 +671,9 @@ BasicIdentityStorage.prototype.getPromise_ = function(sql, params)
 BasicIdentityStorage.prototype.eachPromise_ = function(sql, params, onRow)
 {
   return this.database_.eachPromise(sql, params, onRow)
-  .catch(function(error) { throw new SecurityException(error); } );
+  .catch(function(error) { 
+    return Promise.reject(new SecurityException(error));
+  });
 };
 
 /**
