@@ -19,15 +19,10 @@
  */
 
 var Blob = require('../util/blob.js').Blob;
+var Sqlite3Promise = require('../util/sqlite3-promise.js').Sqlite3Promise;
 var TlvWireFormat = require('../encoding/tlv-wire-format').TlvWireFormat;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var ConsumerDb = require('./consumer-db.js').ConsumerDb;
-var sqlite3 = null;
-try {
-  // This should be installed with: sudo npm install sqlite3
-  sqlite3 = require('sqlite3').verbose();
-}
-catch (e) {}
 
 /**
  * ConsumerDbSqlite3 extends ConsumerDb to implement the storage of decryption
@@ -43,12 +38,8 @@ var ConsumerDbSqlite3 = function ConsumerDbSqlite3(databaseFilePath)
   // Call the base constructor.
   ConsumerDb.call(this);
 
-  if (!sqlite3)
-    throw new ConsumerDb.Error(new Error
-      ("Need to install sqlite3: sudo npm install sqlite3"));
-
-  this.databaseFilePath_ = databaseFilePath;
-  this.database_ = null;
+  this.database_ = new Sqlite3Promise
+    (databaseFilePath, ConsumerDbSqlite3.initializeDatabasePromise_);
 };
 
 ConsumerDbSqlite3.prototype = new ConsumerDb();
@@ -125,112 +116,32 @@ ConsumerDbSqlite3.prototype.deleteKeyPromise = function(keyName, useSync)
 };
 
 /**
- * First call establishDatabasePromise_, then call
- * this.database_.run(sql, params) to execute the SQL command.
- * @param {string} sql The SQL command to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the command.
- * @return {Promise} A promise that fulfills when the SQL command is complete,
- * or that is rejected with ConsumerDb.Error if there is a database error.
+ * Call Sqlite3Promise.runPromise, wrapping an Error in ConsumerDb.Error.
  */
 ConsumerDbSqlite3.prototype.runPromise_ = function(sql, params)
 {
-  if (!params)
-    params = [];
-
-  var thisManager = this;
-  return this.establishDatabasePromise_()
-  .then(function() {
-    return thisManager.runWithoutEstablishPromise_(sql, params);
+  return this.database_.runPromise(sql, params)
+  .catch(function(error) {
+    return Promise.reject(new ConsumerDb.Error(error));
   });
 };
 
 /**
- * First call establishDatabasePromise_, then call
- * this.database_.get(sql, params) to execute the SQL query and get a single row.
- * @param {string} sql The SQL query to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the query.
- * @return {Promise} A promise that returns the query result, or that is rejected
- * with ConsumerDb.Error if there is a database error. The query result is
- * an object containing the values for the first matching row where the object
- * property names correspond to the column names. If no rows are found, the
- * query result is the undefined value.
+ * Call Sqlite3Promise.getPromise, wrapping an Error in ConsumerDb.Error.
  */
 ConsumerDbSqlite3.prototype.getPromise_ = function(sql, params)
 {
-  if (!params)
-    params = [];
-
-  var thisManager = this;
-  return this.establishDatabasePromise_()
-  .then(function() {
-    return new Promise(function(resolve, reject) {
-      thisManager.database_.get(sql, params, function(err, row) {
-        if (err)
-          reject(new ConsumerDb.Error(new Error
-            ("ConsumerDbSqlite3: SQLite error: " + err)));
-        else
-          resolve(row);
-      });
-    });
+  return this.database_.getPromise(sql, params)
+  .catch(function(error) {
+    return Promise.reject(new ConsumerDb.Error(error));
   });
 };
 
-/**
- * Call this.database_.run(sql, params) to execute the SQL command. This should
- * only be called by helper methods which have already called
- * establishDatabasePromise_; normally you would just call runPromise_.
- * @param {string} sql The SQL command to execute.
- * @param {object|Array<object>} params (optional) The single parameter or array
- * of parameters for the command.
- * @return {Promise} A promise that fulfills when the SQL command is complete,
- * or that is rejected with ConsumerDb.Error if there is a database error.
- */
-ConsumerDbSqlite3.prototype.runWithoutEstablishPromise_ = function(sql, params)
+ConsumerDbSqlite3.initializeDatabasePromise_ = function(database)
 {
-  if (!params)
-    params = [];
-
-  var thisManager = this;
-  return new Promise(function(resolve, reject) {
-    thisManager.database_.run(sql, params, function(err) {
-      if (err)
-        reject(new ConsumerDb.Error(new Error
-          ("ConsumerDbSqlite3: SQLite error: " + err)));
-      else
-        resolve();
-    });
-  });
-};
-
-/**
- * If this.database_ is still null, set up this.database_ and create the
- * database tables if they don't exist. Each method which uses the database must
- * call this first. We can't do this in the constructor because it is async.
- * @return {Promise} A promise that fulfills when this.database_ is set up.
- */
-ConsumerDbSqlite3.prototype.establishDatabasePromise_ = function()
-{
-  if (this.database_ != null)
-    // Already set up.
-    return Promise.resolve();
-
-  try {
-    this.database_ = new sqlite3.Database(this.databaseFilePath_);
-  } catch (ex) {
-    return Promise.reject(new ConsumerDb.Error(new Error
-      ("ConsumerDbSqlite3: Error creating sqlite3 " + ex.message)));
-  }
-
-  var thisManager = this;
-
-  // Enable foreign keys.
-  return thisManager.runWithoutEstablishPromise_
-    (ConsumerDbSqlite3.INITIALIZATION1)
+  return database.runPromise(ConsumerDbSqlite3.INITIALIZATION1)
   .then(function() {
-    return thisManager.runWithoutEstablishPromise_
-      (ConsumerDbSqlite3.INITIALIZATION2);
+    return database.runPromise(ConsumerDbSqlite3.INITIALIZATION2);
   });
 };
 
