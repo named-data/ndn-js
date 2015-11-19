@@ -130,7 +130,7 @@ GroupManagerDbSqlite3.prototype.getSchedulePromise = function(name, useSync)
     }
     else
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.getSchedulePromise: Cannot get the result from database")));
+        ("GroupManagerDbSqlite3.getSchedulePromise: Cannot get the result from the database")));
   });
 };
 
@@ -374,7 +374,7 @@ GroupManagerDbSqlite3.prototype.getMemberSchedulePromise = function
       return Promise.resolve(row.schedule_name);
     else
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.getMemberSchedulePromise: Cannot get the result from database")));
+        ("GroupManagerDbSqlite3.getMemberSchedulePromise: Cannot get the result from the database")));
   });
 };
 
