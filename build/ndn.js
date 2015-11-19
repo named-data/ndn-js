@@ -14251,7 +14251,7 @@ exports.IdentityStorage = IdentityStorage;
 IdentityStorage.prototype.doesIdentityExistPromise = function
   (identityName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.doesIdentityExistPromise is not implemented"));
 };
 
@@ -14278,7 +14278,7 @@ IdentityStorage.prototype.doesIdentityExist = function(identityName)
  */
 IdentityStorage.prototype.addIdentityPromise = function(identityName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.addIdentityPromise is not implemented"));
 };
 
@@ -14299,7 +14299,7 @@ IdentityStorage.prototype.addIdentity = function(identityName)
  */
 IdentityStorage.prototype.revokeIdentity = function()
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.revokeIdentity is not implemented"));
 };
 
@@ -14365,7 +14365,7 @@ IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
  */
 IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.doesKeyExistPromise is not implemented"));
 };
 
@@ -14398,7 +14398,7 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 IdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.addKeyPromise is not implemented"));
 };
 
@@ -14430,7 +14430,7 @@ IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
  */
 IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getKeyPromise is not implemented"));
 };
 
@@ -14478,7 +14478,7 @@ IdentityStorage.prototype.deactivateKey = function(keyName)
 IdentityStorage.prototype.doesCertificateExistPromise = function
   (certificateName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.doesCertificateExistPromise is not implemented"));
 };
 
@@ -14508,7 +14508,7 @@ IdentityStorage.prototype.doesCertificateExist = function(certificateName)
  */
 IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.addCertificatePromise is not implemented"));
 };
 
@@ -14539,7 +14539,7 @@ IdentityStorage.prototype.addCertificate = function(certificate)
 IdentityStorage.prototype.getCertificatePromise = function
   (certificateName, allowAny, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getCertificatePromise is not implemented"));
 };
 
@@ -14574,7 +14574,7 @@ IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
  */
 IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getDefaultIdentityPromise is not implemented"));
 };
 
@@ -14604,7 +14604,7 @@ IdentityStorage.prototype.getDefaultIdentity = function()
 IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
   (identityName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getDefaultKeyNameForIdentityPromise is not implemented"));
 };
 
@@ -14672,7 +14672,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
 IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
   (keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getDefaultCertificateNameForKeyPromise is not implemented"));
 };
 
@@ -14706,7 +14706,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
   (identityName, nameList, isDefault, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.getAllKeyNamesOfIdentityPromise is not implemented"));
 };
 
@@ -14739,7 +14739,7 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
 IdentityStorage.prototype.setDefaultIdentityPromise = function
   (identityName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.setDefaultIdentityPromise is not implemented"));
 };
 
@@ -14771,7 +14771,7 @@ IdentityStorage.prototype.setDefaultIdentity = function(identityName)
 IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
   (keyName, identityNameCheck, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.setDefaultKeyNameForIdentityPromise is not implemented"));
 };
 
@@ -14804,7 +14804,7 @@ IdentityStorage.prototype.setDefaultKeyNameForIdentity = function
 IdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
   (keyName, certificateName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.setDefaultCertificateNameForKeyPromise is not implemented"));
 };
 
@@ -14838,7 +14838,7 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 IdentityStorage.prototype.deleteCertificateInfoPromise = function
   (certificateName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.deleteCertificateInfoPromise is not implemented"));
 };
 
@@ -14866,7 +14866,7 @@ IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
 IdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, useSync)
 {
   return SyncPromise.reject
-    (Error("IdentityStorage.deletePublicKeyInfoPromise is not implemented"));
+    (new Error("IdentityStorage.deletePublicKeyInfoPromise is not implemented"));
 };
 
 /**
@@ -14892,7 +14892,7 @@ IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
  */
 IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("IdentityStorage.deleteIdentityInfoPromise is not implemented"));
 };
 
@@ -15957,7 +15957,7 @@ exports.PrivateKeyStorage = PrivateKeyStorage;
 PrivateKeyStorage.prototype.generateKeyPairPromise = function
   (keyName, params, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("PrivateKeyStorage.generateKeyPairPromise is not implemented"));
 };
 
@@ -15984,7 +15984,7 @@ PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
  */
 PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("PrivateKeyStorage.deleteKeyPairPromise is not implemented"));
 };
 
@@ -16009,7 +16009,7 @@ PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
  */
 PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("PrivateKeyStorage.getPublicKeyPromise is not implemented"));
 };
 
@@ -16040,7 +16040,7 @@ PrivateKeyStorage.prototype.getPublicKey = function(keyName)
 PrivateKeyStorage.prototype.signPromise = function
   (data, keyName, digestAlgorithm, useSync)
 {
-  return SyncPromise.reject(Error("PrivateKeyStorage.sign is not implemented"));
+  return SyncPromise.reject(new Error("PrivateKeyStorage.sign is not implemented"));
 };
 
 /**
@@ -16111,7 +16111,7 @@ PrivateKeyStorage.prototype.generateKey = function(keyName, params)
 PrivateKeyStorage.prototype.doesKeyExistPromise = function
   (keyName, keyClass, useSync)
 {
-  return SyncPromise.reject(Error
+  return SyncPromise.reject(new Error
     ("PrivateKeyStorage.doesKeyExist is not implemented"));
 };
 
@@ -16454,8 +16454,8 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
           return SyncPromise.reject(new SecurityException(new Error
             ("Only RSA key generation currently supported")));
 
-        this.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
-        this.privateKeyStore[keyName.toUri()] =
+        thisStore.setPublicKeyForKeyName(keyName, params.getKeyType(), publicKeyDer);
+        thisStore.privateKeyStore[keyName.toUri()] =
           { keyType: params.getKeyType(), privateKey: privateKeyPem };
       }
 
