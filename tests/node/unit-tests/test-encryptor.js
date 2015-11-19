@@ -163,8 +163,8 @@ describe('TestEncryptor', function() {
       var extractContent = new EncryptedContent();
       extractContent.wireDecode(data.getContent());
       assert.ok(keyName.equals(extractContent.getKeyLocator().getKeyName()), input.testName);
-      assert.ok(0 == extractContent.getInitialVector().size(), input.testName);
-      assert.ok(input.type == extractContent.getAlgorithmType(), input.testName);
+      assert.equal(extractContent.getInitialVector().size(), 0, input.testName);
+      assert.equal(extractContent.getAlgorithmType(), input.type, input.testName);
 
       var recovered = extractContent.getPayload();
       var decrypted = RsaAlgorithm.decrypt(dKey, recovered, encryptParams);
@@ -239,8 +239,8 @@ describe('TestEncryptor', function() {
       encryptedNonce.wireDecode(largeDataContent);
       assert.ok(keyName.equals(encryptedNonce.getKeyLocator().getKeyName()),
                 input.testName);
-      assert.ok(0 == encryptedNonce.getInitialVector().size(), input.testName);
-      assert.ok(input.type == encryptedNonce.getAlgorithmType(), input.testName);
+      assert.equal(encryptedNonce.getInitialVector().size(), 0, input.testName);
+      assert.equal(encryptedNonce.getAlgorithmType(), input.type, input.testName);
 
       // Use the size of encryptedNonce to find the start of encryptedPayload.
       var payloadContent = largeDataContent.buf().slice
@@ -251,13 +251,13 @@ describe('TestEncryptor', function() {
       nonceKeyName.append("nonce");
       assert.ok(nonceKeyName.equals(encryptedPayload.getKeyLocator().getKeyName()),
                 input.testName);
-      assert.ok(16 == encryptedPayload.getInitialVector().size(), input.testName);
-      assert.ok(EncryptAlgorithmType.AesCbc == encryptedPayload.getAlgorithmType(),
-                input.testName);
+      assert.equal(encryptedPayload.getInitialVector().size(), 16, input.testName);
+      assert.equal(encryptedPayload.getAlgorithmType(), EncryptAlgorithmType.AesCbc,
+                   input.testName);
 
-      assert.ok(encryptedNonce.wireEncode().size() +
-                encryptedPayload.wireEncode().size() ==
-                largeDataContent.size(), input.testName);
+      assert.equal(largeDataContent.size(),
+        encryptedNonce.wireEncode().size() + encryptedPayload.wireEncode().size(),
+        input.testName);
 
       var blobNonce = encryptedNonce.getPayload();
       var nonce = RsaAlgorithm.decrypt(dKey, blobNonce, encryptParams);

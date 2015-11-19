@@ -29,8 +29,8 @@ describe('TestInterval', function() {
     // Construct with the right parameters.
     var interval1 = new Interval(Common.fromIsoString("20150825T120000"),
                                  Common.fromIsoString("20150825T160000"));
-    assert.ok("20150825T120000" == Common.toIsoString(interval1.getStartTime()));
-    assert.ok("20150825T160000" == Common.toIsoString(interval1.getEndTime()));
+    assert.equal(Common.toIsoString(interval1.getStartTime()), "20150825T120000");
+    assert.equal(Common.toIsoString(interval1.getEndTime()), "20150825T160000");
     assert.ok(interval1.isValid());
 
     // Construct with the invalid interval.
@@ -108,38 +108,38 @@ describe('TestInterval', function() {
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval4);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T040000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T030000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T040000");
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval4);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T010000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T010000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T050000");
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval5);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T040000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T030000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T040000");
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval5);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T030000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T050000");
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval6);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T030000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T050000");
 
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval6);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T010000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T010000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T050000");
 
     tempInterval = new Interval(interval1);
     tempInterval.intersectWith(interval7);
@@ -148,7 +148,7 @@ describe('TestInterval', function() {
     tempInterval = new Interval(interval1);
     tempInterval.unionWith(interval7);
     assert.ok(!tempInterval.isEmpty());
-    assert.ok("20150825T030000" == Common.toIsoString(tempInterval.getStartTime()));
-    assert.ok("20150825T050000" == Common.toIsoString(tempInterval.getEndTime()));
+    assert.equal(Common.toIsoString(tempInterval.getStartTime()), "20150825T030000");
+    assert.equal(Common.toIsoString(tempInterval.getEndTime()), "20150825T050000");
   });
 });

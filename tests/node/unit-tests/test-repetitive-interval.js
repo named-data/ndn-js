@@ -29,43 +29,43 @@ describe('TestRepetitiveInterval', function() {
     var repetitiveInterval1 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20150825T000000"), 5, 10);
-    assert.ok("20150825T000000" == Common.toIsoString(repetitiveInterval1.getStartDate()));
-    assert.ok("20150825T000000" == Common.toIsoString(repetitiveInterval1.getEndDate()));
-    assert.ok(5 == repetitiveInterval1.getIntervalStartHour());
-    assert.ok(10 == repetitiveInterval1.getIntervalEndHour());
+    assert.equal(Common.toIsoString(repetitiveInterval1.getStartDate()), "20150825T000000");
+    assert.equal(Common.toIsoString(repetitiveInterval1.getEndDate()), "20150825T000000");
+    assert.equal(repetitiveInterval1.getIntervalStartHour(), 5);
+    assert.equal(repetitiveInterval1.getIntervalEndHour(), 10);
 
     var repetitiveInterval2 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20150827T000000"), 5, 10, 1,
        RepetitiveInterval.RepeatUnit.DAY);
 
-    assert.ok(1 == repetitiveInterval2.getNRepeats());
-    assert.ok
-      (RepetitiveInterval.RepeatUnit.DAY == repetitiveInterval2.getRepeatUnit());
+    assert.equal(repetitiveInterval2.getNRepeats(), 1);
+    assert.equal
+      (repetitiveInterval2.getRepeatUnit(), RepetitiveInterval.RepeatUnit.DAY);
 
     var repetitiveInterval3 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20151227T000000"), 5, 10, 2,
        RepetitiveInterval.RepeatUnit.MONTH);
 
-    assert.ok(2 == repetitiveInterval3.getNRepeats());
-    assert.ok
-      (RepetitiveInterval.RepeatUnit.MONTH == repetitiveInterval3.getRepeatUnit());
+    assert.equal(repetitiveInterval3.getNRepeats(), 2);
+    assert.equal
+      (repetitiveInterval3.getRepeatUnit(), RepetitiveInterval.RepeatUnit.MONTH);
 
     var repetitiveInterval4 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
        Common.fromIsoString("20301227T000000"), 5, 10, 5,
        RepetitiveInterval.RepeatUnit.YEAR);
 
-    assert.ok(5 == repetitiveInterval4.getNRepeats());
-    assert.ok
-      (RepetitiveInterval.RepeatUnit.YEAR == repetitiveInterval4.getRepeatUnit());
+    assert.equal(repetitiveInterval4.getNRepeats(), 5);
+    assert.equal
+      (repetitiveInterval4.getRepeatUnit(), RepetitiveInterval.RepeatUnit.YEAR);
 
     var repetitiveInterval5 = new RepetitiveInterval();
 
-    assert.ok(0 == repetitiveInterval5.getNRepeats());
-    assert.ok
-      (RepetitiveInterval.RepeatUnit.NONE == repetitiveInterval5.getRepeatUnit());
+    assert.equal(repetitiveInterval5.getNRepeats(), 0);
+    assert.equal
+      (repetitiveInterval5.getRepeatUnit(), RepetitiveInterval.RepeatUnit.NONE);
   });
 
   it('CoverTimePoint', function() {
@@ -80,21 +80,21 @@ describe('TestRepetitiveInterval', function() {
     var timePoint1 = Common.fromIsoString("20150825T050000");
 
     result = repetitiveInterval1.getInterval(timePoint1);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150825T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T100000");
 
     var timePoint2 = Common.fromIsoString("20150902T060000");
 
     result = repetitiveInterval1.getInterval(timePoint2);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150902T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150902T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150902T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150902T100000");
 
     var timePoint3 = Common.fromIsoString("20150929T040000");
 
     result = repetitiveInterval1.getInterval(timePoint3);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
 
     ///////////////////////////////////////////// With the repeat unit MONTH.
 
@@ -106,26 +106,26 @@ describe('TestRepetitiveInterval', function() {
     var timePoint4 = Common.fromIsoString("20150825T050000");
 
     result = repetitiveInterval2.getInterval(timePoint4);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150825T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T100000");
 
     var timePoint5 = Common.fromIsoString("20151025T060000");
 
     result = repetitiveInterval2.getInterval(timePoint5);
-    assert.ok(true == result.isPositive);
-    assert.ok("20151025T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20151025T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20151025T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20151025T100000");
 
     var timePoint6 = Common.fromIsoString("20151226T050000");
 
     result = repetitiveInterval2.getInterval(timePoint6);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
 
     var timePoint7 = Common.fromIsoString("20151225T040000");
 
     result = repetitiveInterval2.getInterval(timePoint7);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
 
     ///////////////////////////////////////////// With the repeat unit YEAR.
 
@@ -137,27 +137,27 @@ describe('TestRepetitiveInterval', function() {
     var timePoint8 = Common.fromIsoString("20150825T050000");
 
     result = repetitiveInterval3.getInterval(timePoint8);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150825T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T100000");
 
     var timePoint9 = Common.fromIsoString("20180825T060000");
 
     result = repetitiveInterval3.getInterval(timePoint9);
-    assert.ok(true == result.isPositive);
-    assert.ok("20180825T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20180825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20180825T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20180825T100000");
 
     var timePoint10 = Common.fromIsoString("20180826T050000");
     result = repetitiveInterval3.getInterval(timePoint10);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
 
     var timePoint11 = Common.fromIsoString("20210825T040000");
     result = repetitiveInterval3.getInterval(timePoint11);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
 
     var timePoint12 = Common.fromIsoString("20300825T040000");
     result = repetitiveInterval3.getInterval(timePoint12);
-    assert.ok(false == result.isPositive);
+    assert.equal(result.isPositive, false);
   });
 });

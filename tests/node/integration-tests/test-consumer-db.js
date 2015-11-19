@@ -111,7 +111,7 @@ describe ("TestConsumerDb", function() {
       return database.getKeyPromise(keyName);
     })
     .then(function(resultBlob) {
-      assert.ok(0 == resultBlob.size());
+      assert.equal(resultBlob.size(), 0);
 
       Promise.resolve();
     })
@@ -148,7 +148,7 @@ describe ("TestConsumerDb", function() {
       return database.getKeyPromise(keyName);
     })
     .then(function(resultBlob) {
-      assert.ok(0 == resultBlob.size());
+      assert.equal(resultBlob.size(), 0);
 
       Promise.resolve();
     })

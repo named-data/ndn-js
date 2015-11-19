@@ -333,10 +333,10 @@ describe ("TestConsumer", function() {
           finalCount = 1;
           assert.ok(result.equals(new Blob(DATA_CONTENT, false)), "consumeComplete");
 
-          assert.ok(1 == contentCount, "contentCount");
-          assert.ok(1 == cKeyCount, "cKeyCount");
-          assert.ok(1 == dKeyCount, "dKeyCount");
-          assert.ok(1 == finalCount, "finalCount");
+          assert.equal(contentCount, 1, "contentCount");
+          assert.equal(cKeyCount, 1, "cKeyCount");
+          assert.equal(dKeyCount, 1, "dKeyCount");
+          assert.equal(finalCount, 1, "finalCount");
 
           done();
         } catch (ex) { done(ex); }

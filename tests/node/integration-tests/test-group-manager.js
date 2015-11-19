@@ -252,8 +252,8 @@ describe ("TestGroupManager", function() {
       // dataContent is a sequence of the two EncryptedContent.
       encryptedNonce = new EncryptedContent();
       encryptedNonce.wireDecode(dataContent);
-      assert.ok(0 == encryptedNonce.getInitialVector().size());
-      assert.ok(EncryptAlgorithmType.RsaOaep == encryptedNonce.getAlgorithmType());
+      assert.equal(encryptedNonce.getInitialVector().size(), 0);
+      assert.equal(encryptedNonce.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
 
       var blobNonce = encryptedNonce.getPayload();
       decryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
@@ -266,8 +266,8 @@ describe ("TestGroupManager", function() {
         (encryptedNonce.wireEncode().size());
       var encryptedPayload = new EncryptedContent();
       encryptedPayload.wireDecode(payloadContent);
-      assert.ok(16 == encryptedPayload.getInitialVector().size());
-      assert.ok(EncryptAlgorithmType.AesCbc == encryptedPayload.getAlgorithmType());
+      assert.equal(encryptedPayload.getInitialVector().size(), 16);
+      assert.equal(encryptedPayload.getAlgorithmType(), EncryptAlgorithmType.AesCbc);
 
       decryptParams.setAlgorithmType(EncryptAlgorithmType.AesCbc);
       decryptParams.setInitialVector(encryptedPayload.getInitialVector());
@@ -295,8 +295,8 @@ describe ("TestGroupManager", function() {
         ("20150825T090000", "20150825T110000", encryptKeyBlob);
     })
     .then(function(data) {
-      assert.ok("/Alice/READ/data_type/E-KEY/20150825T090000/20150825T110000" ==
-                data.getName().toUri())
+      assert.equal(data.getName().toUri(),
+                   "/Alice/READ/data_type/E-KEY/20150825T090000/20150825T110000")
 
       var contentBlob = data.getContent();
       assert.ok(encryptKeyBlob.equals(contentBlob));
@@ -321,28 +321,28 @@ describe ("TestGroupManager", function() {
       return manager.calculateIntervalPromise_(timePoint1, memberKeys);
     })
     .then(function(result) {
-      assert.ok("20150825T090000" == Common.toIsoString(result.getStartTime()));
-      assert.ok("20150825T100000" == Common.toIsoString(result.getEndTime()));
+      assert.equal(Common.toIsoString(result.getStartTime()), "20150825T090000");
+      assert.equal(Common.toIsoString(result.getEndTime()), "20150825T100000");
 
       var timePoint2 = Common.fromIsoString("20150827T073000");
       return manager.calculateIntervalPromise_(timePoint2, memberKeys);
     })
     .then(function(result) {
-      assert.ok("20150827T070000" == Common.toIsoString(result.getStartTime()));
-      assert.ok("20150827T080000" == Common.toIsoString(result.getEndTime()));
+      assert.equal(Common.toIsoString(result.getStartTime()), "20150827T070000");
+      assert.equal(Common.toIsoString(result.getEndTime()), "20150827T080000");
 
       var timePoint3 = Common.fromIsoString("20150827T043000");
       return manager.calculateIntervalPromise_(timePoint3, memberKeys);
     })
     .then(function(result) {
-      assert.ok(false == result.isValid());
+      assert.equal(result.isValid(), false);
 
       var timePoint4 = Common.fromIsoString("20150827T053000");
       return manager.calculateIntervalPromise_(timePoint4, memberKeys);
     })
     .then(function(result) {
-      assert.ok("20150827T050000" == Common.toIsoString(result.getStartTime()));
-      assert.ok("20150827T060000" == Common.toIsoString(result.getEndTime()));
+      assert.equal(Common.toIsoString(result.getStartTime()), "20150827T050000");
+      assert.equal(Common.toIsoString(result.getEndTime()), "20150827T060000");
 
       return Promise.resolve();
     })
@@ -371,20 +371,20 @@ describe ("TestGroupManager", function() {
     })
     .then(function(localResult) {
       result = localResult;
-      assert.ok(4 == result.length);
+      assert.equal(result.length, 4);
 
       // The first data packet contains the group's encryption key (public key).
       data = result[0];
-      assert.ok
-        ("/Alice/READ/data_type/E-KEY/20150825T090000/20150825T100000" ==
-         data.getName().toUri());
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/E-KEY/20150825T090000/20150825T100000");
       groupEKey = new EncryptKey(data.getContent());
 
       // Get the second data packet and decrypt.
       data = result[1];
-      assert.ok
-        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberA/ksk-123" ==
-         data.getName().toUri());
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberA/ksk-123");
 
       /////////////////////////////////////////////////////// Start decryption.
       dataContent = data.getContent();
@@ -393,8 +393,8 @@ describe ("TestGroupManager", function() {
       // dataContent is a sequence of the two EncryptedContent.
       encryptedNonce = new EncryptedContent();
       encryptedNonce.wireDecode(dataContent);
-      assert.ok(0 == encryptedNonce.getInitialVector().size());
-      assert.ok(EncryptAlgorithmType.RsaOaep == encryptedNonce.getAlgorithmType());
+      assert.equal(encryptedNonce.getInitialVector().size(), 0);
+      assert.equal(encryptedNonce.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
 
       decryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
       var blobNonce = encryptedNonce.getPayload();
@@ -407,8 +407,8 @@ describe ("TestGroupManager", function() {
         (encryptedNonce.wireEncode().size());
       var encryptedPayload = new EncryptedContent();
       encryptedPayload.wireDecode(payloadContent);
-      assert.ok(16 == encryptedPayload.getInitialVector().size());
-      assert.ok(EncryptAlgorithmType.AesCbc == encryptedPayload.getAlgorithmType());
+      assert.equal(encryptedPayload.getInitialVector().size(), 16);
+      assert.equal(encryptedPayload.getAlgorithmType(), EncryptAlgorithmType.AesCbc);
 
       decryptParams.setAlgorithmType(EncryptAlgorithmType.AesCbc);
       decryptParams.setInitialVector(encryptedPayload.getInitialVector());
@@ -428,28 +428,28 @@ describe ("TestGroupManager", function() {
 
       // Check the third data packet.
       data = result[2];
-      assert.ok
-        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberB/ksk-123" ==
-         data.getName().toUri());
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberB/ksk-123");
 
       // Check the fourth data packet.
       data = result[3];
-      assert.ok
-        ("/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberC/ksk-123" ==
-         data.getName().toUri());
+      assert.equal
+        (data.getName().toUri(),
+         "/Alice/READ/data_type/D-KEY/20150825T090000/20150825T100000/FOR/ndn/memberC/ksk-123");
 
       // Check invalid time stamps for getting the group key.
       var timePoint2 = Common.fromIsoString("20150826T083000");
       return manager.getGroupKeyPromise(timePoint2);
     })
     .then(function(localResult) {
-      assert.ok(0 == localResult.length);
+      assert.equal(localResult.length, 0);
 
       var timePoint3 = Common.fromIsoString("20150827T023000");
       return manager.getGroupKeyPromise(timePoint3);
     })
     .then(function(localResult) {
-      assert.ok(0 == localResult.length);
+      assert.equal(localResult.length, 0);
 
       return Promise.resolve();
     })

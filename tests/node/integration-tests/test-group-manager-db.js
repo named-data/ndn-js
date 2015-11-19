@@ -209,36 +209,36 @@ describe ("TestGroupManagerDb", function() {
       return database.hasSchedulePromise("work-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
       return database.hasSchedulePromise("rest-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
       return database.hasSchedulePromise("play-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
       return database.hasSchedulePromise("sleep-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(false == hasSchedule);
+      assert.equal(hasSchedule, false);
       return database.hasSchedulePromise("");
     })
     .then(function(hasSchedule) {
-      assert.ok(false == hasSchedule);
+      assert.equal(hasSchedule, false);
 
       return database.hasMemberPromise(new Name("/ndn/BoyA"));
     })
     .then(function(hasMember) {
-      assert.ok(true == hasMember);
+      assert.equal(hasMember, true);
       return database.hasMemberPromise(new Name("/ndn/BoyB"));
     })
     .then(function(hasMember) {
-      assert.ok(true == hasMember);
+      assert.equal(hasMember, true);
       return database.hasMemberPromise(new Name("/ndn/BoyC"));
     })
     .then(function(hasMember) {
-      assert.ok(false == hasMember);
+      assert.equal(hasMember, false);
 
       // Get schedule.
       return database.getSchedulePromise("work-time");
@@ -279,7 +279,7 @@ describe ("TestGroupManagerDb", function() {
       return database.getScheduleMembersPromise("sleep-time");
     })
     .then(function(memberList) {
-      assert.ok(0 == memberList.length);
+      assert.equal(memberList.length, 0);
 
       // List all members.
       return database.listAllMembersPromise();
@@ -294,22 +294,22 @@ describe ("TestGroupManagerDb", function() {
       return database.hasSchedulePromise("boelter-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
       return database.renameSchedulePromise("boelter-time", "rieber-time");
     })
     .then(function() {
       return database.hasSchedulePromise("boelter-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(false == hasSchedule);
+      assert.equal(hasSchedule, false);
       return database.hasSchedulePromise("rieber-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
       return database.getMemberSchedulePromise(new Name("/ndn/Hello"));
     })
     .then(function(scheduleName) {
-      assert.ok("rieber-time" == scheduleName);
+      assert.equal(scheduleName, "rieber-time");
 
       // Update schedule.
       newSchedule = new Schedule();
@@ -332,14 +332,14 @@ describe ("TestGroupManagerDb", function() {
       return database.hasSchedulePromise("ralphs-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(false == hasSchedule);
+      assert.equal(hasSchedule, false);
       return database.updateSchedulePromise("ralphs-time", newSchedule);
     })
     .then(function() {
       return database.hasSchedulePromise("ralphs-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(true == hasSchedule);
+      assert.equal(hasSchedule, true);
 
       // Update the schedule of a member.
       return database.updateMemberSchedulePromise
@@ -349,20 +349,20 @@ describe ("TestGroupManagerDb", function() {
       return database.getMemberSchedulePromise(new Name("/ndn/Hello"));
     })
     .then(function(scheduleName) {
-      assert.ok("play-time" == scheduleName);
+      assert.equal(scheduleName, "play-time");
 
       // Delete member.
       return database.hasMemberPromise(new Name("/ndn/Hello"));
     })
     .then(function(hasMember) {
-      assert.ok(true == hasMember);
+      assert.equal(hasMember, true);
       return database.deleteMemberPromise(new Name("/ndn/Hello"));
     })
     .then(function() {
       return database.hasMemberPromise(new Name("/ndn/Hello"));
     })
     .then(function(hasMember) {
-      assert.ok(false == hasMember);
+      assert.equal(hasMember, false);
 
       // Delete a non-existing member.
       return database.deleteMemberPromise(new Name("/ndn/notExisting"))
@@ -381,15 +381,15 @@ describe ("TestGroupManagerDb", function() {
       return database.hasSchedulePromise("play-time");
     })
     .then(function(hasSchedule) {
-      assert.ok(false == hasSchedule);
+      assert.equal(hasSchedule, false);
       return database.hasMemberPromise(new Name("/ndn/GirlC"));
     })
     .then(function(hasMember) {
-      assert.ok(false == hasMember);
+      assert.equal(hasMember, false);
       return database.hasMemberPromise(new Name("/ndn/GirlD"));
     })
     .then(function(hasMember) {
-      assert.ok(false == hasMember);
+      assert.equal(hasMember, false);
 
       // Delete a non-existing schedule.
       return database.deleteSchedulePromise("not-existing-time")

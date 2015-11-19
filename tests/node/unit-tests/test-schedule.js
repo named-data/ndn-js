@@ -118,46 +118,46 @@ describe('TestSchedule', function() {
     // timePoint1 --> positive 8.25 4-10
     var timePoint1 = Common.fromIsoString("20150825T063000");
     result = schedule.getCoveringInterval(timePoint1);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150825T040000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T040000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T100000");
 
     // timePoint2 --> positive 8.26 6-8
     var timePoint2 = Common.fromIsoString("20150826T073000");
     result = schedule.getCoveringInterval(timePoint2);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150826T060000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150826T080000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150826T060000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150826T080000");
 
     // timePoint3 --> positive 8.27 5-7
     var timePoint3 = Common.fromIsoString("20150827T053000");
     result = schedule.getCoveringInterval(timePoint3);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150827T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150827T070000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150827T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150827T070000");
 
     // timePoint4 --> positive 8.27 5-7
     var timePoint4 = Common.fromIsoString("20150827T063000");
     result = schedule.getCoveringInterval(timePoint4);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150827T050000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150827T070000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150827T050000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150827T070000");
 
     // timePoint5 --> negative 8.27 7-8
     var timePoint5 = Common.fromIsoString("20150827T073000");
     result = schedule.getCoveringInterval(timePoint5);
-    assert.ok(false == result.isPositive);
-    assert.ok(false == result.interval.isEmpty());
-    assert.ok("20150827T070000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150827T080000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, false);
+    assert.equal(result.interval.isEmpty(), false);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150827T070000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150827T080000");
 
     // timePoint6 --> negative 8.25 10-24
     var timePoint6 = Common.fromIsoString("20150825T113000");
     result = schedule.getCoveringInterval(timePoint6);
-    assert.ok(false == result.isPositive);
-    assert.ok(false == result.interval.isEmpty());
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150826T000000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, false);
+    assert.equal(result.interval.isEmpty(), false);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T100000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150826T000000");
   });
 
   it('EncodeAndDecode', function() {
@@ -194,15 +194,15 @@ describe('TestSchedule', function() {
     // timePoint1 --> positive 8.25 4-10
     var timePoint1 = Common.fromIsoString("20150825T063000");
     result = schedule.getCoveringInterval(timePoint1);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150825T040000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150825T100000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150825T040000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T100000");
 
     // timePoint2 --> positive 8.26 6-8
     var timePoint2 = Common.fromIsoString("20150826T073000");
     result = schedule.getCoveringInterval(timePoint2);
-    assert.ok(true == result.isPositive);
-    assert.ok("20150826T060000" == Common.toIsoString(result.interval.getStartTime()));
-    assert.ok("20150826T080000" == Common.toIsoString(result.interval.getEndTime()));
+    assert.equal(result.isPositive, true);
+    assert.equal(Common.toIsoString(result.interval.getStartTime()), "20150826T060000");
+    assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150826T080000");
   });
 });

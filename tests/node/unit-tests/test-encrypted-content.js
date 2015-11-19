@@ -74,10 +74,10 @@ var IV = new Buffer([
 describe('TestEncryptedContent', function() {
   it('Constructor', function() {
     var content = new EncryptedContent();
-    assert.ok(content.getAlgorithmType() == null);
+    assert.equal(content.getAlgorithmType(), null);
     assert.ok(content.getPayload().isNull());
     assert.ok(content.getInitialVector().isNull());
-    assert.ok(content.getKeyLocator().getType() == null);
+    assert.equal(content.getKeyLocator().getType(), null);
 
     var payload = new Blob(MESSAGE, false);
     var initialVector = new Blob(IV, false);
@@ -94,7 +94,7 @@ describe('TestEncryptedContent', function() {
     var contentPayload = sha256RsaContent.getPayload();
     var contentInitialVector = sha256RsaContent.getInitialVector();
 
-    assert.ok(sha256RsaContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
+    assert.equal(sha256RsaContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
     assert.ok(contentPayload.equals(payload));
     assert.ok(contentInitialVector.equals(initialVector));
     assert.ok(sha256RsaContent.getKeyLocator().getType() != null);
@@ -111,7 +111,7 @@ describe('TestEncryptedContent', function() {
     contentPayload = sha256RsaContent.getPayload();
     contentInitialVector = sha256RsaContent.getInitialVector();
 
-    assert.ok(sha256RsaContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
+    assert.equal(sha256RsaContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
     assert.ok(contentPayload.equals(payload));
     assert.ok(contentInitialVector.equals(initialVector));
     assert.ok(sha256RsaContent.getKeyLocator().getType() != null);
@@ -124,7 +124,7 @@ describe('TestEncryptedContent', function() {
       .setKeyLocator(keyLocator).setPayload(payload);
     contentPayload = sha256RsaContent.getPayload();
 
-    assert.ok(sha256RsaContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
+    assert.equal(sha256RsaContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
     assert.ok(contentPayload.equals(payload));
     assert.ok(sha256RsaContent.getInitialVector().isNull());
     assert.ok(sha256RsaContent.getKeyLocator().getType() != null);
@@ -140,7 +140,7 @@ describe('TestEncryptedContent', function() {
     sha256RsaContent.wireDecode(encryptedBlob);
     var contentPayloadNoIV = sha256RsaContent.getPayload();
 
-    assert.ok(sha256RsaContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
+    assert.equal(sha256RsaContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
     assert.ok(contentPayloadNoIV.equals(payload));
     assert.ok(sha256RsaContent.getInitialVector().isNull());
     assert.ok(sha256RsaContent.getKeyLocator().getType() != null);
@@ -266,16 +266,16 @@ describe('TestEncryptedContent', function() {
 
   it('SetterGetter', function() {
     var content = new EncryptedContent();
-    assert.ok(content.getAlgorithmType() == null);
+    assert.equal(content.getAlgorithmType(), null);
     assert.ok(content.getPayload().isNull());
     assert.ok(content.getInitialVector().isNull());
-    assert.ok(content.getKeyLocator().getType() == null);
+    assert.equal(content.getKeyLocator().getType(), null);
 
     content.setAlgorithmType(EncryptAlgorithmType.RsaOaep);
-    assert.ok(content.getAlgorithmType() == EncryptAlgorithmType.RsaOaep);
+    assert.equal(content.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
     assert.ok(content.getPayload().isNull());
     assert.ok(content.getInitialVector().isNull());
-    assert.ok(content.getKeyLocator().getType() == null);
+    assert.equal(content.getKeyLocator().getType(), null);
 
     var keyLocator = new KeyLocator();
     keyLocator.setType(KeyLocatorType.KEYNAME);
