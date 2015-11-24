@@ -25,27 +25,27 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var ConsumerDb = require('./consumer-db.js').ConsumerDb;
 
 /**
- * ConsumerDbSqlite3 extends ConsumerDb to implement the storage of decryption
+ * Sqlite3ConsumerDb extends ConsumerDb to implement the storage of decryption
  * keys for the consumer using SQLite3.
- * Create a ConsumerDbSqlite3 to use the given SQLite3 file.
+ * Create a Sqlite3ConsumerDb to use the given SQLite3 file.
  * @param {string} databaseFilePath The path of the SQLite file.
  * @throws ConsumerDb.Error for a database error.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
-var ConsumerDbSqlite3 = function ConsumerDbSqlite3(databaseFilePath)
+var Sqlite3ConsumerDb = function Sqlite3ConsumerDb(databaseFilePath)
 {
   // Call the base constructor.
   ConsumerDb.call(this);
 
   this.database_ = new Sqlite3Promise
-    (databaseFilePath, ConsumerDbSqlite3.initializeDatabasePromise_);
+    (databaseFilePath, Sqlite3ConsumerDb.initializeDatabasePromise_);
 };
 
-ConsumerDbSqlite3.prototype = new ConsumerDb();
-ConsumerDbSqlite3.prototype.name = "ConsumerDbSqlite3";
+Sqlite3ConsumerDb.prototype = new ConsumerDb();
+Sqlite3ConsumerDb.prototype.name = "Sqlite3ConsumerDb";
 
-exports.ConsumerDbSqlite3 = ConsumerDbSqlite3;
+exports.Sqlite3ConsumerDb = Sqlite3ConsumerDb;
 
 /**
  * Get the key with keyName from the database.
@@ -56,11 +56,11 @@ exports.ConsumerDbSqlite3 = ConsumerDbSqlite3;
  * isNull Blob if cannot find the key with keyName), or that is
  * rejected with ConsumerDb.Error for a database error.
  */
-ConsumerDbSqlite3.prototype.getKeyPromise = function(keyName, useSync)
+Sqlite3ConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
 {
   if (useSync)
     return Promise.reject(new ConsumerDb.Error(new Error
-      ("ConsumerDbSqlite3.getKey is only supported for async")));
+      ("Sqlite3ConsumerDb.getKey is only supported for async")));
 
   return this.getPromise_
     ("SELECT key_buf FROM decryptionkeys WHERE key_name=?",
@@ -83,11 +83,11 @@ ConsumerDbSqlite3.prototype.getKeyPromise = function(keyName, useSync)
  * is rejected with ConsumerDb.Error if a key with the same keyName already
  * exists, or other database error.
  */
-ConsumerDbSqlite3.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
+Sqlite3ConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
 {
   if (useSync)
     return Promise.reject(new ConsumerDb.Error(new Error
-      ("ConsumerDbSqlite3.addKey is only supported for async")));
+      ("Sqlite3ConsumerDb.addKey is only supported for async")));
 
   return this.runPromise_
     ("INSERT INTO decryptionkeys(key_name, key_buf) values (?, ?)",
@@ -104,11 +104,11 @@ ConsumerDbSqlite3.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
  * is no such key), or that is rejected with ConsumerDb.Error for a database
  * error.
  */
-ConsumerDbSqlite3.prototype.deleteKeyPromise = function(keyName, useSync)
+Sqlite3ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
 {
   if (useSync)
     return Promise.reject(new ConsumerDb.Error(new Error
-      ("ConsumerDbSqlite3.deleteKey is only supported for async")));
+      ("Sqlite3ConsumerDb.deleteKey is only supported for async")));
 
   return this.runPromise_
     ("DELETE FROM decryptionkeys WHERE key_name=?",
@@ -118,7 +118,7 @@ ConsumerDbSqlite3.prototype.deleteKeyPromise = function(keyName, useSync)
 /**
  * Call Sqlite3Promise.runPromise, wrapping an Error in ConsumerDb.Error.
  */
-ConsumerDbSqlite3.prototype.runPromise_ = function(sql, params)
+Sqlite3ConsumerDb.prototype.runPromise_ = function(sql, params)
 {
   return this.database_.runPromise(sql, params)
   .catch(function(error) {
@@ -129,7 +129,7 @@ ConsumerDbSqlite3.prototype.runPromise_ = function(sql, params)
 /**
  * Call Sqlite3Promise.getPromise, wrapping an Error in ConsumerDb.Error.
  */
-ConsumerDbSqlite3.prototype.getPromise_ = function(sql, params)
+Sqlite3ConsumerDb.prototype.getPromise_ = function(sql, params)
 {
   return this.database_.getPromise(sql, params)
   .catch(function(error) {
@@ -137,21 +137,21 @@ ConsumerDbSqlite3.prototype.getPromise_ = function(sql, params)
   });
 };
 
-ConsumerDbSqlite3.initializeDatabasePromise_ = function(database)
+Sqlite3ConsumerDb.initializeDatabasePromise_ = function(database)
 {
-  return database.runPromise(ConsumerDbSqlite3.INITIALIZATION1)
+  return database.runPromise(Sqlite3ConsumerDb.INITIALIZATION1)
   .then(function() {
-    return database.runPromise(ConsumerDbSqlite3.INITIALIZATION2);
+    return database.runPromise(Sqlite3ConsumerDb.INITIALIZATION2);
   });
 };
 
-ConsumerDbSqlite3.INITIALIZATION1 =
+Sqlite3ConsumerDb.INITIALIZATION1 =
   "CREATE TABLE IF NOT EXISTS                         \n" +
   "  decryptionkeys(                                  \n" +
   "    key_id              INTEGER PRIMARY KEY,       \n" +
   "    key_name            BLOB NOT NULL,             \n" +
   "    key_buf             BLOB NOT NULL              \n" +
   "  );                                               \n";
-ConsumerDbSqlite3.INITIALIZATION2 =
+Sqlite3ConsumerDb.INITIALIZATION2 =
   "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
   "   KeyNameIndex ON decryptionkeys(key_name);       \n";

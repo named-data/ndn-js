@@ -22,7 +22,7 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
  * ConsumerDb is a base class the storage of decryption keys for the consumer. A
- * subclass must implement the methods. For example, see ConsumerDbSqlite3.
+ * subclass must implement the methods. For example, see Sqlite3ConsumerDb.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */

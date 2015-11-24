@@ -27,7 +27,7 @@ var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Encryptor = require('../../..').Encryptor;
 var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
-var ConsumerDbSqlite3 = require('../../..').ConsumerDbSqlite3;
+var Sqlite3ConsumerDb = require('../../..').Sqlite3ConsumerDb;
 var Consumer = require('../../..').Consumer;
 var EncryptParams = require('../../..').EncryptParams;
 var RsaKeyParams = require('../../..').RsaKeyParams;
@@ -325,7 +325,7 @@ describe ("TestConsumer", function() {
 
     // Create the consumer.
     var consumer = new Consumer
-      (face, keyChain, groupName, uName, new ConsumerDbSqlite3(databaseFilePath));
+      (face, keyChain, groupName, uName, new Sqlite3ConsumerDb(databaseFilePath));
     consumer.addDecryptionKey(uKeyName, fixtureUDKeyBlob, function() {
       var finalCount = 0;
       consumer.consume(contentName, function(data, result) {

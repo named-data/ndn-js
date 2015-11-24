@@ -28,7 +28,7 @@ var RsaKeyParams = require('../../..').RsaKeyParams;
 var RsaAlgorithm = require('../../..').RsaAlgorithm;
 var AesKeyParams = require('../../..').AesKeyParams;
 var AesAlgorithm = require('../../..').AesAlgorithm;
-var ConsumerDbSqlite3 = require('../../..').ConsumerDbSqlite3;
+var Sqlite3ConsumerDb = require('../../..').Sqlite3ConsumerDb;
 
 var databaseFilePath;
 
@@ -90,7 +90,7 @@ describe ("TestConsumerDb", function() {
 
   it("OperateAesDecryptionKey", function(done) {
     // Test construction.
-    var database = new ConsumerDbSqlite3(databaseFilePath);
+    var database = new Sqlite3ConsumerDb(databaseFilePath);
 
     // Generate key blobs.
     keys = generateAesKeys();
@@ -121,7 +121,7 @@ describe ("TestConsumerDb", function() {
 
   it("OperateRsaDecryptionKey", function(done) {
     // Test construction.
-    var database = new ConsumerDbSqlite3(databaseFilePath);
+    var database = new Sqlite3ConsumerDb(databaseFilePath);
 
     var keys;
     var keyName;
