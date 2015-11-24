@@ -27,27 +27,27 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var GroupManagerDb = require('./group-manager-db.js').GroupManagerDb;
 
 /**
- * GroupManagerDbSqlite3 extends GroupManagerDb to implement the storage of
+ * Sqlite3GroupManagerDb extends GroupManagerDb to implement the storage of
  * data used by the GroupManager using the Node.js sqlite3 module.
- * Create a GroupManagerDbSqlite3 to use the given SQLite3 file.
+ * Create a Sqlite3GroupManagerDb to use the given SQLite3 file.
  * @param {string} databaseFilePath The path of the SQLite file.
  * @throws GroupManagerDb.Error for a database error.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
-var GroupManagerDbSqlite3 = function GroupManagerDbSqlite3(databaseFilePath)
+var Sqlite3GroupManagerDb = function Sqlite3GroupManagerDb(databaseFilePath)
 {
   // Call the base constructor.
   GroupManagerDb.call(this);
 
   this.database_ = new Sqlite3Promise
-    (databaseFilePath, GroupManagerDbSqlite3.initializeDatabasePromise_);
+    (databaseFilePath, Sqlite3GroupManagerDb.initializeDatabasePromise_);
 };
 
-GroupManagerDbSqlite3.prototype = new GroupManagerDb();
-GroupManagerDbSqlite3.prototype.name = "GroupManagerDbSqlite3";
+Sqlite3GroupManagerDb.prototype = new GroupManagerDb();
+Sqlite3GroupManagerDb.prototype.name = "Sqlite3GroupManagerDb";
 
-exports.GroupManagerDbSqlite3 = GroupManagerDbSqlite3;
+exports.Sqlite3GroupManagerDb = Sqlite3GroupManagerDb;
 
 ////////////////////////////////////////////////////// Schedule management.
 
@@ -59,11 +59,11 @@ exports.GroupManagerDbSqlite3 = GroupManagerDbSqlite3;
  * @return {Promise} A promise that returns true if there is a schedule (else
  * false), or that is rejected with GroupManagerDb.Error for a database error.
  */
-GroupManagerDbSqlite3.prototype.hasSchedulePromise = function(name, useSync)
+Sqlite3GroupManagerDb.prototype.hasSchedulePromise = function(name, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.hasSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.hasSchedulePromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT schedule_id FROM schedules where schedule_name=?", name)
@@ -83,11 +83,11 @@ GroupManagerDbSqlite3.prototype.hasSchedulePromise = function(name, useSync)
  * of all schedules, or that is rejected with GroupManagerDb.Error for a
  * database error.
  */
-GroupManagerDbSqlite3.prototype.listAllScheduleNamesPromise = function(useSync)
+Sqlite3GroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.listAllScheduleNamesPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.listAllScheduleNamesPromise is only supported for async")));
 
   list = [];
   return this.eachPromise_
@@ -108,11 +108,11 @@ GroupManagerDbSqlite3.prototype.listAllScheduleNamesPromise = function(useSync)
  * rejected with GroupManagerDb.Error if the schedule does not exist or other
  * database error.
  */
-GroupManagerDbSqlite3.prototype.getSchedulePromise = function(name, useSync)
+Sqlite3GroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.getSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.getSchedulePromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT schedule FROM schedules WHERE schedule_name=?", name)
@@ -125,12 +125,12 @@ GroupManagerDbSqlite3.prototype.getSchedulePromise = function(name, useSync)
       } catch (ex) {
         // We don't expect this to happen.
         return Promise.reject(new GroupManagerDb.Error(new Error
-          ("GroupManagerDbSqlite3.getSchedulePromise: Error decoding schedule: " + ex)));
+          ("Sqlite3GroupManagerDb.getSchedulePromise: Error decoding schedule: " + ex)));
       }
     }
     else
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.getSchedulePromise: Cannot get the result from the database")));
+        ("Sqlite3GroupManagerDb.getSchedulePromise: Cannot get the result from the database")));
   });
 };
 
@@ -146,12 +146,12 @@ GroupManagerDbSqlite3.prototype.getSchedulePromise = function(name, useSync)
  * error. Note that the member's identity name is keyName.getPrefix(-1). If the
  * schedule name is not found, the list is empty.
  */
-GroupManagerDbSqlite3.prototype.getScheduleMembersPromise = function
+Sqlite3GroupManagerDb.prototype.getScheduleMembersPromise = function
   (name, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.getScheduleMembersPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.getScheduleMembersPromise is only supported for async")));
 
   list = [];
   var onRowError = null;
@@ -168,7 +168,7 @@ GroupManagerDbSqlite3.prototype.getScheduleMembersPromise = function
       } catch (ex) {
         // We don't expect this to happen.
         onRowError = new GroupManagerDb.Error(new Error
-          ("GroupManagerDbSqlite3.getScheduleMembersPromise: Error decoding name: " + ex));
+          ("Sqlite3GroupManagerDb.getScheduleMembersPromise: Error decoding name: " + ex));
       }
     })
   .then(function() {
@@ -189,16 +189,16 @@ GroupManagerDbSqlite3.prototype.getScheduleMembersPromise = function
  * is rejected with GroupManagerDb.Error if a schedule with the same name
  * already exists, if the name is empty, or other database error.
  */
-GroupManagerDbSqlite3.prototype.addSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.addSchedulePromise = function
   (name, schedule, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.addSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.addSchedulePromise is only supported for async")));
 
   if (name.length == 0)
     return Promise.reject(new GroupManagerDb.Error
-      ("GroupManagerDbSqlite3.addSchedulePromise: The schedule name cannot be empty"));
+      ("Sqlite3GroupManagerDb.addSchedulePromise: The schedule name cannot be empty"));
 
   return this.runPromise_
     ("INSERT INTO schedules (schedule_name, schedule) values (?, ?)",
@@ -215,12 +215,12 @@ GroupManagerDbSqlite3.prototype.addSchedulePromise = function
  * there is no such schedule), or that is rejected with GroupManagerDb.Error for
  * a database error.
  */
-GroupManagerDbSqlite3.prototype.deleteSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.deleteSchedulePromise = function
   (name, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.deleteSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.deleteSchedulePromise is only supported for async")));
 
   return this.runPromise_
     ("DELETE FROM schedules WHERE schedule_name=?", name);
@@ -237,16 +237,16 @@ GroupManagerDbSqlite3.prototype.deleteSchedulePromise = function
  * exists, if the schedule with oldName does not exist, if newName is empty, or
  * other database error.
  */
-GroupManagerDbSqlite3.prototype.renameSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.renameSchedulePromise = function
   (oldName, newName, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.renameSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.renameSchedulePromise is only supported for async")));
 
   if (newName.length == 0)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.renameSchedule: The schedule newName cannot be empty")));
+      ("Sqlite3GroupManagerDb.renameSchedule: The schedule newName cannot be empty")));
 
   return this.runPromise_
     ("UPDATE schedules SET schedule_name=? WHERE schedule_name=?",
@@ -265,12 +265,12 @@ GroupManagerDbSqlite3.prototype.renameSchedulePromise = function
  * that is rejected with GroupManagerDb.Error if the name is empty, or other
  * database error.
  */
-GroupManagerDbSqlite3.prototype.updateSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.updateSchedulePromise = function
   (name, schedule, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.updateSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.updateSchedulePromise is only supported for async")));
 
   var thisManager = this;
   return this.hasSchedulePromise(name)
@@ -294,11 +294,11 @@ GroupManagerDbSqlite3.prototype.updateSchedulePromise = function
  * @return {Promise} A promise that returns true if there is a member (else
  * false), or that is rejected with GroupManagerDb.Error for a database error.
  */
-GroupManagerDbSqlite3.prototype.hasMemberPromise = function(identity, useSync)
+Sqlite3GroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.hasMemberPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.hasMemberPromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT member_id FROM members WHERE member_name=?",
@@ -319,11 +319,11 @@ GroupManagerDbSqlite3.prototype.hasMemberPromise = function(identity, useSync)
  * of all members, or that is rejected with GroupManagerDb.Error for a
  * database error.
  */
-GroupManagerDbSqlite3.prototype.listAllMembersPromise = function(useSync)
+Sqlite3GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.listAllMembersPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.listAllMembersPromise is only supported for async")));
 
   list = [];
   var onRowError = null;
@@ -336,7 +336,7 @@ GroupManagerDbSqlite3.prototype.listAllMembersPromise = function(useSync)
       } catch (ex) {
         // We don't expect this to happen.
         onRowError = new GroupManagerDb.Error(new Error
-          ("GroupManagerDbSqlite3.listAllMembersPromise: Error decoding name: " + ex));
+          ("Sqlite3GroupManagerDb.listAllMembersPromise: Error decoding name: " + ex));
       }
     })
   .then(function() {
@@ -356,12 +356,12 @@ GroupManagerDbSqlite3.prototype.listAllMembersPromise = function(useSync)
  * rejected with GroupManagerDb.Error if there's no member with the given
  * identity name in the database.
  */
-GroupManagerDbSqlite3.prototype.getMemberSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.getMemberSchedulePromise = function
   (identity, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.getMemberSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.getMemberSchedulePromise is only supported for async")));
 
   return this.getPromise_
     ("SELECT schedule_name " +
@@ -374,7 +374,7 @@ GroupManagerDbSqlite3.prototype.getMemberSchedulePromise = function
       return Promise.resolve(row.schedule_name);
     else
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.getMemberSchedulePromise: Cannot get the result from the database")));
+        ("Sqlite3GroupManagerDb.getMemberSchedulePromise: Cannot get the result from the database")));
   });
 };
 
@@ -391,19 +391,19 @@ GroupManagerDbSqlite3.prototype.getMemberSchedulePromise = function
  * scheduleName, if the member's identity name already exists, or other database
  * error.
  */
-GroupManagerDbSqlite3.prototype.addMemberPromise = function
+Sqlite3GroupManagerDb.prototype.addMemberPromise = function
   (scheduleName, keyName, key, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.addMemberPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.addMemberPromise is only supported for async")));
 
   var thisManager = this;
   return this.getScheduleIdPromise_(scheduleName)
   .then(function(scheduleId) {
     if (scheduleId == -1)
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.addMemberPromise: The schedule dose not exist")));
+        ("Sqlite3GroupManagerDb.addMemberPromise: The schedule dose not exist")));
 
     // Need to be changed in the future.
     var memberName = keyName.getPrefix(-1);
@@ -426,19 +426,19 @@ GroupManagerDbSqlite3.prototype.addMemberPromise = function
  * is rejected with GroupManagerDb.Error if there's no member with the given
  * identity name in the database, or there's no schedule named scheduleName.
  */
-GroupManagerDbSqlite3.prototype.updateMemberSchedulePromise = function
+Sqlite3GroupManagerDb.prototype.updateMemberSchedulePromise = function
   (identity, scheduleName, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.updateMemberSchedulePromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.updateMemberSchedulePromise is only supported for async")));
 
   var thisManager = this;
   return this.getScheduleIdPromise_(scheduleName)
   .then(function(scheduleId) {
     if (scheduleId == -1)
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("GroupManagerDbSqlite3.updateMemberSchedulePromise: The schedule dose not exist")));
+        ("Sqlite3GroupManagerDb.updateMemberSchedulePromise: The schedule dose not exist")));
 
     return thisManager.runPromise_
         ("UPDATE members SET schedule_id=? WHERE member_name=?",
@@ -456,12 +456,12 @@ GroupManagerDbSqlite3.prototype.updateMemberSchedulePromise = function
  * there is no such member), or that is rejected with GroupManagerDb.Error for a
  * database error.
  */
-GroupManagerDbSqlite3.prototype.deleteMemberPromise = function
+Sqlite3GroupManagerDb.prototype.deleteMemberPromise = function
   (identity, useSync)
 {
   if (useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
-      ("GroupManagerDbSqlite3.deleteMemberPromise is only supported for async")));
+      ("Sqlite3GroupManagerDb.deleteMemberPromise is only supported for async")));
 
   return this.runPromise_
     ("DELETE FROM members WHERE member_name=?",
@@ -474,7 +474,7 @@ GroupManagerDbSqlite3.prototype.deleteMemberPromise = function
  * @return {Promise} A promise that returns the ID (or -1 if not found), or that
  * is rejected with GroupManagerDb.Error for a database error.
  */
-GroupManagerDbSqlite3.prototype.getScheduleIdPromise_ = function(name)
+Sqlite3GroupManagerDb.prototype.getScheduleIdPromise_ = function(name)
 {
   return this.getPromise_
     ("SELECT schedule_id FROM schedules WHERE schedule_name=?", name)
@@ -489,7 +489,7 @@ GroupManagerDbSqlite3.prototype.getScheduleIdPromise_ = function(name)
 /**
  * Call Sqlite3Promise.runPromise, wrapping an Error in GroupManagerDb.Error.
  */
-GroupManagerDbSqlite3.prototype.runPromise_ = function(sql, params)
+Sqlite3GroupManagerDb.prototype.runPromise_ = function(sql, params)
 {
   return this.database_.runPromise(sql, params)
   .catch(function(error) {
@@ -500,7 +500,7 @@ GroupManagerDbSqlite3.prototype.runPromise_ = function(sql, params)
 /**
  * Call Sqlite3Promise.getPromise, wrapping an Error in GroupManagerDb.Error.
  */
-GroupManagerDbSqlite3.prototype.getPromise_ = function(sql, params)
+Sqlite3GroupManagerDb.prototype.getPromise_ = function(sql, params)
 {
   return this.database_.getPromise(sql, params)
   .catch(function(error) {
@@ -511,7 +511,7 @@ GroupManagerDbSqlite3.prototype.getPromise_ = function(sql, params)
 /**
  * Call Sqlite3Promise.eachPromise, wrapping an Error in GroupManagerDb.Error.
  */
-GroupManagerDbSqlite3.prototype.eachPromise_ = function(sql, params, onRow)
+Sqlite3GroupManagerDb.prototype.eachPromise_ = function(sql, params, onRow)
 {
   return this.database_.eachPromise(sql, params, onRow)
   .catch(function(error) {
@@ -519,35 +519,35 @@ GroupManagerDbSqlite3.prototype.eachPromise_ = function(sql, params, onRow)
   });
 };
 
-GroupManagerDbSqlite3.initializeDatabasePromise_ = function(database)
+Sqlite3GroupManagerDb.initializeDatabasePromise_ = function(database)
 {
   // Enable foreign keys.
   return database.runPromise("PRAGMA foreign_keys = ON")
   .then(function() {
-    return database.runPromise(GroupManagerDbSqlite3.INITIALIZATION1);
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION1);
   })
   .then(function() {
-    return database.runPromise(GroupManagerDbSqlite3.INITIALIZATION2);
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION2);
   })
   .then(function() {
-    return database.runPromise(GroupManagerDbSqlite3.INITIALIZATION3);
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION3);
   })
   .then(function() {
-    return database.runPromise(GroupManagerDbSqlite3.INITIALIZATION4);
+    return database.runPromise(Sqlite3GroupManagerDb.INITIALIZATION4);
   });
 };
 
-GroupManagerDbSqlite3.INITIALIZATION1 =
+Sqlite3GroupManagerDb.INITIALIZATION1 =
   "CREATE TABLE IF NOT EXISTS                         \n" +
   "  schedules(                                       \n" +
   "    schedule_id         INTEGER PRIMARY KEY,       \n" +
   "    schedule_name       TEXT NOT NULL,             \n" +
   "    schedule            BLOB NOT NULL              \n" +
   "  );                                               \n";
-GroupManagerDbSqlite3.INITIALIZATION2 =
+Sqlite3GroupManagerDb.INITIALIZATION2 =
   "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
   "   scheduleNameIndex ON schedules(schedule_name);  \n";
-GroupManagerDbSqlite3.INITIALIZATION3 =
+Sqlite3GroupManagerDb.INITIALIZATION3 =
   "CREATE TABLE IF NOT EXISTS                         \n" +
   "  members(                                         \n" +
   "    member_id           INTEGER PRIMARY KEY,       \n" +
@@ -560,6 +560,6 @@ GroupManagerDbSqlite3.INITIALIZATION3 =
   "      ON DELETE CASCADE                            \n" +
   "      ON UPDATE CASCADE                            \n" +
   "  );                                               \n";
-GroupManagerDbSqlite3.INITIALIZATION4 =
+Sqlite3GroupManagerDb.INITIALIZATION4 =
   "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
   "   memNameIndex ON members(member_name);           \n";

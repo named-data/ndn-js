@@ -25,7 +25,7 @@ var fs = require("fs");
 var RepetitiveInterval = require('../../..').RepetitiveInterval;
 var Schedule = require('../../..').Schedule;
 var GroupManager = require('../../..').GroupManager;
-var GroupManagerDbSqlite3 = require('../../..').GroupManagerDbSqlite3;
+var Sqlite3GroupManagerDb = require('../../..').Sqlite3GroupManagerDb;
 var EncryptedContent = require('../../..').EncryptedContent;
 var EncryptParams = require('../../..').EncryptParams;
 var EncryptAlgorithmType = require('../../..').EncryptAlgorithmType;
@@ -230,7 +230,7 @@ describe ("TestGroupManager", function() {
     // Create the group manager.
     var manager = new GroupManager
       (new Name("Alice"), new Name("data_type"),
-       new GroupManagerDbSqlite3(dKeyDatabaseFilePath), 2048, 1, keyChain);
+       new Sqlite3GroupManagerDb(dKeyDatabaseFilePath), 2048, 1, keyChain);
 
     var newCertificateBlob = certificate.wireEncode();
     var newCertificate = new IdentityCertificate();
@@ -287,7 +287,7 @@ describe ("TestGroupManager", function() {
     // Create the group manager.
     var manager = new GroupManager
       (new Name("Alice"), new Name("data_type"),
-       new GroupManagerDbSqlite3(eKeyDatabaseFilePath), 1024, 1, keyChain);
+       new Sqlite3GroupManagerDb(eKeyDatabaseFilePath), 1024, 1, keyChain);
 
     setManagerPromise(manager)
     .then(function() {
@@ -311,7 +311,7 @@ describe ("TestGroupManager", function() {
     // Create the group manager.
     var manager = new GroupManager
       (new Name("Alice"), new Name("data_type"),
-       new GroupManagerDbSqlite3(intervalDatabaseFilePath), 1024, 1, keyChain);
+       new Sqlite3GroupManagerDb(intervalDatabaseFilePath), 1024, 1, keyChain);
 
     var memberKeys = [];
 
@@ -354,7 +354,7 @@ describe ("TestGroupManager", function() {
     // Create the group manager.
     var manager = new GroupManager
       (new Name("Alice"), new Name("data_type"),
-       new GroupManagerDbSqlite3(groupKeyDatabaseFilePath), 1024, 1, keyChain);
+       new Sqlite3GroupManagerDb(groupKeyDatabaseFilePath), 1024, 1, keyChain);
 
     var result;
     var data;

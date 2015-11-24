@@ -28,7 +28,7 @@ var RepetitiveInterval = require('../../..').RepetitiveInterval;
 var Schedule = require('../../..').Schedule;
 var RsaKeyParams = require('../../..').RsaKeyParams;
 var RsaAlgorithm = require('../../..').RsaAlgorithm;
-var GroupManagerDbSqlite3 = require('../../..').GroupManagerDbSqlite3;
+var Sqlite3GroupManagerDb = require('../../..').Sqlite3GroupManagerDb;
 var Common = require('../unit-tests/unit-tests-common.js').UnitTestsCommon;
 
 var SCHEDULE = new Buffer([
@@ -100,7 +100,7 @@ describe ("TestGroupManagerDb", function() {
     }
     catch (e) {}
 
-    database = new GroupManagerDbSqlite3(databaseFilePath);
+    database = new Sqlite3GroupManagerDb(databaseFilePath);
     done();
   });
 
