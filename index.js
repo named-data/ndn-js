@@ -64,9 +64,11 @@ exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').Encrypte
 exports.GroupManagerDb = require('./js/encrypt/group-manager-db.js').GroupManagerDb;
 exports.GroupManager = require('./js/encrypt/group-manager.js').GroupManager;
 exports.Interval = require('./js/encrypt/interval.js').Interval;
+exports.ProducerDb = require('./js/encrypt/producer-db.js').ProducerDb;
 exports.RepetitiveInterval = require('./js/encrypt/repetitive-interval.js').RepetitiveInterval;
 exports.Schedule = require('./js/encrypt/schedule.js').Schedule;
 exports.Sqlite3ConsumerDb = require('./js/encrypt/sqlite3-consumer-db.js').Sqlite3ConsumerDb;
 exports.Sqlite3GroupManagerDb = require('./js/encrypt/sqlite3-group-manager-db.js').Sqlite3GroupManagerDb;
+exports.Sqlite3ProducerDb = require('./js/encrypt/sqlite3-producer-db.js').Sqlite3ProducerDb;
 
 exports.ChronoSync2013 = require('./js/sync/chrono-sync2013.js').ChronoSync2013;
