@@ -373,7 +373,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
     // Get the D-Key Data.
     var interestName = new Name(dKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.consumerName_);
-    var interest = new Interest(dKeyName);
+    var interest = new Interest(interestName);
 
     // Prepare the callback functions.
     var thisConsumer = this;
