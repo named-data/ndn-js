@@ -73,7 +73,7 @@ createEncryptionKey = function(eKeyName, timeMarker)
 }
 
 describe ("TestProducer", function() {
-  before(function(done) {
+  beforeEach(function(done) {
     databaseFilePath = "policy_config/test.db";
     try {
       fs.unlinkSync(databaseFilePath);
@@ -93,7 +93,7 @@ describe ("TestProducer", function() {
     done();
   });
 
-  after(function(done) {
+  afterEach(function(done) {
     try {
       fs.unlinkSync(databaseFilePath);
     }
@@ -155,7 +155,7 @@ describe ("TestProducer", function() {
     var contentKey = null; // Blob
 
     // We don't know which callback will be called first, so count.
-    var nCallbacksNeeded = 2;
+    var nCallbacksNeeded = 3;
     var nCallbacksCalled = 0;
 
     function checkEncryptionKeys
@@ -257,6 +257,8 @@ describe ("TestProducer", function() {
 
                 var params = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);
                 params.setInitialVector(initialVector);
+                var decryptTest = AesAlgorithm.decrypt(contentKey, encryptedData, params);
+                assert.ok(decryptTest.equals(new Blob(DATA_CONTENT, false)));
 
                 if (nCallbacksCalled == nCallbacksNeeded)
                   done();
