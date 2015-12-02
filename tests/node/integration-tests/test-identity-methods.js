@@ -54,7 +54,7 @@ var RSA_DER =
 "DwIDAQAB";
 
 describe('SqlIdentityStorage', function() {
-  before(function(done) {
+  beforeEach(function(done) {
     databaseFilePath = "policy_config/test-public-info.db";
     try {
       fs.unlinkSync(databaseFilePath);
@@ -69,7 +69,7 @@ describe('SqlIdentityStorage', function() {
     done();
   });
 
-  after(function(done) {
+  afterEach(function(done) {
     try {
       fs.unlinkSync(databaseFilePath);
     } catch (e) {}

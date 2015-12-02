@@ -72,7 +72,7 @@ var interestID;
 
 describe('TestFaceInterestMethods', function() {
   // Mocha will wait until a callback calls "done" before running the "it" test.
-  before(function(done) {
+  beforeEach(function(done) {
     face = new Face({host: "localhost"});
     uri = "/";
     counter = runExpressNameTest(done, face, uri);
@@ -109,7 +109,7 @@ def test_specific_interest(self):
 
 describe('TestFaceInterestMethods', function() {
   // Mocha will wait until a callback calls "done" before running the "it" test.
-  before(function(done) {
+  beforeEach(function(done) {
     uri = "/test/timeout";
     counter = runExpressNameTest(done, face, uri);
   });
@@ -128,7 +128,7 @@ describe('TestFaceInterestMethods', function() {
 
 describe('TestFaceInterestMethods', function() {
   // Mocha will wait until a callback calls "done" before running the "it" test.
-  before(function(done) {
+  beforeEach(function(done) {
     var name = new Name("/ndn/edu/ucla/remap/");
     counter = { onDataCallCount: 0, onTimeoutCallCount: 0 };
 
