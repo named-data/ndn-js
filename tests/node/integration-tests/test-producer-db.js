@@ -31,7 +31,7 @@ var Common = require('../unit-tests/unit-tests-common.js').UnitTestsCommon;
 var databaseFilePath;
 
 describe ("TestProducerDb", function() {
-  before(function(done) {
+  beforeEach(function(done) {
     databaseFilePath = "policy_config/test.db";
     try {
       fs.unlinkSync(databaseFilePath);
@@ -41,7 +41,7 @@ describe ("TestProducerDb", function() {
     done();
   });
 
-  after(function(done) {
+  afterEach(function(done) {
     try {
       fs.unlinkSync(databaseFilePath);
     }

@@ -208,7 +208,7 @@ function createEncryptedDKey()
 }
 
 describe ("TestConsumer", function() {
-  before(function(done) {
+  beforeEach(function(done) {
     databaseFilePath = "policy_config/test.db";
     try {
       fs.unlinkSync(databaseFilePath);
@@ -255,7 +255,7 @@ describe ("TestConsumer", function() {
     done();
   });
 
-  after(function(done) {
+  afterEach(function(done) {
     try {
       fs.unlinkSync(databaseFilePath);
     }

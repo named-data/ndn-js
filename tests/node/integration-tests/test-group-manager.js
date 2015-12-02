@@ -154,7 +154,7 @@ function setManagerPromise(manager)
 }
 
 describe ("TestGroupManager", function() {
-  before(function(done) {
+  beforeEach(function(done) {
     dKeyDatabaseFilePath = "policy_config/manager-d-key-test.db";
     try {
       fs.unlinkSync(dKeyDatabaseFilePath);
@@ -209,7 +209,7 @@ describe ("TestGroupManager", function() {
     done();
   });
 
-  after(function(done) {
+  afterEach(function(done) {
     try {
       fs.unlinkSync(dKeyDatabaseFilePath);
     } catch (e) {}
