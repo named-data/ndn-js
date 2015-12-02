@@ -139,37 +139,37 @@ Producer.prototype.createContentKey = function
 
     var aesParams = new AesKeyParams(128);
     contentKeyBits = AesAlgorithm.generateKey(aesParams).getKeyBits();
-    return thisProducer.database_.addContentKeyPromise(timeSlot, contentKeyBits);
-  })
-  .then(function() {
-    var timeCount = timeSlot;
-    thisProducer.keyRequests_[timeCount] =
-      new Producer.KeyRequest_(thisProducer.getEKeyInfoSize_());
-    var keyRequest = thisProducer.keyRequests_[timeCount];
+    thisProducer.database_.addContentKeyPromise(timeSlot, contentKeyBits)
+    .then(function() {
+      var timeCount = timeSlot;
+      thisProducer.keyRequests_[timeCount] =
+        new Producer.KeyRequest_(thisProducer.getEKeyInfoSize_());
+      var keyRequest = thisProducer.keyRequests_[timeCount];
 
-    var timeRange = new Exclude();
-    Producer.excludeAfter
-      (timeRange, new Name.Component(Schedule.toIsoString(timeSlot)));
-    // Send interests for all nodes in the tree.
-    for (var keyNameUri in thisProducer.eKeyInfo_) {
-      var entry = thisProducer.eKeyInfo_[keyNameUri];
-      var keyInfo = entry.keyInfo;
-      keyRequest.repeatAttempts[keyNameUri] = 0;
-      if (timeSlot < keyInfo.beginTimeslot || timeSlot >= keyInfo.endTimeslot) {
-        thisProducer.sendKeyInterest_
-          (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+      var timeRange = new Exclude();
+      Producer.excludeAfter
+        (timeRange, new Name.Component(Schedule.toIsoString(timeSlot)));
+      // Send interests for all nodes in the tree.
+      for (var keyNameUri in thisProducer.eKeyInfo_) {
+        var entry = thisProducer.eKeyInfo_[keyNameUri];
+        var keyInfo = entry.keyInfo;
+        keyRequest.repeatAttempts[keyNameUri] = 0;
+        if (timeSlot < keyInfo.beginTimeslot || timeSlot >= keyInfo.endTimeslot) {
+          thisProducer.sendKeyInterest_
+            (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+        }
+        else {
+          var eKeyName = new Name(entry.keyName);
+          eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeslot));
+          eKeyName.append(Schedule.toIsoString(keyInfo.endTimeslot));
+          thisProducer.encryptContentKey_
+            (keyRequest, keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
+        }
       }
-      else {
-        var eKeyName = new Name(entry.keyName);
-        eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeslot));
-        eKeyName.append(Schedule.toIsoString(keyInfo.endTimeslot));
-        thisProducer.encryptContentKey_
-          (keyRequest, keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
-      }
-    }
 
-    if (onContentKeyName != null)
-      onContentKeyName(contentKeyName);
+      if (onContentKeyName != null)
+        onContentKeyName(contentKeyName);
+    });
   });
 };
 
