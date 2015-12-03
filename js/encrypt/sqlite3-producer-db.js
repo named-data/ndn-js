@@ -59,14 +59,14 @@ exports.Sqlite3ProducerDb = Sqlite3ProducerDb;
  */
 Sqlite3ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeslot = ProducerDb.getFixedTimeSlot(timeSlot);
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.hasContentKeyPromise is only supported for async")));
 
   return this.getPromise_
-    ("SELECT key FROM contentkeys where timeslot=?", fixedTimeslot)
+    ("SELECT key FROM contentkeys where timeslot=?", fixedTimeSlot)
   .then(function(row) {
     if (row)
       return Promise.resolve(true);
@@ -86,14 +86,14 @@ Sqlite3ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
  */
 Sqlite3ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeslot = ProducerDb.getFixedTimeSlot(timeSlot);
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.getContentKeyPromise is only supported for async")));
 
   return this.getPromise_
-    ("SELECT key FROM contentkeys where timeslot=?", fixedTimeslot)
+    ("SELECT key FROM contentkeys where timeslot=?", fixedTimeSlot)
   .then(function(row) {
     if (row)
       return Promise.resolve(new Blob(row.key, false));
@@ -116,7 +116,7 @@ Sqlite3ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 Sqlite3ProducerDb.prototype.addContentKeyPromise = function
   (timeSlot, key, useSync)
 {
-  var fixedTimeslot = ProducerDb.getFixedTimeSlot(timeSlot);
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
@@ -124,7 +124,7 @@ Sqlite3ProducerDb.prototype.addContentKeyPromise = function
 
   return this.runPromise_
     ("INSERT INTO contentkeys (timeslot, key) values (?, ?)",
-     [fixedTimeslot, key.buf()]);
+     [fixedTimeSlot, key.buf()]);
 };
 
 /**
@@ -139,14 +139,14 @@ Sqlite3ProducerDb.prototype.addContentKeyPromise = function
  */
 Sqlite3ProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeslot = ProducerDb.getFixedTimeSlot(timeSlot);
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.deleteContentKeyPromise is only supported for async")));
 
   return this.runPromise_
-    ("DELETE FROM contentkeys WHERE timeslot=?", fixedTimeslot);
+    ("DELETE FROM contentkeys WHERE timeslot=?", fixedTimeSlot);
 };
 
 /**
@@ -183,9 +183,9 @@ Sqlite3ProducerDb.INITIALIZATION1 =
   "CREATE TABLE IF NOT EXISTS                         \n" +
   "  contentkeys(                                     \n" +
   "    rowId            INTEGER PRIMARY KEY,          \n" +
-  "    timeslot         INTEGER,                      \n" +
+  "    timeSlot         INTEGER,                      \n" +
   "    key              BLOB NOT NULL                 \n" +
   "  );                                               \n";
 Sqlite3ProducerDb.INITIALIZATION2 =
   "CREATE UNIQUE INDEX IF NOT EXISTS                  \n" +
-  "   timeslotIndex ON contentkeys(timeslot);         \n";
+  "   timeSlotIndex ON contentkeys(timeSlot);         \n";

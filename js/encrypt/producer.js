@@ -116,7 +116,7 @@ exports.Producer = Producer;
 Producer.prototype.createContentKey = function
   (timeSlot, onEncryptedKeys, onContentKeyName)
 {
-  var hourSlot = Producer.getRoundedTimeslot_(timeSlot);
+  var hourSlot = Producer.getRoundedTimeSlot_(timeSlot);
 
   // Create the content key name.
   var contentKeyName = new Name(this.namespace_);
@@ -154,14 +154,14 @@ Producer.prototype.createContentKey = function
         var entry = thisProducer.eKeyInfo_[keyNameUri];
         var keyInfo = entry.keyInfo;
         keyRequest.repeatAttempts[keyNameUri] = 0;
-        if (timeSlot < keyInfo.beginTimeslot || timeSlot >= keyInfo.endTimeslot) {
+        if (timeSlot < keyInfo.beginTimeSlot || timeSlot >= keyInfo.endTimeSlot) {
           thisProducer.sendKeyInterest_
             (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
         }
         else {
           var eKeyName = new Name(entry.keyName);
-          eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeslot));
-          eKeyName.append(Schedule.toIsoString(keyInfo.endTimeslot));
+          eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
+          eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
           thisProducer.encryptContentKey_
             (keyRequest, keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
         }
@@ -194,7 +194,7 @@ Producer.prototype.produce = function
     thisProducer.database_.getContentKeyPromise(timeSlot)
     .then(function(contentKey) {
       var dataName = new Name(thisProducer.namespace_);
-      dataName.append(Schedule.toIsoString(Producer.getRoundedTimeslot_(timeSlot)));
+      dataName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
 
       data.setName(dataName);
       var params = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);
@@ -229,8 +229,8 @@ Producer.prototype.produce = function
 
 Producer.KeyInfo_ = function ProducerKeyInfo()
 {
-  this.beginTimeslot = null; // number
-  this.endTimeslot = null;   // number
+  this.beginTimeSlot = null; // number
+  this.endTimeSlot = null;   // number
   this.keyBits = null;       // Blob
 };
 
@@ -249,7 +249,7 @@ Producer.KeyRequest_ = function ProducerKeyRequest(interests)
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
  * @return {number} The start of the hour as milliseconds since Jan 1, 1970 GMT.
  */
-Producer.getRoundedTimeslot_ = function(timeSlot)
+Producer.getRoundedTimeSlot_ = function(timeSlot)
 {
   return Math.round(Math.floor(Math.round(timeSlot) / 3600000.0) * 3600000.0);
 }
@@ -353,8 +353,8 @@ Producer.prototype.handleCoveringKey_ = function
 
   var encryptionKey = data.getContent();
   var keyInfo = this.eKeyInfo_[interestNameUrl].keyInfo;
-  keyInfo.beginTimeslot = begin;
-  keyInfo.endTimeslot = end;
+  keyInfo.beginTimeSlot = begin;
+  keyInfo.endTimeSlot = end;
   keyInfo.keyBits = encryptionKey;
 
   this.encryptContentKey_
@@ -377,7 +377,7 @@ Producer.prototype.encryptContentKey_ = function
 {
   var keyName = new Name(this.namespace_);
   keyName.append(Encryptor.NAME_COMPONENT_C_KEY);
-  keyName.append(Schedule.toIsoString(Producer.getRoundedTimeslot_(timeSlot)));
+  keyName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
 
   var cKeyData;
   var thisProducer = this;
