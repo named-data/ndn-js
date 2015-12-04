@@ -79,7 +79,7 @@ EncryptParams.prototype.getInitialVector = function()
 
 /**
  * Set the algorithm type.
- * @param {number} encryptionMode The algorithm type from EncryptAlgorithmType.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
  * If not specified, set to null.
  * @return {EncryptParams} This EncryptParams so that you can chain calls to
  * update values.
