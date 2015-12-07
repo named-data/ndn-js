@@ -281,7 +281,7 @@ describe('TestEncryptedContent', function() {
     keyLocator.setType(KeyLocatorType.KEYNAME);
     keyLocator.getKeyName().set("/test/key/locator");
     content.setKeyLocator(keyLocator);
-    assert.ok(content.getKeyLocator().getType() != KeyLocatorType.NONE);
+    assert.ok(content.getKeyLocator().getType() != null);
     assert.ok(content.getKeyLocator().getKeyName().equals
               (new Name("/test/key/locator")));
     assert.ok(content.getPayload().isNull());
