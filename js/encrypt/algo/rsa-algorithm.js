@@ -137,7 +137,7 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
   // Encode the SubjectPublicKeyInfo.
   var algorithmIdentifier = new DerNode.DerSequence();
   algorithmIdentifier.addChild(new DerNode.DerOid(new OID
-    (RsaAlgorithm.RSA_ENCRYPTION_OID)));
+    (PrivateKeyStorage.RSA_ENCRYPTION_OID)));
   algorithmIdentifier.addChild(new DerNode.DerNull());
   var publicKey = new DerNode.DerSequence();
   publicKey.addChild(algorithmIdentifier);
@@ -310,10 +310,8 @@ RsaAlgorithm.getRsaPrivateKeyDer = function(pkcs8PrivateKeyDer)
   var algorithmIdChildren = DerNode.getSequence(pkcs8Children, 1).getChildren();
   var oidString = algorithmIdChildren[0].toVal();
 
-  if (oidString != RsaAlgorithm.RSA_ENCRYPTION_OID)
+  if (oidString != PrivateKeyStorage.RSA_ENCRYPTION_OID)
     throw new Error("The PKCS #8 private key is not RSA_ENCRYPTION");
 
   return pkcs8Children[2].getPayload();
 };
-
-RsaAlgorithm.RSA_ENCRYPTION_OID = "1.2.840.113549.1.1.1";
