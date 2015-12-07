@@ -52,7 +52,8 @@ exports.EncryptedContent = EncryptedContent;
 
 /**
  * Get the algorithm type from EncryptAlgorithmType.
- * @returns {number} The algorithm type, or null if not specified.
+ * @returns {number} The algorithm type from EncryptAlgorithmType, or null if
+ * not specified.
  */
 EncryptedContent.prototype.getAlgorithmType = function()
 {
@@ -101,8 +102,8 @@ EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
 
 /**
  * Set the key locator.
- * @param {KeyLocator} keyLocator The key locator. If not specified, set to the
- * default KeyLocator().
+ * @param {KeyLocator} keyLocator The key locator. This makes a copy of the
+ * object. If not specified, set to the default KeyLocator().
  * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
