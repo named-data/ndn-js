@@ -25,6 +25,9 @@ var Blob = require('../util/blob.js').Blob;
 /**
  * An EncryptedContent holds an encryption type, a payload and other fields
  * representing encrypted content.
+ * @param {EncryptedContent} (optional) If value is another EncryptedContent
+ * then copy it. If value is omitted then create an EncryptedContent with
+ * unspecified values.
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
