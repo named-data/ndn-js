@@ -66,7 +66,7 @@ exports.GroupManager = GroupManager;
  * Create a group key for the interval into which timeSlot falls. This creates
  * a group key if it doesn't exist, and encrypts the key using the public key of
  * each eligible member.
- * @param Pnumber} timeSlot The time slot to cover as milliseconds since
+ * @param {number} timeSlot The time slot to cover as milliseconds since
  * Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or

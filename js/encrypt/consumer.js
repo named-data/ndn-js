@@ -422,7 +422,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
 
 /**
  * Decrypt dKeyData.
- * @param (Data) dKeyData The D-KEY data packet.
+ * @param {Data} dKeyData The D-KEY data packet.
  * @return {Promise|SyncPromise} A promise that returns the decrypted Blob, or
  * that is rejected with Consumer.Error or other error.
  */

@@ -22,21 +22,21 @@ var Interval = require('./interval.js').Interval;
 
 /**
  * A RepetitiveInterval is an advanced interval which can repeat and can be used
- * to find a simple Interval that a time point falls in. Create an Interval with
- * one of these forms:
+ * to find a simple Interval that a time point falls in. Create a 
+ * RepetitiveInterval with one of these forms:
  * RepetitiveInterval() A RepetitiveInterval with one day duration, non-repeating..
  * RepetitiveInterval(startDate, endDate, intervalStartHour, intervalEndHour, nRepeats, repeatUnit).
  * RepetitiveInterval(repetitiveInterval).
- * @param startDate {number} The start date as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} startDate The start date as milliseconds since Jan 1, 1970 UTC.
  * startDate must be earlier than or same as endDate. Or if repeatUnit is
  * RepetitiveInterval.RepeatUnit.NONE, then it must equal endDate.
- * @param endDate {number} The end date as milliseconds since Jan 1, 1970 UTC.
- * @param intervalStartHour {number} The start hour in the day, from 0 to 23.
+ * @param {number} endDate The end date as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} intervalStartHour The start hour in the day, from 0 to 23.
  * intervalStartHour must be less than intervalEndHour.
- * @param intervalEndHour {number} The end hour in the day from 1 to 24.
- * @param nRepeats {number} (optional) Repeat the interval nRepeats repetitions,
+ * @param {number} intervalEndHour The end hour in the day from 1 to 24.
+ * @param {number} nRepeats (optional) Repeat the interval nRepeats repetitions,
  * every unit, until endDate. If ommitted, use 0.
- * @param repeatUnit {number} The unit of the repetition, from
+ * @param {number} repeatUnit (optional) The unit of the repetition, from
  * RepetitiveInterval.RepeatUnit. If ommitted, use NONE. If this is NONE or
  * ommitted, then startDate must equal endDate.
  * @note This class is an experimental feature. The API may change.

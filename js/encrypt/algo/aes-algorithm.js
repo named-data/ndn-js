@@ -66,9 +66,9 @@ AesAlgorithm.deriveEncryptKey = function(keyBits)
 
 /**
  * Decrypt the encryptedData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value.
- * @param encryptedData {Blob} The data to decrypt.
- * @param params {EncryptParams} This decrypts according to
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
@@ -127,9 +127,9 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 
 /**
  * Decrypt the encryptedData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value.
- * @param encryptedData {Blob} The data to decrypt.
- * @param params {EncryptParams} This decrypts according to
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The decrypted data.
@@ -144,9 +144,9 @@ AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
 
 /**
  * Encrypt the plainData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value.
- * @param plainData {Blob} The data to encrypt.
- * @param params {EncryptParams} This encrypts according to
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
@@ -202,9 +202,9 @@ AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
 
 /**
  * Encrypt the plainData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value.
- * @param plainData {Blob} The data to encrypt.
- * @param params {EncryptParams} This encrypts according to
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The encrypted data.

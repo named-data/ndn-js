@@ -206,11 +206,11 @@ Encryptor.encryptSymmetricPromise_ = function
 /**
  * Encrypt the payload using the asymmetric key according to params, and
  * return an EncryptedContent.
- * @param payload The data to encrypt. The size should be within range of the
- * key.
- * @param key The key value.
- * @param keyName The key name for the EncryptedContent key locator.
- * @param params The parameters for encryption.
+ * @param {Blob} payload The data to encrypt. The size should be within range of
+ * the key.
+ * @param {Blob} key The key value.
+ * @param {Name} keyName The key name for the EncryptedContent key locator.
+ * @param {EncryptParams} params The parameters for encryption.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.

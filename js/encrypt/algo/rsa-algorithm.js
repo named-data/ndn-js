@@ -148,9 +148,9 @@ RsaAlgorithm.deriveEncryptKey = function(keyBits)
 
 /**
  * Decrypt the encryptedData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value (PKCS8-encoded private key).
- * @param encryptedData {Blob} The data to decrypt.
- * @param params {EncryptParams} This decrypts according to
+ * @param {Blob} keyBits The key value (PKCS8-encoded private key).
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -209,9 +209,9 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
 
 /**
  * Decrypt the encryptedData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value (PKCS8-encoded private key).
- * @param encryptedData {Blob} The data to decrypt.
- * @param params {EncryptParams} This decrypts according to
+ * @param {Blob} keyBits The key value (PKCS8-encoded private key).
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The decrypted data.
  * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
@@ -225,9 +225,9 @@ RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
 
 /**
  * Encrypt the plainData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value (DER-encoded public key).
- * @param plainData {Blob} The data to encrypt.
- * @param params {EncryptParams} This encrypts according to
+ * @param {Blob} keyBits The key value (DER-encoded public key).
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType().
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -283,9 +283,9 @@ RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
 
 /**
  * Encrypt the plainData using the keyBits according the encrypt params.
- * @param keyBits {Blob} The key value (DER-encoded public key).
- * @param plainData {Blob} The data to encrypt.
- * @param params {EncryptParams} This encrypts according to
+ * @param {Blob} keyBits The key value (DER-encoded public key).
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The encrypted data.
  * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
