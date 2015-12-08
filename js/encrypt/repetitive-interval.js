@@ -62,8 +62,8 @@ var RepetitiveInterval = function RepetitiveInterval
     if (repeatUnit == undefined)
       repeatUnit = RepetitiveInterval.RepeatUnit.NONE;
 
-    this.startDate_ = RepetitiveInterval.toDateOnlyMilliseconds(startDate);
-    this.endDate_ = RepetitiveInterval.toDateOnlyMilliseconds(endDate);
+    this.startDate_ = RepetitiveInterval.toDateOnlyMilliseconds_(startDate);
+    this.endDate_ = RepetitiveInterval.toDateOnlyMilliseconds_(endDate);
     this.intervalStartHour_ = Math.round(intervalStartHour);
     this.intervalEndHour_ = Math.round(intervalEndHour);
     this.nRepeats_ = Math.round(nRepeats);
@@ -122,29 +122,29 @@ RepetitiveInterval.prototype.getInterval = function(timePoint)
   var startTime;
   var endTime;
 
-  if (!this.hasIntervalOnDate(timePoint)) {
+  if (!this.hasIntervalOnDate_(timePoint)) {
     // There is no interval on the date of timePoint.
-    startTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint);
-    endTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint) +
+    startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
+    endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
       24 * RepetitiveInterval.MILLISECONDS_IN_HOUR;
     isPositive = false;
   }
   else {
     // There is an interval on the date of timePoint.
-    startTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint) +
+    startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
       this.intervalStartHour_ * RepetitiveInterval.MILLISECONDS_IN_HOUR;
-    endTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint) +
+    endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
       this.intervalEndHour_ * RepetitiveInterval.MILLISECONDS_IN_HOUR;
 
     // check if in the time duration
     if (timePoint < startTime) {
       endTime = startTime;
-      startTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint);
+      startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
       isPositive = false;
     }
     else if (timePoint > endTime) {
       startTime = endTime;
-      endTime = RepetitiveInterval.toDateOnlyMilliseconds(timePoint) +
+      endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
         RepetitiveInterval.MILLISECONDS_IN_DAY;
       isPositive = false;
     }
@@ -254,9 +254,9 @@ RepetitiveInterval.prototype.getRepeatUnit = function()
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @return {boolean} True if the date of the time point is in any interval.
  */
-RepetitiveInterval.prototype.hasIntervalOnDate = function(timePoint)
+RepetitiveInterval.prototype.hasIntervalOnDate_ = function(timePoint)
 {
-  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds(timePoint));
+  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds_(timePoint));
   var startDate = new Date(this.startDate_);
   var endDate = new Date(this.endDate_);
 
@@ -299,7 +299,7 @@ RepetitiveInterval.prototype.hasIntervalOnDate = function(timePoint)
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @return {number} A time point as milliseconds since Jan 1, 1970 UTC.
  */
-RepetitiveInterval.toDateOnlyMilliseconds = function(timePoint)
+RepetitiveInterval.toDateOnlyMilliseconds_ = function(timePoint)
 {
   var result = Math.round(timePoint);
   result -= result % RepetitiveInterval.MILLISECONDS_IN_DAY;
