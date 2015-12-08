@@ -136,7 +136,7 @@ describe('TestEncryptor', function() {
     for (var i = 0; i < encryptorRsaTestInputs.length; ++i) {
       var input = encryptorRsaTestInputs[i];
 
-      var raw_content = new Blob(new Buffer([
+      var rawContent = new Blob(new Buffer([
         0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
         0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
         0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x73
@@ -155,7 +155,7 @@ describe('TestEncryptor', function() {
 
       var encryptParams = new EncryptParams(input.type);
 
-      Encryptor.encryptData(data, raw_content, keyName, eKey, encryptParams);
+      Encryptor.encryptData(data, rawContent, keyName, eKey, encryptParams);
 
       assert.ok(data.getName().equals(new Name("/FOR").append(keyName)),
                 input.testName);
@@ -168,7 +168,7 @@ describe('TestEncryptor', function() {
 
       var recovered = extractContent.getPayload();
       var decrypted = RsaAlgorithm.decrypt(dKey, recovered, encryptParams);
-      assert.ok(raw_content.equals(decrypted), input.testName);
+      assert.ok(rawContent.equals(decrypted), input.testName);
     }
   });
 
@@ -176,7 +176,7 @@ describe('TestEncryptor', function() {
     for (var i = 0; i < encryptorRsaTestInputs.length; ++i) {
       var input = encryptorRsaTestInputs[i];
 
-      var large_content = new Blob(new Buffer([
+      var largeContent = new Blob(new Buffer([
         0x73, 0x5a, 0xbd, 0x47, 0x0c, 0xfe, 0xf8, 0x7d,
         0x2e, 0x17, 0xaa, 0x11, 0x6f, 0x23, 0xc5, 0x10,
         0x23, 0x36, 0x88, 0xc4, 0x2a, 0x0f, 0x9a, 0x72,
@@ -227,7 +227,7 @@ describe('TestEncryptor', function() {
       var dKey = decryptKey.getKeyBits();
 
       var encryptParams = new EncryptParams(input.type);
-      Encryptor.encryptData(data, large_content, keyName, eKey, encryptParams);
+      Encryptor.encryptData(data, largeContent, keyName, eKey, encryptParams);
 
       assert.ok(data.getName().equals(new Name("/FOR").append(keyName)),
                 input.testName);
@@ -268,7 +268,7 @@ describe('TestEncryptor', function() {
       var largePayload = AesAlgorithm.decrypt
         (nonce, bufferPayload, encryptParams);
 
-      assert.ok(large_content.equals(largePayload), input.testName);
+      assert.ok(largeContent.equals(largePayload), input.testName);
     }
   });
 });
