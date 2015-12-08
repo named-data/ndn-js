@@ -488,9 +488,9 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -507,9 +507,9 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @throws {Error} If getAllKeyNamesOfIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.

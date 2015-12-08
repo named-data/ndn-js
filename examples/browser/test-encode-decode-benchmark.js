@@ -153,7 +153,7 @@ var keyChain;
  * where duration is the number of seconds for all iterations and encoding is
  * the wire encoding Buffer. It is necessary to use a callback because the
  * crypto functions use callbacks.
- * @param (number) nIterationsBeforeYield (optional) The number of loops before
+ * @param {number} nIterationsBeforeYield (optional) The number of loops before
  * calling setTimeout(0) to yield.  This is useful to let the system process
  * pending callbacks after nIterationsBeforeYield iterations. If null or omitted,
  * this does not use setTimeout.
@@ -283,7 +283,7 @@ function onVerifyFailed(data)
  * @param {function} onFinished When finished this calls onFinished(duration)
  * where duration is the number of seconds for all iterations. It is necessary
  * to use a callback because the crypto functions use callbacks.
- * @param (number) nIterationsBeforeYield (optional) The number of loops before
+ * @param {number} nIterationsBeforeYield (optional) The number of loops before
  * calling setTimeout(0) to yield.  This is useful to let the system process
  * pending callbacks after nIterationsBeforeYield iterations. If null or omitted,
  * this does not use setTimeout.

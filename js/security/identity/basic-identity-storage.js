@@ -420,9 +420,9 @@ BasicIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.

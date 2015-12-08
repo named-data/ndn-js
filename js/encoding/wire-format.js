@@ -220,7 +220,7 @@ WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
 /**
  * Set the static default WireFormat used by default encoding and decoding
  * methods.
- * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
+ * @param {WireFormat} wireFormat An object of a subclass of WireFormat.
  */
 WireFormat.setDefaultWireFormat = function(wireFormat)
 {

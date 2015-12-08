@@ -265,8 +265,8 @@ FilePrivateKeyStorage.prototype.write = function(keyName, keyClass, bytes) {
 
 /**
  * Read from a key file
- * @param keyName
- * @param keyClass [PUBLIC, PRIVATE, SYMMETRIC]
+ * @param {Name} keyName
+ * @param {number} keyClass An int from KeyClass.
  * @return {Buffer} key bytes
  * @throws Error if the file cannot be read from
  */
@@ -286,7 +286,7 @@ FilePrivateKeyStorage.getUserHomePath = function() {
 /**
  * Transform the key name into a file name
  * @param {Name} keyName
- * @param {KeyClass} keyClass
+ * @param {number} keyClass An int from KeyClass.
  */
 FilePrivateKeyStorage.prototype.transformName = function(keyName, keyClass) {
   var hash = Crypto.createHash('sha256');
