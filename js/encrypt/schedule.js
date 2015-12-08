@@ -86,7 +86,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * repetitive interval sets and find the shortest interval that allows a group
  * member to access the data. If there is no interval covering the time point,
  * this returns false for isPositive and a negative interval.
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is True if the returned interval is positive or false if negative,
@@ -316,7 +316,7 @@ Schedule.decodeRepetitiveInterval_ = function(decoder)
 
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
- * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
  * @returns {string} The string representation.
  */
 Schedule.toIsoString = function(msSince1970)
@@ -346,7 +346,7 @@ Schedule.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 GMT.
+ * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 Schedule.fromIsoString = function(timeString)
 {

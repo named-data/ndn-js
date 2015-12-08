@@ -50,7 +50,7 @@ exports.Sqlite3ProducerDb = Sqlite3ProducerDb;
 
 /**
  * Check if a content key exists for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
  * @return {Promise} A promise that returns true if there is a content key for 
@@ -77,7 +77,7 @@ Sqlite3ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
 
 /**
  * Get the content key for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
  * @return {Promise} A promise that returns a Blob with the encoded key, or that
@@ -105,7 +105,7 @@ Sqlite3ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 
 /**
  * Add key as the content key for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {Blob} key The encoded key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
@@ -130,7 +130,7 @@ Sqlite3ProducerDb.prototype.addContentKeyPromise = function
 /**
  * Delete the content key for the hour covering timeSlot. If there is no key for
  * the time slot, do nothing.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
  * @return {Promise} A promise that fulfills when the key is deleted (or there

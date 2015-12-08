@@ -27,10 +27,10 @@ var Interval = require('./interval.js').Interval;
  * RepetitiveInterval() A RepetitiveInterval with one day duration, non-repeating..
  * RepetitiveInterval(startDate, endDate, intervalStartHour, intervalEndHour, nRepeats, repeatUnit).
  * RepetitiveInterval(repetitiveInterval).
- * @param startDate {number} The start date as milliseconds since Jan 1, 1970 GMT.
+ * @param startDate {number} The start date as milliseconds since Jan 1, 1970 UTC.
  * startDate must be earlier than or same as endDate. Or if repeatUnit is
  * RepetitiveInterval.RepeatUnit.NONE, then it must equal endDate.
- * @param endDate {number} The end date as milliseconds since Jan 1, 1970 GMT.
+ * @param endDate {number} The end date as milliseconds since Jan 1, 1970 UTC.
  * @param intervalStartHour {number} The start hour in the day, from 0 to 23.
  * intervalStartHour must be less than intervalEndHour.
  * @param intervalEndHour {number} The end hour in the day from 1 to 24.
@@ -109,7 +109,7 @@ RepetitiveInterval.RepeatUnit = {
  * Get an interval that covers the time point. If there is no interval
  * covering the time point, this returns false for isPositive and returns a
  * negative interval.
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is True if the returned interval is
@@ -197,7 +197,7 @@ RepetitiveInterval.prototype.compare = function(other)
 
 /**
  * Get the start date.
- * @return {number} The start date as milliseconds since Jan 1, 1970 GMT.
+ * @return {number} The start date as milliseconds since Jan 1, 1970 UTC.
  */
 RepetitiveInterval.prototype.getStartDate = function()
 {
@@ -206,7 +206,7 @@ RepetitiveInterval.prototype.getStartDate = function()
 
 /**
  * Get the end date.
- * @return {number} The end date as milliseconds since Jan 1, 1970 GMT.
+ * @return {number} The end date as milliseconds since Jan 1, 1970 UTC.
  */
 RepetitiveInterval.prototype.getEndDate = function()
 {
@@ -251,7 +251,7 @@ RepetitiveInterval.prototype.getRepeatUnit = function()
 
 /**
  * Check if the date of the time point is in any interval.
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @return {boolean} True if the date of the time point is in any interval.
  */
 RepetitiveInterval.prototype.hasIntervalOnDate = function(timePoint)
@@ -296,8 +296,8 @@ RepetitiveInterval.prototype.hasIntervalOnDate = function(timePoint)
 
 /**
  * Return a time point on the beginning of the date (without hours, minutes, etc.)
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 GMT.
- * @return {number} A time point as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} A time point as milliseconds since Jan 1, 1970 UTC.
  */
 RepetitiveInterval.toDateOnlyMilliseconds = function(timePoint)
 {

@@ -28,7 +28,7 @@ exports.UnitTestsCommon = UnitTestsCommon;
 
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
- * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
  * @returns {string} The string representation.
  */
 UnitTestsCommon.toIsoString = function(msSince1970)
@@ -58,7 +58,7 @@ UnitTestsCommon.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 GMT.
+ * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 UnitTestsCommon.fromIsoString = function(timeString)
 {

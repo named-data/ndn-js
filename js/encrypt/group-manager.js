@@ -67,7 +67,7 @@ exports.GroupManager = GroupManager;
  * a group key if it doesn't exist, and encrypts the key using the public key of
  * each eligible member.
  * @param Pnumber} timeSlot The time slot to cover as milliseconds since
- * Jan 1, 1970 GMT.
+ * Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -259,7 +259,7 @@ GroupManager.prototype.updateMemberSchedulePromise = function
 /**
  * Calculate an Interval that covers the timeSlot.
  * @param {number} timeSlot The time slot to cover as milliseconds since
- * Jan 1, 1970 GMT.
+ * Jan 1, 1970 UTC.
  * @param {Array<object>} memberKeys First clear memberKeys then fill it with
  * the info of members who are allowed to access the interval. memberKeys is an
  * array of object where "keyName" is the Name of the public key and "publicKey"

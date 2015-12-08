@@ -55,7 +55,7 @@ ProducerDb.Error = function ProducerDbError(error)
 
 /**
  * Check if a content key exists for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -71,7 +71,7 @@ ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
 
 /**
  * Get the content key for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -87,7 +87,7 @@ ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 
 /**
  * Add key as the content key for the hour covering timeSlot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {Blob} key The encoded key.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -106,7 +106,7 @@ ProducerDb.prototype.addContentKeyPromise = function
 /**
  * Delete the content key for the hour covering timeSlot. If there is no key for
  * the time slot, do nothing.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -122,8 +122,8 @@ ProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSync)
 
 /**
  * Get the hour-based time slot.
- * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 GMT.
- * @return {number} The hour-based time slot as hours since Jan 1, 1970 GMT.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The hour-based time slot as hours since Jan 1, 1970 UTC.
  */
 ProducerDb.getFixedTimeSlot = function(timeSlot)
 {

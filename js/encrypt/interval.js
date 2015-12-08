@@ -26,10 +26,10 @@
  * Interval(interval).
  * @param {boolean} isValid True to create a valid empty interval, false to
  * create an invalid interval.
- * @param startTime {number} The start time as milliseconds since Jan 1, 1970 GMT.
+ * @param startTime {number} The start time as milliseconds since Jan 1, 1970 UTC.
  * The start time must be less than the end time. To create an empty interval
  * (start time equals end time), use the constructor Interval(true).
- * @param endTime {number} The end time as milliseconds since Jan 1, 1970 GMT.
+ * @param endTime {number} The end time as milliseconds since Jan 1, 1970 UTC.
  * @param interval {Interval} The other interval with values to copy.
  * @note This class is an experimental feature. The API may change.
  * @constructor
@@ -66,7 +66,7 @@ exports.Interval = Interval;
 /**
  * Check if the time point is in this interval.
  * @param {number} timePoint The time point to check as milliseconds since
- * Jan 1, 1970 GMT.
+ * Jan 1, 1970 UTC.
  * @return {boolean} True if timePoint is in this interval.
  * @throws Error if this Interval is invalid.
  */
@@ -163,7 +163,7 @@ Interval.prototype.unionWith = function(interval)
 
 /**
  * Get the start time.
- * @return {number} The start time as milliseconds since Jan 1, 1970 GMT.
+ * @return {number} The start time as milliseconds since Jan 1, 1970 UTC.
  * @throws Error if this Interval is invalid.
  */
 Interval.prototype.getStartTime = function()
@@ -175,7 +175,7 @@ Interval.prototype.getStartTime = function()
 
 /**
  * Get the end time.
- * @return {number} The end time as milliseconds since Jan 1, 1970 GMT.
+ * @return {number} The end time as milliseconds since Jan 1, 1970 UTC.
  * @throws Error if this Interval is invalid.
  */
 Interval.prototype.getEndTime = function()
