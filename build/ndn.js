@@ -8897,7 +8897,7 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
 /**
  * Set the static default WireFormat used by default encoding and decoding
  * methods.
- * @param wireFormat {WireFormat} An object of a subclass of WireFormat.
+ * @param {WireFormat} wireFormat An object of a subclass of WireFormat.
  */
 WireFormat.setDefaultWireFormat = function(wireFormat)
 {
@@ -11861,8 +11861,8 @@ Name.prototype.appendSegment = function(segment)
  * Append a component with the encoded segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param segmentOffset The segment byte offset.
- * @returns This name so that you can chain calls to append.
+ * @param {number} segmentOffset The segment byte offset.
+ * @returns {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -11886,7 +11886,7 @@ Name.prototype.appendVersion = function(version)
  * Append a component with the encoded timestamp according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param timestamp The number of microseconds since the UNIX epoch (Thursday,
+ * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @returns This name so that you can chain calls to append.
  */
@@ -11899,7 +11899,7 @@ Name.prototype.appendTimestamp = function(timestamp)
  * Append a component with the encoded sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param sequenceNumber The sequence number.
+ * @param {number} sequenceNumber The sequence number.
  * @returns This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
@@ -14693,9 +14693,9 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
@@ -14712,9 +14712,9 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @throws {Error} If getAllKeyNamesOfIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
@@ -14883,14 +14883,15 @@ IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
 
 /**
  * Delete an identity and related public keys and certificates.
- * @param {Name} identity The identity name.
+ * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise which fulfills when the identity info
  * is deleted.
  */
-IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync)
+IdentityStorage.prototype.deleteIdentityInfoPromise = function
+  (identityName, useSync)
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.deleteIdentityInfoPromise is not implemented"));
@@ -14898,14 +14899,14 @@ IdentityStorage.prototype.deleteIdentityInfoPromise = function(identity, useSync
 
 /**
  * Delete an identity and related public keys and certificates.
- * @param {Name} identity The identity name.
+ * @param {Name} identityName The identity name.
  * @throws {Error} If deleteIdentityInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
-IdentityStorage.prototype.deleteIdentityInfo = function(identity)
+IdentityStorage.prototype.deleteIdentityInfo = function(identityName)
 {
   return SyncPromise.getValue
-    (this.deleteIdentityInfoPromise(identity, true));
+    (this.deleteIdentityInfoPromise(identityName, true));
 };
 
 // Track the lastTimestamp so that each timestamp is unique.
@@ -15296,9 +15297,9 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
 
 /**
  * Append all the key names of a particular identity to the nameList.
- * @param identityName {Name} The identity name to search for.
- * @param nameList {Array<Name>} Append result names to nameList.
- * @param isDefault {boolean} If true, add only the default key name. If false,
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
@@ -17004,7 +17005,7 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
  * Delete the identity from the public and private key storage. If the
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
- * @param identityName {Name} The name of the identity.
+ * @param {Name} identityName The name of the identity.
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
@@ -17063,7 +17064,7 @@ IdentityManager.prototype.deleteIdentity = function
     });
   });
 
-  return SyncPromise.complete(onComplete, mainPromise, onError);
+  return SyncPromise.complete(onComplete, onError, mainPromise);
 };
 
 /**
@@ -17113,10 +17114,9 @@ IdentityManager.prototype.getDefaultIdentity = function(onComplete, onError)
 /**
  * Generate a pair of RSA keys for the specified identity.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
- * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
- * @param {number} keySize (optional) The size of the key. If omitted, use a
- * default secure key size.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
  * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPair = function
@@ -17188,18 +17188,45 @@ IdentityManager.prototype.getDefaultKeyNameForIdentity = function
  * Generate a pair of RSA keys for the specified identity and set it as default
  * key for the identity.
  * @param {Name} identityName The name of the identity.
- * @param {boolean} isKsk (optional) true for generating a Key-Signing-Key (KSK),
- * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
- * @param {number} keySize (optional) The size of the key. If omitted, use a
- * default secure key size.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If false, this may return a SyncPromise or an async
+ * Promise.
+ * @return {Promise|SyncPromise} A promise which returns the generated key name.
+ */
+IdentityManager.prototype.generateRSAKeyPairAsDefaultPromise = function
+  (identityName, isKsk, keySize, useSync)
+{
+  var newKeyName;
+  var thisManager = this;
+  return this.generateKeyPairPromise(identityName, isKsk, new RsaKeyParams(keySize))
+  .then(function(localKeyName) {
+    newKeyName = localKeyName;
+
+    return thisManager.identityStorage.setDefaultKeyNameForIdentityPromise
+      (newKeyName);
+  })
+  .then(function() {
+    return SyncPromise.resolve(newKeyName);
+  });
+};
+
+/**
+ * Generate a pair of RSA keys for the specified identity and set it as default
+ * key for the identity.
+ * @param {Name} identityName The name of the identity.
+ * @param {boolean} isKsk True for generating a Key-Signing-Key (KSK), false for
+ * a Data-Signing-Key (DSK).
+ * @param {number} keySize The size of the key.
  * @return {Name} The generated key name.
  */
 IdentityManager.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
 {
-  var newKeyName = this.generateRSAKeyPair(identityName, isKsk, keySize);
-  this.identityStorage.setDefaultKeyNameForIdentity(newKeyName);
-  return newKeyName;
+  return SyncPromise.getValue
+    (this.generateRSAKeyPairAsDefaultPromise(identityName, isKsk, keySize, true));
 };
 
 /**
@@ -18022,13 +18049,13 @@ PolicyManager.verifyUsesString = null;
 /**
  * Check the type of signature and use the publicKeyDer to verify the
  * signedBlob using the appropriate signature algorithm.
- * @param signature {Signature} An object of a subclass of Signature, e.g.
+ * @param {Signature} signature An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
  * signature.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  * @throws {SecurityException} if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
@@ -18055,12 +18082,12 @@ PolicyManager.verifySignature = function
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Blob} The signature bits.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
  * signature.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifySha256WithRsaSignature = function
@@ -18100,10 +18127,10 @@ PolicyManager.verifySha256WithRsaSignature = function
 /**
  * Verify the DigestSha256 signature on the SignedBlob by verifying that the
  * digest of SignedBlob equals the signature.
- * @param signature {Blob} The signature bits.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifyDigestSha256Signature = function
@@ -18915,7 +18942,7 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob The SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 ConfigPolicyManager.prototype.verify = function
@@ -19304,7 +19331,7 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 SelfVerifyPolicyManager.prototype.verify = function
@@ -19331,7 +19358,7 @@ SelfVerifyPolicyManager.prototype.verify = function
  * KeyLocator (if available). If the public key can't be found, return and empty
  * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param onComplete {function} This calls onComplete(publicKeyDer) where
+ * @param {function} onComplete This calls onComplete(publicKeyDer) where
  * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
  */
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
@@ -19463,7 +19490,7 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * Delete the identity from the public and private key storage. If the
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
- * @param identityName {Name} The name of the identity.
+ * @param {Name} identityName The name of the identity.
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
@@ -19538,6 +19565,12 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
+  keySize = (typeof isKsk === "boolean") ? isKsk : keySize;
+  isKsk = (typeof isKsk === "boolean") ? isKsk : false;
+
+  if (!keySize)
+    keySize = 2048;
+
   return this.identityManager.generateRSAKeyPair(identityName, isKsk, keySize);
 };
 
@@ -19815,10 +19848,10 @@ KeyChain.prototype.sign = function
  * @param {Data|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If it
  * is an array, sign it and return a Signature object.
- * @param identityName (optional) The identity name for the key to use for
+ * @param {Name} identityName (optional) The identity name for the key to use for
  * signing.  If omitted, infer the signing identity from the data packet name.
- * @param wireFormat (optional) A WireFormat object used to encode the input. If
- * omitted, use WireFormat getDefaultWireFormat().
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) If target is a Data object, this calls
  * onComplete(data) with the supplied Data object which has been modified to set
  * its signature. If target is a Buffer, this calls
@@ -21555,8 +21588,9 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 
 /**
   * Decode controlParameters in NDN-TLV and return the encoding.
-  * @param controlParameters The ControlParameters object to encode.
-  * @param input
+  * @param {ControlParameters} controlParameters The ControlParameters object to
+  * encode.
+  * @param {Buffer} input The buffer with the bytes to decode.
   * @throws EncodingException For invalid encoding
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)

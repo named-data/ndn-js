@@ -171,7 +171,7 @@ IdentityManager.prototype.createIdentity = function(identityName, params)
  * Delete the identity from the public and private key storage. If the
  * identity to be deleted is the current default system default, this will not
  * delete the identity and will return immediately.
- * @param identityName {Name} The name of the identity.
+ * @param {Name} identityName The name of the identity.
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)

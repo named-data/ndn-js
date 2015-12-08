@@ -716,7 +716,7 @@ ConfigPolicyManager.prototype.updateTimestampForKey = function
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob The SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 ConfigPolicyManager.prototype.verify = function

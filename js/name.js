@@ -442,8 +442,8 @@ Name.prototype.appendSegment = function(segment)
  * Append a component with the encoded segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param segmentOffset The segment byte offset.
- * @returns This name so that you can chain calls to append.
+ * @param {number} segmentOffset The segment byte offset.
+ * @returns {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -467,7 +467,7 @@ Name.prototype.appendVersion = function(version)
  * Append a component with the encoded timestamp according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param timestamp The number of microseconds since the UNIX epoch (Thursday,
+ * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @returns This name so that you can chain calls to append.
  */
@@ -480,7 +480,7 @@ Name.prototype.appendTimestamp = function(timestamp)
  * Append a component with the encoded sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @param sequenceNumber The sequence number.
+ * @param {number} sequenceNumber The sequence number.
  * @returns This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)

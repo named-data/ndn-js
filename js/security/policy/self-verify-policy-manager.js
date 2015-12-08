@@ -163,7 +163,7 @@ SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * Sha256WithRsaSignature.
  * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 SelfVerifyPolicyManager.prototype.verify = function
@@ -190,7 +190,7 @@ SelfVerifyPolicyManager.prototype.verify = function
  * KeyLocator (if available). If the public key can't be found, return and empty
  * Blob.
  * @param {KeyLocator} keyLocator The KeyLocator.
- * @param onComplete {function} This calls onComplete(publicKeyDer) where
+ * @param {function} onComplete This calls onComplete(publicKeyDer) where
  * publicKeyDer is the public key DER Blob or an isNull Blob if not found.
  */
 SelfVerifyPolicyManager.prototype.getPublicKeyDer = function

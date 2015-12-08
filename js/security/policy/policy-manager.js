@@ -125,13 +125,13 @@ PolicyManager.verifyUsesString = null;
 /**
  * Check the type of signature and use the publicKeyDer to verify the
  * signedBlob using the appropriate signature algorithm.
- * @param signature {Signature} An object of a subclass of Signature, e.g.
+ * @param {Signature} signature An object of a subclass of Signature, e.g.
  * Sha256WithRsaSignature.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
  * signature.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  * @throws {SecurityException} if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
@@ -158,12 +158,12 @@ PolicyManager.verifySignature = function
 
 /**
  * Verify the RSA signature on the SignedBlob using the given public key.
- * @param signature {Blob} The signature bits.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param publicKeyDer {Blob} The DER-encoded public key used to verify the
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
  * signature.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifySha256WithRsaSignature = function
@@ -203,10 +203,10 @@ PolicyManager.verifySha256WithRsaSignature = function
 /**
  * Verify the DigestSha256 signature on the SignedBlob by verifying that the
  * digest of SignedBlob equals the signature.
- * @param signature {Blob} The signature bits.
- * @param signedBlob {SignedBlob} the SignedBlob with the signed portion to
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
  * verify.
- * @param onComplete {function} This calls onComplete(true) if the signature
+ * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
  */
 PolicyManager.verifyDigestSha256Signature = function

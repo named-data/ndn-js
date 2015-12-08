@@ -291,8 +291,9 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
 
 /**
   * Decode controlParameters in NDN-TLV and return the encoding.
-  * @param controlParameters The ControlParameters object to encode.
-  * @param input
+  * @param {ControlParameters} controlParameters The ControlParameters object to
+  * encode.
+  * @param {Buffer} input The buffer with the bytes to decode.
   * @throws EncodingException For invalid encoding
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
