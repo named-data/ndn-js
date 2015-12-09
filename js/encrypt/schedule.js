@@ -40,7 +40,7 @@ var Schedule = function Schedule(value)
 {
   if (typeof value === 'object' && value instanceof Schedule) {
     // Make a copy.
-    schedule = value;
+    var schedule = value;
 
     // RepetitiveInterval is immutable, so we don't need to make a deep copy.
     this.whiteIntervalList_ = schedule.whiteIntervalList_.slice(0);
@@ -89,7 +89,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
- * isPositive is True if the returned interval is positive or false if negative,
+ * isPositive is true if the returned interval is positive or false if negative,
  * and interval is the Interval covering the time point, or a negative interval
  * if not found.
  */
