@@ -117,11 +117,11 @@ describe ("TestGroupManagerDb", function() {
     var newSchedule;
     var scheduleBlob = new Blob(SCHEDULE, false);
 
-    // Create schedule.
+    // Create a schedule.
     var schedule = new Schedule();
     schedule.wireDecode(scheduleBlob);
 
-    // Create member.
+    // Create a member.
     var params = new RsaKeyParams();
     var decryptKey;
     var encryptKey;
@@ -240,7 +240,7 @@ describe ("TestGroupManagerDb", function() {
     .then(function(hasMember) {
       assert.equal(hasMember, false);
 
-      // Get schedule.
+      // Get a schedule.
       return database.getSchedulePromise("work-time");
     })
     .then(function(scheduleResult) {
@@ -290,7 +290,7 @@ describe ("TestGroupManagerDb", function() {
       assert.ok(members.some(function(x) { return x.equals(new Name("/ndn/BoyA")); }));
       assert.ok(members.some(function(x) { return x.equals(new Name("/ndn/BoyB")); }));
 
-      // Rename schedule.
+      // Rename a schedule.
       return database.hasSchedulePromise("boelter-time");
     })
     .then(function(hasSchedule) {
@@ -311,7 +311,7 @@ describe ("TestGroupManagerDb", function() {
     .then(function(scheduleName) {
       assert.equal(scheduleName, "rieber-time");
 
-      // Update schedule.
+      // Update a schedule.
       newSchedule = new Schedule();
       newSchedule.wireDecode(scheduleBlob);
       var repetitiveInterval = new RepetitiveInterval
@@ -351,7 +351,7 @@ describe ("TestGroupManagerDb", function() {
     .then(function(scheduleName) {
       assert.equal(scheduleName, "play-time");
 
-      // Delete member.
+      // Delete a member.
       return database.hasMemberPromise(new Name("/ndn/Hello"));
     })
     .then(function(hasMember) {
