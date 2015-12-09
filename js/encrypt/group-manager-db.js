@@ -239,7 +239,7 @@ GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
  * an async Promise.
  * @return {Promise|SyncPromise} A promise that returns the string schedule name,
  * or that is rejected with GroupManagerDb.Error if there's no member with the
- * given identity name in the database.
+ * given identity name in the database, or other database error.
  */
 GroupManagerDb.prototype.getMemberSchedulePromise = function(identity, useSync)
 {
@@ -278,7 +278,7 @@ GroupManagerDb.prototype.addMemberPromise = function
  * @return {Promise|SyncPromise} A promise that fulfills when the member is
  * updated, or that is rejected with GroupManagerDb.Error if there's no member
  * with the given identity name in the database, or there's no schedule named
- * scheduleName.
+ * scheduleName, or other database error.
  */
 GroupManagerDb.prototype.updateMemberSchedulePromise = function
   (identity, scheduleName, useSync)

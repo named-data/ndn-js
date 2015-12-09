@@ -354,7 +354,7 @@ Sqlite3GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
  * since this only supports async code.
  * @return {Promise} A promise that returns the string schedule name, or that is
  * rejected with GroupManagerDb.Error if there's no member with the given
- * identity name in the database.
+ * identity name in the database, or other database error.
  */
 Sqlite3GroupManagerDb.prototype.getMemberSchedulePromise = function
   (identity, useSync)
@@ -405,7 +405,7 @@ Sqlite3GroupManagerDb.prototype.addMemberPromise = function
       return Promise.reject(new GroupManagerDb.Error(new Error
         ("Sqlite3GroupManagerDb.addMemberPromise: The schedule dose not exist")));
 
-    // Need to be changed in the future.
+    // Needs to be changed in the future.
     var memberName = keyName.getPrefix(-1);
 
     return thisManager.runPromise_
@@ -424,7 +424,8 @@ Sqlite3GroupManagerDb.prototype.addMemberPromise = function
  * since this only supports async code.
  * @return {Promise} A promise that fulfills when the member is updated, or that
  * is rejected with GroupManagerDb.Error if there's no member with the given
- * identity name in the database, or there's no schedule named scheduleName.
+ * identity name in the database, or there's no schedule named scheduleName, or
+ * other database error.
  */
 Sqlite3GroupManagerDb.prototype.updateMemberSchedulePromise = function
   (identity, scheduleName, useSync)
