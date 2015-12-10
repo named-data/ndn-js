@@ -41,8 +41,8 @@ var Schedule = require('./schedule.js').Schedule;
  * @param {GroupManagerDb} database The GroupManagerDb for storing the group
  * management information (including user public keys and schedules).
  * @param {number} keySize The group key will be an RSA key with keySize bits.
- * @param {number} freshnessHours The FreshnessPeriod of data packets carrying
- * the keys
+ * @param {number} freshnessHours The number of hours of the freshness period of
+ *   data packets carrying the keys.
  * @param {KeyChain} keyChain The KeyChain to use for signing data packets. This
  * signs with the default identity.
  * @note This class is an experimental feature. The API may change.

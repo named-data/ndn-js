@@ -181,7 +181,7 @@ describe ("TestGroupManager", function() {
     var memberEncryptKey = RsaAlgorithm.deriveEncryptKey(decryptKeyBlob);
     encryptKeyBlob = memberEncryptKey.getKeyBits();
 
-    // generate certificate
+    // Generate the certificate.
     certificate.setName(new Name("/ndn/memberA/KEY/ksk-123/ID-CERT/123"));
     var contentPublicKey = new PublicKey(encryptKeyBlob);
     certificate.setPublicKeyInfo(contentPublicKey);
