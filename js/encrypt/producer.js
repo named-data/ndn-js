@@ -229,9 +229,9 @@ Producer.prototype.produce = function
 
 Producer.KeyInfo_ = function ProducerKeyInfo()
 {
-  this.beginTimeSlot = null; // number
-  this.endTimeSlot = null;   // number
-  this.keyBits = null;       // Blob
+  this.beginTimeSlot = 0.0;
+  this.endTimeSlot = 0.0;
+  this.keyBits = null; // Blob
 };
 
 Producer.KeyRequest_ = function ProducerKeyRequest(interests)
