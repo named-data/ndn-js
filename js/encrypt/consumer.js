@@ -221,7 +221,7 @@ Consumer.decryptPromise_ = function(encryptedContent, keyBits)
   .then(function() {
     if (typeof encryptedContent == 'object' && encryptedContent instanceof Blob) {
       // Decode as EncryptedContent.
-      encryptedBlob = encryptedContent;
+      var encryptedBlob = encryptedContent;
       encryptedContent = new EncryptedContent();
       encryptedContent.wireDecode(encryptedBlob);
     }
