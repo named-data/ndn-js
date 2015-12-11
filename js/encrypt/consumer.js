@@ -65,10 +65,10 @@ exports.Consumer = Consumer;
 Consumer.ErrorCode = {
   Timeout:                     1,
   Validation:                  2,
-  UnsupportedEncryptionScheme: 3,
-  InvalidEncryptedFormat:      4,
-  NoDecryptKey:                5,
-  General:                     6
+  UnsupportedEncryptionScheme: 32,
+  InvalidEncryptedFormat:      33,
+  NoDecryptKey:                34,
+  General:                     100
 };
 
 /**
