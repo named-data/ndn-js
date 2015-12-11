@@ -86,7 +86,7 @@ var Producer = function Producer
     nodeName.append(fixedDataType);
     nodeName.append(Encryptor.NAME_COMPONENT_E_KEY);
 
-    this.eKeyInfo_[nodeName.toUri()] = 
+    this.eKeyInfo_[nodeName.toUri()] =
       { keyName: nodeName, keyInfo: new Producer.KeyInfo_() };
     fixedDataType = fixedDataType.getPrefix(-1);
   }
@@ -109,7 +109,7 @@ exports.Producer = Producer;
  * calls onEncryptedKeys(keys) where keys is a list of encrypted content key
  * Data packets. If onEncryptedKeys is null, this does not use it.
  * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
- * with the content key name for the time slot. If onContentKeyName is null, 
+ * with the content key name for the time slot. If onContentKeyName is null,
  * this does not use it. (A callback is neede because of async database
  * operations.)
  */
@@ -270,7 +270,7 @@ Producer.prototype.sendKeyInterest_ = function
   (name, timeSlot, keyRequest, onEncryptedKeys, timeRange)
 {
   var thisProducer = this;
-  
+
   function onKey(interest, data) {
     thisProducer.handleCoveringKey_
       (interest, data, timeSlot, keyRequest, onEncryptedKeys);
@@ -428,7 +428,7 @@ Producer.prototype.getEKeyInfoSize_ = function()
     if (this.eKeyInfo_.hasOwnProperty(key))
       ++size;
   }
-  
+
   return size;
 };
 

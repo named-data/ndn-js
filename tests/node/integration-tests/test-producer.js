@@ -161,7 +161,7 @@ describe ("TestProducer", function() {
     function checkEncryptionKeys
         (result, testTime, roundedTime, expectedExpressInterestCallCount) {
       ++nCallbacksCalled;
-      
+
       try {
         assert.equal(expressInterestCallCount, expectedExpressInterestCallCount);
       } catch (ex) { done(ex); return; }
@@ -211,7 +211,7 @@ describe ("TestProducer", function() {
 
     // An initial test to confirm that keys are created for this time slot.
     producer.createContentKey
-      (testTime1, 
+      (testTime1,
        function(keys) { checkEncryptionKeys(keys, testTime1, testTimeRounded1, 3); },
        function(contentKeyName) {
       try {

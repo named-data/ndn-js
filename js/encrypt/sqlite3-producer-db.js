@@ -53,7 +53,7 @@ exports.Sqlite3ProducerDb = Sqlite3ProducerDb;
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise that returns true if there is a content key for 
+ * @return {Promise} A promise that returns true if there is a content key for
  * timeSlot (else false), or that is rejected with ProducerDb.Error for a
  * database error.
  */

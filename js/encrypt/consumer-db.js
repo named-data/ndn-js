@@ -77,7 +77,7 @@ ConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise that fulfills when the key is added, 
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is added,
  * or that is rejected with ConsumerDb.Error if a key with the same keyName
  * already exists, or other database error.
  */
@@ -94,7 +94,7 @@ ConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise that fulfills when the key is deleted 
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is deleted
  * (or there is no such key), or that is rejected with ConsumerDb.Error for a
  * database error.
  */

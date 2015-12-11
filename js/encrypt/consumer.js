@@ -105,7 +105,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
       Consumer.Error.callOnError(onError, ex, "verifyData error: ");
     }
   };
-  
+
   var onTimeout = function(contentInterest) {
     // We should re-try at least once.
     try {
@@ -166,7 +166,7 @@ Consumer.prototype.addDecryptionKeyPromise = function(keyName, keyBlob, useSync)
  * required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
- * where exception is Error if the consumer name is not a prefix of the key 
+ * where exception is Error if the consumer name is not a prefix of the key
  * name, or ConsumerDb.Error if a key with the same keyName already exists,
  * or other database error. If onComplete is defined but onError is undefined,
  * then this will log any thrown exception. (Some database libraries only use a
@@ -273,7 +273,7 @@ Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
 /**
  * Decrypt the data packet.
  * @param {Data} data The data packet.
- * @param {function} onPlainText When the data packet is decrypted, this calls 
+ * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
  * where errorCode is an error code from Consumer.ErrorCode.

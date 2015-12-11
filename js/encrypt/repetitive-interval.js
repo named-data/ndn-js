@@ -22,7 +22,7 @@ var Interval = require('./interval.js').Interval;
 
 /**
  * A RepetitiveInterval is an advanced interval which can repeat and can be used
- * to find a simple Interval that a time point falls in. Create a 
+ * to find a simple Interval that a time point falls in. Create a
  * RepetitiveInterval with one of these forms:
  * RepetitiveInterval() A RepetitiveInterval with one day duration, non-repeating..
  * RepetitiveInterval(startDate, endDate, intervalStartHour, intervalEndHour, nRepeats, repeatUnit).

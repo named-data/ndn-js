@@ -53,7 +53,7 @@ describe ("TestProducerDb", function() {
   it("DatabaseFunctions", function(done) {
     // Test construction.
     var database = new Sqlite3ProducerDb(databaseFilePath);
-    
+
     // Create a member.
     var params = new AesKeyParams(128);
     var keyBlob1 = AesAlgorithm.generateKey(params).getKeyBits();
