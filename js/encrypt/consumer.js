@@ -295,7 +295,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
   if (cKey)
     this.decrypt_(dataEncryptedContent, cKey, onPlainText, onError);
   else {
-    // Retrieve the C-KEY Data from network.
+    // Retrieve the C-KEY Data from the network.
     var interestName = new Name(cKeyName);
     interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.groupName_);
     var interest = new Interest(interestName);
@@ -435,7 +435,7 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
 
   return SyncPromise.resolve()
   .then(function() {
-    // Get encrypted content.
+    // Get the encrypted content.
     dataContent = dKeyData.getContent();
 
     // Process the nonce.
