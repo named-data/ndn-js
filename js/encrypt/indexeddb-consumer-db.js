@@ -85,15 +85,12 @@ IndexedDbConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync
     return Promise.reject(new ConsumerDb.Error(new Error
       ("IndexedDbConsumerDb.addKeyPromise is only supported for async")));
 
-  var thisStorage = this;
-  return this.getKeyPromise(keyName)
-  .then(function(fetchedKey) {
-    if (!fetchedKey.isNull())
-      return Promise.reject(new ConsumerDb.Error(new Error
-        ("IndexedDbConsumerDb.addKeyPromise: A key for the same name already exists in the database")));
-
-    return thisStorage.database.decryptionKeys.put
-      ({ keyName: keyName.toUri(), key: keyBlob.buf() });
+  // Add rejects if the primary key already exists.
+  return this.database.decryptionKeys.add
+    ({ keyName: keyName.toUri(), key: keyBlob.buf() })
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.addKeyPromise: Error: " + ex)));
   });
 };
 
