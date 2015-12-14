@@ -101,7 +101,7 @@ IndexedDbGroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync
     return Promise.resolve(list);
   })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.listAllScheduleNamesPromise: Error: " + ex)));
   });
 };
@@ -134,7 +134,7 @@ IndexedDbGroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
         return Promise.resolve(schedule);
       })
       .catch(function(ex) {
-        return Promise.reject(new ProducerDb.Error(new Error
+        return Promise.reject(new GroupManagerDb.Error(new Error
           ("IndexedDbGroupManagerDb.getSchedulePromise: Error: " + ex)));
       });
     }
@@ -194,7 +194,7 @@ IndexedDbGroupManagerDb.prototype.getScheduleMembersPromise = function
       else
         return Promise.resolve(list);
     }, function(ex) {
-      return Promise.reject(new ProducerDb.Error(new Error
+      return Promise.reject(new GroupManagerDb.Error(new Error
         ("IndexedDbGroupManagerDb.getScheduleMembersPromise: Error: " + ex)));
     });
   });
@@ -225,8 +225,8 @@ IndexedDbGroupManagerDb.prototype.addSchedulePromise = function
   return this.database.schedules.add
     ({ scheduleName: name, schedule: schedule.wireEncode().buf() })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
-      ("IndexedDbProducerDb.addContentKeyPromise: Error: " + ex)));
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.addContentKeyPromise: Error: " + ex)));
   });
 };
 
@@ -268,7 +268,7 @@ IndexedDbGroupManagerDb.prototype.deleteSchedulePromise = function
     return thisManager.database.schedules.delete(scheduleId);
   })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.deleteSchedulePromise: Error: " + ex)));
   });
 };
@@ -305,7 +305,7 @@ IndexedDbGroupManagerDb.prototype.renameSchedulePromise = function
     return thisManager.database.schedules.update
       (scheduleId, { scheduleName: newName })
     .catch(function(ex) {
-      return Promise.reject(new ProducerDb.Error(new Error
+      return Promise.reject(new GroupManagerDb.Error(new Error
         ("IndexedDbGroupManagerDb.renameSchedulePromise: Error: " + ex)));
     });
   });
@@ -339,7 +339,7 @@ IndexedDbGroupManagerDb.prototype.updateSchedulePromise = function
     return thisManager.database.schedules.update
       (scheduleId, { schedule: schedule.wireEncode().buf() })
     .catch(function(ex) {
-      return Promise.reject(new ProducerDb.Error(new Error
+      return Promise.reject(new GroupManagerDb.Error(new Error
         ("IndexedDbGroupManagerDb.updateSchedulePromise: Error: " + ex)));
     });
   });
@@ -366,7 +366,7 @@ IndexedDbGroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
     return Promise.resolve(entry != undefined);
   })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.hasMemberPromise: Error: " + ex)));
   });
 };
@@ -405,7 +405,7 @@ IndexedDbGroupManagerDb.prototype.listAllMembersPromise = function(useSync)
     else
       return Promise.resolve(list);
   }, function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.listAllMembersPromise: Error: " + ex)));
   });
 };
@@ -442,7 +442,7 @@ IndexedDbGroupManagerDb.prototype.getMemberSchedulePromise = function
     return Promise.resolve(schedulesEntry.scheduleName);
   })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.getScheduleIdPromise_: Error: " + ex)));
   });
 };
@@ -485,7 +485,7 @@ IndexedDbGroupManagerDb.prototype.addMemberPromise = function
          keyName: keyName.wireEncode(TlvWireFormat.get()).buf(),
          publicKey: key.buf() })
     .catch(function(ex) {
-      return Promise.reject(new ProducerDb.Error(new Error
+      return Promise.reject(new GroupManagerDb.Error(new Error
         ("IndexedDbGroupManagerDb.addMemberPromise: Error: " + ex)));
     });
   });
@@ -519,7 +519,7 @@ IndexedDbGroupManagerDb.prototype.updateMemberSchedulePromise = function
     return thisManager.database.members.update
       (identity.toUri(), { scheduleId: scheduleId })
     .catch(function(ex) {
-      return Promise.reject(new ProducerDb.Error(new Error
+      return Promise.reject(new GroupManagerDb.Error(new Error
         ("IndexedDbGroupManagerDb.updateMemberSchedulePromise: Error: " + ex)));
     });
   });
@@ -544,7 +544,7 @@ IndexedDbGroupManagerDb.prototype.deleteMemberPromise = function
 
   return this.database.members.delete(identity.toUri())
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.deleteMemberPromise: Error: " + ex)));
   });
 };
@@ -567,7 +567,7 @@ IndexedDbGroupManagerDb.prototype.getScheduleIdPromise_ = function(name)
     return Promise.resolve(id);
   })
   .catch(function(ex) {
-    return Promise.reject(new ProducerDb.Error(new Error
+    return Promise.reject(new GroupManagerDb.Error(new Error
       ("IndexedDbGroupManagerDb.getScheduleIdPromise_: Error: " + ex)));
   });
 };
