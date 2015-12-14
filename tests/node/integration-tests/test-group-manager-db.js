@@ -123,7 +123,6 @@ describe ("TestGroupManagerDb", function() {
 
     // Create a member.
     var params = new RsaKeyParams();
-    var decryptKey;
     var encryptKey;
     var keyBlob;
     var name1;
