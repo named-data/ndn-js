@@ -59,11 +59,11 @@ exports.Sqlite3ProducerDb = Sqlite3ProducerDb;
  */
 Sqlite3ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
-
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.hasContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   return this.getPromise_
     ("SELECT key FROM contentkeys where timeslot=?", fixedTimeSlot)
@@ -86,11 +86,11 @@ Sqlite3ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
  */
 Sqlite3ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
-
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.getContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   return this.getPromise_
     ("SELECT key FROM contentkeys where timeslot=?", fixedTimeSlot)
@@ -116,11 +116,11 @@ Sqlite3ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
 Sqlite3ProducerDb.prototype.addContentKeyPromise = function
   (timeSlot, key, useSync)
 {
-  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
-
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.addContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   return this.runPromise_
     ("INSERT INTO contentkeys (timeslot, key) values (?, ?)",
@@ -139,11 +139,11 @@ Sqlite3ProducerDb.prototype.addContentKeyPromise = function
  */
 Sqlite3ProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSync)
 {
-  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
-
   if (useSync)
     return Promise.reject(new ProducerDb.Error(new Error
       ("Sqlite3ProducerDb.deleteContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
   return this.runPromise_
     ("DELETE FROM contentkeys WHERE timeslot=?", fixedTimeSlot);
