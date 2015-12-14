@@ -403,7 +403,7 @@ Sqlite3GroupManagerDb.prototype.addMemberPromise = function
   .then(function(scheduleId) {
     if (scheduleId == -1)
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("Sqlite3GroupManagerDb.addMemberPromise: The schedule dose not exist")));
+        ("Sqlite3GroupManagerDb.addMemberPromise: The schedule does not exist")));
 
     // Needs to be changed in the future.
     var memberName = keyName.getPrefix(-1);
@@ -439,7 +439,7 @@ Sqlite3GroupManagerDb.prototype.updateMemberSchedulePromise = function
   .then(function(scheduleId) {
     if (scheduleId == -1)
       return Promise.reject(new GroupManagerDb.Error(new Error
-        ("Sqlite3GroupManagerDb.updateMemberSchedulePromise: The schedule dose not exist")));
+        ("Sqlite3GroupManagerDb.updateMemberSchedulePromise: The schedule does not exist")));
 
     return thisManager.runPromise_
         ("UPDATE members SET schedule_id=? WHERE member_name=?",
