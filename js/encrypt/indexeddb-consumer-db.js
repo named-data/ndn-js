@@ -66,6 +66,10 @@ IndexedDbConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
       return Promise.resolve(new Blob(decryptionKeysEntry.key));
     else
       return Promise.resolve(new Blob());
+  })
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.getKeyPromise: Error: " + ex)));
   });
 };
 
@@ -110,5 +114,9 @@ IndexedDbConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
     return Promise.reject(new ConsumerDb.Error(new Error
       ("IndexedDbConsumerDb.deleteKeyPromise is only supported for async")));
 
-  return this.database.decryptionKeys.delete(keyName.toUri());
+  return this.database.decryptionKeys.delete(keyName.toUri())
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.deleteKeyPromise: Error: " + ex)));
+  });
 };
