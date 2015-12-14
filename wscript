@@ -174,6 +174,7 @@ def build (bld):
                  "js/encrypt/producer.js",
                  "js/encrypt/repetitive-interval.js",
                  "js/encrypt/schedule.js",
+                 "js/encrypt/indexeddb-producer-db.js",
                  "js/sync/chrono-sync2013.js",
                  "js/sync/digest-tree.js",
                  "js/sync/sync-state.js",
