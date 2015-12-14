@@ -24,7 +24,8 @@ var SyncPromise = require('../util/sync-promise.js').SyncPromise;
  * ProducerDb is a base class the storage of keys for the producer. It contains
  * one table that maps time slots (to the nearest hour) to the content key
  * created for that time slot. A subclass must implement the methods. For
- * example, see Sqlite3ProducerDb.
+ * example, see Sqlite3ProducerDb (for Nodejs) or IndexedDbProducerDb (for the
+ * browser).
  * @note This class is an experimental feature. The API may change.
  * @constructor
  */
