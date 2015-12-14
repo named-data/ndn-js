@@ -175,6 +175,7 @@ def build (bld):
                  "js/encrypt/repetitive-interval.js",
                  "js/encrypt/schedule.js",
                  "js/encrypt/indexeddb-consumer-db.js",
+                 "js/encrypt/indexeddb-group-manager-db.js",
                  "js/encrypt/indexeddb-producer-db.js",
                  "js/sync/chrono-sync2013.js",
                  "js/sync/digest-tree.js",
