@@ -65,6 +65,10 @@ IndexedDbProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
   return this.database.contentKeys.get(fixedTimeSlot)
   .then(function(contentKeysEntry) {
     return Promise.resolve(contentKeysEntry != undefined);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.hasContentKeyPromise: Error: " + ex)));
   });
 };
 
@@ -92,6 +96,9 @@ IndexedDbProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
     else
       return Promise.reject(new ProducerDb.Error(new Error
         ("IndexedDbProducerDb.getContentKeyPromise: Cannot get the key from the database")));
+  }, function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.getContentKeyPromise: Error: " + ex)));
   });
 };
 
@@ -114,15 +121,12 @@ IndexedDbProducerDb.prototype.addContentKeyPromise = function
 
   var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
-  var thisStorage = this;
-  return this.hasContentKeyPromise(timeSlot)
-  .then(function(exists) {
-    if (exists)
-      return Promise.reject(new ProducerDb.Error(new Error
-        ("IndexedDbProducerDb.addContentKeyPromise: A key for the same hour already exists in the database")));
-
-    return thisStorage.database.contentKeys.put
-      ({ timeSlot: fixedTimeSlot, key: key.buf() });
+  // Add rejects if the primary key already exists.
+  return this.database.contentKeys.add
+    ({ timeSlot: fixedTimeSlot, key: key.buf() })
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.addContentKeyPromise: Error: " + ex)));
   });
 };
 
@@ -144,5 +148,9 @@ IndexedDbProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSy
 
   var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
 
-  return this.database.contentKeys.delete(fixedTimeSlot);
+  return this.database.contentKeys.delete(fixedTimeSlot)
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.deleteContentKeyPromise: Error: " + ex)));
+  });
 };
