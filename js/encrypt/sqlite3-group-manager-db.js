@@ -89,7 +89,7 @@ Sqlite3GroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
       ("Sqlite3GroupManagerDb.listAllScheduleNamesPromise is only supported for async")));
 
-  list = [];
+  var list = [];
   return this.eachPromise_
     ("SELECT schedule_name FROM schedules", [], function(err, row) {
       list.push(row.schedule_name);
@@ -153,7 +153,7 @@ Sqlite3GroupManagerDb.prototype.getScheduleMembersPromise = function
     return Promise.reject(new GroupManagerDb.Error(new Error
       ("Sqlite3GroupManagerDb.getScheduleMembersPromise is only supported for async")));
 
-  list = [];
+  var list = [];
   var onRowError = null;
   return this.eachPromise_
     ("SELECT key_name, pubkey " +
@@ -325,7 +325,7 @@ Sqlite3GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
     return Promise.reject(new GroupManagerDb.Error(new Error
       ("Sqlite3GroupManagerDb.listAllMembersPromise is only supported for async")));
 
-  list = [];
+  var list = [];
   var onRowError = null;
   return this.eachPromise_
     ("SELECT member_name FROM members", [], function(err, row) {
