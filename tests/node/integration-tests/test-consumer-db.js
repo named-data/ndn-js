@@ -93,7 +93,7 @@ describe ("TestConsumerDb", function() {
     var database = new Sqlite3ConsumerDb(databaseFilePath);
 
     // Generate key blobs.
-    keys = generateAesKeys();
+    var keys = generateAesKeys();
 
     var keyName = new Name
       ("/alice/health/samples/activity/steps/C-KEY/20150928080000/20150928090000!");
