@@ -7601,6 +7601,25 @@ Tlv.LocalControlHeader_NextHopFaceId = 82;
 Tlv.LocalControlHeader_CachingPolicy = 83;
 Tlv.LocalControlHeader_NoCache = 96;
 
+Tlv.Encrypt_EncryptedContent = 130;
+Tlv.Encrypt_EncryptionAlgorithm = 131;
+Tlv.Encrypt_EncryptedPayload = 132;
+Tlv.Encrypt_InitialVector = 133;
+
+// For RepetitiveInterval.
+Tlv.Encrypt_StartDate = 134;
+Tlv.Encrypt_EndDate = 135;
+Tlv.Encrypt_IntervalStartHour = 136;
+Tlv.Encrypt_IntervalEndHour = 137;
+Tlv.Encrypt_NRepeats = 138;
+Tlv.Encrypt_RepeatUnit = 139;
+Tlv.Encrypt_RepetitiveInterval = 140;
+
+// For Schedule.
+Tlv.Encrypt_WhiteIntervalList = 141;
+Tlv.Encrypt_BlackIntervalList = 142;
+Tlv.Encrypt_Schedule = 143;
+
 /**
  * Strip off the lower 32 bits of x and divide by 2^32, returning the "high
  * bytes" above 32 bits.  This is necessary because JavaScript << and >> are
@@ -8892,6 +8911,36 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
 WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the EncryptedContent and return the encoding.  Your derived class
+ * should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  throw new Error
+    ("encodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an EncryptedContent and set the fields of the
+ * encryptedContent object. Your derived class should override.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
+{
+  throw new Error
+    ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -13377,7 +13426,7 @@ DigestAlgorithm.SHA256 = 1;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var KeyType = require('./security-types').KeyType;
+var KeyType = require('./security-types.js').KeyType;
 
 /**
  * KeyParams is a base class for key parameters. Its subclasses are used to
@@ -13444,6 +13493,30 @@ EcdsaKeyParams.prototype.getKeySize = function()
 EcdsaKeyParams.getDefaultSize = function() { return 256; };
 
 EcdsaKeyParams.getType = function() { return KeyType.ECDSA; };
+
+var AesKeyParams = function AesKeyParams(size)
+{
+  // Call the base constructor.
+  KeyParams.call(this, AesKeyParams.getType());
+
+  if (size == null)
+    size = AesKeyParams.getDefaultSize();
+  this.size = size;
+};
+
+AesKeyParams.prototype = new KeyParams();
+AesKeyParams.prototype.name = "AesKeyParams";
+
+exports.AesKeyParams = AesKeyParams;
+
+AesKeyParams.prototype.getKeySize = function()
+{
+  return this.size;
+};
+
+AesKeyParams.getDefaultSize = function() { return 64; };
+
+AesKeyParams.getType = function() { return KeyType.AES; };
 /**
  * Copyright (C) 2014-2015 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -21718,6 +21791,61 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Encode the EncryptedContent in NDN-TLV and return the encoding.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeBlobTlv
+    (Tlv.Encrypt_EncryptedPayload, encryptedContent.getPayload().buf());
+  encoder.writeOptionalBlobTlv
+    (Tlv.Encrypt_InitialVector, encryptedContent.getInitialVector().buf());
+  // Assume the algorithmType value is the same as the TLV type.
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.Encrypt_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
+  Tlv0_1_1WireFormat.encodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_EncryptedContent, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an EncryptedContent in NDN-TLV and set the fields of the
+ * encryptedContent object.
+ * @param {EncryptedContent} encryptedContent The EncryptedContent object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
+
+  Tlv0_1_1WireFormat.decodeKeyLocator
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
+  encryptedContent.setAlgorithmType
+    (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
+  encryptedContent.setInitialVector
+    (new Blob(decoder.readOptionalBlobTlv
+     (Tlv.Encrypt_InitialVector, endOffset), true));
+  encryptedContent.setPayload
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), true));
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
  * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
  * @returns {Tlv0_1_1WireFormat} The singleton instance.
@@ -22315,6 +22443,5070 @@ var decodeSubjectPublicKeyInfo = function(input) { return EncodingUtils.decodeSu
  * @deprecated Use interest.wireEncode().
  */
 function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); }
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/algo/aes https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// (This is ported from ndn::gep::algo::Aes, and named AesAlgorithm because
+// "Aes" is very short and not all the Common Client Libraries have namespaces.)
+
+var Crypto = require('../../crypto.js');
+var Blob = require('../../util/blob.js').Blob;
+var DecryptKey = require('../decrypt-key.js').DecryptKey;
+var EncryptKey = require('../encrypt-key.js').EncryptKey;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * The AesAlgorithm class provides static methods to manipulate keys, encrypt
+ * and decrypt using the AES symmetric key cipher.
+ * @note This class is an experimental feature. The API may change.
+ */
+var AesAlgorithm = function AesAlgorithm()
+{
+};
+
+exports.AesAlgorithm = AesAlgorithm;
+
+/**
+ * Generate a new random decrypt key for AES based on the given params.
+ * @param {AesKeyParams} params The key params with the key size (in bits).
+ * @return {DecryptKey} The new decrypt key.
+ */
+AesAlgorithm.generateKey = function(params)
+{
+  // Convert the key bit size to bytes.
+  var key = Crypto.randomBytes(params.getKeySize() / 8);
+
+  var decryptKey = new DecryptKey(new Blob(key, false));
+  return decryptKey;
+};
+
+/**
+ * Derive a new encrypt key from the given decrypt key value.
+ * @param {Blob} keyBits The key value of the decrypt key.
+ * @return {EncryptKey} The new encrypt key.
+ */
+AesAlgorithm.deriveEncryptKey = function(keyBits)
+{
+  return new EncryptKey(keyBits);
+};
+
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted Blob.
+ */
+AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
+{
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement ECB.
+      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      return crypto.subtle.importKey
+        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
+         ["encrypt", "decrypt"])
+      .then(function(key) {
+        return crypto.subtle.decrypt
+          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
+           key, encryptedData.buf());
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported encryption mode"));
+  }
+  else {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
+      try {
+        // ECB ignores the initial vector.
+        var cipher = Crypto.createDecipheriv("aes-128-ecb", keyBits.buf(), "");
+        return SyncPromise.resolve(new Blob
+          (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+           false));
+      } catch (err) {
+        return SyncPromise.reject(err);
+      }
+    }
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      try {
+        var cipher = Crypto.createDecipheriv
+          ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+        return SyncPromise.resolve(new Blob
+          (Buffer.concat([cipher.update(encryptedData.buf()), cipher.final()]),
+           false));
+      } catch (err) {
+        return SyncPromise.reject(err);
+      }
+    }
+    else
+      return SyncPromise.reject(new Error("unsupported encryption mode"));
+  }
+};
+
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @return {Blob} The decrypted data.
+ * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
+{
+  return SyncPromise.getValue(this.decryptPromise
+    (keyBits, encryptedData, params, true));
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
+ */
+AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
+{
+  if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+    if (params.getInitialVector().size() != AesAlgorithm.BLOCK_SIZE)
+      return SyncPromise.reject(new Error("incorrect initial vector size"));
+  }
+
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement ECB.
+      params.getAlgorithmType() != EncryptAlgorithmType.AesEcb) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      return crypto.subtle.importKey
+        ("raw", keyBits.buf(), { name: "AES-CBC" }, false,
+         ["encrypt", "decrypt"])
+      .then(function(key) {
+        return crypto.subtle.encrypt
+          ({ name: "AES-CBC", iv: params.getInitialVector().buf() },
+           key, plainData.buf());
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported encryption mode"));
+  }
+  else {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.AesEcb) {
+      // ECB ignores the initial vector.
+      var cipher = Crypto.createCipheriv("aes-128-ecb", keyBits.buf(), "");
+      return SyncPromise.resolve(new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false));
+    }
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      var cipher = Crypto.createCipheriv
+        ("aes-128-cbc", keyBits.buf(), params.getInitialVector().buf());
+      return SyncPromise.resolve(new Blob
+        (Buffer.concat([cipher.update(plainData.buf()), cipher.final()]),
+         false));
+    }
+    else
+      return SyncPromise.reject(new Error("unsupported encryption mode"));
+  }
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value.
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
+ * params.getAlgorithmType() and other params as needed such as
+ * params.getInitialVector().
+ * @return {Blob} The encrypted data.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+AesAlgorithm.encrypt = function(keyBits, plainData, params)
+{
+  return SyncPromise.getValue(this.encryptPromise
+    (keyBits, plainData, params, true));
+};
+
+AesAlgorithm.BLOCK_SIZE = 16;
+/**
+ * Copyright (C) 2014-2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/encrypt-params https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Crypto = require('../../crypto.js');
+var Blob = require('../../util/blob.js').Blob;
+
+var EncryptAlgorithmType = function EncryptAlgorithmType()
+{
+}
+
+exports.EncryptAlgorithmType = EncryptAlgorithmType;
+
+// These correspond to the TLV codes.
+EncryptAlgorithmType.AesEcb = 0;
+EncryptAlgorithmType.AesCbc = 1;
+EncryptAlgorithmType.RsaPkcs = 2;
+EncryptAlgorithmType.RsaOaep = 3;
+
+/**
+ * An EncryptParams holds an algorithm type and other parameters used to
+ * encrypt and decrypt. Create an EncryptParams with the given parameters.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType,
+ * or null if not specified.
+ * @param {number} initialVectorLength (optional) The initial vector length, or
+ * 0 if the initial vector is not specified. If ommitted, the initial vector is
+ * not specified.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var EncryptParams = function EncryptParams(algorithmType, initialVectorLength)
+{
+  this.algorithmType_ = algorithmType;
+
+  if (initialVectorLength != null && initialVectorLength > 0) {
+    var initialVector = Crypto.randomBytes(initialVectorLength);
+    this.initialVector_ = new Blob(initialVector, false);
+  }
+  else
+    this.initialVector_ = new Blob();
+};
+
+exports.EncryptParams = EncryptParams;
+
+/**
+ * Get the algorithmType.
+ * @return {number} The algorithm type from EncryptAlgorithmType, or null if not
+ * specified.
+ */
+EncryptParams.prototype.getAlgorithmType = function()
+{
+  return this.algorithmType_;
+};
+
+/**
+ * Get the initial vector.
+ * @return {Blob} The initial vector. If not specified, isNull() is true.
+ */
+EncryptParams.prototype.getInitialVector = function()
+{
+  return this.initialVector_;
+};
+
+/**
+ * Set the algorithm type.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
+ * If not specified, set to null.
+ * @return {EncryptParams} This EncryptParams so that you can chain calls to
+ * update values.
+ */
+EncryptParams.prototype.setAlgorithmType = function(algorithmType)
+{
+  this.algorithmType_ = algorithmType;
+  return this;
+};
+
+/**
+ * Set the initial vector.
+ * @param {Blob} initialVector The initial vector. If not specified, set to the
+ * default Blob() where isNull() is true.
+ * @return {EncryptParams} This EncryptParams so that you can chain calls to
+ * update values.
+ */
+EncryptParams.prototype.setInitialVector = function(initialVector)
+{
+  this.initialVector_ =
+      typeof initialVector === 'object' && initialVector instanceof Blob ?
+    initialVector : new Blob(initialVector);
+  return this;
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/encryptor https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Crypto = require('../../crypto.js');
+var Name = require('../../name.js').Name;
+var KeyLocator = require('../../key-locator.js').KeyLocator;
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
+var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat;
+var Blob = require('../../util/blob.js').Blob;
+var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm;
+var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm;
+var EncryptParams = require('./encrypt-params.js').EncryptParams;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
+var EncryptedContent = require('../encrypted-content.js').EncryptedContent;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/**
+ * Encryptor has static constants and utility methods for encryption, such as
+ * encryptData.
+ * @constructor
+ */
+var Encryptor = function Encryptor(value)
+{
+};
+
+exports.Encryptor = Encryptor;
+
+Encryptor.NAME_COMPONENT_FOR = new Name.Component("FOR");
+Encryptor.NAME_COMPONENT_READ = new Name.Component("READ");
+Encryptor.NAME_COMPONENT_SAMPLE = new Name.Component("SAMPLE");
+Encryptor.NAME_COMPONENT_ACCESS = new Name.Component("ACCESS");
+Encryptor.NAME_COMPONENT_E_KEY = new Name.Component("E-KEY");
+Encryptor.NAME_COMPONENT_D_KEY = new Name.Component("D-KEY");
+Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
+
+/**
+ * Prepare an encrypted data packet by encrypting the payload using the key
+ * according to the params. In addition, this prepares the encoded
+ * EncryptedContent with the encryption result using keyName and params. The
+ * encoding is set as the content of the data packet. If params defines an
+ * asymmetric encryption algorithm and the payload is larger than the maximum
+ * plaintext size, this encrypts the payload with a symmetric key that is
+ * asymmetrically encrypted and provided as a nonce in the content of the data
+ * packet. The packet's /<dataName>/ is updated to be <dataName>/FOR/<keyName>.
+ * @param {Data} data The data packet which is updated.
+ * @param {Blob} payload The payload to encrypt.
+ * @param {Name} keyName The key name for the EncryptedContent.
+ * @param {Blob} key The encryption key value.
+ * @param {EncryptParams} params The parameters for encryption.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the data packet
+ * is updated.
+ */
+Encryptor.encryptDataPromise = function
+  (data, payload, keyName, key, params, useSync)
+{
+  var dataName = data.getName();
+  dataName.append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
+  data.setName(dataName);
+
+  var algorithmType = params.getAlgorithmType();
+
+  if (algorithmType == EncryptAlgorithmType.AesCbc ||
+      algorithmType == EncryptAlgorithmType.AesEcb) {
+    return Encryptor.encryptSymmetricPromise_
+      (payload, key, keyName, params, useSync)
+    .then(function(content) {
+      data.setContent(content.wireEncode(TlvWireFormat.get()));
+      return SyncPromise.resolve();
+    });
+  }
+  else if (algorithmType == EncryptAlgorithmType.RsaPkcs ||
+           algorithmType == EncryptAlgorithmType.RsaOaep) {
+    // Node.js doesn't have a direct way to get the maximum plain text size, so
+    // try to encrypt the payload first and catch the error if it is too big.
+    return Encryptor.encryptAsymmetricPromise_
+      (payload, key, keyName, params, useSync)
+    .then(function(content) {
+      data.setContent(content.wireEncode(TlvWireFormat.get()));
+      return SyncPromise.resolve();
+    }, function(err) {
+      if (err.message.indexOf("data too large for key size") < 0)
+        // Not the expected error.
+        throw err;
+
+      // The payload is larger than the maximum plaintext size.
+      // 128-bit nonce.
+      var nonceKeyBuffer = Crypto.randomBytes(16);
+      var nonceKey = new Blob(nonceKeyBuffer, false);
+
+      var nonceKeyName = new Name(keyName);
+      nonceKeyName.append("nonce");
+
+      var symmetricParams = new EncryptParams
+        (EncryptAlgorithmType.AesCbc, AesAlgorithm.BLOCK_SIZE);
+
+      var nonceContent;
+      return Encryptor.encryptSymmetricPromise_
+        (payload, nonceKey, nonceKeyName, symmetricParams, useSync)
+      .then(function(localNonceContent) {
+        nonceContent = localNonceContent;
+        return Encryptor.encryptAsymmetricPromise_
+          (nonceKey, key, keyName, params, useSync);
+      })
+      .then(function(payloadContent) {
+        var nonceContentEncoding = nonceContent.wireEncode();
+        var payloadContentEncoding = payloadContent.wireEncode();
+        var content = new Buffer
+          (nonceContentEncoding.size() + payloadContentEncoding.size());
+        payloadContentEncoding.buf().copy(content, 0);
+        nonceContentEncoding.buf().copy(content, payloadContentEncoding.size());
+
+        data.setContent(new Blob(content, false));
+        return SyncPromise.resolve();
+      });
+    });
+  }
+  else
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
+};
+
+/**
+ * Prepare an encrypted data packet by encrypting the payload using the key
+ * according to the params. In addition, this prepares the encoded
+ * EncryptedContent with the encryption result using keyName and params. The
+ * encoding is set as the content of the data packet. If params defines an
+ * asymmetric encryption algorithm and the payload is larger than the maximum
+ * plaintext size, this encrypts the payload with a symmetric key that is
+ * asymmetrically encrypted and provided as a nonce in the content of the data
+ * packet.
+ * @param {Data} data The data packet which is updated.
+ * @param {Blob} payload The payload to encrypt.
+ * @param {Name} keyName The key name for the EncryptedContent.
+ * @param {Blob} key The encryption key value.
+ * @param {EncryptParams} params The parameters for encryption.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+Encryptor.encryptData = function(data, payload, keyName, key, params)
+{
+  return SyncPromise.getValue(Encryptor.encryptDataPromise
+    (data, payload, keyName, key, params, true));
+};
+
+/**
+ * Encrypt the payload using the symmetric key according to params, and return
+ * an EncryptedContent.
+ * @param {Blob} payload The data to encrypt.
+ * @param {Blob} key The key value.
+ * @param {Name} keyName The key name for the EncryptedContent key locator.
+ * @param {EncryptParams} params The parameters for encryption.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new EncryptedContent.
+ */
+Encryptor.encryptSymmetricPromise_ = function
+  (payload, key, keyName, params, useSync)
+{
+  var algorithmType = params.getAlgorithmType();
+  var initialVector = params.getInitialVector();
+  var keyLocator = new KeyLocator();
+  keyLocator.setType(KeyLocatorType.KEYNAME);
+  keyLocator.setKeyName(keyName);
+
+  if (algorithmType == EncryptAlgorithmType.AesCbc ||
+      algorithmType == EncryptAlgorithmType.AesEcb) {
+    if (algorithmType == EncryptAlgorithmType.AesCbc) {
+      if (initialVector.size() != AesAlgorithm.BLOCK_SIZE)
+        return SyncPromise.reject(new Error("incorrect initial vector size"));
+    }
+
+    return AesAlgorithm.encryptPromise(key, payload, params, useSync)
+    .then(function(encryptedPayload) {
+      var result = new EncryptedContent();
+      result.setAlgorithmType(algorithmType);
+      result.setKeyLocator(keyLocator);
+      result.setPayload(encryptedPayload);
+      result.setInitialVector(initialVector);
+      return SyncPromise.resolve(result);
+    });
+  }
+  else
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
+};
+
+/**
+ * Encrypt the payload using the asymmetric key according to params, and
+ * return an EncryptedContent.
+ * @param {Blob} payload The data to encrypt. The size should be within range of
+ * the key.
+ * @param {Blob} key The key value.
+ * @param {Name} keyName The key name for the EncryptedContent key locator.
+ * @param {EncryptParams} params The parameters for encryption.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns a new EncryptedContent.
+ */
+Encryptor.encryptAsymmetricPromise_ = function
+  (payload, key, keyName, params, useSync)
+{
+  var algorithmType = params.getAlgorithmType();
+  var keyLocator = new KeyLocator();
+  keyLocator.setType(KeyLocatorType.KEYNAME);
+  keyLocator.setKeyName(keyName);
+
+  if (algorithmType == EncryptAlgorithmType.RsaPkcs ||
+      algorithmType == EncryptAlgorithmType.RsaOaep) {
+    return RsaAlgorithm.encryptPromise(key, payload, params, useSync)
+    .then(function(encryptedPayload) {
+      var result = new EncryptedContent();
+      result.setAlgorithmType(algorithmType);
+      result.setKeyLocator(keyLocator);
+      result.setPayload(encryptedPayload);
+      return SyncPromise.resolve(result);
+    });
+  }
+  else
+    return SyncPromise.reject(new Error("Unsupported encryption method"));
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/algo/rsa https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// (This is ported from ndn::gep::algo::Rsa, and named RsaAlgorithm because
+// "Rsa" is very short and not all the Common Client Libraries have namespaces.)
+
+var constants = require('constants');
+var Crypto = require('../../crypto.js');
+var Blob = require('../../util/blob.js').Blob;
+var DecryptKey = require('../decrypt-key.js').DecryptKey;
+var EncryptKey = require('../encrypt-key.js').EncryptKey;
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
+var DerNode = require('../../encoding/der/der-node.js').DerNode;
+var OID = require('../../encoding/oid.js').OID;
+var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage;
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+var rsaKeygen = null;
+try {
+  // This should be installed with: sudo npm install rsa-keygen
+  rsaKeygen = require('rsa-keygen');
+}
+catch (e) {}
+
+/**
+ * The RsaAlgorithm class provides static methods to manipulate keys, encrypt
+ * and decrypt using RSA.
+ * @note This class is an experimental feature. The API may change.
+ */
+var RsaAlgorithm = function RsaAlgorithm()
+{
+};
+
+exports.RsaAlgorithm = RsaAlgorithm;
+
+/**
+ * Generate a new random decrypt key for RSA based on the given params.
+ * @param {RsaKeyParams} params The key params with the key size (in bits).
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the new DecryptKey
+ * (containing a PKCS8-encoded private key).
+ */
+RsaAlgorithm.generateKeyPromise = function(params, useSync)
+{
+  if (UseSubtleCrypto() && !useSync) {
+    return crypto.subtle.generateKey
+      ({ name: "RSASSA-PKCS1-v1_5", modulusLength: params.getKeySize(),
+         publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+         hash: {name: "SHA-256"} },
+       true, ["sign", "verify"])
+    .then(function(key) {
+      // Export the private key to DER.
+      return crypto.subtle.exportKey("pkcs8", key.privateKey);
+    })
+    .then(function(pkcs8Der) {
+      return Promise.resolve(new DecryptKey
+        (new Blob(new Uint8Array(pkcs8Der), false)));
+    });
+  }
+  else {
+    if (!rsaKeygen)
+      return SyncPromise.reject(new Error
+        ("Need to install rsa-keygen: sudo npm install rsa-keygen"));
+
+    try {
+      var keyPair = rsaKeygen.generate(params.getKeySize());
+      // Get the PKCS1 private key DER from the PEM string and encode as PKCS8.
+      var privateKeyBase64 = keyPair.private_key.toString().replace
+        ("-----BEGIN RSA PRIVATE KEY-----", "").replace
+        ("-----END RSA PRIVATE KEY-----", "");
+      var pkcs1PrivateKeyDer = new Buffer(privateKeyBase64, 'base64');
+      var privateKey = PrivateKeyStorage.encodePkcs8PrivateKey
+        (pkcs1PrivateKeyDer, new OID(PrivateKeyStorage.RSA_ENCRYPTION_OID),
+         new DerNode.DerNull()).buf();
+
+      return SyncPromise.resolve(new DecryptKey(privateKey));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
+};
+
+/**
+ * Generate a new random decrypt key for RSA based on the given params.
+ * @param {RsaKeyParams} params The key params with the key size (in bits).
+ * @return {DecryptKey} The new decrypt key (containing a PKCS8-encoded private
+ * key).
+ * @throws {Error} If generateKeyPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.generateKey = function(params)
+{
+  return SyncPromise.getValue(this.generateKeyPromise(params, true));
+};
+
+/**
+ * Derive a new encrypt key from the given decrypt key value.
+ * @param {Blob} keyBits The key value of the decrypt key (PKCS8-encoded private
+ * key).
+ * @return {EncryptKey} The new encrypt key (DER-encoded public key).
+ */
+RsaAlgorithm.deriveEncryptKey = function(keyBits)
+{
+  var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
+
+  // Decode the PKCS #1 RSAPrivateKey.
+  parsedNode = DerNode.parse(rsaPrivateKeyDer.buf(), 0);
+  var rsaPrivateKeyChildren = parsedNode.getChildren();
+  var modulus = rsaPrivateKeyChildren[1];
+  var publicExponent = rsaPrivateKeyChildren[2];
+
+  // Encode the PKCS #1 RSAPublicKey.
+  var rsaPublicKey = new DerNode.DerSequence();
+  rsaPublicKey.addChild(modulus);
+  rsaPublicKey.addChild(publicExponent);
+  var rsaPublicKeyDer = rsaPublicKey.encode();
+
+  // Encode the SubjectPublicKeyInfo.
+  var algorithmIdentifier = new DerNode.DerSequence();
+  algorithmIdentifier.addChild(new DerNode.DerOid(new OID
+    (PrivateKeyStorage.RSA_ENCRYPTION_OID)));
+  algorithmIdentifier.addChild(new DerNode.DerNull());
+  var publicKey = new DerNode.DerSequence();
+  publicKey.addChild(algorithmIdentifier);
+  publicKey.addChild(new DerNode.DerBitString(rsaPublicKeyDer.buf(), 0));
+
+  return new EncryptKey(publicKey.encode());
+};
+
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value (PKCS8-encoded private key).
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
+ * params.getAlgorithmType().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the decrypted Blob.
+ */
+RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
+{
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
+      return crypto.subtle.importKey
+        ("pkcs8", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["decrypt"])
+      .then(function(privateKey) {
+        return crypto.subtle.decrypt
+          ({ name: "RSA-OAEP" }, privateKey, encryptedData.buf());
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported padding scheme"));
+  }
+  else {
+    // keyBits is PKCS #8 but we need the inner RSAPrivateKey.
+    var rsaPrivateKeyDer = RsaAlgorithm.getRsaPrivateKeyDer(keyBits);
+
+    // Encode the key DER as a PEM private key as needed by Crypto.
+    var keyBase64 = rsaPrivateKeyDer.buf().toString('base64');
+    var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+
+    var padding;
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
+      padding = constants.RSA_PKCS1_PADDING;
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    else
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
+
+    try {
+      // In Node.js, privateDecrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.privateDecrypt({ key: keyPem, padding: padding }, encryptedData.buf()),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
+};
+
+/**
+ * Decrypt the encryptedData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value (PKCS8-encoded private key).
+ * @param {Blob} encryptedData The data to decrypt.
+ * @param {EncryptParams} params This decrypts according to
+ * params.getAlgorithmType().
+ * @return {Blob} The decrypted data.
+ * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
+{
+  return SyncPromise.getValue(this.decryptPromise
+    (keyBits, encryptedData, params, true));
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value (DER-encoded public key).
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
+ * params.getAlgorithmType().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the encrypted Blob.
+ */
+RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
+{
+  if (UseSubtleCrypto() && !useSync &&
+      // Crypto.subtle doesn't implement PKCS1 padding.
+      params.getAlgorithmType() != EncryptAlgorithmType.RsaPkcs) {
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
+      return crypto.subtle.importKey
+        ("spki", keyBits.buf(), { name: "RSA-OAEP", hash: {name: "SHA-1"} },
+         false, ["encrypt"])
+      .then(function(publicKey) {
+        return crypto.subtle.encrypt
+          ({ name: "RSA-OAEP" }, publicKey, plainData.buf());
+      })
+      .then(function(result) {
+        return Promise.resolve(new Blob(new Uint8Array(result), false));
+      });
+    }
+    else
+      return Promise.reject(new Error("unsupported padding scheme"));
+  }
+  else {
+    // Encode the key DER as a PEM public key as needed by Crypto.
+    var keyBase64 = keyBits.buf().toString('base64');
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    var padding;
+    if (params.getAlgorithmType() == EncryptAlgorithmType.RsaPkcs)
+      padding = constants.RSA_PKCS1_PADDING;
+    else if (params.getAlgorithmType() == EncryptAlgorithmType.RsaOaep)
+      padding = constants.RSA_PKCS1_OAEP_PADDING;
+    else
+      return SyncPromise.reject(new Error("unsupported padding scheme"));
+
+    try {
+      // In Node.js, publicEncrypt requires version v0.12.
+      return SyncPromise.resolve(new Blob
+        (Crypto.publicEncrypt({ key: keyPem, padding: padding }, plainData.buf()),
+         false));
+    } catch (err) {
+      return SyncPromise.reject(err);
+    }
+  }
+};
+
+/**
+ * Encrypt the plainData using the keyBits according the encrypt params.
+ * @param {Blob} keyBits The key value (DER-encoded public key).
+ * @param {Blob} plainData The data to encrypt.
+ * @param {EncryptParams} params This encrypts according to
+ * params.getAlgorithmType().
+ * @return {Blob} The encrypted data.
+ * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+RsaAlgorithm.encrypt = function(keyBits, plainData, params)
+{
+  return SyncPromise.getValue(this.encryptPromise
+    (keyBits, plainData, params, true));
+};
+
+/**
+ * Decode the PKCS #8 private key, check that the algorithm is RSA, and return
+ * the inner RSAPrivateKey DER.
+ * @param {Blob} The DER-encoded PKCS #8 private key.
+ * @param {Blob} The DER-encoded RSAPrivateKey.
+ */
+RsaAlgorithm.getRsaPrivateKeyDer = function(pkcs8PrivateKeyDer)
+{
+  var parsedNode = DerNode.parse(pkcs8PrivateKeyDer.buf(), 0);
+  var pkcs8Children = parsedNode.getChildren();
+  var algorithmIdChildren = DerNode.getSequence(pkcs8Children, 1).getChildren();
+  var oidString = algorithmIdChildren[0].toVal();
+
+  if (oidString != PrivateKeyStorage.RSA_ENCRYPTION_OID)
+    throw new Error("The PKCS #8 private key is not RSA_ENCRYPTION");
+
+  return pkcs8Children[2].getPayload();
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/consumer-db https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+
+/**
+ * ConsumerDb is a base class the storage of decryption keys for the consumer. A
+ * subclass must implement the methods. For example, see Sqlite3ConsumerDb (for
+ * Nodejs) or IndexedDbConsumerDb (for the browser).
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var ConsumerDb = function ConsumerDb()
+{
+};
+
+exports.ConsumerDb = ConsumerDb;
+
+/**
+ * Create a new ConsumerDb.Error to report an error using ConsumerDb
+ * methods, wrapping the given error object.
+ * Call with: throw new ConsumerDb.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+ConsumerDb.Error = function ConsumerDbError(error)
+{
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
+}
+
+ConsumerDb.Error.prototype = new Error();
+ConsumerDb.Error.prototype.name = "ConsumerDbError";
+
+/**
+ * Get the key with keyName from the database.
+ * @param {Name} keyName The key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a Blob with the encoded
+ * key (or an isNull Blob if cannot find the key with keyName), or that is
+ * rejected with ConsumerDb.Error for a database error.
+ */
+ConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ConsumerDb.getKeyPromise is not implemented"));
+};
+
+/**
+ * Add the key with keyName and keyBlob to the database.
+ * @param {Name} keyName The key name.
+ * @param {Blob} keyBlob The encoded key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is added,
+ * or that is rejected with ConsumerDb.Error if a key with the same keyName
+ * already exists, or other database error.
+ */
+ConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ConsumerDb.addKeyPromise is not implemented"));
+};
+
+/**
+ * Delete the key with keyName from the database. If there is no key with
+ * keyName, do nothing.
+ * @param {Name} keyName The key name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is deleted
+ * (or there is no such key), or that is rejected with ConsumerDb.Error for a
+ * database error.
+ */
+ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ConsumerDb.addKeyPromise is not implemented"));
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/consumer https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('../util/blob.js').Blob;
+var Name = require('../name.js').Name;
+var Interest = require('../interest.js').Interest;
+var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
+var Encryptor = require('./algo/encryptor.js').Encryptor;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+
+/**
+ * A Consumer manages fetched group keys used to decrypt a data packet in the
+ * group-based encryption protocol.
+ * Create a Consumer to use the given ConsumerDb, Face and other values.
+ * @param {Face} face The face used for data packet and key fetching.
+ * @param {KeyChain} keyChain The keyChain used to verify data packets.
+ * @param {Name} groupName The reading group name that the consumer belongs to.
+ * This makes a copy of the Name.
+ * @param {Name} consumerName The identity of the consumer. This makes a copy of
+ * the Name.
+ * @param {ConsumerDb} database The ConsumerDb database for storing decryption
+ * keys.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var Consumer = function Consumer
+  (face, keyChain, groupName, consumerName, database)
+{
+  this.database_ = database;
+  this.keyChain_ = keyChain;
+  this.face_ = face;
+  this.groupName_ = new Name(groupName);
+  this.consumerName_ = new Name(consumerName);
+
+  // The map key is the C-KEY name URI string. The value is the encoded key Blob.
+  // (Use a string because we can't use the Name object as the key in JavaScript.
+  this.cKeyMap_ = {};
+  // The map key is the D-KEY name URI string. The value is the encoded key Blob.
+  this.dKeyMap_ = {};
+};
+
+exports.Consumer = Consumer;
+
+Consumer.ErrorCode = {
+  Timeout:                     1,
+  Validation:                  2,
+  UnsupportedEncryptionScheme: 32,
+  InvalidEncryptedFormat:      33,
+  NoDecryptKey:                34,
+  General:                     100
+};
+
+/**
+ * Express an Interest to fetch the content packet with contentName, and
+ * decrypt it, fetching keys as needed.
+ * @param {Name} contentName The name of the content packet.
+ * @param {function} onConsumeComplete When the content packet is fetched and
+ * decrypted, this calls onConsumeComplete(contentData, result) where
+ * contentData is the fetched Data packet and result is the decrypted plain
+ * text Blob.
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from Consumer.ErrorCode.
+ */
+Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
+{
+  var interest = new Interest(contentName);
+
+  // Prepare the callback functions.
+  var thisConsumer = this;
+  var onData = function(contentInterest, contentData) {
+    // The Interest has no selectors, so assume the library correctly
+    // matched with the Data name before calling onData.
+
+    try {
+      thisConsumer.keyChain_.verifyData(contentData, function(validData) {
+        // Decrypt the content.
+        thisConsumer.decryptContent_(validData, function(plainText) {
+          onConsumeComplete(contentData, plainText);
+        }, onError);
+      }, function(d) {
+        onError(Consumer.ErrorCode.Validation, "verifyData failed");
+      });
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "verifyData error: ");
+    }
+  };
+
+  var onTimeout = function(contentInterest) {
+    // We should re-try at least once.
+    try {
+      thisConsumer.face_.expressInterest
+        (interest, onData, function(contentInterest) {
+        onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+       });
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+    }
+  };
+
+  // Express the Interest.
+  try {
+    this.face_.expressInterest(interest, onData, onTimeout);
+  } catch (ex) {
+    Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+  }
+};
+
+/**
+ * Set the group name.
+ * @param {Name} groupName The reading group name that the consumer belongs to.
+ * This makes a copy of the Name.
+ */
+Consumer.prototype.setGroup = function(groupName)
+{
+  this.groupName_ = new Name(groupName);
+};
+
+/**
+ * Add a new decryption key with keyName and keyBlob to the database.
+ * @param {Name} keyName The key name.
+ * @param {Blob} keyBlob The encoded key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is added,
+ * or that is rejected with Error if the consumer name is not a prefix of the
+ * key name, or ConsumerDb.Error if a key with the same keyName already exists,
+ * or other database error.
+ */
+Consumer.prototype.addDecryptionKeyPromise = function(keyName, keyBlob, useSync)
+{
+  if (!(this.consumerName_.match(keyName)))
+    return SyncPromise.reject(new Error
+      ("addDecryptionKey: The consumer name must be a prefix of the key name"));
+
+  return this.database_.addKeyPromise(keyName, keyBlob, useSync);
+};
+
+/**
+ * Add a new decryption key with keyName and keyBlob to the database.
+ * @param {Name} keyName The key name.
+ * @param {Blob} keyBlob The encoded key.
+ * @param {function} onComplete (optional) This calls onComplete() when the key
+ * is added. (Some database libraries only use a callback, so onComplete is
+ * required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * where exception is Error if the consumer name is not a prefix of the key
+ * name, or ConsumerDb.Error if a key with the same keyName already exists,
+ * or other database error. If onComplete is defined but onError is undefined,
+ * then this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ */
+Consumer.prototype.addDecryptionKey = function
+  (keyName, keyBlob, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.addDecryptionKeyPromise(keyName, keyBlob, !onComplete));
+};
+
+/**
+ * Consume.Error is used internally from promised-based methods to reject with
+ * an error object that has the errorCode and message returned through the
+ * onError callback.
+ * @param {number} errorCode An error code from Consumer.ErrorCode.
+ * @param {string} message The error message.
+ */
+Consumer.Error = function ConsumerError(errorCode, message)
+{
+  this.errorCode = errorCode;
+  this.message = message;
+};
+
+/**
+ * If exception is a ConsumerError, then call onError with the errorCode and
+ * message, otherwise call onError with ErrorCode.General.
+ */
+Consumer.Error.callOnError = function(onError, exception, messagePrefix)
+{
+  if (!messagePrefix)
+    messagePrefix = "";
+
+  if (exception instanceof Consumer.Error)
+    onError(exception.errorCode, exception.message);
+  else
+    onError(Consumer.ErrorCode.General, messagePrefix + exception);
+}
+
+/**
+ * Decrypt encryptedContent using keyBits.
+ * @param {Blob|EncryptedContent} encryptedContent The EncryptedContent to
+ * decrypt, or a Blob which is first decoded as an EncryptedContent.
+ * @param {Blob} keyBits The key value.
+ * @return {Promise|SyncPromise} A promise that returns the decrypted Blob, or
+ * that is rejected with Consumer.Error or other error.
+ */
+Consumer.decryptPromise_ = function(encryptedContent, keyBits)
+{
+  return SyncPromise.resolve()
+  .then(function() {
+    if (typeof encryptedContent == 'object' && encryptedContent instanceof Blob) {
+      // Decode as EncryptedContent.
+      var encryptedBlob = encryptedContent;
+      encryptedContent = new EncryptedContent();
+      encryptedContent.wireDecode(encryptedBlob);
+    }
+
+    var payload = encryptedContent.getPayload();
+
+    if (encryptedContent.getAlgorithmType() == EncryptAlgorithmType.AesCbc) {
+      // Prepare the parameters.
+      var decryptParams = new EncryptParams(EncryptAlgorithmType.AesCbc);
+      decryptParams.setInitialVector(encryptedContent.getInitialVector());
+
+      // Decrypt the content.
+      return AesAlgorithm.decryptPromise(keyBits, payload, decryptParams);
+    }
+    else if (encryptedContent.getAlgorithmType() == EncryptAlgorithmType.RsaOaep) {
+      // Prepare the parameters.
+      var decryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
+
+      // Decrypt the content.
+      return RsaAlgorithm.decryptPromise(keyBits, payload, decryptParams);
+    }
+    else
+      return SyncPromise.reject(new Consumer.Error
+        (Consumer.ErrorCode.UnsupportedEncryptionScheme,
+          "" + encryptedContent.getAlgorithmType()));
+  });
+};
+
+/**
+ * Decrypt encryptedContent using keyBits.
+ * @param {Blob|EncryptedContent} encryptedContent The EncryptedContent to
+ * decrypt, or a Blob which is first decoded as an EncryptedContent.
+ * @param {Blob} keyBits The key value.
+ * @param {function} onPlainText When the data packet is decrypted, this calls
+ * onPlainText(decryptedBlob) with the decrypted Blob.
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from Consumer.ErrorCode.
+ */
+Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
+{
+  Consumer.decryptPromise_(encryptedContent, keyBits)
+  .then(function(decryptedBlob) {
+    onPlainText(decryptedBlob);
+  }, function(ex) {
+    Consumer.Error.callOnError(onError, ex);
+  });
+};
+
+/**
+ * Decrypt the data packet.
+ * @param {Data} data The data packet.
+ * @param {function} onPlainText When the data packet is decrypted, this calls
+ * onPlainText(decryptedBlob) with the decrypted Blob.
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from Consumer.ErrorCode.
+ */
+Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
+{
+  // Get the encrypted content.
+  var dataEncryptedContent = new EncryptedContent();
+  try {
+    dataEncryptedContent.wireDecode(data.getContent());
+  } catch (ex) {
+    Consumer.Error.callOnError(onError, ex, "Error decoding EncryptedContent: ");
+    return;
+  }
+  var cKeyName = dataEncryptedContent.getKeyLocator().getKeyName();
+
+  // Check if the content key is already in the store.
+  var cKey = this.cKeyMap_[cKeyName.toUri()];
+  if (cKey)
+    this.decrypt_(dataEncryptedContent, cKey, onPlainText, onError);
+  else {
+    // Retrieve the C-KEY Data from the network.
+    var interestName = new Name(cKeyName);
+    interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.groupName_);
+    var interest = new Interest(interestName);
+
+    // Prepare the callback functions.
+    var thisConsumer = this;
+    var onData = function(cKeyInterest, cKeyData) {
+      // The Interest has no selectors, so assume the library correctly
+      // matched with the Data name before calling onData.
+
+      try {
+        thisConsumer.keyChain_.verifyData(cKeyData, function(validCKeyData) {
+          thisConsumer.decryptCKey_(validCKeyData, function(cKeyBits) {
+            thisConsumer.cKeyMap_[cKeyName.toUri()] = cKeyBits;
+            Consumer.decrypt_
+              (dataEncryptedContent, cKeyBits, onPlainText, onError);
+          }, onError);
+        }, function(d) {
+          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        });
+      } catch (ex) {
+        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
+      }
+    };
+
+    var onTimeout = function(dKeyInterest) {
+      // We should re-try at least once.
+      try {
+        thisConsumer.face_.expressInterest
+          (interest, onData, function(contentInterest) {
+          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+         });
+      } catch (ex) {
+        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+      }
+    };
+
+    // Express the Interest.
+    try {
+      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+    }
+  }
+};
+
+/**
+ * Decrypt cKeyData.
+ * @param {Data} cKeyData The C-KEY data packet.
+ * @param {function} onPlainText When the data packet is decrypted, this calls
+ * onPlainText(decryptedBlob) with the decrypted Blob.
+ * @param {function} onError This calls onError(errorCode, message) for an error,
+ * where errorCode is an error code from Consumer.ErrorCode.
+ */
+Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
+{
+  // Get the encrypted content.
+  var cKeyContent = cKeyData.getContent();
+  var cKeyEncryptedContent = new EncryptedContent();
+  try {
+    cKeyEncryptedContent.wireDecode(cKeyContent);
+  } catch (ex) {
+    Consumer.Error.callOnError(onError, ex, "Error decoding EncryptedContent: ");
+    return;
+  }
+  var eKeyName = cKeyEncryptedContent.getKeyLocator().getKeyName();
+  var dKeyName = eKeyName.getPrefix(-3);
+  dKeyName.append(Encryptor.NAME_COMPONENT_D_KEY).append(eKeyName.getSubName(-2));
+
+  // Check if the decryption key is already in the store.
+  var dKey = this.dKeyMap_[dKeyName.toUri()];
+  if (dKey)
+    this.decrypt_(cKeyEncryptedContent, dKey, onPlainText, onError);
+  else {
+    // Get the D-Key Data.
+    var interestName = new Name(dKeyName);
+    interestName.append(Encryptor.NAME_COMPONENT_FOR).append(this.consumerName_);
+    var interest = new Interest(interestName);
+
+    // Prepare the callback functions.
+    var thisConsumer = this;
+    var onData = function(dKeyInterest, dKeyData) {
+      // The Interest has no selectors, so assume the library correctly
+      // matched with the Data name before calling onData.
+
+      try {
+        thisConsumer.keyChain_.verifyData(dKeyData, function(validDKeyData) {
+          thisConsumer.decryptDKeyPromise_(validDKeyData)
+          .then(function(dKeyBits) {
+            thisConsumer.dKeyMap_[dKeyName.toUri()] = dKeyBits;
+            Consumer.decrypt_
+              (cKeyEncryptedContent, dKeyBits, onPlainText, onError);
+          }, function(ex) {
+            Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
+          });
+        }, function(d) {
+          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        });
+      } catch (ex) {
+        Consumer.Error.callOnError(onError, ex, "verifyData error: ");
+      }
+    };
+
+    var onTimeout = function(dKeyInterest) {
+      // We should re-try at least once.
+      try {
+        thisConsumer.face_.expressInterest
+          (interest, onData, function(contentInterest) {
+          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+         });
+      } catch (ex) {
+        Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+      }
+    };
+
+    // Express the Interest.
+    try {
+      thisConsumer.face_.expressInterest(interest, onData, onTimeout);
+    } catch (ex) {
+      Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
+    }
+  }
+};
+
+/**
+ * Decrypt dKeyData.
+ * @param {Data} dKeyData The D-KEY data packet.
+ * @return {Promise|SyncPromise} A promise that returns the decrypted Blob, or
+ * that is rejected with Consumer.Error or other error.
+ */
+Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
+{
+  var dataContent;
+  var encryptedNonce;
+  var encryptedPayloadBlob;
+  var thisConsumer = this;
+
+  return SyncPromise.resolve()
+  .then(function() {
+    // Get the encrypted content.
+    dataContent = dKeyData.getContent();
+
+    // Process the nonce.
+    // dataContent is a sequence of the two EncryptedContent.
+    encryptedNonce = new EncryptedContent();
+    encryptedNonce.wireDecode(dataContent);
+    var consumerKeyName = encryptedNonce.getKeyLocator().getKeyName();
+
+    // Get consumer decryption key.
+    return thisConsumer.getDecryptionKeyPromise_(consumerKeyName);
+  })
+  .then(function(consumerKeyBlob) {
+    if (consumerKeyBlob.size() == 0)
+      return SyncPromise.reject(new Consumer.Error
+        (Consumer.ErrorCode.NoDecryptKey,
+         "The desired consumer decryption key in not in the database"));
+
+    // Process the D-KEY.
+    // Use the size of encryptedNonce to find the start of encryptedPayload.
+    var encryptedPayloadBuffer = dataContent.buf().slice
+      (encryptedNonce.wireEncode().size());
+    encryptedPayloadBlob = new Blob(encryptedPayloadBuffer, false);
+    if (encryptedPayloadBlob.size() == 0)
+      return SyncPromise.reject(new Consumer.Error
+        (Consumer.ErrorCode.InvalidEncryptedFormat,
+         "The data packet does not satisfy the D-KEY packet format"));
+
+    // Decrypt the D-KEY.
+    return Consumer.decryptPromise_(encryptedNonce, consumerKeyBlob);
+  })
+  .then(function(nonceKeyBits) {
+    return Consumer.decryptPromise_(encryptedPayloadBlob, nonceKeyBits);
+  });
+};
+
+/**
+ * Get the encoded blob of the decryption key with decryptionKeyName from the
+ * database.
+ * @param {Name} decryptionKeyName The key name.
+ * @return {Promise|SyncPromise} A promise that returns a Blob with the encoded
+ * key (or an isNull Blob if cannot find the key with decryptionKeyName), or
+ * that is rejected with ConsumerDb.Error for a database error.
+ */
+Consumer.prototype.getDecryptionKeyPromise_ = function(decryptionKeyName)
+{
+  return this.database_.getKeyPromise(decryptionKeyName);
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/decrypt-key https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('../util/blob.js').Blob;
+
+/**
+ * A DecryptKey supplies the key for decrypt.
+ * Create a DecryptKey with the given key value.
+ * @param {Blob|DecryptKey} value If value is another DecryptKey then copy it.
+ * Otherwise, value is the key value.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var DecryptKey = function DecryptKey(value)
+{
+  if (typeof value === 'object' && value instanceof DecryptKey) {
+    // Make a deep copy.
+    this.keyBits_ = value.keyBits_;
+  }
+  else {
+    var keyBits = value;
+    this.keyBits_ = typeof keyBits === 'object' && keyBits instanceof Blob ?
+      keyBits : new Blob(keyBits);
+  }
+};
+
+exports.DecryptKey = DecryptKey;
+
+/**
+ * Get the key value.
+ * @return {Blob} The key value.
+ */
+DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/encrypt-key https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('../util/blob.js').Blob;
+
+/**
+ * An EncryptKey supplies the key for encrypt.
+ * Create an EncryptKey with the given key value.
+ * @param {Blob|EncryptKey} value If value is another EncryptKey then copy it.
+ * Otherwise, value is the key value.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var EncryptKey = function EncryptKey(value)
+{
+  if (typeof value === 'object' && value instanceof EncryptKey) {
+    // Make a deep copy.
+    this.keyBits_ = value.keyBits_;
+  }
+  else {
+    var keyBits = value;
+    this.keyBits_ = typeof keyBits === 'object' && keyBits instanceof Blob ?
+      keyBits : new Blob(keyBits);
+  }
+};
+
+exports.EncryptKey = EncryptKey;
+
+/**
+ * Get the key value.
+ * @return {Blob} The key value.
+ */
+EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/encrypted-content https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var KeyLocator = require('../key-locator.js').KeyLocator;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
+var Blob = require('../util/blob.js').Blob;
+
+/**
+ * An EncryptedContent holds an encryption type, a payload and other fields
+ * representing encrypted content.
+ * @param {EncryptedContent} (optional) If value is another EncryptedContent
+ * then copy it. If value is omitted then create an EncryptedContent with
+ * unspecified values.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var EncryptedContent = function EncryptedContent(value)
+{
+  if (typeof value === 'object' && value instanceof EncryptedContent) {
+    // Make a deep copy.
+    this.algorithmType_ = value.algorithmType_;
+    this.keyLocator_ = new KeyLocator(value.keyLocator_);
+    this.initialVector_ = value.initialVector_;
+    this.payload_ = value.payload_;
+  }
+  else {
+    this.algorithmType_ = null;
+    this.keyLocator_ = new KeyLocator();
+    this.initialVector_ = new Blob();
+    this.payload_ = new Blob();
+  }
+};
+
+exports.EncryptedContent = EncryptedContent;
+
+/**
+ * Get the algorithm type from EncryptAlgorithmType.
+ * @returns {number} The algorithm type from EncryptAlgorithmType, or null if
+ * not specified.
+ */
+EncryptedContent.prototype.getAlgorithmType = function()
+{
+  return this.algorithmType_;
+};
+
+/**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ */
+EncryptedContent.prototype.getKeyLocator = function()
+{
+  return this.keyLocator_;
+};
+
+/**
+ * Get the initial vector.
+ * @returns {Blob} The initial vector. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getInitialVector = function()
+{
+  return this.initialVector_;
+};
+
+/**
+ * Get the payload.
+ * @returns {Blob} The payload. If not specified, isNull() is true.
+ */
+EncryptedContent.prototype.getPayload = function()
+{
+  return this.payload_;
+};
+
+/**
+ * Set the algorithm type.
+ * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
+ * If not specified, set to null.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
+{
+  this.algorithmType_ = algorithmType;
+  return this;
+};
+
+/**
+ * Set the key locator.
+ * @param {KeyLocator} keyLocator The key locator. This makes a copy of the
+ * object. If not specified, set to the default KeyLocator().
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_ = typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator();
+  return this;
+};
+
+/**
+ * Set the initial vector.
+ * @param {Blob} initialVector The initial vector. If not specified, set to the
+ * default Blob() where isNull() is true.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setInitialVector = function(initialVector)
+{
+  this.initialVector_ =
+      typeof initialVector === 'object' && initialVector instanceof Blob ?
+    initialVector : new Blob(initialVector);
+  return this;
+};
+
+/**
+ * Set the encrypted payload.
+ * @param {Blob} payload The payload. If not specified, set to the default Blob()
+ * where isNull() is true.
+ * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * to update values.
+ */
+EncryptedContent.prototype.setPayload = function(payload)
+{
+  this.payload_ = typeof payload === 'object' && payload instanceof Blob ?
+    payload : new Blob(payload);
+  return this;
+};
+
+/**
+ * Encode this EncryptedContent for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+EncryptedContent.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeEncryptedContent(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this
+ * EncryptedContent.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+EncryptedContent.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/group-manager-db https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+
+/**
+ * GroupManagerDb is a base class for the storage of data used by the
+ * GroupManager. It contains two tables to store Schedules and Members.
+ * This is an abstract base class. A subclass must implement the methods.
+ * For example, see Sqlite3GroupManagerDb (for Nodejs) or IndexedDbGroupManagerDb
+ * (for the browser).
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var GroupManagerDb = function GroupManagerDb()
+{
+};
+
+exports.GroupManagerDb = GroupManagerDb;
+
+/**
+ * Create a new GroupManagerDb.Error to report an error using GroupManagerDb
+ * methods, wrapping the given error object.
+ * Call with: throw new GroupManagerDb.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+GroupManagerDb.Error = function GroupManagerDbError(error)
+{
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
+}
+
+GroupManagerDb.Error.prototype = new Error();
+GroupManagerDb.Error.prototype.name = "GroupManagerDbError";
+
+////////////////////////////////////////////////////// Schedule management.
+
+/**
+ * Check if there is a schedule with the given name.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns true if there is a
+ * schedule (else false), or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+GroupManagerDb.prototype.hasSchedulePromise = function(name, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.hasSchedulePromise is not implemented"));
+};
+
+/**
+ * List all the names of the schedules.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new array of string
+ * with the names of all schedules, or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.listAllScheduleNamesPromise is not implemented"));
+};
+
+/**
+ * Get a schedule with the given name.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new Schedule object,
+ * or that is rejected with GroupManagerDb.Error if the schedule does not exist
+ * or other database error.
+ */
+GroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.getSchedulePromise is not implemented"));
+};
+
+/**
+ * For each member using the given schedule, get the name and public key DER
+ * of the member's key.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new array of object
+ * (where "keyName" is the Name of the public key and "publicKey" is the Blob of
+ * the public key DER), or that is rejected with GroupManagerDb.Error for a
+ * database error. Note that the member's identity name is keyName.getPrefix(-1).
+ * If the schedule name is not found, the list is empty.
+ */
+GroupManagerDb.prototype.getScheduleMembersPromise = function
+  (name, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.getScheduleMembersPromise is not implemented"));
+};
+
+/**
+ * Add a schedule with the given name.
+ * @param {string} name The name of the schedule. The name cannot be empty.
+ * @param {Schedule} schedule The Schedule to add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * added, or that is rejected with GroupManagerDb.Error if a schedule with the
+ * same name already exists, if the name is empty, or other database error.
+ */
+GroupManagerDb.prototype.addSchedulePromise = function(name, schedule, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.addSchedulePromise is not implemented"));
+};
+
+/**
+ * Delete the schedule with the given name. Also delete members which use this
+ * schedule. If there is no schedule with the name, then do nothing.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * deleted (or there is no such schedule), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.deleteSchedulePromise = function(name, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.deleteSchedulePromise is not implemented"));
+};
+
+/**
+ * Rename a schedule with oldName to newName.
+ * @param {string} oldName The name of the schedule to be renamed.
+ * @param {string} newName The new name of the schedule. The name cannot be empty.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * renamed, or that is rejected with GroupManagerDb.Error if a schedule with
+ * newName already exists, if the schedule with oldName does not exist, if
+ * newName is empty, or other database error.
+ */
+GroupManagerDb.prototype.renameSchedulePromise = function
+  (oldName, newName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.renameSchedulePromise is not implemented"));
+};
+
+/**
+ * Update the schedule with name and replace the old object with the given
+ * schedule. Otherwise, if no schedule with name exists, a new schedule
+ * with name and the given schedule will be added to database.
+ * @param {string} name The name of the schedule. The name cannot be empty.
+ * @param {Schedule} schedule The Schedule to update or add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * updated, or that is rejected with GroupManagerDb.Error if the name is empty,
+ * or other database error.
+ */
+GroupManagerDb.prototype.updateSchedulePromise = function
+  (name, schedule, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.updateSchedulePromise is not implemented"));
+};
+
+////////////////////////////////////////////////////// Member management.
+
+/**
+ * Check if there is a member with the given identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns true if there is a
+ * member (else false), or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+GroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.hasMemberPromise is not implemented"));
+};
+
+/**
+ * List all the members.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new array of Name with
+ * the names of all members, or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+GroupManagerDb.prototype.listAllMembersPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.listAllMembersPromise is not implemented"));
+};
+
+/**
+ * Get the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the string schedule name,
+ * or that is rejected with GroupManagerDb.Error if there's no member with the
+ * given identity name in the database, or other database error.
+ */
+GroupManagerDb.prototype.getMemberSchedulePromise = function(identity, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.getMemberSchedulePromise is not implemented"));
+};
+
+/**
+ * Add a new member with the given key named keyName into a schedule named
+ * scheduleName. The member's identity name is keyName.getPrefix(-1).
+ * @param {string} scheduleName The schedule name.
+ * @param {Name} keyName The name of the key.
+ * @param {Blob} key A Blob of the public key DER.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * added, or that is rejected with GroupManagerDb.Error if there's no schedule
+ * named scheduleName, if the member's identity name already exists, or other
+ * database error.
+ */
+GroupManagerDb.prototype.addMemberPromise = function
+  (scheduleName, keyName, key, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.addMemberPromise is not implemented"));
+};
+
+/**
+ * Change the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {string} scheduleName The new schedule name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * updated, or that is rejected with GroupManagerDb.Error if there's no member
+ * with the given identity name in the database, or there's no schedule named
+ * scheduleName, or other database error.
+ */
+GroupManagerDb.prototype.updateMemberSchedulePromise = function
+  (identity, scheduleName, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.updateMemberSchedulePromise is not implemented"));
+};
+
+/**
+ * Delete a member with the given identity name. If there is no member with
+ * the identity name, then do nothing.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * deleted (or there is no such member), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManagerDb.prototype.deleteMemberPromise = function(identity, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("GroupManagerDb.deleteMemberPromise is not implemented"));
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/group-manager https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Name = require('../name.js').Name;
+var Data = require('../data.js').Data;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate;
+var SecurityException = require('../security/security-exception.js').SecurityException;
+var RsaKeyParams = require('../security/key-params.js').RsaKeyParams;
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
+var Encryptor = require('./algo/encryptor.js').Encryptor;
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
+var Interval = require('./interval.js').Interval;
+var Schedule = require('./schedule.js').Schedule;
+
+/**
+ * A GroupManager manages keys and schedules for group members in a particular
+ * namespace.
+ * Create a group manager with the given values. The group manager namespace
+ * is <prefix>/read/<dataType> .
+ * @param {Name} prefix The prefix for the group manager namespace.
+ * @param {Name} dataType The data type for the group manager namespace.
+ * @param {GroupManagerDb} database The GroupManagerDb for storing the group
+ * management information (including user public keys and schedules).
+ * @param {number} keySize The group key will be an RSA key with keySize bits.
+ * @param {number} freshnessHours The number of hours of the freshness period of
+ *   data packets carrying the keys.
+ * @param {KeyChain} keyChain The KeyChain to use for signing data packets. This
+ * signs with the default identity.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var GroupManager = function GroupManager
+  (prefix, dataType, database, keySize, freshnessHours, keyChain)
+{
+  this.namespace_ = new Name(prefix).append(Encryptor.NAME_COMPONENT_READ)
+    .append(dataType);
+  this.database_ = database;
+  this.keySize_ = keySize;
+  this.freshnessHours_ = freshnessHours;
+
+  this.keyChain_ = keyChain;
+};
+
+exports.GroupManager = GroupManager;
+
+/**
+ * Create a group key for the interval into which timeSlot falls. This creates
+ * a group key if it doesn't exist, and encrypts the key using the public key of
+ * each eligible member.
+ * @param {number} timeSlot The time slot to cover as milliseconds since
+ * Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a List of Data packets
+ * (where the first is the E-KEY data packet with the group's public key and the
+ * rest are the D-KEY data packets with the group's private key encrypted with
+ * the public key of each eligible member), or that is rejected with
+ * GroupManagerDb.Error for a database error or SecurityException for an error
+ * using the security KeyChain.
+ */
+GroupManager.prototype.getGroupKeyPromise = function(timeSlot, useSync)
+{
+  var memberKeys = [];
+  var result = [];
+  var thisManager = this;
+  var privateKeyBlob;
+  var publicKeyBlob;
+  var startTimeStamp;
+  var endTimeStamp;
+
+  // Get the time interval.
+  return this.calculateIntervalPromise_(timeSlot, memberKeys, useSync)
+  .then(function(finalInterval) {
+    if (finalInterval.isValid() == false)
+      return SyncPromise.resolve(result);
+
+    startTimeStamp = Schedule.toIsoString(finalInterval.getStartTime());
+    endTimeStamp = Schedule.toIsoString(finalInterval.getEndTime());
+
+    // Generate the private and public keys.
+    return thisManager.generateKeyPairPromise_(useSync)
+    .then(function(keyPair) {
+      privateKeyBlob = keyPair.privateKeyBlob;
+      publicKeyBlob = keyPair.publicKeyBlob;
+
+      // Add the first element to the result.
+      // The E-KEY (public key) data packet name convention is:
+      // /<data_type>/E-KEY/[start-ts]/[end-ts]
+      return thisManager.createEKeyDataPromise_
+        (startTimeStamp, endTimeStamp, publicKeyBlob, useSync);
+    })
+    .then(function(data) {
+      result.push(data);
+
+      // Encrypt the private key with the public key from each member's certificate.
+
+      // Process the memberKeys entry at i, and recursively call to process the
+      // next entry. Return a promise which is resolved when all are processed.
+      // (We have to make a recursive function to use Promises.)
+      function processMemberKey(i) {
+        if (i >= memberKeys.length)
+          // Finished.
+          return SyncPromise.resolve();
+
+        var keyName = memberKeys[i].keyName;
+        var certificateKey = memberKeys[i].publicKey;
+
+        return thisManager.createDKeyDataPromise_
+          (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey,
+           useSync)
+        .then(function(data) {
+          result.push(data);
+
+          return processMemberKey(i + 1);
+        });
+      }
+
+      return processMemberKey(0);
+    })
+    .then(function() {
+      return SyncPromise.resolve(result);
+    });
+  });
+};
+
+/**
+ * Add a schedule with the given scheduleName.
+ * @param {string} scheduleName The name of the schedule. The name cannot be
+ * empty.
+ * @param {Schedule} schedule The Schedule to add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * added, or that is rejected with GroupManagerDb.Error if a schedule with the
+ * same name already exists, if the name is empty, or other database error.
+ */
+GroupManager.prototype.addSchedulePromise = function
+  (scheduleName, schedule, useSync)
+{
+  return this.database_.addSchedulePromise(scheduleName, schedule, useSync);
+};
+
+/**
+ * Delete the schedule with the given scheduleName. Also delete members which
+ * use this schedule. If there is no schedule with the name, then do nothing.
+ * @param {string} scheduleName The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * deleted (or there is no such schedule), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.deleteSchedulePromise = function(scheduleName, useSync)
+{
+  return this.database_.deleteSchedulePromise(scheduleName, useSync);
+};
+
+/**
+ * Update the schedule with scheduleName and replace the old object with the
+ * given schedule. Otherwise, if no schedule with name exists, a new schedule
+ * with name and the given schedule will be added to database.
+ * @param {string} scheduleName The name of the schedule. The name cannot be
+ * empty.
+ * @param {Schedule} schedule The Schedule to update or add.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the schedule is
+ * updated, or that is rejected with GroupManagerDb.Error if the name is empty,
+ * or other database error.
+ */
+GroupManager.prototype.updateSchedulePromise = function
+  (name, scheduleName, useSync)
+{
+  return this.database_.updateSchedulePromise(scheduleName, schedule, useSync);
+};
+
+/**
+ * Add a new member with the given memberCertificate into a schedule named
+ * scheduleName. If cert is an IdentityCertificate made from memberCertificate,
+ * then the member's identity name is cert.getPublicKeyName().getPrefix(-1).
+ * @param {string} scheduleName The schedule name.
+ * @param {Data} memberCertificate The member's certificate.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * added, or that is rejected with GroupManagerDb.Error if there's no schedule
+ * named scheduleName, if the member's identity name already exists, or other
+ * database error. Or a promise that is rejected with DerDecodingException for
+ * an error decoding memberCertificate as a certificate.
+ */
+GroupManager.prototype.addMemberPromise = function
+  (scheduleName, memberCertificate, useSync)
+{
+  var cert = new IdentityCertificate(memberCertificate);
+  return this.database_.addMemberPromise
+    (scheduleName, cert.getPublicKeyName(), cert.getPublicKeyInfo().getKeyDer(),
+     useSync);
+};
+
+/**
+ * Remove a member with the given identity name. If there is no member with
+ * the identity name, then do nothing.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * removed (or there is no such member), or that is rejected with
+ * GroupManagerDb.Error for a database error.
+ */
+GroupManager.prototype.removeMemberPromise = function(identity, useSync)
+{
+  return this.database_.deleteMemberPromise(identity, useSync);
+};
+
+/**
+ * Change the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {string} scheduleName The new schedule name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the member is
+ * updated, or that is rejected with GroupManagerDb.Error if there's no member
+ * with the given identity name in the database, or there's no schedule named
+ * scheduleName.
+ */
+GroupManager.prototype.updateMemberSchedulePromise = function
+  (identity, scheduleName, useSync)
+{
+  return this.database_.updateMemberSchedulePromise
+    (identity, scheduleName, useSync);
+};
+
+/**
+ * Calculate an Interval that covers the timeSlot.
+ * @param {number} timeSlot The time slot to cover as milliseconds since
+ * Jan 1, 1970 UTC.
+ * @param {Array<object>} memberKeys First clear memberKeys then fill it with
+ * the info of members who are allowed to access the interval. memberKeys is an
+ * array of object where "keyName" is the Name of the public key and "publicKey"
+ * is the Blob of the public key DER. The memberKeys entries are sorted by
+ * the entry keyName.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a new nterval covering
+ * the time slot, or that is rejected with GroupManagerDb.Error for a database
+ * error.
+ */
+GroupManager.prototype.calculateIntervalPromise_ = function
+  (timeSlot, memberKeys, useSync)
+{
+  // Prepare.
+  var positiveResult = new Interval();
+  var negativeResult = new Interval();
+  // Clear memberKeys.
+  memberKeys.splice(0, memberKeys.length);
+  var thisManager = this;
+
+  // Get the all intervals from the schedules.
+  return this.database_.listAllScheduleNamesPromise(useSync)
+  .then(function(scheduleNames) {
+    // Process the scheduleNames entry at i, and recursively call to process the
+    // next entry. Return a promise which is resolved when all are processed.
+    // (We have to make a recursive function to use Promises.)
+    function processSchedule(i) {
+      if (i >= scheduleNames.length)
+        // Finished.
+        return SyncPromise.resolve();
+
+      var scheduleName = scheduleNames[i];
+
+      return thisManager.database_.getSchedulePromise(scheduleName, useSync)
+      .then(function(schedule) {
+        var result = schedule.getCoveringInterval(timeSlot);
+        var tempInterval = result.interval;
+
+        if (result.isPositive) {
+          if (!positiveResult.isValid())
+            positiveResult = tempInterval;
+          positiveResult.intersectWith(tempInterval);
+
+          return thisManager.database_.getScheduleMembersPromise
+            (scheduleName, useSync)
+          .then(function(map) {
+            // Add each entry in map to memberKeys.
+            for (var iMap = 0; iMap < map.length; ++iMap)
+              GroupManager.memberKeysAdd_(memberKeys, map[iMap]);
+
+            return processSchedule(i + 1);
+          });
+        }
+        else {
+          if (!negativeResult.isValid())
+            negativeResult = tempInterval;
+          negativeResult.intersectWith(tempInterval);
+
+          return processSchedule(i + 1);
+        }
+      });
+    }
+
+    return processSchedule(0);
+  })
+  .then(function() {
+    if (!positiveResult.isValid())
+      // Return an invalid interval when there is no member which has an
+      // interval covering the time slot.
+      return SyncPromise.resolve(new Interval(false));
+
+    // Get the final interval result.
+    var finalInterval;
+    if (negativeResult.isValid())
+      finalInterval = positiveResult.intersectWith(negativeResult);
+    else
+      finalInterval = positiveResult;
+
+    return SyncPromise.resolve(finalInterval);
+  });
+};
+
+/**
+ * Add entry to memberKeys, sorted by entry.keyName. If there is already an
+ * entry with keyName, then don't add.
+ */
+GroupManager.memberKeysAdd_ = function(memberKeys, entry)
+{
+  // Find the index of the first node where the keyName is not less than
+  // entry.keyName.
+  var i = 0;
+  while (i < memberKeys.length) {
+    var comparison = memberKeys[i].keyName.compare(entry.keyName);
+    if (comparison == 0)
+      // A duplicate, so don't add.
+      return;
+
+    if (comparison > 0)
+      break;
+    i += 1;
+  }
+
+  memberKeys.splice(i, 0, entry);
+};
+
+/**
+ * Generate an RSA key pair according to keySize_.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns an object where
+ * "privateKeyBlob" is the encoding Blob of the private key and "publicKeyBlob"
+ * is the encoding Blob of the public key.
+ */
+GroupManager.prototype.generateKeyPairPromise_ = function(useSync)
+{
+  var params = new RsaKeyParams(this.keySize_);
+
+  return RsaAlgorithm.generateKeyPromise(params)
+  .then(function(privateKey) {
+    var privateKeyBlob = privateKey.getKeyBits();
+    var publicKey = RsaAlgorithm.deriveEncryptKey(privateKeyBlob);
+    var publicKeyBlob = publicKey.getKeyBits();
+
+    return SyncPromise.resolve
+      ({ privateKeyBlob: privateKeyBlob, publicKeyBlob: publicKeyBlob });
+  });
+};
+
+/**
+ * Create an E-KEY Data packet for the given public key.
+ * @param {string} startTimeStamp The start time stamp string to put in the name.
+ * @param {string} endTimeStamp The end time stamp string to put in the name.
+ * @param {Blob} publicKeyBlob A Blob of the public key DER.
+ * @return The Data packet.
+ * @throws SecurityException for an error using the security KeyChain.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the Data packet, or that
+ * is rejected with SecurityException for an error using the security KeyChain.
+ */
+GroupManager.prototype.createEKeyDataPromise_ = function
+  (startTimeStamp, endTimeStamp, publicKeyBlob, useSync)
+{
+  var name = new Name(this.namespace_);
+  name.append(Encryptor.NAME_COMPONENT_E_KEY).append(startTimeStamp)
+    .append(endTimeStamp);
+
+  var data = new Data(name);
+  data.getMetaInfo().setFreshnessPeriod
+    (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
+  data.setContent(publicKeyBlob);
+
+  // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
+  var identityManger = this.keyChain_.getIdentityManager();
+  return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
+  .then(function(identityName) {
+    return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
+      (identityName, useSync)
+    .then(function(defaultCertificateName) {
+      return identityManger.identityStorage.getCertificatePromise
+        (defaultCertificateName, true, useSync);
+    })
+    .then(function(certificate) {
+      var certificateName = certificate.getName().getPrefix(-1);
+      return identityManger.signByCertificatePromise
+        (data, certificateName, useSync);
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(data);
+  });
+};
+
+/**
+ * Create a D-KEY Data packet with an EncryptedContent for the given private
+ * key, encrypted with the certificate key.
+ * @param {string} startTimeStamp The start time stamp string to put in the name.
+ * @param {string} endTimeStamp The end time stamp string to put in the name.
+ * @param {Name} keyName The key name to put in the data packet name and the
+ * EncryptedContent key locator.
+ * @param {Blob} privateKeyBlob A Blob of the encoded private key.
+ * @param {Blob} certificateKey The certificate key encoding, used to encrypt
+ * the private key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the Data packet, or that
+ * is rejected with SecurityException for an error using the security KeyChain.
+ */
+GroupManager.prototype.createDKeyDataPromise_ = function
+  (startTimeStamp, endTimeStamp, keyName, privateKeyBlob, certificateKey,
+   useSync)
+{
+  var name = new Name(this.namespace_);
+  name.append(Encryptor.NAME_COMPONENT_D_KEY);
+  name.append(startTimeStamp).append(endTimeStamp);
+  var data = new Data(name);
+  data.getMetaInfo().setFreshnessPeriod
+    (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
+  var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
+  var identityManger = this.keyChain_.getIdentityManager();
+
+  return Encryptor.encryptDataPromise
+    (data, privateKeyBlob, keyName, certificateKey, encryptParams, useSync)
+  .catch(function(ex) {
+    // Consolidate errors such as InvalidKeyException.
+    return SyncPromise.reject(SecurityException(new Error
+      ("createDKeyData: Error in encryptData: " + ex)));
+  })
+  .then(function() {
+    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
+    return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
+    .then(function(identityName) {
+      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
+        (identityName, useSync)     ;
+    })
+    .then(function(defaultCertificateName) {
+      return identityManger.identityStorage.getCertificatePromise
+        (defaultCertificateName, true, useSync);
+    })
+    .then(function(certificate) {
+      var certificateName = certificate.getName().getPrefix(-1);
+      return identityManger.signByCertificatePromise
+        (data, certificateName, useSync);
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(data);
+  });
+};
+
+GroupManager.MILLISECONDS_IN_HOUR = 3600 * 1000;
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/interval https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * An Interval defines a time duration which contains a start timestamp and an
+ * end timestamp. Create an Interval with one of these forms:
+ * Interval(isValid).
+ * Interval(startTime, endTime).
+ * Interval(interval).
+ * @param {boolean} isValid True to create a valid empty interval, false to
+ * create an invalid interval.
+ * @param {number} startTime The start time as milliseconds since Jan 1, 1970 UTC.
+ * The start time must be less than the end time. To create an empty interval
+ * (start time equals end time), use the constructor Interval(true).
+ * @param {number} endTime The end time as milliseconds since Jan 1, 1970 UTC.
+ * @param {Interval} interval The other interval with values to copy.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var Interval = function Interval(value, endTime)
+{
+  if (typeof value === 'object' && value instanceof Interval) {
+    // Make a copy.
+    this.startTime_ = value.startTime_;
+    this.endTime_ = value.endTime_;
+    this.isValid_ = value.isValid_;
+  }
+  else if (typeof value === 'number') {
+    var startTime = value;
+
+    if (!(startTime < endTime))
+      throw new Error("Interval start time must be less than the end time");
+
+    this.startTime_ = startTime;
+    this.endTime_ = endTime;
+    this.isValid_ = true;
+  }
+  else {
+    var isValid = (value ? true : false);
+
+    this.startTime_ = -Number.MAX_VALUE;
+    this.endTime_ = -Number.MAX_VALUE;
+    this.isValid_ = isValid;
+  }
+};
+
+exports.Interval = Interval;
+
+/**
+ * Check if the time point is in this interval.
+ * @param {number} timePoint The time point to check as milliseconds since
+ * Jan 1, 1970 UTC.
+ * @return {boolean} True if timePoint is in this interval.
+ * @throws Error if this Interval is invalid.
+ */
+Interval.prototype.covers = function(timePoint)
+{
+  if (!this.isValid_)
+    throw new Error("Interval.covers: This Interval is invalid");
+
+  if (this.isEmpty())
+    return false;
+  else
+    return this.startTime_ <= timePoint && timePoint < this.endTime_;
+};
+
+/**
+ * Set this Interval to the intersection of this and the other interval.
+ * This and the other interval should be valid but either can be empty.
+ * @param {Interval} interval The other Interval to intersect with.
+ * @return {Interval} This Interval.
+ * @throws Error if this Interval or the other interval is invalid.
+ */
+Interval.prototype.intersectWith = function(interval)
+{
+  if (!this.isValid_)
+    throw new Error("Interval.intersectWith: This Interval is invalid");
+  if (!interval.isValid_)
+    throw new Error("Interval.intersectWith: The other Interval is invalid");
+
+  if (this.isEmpty() || interval.isEmpty()) {
+    // If either is empty, the result is empty.
+    this.startTime_ = this.endTime_;
+    return this;
+  }
+
+  if (this.startTime_ >= interval.endTime_ || this.endTime_ <= interval.startTime_) {
+    // The two intervals don't have an intersection, so the result is empty.
+    this.startTime_ = this.endTime_;
+    return this;
+  }
+
+  // Get the start time.
+  if (this.startTime_ <= interval.startTime_)
+    this.startTime_ = interval.startTime_;
+
+  // Get the end time.
+  if (this.endTime_ > interval.endTime_)
+    this.endTime_ = interval.endTime_;
+
+  return this;
+};
+
+/**
+ * Set this Interval to the union of this and the other interval.
+ * This and the other interval should be valid but either can be empty.
+ * This and the other interval should have an intersection. (Contiguous
+ * intervals are not allowed.)
+ * @param {Interval} interval The other Interval to union with.
+ * @return {Interval} This Interval.
+ * @throws Error if this Interval or the other interval is invalid, or if the
+ * two intervals do not have an intersection.
+ */
+Interval.prototype.unionWith = function(interval)
+{
+  if (!this.isValid_)
+    throw new Error("Interval.intersectWith: This Interval is invalid");
+  if (!interval.isValid_)
+    throw new Error("Interval.intersectWith: The other Interval is invalid");
+
+  if (this.isEmpty()) {
+    // This interval is empty, so use the other.
+    this.startTime_ = interval.startTime_;
+    this.endTime_ = interval.endTime_;
+    return this;
+  }
+
+  if (interval.isEmpty())
+    // The other interval is empty, so keep using this one.
+    return this;
+
+  if (this.startTime_ >= interval.endTime_ || this.endTime_ <= interval.startTime_)
+    throw new Error
+      ("Interval.unionWith: The two intervals do not have an intersection");
+
+  // Get the start time.
+  if (this.startTime_ > interval.startTime_)
+    this.startTime_ = interval.startTime_;
+
+  // Get the end time.
+  if (this.endTime_ < interval.endTime_)
+    this.endTime_ = interval.endTime_;
+
+  return this;
+};
+
+/**
+ * Get the start time.
+ * @return {number} The start time as milliseconds since Jan 1, 1970 UTC.
+ * @throws Error if this Interval is invalid.
+ */
+Interval.prototype.getStartTime = function()
+{
+  if (!this.isValid_)
+    throw new Error("Interval.getStartTime: This Interval is invalid");
+  return this.startTime_;
+};
+
+/**
+ * Get the end time.
+ * @return {number} The end time as milliseconds since Jan 1, 1970 UTC.
+ * @throws Error if this Interval is invalid.
+ */
+Interval.prototype.getEndTime = function()
+{
+  if (!this.isValid_)
+    throw new Error("Interval.getEndTime: This Interval is invalid");
+  return this.endTime_;
+};
+
+/**
+ * Check if this Interval is valid.
+ * @return {boolean} True if this interval is valid, false if invalid.
+ */
+Interval.prototype.isValid = function() { return this.isValid_; };
+
+/**
+ * Check if this Interval is empty.
+ * @return {boolean} True if this Interval is empty (start time equals end time),
+ * false if not.
+ * @throws Error if this Interval is invalid.
+ */
+Interval.prototype.isEmpty = function()
+{
+  if (!this.isValid_)
+    throw new Error("Interval.isEmpty: This Interval is invalid");
+  return this.startTime_ == this.endTime_;
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/producer-db https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+
+/**
+ * ProducerDb is a base class the storage of keys for the producer. It contains
+ * one table that maps time slots (to the nearest hour) to the content key
+ * created for that time slot. A subclass must implement the methods. For
+ * example, see Sqlite3ProducerDb (for Nodejs) or IndexedDbProducerDb (for the
+ * browser).
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var ProducerDb = function ProducerDb()
+{
+};
+
+exports.ProducerDb = ProducerDb;
+
+/**
+ * Create a new ProducerDb.Error to report an error using ProducerDb
+ * methods, wrapping the given error object.
+ * Call with: throw new ProducerDb.Error(new Error("message")).
+ * @constructor
+ * @param {Error} error The exception created with new Error.
+ */
+ProducerDb.Error = function ProducerDbError(error)
+{
+  if (error) {
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
+  }
+}
+
+/**
+ * Check if a content key exists for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns true if there is a
+ * content key for timeSlot (else false), or that is rejected with
+ * ProducerDb.Error for a database error.
+ */
+ProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ProducerDb.hasContentKeyPromise is not implemented"));
+};
+
+/**
+ * Get the content key for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns a Blob with the encoded
+ * key, or that is rejected with ProducerDb.Error if there is no key covering
+ * timeSlot, or other database error
+ */
+ProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ProducerDb.getContentKeyPromise is not implemented"));
+};
+
+/**
+ * Add key as the content key for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {Blob} key The encoded key.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is added,
+ * or that is rejected with ProducerDb.Error if a key for the same hour already
+ * exists in the database, or other database error.
+ */
+ProducerDb.prototype.addContentKeyPromise = function
+  (timeSlot, key, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ProducerDb.addContentKeyPromise is not implemented"));
+};
+
+/**
+ * Delete the content key for the hour covering timeSlot. If there is no key for
+ * the time slot, do nothing.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that fulfills when the key is deleted
+ * (or there is no such key), or that is rejected with ProducerDb.Error for a
+ * database error.
+ */
+ProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("ProducerDb.deleteContentKeyPromise is not implemented"));
+};
+
+/**
+ * Get the hour-based time slot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The hour-based time slot as hours since Jan 1, 1970 UTC.
+ */
+ProducerDb.getFixedTimeSlot = function(timeSlot)
+{
+  return Math.floor(Math.round(timeSlot) / 3600000.0);
+};
+
+ProducerDb.Error.prototype = new Error();
+ProducerDb.Error.prototype.name = "ProducerDbError";
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/producer https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Name = require('../name.js').Name;
+var Interest = require('../interest.js').Interest;
+var Data = require('../data.js').Data;
+var Exclude = require('../exclude.js').Exclude;
+var Encryptor = require('./algo/encryptor.js').Encryptor;
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
+var AesKeyParams = require('../security/key-params.js').AesKeyParams;
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
+var Schedule = require('./schedule.js').Schedule;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+
+/**
+ * A Producer manages content keys used to encrypt a data packet in the
+ * group-based encryption protocol.
+ * Create a Producer to use the given ProducerDb, Face and other values.
+ *
+ * A producer can produce data with a naming convention:
+ *   /<prefix>/SAMPLE/<dataType>/[timestamp]
+ *
+ * The produced data packet is encrypted with a content key,
+ * which is stored in the ProducerDb database.
+ *
+ * A producer also needs to produce data containing a content key
+ * encrypted with E-KEYs. A producer can retrieve E-KEYs through the face,
+ * and will re-try for at most repeatAttemps times when E-KEY retrieval fails.
+ *
+ * @param {Name} prefix The producer name prefix. This makes a copy of the Name.
+ * @param {Name} dataType The dataType portion of the producer name. This makes
+ * a copy of the Name.
+ * @param {Face} face The face used to retrieve keys.
+ * @param {KeyChain} keyChain The keyChain used to sign data packets.
+ * @param {ProducerDb} database The ProducerDb database for storing keys.
+ * @param {number} repeatAttempts (optional) The maximum retry for retrieving
+ * keys. If omitted, use a default value of 3.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var Producer = function Producer
+  (prefix, dataType, face, keyChain, database, repeatAttempts)
+{
+  this.face_ = face;
+  this.keyChain_ = keyChain;
+  this.database_ = database;
+  this.maxRepeatAttempts_ = (repeatAttempts == undefined ? 3 : repeatAttempts);
+
+  // The map key is the key name URI string. The value is an object with fields
+  // "keyName" and "keyInfo" where "keyName" is the same Name used for the key
+  // name URI string, and "keyInfo" is the Producer.KeyInfo_.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  // (Also put the original Name in the value because we need to iterate over
+  // eKeyInfo_ and we don't want to rebuild the Name from the name URI string.)
+  this.eKeyInfo_ = {};
+  // The map key is the time stamp. The value is a Producer.KeyRequest_.
+  this.keyRequests_ = {};
+
+  var fixedPrefix = new Name(prefix);
+  var fixedDataType = new Name(dataType);
+
+  // Fill ekeyInfo_ with all permutations of dataType, including the 'E-KEY'
+  // component of the name. This will be used in createContentKey to send
+  // interests without reconstructing names every time.
+  fixedPrefix.append(Encryptor.NAME_COMPONENT_READ);
+  while (fixedDataType.size() > 0) {
+    var nodeName = new Name(fixedPrefix);
+    nodeName.append(fixedDataType);
+    nodeName.append(Encryptor.NAME_COMPONENT_E_KEY);
+
+    this.eKeyInfo_[nodeName.toUri()] =
+      { keyName: nodeName, keyInfo: new Producer.KeyInfo_() };
+    fixedDataType = fixedDataType.getPrefix(-1);
+  }
+  fixedPrefix.append(dataType);
+  this.namespace_ = new Name(prefix);
+  this.namespace_.append(Encryptor.NAME_COMPONENT_SAMPLE);
+  this.namespace_.append(dataType);
+};
+
+exports.Producer = Producer;
+
+/**
+ * Create the content key. This first checks if the content key exists. For an
+ * existing content key, this returns the content key name directly. If the
+ * key does not exist, this creates one and encrypts it using the
+ * corresponding E-KEYs. The encrypted content keys are passed to the
+ * onProducerEKey callback.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {function} onEncryptedKeys If this creates a content key, then this
+ * calls onEncryptedKeys(keys) where keys is a list of encrypted content key
+ * Data packets. If onEncryptedKeys is null, this does not use it.
+ * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
+ * with the content key name for the time slot. If onContentKeyName is null,
+ * this does not use it. (A callback is neede because of async database
+ * operations.)
+ */
+Producer.prototype.createContentKey = function
+  (timeSlot, onEncryptedKeys, onContentKeyName)
+{
+  var hourSlot = Producer.getRoundedTimeSlot_(timeSlot);
+
+  // Create the content key name.
+  var contentKeyName = new Name(this.namespace_);
+  contentKeyName.append(Encryptor.NAME_COMPONENT_C_KEY);
+  contentKeyName.append(Schedule.toIsoString(hourSlot));
+
+  var contentKeyBits;
+  var thisProducer = this;
+
+  this.database_.hasContentKeyPromise(timeSlot)
+  .then(function(exists) {
+    if (exists) {
+      thisProducer.database_.getContentKeyPromise(timeSlot)
+      .then(function(localContentKeyBits) {
+        if (onContentKeyName != null)
+          onContentKeyName(contentKeyName);
+      });
+      return;
+    }
+
+    var aesParams = new AesKeyParams(128);
+    contentKeyBits = AesAlgorithm.generateKey(aesParams).getKeyBits();
+    thisProducer.database_.addContentKeyPromise(timeSlot, contentKeyBits)
+    .then(function() {
+      var timeCount = timeSlot;
+      thisProducer.keyRequests_[timeCount] =
+        new Producer.KeyRequest_(thisProducer.getEKeyInfoSize_());
+      var keyRequest = thisProducer.keyRequests_[timeCount];
+
+      var timeRange = new Exclude();
+      Producer.excludeAfter
+        (timeRange, new Name.Component(Schedule.toIsoString(timeSlot)));
+      // Send interests for all nodes in the tree.
+      for (var keyNameUri in thisProducer.eKeyInfo_) {
+        var entry = thisProducer.eKeyInfo_[keyNameUri];
+        var keyInfo = entry.keyInfo;
+        keyRequest.repeatAttempts[keyNameUri] = 0;
+        if (timeSlot < keyInfo.beginTimeSlot || timeSlot >= keyInfo.endTimeSlot) {
+          thisProducer.sendKeyInterest_
+            (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+        }
+        else {
+          var eKeyName = new Name(entry.keyName);
+          eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
+          eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
+          thisProducer.encryptContentKey_
+            (keyRequest, keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
+        }
+      }
+
+      if (onContentKeyName != null)
+        onContentKeyName(contentKeyName);
+    });
+  });
+};
+
+/**
+ * Encrypt the given content with the content key that covers timeSlot, and
+ * update the data packet with the encrypted content and an appropriate data
+ * name.
+ * @param {Data} data An empty Data object which is updated.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {Blob} content The content to encrypt.
+ * @param {function} onComplete This calls onComplete() when the data packet has
+ * been updated.
+ * @param {function} onError (optional) If there is an exception, then this
+ * calls onError(exception) with the exception. If omitted, this does not use it.
+ */
+Producer.prototype.produce = function
+  (data, timeSlot, content, onComplete, onError)
+{
+  var thisProducer = this;
+
+  this.createContentKey(timeSlot, null, function(contentKeyName) {
+    thisProducer.database_.getContentKeyPromise(timeSlot)
+    .then(function(contentKey) {
+      var dataName = new Name(thisProducer.namespace_);
+      dataName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
+
+      data.setName(dataName);
+      var params = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);
+      return Encryptor.encryptData
+        (data, content, contentKeyName, contentKey, params);
+    })
+    .then(function() {
+      // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
+      var identityManger = thisProducer.keyChain_.getIdentityManager();
+      return identityManger.identityStorage.getDefaultIdentityPromise()
+      .then(function(identityName) {
+        return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
+          (identityName);
+      })
+      .then(function(defaultCertificateName) {
+        return identityManger.identityStorage.getCertificatePromise
+          (defaultCertificateName, true);
+      })
+      .then(function(certificate) {
+        var certificateName = certificate.getName().getPrefix(-1);
+        return identityManger.signByCertificatePromise
+          (data, certificateName);
+      });
+    })
+    .then(function() {
+      onComplete();
+    }, function(error) {
+      onError(error);
+    });
+  });
+}
+
+Producer.KeyInfo_ = function ProducerKeyInfo()
+{
+  this.beginTimeSlot = 0.0;
+  this.endTimeSlot = 0.0;
+  this.keyBits = null; // Blob
+};
+
+Producer.KeyRequest_ = function ProducerKeyRequest(interests)
+{
+  this.interestCount = interests; // number
+  // The map key is the name URI string. The value is an int count.
+  // (Use a string because we can't use the Name object as the key in JavaScript.)
+  this.repeatAttempts = {};
+  this.encryptedKeys = []; // of Data
+};
+
+/**
+ * Round timeSlot to the nearest whole hour, so that we can store content keys
+ * uniformly (by start of the hour).
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The start of the hour as milliseconds since Jan 1, 1970 UTC.
+ */
+Producer.getRoundedTimeSlot_ = function(timeSlot)
+{
+  return Math.round(Math.floor(Math.round(timeSlot) / 3600000.0) * 3600000.0);
+}
+
+/**
+ * Send an interest with the given name through the face with callbacks to
+ * handleCoveringKey_ and handleTimeout_.
+ * @param {Name} name The name of the interest to send.
+ * @param {number} timeSlot The time slot, passed to handleCoveringKey_ and
+ * handleTimeout_.
+ * @param {Producer.KeyRequest_} keyRequest The KeyRequest, passed to
+ * handleCoveringKey_ and handleTimeout_.
+ * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
+ * handleCoveringKey_ and handleTimeout_.
+ * @param {Exclude} timeRange The Exclude for the interest.
+ */
+Producer.prototype.sendKeyInterest_ = function
+  (name, timeSlot, keyRequest, onEncryptedKeys, timeRange)
+{
+  var thisProducer = this;
+
+  function onKey(interest, data) {
+    thisProducer.handleCoveringKey_
+      (interest, data, timeSlot, keyRequest, onEncryptedKeys);
+  }
+
+  function onTimeout(interest) {
+    thisProducer.handleTimeout_(interest, timeSlot, keyRequest, onEncryptedKeys);
+  }
+
+  var keyInterest = new Interest(name);
+  keyInterest.setExclude(timeRange);
+  keyInterest.setChildSelector(1);
+
+  this.face_.expressInterest(keyInterest, onKey, onTimeout);
+};
+
+/**
+ * This is called from an expressInterest timeout to update the state of
+ * keyRequest.
+ * @param {Interest} interest The timed-out interest.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
+ * @param {function} onEncryptedKeys When there are no more interests to process,
+ * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
+ * key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.handleTimeout_ = function
+  (interest, timeSlot, keyRequest, onEncryptedKeys)
+{
+  var interestName = interest.getName();
+  var interestNameUri = interestName.toUri();
+
+  if (keyRequest.repeatAttempts[interestNameUri] < this.maxRepeatAttempts_) {
+    ++keyRequest.repeatAttempts[interestNameUri];
+    this.sendKeyInterest_
+      (interestName, timeSlot, keyRequest, onEncryptedKeys,
+       interest.getExclude());
+  }
+  else
+    --keyRequest.interestCount;
+
+  if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
+    onEncryptedKeys(keyRequest.encryptedKeys);
+    delete this.keyRequests_[timeSlot];
+  }
+};
+
+/**
+ * This is called from an expressInterest OnData to check that the encryption
+ * key contained in data fits the timeSlot. This sends a refined interest if
+ * required.
+ * @param {Interest} interest The interest given to expressInterest.
+ * @param {Data} data The fetched Data packet.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
+ * @param {function} onEncryptedKeys When there are no more interests to process,
+ * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
+ * key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.handleCoveringKey_ = function
+  (interest, data, timeSlot, keyRequest, onEncryptedKeys)
+{
+  var interestName = interest.getName();
+  var interestNameUrl = interestName.toUri();
+  var keyName = data.getName();
+
+  var begin = Schedule.fromIsoString
+    (keyName.get(Producer.iStartTimeStamp).getValue().toString());
+  var end = Schedule.fromIsoString
+    (keyName.get(Producer.iEndTimeStamp).getValue().toString());
+
+  if (timeSlot >= end) {
+    var timeRange = new Exclude(interest.getExclude());
+    Producer.excludeBefore(timeRange, keyName.get(Producer.iStartTimeStamp));
+    keyRequest.repeatAttempts[interestNameUrl] = 0;
+    this.sendKeyInterest_
+      (interestName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+    return;
+  }
+
+  var encryptionKey = data.getContent();
+  var keyInfo = this.eKeyInfo_[interestNameUrl].keyInfo;
+  keyInfo.beginTimeSlot = begin;
+  keyInfo.endTimeSlot = end;
+  keyInfo.keyBits = encryptionKey;
+
+  this.encryptContentKey_
+    (keyRequest, encryptionKey, keyName, timeSlot, onEncryptedKeys);
+};
+
+/**
+ * Get the content key from the database_ and encrypt it for the timeSlot
+ * using encryptionKey.
+ * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
+ * @param {Blob} encryptionKey The encryption key value.
+ * @param {Name} eKeyName The key name for the EncryptedContent.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {function} onEncryptedKeys When there are no more interests to process,
+ * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
+ * key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.encryptContentKey_ = function
+  (keyRequest, encryptionKey, eKeyName, timeSlot, onEncryptedKeys)
+{
+  var keyName = new Name(this.namespace_);
+  keyName.append(Encryptor.NAME_COMPONENT_C_KEY);
+  keyName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
+
+  var cKeyData;
+  var thisProducer = this;
+
+  this.database_.getContentKeyPromise(timeSlot)
+  .then(function(contentKey) {
+    cKeyData = new Data();
+    cKeyData.setName(keyName);
+    var params = new EncryptParams(EncryptAlgorithmType.RsaOaep);
+    return Encryptor.encryptData
+      (cKeyData, contentKey, eKeyName, encryptionKey, params);
+  })
+  .then(function() {
+    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
+    var identityManger = thisProducer.keyChain_.getIdentityManager();
+    return identityManger.identityStorage.getDefaultIdentityPromise()
+    .then(function(identityName) {
+      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
+        (identityName);
+    })
+    .then(function(defaultCertificateName) {
+      return identityManger.identityStorage.getCertificatePromise
+        (defaultCertificateName, true);
+    })
+    .then(function(certificate) {
+      var certificateName = certificate.getName().getPrefix(-1);
+      return identityManger.signByCertificatePromise
+        (cKeyData, certificateName);
+    });
+  })
+  .then(function() {
+    keyRequest.encryptedKeys.push(cKeyData);
+
+    --keyRequest.interestCount;
+    if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
+      onEncryptedKeys(keyRequest.encryptedKeys);
+      delete thisProducer.keyRequests_[timeSlot];
+    }
+  });
+};
+
+Producer.prototype.getEKeyInfoSize_ = function()
+{
+  // Note: This is really a method to find the key count in any object, but we
+  // don't want to claim that it is a tested and general utility method.
+  var size = 0;
+  for (key in this.eKeyInfo_) {
+    if (this.eKeyInfo_.hasOwnProperty(key))
+      ++size;
+  }
+
+  return size;
+};
+
+// TODO: Move this to be the main representation inside the Exclude object.
+/**
+ * Create a new ExcludeEntry.
+ * @param {Name.Component} component
+ * @param {boolean} anyFollowsComponent
+ */
+Producer.ExcludeEntry = function ExcludeEntry(component, anyFollowsComponent)
+{
+  this.component_ = component;
+  this.anyFollowsComponent_ = anyFollowsComponent;
+};
+
+/**
+ * Create a list of ExcludeEntry from the Exclude object.
+ * @param {Exclude} exclude The Exclude object to read.
+ * @return {Array<ExcludeEntry>} A new array of ExcludeEntry.
+ */
+Producer.getExcludeEntries = function(exclude)
+{
+  var entries = [];
+
+  for (var i = 0; i < exclude.size(); ++i) {
+    if (exclude.get(i) == Exclude.ANY) {
+      if (entries.length == 0)
+        // Add a "beginning ANY".
+        entries.push(new Producer.ExcludeEntry(new Name.Component(), true));
+      else
+        // Set anyFollowsComponent of the final component.
+        entries[entries.length - 1].anyFollowsComponent_ = true;
+    }
+    else
+      entries.push(new Producer.ExcludeEntry(exclude.get(i), false));
+  }
+
+  return entries;
+};
+
+/**
+ * Set the Exclude object from the array of ExcludeEntry.
+ * @param {Exclude} exclude The Exclude object to update.
+ * @param {Array<ExcludeEntry>} entries The array of ExcludeEntry.
+ */
+Producer.setExcludeEntries = function(exclude, entries)
+{
+  exclude.clear();
+
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+
+    if (i == 0 && entry.component_.getValue().size() == 0 &&
+        entry.anyFollowsComponent_)
+      // This is a "beginning ANY".
+      exclude.appendAny();
+    else {
+      exclude.appendComponent(entry.component_);
+      if (entry.anyFollowsComponent_)
+        exclude.appendAny();
+    }
+  }
+};
+
+/**
+ * Get the latest entry in the array whose component_ is less than or equal to
+ * component.
+ * @param {Array<ExcludeEntry>} entries The array of ExcludeEntry.
+ * @param {Name.Component} component The component to compare.
+ * @return {number} The index of the found entry, or -1 if not found.
+ */
+Producer.findEntryBeforeOrAt = function(entries, component)
+{
+  var i = entries.length - 1;
+  while (i >= 0) {
+    if (entries[i].component_.compare(component) <= 0)
+      break;
+    --i;
+  }
+
+  return i;
+};
+
+/**
+ * Exclude all components in the range beginning at "from".
+ * @param {Exclude} exclude The Exclude object to update.
+ * @param {Name.Component} from The first component in the exclude range.
+ */
+Producer.excludeAfter = function(exclude, from)
+{
+  var entries = Producer.getExcludeEntries(exclude);
+
+  var iNewFrom;
+  var iFoundFrom = Producer.findEntryBeforeOrAt(entries, from);
+  if (iFoundFrom < 0) {
+    // There is no entry before "from" so insert at the beginning.
+    entries.splice(0, 0, new Producer.ExcludeEntry(from, true));
+    iNewFrom = 0;
+  }
+  else {
+    var foundFrom = entries[iFoundFrom];
+
+    if (!foundFrom.anyFollowsComponent_) {
+      if (foundFrom.component_.equals(from)) {
+        // There is already an entry with "from", so just set the "ANY" flag.
+        foundFrom.anyFollowsComponent_ = true;
+        iNewFrom = iFoundFrom;
+      }
+      else {
+        // Insert following the entry before "from".
+        entries.splice(iFoundFrom + 1, 0, new Producer.ExcludeEntry(from, true));
+        iNewFrom = iFoundFrom + 1;
+      }
+    }
+    else
+      // The entry before "from" already has an "ANY" flag, so do nothing.
+      iNewFrom = iFoundFrom;
+  }
+
+  // Remove intermediate entries since they are inside the range.
+  var iRemoveBegin = iNewFrom + 1;
+  var nRemoveNeeded = entries.length - iRemoveBegin;
+  entries.splice(iRemoveBegin, nRemoveNeeded);
+
+  Producer.setExcludeEntries(exclude, entries);
+};
+
+/**
+ * Exclude all components in the range ending at "to".
+ * @param {Exclude} exclude The Exclude object to update.
+ * @param {Name.Component} to The last component in the exclude range.
+ */
+Producer.excludeBefore = function(exclude, to)
+{
+  Producer.excludeRange(exclude, new Name.Component(), to);
+};
+
+/**
+ * Exclude all components in the range beginning at "from" and ending at "to".
+ * @param {Exclude} exclude The Exclude object to update.
+ * @param {Name.Component} from The first component in the exclude range.
+ * @param {Name.Component} to The last component in the exclude range.
+ */
+Producer.excludeRange = function(exclude, from, to)
+{
+  if (from.compare(to) >= 0) {
+    if (from.compare(to) == 0)
+      throw new Error
+        ("excludeRange: from == to. To exclude a single component, sue excludeOne.");
+    else
+      throw new Error
+        ("excludeRange: from must be less than to. Invalid range: [" +
+         from.toEscapedString() + ", " + to.toEscapedString() + "]");
+  }
+
+  var entries = Producer.getExcludeEntries(exclude);
+
+  var iNewFrom;
+  var iFoundFrom = Producer.findEntryBeforeOrAt(entries, from);
+  if (iFoundFrom < 0) {
+    // There is no entry before "from" so insert at the beginning.
+    entries.splice(0, 0, new Producer.ExcludeEntry(from, true));
+    iNewFrom = 0;
+  }
+  else {
+    var foundFrom = entries[iFoundFrom];
+
+    if (!foundFrom.anyFollowsComponent_) {
+      if (foundFrom.component_.equals(from)) {
+        // There is already an entry with "from", so just set the "ANY" flag.
+        foundFrom.anyFollowsComponent_ = true;
+        iNewFrom = iFoundFrom;
+      }
+      else {
+        // Insert following the entry before "from".
+        entries.splice(iFoundFrom + 1, 0, new Producer.ExcludeEntry(from, true));
+        iNewFrom = iFoundFrom + 1;
+      }
+    }
+    else
+      // The entry before "from" already has an "ANY" flag, so do nothing.
+      iNewFrom = iFoundFrom;
+  }
+
+  // We have at least one "from" before "to", so we know this will find an entry.
+  var iFoundTo = Producer.findEntryBeforeOrAt(entries, to);
+  var foundTo = entries[iFoundTo];
+  if (iFoundTo == iNewFrom)
+    // Insert the "to" immediately after the "from".
+    entries.splice(iNewFrom + 1, 0, new Producer.ExcludeEntry(to, false));
+  else {
+    var iRemoveEnd;
+    if (!foundTo.anyFollowsComponent_) {
+      if (foundTo.component_.equals(to))
+        // The "to" entry already exists. Remove up to it.
+        iRemoveEnd = iFoundTo;
+      else {
+        // Insert following the previous entry, which will be removed.
+        entries.splice(iFoundTo + 1, 0, new Producer.ExcludeEntry(to, false));
+        iRemoveEnd = iFoundTo + 1;
+      }
+    }
+    else
+      // "to" follows a component which is already followed by "ANY", meaning
+      // the new range now encompasses it, so remove the component.
+      iRemoveEnd = iFoundTo + 1;
+
+    // Remove intermediate entries since they are inside the range.
+    var iRemoveBegin = iNewFrom + 1;
+    var nRemoveNeeded = iRemoveEnd - iRemoveBegin;
+    entries.splice(iRemoveBegin, nRemoveNeeded);
+  }
+
+  Producer.setExcludeEntries(exclude, entries);
+};
+
+Producer.iStartTimeStamp = -2;
+Producer.iEndTimeStamp = -1;
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/repetitive-interval https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Interval = require('./interval.js').Interval;
+
+/**
+ * A RepetitiveInterval is an advanced interval which can repeat and can be used
+ * to find a simple Interval that a time point falls in. Create a
+ * RepetitiveInterval with one of these forms:
+ * RepetitiveInterval() A RepetitiveInterval with one day duration, non-repeating..
+ * RepetitiveInterval(startDate, endDate, intervalStartHour, intervalEndHour, nRepeats, repeatUnit).
+ * RepetitiveInterval(repetitiveInterval).
+ * @param {number} startDate The start date as milliseconds since Jan 1, 1970 UTC.
+ * startDate must be earlier than or same as endDate. Or if repeatUnit is
+ * RepetitiveInterval.RepeatUnit.NONE, then it must equal endDate.
+ * @param {number} endDate The end date as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} intervalStartHour The start hour in the day, from 0 to 23.
+ * intervalStartHour must be less than intervalEndHour.
+ * @param {number} intervalEndHour The end hour in the day from 1 to 24.
+ * @param {number} nRepeats (optional) Repeat the interval nRepeats repetitions,
+ * every unit, until endDate. If ommitted, use 0.
+ * @param {number} repeatUnit (optional) The unit of the repetition, from
+ * RepetitiveInterval.RepeatUnit. If ommitted, use NONE. If this is NONE or
+ * ommitted, then startDate must equal endDate.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var RepetitiveInterval = function RepetitiveInterval
+  (startDate, endDate, intervalStartHour, intervalEndHour, nRepeats, repeatUnit)
+{
+  if (typeof startDate === 'object' && startDate instanceof RepetitiveInterval) {
+    // Make a copy.
+    repetitiveInterval = startDate;
+
+    this.startDate_ = repetitiveInterval.startDate_;
+    this.endDate_ = repetitiveInterval.endDate_;
+    this.intervalStartHour_ = repetitiveInterval.intervalStartHour_;
+    this.intervalEndHour_ = repetitiveInterval.intervalEndHour_;
+    this.nRepeats_ = repetitiveInterval.nRepeats_;
+    this.repeatUnit_ = repetitiveInterval.repeatUnit_;
+  }
+  else if (typeof startDate === 'number') {
+    if (nRepeats == undefined)
+      nRepeats = 0;
+    if (repeatUnit == undefined)
+      repeatUnit = RepetitiveInterval.RepeatUnit.NONE;
+
+    this.startDate_ = RepetitiveInterval.toDateOnlyMilliseconds_(startDate);
+    this.endDate_ = RepetitiveInterval.toDateOnlyMilliseconds_(endDate);
+    this.intervalStartHour_ = Math.round(intervalStartHour);
+    this.intervalEndHour_ = Math.round(intervalEndHour);
+    this.nRepeats_ = Math.round(nRepeats);
+    this.repeatUnit_ = repeatUnit;
+
+    // Validate.
+    if (!(this.intervalStartHour_ < this.intervalEndHour_))
+      throw new Error("ReptitiveInterval: startHour must be less than endHour");
+    if (!(this.startDate_ <= this.endDate_))
+      throw new Error
+        ("ReptitiveInterval: startDate must be earlier than or same as endDate");
+    if (!(this.intervalStartHour_ >= 0))
+      throw new Error("ReptitiveInterval: intervalStartHour must be non-negative");
+    if (!(this.intervalEndHour_ >= 1 && this.intervalEndHour_ <= 24))
+      throw new Error("ReptitiveInterval: intervalEndHour must be from 1 to 24");
+    if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.NONE) {
+      if (!(this.startDate_ == this.endDate_))
+        throw new Error
+          ("ReptitiveInterval: With RepeatUnit.NONE, startDate must equal endDate");
+    }
+  }
+  else {
+    // The default constructor.
+    this.startDate_ = -Number.MAX_VALUE;
+    this.endDate_ = -Number.MAX_VALUE;
+    this.intervalStartHour_ = 0;
+    this.intervalEndHour_ = 24;
+    this.nRepeats_ = 0;
+    this.repeatUnit_ = RepetitiveInterval.RepeatUnit.NONE;
+  }
+};
+
+exports.RepetitiveInterval = RepetitiveInterval;
+
+RepetitiveInterval.RepeatUnit = {
+  NONE:  0,
+  DAY:   1,
+  MONTH: 2,
+  YEAR:  3
+};
+
+/**
+ * Get an interval that covers the time point. If there is no interval
+ * covering the time point, this returns false for isPositive and returns a
+ * negative interval.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @returns {object} An associative array with fields
+ * (isPositive, interval) where
+ * isPositive is true if the returned interval is
+ * positive or false if negative, and interval is the Interval covering the time
+ * point or a negative interval if not found.
+ */
+RepetitiveInterval.prototype.getInterval = function(timePoint)
+{
+  var isPositive;
+  var startTime;
+  var endTime;
+
+  if (!this.hasIntervalOnDate_(timePoint)) {
+    // There is no interval on the date of timePoint.
+    startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
+    endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
+      24 * RepetitiveInterval.MILLISECONDS_IN_HOUR;
+    isPositive = false;
+  }
+  else {
+    // There is an interval on the date of timePoint.
+    startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
+      this.intervalStartHour_ * RepetitiveInterval.MILLISECONDS_IN_HOUR;
+    endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
+      this.intervalEndHour_ * RepetitiveInterval.MILLISECONDS_IN_HOUR;
+
+    // check if in the time duration
+    if (timePoint < startTime) {
+      endTime = startTime;
+      startTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
+      isPositive = false;
+    }
+    else if (timePoint > endTime) {
+      startTime = endTime;
+      endTime = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint) +
+        RepetitiveInterval.MILLISECONDS_IN_DAY;
+      isPositive = false;
+    }
+    else
+      isPositive = true;
+  }
+
+  return { isPositive: isPositive, interval: new Interval(startTime, endTime) };
+};
+
+/**
+ * Compare this to the other RepetitiveInterval.
+ * @param {RepetitiveInterval} other The other RepetitiveInterval to compare to.
+ * @return {number} -1 if this is less than the other, 1 if greater and 0 if equal.
+ */
+RepetitiveInterval.prototype.compare = function(other)
+{
+  if (this.startDate_ < other.startDate_)
+    return -1;
+  if (this.startDate_ > other.startDate_)
+    return 1;
+
+  if (this.endDate_ < other.endDate_)
+    return -1;
+  if (this.endDate_ > other.endDate_)
+    return 1;
+
+  if (this.intervalStartHour_ < other.intervalStartHour_)
+    return -1;
+  if (this.intervalStartHour_ > other.intervalStartHour_)
+    return 1;
+
+  if (this.intervalEndHour_ < other.intervalEndHour_)
+    return -1;
+  if (this.intervalEndHour_ > other.intervalEndHour_)
+    return 1;
+
+  if (this.nRepeats_ < other.nRepeats_)
+    return -1;
+  if (this.nRepeats_ > other.nRepeats_)
+    return 1;
+
+  if (this.repeatUnit_ < other.repeatUnit_)
+    return -1;
+  if (this.repeatUnit_ > other.repeatUnit_)
+    return 1;
+
+  return 0;
+};
+
+/**
+ * Get the start date.
+ * @return {number} The start date as milliseconds since Jan 1, 1970 UTC.
+ */
+RepetitiveInterval.prototype.getStartDate = function()
+{
+  return this.startDate_;
+};
+
+/**
+ * Get the end date.
+ * @return {number} The end date as milliseconds since Jan 1, 1970 UTC.
+ */
+RepetitiveInterval.prototype.getEndDate = function()
+{
+  return this.endDate_;
+};
+
+/**
+ * Get the interval start hour.
+ * @return {number} The interval start hour.
+ */
+RepetitiveInterval.prototype.getIntervalStartHour = function()
+{
+  return this.intervalStartHour_;
+}
+
+/**
+ * Get the interval end hour.
+ * @return {number} The interval end hour.
+ */
+RepetitiveInterval.prototype.getIntervalEndHour = function()
+{
+  return this.intervalEndHour_;
+};
+
+/**
+ * Get the number of repeats.
+ * @return {number} The number of repeats.
+ */
+RepetitiveInterval.prototype.getNRepeats = function()
+{
+  return this.nRepeats_;
+};
+
+/**
+ * Get the repeat unit.
+ * @return {number} The repeat unit, from RepetitiveInterval.RepeatUnit.
+ */
+RepetitiveInterval.prototype.getRepeatUnit = function()
+{
+  return this.repeatUnit_;
+};
+
+/**
+ * Check if the date of the time point is in any interval.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @return {boolean} True if the date of the time point is in any interval.
+ */
+RepetitiveInterval.prototype.hasIntervalOnDate_ = function(timePoint)
+{
+  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds_(timePoint));
+  var startDate = new Date(this.startDate_);
+  var endDate = new Date(this.endDate_);
+
+  if (timePointDate.getTime() < startDate.getTime() ||
+      timePointDate.getTime() > endDate.getTime())
+    return false;
+
+  if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.NONE)
+    return true;
+
+  if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
+    var durationDays =
+      (timePointDate.getTime() - startDate.getTime()) /
+      RepetitiveInterval.MILLISECONDS_IN_DAY;
+    if (durationDays % this.nRepeats_ == 0)
+      return true;
+  }
+  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
+           timePointDate.getUTCDate() == startDate.getUTCDate()) {
+    var yearDifference =
+      timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+    var monthDifference = 12 * yearDifference +
+      timePointDate.getUTCMonth() - startDate.getUTCMonth();
+    if (monthDifference % this.nRepeats_ == 0)
+      return true;
+  }
+  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
+           timePointDate.getUTCDate() == startDate.getUTCDate() &&
+           timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
+    var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+    if (difference % this.nRepeats_ == 0)
+      return true;
+  }
+
+  return false;
+};
+
+/**
+ * Return a time point on the beginning of the date (without hours, minutes, etc.)
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} A time point as milliseconds since Jan 1, 1970 UTC.
+ */
+RepetitiveInterval.toDateOnlyMilliseconds_ = function(timePoint)
+{
+  var result = Math.round(timePoint);
+  result -= result % RepetitiveInterval.MILLISECONDS_IN_DAY;
+  return result;
+};
+
+RepetitiveInterval.MILLISECONDS_IN_HOUR = 3600 * 1000;
+RepetitiveInterval.MILLISECONDS_IN_DAY = 24 * 3600 * 1000;
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/schedule https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Interval = require('./interval.js').Interval;
+var RepetitiveInterval = require('./repetitive-interval.js').RepetitiveInterval;
+var Tlv = require('../encoding/tlv/tlv.js').Tlv;
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder;
+var Blob = require('../util/blob.js').Blob;
+
+/**
+ * Schedule is used to manage the times when a member can access data using two
+ * sets of RepetitiveInterval as follows. whiteIntervalList is an ordered
+ * set for the times a member is allowed to access to data, and
+ * blackIntervalList is for the times a member is not allowed.
+ * Create a Schedule with one of these forms:
+ * Schedule() A Schedule with empty whiteIntervalList and blackIntervalList.
+ * Schedule(schedule). A copy of the given schedule.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var Schedule = function Schedule(value)
+{
+  if (typeof value === 'object' && value instanceof Schedule) {
+    // Make a copy.
+    var schedule = value;
+
+    // RepetitiveInterval is immutable, so we don't need to make a deep copy.
+    this.whiteIntervalList_ = schedule.whiteIntervalList_.slice(0);
+    this.blackIntervalList_ = schedule.blackIntervalList_.slice(0);
+  }
+  else {
+    // The default constructor.
+    this.whiteIntervalList_ = [];
+    this.blackIntervalList_ = [];
+  }
+};
+
+exports.Schedule = Schedule;
+
+/**
+ * Add the repetitiveInterval to the whiteIntervalList.
+ * @param {RepetitiveInterval} repetitiveInterval The RepetitiveInterval to add.
+ * If the list already contains the same RepetitiveInterval, this does nothing.
+ * @return {Schedule} This Schedule so you can chain calls to add.
+ */
+Schedule.prototype.addWhiteInterval = function(repetitiveInterval)
+{
+  // RepetitiveInterval is immutable, so we don't need to make a copy.
+  Schedule.sortedSetAdd_(this.whiteIntervalList_, repetitiveInterval);
+  return this;
+};
+
+/**
+ * Add the repetitiveInterval to the blackIntervalList.
+ * @param {RepetitiveInterval} repetitiveInterval The RepetitiveInterval to add.
+ * If the list already contains the same RepetitiveInterval, this does nothing.
+ * @return {Schedule} This Schedule so you can chain calls to add.
+ */
+Schedule.prototype.addBlackInterval = function(repetitiveInterval)
+{
+  // RepetitiveInterval is immutable, so we don't need to make a copy.
+  Schedule.sortedSetAdd_(this.blackIntervalList_, repetitiveInterval);
+  return this;
+};
+
+/**
+ * Get the interval that covers the time point. This iterates over the two
+ * repetitive interval sets and find the shortest interval that allows a group
+ * member to access the data. If there is no interval covering the time point,
+ * this returns false for isPositive and a negative interval.
+ * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @returns {object} An associative array with fields
+ * (isPositive, interval) where
+ * isPositive is true if the returned interval is positive or false if negative,
+ * and interval is the Interval covering the time point, or a negative interval
+ * if not found.
+ */
+Schedule.prototype.getCoveringInterval = function(timePoint)
+{
+  var blackPositiveResult = new Interval(true);
+  var whitePositiveResult = new Interval(true);
+
+  var blackNegativeResult = new Interval();
+  var whiteNegativeResult = new Interval();
+
+  // Get the black result.
+  for (var i = 0; i < this.blackIntervalList_.length; ++i) {
+    var element = this.blackIntervalList_[i];
+
+    var result = element.getInterval(timePoint);
+    var tempInterval = result.interval;
+    if (result.isPositive == true)
+      // tempInterval covers the time point, so union the black negative
+      // result with it.
+      // Get the union interval of all the black intervals covering the
+      // time point.
+      // Return false for isPositive and the union interval.
+      blackPositiveResult.unionWith(tempInterval);
+    else {
+      // tempInterval does not cover the time point, so intersect the black
+      // negative result with it.
+      // Get the intersection interval of all the black intervals not covering
+      // the time point.
+      // Return true for isPositive if the white positive result is not empty,
+      // false if it is empty.
+      if (!blackNegativeResult.isValid())
+        blackNegativeResult = tempInterval;
+      else
+        blackNegativeResult.intersectWith(tempInterval);
+    }
+  }
+
+  // If the black positive result is not full, then isPositive must be false.
+  if (!blackPositiveResult.isEmpty())
+    return { isPositive: false, interval: blackPositiveResult };
+
+  // Get the whiteResult.
+  for (var i = 0; i < this.whiteIntervalList_.length; ++i) {
+    var element = this.whiteIntervalList_[i];
+
+    var result = element.getInterval(timePoint);
+    var tempInterval = result.interval;
+    if (result.isPositive == true)
+      // tempInterval covers the time point, so union the white positive
+      // result with it.
+      // Get the union interval of all the white intervals covering the time
+      // point.
+      // Return true for isPositive.
+      whitePositiveResult.unionWith(tempInterval);
+    else {
+      // tempInterval does not cover the time point, so intersect the white
+      // negative result with it.
+      // Get the intersection of all the white intervals not covering the time
+      // point.
+      // Return false for isPositive if the positive result is empty, or
+      // true if it is not empty.
+      if (!whiteNegativeResult.isValid())
+        whiteNegativeResult = tempInterval;
+      else
+        whiteNegativeResult.intersectWith(tempInterval);
+    }
+  }
+
+  // If the positive result is empty then return false for isPositive. If it
+  // is not empty then return true for isPositive.
+  if (!whitePositiveResult.isEmpty())
+    return { isPositive: true,
+             interval: whitePositiveResult.intersectWith(blackNegativeResult) };
+  else
+    return { isPositive: false, interval: whiteNegativeResult };
+};
+
+/**
+ * Encode this Schedule.
+ * @return {Blob} The encoded buffer.
+ */
+Schedule.prototype.wireEncode = function()
+{
+  // For now, don't use WireFormat and hardcode to use TLV since the encoding
+  // doesn't go out over the wire, only into the local SQL database.
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // Encode the blackIntervalList.
+  var saveLengthForList = encoder.getLength();
+  for (var i = this.blackIntervalList_.length - 1; i >= 0; i--)
+    Schedule.encodeRepetitiveInterval_(this.blackIntervalList_[i], encoder);
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_BlackIntervalList, encoder.getLength() - saveLengthForList);
+
+  // Encode the whiteIntervalList.
+  saveLengthForList = encoder.getLength();
+  for (var i = this.whiteIntervalList_.length - 1; i >= 0; i--)
+    Schedule.encodeRepetitiveInterval_(this.whiteIntervalList_[i], encoder);
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_WhiteIntervalList, encoder.getLength() - saveLengthForList);
+
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_Schedule, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode the input and update this Schedule object.
+ * @param {Blob|Buffer} input The input buffer to decode. For Buffer, this reads
+ * from position() to limit(), but does not change the position.
+ * @throws EncodingException For invalid encoding.
+ */
+Schedule.prototype.wireDecode = function(input)
+{
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+    input.buf() : input;
+
+  // For now, don't use WireFormat and hardcode to use TLV since the encoding
+  // doesn't go out over the wire, only into the local SQL database.
+  var decoder = new TlvDecoder(decodeBuffer);
+
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Encrypt_Schedule);
+
+  // Decode the whiteIntervalList.
+  this.whiteIntervalList_ = [];
+  var listEndOffset = decoder.readNestedTlvsStart(Tlv.Encrypt_WhiteIntervalList);
+  while (decoder.getOffset() < listEndOffset)
+    Schedule.sortedSetAdd_
+      (this.whiteIntervalList_, Schedule.decodeRepetitiveInterval_(decoder));
+  decoder.finishNestedTlvs(listEndOffset);
+
+  // Decode the blackIntervalList.
+  this.blackIntervalList_ = [];
+  listEndOffset = decoder.readNestedTlvsStart(Tlv.Encrypt_BlackIntervalList);
+  while (decoder.getOffset() < listEndOffset)
+    Schedule.sortedSetAdd_
+      (this.blackIntervalList_, Schedule.decodeRepetitiveInterval_(decoder));
+  decoder.finishNestedTlvs(listEndOffset);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+/**
+ * Insert element into the list, sorted using element.compare(). If it is a
+ * duplicate of an existing list element, don't add it.
+ */
+Schedule.sortedSetAdd_ = function(list, element)
+{
+  // Find the index of the first element where it is not less than element.
+  var i = 0;
+  while (i < list.length) {
+    var comparison = list[i].compare(element);
+    if (comparison == 0)
+      // Don't add a duplicate.
+      return;
+    if (!(comparison < 0))
+      break;
+
+    ++i;
+  }
+
+  list.splice(i, 0, element);
+};
+
+/**
+ * Encode the RepetitiveInterval as NDN-TLV to the encoder.
+ * @param {RepetitiveInterval} repetitiveInterval The RepetitiveInterval to encode.
+ * @param {TlvEncoder} encoder The TlvEncoder to receive the encoding.
+ */
+Schedule.encodeRepetitiveInterval_ = function(repetitiveInterval, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  // The RepeatUnit enum has the same values as the encoding.
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.Encrypt_RepeatUnit, repetitiveInterval.getRepeatUnit());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.Encrypt_NRepeats, repetitiveInterval.getNRepeats());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.Encrypt_IntervalEndHour, repetitiveInterval.getIntervalEndHour());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.Encrypt_IntervalStartHour, repetitiveInterval.getIntervalStartHour());
+  // Use Blob to convert the string to UTF8 encoding.
+  encoder.writeBlobTlv(Tlv.Encrypt_EndDate,
+    new Blob(Schedule.toIsoString(repetitiveInterval.getEndDate())).buf());
+  encoder.writeBlobTlv(Tlv.Encrypt_StartDate,
+    new Blob(Schedule.toIsoString(repetitiveInterval.getStartDate())).buf());
+
+  encoder.writeTypeAndLength
+    (Tlv.Encrypt_RepetitiveInterval, encoder.getLength() - saveLength);
+};
+
+/**
+ * Decode the input as an NDN-TLV RepetitiveInterval.
+ * @param {TlvDecoder} decoder The decoder with the input to decode.
+ * @return {RepetitiveInterval} A new RepetitiveInterval with the decoded result.
+ */
+Schedule.decodeRepetitiveInterval_ = function(decoder)
+{
+  var endOffset = decoder.readNestedTlvsStart(Tlv.Encrypt_RepetitiveInterval);
+
+  // Use Blob to convert UTF8 to a string.
+  var startDate = Schedule.fromIsoString
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_StartDate), true).toString());
+  var endDate = Schedule.fromIsoString
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EndDate), true).toString());
+  var startHour = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_IntervalStartHour);
+  var endHour = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_IntervalEndHour);
+  var nRepeats = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_NRepeats);
+
+  // The RepeatUnit enum has the same values as the encoding.
+  var repeatUnit = decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_RepeatUnit);
+
+  decoder.finishNestedTlvs(endOffset);
+  return new RepetitiveInterval
+    (startDate, endDate, startHour, endHour, nRepeats, repeatUnit);
+};
+
+/**
+ * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
+ * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
+ * @returns {string} The string representation.
+ */
+Schedule.toIsoString = function(msSince1970)
+{
+  var utcTime = new Date(Math.round(msSince1970));
+  return utcTime.getUTCFullYear() +
+         Schedule.to2DigitString(utcTime.getUTCMonth() + 1) +
+         Schedule.to2DigitString(utcTime.getUTCDate()) +
+         "T" +
+         Schedule.to2DigitString(utcTime.getUTCHours()) +
+         Schedule.to2DigitString(utcTime.getUTCMinutes()) +
+         Schedule.to2DigitString(utcTime.getUTCSeconds());
+};
+
+/**
+ * A private method to zero pad an integer to 2 digits.
+ * @param {number} x The number to pad.  Assume it is a non-negative integer.
+ * @returns {string} The padded string.
+ */
+Schedule.to2DigitString = function(x)
+{
+  var result = x.toString();
+  return result.length === 1 ? "0" + result : result;
+};
+
+/**
+ * Convert an ISO time representation with the "T" in the middle to a UNIX
+ * timestamp.
+ * @param {string} timeString The ISO time representation.
+ * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
+ */
+Schedule.fromIsoString = function(timeString)
+{
+  if (timeString.length != 15 || timeString.substr(8, 1) != 'T')
+    throw new Error("fromIsoString: Format is not the expected yyyymmddThhmmss");
+
+  return Date.UTC
+    (parseInt(timeString.substr(0, 4)),
+     parseInt(timeString.substr(4, 2) - 1),
+     parseInt(timeString.substr(6, 2)),
+     parseInt(timeString.substr(9, 2)),
+     parseInt(timeString.substr(11, 2)),
+     parseInt(timeString.substr(13, 2)));
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// Don't require modules since this is meant for the browser, not Node.js.
+
+/**
+ * IndexedDbConsumerDb extends ConsumerDb to implement the storage of decryption
+ * keys for the consumer using the browser's IndexedDB service.
+ * Create an IndexedDbConsumerDb to use the given IndexedDB database name.
+ * @param {string} databaseName IndexedDB database name.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var IndexedDbConsumerDb = function IndexedDbConsumerDb(databaseName)
+{
+  ConsumerDb.call(this);
+
+  this.database = new Dexie(databaseName);
+  this.database.version(1).stores({
+    // "keyName" is the key name URI // string
+    //   (Note: In SQLite3, the key name is the TLV encoded bytes, but we can't
+    //   index on a byte array in IndexedDb.)
+    // "key" is the key bytes // Uint8Array
+    decryptionKeys: "keyName"
+  });
+  this.database.open();
+};
+
+IndexedDbConsumerDb.prototype = new ConsumerDb();
+IndexedDbConsumerDb.prototype.name = "IndexedDbConsumerDb";
+
+/**
+ * Get the key with keyName from the database.
+ * @param {Name} keyName The key name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a Blob with the encoded key (or an
+ * isNull Blob if cannot find the key with keyName), or that is
+ * rejected with ConsumerDb.Error for a database error.
+ */
+IndexedDbConsumerDb.prototype.getKeyPromise = function(keyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.getKeyPromise is only supported for async")));
+
+  return this.database.decryptionKeys.get(keyName.toUri())
+  .then(function(decryptionKeysEntry) {
+    if (decryptionKeysEntry)
+      return Promise.resolve(new Blob(decryptionKeysEntry.key));
+    else
+      return Promise.resolve(new Blob());
+  })
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.getKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Add the key with keyName and keyBlob to the database.
+ * @param {Name} keyName The key name.
+ * @param {Blob} keyBlob The encoded key.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the key is added, or that
+ * is rejected with ConsumerDb.Error if a key with the same keyName already
+ * exists, or other database error.
+ */
+IndexedDbConsumerDb.prototype.addKeyPromise = function(keyName, keyBlob, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.addKeyPromise is only supported for async")));
+
+  // Add rejects if the primary key already exists.
+  return this.database.decryptionKeys.add
+    ({ keyName: keyName.toUri(), key: keyBlob.buf() })
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.addKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Delete the key with keyName from the database. If there is no key with
+ * keyName, do nothing.
+ * @param {Name} keyName The key name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the key is deleted (or there
+ * is no such key), or that is rejected with ConsumerDb.Error for a database
+ * error.
+ */
+IndexedDbConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.deleteKeyPromise is only supported for async")));
+
+  return this.database.decryptionKeys.delete(keyName.toUri())
+  .catch(function(ex) {
+    return Promise.reject(new ConsumerDb.Error(new Error
+      ("IndexedDbConsumerDb.deleteKeyPromise: Error: " + ex)));
+  });
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// Don't require modules since this is meant for the browser, not Node.js.
+
+/**
+ * IndexedDbGroupManagerDb extends GroupManagerDb to implement the storage of
+ * data used by the GroupManager using the browser's IndexedDB service.
+ * Create an IndexedDbGroupManagerDb to use the given IndexedDB database name.
+ * @param {string} databaseName IndexedDB database name.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var IndexedDbGroupManagerDb = function IndexedDbGroupManagerDb(databaseName)
+{
+  GroupManagerDb.call(this);
+
+  this.database = new Dexie(databaseName);
+  this.database.version(1).stores({
+    // "scheduleId" is the schedule ID, auto incremented // number
+    // "scheduleName" is the schedule name, unique // string
+    // "schedule" is the TLV-encoded schedule // Uint8Array
+    schedules: "++scheduleId, &scheduleName",
+
+    // "memberNameUri" is the member name URI // string
+    //   (Note: In SQLite3, the member name index is the TLV encoded bytes, but
+    //   we can't index on a byte array in IndexedDb.)
+    //   (Note: The SQLite3 table also has an auto-incremented member ID primary
+    //   key, but is not used so we omit it to simplify.)
+    // "memberName" is the TLV-encoded member name (same as memberNameUri // Uint8Array
+    // "scheduleId" is the schedule ID, linked to the schedules table // number
+    //   (Note: The SQLite3 table has a foreign key to the schedules table with
+    //   cascade update and delete, but we have to handle it manually.)
+    // "keyName" is the TLV-encoded key name // Uint8Array
+    // "publicKey" is the encoded key bytes // Uint8Array
+    members: "memberNameUri, scheduleId"
+  });
+  this.database.open();
+};
+
+IndexedDbGroupManagerDb.prototype = new GroupManagerDb();
+IndexedDbGroupManagerDb.prototype.name = "IndexedDbGroupManagerDb";
+
+////////////////////////////////////////////////////// Schedule management.
+
+/**
+ * Check if there is a schedule with the given name.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns true if there is a schedule (else
+ * false), or that is rejected with GroupManagerDb.Error for a database error.
+ */
+IndexedDbGroupManagerDb.prototype.hasSchedulePromise = function(name, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.hasSchedulePromise is only supported for async")));
+
+  return this.getScheduleIdPromise_(name)
+  .then(function(scheduleId) {
+    return Promise.resolve(scheduleId != -1);
+  });
+};
+
+/**
+ * List all the names of the schedules.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a new array of string with the names
+ * of all schedules, or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+IndexedDbGroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.listAllScheduleNamesPromise is only supported for async")));
+
+  var list = [];
+  return this.database.schedules.each(function(entry) { 
+    list.push(entry.scheduleName);
+  })
+  .then(function() {
+    return Promise.resolve(list);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.listAllScheduleNamesPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Get a schedule with the given name.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a new Schedule object, or that is
+ * rejected with GroupManagerDb.Error if the schedule does not exist or other
+ * database error.
+ */
+IndexedDbGroupManagerDb.prototype.getSchedulePromise = function(name, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.getSchedulePromise is only supported for async")));
+
+  var thisManager = this;
+  // Use getScheduleIdPromise_ to handle the search on the non-primary key.
+  return this.getScheduleIdPromise_(name)
+  .then(function(scheduleId) {
+    if (scheduleId != -1) {
+      return thisManager.database.schedules.get(scheduleId)
+      .then(function(entry) {
+        // We expect entry to be found, and don't expect an error decoding.
+        var schedule = new Schedule();
+        schedule.wireDecode(new Blob(entry.schedule, false));
+        return Promise.resolve(schedule);
+      })
+      .catch(function(ex) {
+        return Promise.reject(new GroupManagerDb.Error(new Error
+          ("IndexedDbGroupManagerDb.getSchedulePromise: Error: " + ex)));
+      });
+    }
+    else
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.getSchedulePromise: Cannot get the result from the database")));
+  });
+};
+
+/**
+ * For each member using the given schedule, get the name and public key DER
+ * of the member's key.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a new array of object (where
+ * "keyName" is the Name of the public key and "publicKey" is the Blob of the
+ * public key DER), or that is rejected with GroupManagerDb.Error for a database
+ * error. Note that the member's identity name is keyName.getPrefix(-1). If the
+ * schedule name is not found, the list is empty.
+ */
+IndexedDbGroupManagerDb.prototype.getScheduleMembersPromise = function
+  (name, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.getScheduleMembersPromise is only supported for async")));
+
+  var list = [];
+  var thisManager = this;
+  // There is only one matching schedule ID, so we can just look it up instead
+  // of doing a more complicated join.
+  return this.getScheduleIdPromise_(name)
+  .then(function(scheduleId) {
+    if (scheduleId == -1)
+      // Return the empty list.
+      return Promise.resolve(list);
+    
+    var onEntryError = null;
+    return thisManager.database.members.where("scheduleId").equals(scheduleId)
+    .each(function(entry) {
+      try {
+        var keyName = new Name();
+        keyName.wireDecode(new Blob(entry.keyName, false), TlvWireFormat.get());
+
+        list.push({ keyName: keyName, publicKey: new Blob(entry.publicKey, false) });
+      } catch (ex) {
+        // We don't expect this to happen.
+        onEntryError = new GroupManagerDb.Error(new Error
+          ("IndexedDbGroupManagerDb.getScheduleMembersPromise: Error decoding name: " + ex));
+      }
+    })
+    .then(function() {
+      if (onEntryError)
+        // We got an error decoding.
+        return Promise.reject(onEntryError);
+      else
+        return Promise.resolve(list);
+    }, function(ex) {
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.getScheduleMembersPromise: Error: " + ex)));
+    });
+  });
+};
+
+/**
+ * Add a schedule with the given name.
+ * @param {string} name The name of the schedule. The name cannot be empty.
+ * @param {Schedule} schedule The Schedule to add.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the schedule is added, or that
+ * is rejected with GroupManagerDb.Error if a schedule with the same name
+ * already exists, if the name is empty, or other database error.
+ */
+IndexedDbGroupManagerDb.prototype.addSchedulePromise = function
+  (name, schedule, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.addSchedulePromise is only supported for async")));
+
+  if (name.length == 0)
+    return Promise.reject(new GroupManagerDb.Error
+      ("IndexedDbGroupManagerDb.addSchedulePromise: The schedule name cannot be empty"));
+
+  // Add rejects if the primary key already exists.
+  return this.database.schedules.add
+    ({ scheduleName: name, schedule: schedule.wireEncode().buf() })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.addContentKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Delete the schedule with the given name. Also delete members which use this
+ * schedule. If there is no schedule with the name, then do nothing.
+ * @param {string} name The name of the schedule.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the schedule is deleted (or
+ * there is no such schedule), or that is rejected with GroupManagerDb.Error for
+ * a database error.
+ */
+IndexedDbGroupManagerDb.prototype.deleteSchedulePromise = function
+  (name, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.deleteSchedulePromise is only supported for async")));
+
+  var scheduleId;
+  var thisManager = this;
+  return this.getScheduleIdPromise_(name)
+  .then(function(localScheduleId) {
+    scheduleId = localScheduleId;
+
+    // Get the members which use this schedule.
+    return thisManager.database.members.where("scheduleId").equals(scheduleId).toArray();
+  })
+  .then(function(membersEntries) {
+    // Delete the members.
+    var promises = membersEntries.map(function(entry) {
+      return thisManager.database.members.delete(entry.memberNameUri);
+    });
+    return Promise.all(promises);
+  })
+  .then(function() {
+    // Now delete the schedule.
+    return thisManager.database.schedules.delete(scheduleId);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.deleteSchedulePromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Rename a schedule with oldName to newName.
+ * @param {string} oldName The name of the schedule to be renamed.
+ * @param {string} newName The new name of the schedule. The name cannot be empty.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the schedule is renamed, or
+ * that is rejected with GroupManagerDb.Error if a schedule with newName already
+ * exists, if the schedule with oldName does not exist, if newName is empty, or
+ * other database error.
+ */
+IndexedDbGroupManagerDb.prototype.renameSchedulePromise = function
+  (oldName, newName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.renameSchedulePromise is only supported for async")));
+
+  if (newName.length == 0)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.renameSchedule: The schedule newName cannot be empty")));
+
+  var thisManager = this;
+  return this.getScheduleIdPromise_(oldName)
+  .then(function(scheduleId) {
+    if (scheduleId == -1)
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.renameSchedule: The schedule oldName does not exist")));
+
+    return thisManager.database.schedules.update
+      (scheduleId, { scheduleName: newName })
+    .catch(function(ex) {
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.renameSchedulePromise: Error: " + ex)));
+    });
+  });
+};
+
+/**
+ * Update the schedule with name and replace the old object with the given
+ * schedule. Otherwise, if no schedule with name exists, a new schedule
+ * with name and the given schedule will be added to database.
+ * @param {string} name The name of the schedule. The name cannot be empty.
+ * @param {Schedule} schedule The Schedule to update or add.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the schedule is updated, or
+ * that is rejected with GroupManagerDb.Error if the name is empty, or other
+ * database error.
+ */
+IndexedDbGroupManagerDb.prototype.updateSchedulePromise = function
+  (name, schedule, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.updateSchedulePromise is only supported for async")));
+
+  var thisManager = this;
+  return this.getScheduleIdPromise_(name)
+  .then(function(scheduleId) {
+    if (scheduleId == -1)
+      return thisManager.addSchedulePromise(name, schedule);
+
+    return thisManager.database.schedules.update
+      (scheduleId, { schedule: schedule.wireEncode().buf() })
+    .catch(function(ex) {
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.updateSchedulePromise: Error: " + ex)));
+    });
+  });
+};
+
+////////////////////////////////////////////////////// Member management.
+
+/**
+ * Check if there is a member with the given identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns true if there is a member (else
+ * false), or that is rejected with GroupManagerDb.Error for a database error.
+ */
+IndexedDbGroupManagerDb.prototype.hasMemberPromise = function(identity, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.hasMemberPromise is only supported for async")));
+
+  return this.database.members.get(identity.toUri())
+  .then(function(entry) {
+    return Promise.resolve(entry != undefined);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.hasMemberPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * List all the members.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a new array of Name with the names
+ * of all members, or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+IndexedDbGroupManagerDb.prototype.listAllMembersPromise = function(useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.listAllMembersPromise is only supported for async")));
+
+  var list = [];
+  var onEntryError = null;
+  return this.database.members.each(function(entry) {
+    try {
+      var identity = new Name();
+      identity.wireDecode(new Blob(entry.memberName, false), TlvWireFormat.get());
+      list.push(identity);
+    } catch (ex) {
+      // We don't expect this to happen.
+      onEntryError = new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.listAllMembersPromise: Error decoding name: " + ex));
+    }
+  })
+  .then(function() {
+    if (onEntryError)
+      // We got an error decoding.
+      return Promise.reject(onEntryError);
+    else
+      return Promise.resolve(list);
+  }, function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.listAllMembersPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Get the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns the string schedule name, or that is
+ * rejected with GroupManagerDb.Error if there's no member with the given
+ * identity name in the database, or other database error.
+ */
+IndexedDbGroupManagerDb.prototype.getMemberSchedulePromise = function
+  (identity, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.getMemberSchedulePromise is only supported for async")));
+
+  var thisManager = this;
+  return this.database.members.get(identity.toUri())
+  .then(function(membersEntry) {
+    if (!membersEntry)
+      throw new Error("The member identity name does not exist in the database");
+
+    return thisManager.database.schedules.get(membersEntry.scheduleId);
+  })
+  .then(function(schedulesEntry) {
+    if (!schedulesEntry)
+      throw new Error
+        ("The schedule ID for the member identity name does not exist in the database");
+
+    return Promise.resolve(schedulesEntry.scheduleName);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.getScheduleIdPromise_: Error: " + ex)));
+  });
+};
+
+/**
+ * Add a new member with the given key named keyName into a schedule named
+ * scheduleName. The member's identity name is keyName.getPrefix(-1).
+ * @param {string} scheduleName The schedule name.
+ * @param {Name} keyName The name of the key.
+ * @param {Blob} key A Blob of the public key DER.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the member is added, or that
+ * is rejected with GroupManagerDb.Error if there's no schedule named
+ * scheduleName, if the member's identity name already exists, or other database
+ * error.
+ */
+IndexedDbGroupManagerDb.prototype.addMemberPromise = function
+  (scheduleName, keyName, key, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.addMemberPromise is only supported for async")));
+
+  var thisManager = this;
+  return this.getScheduleIdPromise_(scheduleName)
+  .then(function(scheduleId) {
+    if (scheduleId == -1)
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.addMemberPromise: The schedule does not exist")));
+
+    // Needs to be changed in the future.
+    var memberName = keyName.getPrefix(-1);
+
+    // Add rejects if the primary key already exists.
+    return thisManager.database.members.add
+      ({ memberNameUri: memberName.toUri(),
+         memberName: memberName.wireEncode(TlvWireFormat.get()).buf(),
+         scheduleId: scheduleId,
+         keyName: keyName.wireEncode(TlvWireFormat.get()).buf(),
+         publicKey: key.buf() })
+    .catch(function(ex) {
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.addMemberPromise: Error: " + ex)));
+    });
+  });
+};
+
+/**
+ * Change the name of the schedule for the given member's identity name.
+ * @param {Name} identity The member's identity name.
+ * @param {string} scheduleName The new schedule name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the member is updated, or that
+ * is rejected with GroupManagerDb.Error if there's no member with the given
+ * identity name in the database, or there's no schedule named scheduleName, or
+ * other database error.
+ */
+IndexedDbGroupManagerDb.prototype.updateMemberSchedulePromise = function
+  (identity, scheduleName, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.updateMemberSchedulePromise is only supported for async")));
+
+  var thisManager = this;
+  return this.getScheduleIdPromise_(scheduleName)
+  .then(function(scheduleId) {
+    if (scheduleId == -1)
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.updateMemberSchedulePromise: The schedule does not exist")));
+
+    return thisManager.database.members.update
+      (identity.toUri(), { scheduleId: scheduleId })
+    .catch(function(ex) {
+      return Promise.reject(new GroupManagerDb.Error(new Error
+        ("IndexedDbGroupManagerDb.updateMemberSchedulePromise: Error: " + ex)));
+    });
+  });
+};
+
+/**
+ * Delete a member with the given identity name. If there is no member with
+ * the identity name, then do nothing.
+ * @param {Name} identity The member's identity name.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the member is deleted (or
+ * there is no such member), or that is rejected with GroupManagerDb.Error for a
+ * database error.
+ */
+IndexedDbGroupManagerDb.prototype.deleteMemberPromise = function
+  (identity, useSync)
+{
+  if (useSync)
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.deleteMemberPromise is only supported for async")));
+
+  return this.database.members.delete(identity.toUri())
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.deleteMemberPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Get the ID for the schedule.
+ * @param {string} name The schedule name.
+ * @return {Promise} A promise that returns the ID (or -1 if not found), or that
+ * is rejected with GroupManagerDb.Error for a database error.
+ */
+IndexedDbGroupManagerDb.prototype.getScheduleIdPromise_ = function(name)
+{
+  // The scheduleName is not the primary key, so use 'where' instead of 'get'.
+  var id = -1;
+  return this.database.schedules.where("scheduleName").equals(name)
+  .each(function(entry) {
+    id = entry.scheduleId;
+  })
+  .then(function() {
+    return Promise.resolve(id);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new GroupManagerDb.Error(new Error
+      ("IndexedDbGroupManagerDb.getScheduleIdPromise_: Error: " + ex)));
+  });
+};
+/**
+ * Copyright (C) 2015 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// Don't require modules since this is meant for the browser, not Node.js.
+
+/**
+ * IndexedDbProducerDb extends ProducerDb to implement storage of keys for the
+ * producer using the browser's IndexedDB service. It contains one table that
+ * maps time slots (to the nearest hour) to the content key created for that
+ * time slot.
+ * Create an IndexedDbProducerDb to use the given IndexedDB database name.
+ * @param {string} databaseName IndexedDB database name.
+ * @note This class is an experimental feature. The API may change.
+ * @constructor
+ */
+var IndexedDbProducerDb = function IndexedDbProducerDb(databaseName)
+{
+  ProducerDb.call(this);
+
+  this.database = new Dexie(databaseName);
+  this.database.version(1).stores({
+    // "timeSlot" is the hour-based time slot as hours since Jan 1, 1970 UTC. // number
+    // "key" is the encoded key // Uint8Array
+    contentKeys: "timeSlot"
+  });
+  this.database.open();
+};
+
+IndexedDbProducerDb.prototype = new ProducerDb();
+IndexedDbProducerDb.prototype.name = "IndexedDbProducerDb";
+
+/**
+ * Check if a content key exists for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns true if there is a content key for
+ * timeSlot (else false), or that is rejected with ProducerDb.Error for a
+ * database error.
+ */
+IndexedDbProducerDb.prototype.hasContentKeyPromise = function(timeSlot, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.hasContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
+
+  return this.database.contentKeys.get(fixedTimeSlot)
+  .then(function(contentKeysEntry) {
+    return Promise.resolve(contentKeysEntry != undefined);
+  })
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.hasContentKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Get the content key for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that returns a Blob with the encoded key, or that
+ * is rejected with ProducerDb.Error if there is no key covering timeSlot, or
+ * other database error
+ */
+IndexedDbProducerDb.prototype.getContentKeyPromise = function(timeSlot, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.getContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
+
+  return this.database.contentKeys.get(fixedTimeSlot)
+  .then(function(contentKeysEntry) {
+    if (contentKeysEntry)
+      return Promise.resolve(new Blob(contentKeysEntry.key));
+    else
+      return Promise.reject(new ProducerDb.Error(new Error
+        ("IndexedDbProducerDb.getContentKeyPromise: Cannot get the key from the database")));
+  }, function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.getContentKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Add key as the content key for the hour covering timeSlot.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {Blob} key The encoded key.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the key is added, or that
+ * is rejected with ProducerDb.Error if a key for the same hour already exists
+ * in the database, or other database error.
+ */
+IndexedDbProducerDb.prototype.addContentKeyPromise = function
+  (timeSlot, key, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.addContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
+
+  // Add rejects if the primary key already exists.
+  return this.database.contentKeys.add
+    ({ timeSlot: fixedTimeSlot, key: key.buf() })
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.addContentKeyPromise: Error: " + ex)));
+  });
+};
+
+/**
+ * Delete the content key for the hour covering timeSlot. If there is no key for
+ * the time slot, do nothing.
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise that fulfills when the key is deleted (or there
+ * is no such key), or that is rejected with ProducerDb.Error for a database
+ * error.
+ */
+IndexedDbProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSync)
+{
+  if (useSync)
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.deleteContentKeyPromise is only supported for async")));
+
+  var fixedTimeSlot = ProducerDb.getFixedTimeSlot(timeSlot);
+
+  return this.database.contentKeys.delete(fixedTimeSlot)
+  .catch(function(ex) {
+    return Promise.reject(new ProducerDb.Error(new Error
+      ("IndexedDbProducerDb.deleteContentKeyPromise: Error: " + ex)));
+  });
+};
 /**
  * This class represents the digest tree for chrono-sync2013.
  * Copyright (C) 2014-2015 Regents of the University of California.
