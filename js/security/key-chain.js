@@ -421,15 +421,17 @@ KeyChain.prototype.getPolicyManager = function()
 
 /**
  * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object.
+ * is an array, produce a Signature object. There are two forms of sign:
+ * sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
+ * sign(target [, wireFormat] [, onComplete] [, onError]).
  * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If this
  * is an Interest object, wire encode for signing, append a SignatureInfo to the
  * Interest name, sign the name components and append a final name component
  * with the signature bits. If it is an array, sign it and produce a Signature
  * object.
- * @param {Name} certificateName The certificate name of the key to use for
- * signing.
+ * @param {Name} certificateName (optional) The certificate name of the key to
+ * use for signing. If omitted, use the default identity in the identity storage.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) If target is a Data object, this calls
@@ -451,17 +453,72 @@ KeyChain.prototype.getPolicyManager = function()
  * described above.
  */
 KeyChain.prototype.sign = function
-  (target, certificateName, wireFormat, onComplete, onError)
+  (target, certificateNameOrWireFormat, wireFormat, onComplete, onError)
 {
-  if (target instanceof Interest)
-    return this.identityManager.signInterestByCertificate
-      (target, certificateName, wireFormat, onComplete, onError);
-  else if (target instanceof Data)
-    return this.identityManager.signByCertificate
-      (target, certificateName, wireFormat, onComplete, onError);
-  else
-    return this.identityManager.signByCertificate
-      (target, certificateName, onComplete, onError);
+  var certificateName;
+  if (certificateNameOrWireFormat instanceof Name)
+    // sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
+    // sign(target, certificateName [, onComplete] [, onError]).
+    certificateName = certificateNameOrWireFormat;
+    // If wireFormat is omitted, we'll shift below.
+  else {
+    // sign(target [, wireFormat] [, onComplete] [, onError]).
+    // sign(target [, onComplete] [, onError]).
+    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
+    onError = onComplete;
+    onComplete = wireFormat;
+    wireFormat = certificateNameOrWireFormat;
+    certificateName = null;
+  }
+
+  if (!(wireFormat instanceof WireFormat)) {
+    // wireFormat is omitted. Shift the parameters.
+    onError = onComplete;
+    onComplete = wireFormat;
+    wireFormat = undefined;
+  }
+
+  function onCertificateName(localCertificateName) {
+    if (target instanceof Interest)
+      return thisKeyChain.identityManager.signInterestByCertificate
+        (target, localCertificateName, wireFormat, onComplete, onError);
+    else if (target instanceof Data)
+      return thisKeyChain.identityManager.signByCertificate
+        (target, localCertificateName, wireFormat, onComplete, onError);
+    else
+      return thisKeyChain.identityManager.signByCertificate
+        (target, localCertificateName, onComplete, onError);
+  }
+
+  var useSync = !onComplete;
+  var thisKeyChain = this;
+
+  var mainPromise = SyncPromise.resolve()
+  .then(function() {
+    if (certificateName != null)
+      return SyncPromise.resolve();
+
+    // Get the default certificate name.
+    return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
+    .then(function(signingCertificate) {
+      certificateName = signingCertificate.getName().getPrefix(-1);
+      return SyncPromise.resolve();
+    });
+  })
+  .then(function() {
+    // certificateName is now set. Do the actual signing.
+    if (target instanceof Interest)
+      return thisKeyChain.identityManager.signInterestByCertificatePromise
+        (target, certificateName, wireFormat, useSync);
+    else if (target instanceof Data)
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (target, certificateName, wireFormat, useSync);
+    else
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (target, certificateName, useSync);
+  });
+
+  return SyncPromise.complete(onComplete, onError, mainPromise);
 };
 
 /**
