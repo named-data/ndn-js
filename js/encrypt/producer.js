@@ -202,22 +202,7 @@ Producer.prototype.produce = function
         (data, content, contentKeyName, contentKey, params);
     })
     .then(function() {
-      // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-      var identityManger = thisProducer.keyChain_.getIdentityManager();
-      return identityManger.identityStorage.getDefaultIdentityPromise()
-      .then(function(identityName) {
-        return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-          (identityName);
-      })
-      .then(function(defaultCertificateName) {
-        return identityManger.identityStorage.getCertificatePromise
-          (defaultCertificateName, true);
-      })
-      .then(function(certificate) {
-        var certificateName = certificate.getName().getPrefix(-1);
-        return identityManger.signByCertificatePromise
-          (data, certificateName);
-      });
+      return thisProducer.keyChain_.signPromise(data);
     })
     .then(function() {
       onComplete();
@@ -391,22 +376,7 @@ Producer.prototype.encryptContentKey_ = function
       (cKeyData, contentKey, eKeyName, encryptionKey, params);
   })
   .then(function() {
-    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-    var identityManger = thisProducer.keyChain_.getIdentityManager();
-    return identityManger.identityStorage.getDefaultIdentityPromise()
-    .then(function(identityName) {
-      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName);
-    })
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (cKeyData, certificateName);
-    });
+    return thisProducer.keyChain_.signPromise(cKeyData);
   })
   .then(function() {
     keyRequest.encryptedKeys.push(cKeyData);

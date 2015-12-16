@@ -416,25 +416,7 @@ GroupManager.prototype.createEKeyDataPromise_ = function
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
   data.setContent(publicKeyBlob);
 
-  // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-  var identityManger = this.keyChain_.getIdentityManager();
-  return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
-  .then(function(identityName) {
-    return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-      (identityName, useSync)
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true, useSync);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (data, certificateName, useSync);
-    });
-  })
-  .then(function() {
-    return SyncPromise.resolve(data);
-  });
+  return this.keyChain_.signPromise(data);
 };
 
 /**
@@ -464,7 +446,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   data.getMetaInfo().setFreshnessPeriod
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
   var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
-  var identityManger = this.keyChain_.getIdentityManager();
+  var thisManager = this;
 
   return Encryptor.encryptDataPromise
     (data, privateKeyBlob, keyName, certificateKey, encryptParams, useSync)
@@ -474,24 +456,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
       ("createDKeyData: Error in encryptData: " + ex)));
   })
   .then(function() {
-    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-    return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
-    .then(function(identityName) {
-      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName, useSync)     ;
-    })
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true, useSync);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (data, certificateName, useSync);
-    });
-  })
-  .then(function() {
-    return SyncPromise.resolve(data);
+    return thisManager.keyChain_.signPromise(data);
   });
 };
 
