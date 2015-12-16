@@ -757,15 +757,15 @@ IdentityManager.prototype.signByCertificatePromise = function
  * signature is the produced Signature object. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
- * @return {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or the target (if target is Data). Otherwise,
- * if onComplete is supplied then return undefined and use onComplete as described
- * above.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some crypto libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * @return {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data). Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as described
+ * above.
  */
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete, onError)
@@ -788,6 +788,56 @@ IdentityManager.prototype.signByCertificate = function
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the supplied Interest.
+ */
+IdentityManager.prototype.signInterestByCertificatePromise = function
+  (interest, certificateName, wireFormat, useSync)
+{
+  useSync = (typeof wireFormat === "boolean") ? wireFormat : useSync;
+  wireFormat = (typeof wireFormat === "boolean" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  var thisManager = this;
+  var signature;
+  var digestAlgorithm = [0];
+  return this.makeSignatureByCertificatePromise
+      (certificateName, digestAlgorithm, useSync)
+  .then(function(localSignature) {
+    signature = localSignature;
+    // Append the encoded SignatureInfo.
+    interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+    // Append an empty signature so that the "signedPortion" is correct.
+    interest.getName().append(new Name.Component());
+    // Encode once to get the signed portion.
+    var encoding = interest.wireEncode(wireFormat);
+    var keyName = IdentityManager.certificateNameToPublicKeyName
+      (certificateName);
+
+    return thisManager.privateKeyStorage.signPromise
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
+  })
+  .then(function(signatureValue) {
+    signature.setSignature(signatureValue);
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+    return SyncPromise.resolve(interest);
+  });
+};
+
+/**
+ * Append a SignatureInfo to the Interest name, sign the name components and
+ * append a final name component with the signature bits.
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) This calls onComplete(interest) with
  * the supplied Interest object which has been modified to set its signature. If
  * omitted, then return when the interest has been signed. (Some crypto
@@ -797,6 +847,9 @@ IdentityManager.prototype.signByCertificate = function
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some crypto libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * @return {Signature} If onComplete is omitted, return the interest. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
  */
 IdentityManager.prototype.signInterestByCertificate = function
   (interest, certificateName, wireFormat, onComplete, onError)
@@ -805,37 +858,9 @@ IdentityManager.prototype.signInterestByCertificate = function
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
-  var useSync = !onComplete;
-
-  var thisManager = this;
-  var signature;
-  var digestAlgorithm = [0];
   return SyncPromise.complete(onComplete, onError,
-    this.makeSignatureByCertificatePromise
-      (certificateName, digestAlgorithm, useSync)
-    .then(function(localSignature) {
-      signature = localSignature;
-      // Append the encoded SignatureInfo.
-      interest.getName().append(wireFormat.encodeSignatureInfo(signature));
-
-      // Append an empty signature so that the "signedPortion" is correct.
-      interest.getName().append(new Name.Component());
-      // Encode once to get the signed portion.
-      var encoding = interest.wireEncode(wireFormat);
-      var keyName = IdentityManager.certificateNameToPublicKeyName
-        (certificateName);
-
-      return thisManager.privateKeyStorage.signPromise
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
-    })
-    .then(function(signatureValue) {
-      signature.setSignature(signatureValue);
-
-      // Remove the empty signature and append the real one.
-      interest.setName(interest.getName().getPrefix(-1).append
-        (wireFormat.encodeSignatureValue(signature)));
-      return SyncPromise.resolve(interest);
-    }));
+    this.signInterestByCertificatePromise
+      (interest, certificateName, wireFormat, !onComplete));
 };
 
 /**
