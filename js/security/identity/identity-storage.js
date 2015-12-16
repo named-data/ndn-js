@@ -343,8 +343,8 @@ IdentityStorage.prototype.getCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny If false, only a valid certificate will be returned,
  * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found, return a shared_ptr
- * with a null pointer.
+ * @returns {IdentityCertificate} The requested certificate.  If not found, 
+ * return null.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -615,6 +615,46 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 {
   return SyncPromise.getValue
     (this.setDefaultCertificateNameForKeyPromise(keyName, certificateName, true));
+};
+
+/**
+ * Get the certificate of the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the requested
+ * IdentityCertificate or null if not found.
+ */
+IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
+{
+  var thisStorage = this;
+  return this.getDefaultIdentityPromise(useSync)
+  .then(function(identityName) {
+    return thisStorage.getDefaultCertificateNameForIdentityPromise
+      (identityName, useSync);
+  }, function(ex) {
+    // The default is not defined.
+    return SyncPromise.resolve(null);
+  })
+  .then(function(certName) {
+    if (certName == null)
+      return SyncPromise.resolve(null);
+
+    return thisStorage.getCertificatePromise(certName, true, useSync);
+  });
+};
+
+/**
+ * Get the certificate of the default identity.
+ * @returns {IdentityCertificate} The requested certificate.  If not found,
+ * return null.
+ * @throws {Error} If getDefaultCertificatePromise doesn't return a SyncPromise
+ * which is already fulfilled.
+ */
+IdentityStorage.prototype.getDefaultCertificate = function()
+{
+  return SyncPromise.getValue
+    (this.getDefaultCertificatePromise(true));
 };
 
 /*****************************************
