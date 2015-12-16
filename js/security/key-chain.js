@@ -49,7 +49,6 @@ var KeyChain = function KeyChain(identityManager, policyManager)
   this.identityManager = identityManager;
   this.policyManager = policyManager;
   this.face = null;
-  this.maxSteps = 100;
 };
 
 exports.KeyChain = KeyChain;
