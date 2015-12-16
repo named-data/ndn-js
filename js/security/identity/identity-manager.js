@@ -64,29 +64,20 @@ exports.IdentityManager = IdentityManager;
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @param {function} onComplete (optional) This calls onComplete(certificateName)
- * with the name of the default certificate of the identity. If omitted, the
- * return value is described below. (Some crypto libraries only use a callback,
- * so onComplete is required to use these.)
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some crypto libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * @return {Name} If onComplete is omitted, return the name of the default
- * certificate of the identity. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the name of the default
+ * certificate of the identity.
  */
-IdentityManager.prototype.createIdentityAndCertificate = function
-  (identityName, params, onComplete, onError)
+IdentityManager.prototype.createIdentityAndCertificatePromise = function
+  (identityName, params, useSync)
 {
-  var useSync = !onComplete;
   var thisManager = this;
-
   var generateKey = true;
   var keyName = null;
 
-  var mainPromise = this.identityStorage.addIdentityPromise(identityName, useSync)
+  return this.identityStorage.addIdentityPromise(identityName, useSync)
   .then(function() {
     return thisManager.identityStorage.getDefaultKeyNameForIdentityPromise
       (identityName, useSync)
@@ -144,8 +135,33 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       });
     });
   });
+};
 
-  return SyncPromise.complete(onComplete, onError, mainPromise);
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
+ * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with the name of the default certificate of the identity. If omitted, the
+ * return value is described below. (Some crypto libraries only use a callback,
+ * so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {Name} If onComplete is omitted, return the name of the default
+ * certificate of the identity. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+IdentityManager.prototype.createIdentityAndCertificate = function
+  (identityName, params, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.createIdentityAndCertificatePromise(identityName, params, !onComplete));
 };
 
 /**
