@@ -448,7 +448,7 @@ KeyChain.prototype.getPolicyManager = function()
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data or Interest).
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
  */
@@ -478,22 +478,57 @@ KeyChain.prototype.sign = function
     wireFormat = undefined;
   }
 
-  function onCertificateName(localCertificateName) {
-    if (target instanceof Interest)
-      return thisKeyChain.identityManager.signInterestByCertificate
-        (target, localCertificateName, wireFormat, onComplete, onError);
-    else if (target instanceof Data)
-      return thisKeyChain.identityManager.signByCertificate
-        (target, localCertificateName, wireFormat, onComplete, onError);
-    else
-      return thisKeyChain.identityManager.signByCertificate
-        (target, localCertificateName, onComplete, onError);
+  return SyncPromise.complete(onComplete, onError,
+    this.signPromise(target, certificateName, wireFormat, !onComplete));
+};
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is an array, produce a Signature object. There are two forms of signPromise:
+ * signPromise(target, certificateName [, wireFormat] [, useSync]).
+ * sign(target [, wireFormat] [, useSync]).
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
+ * signing, update its signature and key locator field and wireEncoding. If this
+ * is an Interest object, wire encode for signing, append a SignatureInfo to the
+ * Interest name, sign the name components and append a final name component
+ * with the signature bits. If it is an array, sign it and produce a Signature
+ * object.
+ * @param {Name} certificateName (optional) The certificate name of the key to
+ * use for signing. If omitted, use the default identity in the identity storage.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
+ */
+KeyChain.prototype.signPromise = function
+  (target, certificateNameOrWireFormat, wireFormat, useSync)
+{
+  var certificateName;
+  if (certificateNameOrWireFormat instanceof Name)
+    // sign(target, certificateName [, wireFormat] [, useSync]).
+    // sign(target, certificateName [, useSync]).
+    certificateName = certificateNameOrWireFormat;
+    // If wireFormat is omitted, we'll shift below.
+  else {
+    // sign(target [, wireFormat] [, useSync]).
+    // sign(target [, useSync]).
+    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
+    useSync = wireFormat;
+    wireFormat = certificateNameOrWireFormat;
+    certificateName = null;
   }
 
-  var useSync = !onComplete;
-  var thisKeyChain = this;
+  if (!(wireFormat instanceof WireFormat)) {
+    // wireFormat is omitted. Shift the parameters.
+    useSync = wireFormat;
+    wireFormat = undefined;
+  }
 
-  var mainPromise = SyncPromise.resolve()
+  var thisKeyChain = this;
+  return SyncPromise.resolve()
   .then(function() {
     if (certificateName != null)
       return SyncPromise.resolve();
@@ -517,8 +552,6 @@ KeyChain.prototype.sign = function
       return thisKeyChain.identityManager.signByCertificatePromise
         (target, certificateName, useSync);
   });
-
-  return SyncPromise.complete(onComplete, onError, mainPromise);
 };
 
 /**
