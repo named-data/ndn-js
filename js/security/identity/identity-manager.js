@@ -287,6 +287,20 @@ IdentityManager.prototype.setDefaultIdentity = function
 
 /**
  * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the Name of default
+ * identity, or a promise rejected with SecurityException if the default
+ * identity is not set.
+ */
+IdentityManager.prototype.getDefaultIdentityPromise = function(useSync)
+{
+  return this.identityStorage.getDefaultIdentityPromise(useSync);
+};
+
+/**
+ * Get the default identity.
  * @param {function} onComplete (optional) This calls onComplete(identityName)
  * with name of the default identity. If omitted, the return value is described
  * below. (Some database libraries only use a callback, so onComplete is required
