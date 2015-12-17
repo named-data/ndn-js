@@ -539,7 +539,7 @@ KeyChain.prototype.signPromise = function
     return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
     .then(function(signingCertificate) {
       if (signingCertificate != null) {
-        certificateName = signingCertificate.getName().getPrefix(-1);
+        certificateName = signingCertificate.getName();
         return SyncPromise.resolve();
       }
 
@@ -549,7 +549,7 @@ KeyChain.prototype.signPromise = function
         return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
       })
       .then(function(signingCertificate) {
-        certificateName = signingCertificate.getName().getPrefix(-1);
+        certificateName = signingCertificate.getName();
         return SyncPromise.resolve();
       });
     });
