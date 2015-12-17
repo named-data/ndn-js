@@ -14621,8 +14621,8 @@ IdentityStorage.prototype.getCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny If false, only a valid certificate will be returned,
  * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found, return a shared_ptr
- * with a null pointer.
+ * @returns {IdentityCertificate} The requested certificate.  If not found, 
+ * return null.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -14893,6 +14893,46 @@ IdentityStorage.prototype.setDefaultCertificateNameForKey = function
 {
   return SyncPromise.getValue
     (this.setDefaultCertificateNameForKeyPromise(keyName, certificateName, true));
+};
+
+/**
+ * Get the certificate of the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the requested
+ * IdentityCertificate or null if not found.
+ */
+IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
+{
+  var thisStorage = this;
+  return this.getDefaultIdentityPromise(useSync)
+  .then(function(identityName) {
+    return thisStorage.getDefaultCertificateNameForIdentityPromise
+      (identityName, useSync);
+  }, function(ex) {
+    // The default is not defined.
+    return SyncPromise.resolve(null);
+  })
+  .then(function(certName) {
+    if (certName == null)
+      return SyncPromise.resolve(null);
+
+    return thisStorage.getCertificatePromise(certName, true, useSync);
+  });
+};
+
+/**
+ * Get the certificate of the default identity.
+ * @returns {IdentityCertificate} The requested certificate.  If not found,
+ * return null.
+ * @throws {Error} If getDefaultCertificatePromise doesn't return a SyncPromise
+ * which is already fulfilled.
+ */
+IdentityStorage.prototype.getDefaultCertificate = function()
+{
+  return SyncPromise.getValue
+    (this.getDefaultCertificatePromise(true));
 };
 
 /*****************************************
@@ -16971,29 +17011,20 @@ exports.IdentityManager = IdentityManager;
  * @param {Name} identityName The name of the identity.
  * @params {KeyParams} params The key parameters if a key needs to be generated
  * for the identity.
- * @param {function} onComplete (optional) This calls onComplete(certificateName)
- * with the name of the default certificate of the identity. If omitted, the
- * return value is described below. (Some crypto libraries only use a callback,
- * so onComplete is required to use these.)
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * @return {Name} If onComplete is omitted, return the name of the default
- * certificate of the identity. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the name of the default
+ * certificate of the identity.
  */
-IdentityManager.prototype.createIdentityAndCertificate = function
-  (identityName, params, onComplete, onError)
+IdentityManager.prototype.createIdentityAndCertificatePromise = function
+  (identityName, params, useSync)
 {
-  var useSync = !onComplete;
   var thisManager = this;
-
   var generateKey = true;
   var keyName = null;
 
-  var mainPromise = this.identityStorage.addIdentityPromise(identityName, useSync)
+  return this.identityStorage.addIdentityPromise(identityName, useSync)
   .then(function() {
     return thisManager.identityStorage.getDefaultKeyNameForIdentityPromise
       (identityName, useSync)
@@ -17051,8 +17082,33 @@ IdentityManager.prototype.createIdentityAndCertificate = function
       });
     });
   });
+};
 
-  return SyncPromise.complete(onComplete, onError, mainPromise);
+/**
+ * Create an identity by creating a pair of Key-Signing-Key (KSK) for this
+ * identity and a self-signed certificate of the KSK. If a key pair or
+ * certificate for the identity already exists, use it.
+ * @param {Name} identityName The name of the identity.
+ * @params {KeyParams} params The key parameters if a key needs to be generated
+ * for the identity.
+ * @param {function} onComplete (optional) This calls onComplete(certificateName)
+ * with the name of the default certificate of the identity. If omitted, the
+ * return value is described below. (Some crypto libraries only use a callback,
+ * so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {Name} If onComplete is omitted, return the name of the default
+ * certificate of the identity. Otherwise, if onComplete is supplied then return
+ * undefined and use onComplete as described above.
+ */
+IdentityManager.prototype.createIdentityAndCertificate = function
+  (identityName, params, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.createIdentityAndCertificatePromise(identityName, params, !onComplete));
 };
 
 /**
@@ -17096,7 +17152,7 @@ IdentityManager.prototype.deleteIdentity = function
 
   var doDelete = true;
 
-  var mainPromise = this.identityStorage.getDefaultIdentityPromise(identityName)
+  var mainPromise = this.identityStorage.getDefaultIdentityPromise(useSync)
   .then(function(defaultIdentityName) {
     if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
@@ -17144,6 +17200,22 @@ IdentityManager.prototype.deleteIdentity = function
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * identity is set.
+ */
+IdentityManager.prototype.setDefaultIdentityPromise = function
+  (identityName, useSync)
+{
+  return this.identityStorage.setDefaultIdentityPromise(identityName, useSync);
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
@@ -17162,9 +17234,23 @@ IdentityManager.prototype.setDefaultIdentity = function
 
 /**
  * Get the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the Name of default
+ * identity, or a promise rejected with SecurityException if the default
+ * identity is not set.
+ */
+IdentityManager.prototype.getDefaultIdentityPromise = function(useSync)
+{
+  return this.identityStorage.getDefaultIdentityPromise(useSync);
+};
+
+/**
+ * Get the default identity.
  * @param {function} onComplete (optional) This calls onComplete(identityName)
  * with name of the default identity. If omitted, the return value is described
- * below. (Some crypto libraries only use a callback, so onComplete is required
+ * below. (Some database libraries only use a callback, so onComplete is required
  * to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17182,6 +17268,19 @@ IdentityManager.prototype.getDefaultIdentity = function(onComplete, onError)
 {
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.getDefaultIdentityPromise(!onComplete));
+};
+
+/**
+ * Get the certificate of the default identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which returns the requested
+ * IdentityCertificate or null if not found.
+ */
+IdentityManager.prototype.getDefaultCertificatePromise = function(useSync)
+{
+  return this.identityStorage.getDefaultCertificatePromise(useSync);
 };
 
 /**
@@ -17235,7 +17334,7 @@ IdentityManager.prototype.setDefaultKeyForIdentity = function
  * @param {Name} identityName The name of the identity.
  * @param {function} onComplete (optional) This calls onComplete(keyName)
  * with name of the default key. If omitted, the return value is described
- * below. (Some crypto libraries only use a callback, so onComplete is required
+ * below. (Some database libraries only use a callback, so onComplete is required
  * to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17306,7 +17405,7 @@ IdentityManager.prototype.generateRSAKeyPairAsDefault = function
  * Get the public key with the specified name.
  * @param {Name} keyName The name of the key.
  * @param {function} onComplete (optional) This calls onComplete(publicKey)
- * with PublicKey. If omitted, the return value is described below. (Some crypto
+ * with PublicKey. If omitted, the return value is described below. (Some database
  * libraries only use a callback, so onComplete is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17425,7 +17524,7 @@ IdentityManager.prototype.addCertificateAsIdentityDefaultPromise = function
  * @param {IdentityCertificate} certificate The certificate to be added. This
  * makes a copy of the certificate.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
- * (Some crypto libraries only use a callback, so onComplete is required to use
+ * (Some database libraries only use a callback, so onComplete is required to use
  * these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17451,7 +17550,7 @@ IdentityManager.prototype.addCertificateAsDefault = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
  * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some crypto libraries only use a callback, so
+ * value is described below. (Some database libraries only use a callback, so
  * onComplete is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17475,7 +17574,7 @@ IdentityManager.prototype.getCertificate = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
  * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
+ * described below. (Some database libraries only use a callback, so onComplete is
  * required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17518,7 +17617,7 @@ IdentityManager.prototype.getDefaultCertificateNameForIdentityPromise = function
  * @param {Name} identityName The name of the specified identity.
  * @param {function} onComplete (optional) This calls onComplete(certificateName)
  * with name of the default certificate. If omitted, the return value is described
- * below. (Some crypto libraries only use a callback, so onComplete is required
+ * below. (Some database libraries only use a callback, so onComplete is required
  * to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17546,7 +17645,7 @@ IdentityManager.prototype.getDefaultCertificateNameForIdentity = function
  * when signing is based on identity and the identity is not specified.
  * @param {function} onComplete (optional) This calls onComplete(certificateName)
  * with name of the default certificate. If omitted, the return value is described
- * below. (Some crypto libraries only use a callback, so onComplete is required
+ * below. (Some database libraries only use a callback, so onComplete is required
  * to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
@@ -17651,15 +17750,15 @@ IdentityManager.prototype.signByCertificatePromise = function
  * signature is the produced Signature object. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some crypto libraries only use a
+ * callback, so onError is required to be notified of an exception.)
  * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data). Otherwise,
  * if onComplete is supplied then return undefined and use onComplete as described
  * above.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
  */
 IdentityManager.prototype.signByCertificate = function
   (target, certificateName, wireFormat, onComplete, onError)
@@ -17682,6 +17781,56 @@ IdentityManager.prototype.signByCertificate = function
  * signing.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the supplied Interest.
+ */
+IdentityManager.prototype.signInterestByCertificatePromise = function
+  (interest, certificateName, wireFormat, useSync)
+{
+  useSync = (typeof wireFormat === "boolean") ? wireFormat : useSync;
+  wireFormat = (typeof wireFormat === "boolean" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
+
+  var thisManager = this;
+  var signature;
+  var digestAlgorithm = [0];
+  return this.makeSignatureByCertificatePromise
+      (certificateName, digestAlgorithm, useSync)
+  .then(function(localSignature) {
+    signature = localSignature;
+    // Append the encoded SignatureInfo.
+    interest.getName().append(wireFormat.encodeSignatureInfo(signature));
+
+    // Append an empty signature so that the "signedPortion" is correct.
+    interest.getName().append(new Name.Component());
+    // Encode once to get the signed portion.
+    var encoding = interest.wireEncode(wireFormat);
+    var keyName = IdentityManager.certificateNameToPublicKeyName
+      (certificateName);
+
+    return thisManager.privateKeyStorage.signPromise
+      (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
+  })
+  .then(function(signatureValue) {
+    signature.setSignature(signatureValue);
+
+    // Remove the empty signature and append the real one.
+    interest.setName(interest.getName().getPrefix(-1).append
+      (wireFormat.encodeSignatureValue(signature)));
+    return SyncPromise.resolve(interest);
+  });
+};
+
+/**
+ * Append a SignatureInfo to the Interest name, sign the name components and
+ * append a final name component with the signature bits.
+ * @param {Interest} interest The Interest object to be signed. This appends
+ * name components of SignatureInfo and the signature bits.
+ * @param {Name} certificateName The certificate name of the key to use for
+ * signing.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) This calls onComplete(interest) with
  * the supplied Interest object which has been modified to set its signature. If
  * omitted, then return when the interest has been signed. (Some crypto
@@ -17689,8 +17838,11 @@ IdentityManager.prototype.signByCertificate = function
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
+ * this will log any thrown exception. (Some crypto libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * @return {Signature} If onComplete is omitted, return the interest. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
  */
 IdentityManager.prototype.signInterestByCertificate = function
   (interest, certificateName, wireFormat, onComplete, onError)
@@ -17699,37 +17851,9 @@ IdentityManager.prototype.signInterestByCertificate = function
   onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
   wireFormat = (typeof wireFormat === "function" || !wireFormat) ? WireFormat.getDefaultWireFormat() : wireFormat;
 
-  var useSync = !onComplete;
-
-  var thisManager = this;
-  var signature;
-  var digestAlgorithm = [0];
   return SyncPromise.complete(onComplete, onError,
-    this.makeSignatureByCertificatePromise
-      (certificateName, digestAlgorithm, useSync)
-    .then(function(localSignature) {
-      signature = localSignature;
-      // Append the encoded SignatureInfo.
-      interest.getName().append(wireFormat.encodeSignatureInfo(signature));
-
-      // Append an empty signature so that the "signedPortion" is correct.
-      interest.getName().append(new Name.Component());
-      // Encode once to get the signed portion.
-      var encoding = interest.wireEncode(wireFormat);
-      var keyName = IdentityManager.certificateNameToPublicKeyName
-        (certificateName);
-
-      return thisManager.privateKeyStorage.signPromise
-        (encoding.signedBuf(), keyName, digestAlgorithm[0], useSync);
-    })
-    .then(function(signatureValue) {
-      signature.setSignature(signatureValue);
-
-      // Remove the empty signature and append the real one.
-      interest.setName(interest.getName().getPrefix(-1).append
-        (wireFormat.encodeSignatureValue(signature)));
-      return SyncPromise.resolve(interest);
-    }));
+    this.signInterestByCertificatePromise
+      (interest, certificateName, wireFormat, !onComplete));
 };
 
 /**
@@ -17841,7 +17965,7 @@ IdentityManager.prototype.selfSignPromise = function(keyName, useSync)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
+ * this will log any thrown exception. (Some crypto libraries only use a
  * callback, so onError is required to be notified of an exception.)
  */
 IdentityManager.prototype.selfSign = function(keyName, onComplete, onError)
@@ -19468,9 +19592,11 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Crypto = require('../crypto.js');
 var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
+var Blob = require('../util/blob.js').Blob;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
@@ -19499,7 +19625,6 @@ var KeyChain = function KeyChain(identityManager, policyManager)
   this.identityManager = identityManager;
   this.policyManager = policyManager;
   this.face = null;
-  this.maxSteps = 100;
 };
 
 exports.KeyChain = KeyChain;
@@ -19872,15 +19997,17 @@ KeyChain.prototype.getPolicyManager = function()
 
 /**
  * Sign the target. If it is a Data or Interest object, set its signature. If it
- * is an array, produce a Signature object.
+ * is an array, produce a Signature object. There are two forms of sign:
+ * sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
+ * sign(target [, wireFormat] [, onComplete] [, onError]).
  * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
  * signing, update its signature and key locator field and wireEncoding. If this
  * is an Interest object, wire encode for signing, append a SignatureInfo to the
  * Interest name, sign the name components and append a final name component
  * with the signature bits. If it is an array, sign it and produce a Signature
  * object.
- * @param {Name} certificateName The certificate name of the key to use for
- * signing.
+ * @param {Name} certificateName (optional) The certificate name of the key to
+ * use for signing. If omitted, use the default identity in the identity storage.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the input. If omitted, use WireFormat getDefaultWireFormat().
  * @param {function} onComplete (optional) If target is a Data object, this calls
@@ -19897,22 +20024,119 @@ KeyChain.prototype.getPolicyManager = function()
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
  * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data or Interest).
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
  */
 KeyChain.prototype.sign = function
-  (target, certificateName, wireFormat, onComplete, onError)
+  (target, certificateNameOrWireFormat, wireFormat, onComplete, onError)
 {
-  if (target instanceof Interest)
-    return this.identityManager.signInterestByCertificate
-      (target, certificateName, wireFormat, onComplete, onError);
-  else if (target instanceof Data)
-    return this.identityManager.signByCertificate
-      (target, certificateName, wireFormat, onComplete, onError);
-  else
-    return this.identityManager.signByCertificate
-      (target, certificateName, onComplete, onError);
+  var certificateName;
+  if (certificateNameOrWireFormat instanceof Name)
+    // sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
+    // sign(target, certificateName [, onComplete] [, onError]).
+    certificateName = certificateNameOrWireFormat;
+    // If wireFormat is omitted, we'll shift below.
+  else {
+    // sign(target [, wireFormat] [, onComplete] [, onError]).
+    // sign(target [, onComplete] [, onError]).
+    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
+    onError = onComplete;
+    onComplete = wireFormat;
+    wireFormat = certificateNameOrWireFormat;
+    certificateName = null;
+  }
+
+  if (!(wireFormat instanceof WireFormat)) {
+    // wireFormat is omitted. Shift the parameters.
+    onError = onComplete;
+    onComplete = wireFormat;
+    wireFormat = undefined;
+  }
+
+  return SyncPromise.complete(onComplete, onError,
+    this.signPromise(target, certificateName, wireFormat, !onComplete));
+};
+
+/**
+ * Sign the target. If it is a Data or Interest object, set its signature. If it
+ * is an array, produce a Signature object. There are two forms of signPromise:
+ * signPromise(target, certificateName [, wireFormat] [, useSync]).
+ * sign(target [, wireFormat] [, useSync]).
+ * @param {Data|Interest|Buffer} target If this is a Data object, wire encode for
+ * signing, update its signature and key locator field and wireEncoding. If this
+ * is an Interest object, wire encode for signing, append a SignatureInfo to the
+ * Interest name, sign the name components and append a final name component
+ * with the signature bits. If it is an array, sign it and produce a Signature
+ * object.
+ * @param {Name} certificateName (optional) The certificate name of the key to
+ * use for signing. If omitted, use the default identity in the identity storage.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the input. If omitted, use WireFormat getDefaultWireFormat().
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the generated Signature
+ * object (if target is a Buffer) or the target (if target is Data or Interest).
+ */
+KeyChain.prototype.signPromise = function
+  (target, certificateNameOrWireFormat, wireFormat, useSync)
+{
+  var certificateName;
+  if (certificateNameOrWireFormat instanceof Name)
+    // sign(target, certificateName [, wireFormat] [, useSync]).
+    // sign(target, certificateName [, useSync]).
+    certificateName = certificateNameOrWireFormat;
+    // If wireFormat is omitted, we'll shift below.
+  else {
+    // sign(target [, wireFormat] [, useSync]).
+    // sign(target [, useSync]).
+    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
+    useSync = wireFormat;
+    wireFormat = certificateNameOrWireFormat;
+    certificateName = null;
+  }
+
+  if (!(wireFormat instanceof WireFormat)) {
+    // wireFormat is omitted. Shift the parameters.
+    useSync = wireFormat;
+    wireFormat = undefined;
+  }
+
+  var thisKeyChain = this;
+  return SyncPromise.resolve()
+  .then(function() {
+    if (certificateName != null)
+      return SyncPromise.resolve();
+
+    // Get the default certificate name.
+    return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
+    .then(function(signingCertificate) {
+      if (signingCertificate != null) {
+        certificateName = signingCertificate.getName();
+        return SyncPromise.resolve();
+      }
+
+      // Set the default certificate and default certificate name again.
+      return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
+      .then(function(localCertificateName) {
+        certificateName =localCertificateName;
+        return SyncPromise.resolve();
+      });
+    });
+  })
+  .then(function() {
+    // certificateName is now set. Do the actual signing.
+    if (target instanceof Interest)
+      return thisKeyChain.identityManager.signInterestByCertificatePromise
+        (target, certificateName, wireFormat, useSync);
+    else if (target instanceof Data)
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (target, certificateName, wireFormat, useSync);
+    else
+      return thisKeyChain.identityManager.signByCertificatePromise
+        (target, certificateName, useSync);
+  });
 };
 
 /**
@@ -20133,6 +20357,83 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   }
   else
     onVerifyFailed(originalDataOrInterest);
+};
+
+/**
+ * Get the default certificate from the identity storage and return its name.
+ * If there is no default identity or default certificate, then create one.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the default certificate
+ * name.
+ */
+KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
+{
+  var signingCertificate;
+  var thisKeyChain = this;
+  return this.identityManager.getDefaultCertificatePromise(useSync)
+  .then(function(localCertificate) {
+    signingCertificate = localCertificate;
+    if (signingCertificate != null)
+      return SyncPromise.resolve();
+
+    // Set the default certificate and get the certificate again.
+    return thisKeyChain.setDefaultCertificatePromise_(useSync)
+    .then(function() {
+      return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
+    })
+    .then(function(localCertificate) {
+      signingCertificate = localCertificate;
+      return SyncPromise.resolve();
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(signingCertificate.getName());
+  });
+}
+
+/**
+ * Create the default certificate if it is not initialized. If there is no
+ * default identity yet, creating a new tmp-identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that resolves when the default
+ * certificate is set.
+ */
+KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
+{
+  var thisKeyChain = this;
+
+  return this.identityManager.getDefaultCertificatePromise(useSync)
+  .then(function(certificate) {
+    if (certificate != null)
+      // We already have a default certificate.
+      return SyncPromise.resolve();
+
+    var defaultIdentity;
+    return thisKeyChain.identityManager.getDefaultIdentityPromise(useSync)
+    .then(function(localDefaultIdentity) {
+      defaultIdentity = localDefaultIdentity;
+      return SyncPromise.resolve();
+    }, function(ex) {
+      // Create a default identity name.
+      randomComponent = Crypto.randomBytes(4);
+      defaultIdentity = new Name().append("tmp-identity")
+        .append(new Blob(randomComponent, false));
+
+      return SyncPromise.resolve();
+    })
+    .then(function() {
+      return thisKeyChain.identityManager.createIdentityAndCertificatePromise
+        (defaultIdentity, KeyChain.DEFAULT_KEY_PARAMS, useSync);
+    })
+    .then(function() {
+      return thisKeyChain.identityManager.setDefaultIdentityPromise
+        (defaultIdentity, useSync);
+    });
+  });
 };
 /**
  * This class represents an Interest Exclude.
@@ -24914,25 +25215,7 @@ GroupManager.prototype.createEKeyDataPromise_ = function
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
   data.setContent(publicKeyBlob);
 
-  // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-  var identityManger = this.keyChain_.getIdentityManager();
-  return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
-  .then(function(identityName) {
-    return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-      (identityName, useSync)
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true, useSync);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (data, certificateName, useSync);
-    });
-  })
-  .then(function() {
-    return SyncPromise.resolve(data);
-  });
+  return this.keyChain_.signPromise(data);
 };
 
 /**
@@ -24962,7 +25245,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
   data.getMetaInfo().setFreshnessPeriod
     (this.freshnessHours_ * GroupManager.MILLISECONDS_IN_HOUR);
   var encryptParams = new EncryptParams(EncryptAlgorithmType.RsaOaep);
-  var identityManger = this.keyChain_.getIdentityManager();
+  var thisManager = this;
 
   return Encryptor.encryptDataPromise
     (data, privateKeyBlob, keyName, certificateKey, encryptParams, useSync)
@@ -24972,24 +25255,7 @@ GroupManager.prototype.createDKeyDataPromise_ = function
       ("createDKeyData: Error in encryptData: " + ex)));
   })
   .then(function() {
-    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-    return identityManger.identityStorage.getDefaultIdentityPromise(useSync)
-    .then(function(identityName) {
-      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName, useSync)     ;
-    })
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true, useSync);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (data, certificateName, useSync);
-    });
-  })
-  .then(function() {
-    return SyncPromise.resolve(data);
+    return thisManager.keyChain_.signPromise(data);
   });
 };
 
@@ -25538,22 +25804,7 @@ Producer.prototype.produce = function
         (data, content, contentKeyName, contentKey, params);
     })
     .then(function() {
-      // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-      var identityManger = thisProducer.keyChain_.getIdentityManager();
-      return identityManger.identityStorage.getDefaultIdentityPromise()
-      .then(function(identityName) {
-        return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-          (identityName);
-      })
-      .then(function(defaultCertificateName) {
-        return identityManger.identityStorage.getCertificatePromise
-          (defaultCertificateName, true);
-      })
-      .then(function(certificate) {
-        var certificateName = certificate.getName().getPrefix(-1);
-        return identityManger.signByCertificatePromise
-          (data, certificateName);
-      });
+      return thisProducer.keyChain_.signPromise(data);
     })
     .then(function() {
       onComplete();
@@ -25727,22 +25978,7 @@ Producer.prototype.encryptContentKey_ = function
       (cKeyData, contentKey, eKeyName, encryptionKey, params);
   })
   .then(function() {
-    // TODO: When implemented, use KeyChain.sign(data) which does the same thing.
-    var identityManger = thisProducer.keyChain_.getIdentityManager();
-    return identityManger.identityStorage.getDefaultIdentityPromise()
-    .then(function(identityName) {
-      return identityManger.identityStorage.getDefaultCertificateNameForIdentityPromise
-        (identityName);
-    })
-    .then(function(defaultCertificateName) {
-      return identityManger.identityStorage.getCertificatePromise
-        (defaultCertificateName, true);
-    })
-    .then(function(certificate) {
-      var certificateName = certificate.getName().getPrefix(-1);
-      return identityManger.signByCertificatePromise
-        (cKeyData, certificateName);
-    });
+    return thisProducer.keyChain_.signPromise(cKeyData);
   })
   .then(function() {
     keyRequest.encryptedKeys.push(cKeyData);
