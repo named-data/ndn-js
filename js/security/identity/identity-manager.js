@@ -205,7 +205,7 @@ IdentityManager.prototype.deleteIdentity = function
 
   var doDelete = true;
 
-  var mainPromise = this.identityStorage.getDefaultIdentityPromise(identityName)
+  var mainPromise = this.identityStorage.getDefaultIdentityPromise(useSync)
   .then(function(defaultIdentityName) {
     if (defaultIdentityName.equals(identityName))
       // Don't delete the default identity!
