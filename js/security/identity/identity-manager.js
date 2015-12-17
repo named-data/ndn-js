@@ -253,6 +253,22 @@ IdentityManager.prototype.deleteIdentity = function
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise which fulfills when the default
+ * identity is set.
+ */
+IdentityManager.prototype.setDefaultIdentityPromise = function
+  (identityName, useSync)
+{
+  return this.identityStorage.setDefaultIdentityPromise(identityName, useSync);
+};
+
+/**
+ * Set the default identity.  If the identityName does not exist, then clear the
+ * default identity so that getDefaultIdentity() throws an exception.
+ * @param {Name} identityName The default identity name.
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
