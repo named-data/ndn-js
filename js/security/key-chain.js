@@ -544,12 +544,9 @@ KeyChain.prototype.signPromise = function
       }
 
       // Set the default certificate and default certificate name again.
-      return thisKeyChain.setDefaultCertificatePromise_(useSync)
-      .then(function() {
-        return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
-      })
-      .then(function(signingCertificate) {
-        certificateName = signingCertificate.getName();
+      return thisKeyChain.prepareDefaultCertificateNamePromise_(useSync)
+      .then(function(localCertificateName) {
+        certificateName =localCertificateName;
         return SyncPromise.resolve();
       });
     });
@@ -787,6 +784,40 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   else
     onVerifyFailed(originalDataOrInterest);
 };
+
+/**
+ * Get the default certificate from the identity storage and return its name.
+ * If there is no default identity or default certificate, then create one.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the default certificate
+ * name.
+ */
+KeyChain.prototype.prepareDefaultCertificateNamePromise_ = function(useSync)
+{
+  var signingCertificate;
+  var thisKeyChain = this;
+  return this.identityManager.getDefaultCertificatePromise(useSync)
+  .then(function(localCertificate) {
+    signingCertificate = localCertificate;
+    if (signingCertificate != null)
+      return SyncPromise.resolve();
+
+    // Set the default certificate and get the certificate again.
+    return thisKeyChain.setDefaultCertificatePromise_(useSync)
+    .then(function() {
+      return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
+    })
+    .then(function(localCertificate) {
+      signingCertificate = localCertificate;
+      return SyncPromise.resolve();
+    });
+  })
+  .then(function() {
+    return SyncPromise.resolve(signingCertificate.getName());
+  });
+}
 
 /**
  * Create the default certificate if it is not initialized. If there is no
