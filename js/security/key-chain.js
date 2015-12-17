@@ -18,9 +18,11 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Crypto = require('../crypto.js');
 var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
+var Blob = require('../util/blob.js').Blob;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
@@ -536,8 +538,20 @@ KeyChain.prototype.signPromise = function
     // Get the default certificate name.
     return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync)
     .then(function(signingCertificate) {
-      certificateName = signingCertificate.getName().getPrefix(-1);
-      return SyncPromise.resolve();
+      if (signingCertificate != null) {
+        certificateName = signingCertificate.getName().getPrefix(-1);
+        return SyncPromise.resolve();
+      }
+
+      // Set the default certificate and default certificate name again.
+      return thisKeyChain.setDefaultCertificatePromise_(useSync)
+      .then(function() {
+        return thisKeyChain.identityManager.getDefaultCertificatePromise(useSync);
+      })
+      .then(function(signingCertificate) {
+        certificateName = signingCertificate.getName().getPrefix(-1);
+        return SyncPromise.resolve();
+      });
     });
   })
   .then(function() {
@@ -772,4 +786,47 @@ KeyChain.prototype.onCertificateInterestTimeout = function
   }
   else
     onVerifyFailed(originalDataOrInterest);
+};
+
+/**
+ * Create the default certificate if it is not initialized. If there is no
+ * default identity yet, creating a new tmp-identity.
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that resolves when the default
+ * certificate is set.
+ */
+KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
+{
+  var thisKeyChain = this;
+
+  return this.identityManager.getDefaultCertificatePromise(useSync)
+  .then(function(certificate) {
+    if (certificate != null)
+      // We already have a default certificate.
+      return SyncPromise.resolve();
+
+    var defaultIdentity;
+    return thisKeyChain.identityManager.getDefaultIdentityPromise(useSync)
+    .then(function(localDefaultIdentity) {
+      defaultIdentity = localDefaultIdentity;
+      return SyncPromise.resolve();
+    }, function(ex) {
+      // Create a default identity name.
+      randomComponent = Crypto.randomBytes(4);
+      defaultIdentity = new Name().append("tmp-identity")
+        .append(new Blob(randomComponent, false));
+
+      return SyncPromise.resolve();
+    })
+    .then(function() {
+      return thisKeyChain.identityManager.createIdentityAndCertificatePromise
+        (defaultIdentity, KeyChain.DEFAULT_KEY_PARAMS, useSync);
+    })
+    .then(function() {
+      return thisKeyChain.identityManager.setDefaultIdentityPromise
+        (defaultIdentity, useSync);
+    });
+  });
 };
