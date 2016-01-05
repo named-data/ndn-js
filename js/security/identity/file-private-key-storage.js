@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014-2015 Regents of the University of California.
+ * Copyright (C) 2014-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * @author: Andrew Brown <andrew.brown@intel.com>
  * From ndn-cxx security by Yingdi Yu <yingdi@cs.ucla.edu>.

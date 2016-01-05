@@ -1,7 +1,7 @@
 /**
  * This module checks for the availability of various crypto.subtle api's at runtime,
  * exporting a function that returns the known availability of necessary NDN crypto apis
- * Copyright (C) 2014-2015 Regents of the University of California.
+ * Copyright (C) 2014-2016 Regents of the University of California.
  * @author: Ryan Bennett <nomad.ry@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
