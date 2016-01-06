@@ -58,7 +58,9 @@ exports.WebSocketTransport = WebSocketTransport;
  * Create a new WebSocketTransport.ConnectionInfo which extends
  * Transport.ConnectionInfo to hold the host and port info for the WebSocket
  * connection.
- * @param {string} host The host for the connection.
+ * @param {string} host The host for the connection. However, if the host string
+ * begins with "ws:" or "wss:", then ignore port and use the string as the full
+ * endpoint URI.
  * @param {number} port (optional) The port number for the connection. If
  * omitted, use 9696.
  */
@@ -92,8 +94,17 @@ WebSocketTransport.ConnectionInfo.prototype.equals = function(other)
 
 WebSocketTransport.ConnectionInfo.prototype.toString = function()
 {
-  return "{ host: " + this.host + ", port: " + this.port + " }";
+  if (this.hostIsUri())
+    return "{ uri: " + this.host + " }";
+  else
+    return "{ host: " + this.host + ", port: " + this.port + " }";
 };
+
+WebSocketTransport.ConnectionInfo.prototype.hostIsUri = function()
+{
+  return this.host.substr(0, 3) == "ws:" ||
+         this.host.substr(0, 4) == "wss:";
+}
 
 /**
  * Determine whether this transport connecting according to connectionInfo is to
@@ -115,7 +126,7 @@ WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onErro
  * previously took a Face object which is deprecated and renamed as the method
  * connectByFace.
  * @param {WebSocketTransport.ConnectionInfo} connectionInfo A
- * WebSocketTransport.ConnectionInfo with the host and port.
+ * WebSocketTransport.ConnectionInfo.
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
@@ -128,7 +139,9 @@ WebSocketTransport.prototype.connect = function
 {
   this.close();
 
-  this.ws = new WebSocket('ws://' + connectionInfo.host + ':' + connectionInfo.port);
+  var uri = connectionInfo.hostIsUri() ?
+    connectionInfo.host : 'ws://' + connectionInfo.host + ':' + connectionInfo.port;
+  this.ws = new WebSocket(uri);
   if (LOG > 0) console.log('ws connection created.');
     this.connectionInfo = connectionInfo;
 
