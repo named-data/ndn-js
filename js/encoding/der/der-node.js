@@ -462,7 +462,7 @@ DerNode.DerBoolean.prototype.toVal = function()
  * Create a new DerInteger for the value.
  * @param {number|Buffer} integer The value to encode. If integer is a Buffer
  * byte array of a positive integer, you must ensure that the first byte is less
- * than 0x7f.
+ * than 0x80.
  */
 DerNode.DerInteger = function DerInteger(integer)
 {
