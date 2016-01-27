@@ -58,3 +58,8 @@ To build ndn.min.js, Java must be installed.
     ./waf
 
 Then go to the ndn-protocol directory and run ./make-ndn-protocol.sh which makes ndn-protocol.xpi in the top directory.
+Firefox now requires add-ons to be signed, but for development you can temporarily disable this as follows:
+
+* Type about:config into the URL bar in Firefox
+* In the Search box type xpinstall.signatures.required
+* Right-click and select "Toggle" to set it to false
