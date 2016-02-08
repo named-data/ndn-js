@@ -18,20 +18,16 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-// Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('./crypto.js');
 var DataUtils = require('./encoding/data-utils.js').DataUtils;
 var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
-var MetaInfo = require('./meta-info.js').MetaInfo;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
 var Tlv = require('./encoding/tlv/tlv.js').Tlv;
 var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
 var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
 var Transport = require('./transport/transport.js').Transport;
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
@@ -756,25 +752,25 @@ Face.prototype.registerPrefix = function
   // WireFormat,        null,            null
   // null,              null,            None
   if (typeof arg4 === "function")
-    onRegisterSuccess = arg4
+    onRegisterSuccess = arg4;
   else
-    onRegisterSuccess = null
+    onRegisterSuccess = null;
 
   if (arg4 instanceof ForwardingFlags)
-    flags = arg4
+    flags = arg4;
   else if (arg5 instanceof ForwardingFlags)
-    flags = arg5
+    flags = arg5;
   else
-    flags = ForwardingFlags()
+    flags = new ForwardingFlags();
 
   if (arg4 instanceof WireFormat)
-    wireFormat = arg4
+    wireFormat = arg4;
   else if (arg5 instanceof WireFormat)
-    wireFormat = arg5
+    wireFormat = arg5;
   else if (arg6 instanceof WireFormat)
-    wireFormat = arg6
+    wireFormat = arg6;
   else
-    wireFormat = WireFormat.getDefaultWireFormat()
+    wireFormat = WireFormat.getDefaultWireFormat();
 
   if (!onRegisterFailed)
     onRegisterFailed = function() {};
