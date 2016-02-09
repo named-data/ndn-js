@@ -1,5 +1,8 @@
-Interim changes since NDN-JS v0.10 (2016-01-07)
+Interim changes since NDN-JS v0.10 (2016-02-09)
 -----------------------------------------------
+
+Changes
+* In MemoryContentCache.registerPrefix, added optional onRegisterSuccess. (Thanks to Zhehao Wang.)
 
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.

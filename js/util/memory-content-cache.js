@@ -18,6 +18,8 @@
  */
 
 var Name = require('../name.js').Name;
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
+var WireFormat = require('../encoding/wire-format.js').WireFormat;
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -70,6 +72,12 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onRegisterFailed If this fails to register the prefix for
  * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
  * given to registerPrefix.
+ * @param {function} onRegisterSuccess (optional) When this receives a success
+ * message, this calls onRegisterSuccess[0](prefix, registeredPrefixId). If
+ * onRegisterSuccess is [null] or omitted, this does not use it. (As a special
+ * case, this optional parameter is supplied as an array of one function,
+ * instead of just a function, in order to detect when it is used instead of the
+ * following optional onDataNotFound function.)
  * @param {function} onDataNotFound (optional) If a data packet for an interest
  * is not found in the cache, this forwards the interest by calling
  * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
@@ -84,12 +92,67 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
 MemoryContentCache.prototype.registerPrefix = function
-  (prefix, onRegisterFailed, onDataNotFound, flags, wireFormat)
+  (prefix, onRegisterFailed, onRegisterSuccess, onDataNotFound, flags, wireFormat)
 {
+  var arg3 = onRegisterSuccess;
+  var arg4 = onDataNotFound;
+  var arg5 = flags;
+  var arg6 = wireFormat;
+  // arg3,                arg4,            arg5,            arg6 may be:
+  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, WireFormat
+  // [OnRegisterSuccess], OnDataNotFound,  ForwardingFlags, null
+  // [OnRegisterSuccess], OnDataNotFound,  WireFormat,      null
+  // [OnRegisterSuccess], OnDataNotFound,  null,            null
+  // [OnRegisterSuccess], ForwardingFlags, WireFormat,      null
+  // [OnRegisterSuccess], ForwardingFlags, null,            null
+  // [OnRegisterSuccess], WireFormat,      null,            null
+  // [OnRegisterSuccess], null,            null,            null
+  // OnDataNotFound,      ForwardingFlags, WireFormat,      null
+  // OnDataNotFound,      ForwardingFlags, null,            null
+  // OnDataNotFound,      WireFormat,      null,            null
+  // OnDataNotFound,      null,            null,            null
+  // ForwardingFlags,     WireFormat,      null,            null
+  // ForwardingFlags,     null,            null,            null
+  // WireFormat,          null,            null,            null
+  // null,                null,            null,            null
+  if (typeof arg3 === "object" && arg3.length === 1 &&
+      typeof arg3[0] === "function")
+    onRegisterSuccess = arg3[0];
+  else
+    onRegisterSuccess = null;
+
+  if (typeof arg3 === "function")
+    onDataNotFound = arg3;
+  else if (typeof arg4 === "function")
+    onDataNotFound = arg4;
+  else
+    onDataNotFound = null;
+
+  if (arg3 instanceof ForwardingFlags)
+    flags = arg3;
+  else if (arg4 instanceof ForwardingFlags)
+    flags = arg4;
+  else if (arg5 instanceof ForwardingFlags)
+    flags = arg5;
+  else
+    flags = new ForwardingFlags();
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5;
+  else if (arg6 instanceof WireFormat)
+    wireFormat = arg6;
+  else
+    wireFormat = WireFormat.getDefaultWireFormat();
+
   if (onDataNotFound)
     this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
   var registeredPrefixId = this.face.registerPrefix
-    (prefix, this.onInterest.bind(this), onRegisterFailed, flags, wireFormat);
+    (prefix, this.onInterest.bind(this), onRegisterFailed, onRegisterSuccess,
+     flags, wireFormat);
   this.registeredPrefixIdList.push(registeredPrefixId);
 };
 
