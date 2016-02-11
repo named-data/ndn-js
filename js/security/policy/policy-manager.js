@@ -77,8 +77,14 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.

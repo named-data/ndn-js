@@ -55,8 +55,14 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * onData(interest, data) where interest is the interest given to
  * expressInterest and data is the received Data object. This is normally the
  * same onData you initially passed to expressInterest.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onTimeout If the interesLifetime goes over
  * maxInterestLifetime, this calls onTimeout(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Object} settings (optional) If not null, an associative array with
  * the following defaults:
  * {

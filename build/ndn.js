@@ -1,3 +1,514 @@
+// Domain Public by Eric Wendelin http://www.eriwen.com/ (2008)
+//                  Luke Smith http://lucassmith.name/ (2008)
+//                  Loic Dachary <loic@dachary.org> (2008)
+//                  Johan Euphrosine <proppy@aminche.com> (2008)
+//                  Oyvind Sean Kinsey http://kinsey.no/blog (2010)
+//                  Victor Homyakov <victor-homyakov@users.sourceforge.net> (2010)
+/*global module, exports, define, ActiveXObject*/
+(function(global, factory) {
+    if (typeof exports === 'object') {
+        // Node
+        module.exports.printStackTrace = factory();
+    } else if (typeof define === 'function' && define.amd) {
+        // AMD
+        define(factory);
+    } else {
+        // Browser globals
+        global.printStackTrace = factory();
+    }
+}(this, function() {
+    /**
+     * Main function giving a function stack trace with a forced or passed in Error
+     *
+     * @cfg {Error} e The error to create a stacktrace from (optional)
+     * @cfg {Boolean} guess If we should try to resolve the names of anonymous functions
+     * @return {Array} of Strings with functions, lines, files, and arguments where possible
+     */
+    function printStackTrace(options) {
+        options = options || {guess: true};
+        var ex = options.e || null, guess = !!options.guess, mode = options.mode || null;
+        var p = new printStackTrace.implementation(), result = p.run(ex, mode);
+        return (guess) ? p.guessAnonymousFunctions(result) : result;
+    }
+
+    printStackTrace.implementation = function() {
+    };
+
+    printStackTrace.implementation.prototype = {
+        /**
+         * @param {Error} [ex] The error to create a stacktrace from (optional)
+         * @param {String} [mode] Forced mode (optional, mostly for unit tests)
+         */
+        run: function(ex, mode) {
+            ex = ex || this.createException();
+            mode = mode || this.mode(ex);
+            if (mode === 'other') {
+                return this.other(arguments.callee);
+            } else {
+                return this[mode](ex);
+            }
+        },
+
+        createException: function() {
+            try {
+                this.undef();
+            } catch (e) {
+                return e;
+            }
+        },
+
+        /**
+         * Mode could differ for different exception, e.g.
+         * exceptions in Chrome may or may not have arguments or stack.
+         *
+         * @return {String} mode of operation for the exception
+         */
+        mode: function(e) {
+            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf('PhantomJS') > -1) {
+                return 'phantomjs';
+            }
+
+            if (e['arguments'] && e.stack) {
+                return 'chrome';
+            }
+
+            if (e.stack && e.sourceURL) {
+                return 'safari';
+            }
+
+            if (e.stack && e.number) {
+                return 'ie';
+            }
+
+            if (e.stack && e.fileName) {
+                return 'firefox';
+            }
+
+            if (e.message && e['opera#sourceloc']) {
+                // e.message.indexOf("Backtrace:") > -1 -> opera9
+                // 'opera#sourceloc' in e -> opera9, opera10a
+                // !e.stacktrace -> opera9
+                if (!e.stacktrace) {
+                    return 'opera9'; // use e.message
+                }
+                if (e.message.indexOf('\n') > -1 && e.message.split('\n').length > e.stacktrace.split('\n').length) {
+                    // e.message may have more stack entries than e.stacktrace
+                    return 'opera9'; // use e.message
+                }
+                return 'opera10a'; // use e.stacktrace
+            }
+
+            if (e.message && e.stack && e.stacktrace) {
+                // e.stacktrace && e.stack -> opera10b
+                if (e.stacktrace.indexOf("called from line") < 0) {
+                    return 'opera10b'; // use e.stacktrace, format differs from 'opera10a'
+                }
+                // e.stacktrace && e.stack -> opera11
+                return 'opera11'; // use e.stacktrace, format differs from 'opera10a', 'opera10b'
+            }
+
+            if (e.stack && !e.fileName) {
+                // Chrome 27 does not have e.arguments as earlier versions,
+                // but still does not have e.fileName as Firefox
+                return 'chrome';
+            }
+
+            return 'other';
+        },
+
+        /**
+         * Given a context, function name, and callback function, overwrite it so that it calls
+         * printStackTrace() first with a callback and then runs the rest of the body.
+         *
+         * @param {Object} context of execution (e.g. window)
+         * @param {String} functionName to instrument
+         * @param {Function} callback function to call with a stack trace on invocation
+         */
+        instrumentFunction: function(context, functionName, callback) {
+            context = context || window;
+            var original = context[functionName];
+            context[functionName] = function instrumented() {
+                callback.call(this, printStackTrace().slice(4));
+                return context[functionName]._instrumented.apply(this, arguments);
+            };
+            context[functionName]._instrumented = original;
+        },
+
+        /**
+         * Given a context and function name of a function that has been
+         * instrumented, revert the function to it's original (non-instrumented)
+         * state.
+         *
+         * @param {Object} context of execution (e.g. window)
+         * @param {String} functionName to de-instrument
+         */
+        deinstrumentFunction: function(context, functionName) {
+            if (context[functionName].constructor === Function &&
+                context[functionName]._instrumented &&
+                context[functionName]._instrumented.constructor === Function) {
+                context[functionName] = context[functionName]._instrumented;
+            }
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Chrome's stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        chrome: function(e) {
+            return (e.stack + '\n')
+                .replace(/^[\s\S]+?\s+at\s+/, ' at ') // remove message
+                .replace(/^\s+(at eval )?at\s+/gm, '') // remove 'at' and indentation
+                .replace(/^([^\(]+?)([\n$])/gm, '{anonymous}() ($1)$2')
+                .replace(/^Object.<anonymous>\s*\(([^\)]+)\)/gm, '{anonymous}() ($1)')
+                .replace(/^(.+) \((.+)\)$/gm, '$1@$2')
+                .split('\n')
+                .slice(0, -1);
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Safari's stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        safari: function(e) {
+            return e.stack.replace(/\[native code\]\n/m, '')
+                .replace(/^(?=\w+Error\:).*$\n/m, '')
+                .replace(/^@/gm, '{anonymous}()@')
+                .split('\n');
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on IE's stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        ie: function(e) {
+            return e.stack
+                .replace(/^\s*at\s+(.*)$/gm, '$1')
+                .replace(/^Anonymous function\s+/gm, '{anonymous}() ')
+                .replace(/^(.+)\s+\((.+)\)$/gm, '$1@$2')
+                .split('\n')
+                .slice(1);
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Firefox's stack string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        firefox: function(e) {
+            return e.stack.replace(/(?:\n@:0)?\s+$/m, '')
+                .replace(/^(?:\((\S*)\))?@/gm, '{anonymous}($1)@')
+                .split('\n');
+        },
+
+        opera11: function(e) {
+            var ANON = '{anonymous}', lineRE = /^.*line (\d+), column (\d+)(?: in (.+))? in (\S+):$/;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for (var i = 0, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var location = match[4] + ':' + match[1] + ':' + match[2];
+                    var fnName = match[3] || "global code";
+                    fnName = fnName.replace(/<anonymous function: (\S+)>/, "$1").replace(/<anonymous function>/, ANON);
+                    result.push(fnName + '@' + location + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        opera10b: function(e) {
+            // "<anonymous function: run>([arguments not available])@file://localhost/G:/js/stacktrace.js:27\n" +
+            // "printStackTrace([arguments not available])@file://localhost/G:/js/stacktrace.js:18\n" +
+            // "@file://localhost/G:/js/test/functional/testcase1.html:15"
+            var lineRE = /^(.*)@(.+):(\d+)$/;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for (var i = 0, len = lines.length; i < len; i++) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var fnName = match[1] ? (match[1] + '()') : "global code";
+                    result.push(fnName + '@' + match[2] + ':' + match[3]);
+                }
+            }
+
+            return result;
+        },
+
+        /**
+         * Given an Error object, return a formatted Array based on Opera 10's stacktrace string.
+         *
+         * @param e - Error object to inspect
+         * @return Array<String> of function calls, files and line numbers
+         */
+        opera10a: function(e) {
+            // "  Line 27 of linked script file://localhost/G:/js/stacktrace.js\n"
+            // "  Line 11 of inline#1 script in file://localhost/G:/js/test/functional/testcase1.html: In function foo\n"
+            var ANON = '{anonymous}', lineRE = /Line (\d+).*script (?:in )?(\S+)(?:: In function (\S+))?$/i;
+            var lines = e.stacktrace.split('\n'), result = [];
+
+            for (var i = 0, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    var fnName = match[3] || ANON;
+                    result.push(fnName + '()@' + match[2] + ':' + match[1] + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        // Opera 7.x-9.2x only!
+        opera9: function(e) {
+            // "  Line 43 of linked script file://localhost/G:/js/stacktrace.js\n"
+            // "  Line 7 of inline#1 script in file://localhost/G:/js/test/functional/testcase1.html\n"
+            var ANON = '{anonymous}', lineRE = /Line (\d+).*script (?:in )?(\S+)/i;
+            var lines = e.message.split('\n'), result = [];
+
+            for (var i = 2, len = lines.length; i < len; i += 2) {
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    result.push(ANON + '()@' + match[2] + ':' + match[1] + ' -- ' + lines[i + 1].replace(/^\s+/, ''));
+                }
+            }
+
+            return result;
+        },
+
+        phantomjs: function(e) {
+            var ANON = '{anonymous}', lineRE = /(\S+) \((\S+)\)/i;
+            var lines = e.stack.split('\n'), result = [];
+
+            for (var i = 1, len = lines.length; i < len; i++) {
+                lines[i] = lines[i].replace(/^\s+at\s+/gm, '');
+                var match = lineRE.exec(lines[i]);
+                if (match) {
+                    result.push(match[1] + '()@' + match[2]);
+                }
+                else {
+                    result.push(ANON + '()@' + lines[i]);
+                }
+            }
+
+            return result;
+        },
+
+        // Safari 5-, IE 9-, and others
+        other: function(curr) {
+            var ANON = '{anonymous}', fnRE = /function(?:\s+([\w$]+))?\s*\(/, stack = [], fn, args, maxStackSize = 10;
+            var slice = Array.prototype.slice;
+            while (curr && stack.length < maxStackSize) {
+                fn = fnRE.test(curr.toString()) ? RegExp.$1 || ANON : ANON;
+                try {
+                    args = slice.call(curr['arguments'] || []);
+                } catch (e) {
+                    args = ['Cannot access arguments: ' + e];
+                }
+                stack[stack.length] = fn + '(' + this.stringifyArguments(args) + ')';
+                try {
+                    curr = curr.caller;
+                } catch (e) {
+                    stack[stack.length] = 'Cannot access caller: ' + e;
+                    break;
+                }
+            }
+            return stack;
+        },
+
+        /**
+         * Given arguments array as a String, substituting type names for non-string types.
+         *
+         * @param {Arguments,Array} args
+         * @return {String} stringified arguments
+         */
+        stringifyArguments: function(args) {
+            var result = [];
+            var slice = Array.prototype.slice;
+            for (var i = 0; i < args.length; ++i) {
+                var arg = args[i];
+                if (arg === undefined) {
+                    result[i] = 'undefined';
+                } else if (arg === null) {
+                    result[i] = 'null';
+                } else if (arg.constructor) {
+                    // TODO constructor comparison does not work for iframes
+                    if (arg.constructor === Array) {
+                        if (arg.length < 3) {
+                            result[i] = '[' + this.stringifyArguments(arg) + ']';
+                        } else {
+                            result[i] = '[' + this.stringifyArguments(slice.call(arg, 0, 1)) + '...' + this.stringifyArguments(slice.call(arg, -1)) + ']';
+                        }
+                    } else if (arg.constructor === Object) {
+                        result[i] = '#object';
+                    } else if (arg.constructor === Function) {
+                        result[i] = '#function';
+                    } else if (arg.constructor === String) {
+                        result[i] = '"' + arg + '"';
+                    } else if (arg.constructor === Number) {
+                        result[i] = arg;
+                    } else {
+                        result[i] = '?';
+                    }
+                }
+            }
+            return result.join(',');
+        },
+
+        sourceCache: {},
+
+        /**
+         * @return {String} the text from a given URL
+         */
+        ajax: function(url) {
+            var req = this.createXMLHTTPObject();
+            if (req) {
+                try {
+                    req.open('GET', url, false);
+                    //req.overrideMimeType('text/plain');
+                    //req.overrideMimeType('text/javascript');
+                    req.send(null);
+                    //return req.status == 200 ? req.responseText : '';
+                    return req.responseText;
+                } catch (e) {
+                }
+            }
+            return '';
+        },
+
+        /**
+         * Try XHR methods in order and store XHR factory.
+         *
+         * @return {XMLHttpRequest} XHR function or equivalent
+         */
+        createXMLHTTPObject: function() {
+            var xmlhttp, XMLHttpFactories = [
+                function() {
+                    return new XMLHttpRequest();
+                }, function() {
+                    return new ActiveXObject('Msxml2.XMLHTTP');
+                }, function() {
+                    return new ActiveXObject('Msxml3.XMLHTTP');
+                }, function() {
+                    return new ActiveXObject('Microsoft.XMLHTTP');
+                }
+            ];
+            for (var i = 0; i < XMLHttpFactories.length; i++) {
+                try {
+                    xmlhttp = XMLHttpFactories[i]();
+                    // Use memoization to cache the factory
+                    this.createXMLHTTPObject = XMLHttpFactories[i];
+                    return xmlhttp;
+                } catch (e) {
+                }
+            }
+        },
+
+        /**
+         * Given a URL, check if it is in the same domain (so we can get the source
+         * via Ajax).
+         *
+         * @param url {String} source url
+         * @return {Boolean} False if we need a cross-domain request
+         */
+        isSameDomain: function(url) {
+            return typeof location !== "undefined" && url.indexOf(location.hostname) !== -1; // location may not be defined, e.g. when running from nodejs.
+        },
+
+        /**
+         * Get source code from given URL if in the same domain.
+         *
+         * @param url {String} JS source URL
+         * @return {Array} Array of source code lines
+         */
+        getSource: function(url) {
+            // TODO reuse source from script tags?
+            if (!(url in this.sourceCache)) {
+                this.sourceCache[url] = this.ajax(url).split('\n');
+            }
+            return this.sourceCache[url];
+        },
+
+        guessAnonymousFunctions: function(stack) {
+            for (var i = 0; i < stack.length; ++i) {
+                var reStack = /\{anonymous\}\(.*\)@(.*)/,
+                    reRef = /^(.*?)(?::(\d+))(?::(\d+))?(?: -- .+)?$/,
+                    frame = stack[i], ref = reStack.exec(frame);
+
+                if (ref) {
+                    var m = reRef.exec(ref[1]);
+                    if (m) { // If falsey, we did not get any file/line information
+                        var file = m[1], lineno = m[2], charno = m[3] || 0;
+                        if (file && this.isSameDomain(file) && lineno) {
+                            var functionName = this.guessAnonymousFunction(file, lineno, charno);
+                            stack[i] = frame.replace('{anonymous}', functionName);
+                        }
+                    }
+                }
+            }
+            return stack;
+        },
+
+        guessAnonymousFunction: function(url, lineNo, charNo) {
+            var ret;
+            try {
+                ret = this.findFunctionName(this.getSource(url), lineNo);
+            } catch (e) {
+                ret = 'getSource failed with url: ' + url + ', exception: ' + e.toString();
+            }
+            return ret;
+        },
+
+        findFunctionName: function(source, lineNo) {
+            // FIXME findFunctionName fails for compressed source
+            // (more than one function on the same line)
+            // function {name}({args}) m[1]=name m[2]=args
+            var reFunctionDeclaration = /function\s+([^(]*?)\s*\(([^)]*)\)/;
+            // {name} = function ({args}) TODO args capture
+            // /['"]?([0-9A-Za-z_]+)['"]?\s*[:=]\s*function(?:[^(]*)/
+            var reFunctionExpression = /['"]?([$_A-Za-z][$_A-Za-z0-9]*)['"]?\s*[:=]\s*function\b/;
+            // {name} = eval()
+            var reFunctionEvaluation = /['"]?([$_A-Za-z][$_A-Za-z0-9]*)['"]?\s*[:=]\s*(?:eval|new Function)\b/;
+            // Walk backwards in the source lines until we find
+            // the line which matches one of the patterns above
+            var code = "", line, maxLines = Math.min(lineNo, 20), m, commentPos;
+            for (var i = 0; i < maxLines; ++i) {
+                // lineNo is 1-based, source[] is 0-based
+                line = source[lineNo - i - 1];
+                commentPos = line.indexOf('//');
+                if (commentPos >= 0) {
+                    line = line.substr(0, commentPos);
+                }
+                // TODO check other types of comments? Commented code may lead to false positive
+                if (line) {
+                    code = line + code;
+                    m = reFunctionExpression.exec(code);
+                    if (m && m[1]) {
+                        return m[1];
+                    }
+                    m = reFunctionDeclaration.exec(code);
+                    if (m && m[1]) {
+                        //return m[1] + "(" + (m[2] || "") + ")";
+                        return m[1];
+                    }
+                    m = reFunctionEvaluation.exec(code);
+                    if (m && m[1]) {
+                        return m[1];
+                    }
+                }
+            }
+            return '(?)';
+        }
+    };
+
+    return printStackTrace;
+}));
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
  * @author: Ryan Bennett
@@ -24,6 +535,29 @@ var exports = ndn;
 
 var module = {}
 function require(){return ndn;}
+/**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+// This is included after stacktrace.js and browserify-require.js so that
+// require().printStackTrace works.
+
+exports.printStackTrace = printStackTrace;
 /**
  * This module checks for the availability of various crypto.subtle api's at runtime,
  * exporting a function that returns the known availability of necessary NDN crypto apis
@@ -6349,6 +6883,8 @@ Log.LOG = 0;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var printStackTrace = require('../../contrib/stacktrace/stacktrace.js').printStackTrace;
+
 /**
  * NdnCommon has static NDN utility methods and constants.
  * @constructor
@@ -6365,6 +6901,17 @@ exports.NdnCommon = NdnCommon;
  * Face.getMaxNdnPacketSize() which is equivalent.
  */
 NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
+
+/**
+ * Get the error message plus its stack trace.
+ * @param {Error} error The error object.
+ * @returns {string} The error message, plus the stack trace with each line
+ * separated by '\n'.
+ */
+NdnCommon.getErrorWithStackTrace = function(error)
+{
+  return error + '\n' + printStackTrace({e: error}).join('\n');
+}
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -6422,8 +6969,14 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * onData(interest, data) where interest is the interest given to
  * expressInterest and data is the received Data object. This is normally the
  * same onData you initially passed to expressInterest.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onTimeout If the interesLifetime goes over
  * maxInterestLifetime, this calls onTimeout(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Object} settings (optional) If not null, an associative array with
  * the following defaults:
  * {
@@ -6946,6 +7499,8 @@ ChangeCounter.prototype.checkChanged = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+
 /**
  * A SyncPromise is a promise which is immediately fulfilled or rejected, used
  * to return a promise in synchronous code.
@@ -7085,11 +7640,17 @@ SyncPromise.getValue = function(promise)
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an error when this calls promise.then, this calls
  * onError(err) with the value of the error. If onComplete is undefined, then
  * onError is ignored and this will call SyncPromise.getValue(promise) which may
  * throw an exception.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Promise|SyncPromise} promise If onComplete is defined, this calls
  * promise.then. Otherwise, this calls SyncPromise.getValue(promise).
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
@@ -7112,10 +7673,19 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
   if (onComplete)
     promise
     .then(function(value) {
-      onComplete(value);
+      try {
+        onComplete(value);
+      } catch (ex) {
+        console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }, function(err) {
-      if (onError)
-        onError(err);
+      if (onError) {
+        try {
+          onError(err);
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
       else {
         if (promise instanceof SyncPromise)
           throw err;
@@ -10477,12 +11047,18 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onRegisterFailed If this fails to register the prefix for
  * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
  * given to registerPrefix.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterSuccess (optional) When this receives a success
  * message, this calls onRegisterSuccess[0](prefix, registeredPrefixId). If
  * onRegisterSuccess is [null] or omitted, this does not use it. (As a special
  * case, this optional parameter is supplied as an array of one function,
  * instead of just a function, in order to detect when it is used instead of the
  * following optional onDataNotFound function.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onDataNotFound (optional) If a data packet for an interest
  * is not found in the cache, this forwards the interest by calling
  * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
@@ -10493,6 +11069,9 @@ exports.MemoryContentCache = MemoryContentCache;
  * want to automatically store all pending interests, you can simply use
  * getStorePendingInterest() for onDataNotFound. If onDataNotFound is omitted or
  * null, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
@@ -10979,6 +11558,7 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
 
 var Interest = require('../interest.js').Interest;
 var Blob = require('./blob.js').Blob;
+var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
  * SegmentFetcher is a utility class to fetch the latest version of segmented data.
@@ -11045,12 +11625,21 @@ var Blob = require('./blob.js').Blob;
  * verifySegment(data) where data is a Data object. If it returns False then
  * abort fetching and call onError with
  * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onComplete When all segments are received, call
  * onComplete(content) where content is a Blob which has the concatenation of
  * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
  * SegmentFetcher.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @constructor
  */
 var SegmentFetcher = function SegmentFetcher
@@ -11098,12 +11687,21 @@ SegmentFetcher.DontVerifySegment = function(data)
  * abort fetching and call onError with
  * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
  * not required, use SegmentFetcher.DontVerifySegment.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onComplete When all segments are received, call
  * onComplete(content) where content is a Blob which has the concatenation of
  * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
  * SegmentFetcher.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 SegmentFetcher.fetch = function
   (face, baseInterest, verifySegment, onComplete, onError)
@@ -11144,28 +11742,41 @@ SegmentFetcher.prototype.fetchNextSegment = function
 SegmentFetcher.prototype.onData = function(originalInterest, data)
 {
   if (!this.verifySegment(data)) {
-    this.onError
-      (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed");
+    try {
+      this.onError
+        (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+         "Segment verification failed");
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return;
   }
 
-  if (!SegmentFetcher.endsWithSegmentNumber(data.getName()))
+  if (!SegmentFetcher.endsWithSegmentNumber(data.getName())) {
     // We don't expect a name without a segment number.  Treat it as a bad packet.
-    this.onError
-      (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-       "Got an unexpected packet without a segment number: " +
-        data.getName().toUri());
+    try {
+      this.onError
+        (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+         "Got an unexpected packet without a segment number: " +
+          data.getName().toUri());
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
   else {
     var currentSegment = 0;
     try {
       currentSegment = data.getName().get(-1).toSegment();
     }
     catch (ex) {
-      this.onError(
-        SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-         "Error decoding the name segment number " +
-         data.getName().get(-1).toEscapedString() + ": " + ex);
+      try {
+        this.onError
+          (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+           "Error decoding the name segment number " +
+           data.getName().get(-1).toEscapedString() + ": " + ex);
+      } catch (ex) {
+        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       return;
     }
 
@@ -11185,11 +11796,15 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
           finalSegmentNumber = (data.getMetaInfo().getFinalBlockId().toSegment());
         }
         catch (ex) {
-          this.onError
-            (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-             "Error decoding the FinalBlockId segment number " +
-             data.getMetaInfo().getFinalBlockId().toEscapedString() +
-             ": " + ex);
+          try {
+            this.onError
+              (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+               "Error decoding the FinalBlockId segment number " +
+               data.getMetaInfo().getFinalBlockId().toEscapedString() +
+               ": " + ex);
+          } catch (ex) {
+            console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
           return;
         }
 
@@ -11198,7 +11813,11 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
 
           // Concatenate to get content.
           var content = Buffer.concat(this.contentParts);
-          this.onComplete(new Blob(content, false));
+          try {
+            this.onComplete(new Blob(content, false));
+          } catch (ex) {
+            console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
           return;
         }
       }
@@ -11212,9 +11831,13 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
 
 SegmentFetcher.prototype.onTimeout = function(interest)
 {
-  this.onError
-    (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
-     "Time out for interest " + interest.getName().toUri());
+  try {
+    this.onError
+      (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
+       "Time out for interest " + interest.getName().toUri());
+  } catch (ex) {
+    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
 };
 
 /**
@@ -18274,8 +18897,14 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
@@ -18534,6 +19163,7 @@ var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * ConfigPolicyManager manages trust according to a configuration file in the
@@ -18702,8 +19332,14 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
@@ -18712,20 +19348,32 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
 {
   if (stepCount > this.maxDepth) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signature = ConfigPolicyManager.extractSignature(dataOrInterest, wireFormat);
   // No signature -> fail.
   if (signature == null) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   if (!KeyLocator.canGetFromSignature(signature)) {
     // We only support signature types with key locators.
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -18735,14 +19383,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   }
   catch (ex) {
     // No key locator -> fail.
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signatureName = keyLocator.getKeyName();
   // No key name in KeyLocator -> fail.
   if (signatureName.size() == 0) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -18761,14 +19417,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
 
   // No matching rule -> fail.
   if (matchedRule == null) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signatureMatches = this.checkSignatureMatch
     (signatureName, objectName, matchedRule);
   if (!signatureMatches) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -18806,7 +19470,11 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
     if (!this.interestTimestampIsFresh(keyName, timestamp)) {
-      onVerifyFailed(dataOrInterest);
+      try {
+        onVerifyFailed(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       return null;
     }
   }
@@ -18814,12 +19482,21 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // Certificate is known, so verify the signature.
   this.verify(signature, dataOrInterest.wireEncode(), function (verified) {
     if (verified) {
-      onVerified(dataOrInterest);
+      try {
+        onVerified(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       if (dataOrInterest instanceof Interest)
         thisManager.updateTimestampForKey(keyName, timestamp);
     }
-    else
-      onVerifyFailed(dataOrInterest);
+    else {
+      try {
+        onVerifyFailed(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
   });
 };
 
@@ -19354,6 +20031,7 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = functio
 
 var Name = require('../../name.js').Name;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * @constructor
@@ -19402,6 +20080,9 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified This does override to call
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed Override to ignore this.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
@@ -19410,7 +20091,11 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
 {
-  onVerified(dataOrInterest);
+  try {
+    onVerified(dataOrInterest);
+  } catch (ex) {
+    console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
   return null;
 };
 
@@ -19470,6 +20155,7 @@ var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * A SelfVerifyPolicyManager implements a PolicyManager to look in the
@@ -19530,8 +20216,14 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
  * certificate chain.
@@ -19545,7 +20237,20 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
     this.verify(data.getSignature(), data.wireEncode(), function(verified) {
-      if (verified) onVerified(data); else onVerifyFailed(data);
+      if (verified) {
+        try {
+          onVerified(data);
+        } catch (ex) {
+          console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+      else {
+        try {
+          onVerifyFailed(data);
+        } catch (ex) {
+          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     });
   }
   else if (dataOrInterest instanceof Interest) {
@@ -19557,7 +20262,20 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified) {
-      if (verified) onVerified(interest); else onVerifyFailed(interest);
+      if (verified) {
+        try {
+          onVerified(interest);
+        } catch (ex) {
+          console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+      else {
+        try {
+          onVerifyFailed(interest);
+        } catch (ex) {
+          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     });
   }
   else
@@ -19673,15 +20391,12 @@ var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var Blob = require('../util/blob.js').Blob;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var Tlv = require('../encoding/tlv/tlv.js').Tlv;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -19720,11 +20435,17 @@ exports.KeyChain = KeyChain;
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @returns {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -19768,11 +20489,17 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.deleteIdentity = function
   (identityName, onComplete, onError)
@@ -19786,6 +20513,9 @@ KeyChain.prototype.deleteIdentity = function
  * with name of the default identity. If omitted, the return value is described
  * below. (Some crypto libraries only use a callback, so onComplete is required
  * to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
@@ -19794,6 +20524,9 @@ KeyChain.prototype.deleteIdentity = function
  * @returns {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @throws SecurityException if the default identity is not set. However, if
  * onComplete and onError are defined, then if there is an exception return
  * undefined and call onError(exception).
@@ -19810,11 +20543,17 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  * with name of the default certificate. If omitted, the return value is described
  * below. (Some crypto libraries only use a callback, so onComplete is required
  * to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {Name} If onComplete is omitted, return the default certificate name.
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
@@ -19857,11 +20596,17 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
@@ -19903,11 +20648,17 @@ KeyChain.prototype.createSigningRequest = function(keyName)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.installIdentityCertificate = function
   (certificate, onComplete, onError)
@@ -19921,11 +20672,17 @@ KeyChain.prototype.installIdentityCertificate = function
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.setDefaultCertificateForKey = function
   (certificate, onComplete, onError)
@@ -19941,11 +20698,17 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * with the requested IdentityCertificate which is valid. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate which is valid. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -19964,11 +20727,17 @@ KeyChain.prototype.getCertificate = function
  * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
@@ -19987,11 +20756,17 @@ KeyChain.prototype.getAnyCertificate = function
  * with the requested IdentityCertificate which is valid. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate which is valid. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -20010,11 +20785,17 @@ KeyChain.prototype.getIdentityCertificate = function
  * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
@@ -20094,11 +20875,17 @@ KeyChain.prototype.getPolicyManager = function()
  * onComplete(signature) where signature is the produced Signature object. If
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @returns {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
@@ -20231,15 +21018,21 @@ KeyChain.prototype.signPromise = function
  * onComplete(signature) where signature is the produced Signature object. If
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
- * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data).
- * Otherwise, if onComplete is supplied then return undefined and use onComplete
- * as described above.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or undefined (if target is Data).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  */
 KeyChain.prototype.signByIdentity = function
   (target, identityName, wireFormat, onComplete, onError)
@@ -20331,8 +21124,14 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * @param {Data} data The Data object with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(data).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(data).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {number} stepCount
  */
 KeyChain.prototype.verifyData = function
@@ -20354,10 +21153,20 @@ KeyChain.prototype.verifyData = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(data))
-    onVerified(data);
-  else
-    onVerifyFailed(data);
+  else if (this.policyManager.skipVerifyAndTrust(data)) {
+    try {
+      onVerified(data);
+    } catch (ex) {
+      console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onVerifyFailed(data);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -20367,8 +21176,14 @@ KeyChain.prototype.verifyData = function
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.verifyInterest = function
   (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
@@ -20391,10 +21206,20 @@ KeyChain.prototype.verifyInterest = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(interest))
-    onVerified(interest);
-  else
-    onVerifyFailed(interest);
+  else if (this.policyManager.skipVerifyAndTrust(interest)) {
+    try {
+      onVerified(interest);
+    } catch (ex) {
+      console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onVerifyFailed(interest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -20431,8 +21256,13 @@ KeyChain.prototype.onCertificateInterestTimeout = function
            (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
        });
   }
-  else
-    onVerifyFailed(originalDataOrInterest);
+  else {
+    try {
+      onVerifyFailed(originalDataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -23839,6 +24669,7 @@ var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Encryptor = require('./algo/encryptor.js').Encryptor;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A Consumer manages fetched group keys used to decrypt a data packet in the
@@ -23890,8 +24721,14 @@ Consumer.ErrorCode = {
  * decrypted, this calls onConsumeComplete(contentData, result) where
  * contentData is the fetched Data packet and result is the decrypted plain
  * text Blob.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError This calls onError(errorCode, message) for an error,
  * where errorCode is an error code from Consumer.ErrorCode.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
 {
@@ -23907,10 +24744,18 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
       thisConsumer.keyChain_.verifyData(contentData, function(validData) {
         // Decrypt the content.
         thisConsumer.decryptContent_(validData, function(plainText) {
-          onConsumeComplete(contentData, plainText);
+          try {
+            onConsumeComplete(contentData, plainText);
+          } catch (ex) {
+            console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
         }, onError);
       }, function(d) {
-        onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        try {
+          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       });
     } catch (ex) {
       Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -23922,7 +24767,11 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
     try {
       thisConsumer.face_.expressInterest
         (interest, onData, function(contentInterest) {
-        onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+        try {
+          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
        });
     } catch (ex) {
       Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -24012,10 +24861,20 @@ Consumer.Error.callOnError = function(onError, exception, messagePrefix)
   if (!messagePrefix)
     messagePrefix = "";
 
-  if (exception instanceof Consumer.Error)
-    onError(exception.errorCode, exception.message);
-  else
-    onError(Consumer.ErrorCode.General, messagePrefix + exception);
+  if (exception instanceof Consumer.Error) {
+    try {
+      onError(exception.errorCode, exception.message);
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onError(Consumer.ErrorCode.General, messagePrefix + exception);
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 }
 
 /**
@@ -25706,7 +26565,7 @@ var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmT
 var AesKeyParams = require('../security/key-params.js').AesKeyParams;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Schedule = require('./schedule.js').Schedule;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A Producer manages content keys used to encrypt a data packet in the
@@ -25786,10 +26645,16 @@ exports.Producer = Producer;
  * @param {function} onEncryptedKeys If this creates a content key, then this
  * calls onEncryptedKeys(keys) where keys is a list of encrypted content key
  * Data packets. If onEncryptedKeys is null, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
  * with the content key name for the time slot. If onContentKeyName is null,
  * this does not use it. (A callback is neede because of async database
  * operations.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Producer.prototype.createContentKey = function
   (timeSlot, onEncryptedKeys, onContentKeyName)
@@ -25860,8 +26725,14 @@ Producer.prototype.createContentKey = function
  * @param {Blob} content The content to encrypt.
  * @param {function} onComplete This calls onComplete() when the data packet has
  * been updated.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If there is an exception, then this
  * calls onError(exception) with the exception. If omitted, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Producer.prototype.produce = function
   (data, timeSlot, content, onComplete, onError)
@@ -25883,9 +26754,17 @@ Producer.prototype.produce = function
       return thisProducer.keyChain_.signPromise(data);
     })
     .then(function() {
-      onComplete();
+      try {
+        onComplete();
+      } catch (ex) {
+        console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }, function(error) {
-      onError(error);
+      try {
+        onError(error);
+      } catch (ex) {
+        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     });
   });
 }
@@ -25976,7 +26855,11 @@ Producer.prototype.handleTimeout_ = function
     --keyRequest.interestCount;
 
   if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
-    onEncryptedKeys(keyRequest.encryptedKeys);
+    try {
+      onEncryptedKeys(keyRequest.encryptedKeys);
+    } catch (ex) {
+      console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     delete this.keyRequests_[timeSlot];
   }
 };
@@ -26061,7 +26944,11 @@ Producer.prototype.encryptContentKey_ = function
 
     --keyRequest.interestCount;
     if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
-      onEncryptedKeys(keyRequest.encryptedKeys);
+      try {
+        onEncryptedKeys(keyRequest.encryptedKeys);
+      } catch (ex) {
+        console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       delete thisProducer.keyRequests_[timeSlot];
     }
   });
@@ -27846,6 +28733,7 @@ var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 var SyncStateProto = require('./sync-state.js').SyncStateProto;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
@@ -27866,9 +28754,15 @@ var SyncStateProto = require('./sync-state.js').SyncStateProto;
  * isRecovery is true, a chat application would not want to re-display all
  * the associated chat messages.) The callback should send interests to fetch
  * the application data for the sequence numbers in the sync state.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onInitialized This calls onInitialized() when the first sync data
  * is received (or the interest times out because there are no other
  * publishers yet).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} applicationDataPrefix The prefix used by this application instance
  * for application data. For example, "/my/local/prefix/ndnchat4/0K4wChff2v".
  * This is used when sending a sync message for a new sequence number.
@@ -27889,6 +28783,9 @@ var SyncStateProto = require('./sync-state.js').SyncStateProto;
  * @param {function} onRegisterFailed If failed to register the prefix to receive
  * interests for the applicationBroadcastPrefix, this calls
  * onRegisterFailed(applicationBroadcastPrefix).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 var ChronoSync2013 = function ChronoSync2013
   (onReceivedSyncState, onInitialized, applicationDataPrefix,
@@ -28203,7 +29100,11 @@ ChronoSync2013.prototype.onData = function(interest, co)
   }
 
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
-  this.onReceivedSyncState(syncStates, isRecovery);
+  try {
+    this.onReceivedSyncState(syncStates, isRecovery);
+  } catch (ex) {
+    console.log("Error in onReceivedSyncState: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
 
   var n = new Name(this.applicationBroadcastPrefix);
   n.append(this.digest_tree.getRoot());
@@ -28226,7 +29127,11 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   console.log("no other people");
 
   this.usrseq++;
-  this.onInitialized();
+  try {
+    this.onInitialized();
+  } catch (ex) {
+    console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
   var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                  type:'UPDATE',
                                  seqno: {
@@ -28406,7 +29311,11 @@ ChronoSync2013.prototype.initialOndata = function(content)
       if (this.update(content_t)) {
         var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content_t);
         this.digest_log.push(newlog);
-        this.onInitialized();
+        try {
+          this.onInitialized();
+        } catch (ex) {
+          console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
     }
   }
@@ -28444,7 +29353,11 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                    }
                                  })];
     if (this.update(content)) {
-      this.onInitialized();
+      try {
+        this.onInitialized();
+      } catch (ex) {
+        console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }
   }
 };
@@ -29263,9 +30176,15 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * interest is the interest given to expressInterest and data is the received
  * Data object. NOTE: You must not change the interest object - if you need to
  * change it then make a copy.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onTimeout (optional) If the interest times out according to the interest lifetime,
  *   this calls onTimeout(interest) where:
  *   interest is the interest given to expressInterest.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
@@ -29428,8 +30347,13 @@ Face.prototype.expressInterestHelper = function
         thisFace.pendingInterestTable.splice(index, 1);
 
       // Call onTimeout.
-      if (pitEntry.onTimeout)
-        pitEntry.onTimeout(pitEntry.interest);
+      if (pitEntry.onTimeout) {
+        try {
+          pitEntry.onTimeout(pitEntry.interest);
+        } catch (ex) {
+          console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     };
 
     pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
@@ -29563,15 +30487,24 @@ Face.prototype.nodeMakeCommandInterest = function
  * NOTE: You must not change the prefix object - if you need to change it then
  * make a copy. If onInterest is null, it is ignored and you must call
  * setInterestFilter.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterSuccess (optional) When this receives a success
  * message, this calls onRegisterSuccess(prefix, registeredPrefixId) where
  * prefix is the prefix given to registerPrefix and registeredPrefixId is
  * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
  * this does not use it. (The onRegisterSuccess parameter comes after
  * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
@@ -29674,8 +30607,13 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
     // Error decoding the ControlResponse.
     if (LOG > 0)
       console.log("Register prefix failed: Error decoding the NFD response: " + e);
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    if (this.onRegisterFailed) {
+      try {
+        this.onRegisterFailed(this.prefix);
+      } catch (ex) {
+        console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
     return;
   }
 
@@ -29684,16 +30622,26 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
     if (LOG > 0)
       console.log("Register prefix failed: Expected NFD status code 200, got: " +
                   statusCode);
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    if (this.onRegisterFailed) {
+      try {
+        this.onRegisterFailed(this.prefix);
+      } catch (ex) {
+        console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
     return;
   }
 
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
-  if (this.onRegisterSuccess != null)
+  if (this.onRegisterSuccess != null) {
+    try {
       this.onRegisterSuccess(this.prefix, this.registeredPrefixId);
+    } catch (ex) {
+      console.log("Error in onRegisterSuccess: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -29703,8 +30651,13 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
 {
   if (LOG > 2)
     console.log("Timeout for NFD register prefix command.");
-  if (this.onRegisterFailed)
-    this.onRegisterFailed(this.prefix);
+  if (this.onRegisterFailed) {
+    try {
+      this.onRegisterFailed(this.prefix);
+    } catch (ex) {
+      console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -29794,8 +30747,13 @@ Face.prototype.nfdRegisterPrefix = function
      function(message) {
        if (LOG > 0)
          console.log("Error in Transport.isLocal: " + message);
-       if (onRegisterFailed)
-         onRegisterFailed(prefix);
+       if (onRegisterFailed) {
+         try {
+           onRegisterFailed(prefix);
+         } catch (ex) {
+           console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+         }
+       }
      });
 };
 
@@ -29858,6 +30816,9 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
  * Interest.
  * @param {function} onInterest When an Interest is received which matches the
  * filter, this calls onInterest(prefix, interest, face, interestFilterId, filter).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
 {
@@ -29987,9 +30948,13 @@ Face.prototype.onReceivedElement = function(element)
       if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
-        entry.getOnInterest()
-          (entry.getFilter().getPrefix(), interest, this,
-           entry.getInterestFilterId(), entry.getFilter());
+        try {
+          entry.getOnInterest()
+            (entry.getFilter().getPrefix(), interest, this,
+             entry.getInterestFilterId(), entry.getFilter());
+        } catch (ex) {
+          console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
     }
   }
@@ -30000,7 +30965,11 @@ Face.prototype.onReceivedElement = function(element)
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];
-      pendingInterest.onData(pendingInterest.interest, data);
+      try {
+        pendingInterest.onData(pendingInterest.interest, data);
+      } catch (ex) {
+        console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }
   }
 };

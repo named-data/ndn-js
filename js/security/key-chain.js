@@ -23,15 +23,12 @@ var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var Blob = require('../util/blob.js').Blob;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var Tlv = require('../encoding/tlv/tlv.js').Tlv;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
 var SecurityException = require('./security-exception.js').SecurityException;
 var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -70,11 +67,17 @@ exports.KeyChain = KeyChain;
  * with name of the default certificate of the identity. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @returns {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -118,11 +121,17 @@ KeyChain.prototype.createIdentity = function(identityName, params)
  * @param {function} onComplete (optional) This calls onComplete() when the
  * operation is complete. If omitted, do not use it. (Some database libraries
  * only use a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.deleteIdentity = function
   (identityName, onComplete, onError)
@@ -136,6 +145,9 @@ KeyChain.prototype.deleteIdentity = function
  * with name of the default identity. If omitted, the return value is described
  * below. (Some crypto libraries only use a callback, so onComplete is required
  * to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
@@ -144,6 +156,9 @@ KeyChain.prototype.deleteIdentity = function
  * @returns {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @throws SecurityException if the default identity is not set. However, if
  * onComplete and onError are defined, then if there is an exception return
  * undefined and call onError(exception).
@@ -160,11 +175,17 @@ KeyChain.prototype.getDefaultIdentity = function(onComplete, onError)
  * with name of the default certificate. If omitted, the return value is described
  * below. (Some crypto libraries only use a callback, so onComplete is required
  * to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {Name} If onComplete is omitted, return the default certificate name.
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
@@ -207,11 +228,17 @@ KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.setDefaultKeyForIdentity = function
   (keyName, identityNameCheck, onComplete, onError)
@@ -253,11 +280,17 @@ KeyChain.prototype.createSigningRequest = function(keyName)
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.installIdentityCertificate = function
   (certificate, onComplete, onError)
@@ -271,11 +304,17 @@ KeyChain.prototype.installIdentityCertificate = function
  * @param {function} onComplete (optional) This calls onComplete() when complete.
  * (Some database libraries only use a callback, so onComplete is required to
  * use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.setDefaultCertificateForKey = function
   (certificate, onComplete, onError)
@@ -291,11 +330,17 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * with the requested IdentityCertificate which is valid. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate which is valid. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -314,11 +359,17 @@ KeyChain.prototype.getCertificate = function
  * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
@@ -337,11 +388,17 @@ KeyChain.prototype.getAnyCertificate = function
  * with the requested IdentityCertificate which is valid. If omitted, the return
  * value is described below. (Some crypto libraries only use a callback, so
  * onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate which is valid. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
@@ -360,11 +417,17 @@ KeyChain.prototype.getIdentityCertificate = function
  * with the requested IdentityCertificate. If omitted, the return value is
  * described below. (Some crypto libraries only use a callback, so onComplete is
  * required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
@@ -444,11 +507,17 @@ KeyChain.prototype.getPolicyManager = function()
  * onComplete(signature) where signature is the produced Signature object. If
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @returns {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
@@ -581,15 +650,21 @@ KeyChain.prototype.signPromise = function
  * onComplete(signature) where signature is the produced Signature object. If
  * omitted, the return value is described below. (Some crypto libraries only use
  * a callback, so onComplete is required to use these.)
- * @returns {Signature} If onComplete is omitted, return the generated Signature
- * object (if target is a Buffer) or undefined (if target is Data).
- * Otherwise, if onComplete is supplied then return undefined and use onComplete
- * as described above.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * object (if target is a Buffer) or undefined (if target is Data).
+ * Otherwise, if onComplete is supplied then return undefined and use onComplete
+ * as described above.
  */
 KeyChain.prototype.signByIdentity = function
   (target, identityName, wireFormat, onComplete, onError)
@@ -681,8 +756,14 @@ KeyChain.prototype.signWithSha256 = function(target, wireFormat)
  * @param {Data} data The Data object with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(data).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(data).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {number} stepCount
  */
 KeyChain.prototype.verifyData = function
@@ -704,10 +785,20 @@ KeyChain.prototype.verifyData = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(data))
-    onVerified(data);
-  else
-    onVerifyFailed(data);
+  else if (this.policyManager.skipVerifyAndTrust(data)) {
+    try {
+      onVerified(data);
+    } catch (ex) {
+      console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onVerifyFailed(data);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -717,8 +808,14 @@ KeyChain.prototype.verifyData = function
  * @param {Interest} interest The interest with the signature to check.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(interest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 KeyChain.prototype.verifyInterest = function
   (interest, onVerified, onVerifyFailed, stepCount, wireFormat)
@@ -741,10 +838,20 @@ KeyChain.prototype.verifyInterest = function
          });
     }
   }
-  else if (this.policyManager.skipVerifyAndTrust(interest))
-    onVerified(interest);
-  else
-    onVerifyFailed(interest);
+  else if (this.policyManager.skipVerifyAndTrust(interest)) {
+    try {
+      onVerified(interest);
+    } catch (ex) {
+      console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onVerifyFailed(interest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -781,8 +888,13 @@ KeyChain.prototype.onCertificateInterestTimeout = function
            (callbackInterest, retry - 1, onVerifyFailed, originalDataOrInterest, nextStep);
        });
   }
-  else
-    onVerifyFailed(originalDataOrInterest);
+  else {
+    try {
+      onVerifyFailed(originalDataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**

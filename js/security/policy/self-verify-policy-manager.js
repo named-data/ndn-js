@@ -29,6 +29,7 @@ var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * A SelfVerifyPolicyManager implements a PolicyManager to look in the
@@ -89,8 +90,14 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
  * certificate chain.
@@ -104,7 +111,20 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     var data = dataOrInterest;
     // wireEncode returns the cached encoding if available.
     this.verify(data.getSignature(), data.wireEncode(), function(verified) {
-      if (verified) onVerified(data); else onVerifyFailed(data);
+      if (verified) {
+        try {
+          onVerified(data);
+        } catch (ex) {
+          console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+      else {
+        try {
+          onVerifyFailed(data);
+        } catch (ex) {
+          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     });
   }
   else if (dataOrInterest instanceof Interest) {
@@ -116,7 +136,20 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified) {
-      if (verified) onVerified(interest); else onVerifyFailed(interest);
+      if (verified) {
+        try {
+          onVerified(interest);
+        } catch (ex) {
+          console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+      else {
+        try {
+          onVerifyFailed(interest);
+        } catch (ex) {
+          console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     });
   }
   else

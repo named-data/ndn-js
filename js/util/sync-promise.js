@@ -17,6 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+
 /**
  * A SyncPromise is a promise which is immediately fulfilled or rejected, used
  * to return a promise in synchronous code.
@@ -156,11 +158,17 @@ SyncPromise.getValue = function(promise)
  * @param {function} onComplete If defined, this calls promise.then to fulfill
  * the promise, then calls onComplete(value) with the value of the promise.
  * If onComplete is undefined, the return value is described below.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an error when this calls promise.then, this calls
  * onError(err) with the value of the error. If onComplete is undefined, then
  * onError is ignored and this will call SyncPromise.getValue(promise) which may
  * throw an exception.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Promise|SyncPromise} promise If onComplete is defined, this calls
  * promise.then. Otherwise, this calls SyncPromise.getValue(promise).
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
@@ -183,10 +191,19 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
   if (onComplete)
     promise
     .then(function(value) {
-      onComplete(value);
+      try {
+        onComplete(value);
+      } catch (ex) {
+        console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }, function(err) {
-      if (onError)
-        onError(err);
+      if (onError) {
+        try {
+          onError(err);
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
       else {
         if (promise instanceof SyncPromise)
           throw err;

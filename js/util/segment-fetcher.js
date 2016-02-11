@@ -20,6 +20,7 @@
 
 var Interest = require('../interest.js').Interest;
 var Blob = require('./blob.js').Blob;
+var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
  * SegmentFetcher is a utility class to fetch the latest version of segmented data.
@@ -86,12 +87,21 @@ var Blob = require('./blob.js').Blob;
  * verifySegment(data) where data is a Data object. If it returns False then
  * abort fetching and call onError with
  * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onComplete When all segments are received, call
  * onComplete(content) where content is a Blob which has the concatenation of
  * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
  * SegmentFetcher.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @constructor
  */
 var SegmentFetcher = function SegmentFetcher
@@ -139,12 +149,21 @@ SegmentFetcher.DontVerifySegment = function(data)
  * abort fetching and call onError with
  * SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED. If data validation is
  * not required, use SegmentFetcher.DontVerifySegment.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onComplete When all segments are received, call
  * onComplete(content) where content is a Blob which has the concatenation of
  * the content of all the segments.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError Call onError.onError(errorCode, message) for
  * timeout or an error processing segments. errorCode is a value from
  * SegmentFetcher.ErrorCode and message is a related string.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 SegmentFetcher.fetch = function
   (face, baseInterest, verifySegment, onComplete, onError)
@@ -185,28 +204,41 @@ SegmentFetcher.prototype.fetchNextSegment = function
 SegmentFetcher.prototype.onData = function(originalInterest, data)
 {
   if (!this.verifySegment(data)) {
-    this.onError
-      (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
-       "Segment verification failed");
+    try {
+      this.onError
+        (SegmentFetcher.ErrorCode.SEGMENT_VERIFICATION_FAILED,
+         "Segment verification failed");
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return;
   }
 
-  if (!SegmentFetcher.endsWithSegmentNumber(data.getName()))
+  if (!SegmentFetcher.endsWithSegmentNumber(data.getName())) {
     // We don't expect a name without a segment number.  Treat it as a bad packet.
-    this.onError
-      (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-       "Got an unexpected packet without a segment number: " +
-        data.getName().toUri());
+    try {
+      this.onError
+        (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+         "Got an unexpected packet without a segment number: " +
+          data.getName().toUri());
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
   else {
     var currentSegment = 0;
     try {
       currentSegment = data.getName().get(-1).toSegment();
     }
     catch (ex) {
-      this.onError(
-        SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-         "Error decoding the name segment number " +
-         data.getName().get(-1).toEscapedString() + ": " + ex);
+      try {
+        this.onError
+          (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+           "Error decoding the name segment number " +
+           data.getName().get(-1).toEscapedString() + ": " + ex);
+      } catch (ex) {
+        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       return;
     }
 
@@ -226,11 +258,15 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
           finalSegmentNumber = (data.getMetaInfo().getFinalBlockId().toSegment());
         }
         catch (ex) {
-          this.onError
-            (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
-             "Error decoding the FinalBlockId segment number " +
-             data.getMetaInfo().getFinalBlockId().toEscapedString() +
-             ": " + ex);
+          try {
+            this.onError
+              (SegmentFetcher.ErrorCode.DATA_HAS_NO_SEGMENT,
+               "Error decoding the FinalBlockId segment number " +
+               data.getMetaInfo().getFinalBlockId().toEscapedString() +
+               ": " + ex);
+          } catch (ex) {
+            console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
           return;
         }
 
@@ -239,7 +275,11 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
 
           // Concatenate to get content.
           var content = Buffer.concat(this.contentParts);
-          this.onComplete(new Blob(content, false));
+          try {
+            this.onComplete(new Blob(content, false));
+          } catch (ex) {
+            console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
           return;
         }
       }
@@ -253,9 +293,13 @@ SegmentFetcher.prototype.onData = function(originalInterest, data)
 
 SegmentFetcher.prototype.onTimeout = function(interest)
 {
-  this.onError
-    (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
-     "Time out for interest " + interest.getName().toUri());
+  try {
+    this.onError
+      (SegmentFetcher.ErrorCode.INTEREST_TIMEOUT,
+       "Time out for interest " + interest.getName().toUri());
+  } catch (ex) {
+    console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
 };
 
 /**

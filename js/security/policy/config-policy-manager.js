@@ -35,6 +35,7 @@ var ValidationRequest = require('./validation-request.js').ValidationRequest;
 var SecurityException = require('../security-exception.js').SecurityException;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * ConfigPolicyManager manages trust according to a configuration file in the
@@ -203,8 +204,14 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified If the signature is verified, this calls
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed If the signature check fails, this calls
  * onVerifyFailed(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
@@ -213,20 +220,32 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
 {
   if (stepCount > this.maxDepth) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signature = ConfigPolicyManager.extractSignature(dataOrInterest, wireFormat);
   // No signature -> fail.
   if (signature == null) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   if (!KeyLocator.canGetFromSignature(signature)) {
     // We only support signature types with key locators.
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -236,14 +255,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   }
   catch (ex) {
     // No key locator -> fail.
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signatureName = keyLocator.getKeyName();
   // No key name in KeyLocator -> fail.
   if (signatureName.size() == 0) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -262,14 +289,22 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
 
   // No matching rule -> fail.
   if (matchedRule == null) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
   var signatureMatches = this.checkSignatureMatch
     (signatureName, objectName, matchedRule);
   if (!signatureMatches) {
-    onVerifyFailed(dataOrInterest);
+    try {
+      onVerifyFailed(dataOrInterest);
+    } catch (ex) {
+      console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     return null;
   }
 
@@ -307,7 +342,11 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
     var timestamp = dataOrInterest.getName().get(-4).toNumber();
 
     if (!this.interestTimestampIsFresh(keyName, timestamp)) {
-      onVerifyFailed(dataOrInterest);
+      try {
+        onVerifyFailed(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       return null;
     }
   }
@@ -315,12 +354,21 @@ ConfigPolicyManager.prototype.checkVerificationPolicy = function
   // Certificate is known, so verify the signature.
   this.verify(signature, dataOrInterest.wireEncode(), function (verified) {
     if (verified) {
-      onVerified(dataOrInterest);
+      try {
+        onVerified(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       if (dataOrInterest instanceof Interest)
         thisManager.updateTimestampForKey(keyName, timestamp);
     }
-    else
-      onVerifyFailed(dataOrInterest);
+    else {
+      try {
+        onVerifyFailed(dataOrInterest);
+      } catch (ex) {
+        console.log("Error in onVerifyFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
   });
 };
 

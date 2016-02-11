@@ -28,7 +28,7 @@ var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmT
 var AesKeyParams = require('../security/key-params.js').AesKeyParams;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Schedule = require('./schedule.js').Schedule;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A Producer manages content keys used to encrypt a data packet in the
@@ -108,10 +108,16 @@ exports.Producer = Producer;
  * @param {function} onEncryptedKeys If this creates a content key, then this
  * calls onEncryptedKeys(keys) where keys is a list of encrypted content key
  * Data packets. If onEncryptedKeys is null, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
  * with the content key name for the time slot. If onContentKeyName is null,
  * this does not use it. (A callback is neede because of async database
  * operations.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Producer.prototype.createContentKey = function
   (timeSlot, onEncryptedKeys, onContentKeyName)
@@ -182,8 +188,14 @@ Producer.prototype.createContentKey = function
  * @param {Blob} content The content to encrypt.
  * @param {function} onComplete This calls onComplete() when the data packet has
  * been updated.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError (optional) If there is an exception, then this
  * calls onError(exception) with the exception. If omitted, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Producer.prototype.produce = function
   (data, timeSlot, content, onComplete, onError)
@@ -205,9 +217,17 @@ Producer.prototype.produce = function
       return thisProducer.keyChain_.signPromise(data);
     })
     .then(function() {
-      onComplete();
+      try {
+        onComplete();
+      } catch (ex) {
+        console.log("Error in onComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }, function(error) {
-      onError(error);
+      try {
+        onError(error);
+      } catch (ex) {
+        console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     });
   });
 }
@@ -298,7 +318,11 @@ Producer.prototype.handleTimeout_ = function
     --keyRequest.interestCount;
 
   if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
-    onEncryptedKeys(keyRequest.encryptedKeys);
+    try {
+      onEncryptedKeys(keyRequest.encryptedKeys);
+    } catch (ex) {
+      console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
     delete this.keyRequests_[timeSlot];
   }
 };
@@ -383,7 +407,11 @@ Producer.prototype.encryptContentKey_ = function
 
     --keyRequest.interestCount;
     if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
-      onEncryptedKeys(keyRequest.encryptedKeys);
+      try {
+        onEncryptedKeys(keyRequest.encryptedKeys);
+      } catch (ex) {
+        console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
       delete thisProducer.keyRequests_[timeSlot];
     }
   });

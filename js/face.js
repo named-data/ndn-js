@@ -420,9 +420,15 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * interest is the interest given to expressInterest and data is the received
  * Data object. NOTE: You must not change the interest object - if you need to
  * change it then make a copy.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onTimeout (optional) If the interest times out according to the interest lifetime,
  *   this calls onTimeout(interest) where:
  *   interest is the interest given to expressInterest.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
@@ -585,8 +591,13 @@ Face.prototype.expressInterestHelper = function
         thisFace.pendingInterestTable.splice(index, 1);
 
       // Call onTimeout.
-      if (pitEntry.onTimeout)
-        pitEntry.onTimeout(pitEntry.interest);
+      if (pitEntry.onTimeout) {
+        try {
+          pitEntry.onTimeout(pitEntry.interest);
+        } catch (ex) {
+          console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
     };
 
     pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
@@ -720,15 +731,24 @@ Face.prototype.nodeMakeCommandInterest = function
  * NOTE: You must not change the prefix object - if you need to change it then
  * make a copy. If onInterest is null, it is ignored and you must call
  * setInterestFilter.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterFailed If register prefix fails for any reason,
  * this calls onRegisterFailed(prefix) where:
  *   prefix is the prefix given to registerPrefix.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterSuccess (optional) When this receives a success
  * message, this calls onRegisterSuccess(prefix, registeredPrefixId) where
  * prefix is the prefix given to registerPrefix and registeredPrefixId is
  * the value retured by registerPrefix. If onRegisterSuccess is null or omitted,
  * this does not use it. (The onRegisterSuccess parameter comes after
  * onRegisterFailed because it can be null or omitted, unlike onRegisterFailed.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
@@ -831,8 +851,13 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
     // Error decoding the ControlResponse.
     if (LOG > 0)
       console.log("Register prefix failed: Error decoding the NFD response: " + e);
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    if (this.onRegisterFailed) {
+      try {
+        this.onRegisterFailed(this.prefix);
+      } catch (ex) {
+        console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
     return;
   }
 
@@ -841,16 +866,26 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
     if (LOG > 0)
       console.log("Register prefix failed: Expected NFD status code 200, got: " +
                   statusCode);
-    if (this.onRegisterFailed)
-      this.onRegisterFailed(this.prefix);
+    if (this.onRegisterFailed) {
+      try {
+        this.onRegisterFailed(this.prefix);
+      } catch (ex) {
+        console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
     return;
   }
 
   if (LOG > 2)
     console.log("Register prefix succeeded with the NFD forwarder for prefix " +
                 this.prefix.toUri());
-  if (this.onRegisterSuccess != null)
+  if (this.onRegisterSuccess != null) {
+    try {
       this.onRegisterSuccess(this.prefix, this.registeredPrefixId);
+    } catch (ex) {
+      console.log("Error in onRegisterSuccess: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -860,8 +895,13 @@ Face.RegisterResponse.prototype.onTimeout = function(interest)
 {
   if (LOG > 2)
     console.log("Timeout for NFD register prefix command.");
-  if (this.onRegisterFailed)
-    this.onRegisterFailed(this.prefix);
+  if (this.onRegisterFailed) {
+    try {
+      this.onRegisterFailed(this.prefix);
+    } catch (ex) {
+      console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 };
 
 /**
@@ -951,8 +991,13 @@ Face.prototype.nfdRegisterPrefix = function
      function(message) {
        if (LOG > 0)
          console.log("Error in Transport.isLocal: " + message);
-       if (onRegisterFailed)
-         onRegisterFailed(prefix);
+       if (onRegisterFailed) {
+         try {
+           onRegisterFailed(prefix);
+         } catch (ex) {
+           console.log("Error in onRegisterFailed: " + NdnCommon.getErrorWithStackTrace(ex));
+         }
+       }
      });
 };
 
@@ -1015,6 +1060,9 @@ Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
  * Interest.
  * @param {function} onInterest When an Interest is received which matches the
  * filter, this calls onInterest(prefix, interest, face, interestFilterId, filter).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Face.prototype.setInterestFilter = function(filterOrPrefix, onInterest)
 {
@@ -1144,9 +1192,13 @@ Face.prototype.onReceivedElement = function(element)
       if (entry.getFilter().doesMatch(interest.getName())) {
         if (LOG > 3)
           console.log("Found interest filter for " + interest.getName().toUri());
-        entry.getOnInterest()
-          (entry.getFilter().getPrefix(), interest, this,
-           entry.getInterestFilterId(), entry.getFilter());
+        try {
+          entry.getOnInterest()
+            (entry.getFilter().getPrefix(), interest, this,
+             entry.getInterestFilterId(), entry.getFilter());
+        } catch (ex) {
+          console.log("Error in onInterest: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
     }
   }
@@ -1157,7 +1209,11 @@ Face.prototype.onReceivedElement = function(element)
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];
-      pendingInterest.onData(pendingInterest.interest, data);
+      try {
+        pendingInterest.onData(pendingInterest.interest, data);
+      } catch (ex) {
+        console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }
   }
 };

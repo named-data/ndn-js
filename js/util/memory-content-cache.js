@@ -72,12 +72,18 @@ exports.MemoryContentCache = MemoryContentCache;
  * @param {function} onRegisterFailed If this fails to register the prefix for
  * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
  * given to registerPrefix.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onRegisterSuccess (optional) When this receives a success
  * message, this calls onRegisterSuccess[0](prefix, registeredPrefixId). If
  * onRegisterSuccess is [null] or omitted, this does not use it. (As a special
  * case, this optional parameter is supplied as an array of one function,
  * instead of just a function, in order to detect when it is used instead of the
  * following optional onDataNotFound function.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onDataNotFound (optional) If a data packet for an interest
  * is not found in the cache, this forwards the interest by calling
  * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
@@ -88,6 +94,9 @@ exports.MemoryContentCache = MemoryContentCache;
  * want to automatically store all pending interests, you can simply use
  * getStorePendingInterest() for onDataNotFound. If onDataNotFound is omitted or
  * null, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {ForwardingFlags} flags (optional) See Face.registerPrefix.
  * @param {WireFormat} wireFormat (optional) See Face.registerPrefix.
  */
