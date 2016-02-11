@@ -28,6 +28,7 @@ var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Encryptor = require('./algo/encryptor.js').Encryptor;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * A Consumer manages fetched group keys used to decrypt a data packet in the
@@ -79,8 +80,14 @@ Consumer.ErrorCode = {
  * decrypted, this calls onConsumeComplete(contentData, result) where
  * contentData is the fetched Data packet and result is the decrypted plain
  * text Blob.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onError This calls onError(errorCode, message) for an error,
  * where errorCode is an error code from Consumer.ErrorCode.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
 {
@@ -96,10 +103,18 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
       thisConsumer.keyChain_.verifyData(contentData, function(validData) {
         // Decrypt the content.
         thisConsumer.decryptContent_(validData, function(plainText) {
-          onConsumeComplete(contentData, plainText);
+          try {
+            onConsumeComplete(contentData, plainText);
+          } catch (ex) {
+            console.log("Error in onConsumeComplete: " + NdnCommon.getErrorWithStackTrace(ex));
+          }
         }, onError);
       }, function(d) {
-        onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        try {
+          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       });
     } catch (ex) {
       Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -111,7 +126,11 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
     try {
       thisConsumer.face_.expressInterest
         (interest, onData, function(contentInterest) {
-        onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+        try {
+          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+        } catch (ex) {
+          console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
        });
     } catch (ex) {
       Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -201,10 +220,20 @@ Consumer.Error.callOnError = function(onError, exception, messagePrefix)
   if (!messagePrefix)
     messagePrefix = "";
 
-  if (exception instanceof Consumer.Error)
-    onError(exception.errorCode, exception.message);
-  else
-    onError(Consumer.ErrorCode.General, messagePrefix + exception);
+  if (exception instanceof Consumer.Error) {
+    try {
+      onError(exception.errorCode, exception.message);
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
+  else {
+    try {
+      onError(Consumer.ErrorCode.General, messagePrefix + exception);
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+  }
 }
 
 /**

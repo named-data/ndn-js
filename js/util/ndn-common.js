@@ -18,6 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var printStackTrace = require('../../contrib/stacktrace/stacktrace.js').printStackTrace;
+
 /**
  * NdnCommon has static NDN utility methods and constants.
  * @constructor
@@ -34,3 +36,14 @@ exports.NdnCommon = NdnCommon;
  * Face.getMaxNdnPacketSize() which is equivalent.
  */
 NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
+
+/**
+ * Get the error message plus its stack trace.
+ * @param {Error} error The error object.
+ * @returns {string} The error message, plus the stack trace with each line
+ * separated by '\n'.
+ */
+NdnCommon.getErrorWithStackTrace = function(error)
+{
+  return error + '\n' + printStackTrace({e: error}).join('\n');
+}

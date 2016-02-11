@@ -20,6 +20,7 @@
 
 var Name = require('../../name.js').Name;
 var PolicyManager = require('./policy-manager.js').PolicyManager;
+var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
  * @constructor
@@ -68,6 +69,9 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * done, used to track the verification progress.
  * @param {function} onVerified This does override to call
  * onVerified(dataOrInterest).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onVerifyFailed Override to ignore this.
  * @param {WireFormat} wireFormat
  * @returns {ValidationRequest} null for no further step for looking up a
@@ -76,7 +80,11 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
   (dataOrInterest, stepCount, onVerified, onVerifyFailed, wireFormat)
 {
-  onVerified(dataOrInterest);
+  try {
+    onVerified(dataOrInterest);
+  } catch (ex) {
+    console.log("Error in onVerified: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
   return null;
 };
 

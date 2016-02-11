@@ -86,7 +86,10 @@ def build (bld):
                        "contrib/securityLib/jsbn.js",
                        "contrib/securityLib/jsbn2.js"]
 
-        ndnjs = ["js/browserify-require.js",
+                 # Include stacktrace.js before browserify so that it's defined globally.
+        ndnjs = ["contrib/stacktrace/stacktrace.js",
+                 "js/browserify-require.js",
+                 "js/browserify-stacktrace.js",
                  "js/use-subtle-crypto.js"] + securityLib + [
                  "js/browserify.js",
                  "contrib/feross/base64-js.js",

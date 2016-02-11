@@ -25,6 +25,7 @@ var Name = require('../name.js').Name;
 var Blob = require('../util/blob.js').Blob;
 var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
 var SyncStateProto = require('./sync-state.js').SyncStateProto;
+var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
  * ChronoSync2013 implements the NDN ChronoSync protocol as described in the
@@ -45,9 +46,15 @@ var SyncStateProto = require('./sync-state.js').SyncStateProto;
  * isRecovery is true, a chat application would not want to re-display all
  * the associated chat messages.) The callback should send interests to fetch
  * the application data for the sequence numbers in the sync state.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {function} onInitialized This calls onInitialized() when the first sync data
  * is received (or the interest times out because there are no other
  * publishers yet).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} applicationDataPrefix The prefix used by this application instance
  * for application data. For example, "/my/local/prefix/ndnchat4/0K4wChff2v".
  * This is used when sending a sync message for a new sequence number.
@@ -68,6 +75,9 @@ var SyncStateProto = require('./sync-state.js').SyncStateProto;
  * @param {function} onRegisterFailed If failed to register the prefix to receive
  * interests for the applicationBroadcastPrefix, this calls
  * onRegisterFailed(applicationBroadcastPrefix).
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 var ChronoSync2013 = function ChronoSync2013
   (onReceivedSyncState, onInitialized, applicationDataPrefix,
@@ -382,7 +392,11 @@ ChronoSync2013.prototype.onData = function(interest, co)
   }
 
   // Instead of using Protobuf, use our own definition of SyncStates to pass to onReceivedSyncState.
-  this.onReceivedSyncState(syncStates, isRecovery);
+  try {
+    this.onReceivedSyncState(syncStates, isRecovery);
+  } catch (ex) {
+    console.log("Error in onReceivedSyncState: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
 
   var n = new Name(this.applicationBroadcastPrefix);
   n.append(this.digest_tree.getRoot());
@@ -405,7 +419,11 @@ ChronoSync2013.prototype.initialTimeOut = function(interest)
   console.log("no other people");
 
   this.usrseq++;
-  this.onInitialized();
+  try {
+    this.onInitialized();
+  } catch (ex) {
+    console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+  }
   var content = [new this.SyncState({ name:this.applicationDataPrefixUri,
                                  type:'UPDATE',
                                  seqno: {
@@ -585,7 +603,11 @@ ChronoSync2013.prototype.initialOndata = function(content)
       if (this.update(content_t)) {
         var newlog = new ChronoSync2013.DigestLogEntry(this.digest_tree.getRoot(), content_t);
         this.digest_log.push(newlog);
-        this.onInitialized();
+        try {
+          this.onInitialized();
+        } catch (ex) {
+          console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
       }
     }
   }
@@ -623,7 +645,11 @@ ChronoSync2013.prototype.initialOndata = function(content)
                                    }
                                  })];
     if (this.update(content)) {
-      this.onInitialized();
+      try {
+        this.onInitialized();
+      } catch (ex) {
+        console.log("Error in onInitialized: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
     }
   }
 };
