@@ -20892,29 +20892,48 @@ KeyChain.prototype.getPolicyManager = function()
  * described above.
  */
 KeyChain.prototype.sign = function
-  (target, certificateNameOrWireFormat, wireFormat, onComplete, onError)
+  (target, certificateName, wireFormat, onComplete, onError)
 {
-  var certificateName;
-  if (certificateNameOrWireFormat instanceof Name)
-    // sign(target, certificateName [, wireFormat] [, onComplete] [, onError]).
-    // sign(target, certificateName [, onComplete] [, onError]).
-    certificateName = certificateNameOrWireFormat;
-    // If wireFormat is omitted, we'll shift below.
-  else {
-    // sign(target [, wireFormat] [, onComplete] [, onError]).
-    // sign(target [, onComplete] [, onError]).
-    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
-    onError = onComplete;
-    onComplete = wireFormat;
-    wireFormat = certificateNameOrWireFormat;
+  var arg2 = certificateName;
+  var arg3 = wireFormat;
+  var arg4 = onComplete;
+  var arg5 = onError;
+  // arg2,            arg3,       arg4,       arg5
+  // certificateName, wireFormat, onComplete, onError
+  // certificateName, wireFormat, null,       null
+  // certificateName, onComplete, onError,    null
+  // certificateName, null,       null,       null
+  // wireFormat,      onComplete, onError,    null
+  // wireFormat,      null,       null,       null
+  // onComplete,      onError,    null,       null
+  // null,            null,       null,       null
+  if (arg2 instanceof Name)
+    certificateName = arg2;
+  else
     certificateName = null;
-  }
 
-  if (!(wireFormat instanceof WireFormat)) {
-    // wireFormat is omitted. Shift the parameters.
-    onError = onComplete;
-    onComplete = wireFormat;
-    wireFormat = undefined;
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === "function") {
+    onComplete = arg2;
+    onError = arg3;
+  }
+  else if (typeof arg3 === "function") {
+    onComplete = arg3;
+    onError = arg4;
+  }
+  else if (typeof arg4 === "function") {
+    onComplete = arg4;
+    onError = arg5;
+  }
+  else {
+    onComplete = null;
+    onError = null;
   }
 
   return SyncPromise.complete(onComplete, onError,
