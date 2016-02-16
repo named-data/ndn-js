@@ -25,6 +25,7 @@ var Name = require('../name.js').Name;
  * An NdnRegexMatcher has static methods to convert an NDN regex
  * (http://redmine.named-data.net/projects/ndn-cxx/wiki/Regex) to a JavaScript
  * RegExp that can match against URIs.
+ * @constructor
  */
 var NdnRegexMatcher = function NdnRegexMatcher()
 {

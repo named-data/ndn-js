@@ -33,6 +33,7 @@ var Blob = require('../util/blob.js').Blob;
  *
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
+ * @constructor
  */
 var ProtobufTlv = function ProtobufTlv()
 {

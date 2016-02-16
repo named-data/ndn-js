@@ -78,6 +78,7 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @constructor
  */
 var ChronoSync2013 = function ChronoSync2013
   (onReceivedSyncState, onInitialized, applicationDataPrefix,

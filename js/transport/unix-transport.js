@@ -23,6 +23,7 @@ var Transport = require('./transport.js').Transport;
 
 /**
  * A UnixTransport connects to the forwarder using a Unix socket for Node.js.
+ * @constructor
  */
 var UnixTransport = function UnixTransport()
 {

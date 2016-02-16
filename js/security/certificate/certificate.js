@@ -32,6 +32,7 @@ var CertificateExtension = require('./certificate-extension.js').CertificateExte
  * @param {Data} data (optional) The data packet with the content to decode.
  * If omitted, create a Certificate with default values and the Data content
  * is empty.
+ * @constructor
  */
 var Certificate = function Certificate(data)
 {

@@ -37,6 +37,7 @@ var LOG = require('../log.js').Log.LOG;
  * in milliseconds between each check to clean up stale content in the cache. If
  * omitted, use a default of 1000 milliseconds. If this is a large number, then
  * effectively the stale content will not be removed from the cache.
+ * @constructor
  */
 var MemoryContentCache = function MemoryContentCache
   (face, cleanupIntervalMilliseconds)

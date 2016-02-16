@@ -24,6 +24,9 @@ var SecurityException = require('../../security//security-exception.js').Securit
 var Certificate = require('./certificate.js').Certificate;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 
+/**
+ * @constructor
+ */
 var IdentityCertificate = function IdentityCertificate(data)
 {
   // Call the base constructor.

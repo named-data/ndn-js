@@ -33,6 +33,7 @@ var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
  * decoding.
  * @param {Blob} keyDer The blob of the SubjectPublicKeyInfo DER.
  * @throws {UnrecognizedKeyFormatException} if can't decode the key DER.
+ * @constructor
  */
 var PublicKey = function PublicKey(keyDer)
 {

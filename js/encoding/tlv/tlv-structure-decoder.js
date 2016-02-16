@@ -21,6 +21,7 @@ var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**
  * Create and initialize a TlvStructureDecoder.
+ * @constructor
  */
 var TlvStructureDecoder = function TlvStructureDecoder()
 {

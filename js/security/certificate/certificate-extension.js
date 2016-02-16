@@ -27,6 +27,7 @@ var OID = require('../../encoding/oid.js').OID;
  * @param {string|OID} oid The oid of subject description entry.
  * @param {boolean} isCritical If true, the extension must be handled.
  * @param {Blob} value The extension value.
+ * @constructor
  */
 var CertificateExtension = function CertificateExtension(oid, isCritical, value)
 {

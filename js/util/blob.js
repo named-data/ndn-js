@@ -32,6 +32,7 @@
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
  * treat the value as immutable and promise not to change it.
+ * @constructor
  */
 var Blob = function Blob(value, copy)
 {

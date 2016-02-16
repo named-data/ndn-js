@@ -25,6 +25,7 @@
  * again with double the interestLifetime. If the interesLifetime goes
  * over settings.maxInterestLifetime, then call the given onTimeout. If this
  * internally gets onData, just call the given onData.
+ * @constructor
  */
 var ExponentialReExpress = function ExponentialReExpress
   (face, onData, onTimeout, settings)

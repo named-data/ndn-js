@@ -22,6 +22,9 @@
 var Crypto = require('../crypto.js');
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
+/**
+ * @constructor
+ */
 var DigestTree = function DigestTree()
 {
   this.root = "00";

@@ -25,6 +25,7 @@ var Transport = require('./transport.js').Transport;
 
 /**
  * A TcpTransport connects to the forwarder using TCP for Node.js.
+ * @constructor
  */
 var TcpTransport = function TcpTransport()
 {

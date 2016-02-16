@@ -24,6 +24,7 @@ var IdentityCertificate = require('../certificate/identity-certificate.js').Iden
 /**
  * A CertificateCache is used to save other users' certificate during
  * verification.
+ * @constructor
  */
 var CertificateCache = function CertificateCache()
 {

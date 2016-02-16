@@ -33,6 +33,7 @@ var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
  * The AesAlgorithm class provides static methods to manipulate keys, encrypt
  * and decrypt using the AES symmetric key cipher.
  * @note This class is an experimental feature. The API may change.
+ * @constructor
  */
 var AesAlgorithm = function AesAlgorithm()
 {

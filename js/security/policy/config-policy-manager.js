@@ -71,6 +71,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * timestamp is kept in the store (milliseconds). If omitted, use a default value.
  * @param {number} maxTrackedKeys The maximum number of public key use
  * timestamps to track. If omitted, use a default.
+ * @constructor
  */
 var ConfigPolicyManager = function ConfigPolicyManager
   (configFileName, certificateCache, searchDepth, graceInterval,

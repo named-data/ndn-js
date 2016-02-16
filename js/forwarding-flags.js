@@ -22,6 +22,7 @@
  * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
  * bits are changed, amended or deprecated.
  * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
+ * @constructor
  */
 var ForwardingFlags = function ForwardingFlags(value)
 {

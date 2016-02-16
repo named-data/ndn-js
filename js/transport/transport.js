@@ -19,6 +19,7 @@
 
 /**
  * Transport is a base class for specific transport classes such as TcpTransport.
+ * @constructor
  */
 var Transport = function Transport()
 {

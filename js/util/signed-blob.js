@@ -29,6 +29,7 @@ var Blob = require('./blob.js').Blob;
  * encoding of the beginning of the signed portion. If omitted, set to 0.
  * @param {number} signedPortionEndOffset (optional) The offset in the encoding
  * of the end of the signed portion. If omitted, set to 0.
+ * @constructor
  */
 var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset)
 {

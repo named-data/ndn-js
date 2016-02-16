@@ -43,6 +43,7 @@ catch (e) {}
  * The RsaAlgorithm class provides static methods to manipulate keys, encrypt
  * and decrypt using RSA.
  * @note This class is an experimental feature. The API may change.
+ * @constructor
  */
 var RsaAlgorithm = function RsaAlgorithm()
 {

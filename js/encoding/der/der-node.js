@@ -32,6 +32,7 @@ var DerNodeType = require('./der-node-type.js').DerNodeType;
  * Create a generic DER node with the given nodeType. This is a private
  * constructor used by one of the public DerNode subclasses defined below.
  * @param {number} nodeType One of the defined DER DerNodeType constants.
+ * @constructor
  */
 var DerNode = function DerNode(nodeType)
 {

@@ -28,6 +28,7 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode;
  * Create a new CertificateSubjectDescription.
  * @param {string|OID} oid The oid of the subject description entry.
  * @param {string} value The value of the subject description entry.
+ * @constructor
  */
 var CertificateSubjectDescription = function CertificateSubjectDescription
   (oid, value)

@@ -31,6 +31,7 @@ var fs = require('fs');
  *
  * Nodes can be accessed with a path syntax, as long as nodes in the path do not
  * contain the path separator '/' in their names.
+ * @constructor
  */
 var BoostInfoTree = function BoostInfoTree(value, parent)
 {
@@ -177,6 +178,7 @@ BoostInfoTree.prototype.find = function(treeName)
 /**
  * A BoostInfoParser reads files in Boost's INFO format and constructs a
  * BoostInfoTree.
+ * @constructor
  */
 var BoostInfoParser = function BoostInfoParser()
 {
