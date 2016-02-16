@@ -29,6 +29,8 @@ var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+var IdentityManager = require('./identity/identity-manager.js').IdentityManager;
+var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -36,15 +38,23 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * Note: This class is an experimental feature. See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/key-chain.html .
  *
- * Create a new KeyChain with the given IdentityManager and PolicyManager.
- * @param {IdentityManager} identityManager An object of a subclass of
- * IdentityManager.
- * @param {PolicyManager} policyManager An object of a subclass of
- * PolicyManager.
+ * Create a new KeyChain with the identityManager and policyManager.
+ * @param {IdentityManager} identityManager (optional) The identity manager as a
+ * subclass of IdentityManager. If omitted, use the default IdentityManager
+ * constructor.
+ * @param {PolicyManager} policyManager (optional) The policy manager as a
+ * subclass of PolicyManager. If omitted, use NoVerifyPolicyManager.
+ * @throws SecurityException if this is not in Node.js and this uses the default
+ * IdentityManager constructor. (See IdentityManager for details.)
  * @constructor
  */
 var KeyChain = function KeyChain(identityManager, policyManager)
 {
+  if (!identityManager)
+    identityManager = new IdentityManager();
+  if (!policyManager)
+    policyManager = new NoVerifyPolicyManager();
+
   this.identityManager = identityManager;
   this.policyManager = policyManager;
   this.face = null;

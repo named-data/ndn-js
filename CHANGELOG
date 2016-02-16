@@ -1,9 +1,10 @@
-Interim changes since NDN-JS v0.10 (2016-02-10)
+Interim changes since NDN-JS v0.10 (2016-02-16)
 -----------------------------------------------
 
 Changes
 * In MemoryContentCache.registerPrefix, added optional onRegisterSuccess. (Thanks to Zhehao Wang.)
 * http://redmine.named-data.net/issues/3152 In API callbacks, catch and log exceptions.
+* http://redmine.named-data.net/issues/2366 Default KeyChain constructor for Node.js in Linux.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.

@@ -6939,6 +6939,7 @@ NdnCommon.getErrorWithStackTrace = function(error)
  * again with double the interestLifetime. If the interesLifetime goes
  * over settings.maxInterestLifetime, then call the given onTimeout. If this
  * internally gets onData, just call the given onData.
+ * @constructor
  */
 var ExponentialReExpress = function ExponentialReExpress
   (face, onData, onTimeout, settings)
@@ -7042,6 +7043,7 @@ ExponentialReExpress.prototype.onTimeout = function(interest)
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
  * treat the value as immutable and promise not to change it.
+ * @constructor
  */
 var Blob = function Blob(value, copy)
 {
@@ -7188,6 +7190,7 @@ var Blob = require('./blob.js').Blob;
  * encoding of the beginning of the signed portion. If omitted, set to 0.
  * @param {number} signedPortionEndOffset (optional) The offset in the encoding
  * of the end of the signed portion. If omitted, set to 0.
+ * @constructor
  */
 var SignedBlob = function SignedBlob(value, signedPortionBeginOffset, signedPortionEndOffset)
 {
@@ -8803,6 +8806,7 @@ var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**
  * Create and initialize a TlvStructureDecoder.
+ * @constructor
  */
 var TlvStructureDecoder = function TlvStructureDecoder()
 {
@@ -9036,6 +9040,7 @@ var Blob = require('../util/blob.js').Blob;
  *
  * Protobuf has no "outer" message type, so you need to put your TLV message
  * inside an outer "typeless" message.
+ * @constructor
  */
 var ProtobufTlv = function ProtobufTlv()
 {
@@ -9243,6 +9248,9 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/**
+ * @constructor
+ */
 var OID = function OID(oid)
 {
   if (typeof oid === 'string') {
@@ -9818,6 +9826,7 @@ var DerNodeType = require('./der-node-type.js').DerNodeType;
  * Create a generic DER node with the given nodeType. This is a private
  * constructor used by one of the public DerNode subclasses defined below.
  * @param {number} nodeType One of the defined DER DerNodeType constants.
+ * @constructor
  */
 var DerNode = function DerNode(nodeType)
 {
@@ -10643,6 +10652,7 @@ var fs = require('fs');
  *
  * Nodes can be accessed with a path syntax, as long as nodes in the path do not
  * contain the path separator '/' in their names.
+ * @constructor
  */
 var BoostInfoTree = function BoostInfoTree(value, parent)
 {
@@ -10789,6 +10799,7 @@ BoostInfoTree.prototype.find = function(treeName)
 /**
  * A BoostInfoParser reads files in Boost's INFO format and constructs a
  * BoostInfoTree.
+ * @constructor
  */
 var BoostInfoParser = function BoostInfoParser()
 {
@@ -11012,6 +11023,7 @@ var LOG = require('../log.js').Log.LOG;
  * in milliseconds between each check to clean up stale content in the cache. If
  * omitted, use a default of 1000 milliseconds. If this is a large number, then
  * effectively the stale content will not be removed from the cache.
+ * @constructor
  */
 var MemoryContentCache = function MemoryContentCache
   (face, cleanupIntervalMilliseconds)
@@ -11473,6 +11485,7 @@ var Name = require('../name.js').Name;
  * An NdnRegexMatcher has static methods to convert an NDN regex
  * (http://redmine.named-data.net/projects/ndn-cxx/wiki/Regex) to a JavaScript
  * RegExp that can match against URIs.
+ * @constructor
  */
 var NdnRegexMatcher = function NdnRegexMatcher()
 {
@@ -11872,6 +11885,7 @@ SegmentFetcher.endsWithSegmentNumber = function(name)
 
 /**
  * Transport is a base class for specific transport classes such as TcpTransport.
+ * @constructor
  */
 var Transport = function Transport()
 {
@@ -14251,6 +14265,7 @@ var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
  * decoding.
  * @param {Blob} keyDer The blob of the SubjectPublicKeyInfo DER.
  * @throws {UnrecognizedKeyFormatException} if can't decode the key DER.
+ * @constructor
  */
 var PublicKey = function PublicKey(keyDer)
 {
@@ -14366,6 +14381,7 @@ var OID = require('../../encoding/oid.js').OID;
  * @param {string|OID} oid The oid of subject description entry.
  * @param {boolean} isCritical If true, the extension must be handled.
  * @param {Blob} value The extension value.
+ * @constructor
  */
 var CertificateExtension = function CertificateExtension(oid, isCritical, value)
 {
@@ -14451,6 +14467,7 @@ var DerNode = require('../../encoding/der/der-node.js').DerNode;
  * Create a new CertificateSubjectDescription.
  * @param {string|OID} oid The oid of the subject description entry.
  * @param {string} value The value of the subject description entry.
+ * @constructor
  */
 var CertificateSubjectDescription = function CertificateSubjectDescription
   (oid, value)
@@ -14527,6 +14544,7 @@ var CertificateExtension = require('./certificate-extension.js').CertificateExte
  * @param {Data} data (optional) The data packet with the content to decode.
  * If omitted, create a Certificate with default values and the Data content
  * is empty.
+ * @constructor
  */
 var Certificate = function Certificate(data)
 {
@@ -14833,6 +14851,9 @@ var SecurityException = require('../../security//security-exception.js').Securit
 var Certificate = require('./certificate.js').Certificate;
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 
+/**
+ * @constructor
+ */
 var IdentityCertificate = function IdentityCertificate(data)
 {
   // Call the base constructor.
@@ -17681,22 +17702,51 @@ var IdentityCertificate = require('../certificate/identity-certificate.js').Iden
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage;
+var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivateKeyStorage;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
  * and certificates.
  *
- * Create a new IdentityManager to use the given IdentityStorage and
+ * Create a new IdentityManager to use the IdentityStorage and
  * PrivateKeyStorage.
  * @param {IdentityStorage} identityStorage An object of a subclass of
- * IdentityStorage.
- * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of
- * PrivateKeyStorage.
+ * IdentityStorage. In Node.js, if this is omitted then use BasicIdentityStorage.
+ * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of 
+ * PrivateKeyStorage. In Node.js, if this is omitted then use the default
+ * PrivateKeyStorage for your system, which is FilePrivateKeyStorage for any
+ * system other than OS X. (OS X key chain storage is not yet implemented, so
+ * you must supply a different PrivateKeyStorage.)
+ * @throws SecurityException if this is not in Node.js and identityStorage or
+ * privateKeyStorage is omitted.
  * @constructor
  */
 var IdentityManager = function IdentityManager
   (identityStorage, privateKeyStorage)
 {
+  if (!identityStorage) {
+    if (!BasicIdentityStorage)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("IdentityManager: If not in Node.js then you must supply an identityStorage."));
+
+    identityStorage = new BasicIdentityStorage();
+  }
+  if (!privateKeyStorage) {
+    if (!FilePrivateKeyStorage)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("IdentityManager: If not in Node.js then you must supply a privateKeyStorage."));
+
+    // Assume we are in Node.js, so check the system.
+    if (process.platform === "darwin")
+      throw new SecurityException(new Error
+        ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
+    else
+      privateKeyStorage = new FilePrivateKeyStorage();
+  }
+
   this.identityStorage = identityStorage;
   this.privateKeyStorage = privateKeyStorage;
 };
@@ -19071,6 +19121,7 @@ var IdentityCertificate = require('../certificate/identity-certificate.js').Iden
 /**
  * A CertificateCache is used to save other users' certificate during
  * verification.
+ * @constructor
  */
 var CertificateCache = function CertificateCache()
 {
@@ -19199,6 +19250,7 @@ var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
  * timestamp is kept in the store (milliseconds). If omitted, use a default value.
  * @param {number} maxTrackedKeys The maximum number of public key use
  * timestamps to track. If omitted, use a default.
+ * @constructor
  */
 var ConfigPolicyManager = function ConfigPolicyManager
   (configFileName, certificateCache, searchDepth, graceInterval,
@@ -20397,6 +20449,8 @@ var RsaKeyParams = require('./key-params.js').RsaKeyParams;
 var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+var IdentityManager = require('./identity/identity-manager.js').IdentityManager;
+var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**
  * A KeyChain provides a set of interfaces to the security library such as
@@ -20404,15 +20458,23 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * Note: This class is an experimental feature. See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/key-chain.html .
  *
- * Create a new KeyChain with the given IdentityManager and PolicyManager.
- * @param {IdentityManager} identityManager An object of a subclass of
- * IdentityManager.
- * @param {PolicyManager} policyManager An object of a subclass of
- * PolicyManager.
+ * Create a new KeyChain with the identityManager and policyManager.
+ * @param {IdentityManager} identityManager (optional) The identity manager as a
+ * subclass of IdentityManager. If omitted, use the default IdentityManager
+ * constructor.
+ * @param {PolicyManager} policyManager (optional) The policy manager as a
+ * subclass of PolicyManager. If omitted, use NoVerifyPolicyManager.
+ * @throws SecurityException if this is not in Node.js and this uses the default
+ * IdentityManager constructor. (See IdentityManager for details.)
  * @constructor
  */
 var KeyChain = function KeyChain(identityManager, policyManager)
 {
+  if (!identityManager)
+    identityManager = new IdentityManager();
+  if (!policyManager)
+    policyManager = new NoVerifyPolicyManager();
+
   this.identityManager = identityManager;
   this.policyManager = policyManager;
   this.face = null;
@@ -22111,6 +22173,7 @@ Object.defineProperty(Interest.prototype, "nonce",
  * a registered prefix.  We use a separate ForwardingFlags object to retain future compatibility if the daemon forwarding
  * bits are changed, amended or deprecated.
  * Create a new ForwardingFlags with "childInherit" set and all other flags cleared.
+ * @constructor
  */
 var ForwardingFlags = function ForwardingFlags(value)
 {
@@ -23704,6 +23767,7 @@ var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
  * The AesAlgorithm class provides static methods to manipulate keys, encrypt
  * and decrypt using the AES symmetric key cipher.
  * @note This class is an experimental feature. The API may change.
+ * @constructor
  */
 var AesAlgorithm = function AesAlgorithm()
 {
@@ -24280,6 +24344,7 @@ catch (e) {}
  * The RsaAlgorithm class provides static methods to manipulate keys, encrypt
  * and decrypt using RSA.
  * @note This class is an experimental feature. The API may change.
+ * @constructor
  */
 var RsaAlgorithm = function RsaAlgorithm()
 {
@@ -28805,6 +28870,7 @@ var NdnCommon = require('../util/ndn-common.js').NdnCommon;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @constructor
  */
 var ChronoSync2013 = function ChronoSync2013
   (onReceivedSyncState, onInitialized, applicationDataPrefix,
@@ -29408,6 +29474,9 @@ ChronoSync2013.prototype.dummyOnData = function(interest, data)
 var Crypto = require('../crypto.js');
 var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
+/**
+ * @constructor
+ */
 var DigestTree = function DigestTree()
 {
   this.root = "00";
