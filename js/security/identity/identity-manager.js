@@ -35,22 +35,51 @@ var IdentityCertificate = require('../certificate/identity-certificate.js').Iden
 var PublicKey = require('../certificate/public-key.js').PublicKey;
 var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage;
+var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivateKeyStorage;
 
 /**
  * An IdentityManager is the interface of operations related to identity, keys,
  * and certificates.
  *
- * Create a new IdentityManager to use the given IdentityStorage and
+ * Create a new IdentityManager to use the IdentityStorage and
  * PrivateKeyStorage.
  * @param {IdentityStorage} identityStorage An object of a subclass of
- * IdentityStorage.
- * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of
- * PrivateKeyStorage.
+ * IdentityStorage. In Node.js, if this is omitted then use BasicIdentityStorage.
+ * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of 
+ * PrivateKeyStorage. In Node.js, if this is omitted then use the default
+ * PrivateKeyStorage for your system, which is FilePrivateKeyStorage for any
+ * system other than OS X. (OS X key chain storage is not yet implemented, so
+ * you must supply a different PrivateKeyStorage.)
+ * @throws SecurityException if this is not in Node.js and identityStorage or
+ * privateKeyStorage is omitted.
  * @constructor
  */
 var IdentityManager = function IdentityManager
   (identityStorage, privateKeyStorage)
 {
+  if (!identityStorage) {
+    if (!BasicIdentityStorage)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("IdentityManager: If not in Node.js then you must supply an identityStorage."));
+
+    identityStorage = new BasicIdentityStorage();
+  }
+  if (!privateKeyStorage) {
+    if (!FilePrivateKeyStorage)
+      // Assume we are in the browser.
+      throw new SecurityException(new Error
+        ("IdentityManager: If not in Node.js then you must supply a privateKeyStorage."));
+
+    // Assume we are in Node.js, so check the system.
+    if (process.platform === "darwin")
+      throw new SecurityException(new Error
+        ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
+    else
+      privateKeyStorage = new FilePrivateKeyStorage();
+  }
+
   this.identityStorage = identityStorage;
   this.privateKeyStorage = privateKeyStorage;
 };
