@@ -210,7 +210,8 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
         else
           // We are in an async promise callback, so a thrown exception won't
           // reach the caller. Just log it.
-          console.log("Uncaught exception from a Promise: " + err);
+          console.log("Uncaught exception from a Promise: " + 
+            NdnCommon.getErrorWithStackTrace(err));
       }
     });
   else
