@@ -14,7 +14,7 @@ The above copyright notice and this permission notice shall be included in all c
 code.google.com/p/crypto-js/wiki/License
 */
 
-var C = require('./core.js').CryptoJS;
+var C = CryptoJS;
 (function (Math) {
     // Shortcuts
     var C_lib = C.lib;
@@ -193,6 +193,3 @@ var C = require('./core.js').CryptoJS;
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
-
-exports.CryptoJS = C;
-module.exports = exports;
