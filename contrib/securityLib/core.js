@@ -1,18 +1,11 @@
-/*
-CryptoJS v3.1.2
-code.google.com/p/crypto-js
-(c) 2009-2013 by Jeff Mott. All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
-associated documentation files (the "Software"), to deal in the Software without restriction, including 
-without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
-sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-code.google.com/p/crypto-js/wiki/License
-*/
+/*! CryptoJS v3.1.2 core-fix.js
+ * code.google.com/p/crypto-js
+ * (c) 2009-2013 by Jeff Mott. All rights reserved.
+ * code.google.com/p/crypto-js/wiki/License
+ * THIS IS FIX of 'core.js' to fix Hmac issue.
+ * https://code.google.com/p/crypto-js/issues/detail?id=84
+ * https://crypto-js.googlecode.com/svn-history/r667/branches/3.x/src/core.js
+ */
 /**
  * CryptoJS core components.
  */
@@ -225,14 +218,11 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
                     var thatByte = (thatWords[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
                     thisWords[(thisSigBytes + i) >>> 2] |= thatByte << (24 - ((thisSigBytes + i) % 4) * 8);
                 }
-            } else if (thatWords.length > 0xffff) {
+            } else {
                 // Copy one word at a time
                 for (var i = 0; i < thatSigBytes; i += 4) {
                     thisWords[(thisSigBytes + i) >>> 2] = thatWords[i >>> 2];
                 }
-            } else {
-                // Copy all words at once
-                thisWords.push.apply(thisWords, thatWords);
             }
             this.sigBytes += thatSigBytes;
 
@@ -719,6 +709,3 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
-
-exports.CryptoJS = CryptoJS;
-module.exports = exports;

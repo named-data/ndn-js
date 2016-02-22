@@ -36,7 +36,7 @@
     function hash(){
       var input = document.getElementById('contentname').value;
 
-      var sha256 = ndn.createHash('sha256')
+      var sha256 = exports.createHash('sha256')
       var data = DataUtils.toNumbersFromString(input);
       // Call update multiple times in small chunks to test the buffering.
       var chunkSize = 3;

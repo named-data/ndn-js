@@ -1,26 +1,7 @@
-// Copyright (c) 2003-2009  Tom Wu
-// All Rights Reserved.
-// 
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to
-// permit persons to whom the Software is furnished to do so, subject to
-// the following conditions:
-//
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
-// 
-// See "jrsasig-THIRDPARTYLICENSE.txt" for details.
-
-var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-  , b64pad="="
-  , BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz";
-
-function int2char(n) {
-  return BI_RM.charAt(n); 
-}
+/*! (c) Tom Wu | http://www-cs-students.stanford.edu/~tjw/jsbn/
+ */
+var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+var b64pad="=";
 
 function hex2b64(h) {
   var i;
@@ -48,6 +29,7 @@ function b64tohex(s) {
   var i;
   var k = 0; // b64 state, 0-3
   var slop;
+  var v;
   for(i = 0; i < s.length; ++i) {
     if(s.charAt(i) == b64pad) break;
     v = b64map.indexOf(s.charAt(i));
@@ -90,9 +72,3 @@ function b64toBA(s) {
   }
   return a;
 }
-
-exports.b64tohex = b64tohex;
-exports.b64toBA  = b64toBA;
-exports.hex2b64  = hex2b64;
-
-module.exports = exports;
