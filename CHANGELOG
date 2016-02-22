@@ -5,6 +5,7 @@ Changes
 * In MemoryContentCache.registerPrefix, added optional onRegisterSuccess. (Thanks to Zhehao Wang.)
 * http://redmine.named-data.net/issues/3152 In API callbacks, catch and log exceptions.
 * http://redmine.named-data.net/issues/2366 Default KeyChain constructor for Node.js in Linux.
+* Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.
