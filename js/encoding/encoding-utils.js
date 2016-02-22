@@ -23,9 +23,10 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ContentType = require('../meta-info.js').ContentType;
 var WireFormat = require('./wire-format.js').WireFormat;
-var LOG = require('../log.js').Log.LOG;
 
 /**
  * An EncodingUtils has static methods for encoding data.
@@ -126,6 +127,13 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof HmacWithSha256Signature) {
+    var signature = data.getSignature();
+    append("HmacWithSha256 signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
