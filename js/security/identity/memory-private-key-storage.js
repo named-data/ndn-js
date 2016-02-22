@@ -38,12 +38,6 @@ try {
   rsaKeygen = require('rsa-keygen');
 }
 catch (e) {}
-var RSAKey = null;
-try {
-  // This is included in ndn.js for the browser.
-  RSAKey = require().RSAKey;
-}
-catch (e) {}
 
 /**
  * MemoryPrivateKeyStorage class extends PrivateKeyStorage to implement private
@@ -186,10 +180,10 @@ MemoryPrivateKeyStorage.prototype.generateKeyPairPromise = function
   else {
     return SyncPromise.resolve()
     .then(function() {
-      if (RSAKey) {
+      if (typeof RSAKey !== 'undefined') {
         // Assume we are in the browser.
         if (params.getKeyType() === KeyType.RSA) {
-          var rsaKey = new (require().RSAKey)();
+          var rsaKey = new RSAKey();
           rsaKey.generate(params.getKeySize(), '010001');
           thisStore.setKeyPairForKeyName
             (keyName, params.getKeyType(),
