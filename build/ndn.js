@@ -625,21 +625,14 @@ function DetectSubtleCrypto(){
 var UseSubtleCrypto = DetectSubtleCrypto();
 
 exports.UseSubtleCrypto = UseSubtleCrypto;
-/*
-CryptoJS v3.1.2
-code.google.com/p/crypto-js
-(c) 2009-2013 by Jeff Mott. All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
-associated documentation files (the "Software"), to deal in the Software without restriction, including 
-without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or 
-sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-code.google.com/p/crypto-js/wiki/License
-*/
+/*! CryptoJS v3.1.2 core-fix.js
+ * code.google.com/p/crypto-js
+ * (c) 2009-2013 by Jeff Mott. All rights reserved.
+ * code.google.com/p/crypto-js/wiki/License
+ * THIS IS FIX of 'core.js' to fix Hmac issue.
+ * https://code.google.com/p/crypto-js/issues/detail?id=84
+ * https://crypto-js.googlecode.com/svn-history/r667/branches/3.x/src/core.js
+ */
 /**
  * CryptoJS core components.
  */
@@ -852,14 +845,11 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
                     var thatByte = (thatWords[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
                     thisWords[(thisSigBytes + i) >>> 2] |= thatByte << (24 - ((thisSigBytes + i) % 4) * 8);
                 }
-            } else if (thatWords.length > 0xffff) {
+            } else {
                 // Copy one word at a time
                 for (var i = 0; i < thatSigBytes; i += 4) {
                     thisWords[(thisSigBytes + i) >>> 2] = thatWords[i >>> 2];
                 }
-            } else {
-                // Copy all words at once
-                thisWords.push.apply(thisWords, thatWords);
             }
             this.sigBytes += thatSigBytes;
 
@@ -1346,9 +1336,6 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
-
-exports.CryptoJS = CryptoJS;
-module.exports = exports;
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1365,7 +1352,7 @@ The above copyright notice and this permission notice shall be included in all c
 code.google.com/p/crypto-js/wiki/License
 */
 
-var C = require('./core.js').CryptoJS;
+var C = CryptoJS;
 (function (Math) {
     // Shortcuts
     var C_lib = C.lib;
@@ -1544,9 +1531,6 @@ var C = require('./core.js').CryptoJS;
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
-
-exports.CryptoJS = C;
-module.exports = exports;
 /*! (c) Tom Wu | http://www-cs-students.stanford.edu/~tjw/jsbn/
  */
 var b64map="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -2176,12 +2160,12 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
-/*! crypto-1.0.4.js (c) 2013 Kenji Urushima | kjur.github.com/jsrsasign/license
+/*! crypto-1.1.7.js (c) 2013-2015 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
  * crypto.js - Cryptographic Algorithm Provider class
  *
- * Copyright (c) 2013 Kenji Urushima (kenji.urushima@gmail.com)
+ * Copyright (c) 2013-2015 Kenji Urushima (kenji.urushima@gmail.com)
  *
  * This software is licensed under the terms of the MIT License.
  * http://kjur.github.com/jsrsasign/license
@@ -2192,10 +2176,10 @@ RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 
 /**
  * @fileOverview
- * @name crypto-1.0.js
+ * @name crypto-1.1.js
  * @author Kenji Urushima kenji.urushima@gmail.com
- * @version 1.0.4 (2013-Mar-28)
- * @since 2.2
+ * @version 1.1.7 (2015-Oct-11)
+ * @since jsrsasign 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
@@ -2226,6 +2210,7 @@ if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
  * @name KJUR.crypto.Util
  * @class static object for cryptographic function utilities
  * @property {Array} DIGESTINFOHEAD PKCS#1 DigestInfo heading hexadecimal bytes for each hash algorithms
+ * @property {Array} DEFAULTPROVIDER associative array of default provider name for each hash and signature algorithms
  * @description
  */
 KJUR.crypto.Util = new function() {
@@ -2238,6 +2223,67 @@ KJUR.crypto.Util = new function() {
 	'md2':       "3020300c06082a864886f70d020205000410",
 	'md5':       "3020300c06082a864886f70d020505000410",
 	'ripemd160': "3021300906052b2403020105000414"
+    };
+
+    /*
+     * @since crypto 1.1.1
+     */
+    this.DEFAULTPROVIDER = {
+	'md5':			'cryptojs',
+	'sha1':			'cryptojs',
+	'sha224':		'cryptojs',
+	'sha256':		'cryptojs',
+	'sha384':		'cryptojs',
+	'sha512':		'cryptojs',
+	'ripemd160':		'cryptojs',
+	'hmacmd5':		'cryptojs',
+	'hmacsha1':		'cryptojs',
+	'hmacsha224':		'cryptojs',
+	'hmacsha256':		'cryptojs',
+	'hmacsha384':		'cryptojs',
+	'hmacsha512':		'cryptojs',
+	'hmacripemd160':	'cryptojs',
+
+	'MD5withRSA':		'cryptojs/jsrsa',
+	'SHA1withRSA':		'cryptojs/jsrsa',
+	'SHA224withRSA':	'cryptojs/jsrsa',
+	'SHA256withRSA':	'cryptojs/jsrsa',
+	'SHA384withRSA':	'cryptojs/jsrsa',
+	'SHA512withRSA':	'cryptojs/jsrsa',
+	'RIPEMD160withRSA':	'cryptojs/jsrsa',
+
+	'MD5withECDSA':		'cryptojs/jsrsa',
+	'SHA1withECDSA':	'cryptojs/jsrsa',
+	'SHA224withECDSA':	'cryptojs/jsrsa',
+	'SHA256withECDSA':	'cryptojs/jsrsa',
+	'SHA384withECDSA':	'cryptojs/jsrsa',
+	'SHA512withECDSA':	'cryptojs/jsrsa',
+	'RIPEMD160withECDSA':	'cryptojs/jsrsa',
+
+	'SHA1withDSA':		'cryptojs/jsrsa',
+	'SHA224withDSA':	'cryptojs/jsrsa',
+	'SHA256withDSA':	'cryptojs/jsrsa',
+
+	'MD5withRSAandMGF1':		'cryptojs/jsrsa',
+	'SHA1withRSAandMGF1':		'cryptojs/jsrsa',
+	'SHA224withRSAandMGF1':		'cryptojs/jsrsa',
+	'SHA256withRSAandMGF1':		'cryptojs/jsrsa',
+	'SHA384withRSAandMGF1':		'cryptojs/jsrsa',
+	'SHA512withRSAandMGF1':		'cryptojs/jsrsa',
+	'RIPEMD160withRSAandMGF1':	'cryptojs/jsrsa'
+    };
+
+    /*
+     * @since crypto 1.1.2
+     */
+    this.CRYPTOJSMESSAGEDIGESTNAME = {
+	'md5':		'CryptoJS.algo.MD5',
+	'sha1':		'CryptoJS.algo.SHA1',
+	'sha224':	'CryptoJS.algo.SHA224',
+	'sha256':	'CryptoJS.algo.SHA256',
+	'sha384':	'CryptoJS.algo.SHA384',
+	'sha512':	'CryptoJS.algo.SHA512',
+	'ripemd160':	'CryptoJS.algo.RIPEMD160'
     };
 
     /**
@@ -2260,7 +2306,7 @@ KJUR.crypto.Util = new function() {
      * @name getPaddedDigestInfoHex
      * @memberOf KJUR.crypto.Util
      * @function
-     * @param {String} hHash hexadecimal hash value
+     * @param {String} hHash hexadecimal hash value of message to be signed
      * @param {String} alg hash algorithm name (ex. 'sha1')
      * @param {Integer} keySize key bit length (ex. 1024)
      * @return {String} hexadecimal string of PKCS#1 padded DigestInfo
@@ -2281,6 +2327,36 @@ KJUR.crypto.Util = new function() {
 	}
 	var hPaddedMessage = hHead + hMid + hTail;
 	return hPaddedMessage;
+    };
+
+    /**
+     * get hexadecimal hash of string with specified algorithm
+     * @name hashString
+     * @memberOf KJUR.crypto.Util
+     * @function
+     * @param {String} s input string to be hashed
+     * @param {String} alg hash algorithm name
+     * @return {String} hexadecimal string of hash value
+     * @since 1.1.1
+     */
+    this.hashString = function(s, alg) {
+        var md = new KJUR.crypto.MessageDigest({'alg': alg});
+        return md.digestString(s);
+    };
+
+    /**
+     * get hexadecimal hash of hexadecimal string with specified algorithm
+     * @name hashHex
+     * @memberOf KJUR.crypto.Util
+     * @function
+     * @param {String} sHex input hexadecimal string to be hashed
+     * @param {String} alg hash algorithm name
+     * @return {String} hexadecimal string of hash value
+     * @since 1.1.1
+     */
+    this.hashHex = function(sHex, alg) {
+        var md = new KJUR.crypto.MessageDigest({'alg': alg});
+        return md.digestHex(sHex);
     };
 
     /**
@@ -2311,6 +2387,11 @@ KJUR.crypto.Util = new function() {
         return md.digestString(s);
     };
 
+    this.sha256Hex = function(s) {
+        var md = new KJUR.crypto.MessageDigest({'alg':'sha256', 'prov':'cryptojs'});
+        return md.digestHex(s);
+    };
+
     /**
      * get hexadecimal SHA512 hash of string
      * @name sha512
@@ -2323,6 +2404,11 @@ KJUR.crypto.Util = new function() {
     this.sha512 = function(s) {
         var md = new KJUR.crypto.MessageDigest({'alg':'sha512', 'prov':'cryptojs'});
         return md.digestString(s);
+    };
+
+    this.sha512Hex = function(s) {
+        var md = new KJUR.crypto.MessageDigest({'alg':'sha512', 'prov':'cryptojs'});
+        return md.digestHex(s);
     };
 
     /**
@@ -2352,6 +2438,13 @@ KJUR.crypto.Util = new function() {
         var md = new KJUR.crypto.MessageDigest({'alg':'ripemd160', 'prov':'cryptojs'});
         return md.digestString(s);
     };
+
+    /*
+     * @since 1.1.2
+     */
+    this.getCryptoJSMDByName = function(s) {
+	
+    };
 };
 
 /**
@@ -2374,16 +2467,11 @@ KJUR.crypto.Util = new function() {
  * </ul>
  * @example
  * // CryptoJS provider sample
- * &lt;script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core.js"&gt;&lt;/script&gt;
- * &lt;script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/sha1.js"&gt;&lt;/script&gt;
- * &lt;script src="crypto-1.0.js"&gt;&lt;/script&gt;
  * var md = new KJUR.crypto.MessageDigest({alg: "sha1", prov: "cryptojs"});
  * md.updateString('aaa')
  * var mdHex = md.digest()
  *
  * // SJCL(Stanford JavaScript Crypto Library) provider sample
- * &lt;script src="http://bitwiseshiftleft.github.io/sjcl/sjcl.js"&gt;&lt;/script&gt;
- * &lt;script src="crypto-1.0.js"&gt;&lt;/script&gt;
  * var md = new KJUR.crypto.MessageDigest({alg: "sha256", prov: "sjcl"}); // sjcl supports sha256 only
  * md.updateString('aaa')
  * var mdHex = md.digest()
@@ -2392,15 +2480,6 @@ KJUR.crypto.MessageDigest = function(params) {
     var md = null;
     var algName = null;
     var provName = null;
-    var _CryptoJSMdName = {
-	'md5': 'CryptoJS.algo.MD5',
-	'sha1': 'CryptoJS.algo.SHA1',
-	'sha224': 'CryptoJS.algo.SHA224',
-	'sha256': 'CryptoJS.algo.SHA256',
-	'sha384': 'CryptoJS.algo.SHA384',
-	'sha512': 'CryptoJS.algo.SHA512',
-	'ripemd160': 'CryptoJS.algo.RIPEMD160'
-    };
 
     /**
      * set hash algorithm and provider
@@ -2417,10 +2496,13 @@ KJUR.crypto.MessageDigest = function(params) {
      * md.setAlgAndProvider('ripemd160', 'cryptojs');
      */
     this.setAlgAndProvider = function(alg, prov) {
+	if (alg != null && prov === undefined) prov = KJUR.crypto.Util.DEFAULTPROVIDER[alg];
+
+	// for cryptojs
 	if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(alg) != -1 &&
 	    prov == 'cryptojs') {
 	    try {
-		this.md = eval(_CryptoJSMdName[alg]).create();
+		this.md = eval(KJUR.crypto.Util.CRYPTOJSMESSAGEDIGESTNAME[alg]).create();
 	    } catch (ex) {
 		throw "setAlgAndProvider hash alg set fail alg=" + alg + "/" + ex;
 	    }
@@ -2542,15 +2624,266 @@ KJUR.crypto.MessageDigest = function(params) {
 	throw "digestHex(hex) not supported for this alg/prov: " + this.algName + "/" + this.provName;
     };
 
-    if (typeof params != "undefined") {
-	if (typeof params['alg'] != "undefined") {
+    if (params !== undefined) {
+	if (params['alg'] !== undefined) {
 	    this.algName = params['alg'];
-	    this.provName = params['prov'];
-	    this.setAlgAndProvider(params['alg'], params['prov']);
+	    if (params['prov'] === undefined)
+		this.provName = KJUR.crypto.Util.DEFAULTPROVIDER[this.algName];
+	    this.setAlgAndProvider(this.algName, this.provName);
 	}
     }
 };
 
+/**
+ * Mac(Message Authentication Code) class which is very similar to java.security.Mac class 
+ * @name KJUR.crypto.Mac
+ * @class Mac class which is very similar to java.security.Mac class
+ * @param {Array} params parameters for constructor
+ * @description
+ * <br/>
+ * Currently this supports following algorithm and providers combination:
+ * <ul>
+ * <li>hmacmd5 - cryptojs</li>
+ * <li>hmacsha1 - cryptojs</li>
+ * <li>hmacsha224 - cryptojs</li>
+ * <li>hmacsha256 - cryptojs</li>
+ * <li>hmacsha384 - cryptojs</li>
+ * <li>hmacsha512 - cryptojs</li>
+ * </ul>
+ * NOTE: HmacSHA224 and HmacSHA384 issue was fixed since jsrsasign 4.1.4.
+ * Please use 'ext/cryptojs-312-core-fix*.js' instead of 'core.js' of original CryptoJS
+ * to avoid those issue.
+ * <br/>
+ * NOTE2: Hmac signature bug was fixed in jsrsasign 4.9.0 by providing CryptoJS
+ * bug workaround.
+ * <br/>
+ * Please see {@link KJUR.crypto.Mac.setPassword}, how to provide password
+ * in various ways in detail.
+ * @example
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA1", "pass": "pass"});
+ * mac.updateString('aaa')
+ * var macHex = md.doFinal()
+ *
+ * // other password representation 
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"hex":  "6161"}});
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"utf8": "aa"}});
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"rstr": "\x61\x61"}});
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"b64":  "Mi02/+...a=="}});
+ * var mac = new KJUR.crypto.Mac({alg: "HmacSHA256", "pass": {"b64u": "Mi02_-...a"}});
+ */
+KJUR.crypto.Mac = function(params) {
+    var mac = null;
+    var pass = null;
+    var algName = null;
+    var provName = null;
+    var algProv = null;
+
+    this.setAlgAndProvider = function(alg, prov) {
+	alg = alg.toLowerCase();
+
+	if (alg == null) alg = "hmacsha1";
+
+	alg = alg.toLowerCase();
+        if (alg.substr(0, 4) != "hmac") {
+	    throw "setAlgAndProvider unsupported HMAC alg: " + alg;
+	}
+
+	if (prov === undefined) prov = KJUR.crypto.Util.DEFAULTPROVIDER[alg];
+	this.algProv = alg + "/" + prov;
+
+	var hashAlg = alg.substr(4);
+
+	// for cryptojs
+	if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(hashAlg) != -1 &&
+	    prov == 'cryptojs') {
+	    try {
+		var mdObj = eval(KJUR.crypto.Util.CRYPTOJSMESSAGEDIGESTNAME[hashAlg]);
+		this.mac = CryptoJS.algo.HMAC.create(mdObj, this.pass);
+	    } catch (ex) {
+		throw "setAlgAndProvider hash alg set fail hashAlg=" + hashAlg + "/" + ex;
+	    }
+	    this.updateString = function(str) {
+		this.mac.update(str);
+	    };
+	    this.updateHex = function(hex) {
+		var wHex = CryptoJS.enc.Hex.parse(hex);
+		this.mac.update(wHex);
+	    };
+	    this.doFinal = function() {
+		var hash = this.mac.finalize();
+		return hash.toString(CryptoJS.enc.Hex);
+	    };
+	    this.doFinalString = function(str) {
+		this.updateString(str);
+		return this.doFinal();
+	    };
+	    this.doFinalHex = function(hex) {
+		this.updateHex(hex);
+		return this.doFinal();
+	    };
+	}
+    };
+
+    /**
+     * update digest by specified string
+     * @name updateString
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @param {String} str string to update
+     * @description
+     * @example
+     * md.updateString('New York');
+     */
+    this.updateString = function(str) {
+	throw "updateString(str) not supported for this alg/prov: " + this.algProv;
+    };
+
+    /**
+     * update digest by specified hexadecimal string
+     * @name updateHex
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @param {String} hex hexadecimal string to update
+     * @description
+     * @example
+     * md.updateHex('0afe36');
+     */
+    this.updateHex = function(hex) {
+	throw "updateHex(hex) not supported for this alg/prov: " + this.algProv;
+    };
+
+    /**
+     * completes hash calculation and returns hash result
+     * @name doFinal
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @description
+     * @example
+     * md.digest()
+     */
+    this.doFinal = function() {
+	throw "digest() not supported for this alg/prov: " + this.algProv;
+    };
+
+    /**
+     * performs final update on the digest using string, then completes the digest computation
+     * @name doFinalString
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @param {String} str string to final update
+     * @description
+     * @example
+     * md.digestString('aaa')
+     */
+    this.doFinalString = function(str) {
+	throw "digestString(str) not supported for this alg/prov: " + this.algProv;
+    };
+
+    /**
+     * performs final update on the digest using hexadecimal string, 
+     * then completes the digest computation
+     * @name doFinalHex
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @param {String} hex hexadecimal string to final update
+     * @description
+     * @example
+     * md.digestHex('0f2abd')
+     */
+    this.doFinalHex = function(hex) {
+	throw "digestHex(hex) not supported for this alg/prov: " + this.algProv;
+    };
+
+    /**
+     * set password for Mac
+     * @name setPassword
+     * @memberOf KJUR.crypto.Mac
+     * @function
+     * @param {Object} pass password for Mac
+     * @since crypto 1.1.7 jsrsasign 4.9.0
+     * @description
+     * This method will set password for (H)Mac internally.
+     * Argument 'pass' can be specified as following:
+     * <ul>
+     * <li>even length string of 0..9, a..f or A-F: implicitly specified as hexadecimal string</li>
+     * <li>not above string: implicitly specified as raw string</li>
+     * <li>{rstr: "\x65\x70"}: explicitly specified as raw string</li>
+     * <li>{hex: "6570"}: explicitly specified as hexacedimal string</li>
+     * <li>{utf8: "秘密"}: explicitly specified as UTF8 string</li>
+     * <li>{b64: "Mi78..=="}: explicitly specified as Base64 string</li>
+     * <li>{b64u: "Mi7-_"}: explicitly specified as Base64URL string</li>
+     * </ul>
+     * It is *STRONGLY RECOMMENDED* that explicit representation of password argument
+     * to avoid ambiguity. For example string  "6161" can mean a string "6161" or 
+     * a hexadecimal string of "aa" (i.e. \x61\x61).
+     * @example
+     * mac = KJUR.crypto.Mac({'alg': 'hmacsha256'});
+     * // set password by implicit raw string
+     * mac.setPassword("\x65\x70\xb9\x0b");
+     * mac.setPassword("password");
+     * // set password by implicit hexadecimal string
+     * mac.setPassword("6570b90b");
+     * mac.setPassword("6570B90B");
+     * // set password by explicit raw string
+     * mac.setPassword({"rstr": "\x65\x70\xb9\x0b"});
+     * // set password by explicit hexadecimal string
+     * mac.setPassword({"hex": "6570b90b"});
+     * // set password by explicit utf8 string
+     * mac.setPassword({"utf8": "passwordパスワード");
+     * // set password by explicit Base64 string
+     * mac.setPassword({"b64": "Mb+c3f/=="});
+     * // set password by explicit Base64URL string
+     * mac.setPassword({"b64u": "Mb-c3f_"});
+     */
+    this.setPassword = function(pass) {
+	// internal this.pass shall be CryptoJS DWord Object for CryptoJS bug
+	// work around. CrytoJS HMac password can be passed by
+	// raw string as described in the manual however it doesn't
+	// work properly in some case. If password was passed
+	// by CryptoJS DWord which is not described in the manual
+	// it seems to work. (fixed since crypto 1.1.7)
+
+	if (typeof pass == 'string') {
+	    var hPass = pass;
+	    if (pass.length % 2 == 1 || ! pass.match(/^[0-9A-Fa-f]+$/)) { // raw str
+		hPass = rstrtohex(pass);
+	    }
+	    this.pass = CryptoJS.enc.Hex.parse(hPass);
+	    return;
+	}
+
+	if (typeof pass != 'object')
+	    throw "KJUR.crypto.Mac unsupported password type: " + pass;
+	
+	var hPass = null;
+	if (pass.hex  !== undefined) {
+	    if (pass.hex.length % 2 != 0 || ! pass.hex.match(/^[0-9A-Fa-f]+$/))
+		throw "Mac: wrong hex password: " + pass.hex;
+	    hPass = pass.hex;
+	}
+	if (pass.utf8 !== undefined) hPass = utf8tohex(pass.utf8);
+	if (pass.rstr !== undefined) hPass = rstrtohex(pass.rstr);
+	if (pass.b64  !== undefined) hPass = b64tohex(pass.b64);
+	if (pass.b64u !== undefined) hPass = b64utohex(pass.b64u);
+
+	if (hPass == null)
+	    throw "KJUR.crypto.Mac unsupported password type: " + pass;
+
+	this.pass = CryptoJS.enc.Hex.parse(hPass);
+    };
+
+    if (params !== undefined) {
+	if (params.pass !== undefined) {
+	    this.setPassword(params.pass);
+	}
+	if (params.alg !== undefined) {
+	    this.algName = params.alg;
+	    if (params['prov'] === undefined)
+		this.provName = KJUR.crypto.Util.DEFAULTPROVIDER[this.algName];
+	    this.setAlgAndProvider(this.algName, this.provName);
+	}
+    }
+};
 
 /**
  * Signature class which is very similar to java.security.Signature class
@@ -2562,30 +2895,73 @@ KJUR.crypto.MessageDigest = function(params) {
  * <br/>
  * As for params of constructor's argument, it can be specify following attributes:
  * <ul>
- * <li>alg - signature algorithm name (ex. {MD5,SHA1,SHA224,SHA256,SHA384,SHA512,RIPEMD160}withRSA)</li>
+ * <li>alg - signature algorithm name (ex. {MD5,SHA1,SHA224,SHA256,SHA384,SHA512,RIPEMD160}with{RSA,ECDSA,DSA})</li>
  * <li>provider - currently 'cryptojs/jsrsa' only</li>
- * <li>prvkeypem - PEM string of signer's private key. If this specified, no need to call initSign(prvKey).</li>
  * </ul>
  * <h4>SUPPORTED ALGORITHMS AND PROVIDERS</h4>
- * Signature class supports {MD5,SHA1,SHA224,SHA256,SHA384,SHA512,RIPEMD160}
- * withRSA algorithm in 'cryptojs/jsrsa' provider.
+ * This Signature class supports following signature algorithm and provider names:
+ * <ul>
+ * <li>MD5withRSA - cryptojs/jsrsa</li>
+ * <li>SHA1withRSA - cryptojs/jsrsa</li>
+ * <li>SHA224withRSA - cryptojs/jsrsa</li>
+ * <li>SHA256withRSA - cryptojs/jsrsa</li>
+ * <li>SHA384withRSA - cryptojs/jsrsa</li>
+ * <li>SHA512withRSA - cryptojs/jsrsa</li>
+ * <li>RIPEMD160withRSA - cryptojs/jsrsa</li>
+ * <li>MD5withECDSA - cryptojs/jsrsa</li>
+ * <li>SHA1withECDSA - cryptojs/jsrsa</li>
+ * <li>SHA224withECDSA - cryptojs/jsrsa</li>
+ * <li>SHA256withECDSA - cryptojs/jsrsa</li>
+ * <li>SHA384withECDSA - cryptojs/jsrsa</li>
+ * <li>SHA512withECDSA - cryptojs/jsrsa</li>
+ * <li>RIPEMD160withECDSA - cryptojs/jsrsa</li>
+ * <li>MD5withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA1withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA224withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA256withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA384withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA512withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>RIPEMD160withRSAandMGF1 - cryptojs/jsrsa</li>
+ * <li>SHA1withDSA - cryptojs/jsrsa</li>
+ * <li>SHA224withDSA - cryptojs/jsrsa</li>
+ * <li>SHA256withDSA - cryptojs/jsrsa</li>
+ * </ul>
+ * Here are supported elliptic cryptographic curve names and their aliases for ECDSA:
+ * <ul>
+ * <li>secp256k1</li>
+ * <li>secp256r1, NIST P-256, P-256, prime256v1</li>
+ * <li>secp384r1, NIST P-384, P-384</li>
+ * </ul>
+ * NOTE1: DSA signing algorithm is also supported since crypto 1.1.5.
  * <h4>EXAMPLES</h4>
  * @example
- * // signature generation
- * var sig = new KJUR.crypto.Signature({"alg": "SHA1withRSA", "prov": "cryptojs/jsrsa"});
- * sig.initSign(prvKey);
+ * // RSA signature generation
+ * var sig = new KJUR.crypto.Signature({"alg": "SHA1withRSA"});
+ * sig.init(prvKeyPEM);
  * sig.updateString('aaa');
  * var hSigVal = sig.sign();
  *
- * // signature validation
- * var sig2 = new KJUR.crypto.Signature({"alg": "SHA1withRSA", "prov": "cryptojs/jsrsa"});
- * sig2.initVerifyByCertificatePEM(cert)
+ * // DSA signature validation
+ * var sig2 = new KJUR.crypto.Signature({"alg": "SHA1withDSA"});
+ * sig2.init(certPEM);
  * sig.updateString('aaa');
  * var isValid = sig2.verify(hSigVal);
+ * 
+ * // ECDSA signing
+ * var sig = new KJUR.crypto.Signature({'alg':'SHA1withECDSA'});
+ * sig.init(prvKeyPEM);
+ * sig.updateString('aaa');
+ * var sigValueHex = sig.sign();
+ *
+ * // ECDSA verifying
+ * var sig2 = new KJUR.crypto.Signature({'alg':'SHA1withECDSA'});
+ * sig.init(certPEM);
+ * sig.updateString('aaa');
+ * var isValid = sig.verify(sigValueHex);
  */
 KJUR.crypto.Signature = function(params) {
-    var prvKey = null; // RSAKey for signing
-    var pubKey = null; // RSAKey for verifying
+    var prvKey = null; // RSAKey/KJUR.crypto.{ECDSA,DSA} object for signing
+    var pubKey = null; // RSAKey/KJUR.crypto.{ECDSA,DSA} object for verifying
 
     var md = null; // KJUR.crypto.MessageDigest object
     var sig = null;
@@ -2593,8 +2969,10 @@ KJUR.crypto.Signature = function(params) {
     var provName = null;
     var algProvName = null;
     var mdAlgName = null;
-    var pubkeyAlgName = null;
+    var pubkeyAlgName = null;	// rsa,ecdsa,rsaandmgf1(=rsapss)
     var state = null;
+    var pssSaltLen = -1;
+    var initParams = null;
 
     var sHashHex = null; // hex hash value for hex
     var hDigestInfo = null;
@@ -2635,18 +3013,56 @@ KJUR.crypto.Signature = function(params) {
 
 	if (':md5:sha1:sha224:sha256:sha384:sha512:ripemd160:'.indexOf(this.mdAlgName) != -1) {
 	    try {
-		this.md = new KJUR.crypto.MessageDigest({'alg':this.mdAlgName,'prov':'cryptojs'});
+		this.md = new KJUR.crypto.MessageDigest({'alg':this.mdAlgName});
 	    } catch (ex) {
-		throw "setAlgAndProvider hash alg set fail alg=" + this.mdAlgName + "/" + ex;
+		throw "setAlgAndProvider hash alg set fail alg=" +
+                      this.mdAlgName + "/" + ex;
 	    }
 
-	    this.initSign = function(prvKey) {
-		this.prvKey = prvKey;
+	    this.init = function(keyparam, pass) {
+		var keyObj = null;
+		try {
+		    if (pass === undefined) {
+			keyObj = KEYUTIL.getKey(keyparam);
+		    } else {
+			keyObj = KEYUTIL.getKey(keyparam, pass);
+		    }
+		} catch (ex) {
+		    throw "init failed:" + ex;
+		}
+
+		if (keyObj.isPrivate === true) {
+		    this.prvKey = keyObj;
+		    this.state = "SIGN";
+		} else if (keyObj.isPublic === true) {
+		    this.pubKey = keyObj;
+		    this.state = "VERIFY";
+		} else {
+		    throw "init failed.:" + keyObj;
+		}
+	    };
+
+	    this.initSign = function(params) {
+		if (typeof params['ecprvhex'] == 'string' &&
+                    typeof params['eccurvename'] == 'string') {
+		    this.ecprvhex = params['ecprvhex'];
+		    this.eccurvename = params['eccurvename'];
+		} else {
+		    this.prvKey = params;
+		}
 		this.state = "SIGN";
 	    };
 
-	    this.initVerifyByPublicKey = function(rsaPubKey) {
-		this.pubKey = rsaPubKey;
+	    this.initVerifyByPublicKey = function(params) {
+		if (typeof params['ecpubhex'] == 'string' &&
+		    typeof params['eccurvename'] == 'string') {
+		    this.ecpubhex = params['ecpubhex'];
+		    this.eccurvename = params['eccurvename'];
+		} else if (params instanceof KJUR.crypto.ECDSA) {
+		    this.pubKey = params;
+		} else if (params instanceof RSAKey) {
+		    this.pubKey = params;
+		}
 		this.state = "VERIFY";
 	    };
 
@@ -2660,52 +3076,106 @@ KJUR.crypto.Signature = function(params) {
 	    this.updateString = function(str) {
 		this.md.updateString(str);
 	    };
+
 	    this.updateHex = function(hex) {
 		this.md.updateHex(hex);
 	    };
+
 	    this.sign = function() {
-                var util = KJUR.crypto.Util;
-		var keyLen = this.prvKey.n.bitLength();
 		this.sHashHex = this.md.digest();
-		this.hDigestInfo = util.getDigestInfoHex(this.sHashHex, this.mdAlgName);
-		this.hPaddedDigestInfo = 
-                    util.getPaddedDigestInfoHex(this.sHashHex, this.mdAlgName, keyLen);
-
-		var biPaddedDigestInfo = parseBigInt(this.hPaddedDigestInfo, 16);
-		this.hoge = biPaddedDigestInfo.toString(16);
-
-		var biSign = this.prvKey.doPrivate(biPaddedDigestInfo);
-		this.hSign = this._zeroPaddingOfSignature(biSign.toString(16), keyLen);
+		if (typeof this.ecprvhex != "undefined" &&
+		    typeof this.eccurvename != "undefined") {
+		    var ec = new KJUR.crypto.ECDSA({'curve': this.eccurvename});
+		    this.hSign = ec.signHex(this.sHashHex, this.ecprvhex);
+		} else if (this.prvKey instanceof RSAKey &&
+		           this.pubkeyAlgName == "rsaandmgf1") {
+		    this.hSign = this.prvKey.signWithMessageHashPSS(this.sHashHex,
+								    this.mdAlgName,
+								    this.pssSaltLen);
+		} else if (this.prvKey instanceof RSAKey &&
+			   this.pubkeyAlgName == "rsa") {
+		    this.hSign = this.prvKey.signWithMessageHash(this.sHashHex,
+								 this.mdAlgName);
+		} else if (this.prvKey instanceof KJUR.crypto.ECDSA) {
+		    this.hSign = this.prvKey.signWithMessageHash(this.sHashHex);
+		} else if (this.prvKey instanceof KJUR.crypto.DSA) {
+		    this.hSign = this.prvKey.signWithMessageHash(this.sHashHex);
+		} else {
+		    throw "Signature: unsupported public key alg: " + this.pubkeyAlgName;
+		}
 		return this.hSign;
 	    };
 	    this.signString = function(str) {
 		this.updateString(str);
-		this.sign();
+		return this.sign();
 	    };
 	    this.signHex = function(hex) {
 		this.updateHex(hex);
-		this.sign();
+		return this.sign();
 	    };
 	    this.verify = function(hSigVal) {
-                var util = KJUR.crypto.Util;
-		var keyLen = this.pubKey.n.bitLength();
-		this.sHashHex = this.md.digest();
-
-		var biSigVal = parseBigInt(hSigVal, 16);
-		var biPaddedDigestInfo = this.pubKey.doPublic(biSigVal);
-		this.hPaddedDigestInfo = biPaddedDigestInfo.toString(16);
-                var s = this.hPaddedDigestInfo;
-                s = s.replace(/^1ff+00/, '');
-
-		var hDIHEAD = KJUR.crypto.Util.DIGESTINFOHEAD[this.mdAlgName];
-                if (s.indexOf(hDIHEAD) != 0) {
-		    return false;
+	        this.sHashHex = this.md.digest();
+		if (typeof this.ecpubhex != "undefined" &&
+		    typeof this.eccurvename != "undefined") {
+		    var ec = new KJUR.crypto.ECDSA({curve: this.eccurvename});
+		    return ec.verifyHex(this.sHashHex, hSigVal, this.ecpubhex);
+		} else if (this.pubKey instanceof RSAKey &&
+			   this.pubkeyAlgName == "rsaandmgf1") {
+		    return this.pubKey.verifyWithMessageHashPSS(this.sHashHex, hSigVal, 
+								this.mdAlgName,
+								this.pssSaltLen);
+		} else if (this.pubKey instanceof RSAKey &&
+			   this.pubkeyAlgName == "rsa") {
+		    return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
+		} else if (this.pubKey instanceof KJUR.crypto.ECDSA) {
+		    return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
+		} else if (this.pubKey instanceof KJUR.crypto.DSA) {
+		    return this.pubKey.verifyWithMessageHash(this.sHashHex, hSigVal);
+		} else {
+		    throw "Signature: unsupported public key alg: " + this.pubkeyAlgName;
 		}
-		var hHashFromDI = s.substr(hDIHEAD.length);
-		//alert(hHashFromDI + "\n" + this.sHashHex);
-		return (hHashFromDI == this.sHashHex);
 	    };
 	}
+    };
+
+    /**
+     * Initialize this object for signing or verifying depends on key
+     * @name init
+     * @memberOf KJUR.crypto.Signature
+     * @function
+     * @param {Object} key specifying public or private key as plain/encrypted PKCS#5/8 PEM file, certificate PEM or {@link RSAKey}, {@link KJUR.crypto.DSA} or {@link KJUR.crypto.ECDSA} object
+     * @param {String} pass (OPTION) passcode for encrypted private key
+     * @since crypto 1.1.3
+     * @description
+     * This method is very useful initialize method for Signature class since
+     * you just specify key then this method will automatically initialize it
+     * using {@link KEYUTIL.getKey} method.
+     * As for 'key',  following argument type are supported:
+     * <h5>signing</h5>
+     * <ul>
+     * <li>PEM formatted PKCS#8 encrypted RSA/ECDSA private key concluding "BEGIN ENCRYPTED PRIVATE KEY"</li>
+     * <li>PEM formatted PKCS#5 encrypted RSA/DSA private key concluding "BEGIN RSA/DSA PRIVATE KEY" and ",ENCRYPTED"</li>
+     * <li>PEM formatted PKCS#8 plain RSA/ECDSA private key concluding "BEGIN PRIVATE KEY"</li>
+     * <li>PEM formatted PKCS#5 plain RSA/DSA private key concluding "BEGIN RSA/DSA PRIVATE KEY" without ",ENCRYPTED"</li>
+     * <li>RSAKey object of private key</li>
+     * <li>KJUR.crypto.ECDSA object of private key</li>
+     * <li>KJUR.crypto.DSA object of private key</li>
+     * </ul>
+     * <h5>verification</h5>
+     * <ul>
+     * <li>PEM formatted PKCS#8 RSA/EC/DSA public key concluding "BEGIN PUBLIC KEY"</li>
+     * <li>PEM formatted X.509 certificate with RSA/EC/DSA public key concluding
+     *     "BEGIN CERTIFICATE", "BEGIN X509 CERTIFICATE" or "BEGIN TRUSTED CERTIFICATE".</li>
+     * <li>RSAKey object of public key</li>
+     * <li>KJUR.crypto.ECDSA object of public key</li>
+     * <li>KJUR.crypto.DSA object of public key</li>
+     * </ul>
+     * @example
+     * sig.init(sCertPEM)
+     */
+    this.init = function(key, pass) {
+	throw "init(key, pass) not supported for this alg:prov=" +
+	      this.algProvName;
     };
 
     /**
@@ -2713,14 +3183,24 @@ KJUR.crypto.Signature = function(params) {
      * @name initVerifyByPublicKey
      * @memberOf KJUR.crypto.Signature
      * @function
-     * @param {RSAKey} rsaPubKey RSAKey object of public key
+     * @param {Object} param RSAKey object of public key or associative array for ECDSA
      * @since 1.0.2
+     * @deprecated from crypto 1.1.5. please use init() method instead.
      * @description
+     * Public key information will be provided as 'param' parameter and the value will be
+     * following:
+     * <ul>
+     * <li>{@link RSAKey} object for RSA verification</li>
+     * <li>associative array for ECDSA verification
+     *     (ex. <code>{'ecpubhex': '041f..', 'eccurvename': 'secp256r1'}</code>)
+     * </li>
+     * </ul>
      * @example
-     * sig.initVerifyByPublicKey(prvKey)
+     * sig.initVerifyByPublicKey(rsaPrvKey)
      */
     this.initVerifyByPublicKey = function(rsaPubKey) {
-	throw "initVerifyByPublicKey(rsaPubKeyy) not supported for this alg:prov=" + this.algProvName;
+	throw "initVerifyByPublicKey(rsaPubKeyy) not supported for this alg:prov=" +
+	      this.algProvName;
     };
 
     /**
@@ -2730,12 +3210,14 @@ KJUR.crypto.Signature = function(params) {
      * @function
      * @param {String} certPEM PEM formatted string of certificate
      * @since 1.0.2
+     * @deprecated from crypto 1.1.5. please use init() method instead.
      * @description
      * @example
      * sig.initVerifyByCertificatePEM(certPEM)
      */
     this.initVerifyByCertificatePEM = function(certPEM) {
-	throw "initVerifyByCertificatePEM(certPEM) not supported for this alg:prov=" + this.algProvName;
+	throw "initVerifyByCertificatePEM(certPEM) not supported for this alg:prov=" +
+	    this.algProvName;
     };
 
     /**
@@ -2743,8 +3225,16 @@ KJUR.crypto.Signature = function(params) {
      * @name initSign
      * @memberOf KJUR.crypto.Signature
      * @function
-     * @param {RSAKey} prvKey RSAKey object of private key
+     * @param {Object} param RSAKey object of public key or associative array for ECDSA
+     * @deprecated from crypto 1.1.5. please use init() method instead.
      * @description
+     * Private key information will be provided as 'param' parameter and the value will be
+     * following:
+     * <ul>
+     * <li>{@link RSAKey} object for RSA signing</li>
+     * <li>associative array for ECDSA signing
+     *     (ex. <code>{'ecprvhex': '1d3f..', 'eccurvename': 'secp256r1'}</code>)</li>
+     * </ul>
      * @example
      * sig.initSign(prvKey)
      */
@@ -2839,16 +3329,25 @@ KJUR.crypto.Signature = function(params) {
 	throw "verify(hSigVal) not supported for this alg:prov=" + this.algProvName;
     };
 
-    if (typeof params != "undefined") {
-	if (typeof params['alg'] != "undefined") {
+    this.initParams = params;
+
+    if (params !== undefined) {
+	if (params['alg'] !== undefined) {
 	    this.algName = params['alg'];
-	    this.provName = params['prov'];
-	    this.algProvName = params['alg'] + ":" + params['prov'];
-	    this.setAlgAndProvider(params['alg'], params['prov']);
+	    if (params['prov'] === undefined) {
+		this.provName = KJUR.crypto.Util.DEFAULTPROVIDER[this.algName];
+	    } else {
+		this.provName = params['prov'];
+	    }
+	    this.algProvName = this.algName + ":" + this.provName;
+	    this.setAlgAndProvider(this.algName, this.provName);
 	    this._setAlgNames();
 	}
-	if (typeof params['prvkeypem'] != "undefined") {
-	    if (typeof params['prvkeypas'] != "undefined") {
+
+	if (params['psssaltlen'] !== undefined) this.pssSaltLen = params['psssaltlen'];
+
+	if (params['prvkeypem'] !== undefined) {
+	    if (params['prvkeypas'] !== undefined) {
 		throw "both prvkeypem and prvkeypas parameters not supported";
 	    } else {
 		try {
@@ -2863,6 +3362,33 @@ KJUR.crypto.Signature = function(params) {
     }
 };
 
+/**
+ * static object for cryptographic function utilities
+ * @name KJUR.crypto.OID
+ * @class static object for cryptography related OIDs
+ * @property {Array} oidhex2name key value of hexadecimal OID and its name
+ *           (ex. '2a8648ce3d030107' and 'secp256r1')
+ * @since crypto 1.1.3
+ * @description
+ */
+
+
+KJUR.crypto.OID = new function() {
+    this.oidhex2name = {
+	'2a864886f70d010101': 'rsaEncryption',
+	'2a8648ce3d0201': 'ecPublicKey',
+	'2a8648ce380401': 'dsa',
+	'2a8648ce3d030107': 'secp256r1',
+	'2b8104001f': 'secp192k1',
+	'2b81040021': 'secp224r1',
+	'2b8104000a': 'secp256k1',
+	'2b81040023': 'secp521r1',
+	'2b81040022': 'secp384r1',
+	'2a8648ce380403': 'SHA1withDSA', // 1.2.840.10040.4.3
+	'608648016503040301': 'SHA224withDSA', // 2.16.840.1.101.3.4.3.1
+	'608648016503040302': 'SHA256withDSA'  // 2.16.840.1.101.3.4.3.2
+    };
+};
 /*! rsapem-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -3421,6 +3947,614 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+/*! ecdsa-modified-1.0.4.js (c) Stephan Thomas, Kenji Urushima | github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE
+ */
+/*
+ * ecdsa-modified.js - modified Bitcoin.ECDSA class
+ * 
+ * Copyright (c) 2013 Stefan Thomas (github.com/justmoon)
+ *                    Kenji Urushima (kenji.urushima@gmail.com)
+ * LICENSE
+ *   https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE
+ */
+
+/**
+ * @fileOverview
+ * @name ecdsa-modified-1.0.js
+ * @author Stefan Thomas (github.com/justmoon) and Kenji Urushima (kenji.urushima@gmail.com)
+ * @version 1.0.4 (2013-Oct-06)
+ * @since jsrsasign 4.0
+ * @license <a href="https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE">MIT License</a>
+ */
+
+if (typeof KJUR == "undefined" || !KJUR) KJUR = {};
+if (typeof KJUR.crypto == "undefined" || !KJUR.crypto) KJUR.crypto = {};
+
+/**
+ * class for EC key generation,  ECDSA signing and verifcation
+ * @name KJUR.crypto.ECDSA
+ * @class class for EC key generation,  ECDSA signing and verifcation
+ * @description
+ * <p>
+ * CAUTION: Most of the case, you don't need to use this class except
+ * for generating an EC key pair. Please use {@link KJUR.crypto.Signature} class instead.
+ * </p>
+ * <p>
+ * This class was originally developped by Stefan Thomas for Bitcoin JavaScript library.
+ * (See {@link https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/src/ecdsa.js})
+ * Currently this class supports following named curves and their aliases.
+ * <ul>
+ * <li>secp256r1, NIST P-256, P-256, prime256v1 (*)</li>
+ * <li>secp256k1 (*)</li>
+ * <li>secp384r1, NIST P-384, P-384 (*)</li>
+ * </ul>
+ * </p>
+ */
+KJUR.crypto.ECDSA = function(params) {
+    var curveName = "secp256r1";	// curve name default
+    var ecparams = null;
+    var prvKeyHex = null;
+    var pubKeyHex = null;
+
+    var rng = new SecureRandom();
+
+    var P_OVER_FOUR = null;
+
+    this.type = "EC";
+
+    function implShamirsTrick(P, k, Q, l) {
+	var m = Math.max(k.bitLength(), l.bitLength());
+	var Z = P.add2D(Q);
+	var R = P.curve.getInfinity();
+
+	for (var i = m - 1; i >= 0; --i) {
+	    R = R.twice2D();
+
+	    R.z = BigInteger.ONE;
+
+	    if (k.testBit(i)) {
+		if (l.testBit(i)) {
+		    R = R.add2D(Z);
+		} else {
+		    R = R.add2D(P);
+		}
+	    } else {
+		if (l.testBit(i)) {
+		    R = R.add2D(Q);
+		}
+	    }
+	}
+	
+	return R;
+    };
+
+    //===========================
+    // PUBLIC METHODS
+    //===========================
+    this.getBigRandom = function (limit) {
+	return new BigInteger(limit.bitLength(), rng)
+	.mod(limit.subtract(BigInteger.ONE))
+	.add(BigInteger.ONE)
+	;
+    };
+
+    this.setNamedCurve = function(curveName) {
+	this.ecparams = KJUR.crypto.ECParameterDB.getByName(curveName);
+	this.prvKeyHex = null;
+	this.pubKeyHex = null;
+	this.curveName = curveName;
+    }
+
+    this.setPrivateKeyHex = function(prvKeyHex) {
+        this.isPrivate = true;
+	this.prvKeyHex = prvKeyHex;
+    }
+
+    this.setPublicKeyHex = function(pubKeyHex) {
+        this.isPublic = true;
+	this.pubKeyHex = pubKeyHex;
+    }
+
+    /**
+     * generate a EC key pair
+     * @name generateKeyPairHex
+     * @memberOf KJUR.crypto.ECDSA
+     * @function
+     * @return {Array} associative array of hexadecimal string of private and public key
+     * @since ecdsa-modified 1.0.1
+     * @example
+     * var ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * var keypair = ec.generateKeyPairHex();
+     * var pubhex = keypair.ecpubhex; // hexadecimal string of EC private key (=d)
+     * var prvhex = keypair.ecprvhex; // hexadecimal string of EC public key
+     */
+    this.generateKeyPairHex = function() {
+	var biN = this.ecparams['n'];
+	var biPrv = this.getBigRandom(biN);
+	var epPub = this.ecparams['G'].multiply(biPrv);
+	var biX = epPub.getX().toBigInteger();
+	var biY = epPub.getY().toBigInteger();
+
+	var charlen = this.ecparams['keylen'] / 4;
+	var hPrv = ("0000000000" + biPrv.toString(16)).slice(- charlen);
+	var hX   = ("0000000000" + biX.toString(16)).slice(- charlen);
+	var hY   = ("0000000000" + biY.toString(16)).slice(- charlen);
+	var hPub = "04" + hX + hY;
+
+	this.setPrivateKeyHex(hPrv);
+	this.setPublicKeyHex(hPub);
+	return {'ecprvhex': hPrv, 'ecpubhex': hPub};
+    };
+
+    this.signWithMessageHash = function(hashHex) {
+	return this.signHex(hashHex, this.prvKeyHex);
+    };
+
+    /**
+     * signing to message hash
+     * @name signHex
+     * @memberOf KJUR.crypto.ECDSA
+     * @function
+     * @param {String} hashHex hexadecimal string of hash value of signing message
+     * @param {String} privHex hexadecimal string of EC private key
+     * @return {String} hexadecimal string of ECDSA signature
+     * @since ecdsa-modified 1.0.1
+     * @example
+     * var ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * var sigValue = ec.signHex(hash, prvKey);
+     */
+    this.signHex = function (hashHex, privHex) {
+	var d = new BigInteger(privHex, 16);
+	var n = this.ecparams['n'];
+	var e = new BigInteger(hashHex, 16);
+
+	do {
+	    var k = this.getBigRandom(n);
+	    var G = this.ecparams['G'];
+	    var Q = G.multiply(k);
+	    var r = Q.getX().toBigInteger().mod(n);
+	} while (r.compareTo(BigInteger.ZERO) <= 0);
+
+	var s = k.modInverse(n).multiply(e.add(d.multiply(r))).mod(n);
+
+	return KJUR.crypto.ECDSA.biRSSigToASN1Sig(r, s);
+    };
+
+    this.sign = function (hash, priv) {
+	var d = priv;
+	var n = this.ecparams['n'];
+	var e = BigInteger.fromByteArrayUnsigned(hash);
+
+	do {
+	    var k = this.getBigRandom(n);
+	    var G = this.ecparams['G'];
+	    var Q = G.multiply(k);
+	    var r = Q.getX().toBigInteger().mod(n);
+	} while (r.compareTo(BigInteger.ZERO) <= 0);
+
+	var s = k.modInverse(n).multiply(e.add(d.multiply(r))).mod(n);
+	return this.serializeSig(r, s);
+    };
+
+    this.verifyWithMessageHash = function(hashHex, sigHex) {
+	return this.verifyHex(hashHex, sigHex, this.pubKeyHex);
+    };
+
+    /**
+     * verifying signature with message hash and public key
+     * @name verifyHex
+     * @memberOf KJUR.crypto.ECDSA
+     * @function
+     * @param {String} hashHex hexadecimal string of hash value of signing message
+     * @param {String} sigHex hexadecimal string of signature value
+     * @param {String} pubkeyHex hexadecimal string of public key
+     * @return {Boolean} true if the signature is valid, otherwise false
+     * @since ecdsa-modified 1.0.1
+     * @example
+     * var ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+     * var result = ec.verifyHex(msgHashHex, sigHex, pubkeyHex);
+     */
+    this.verifyHex = function(hashHex, sigHex, pubkeyHex) {
+	var r,s;
+
+	var obj = KJUR.crypto.ECDSA.parseSigHex(sigHex);
+	r = obj.r;
+	s = obj.s;
+
+	var Q;
+	Q = ECPointFp.decodeFromHex(this.ecparams['curve'], pubkeyHex);
+	var e = new BigInteger(hashHex, 16);
+
+	return this.verifyRaw(e, r, s, Q);
+    };
+
+    this.verify = function (hash, sig, pubkey) {
+	var r,s;
+	if (Bitcoin.Util.isArray(sig)) {
+	    var obj = this.parseSig(sig);
+	    r = obj.r;
+	    s = obj.s;
+	} else if ("object" === typeof sig && sig.r && sig.s) {
+	    r = sig.r;
+	    s = sig.s;
+	} else {
+	    throw "Invalid value for signature";
+	}
+
+	var Q;
+	if (pubkey instanceof ECPointFp) {
+	    Q = pubkey;
+	} else if (Bitcoin.Util.isArray(pubkey)) {
+	    Q = ECPointFp.decodeFrom(this.ecparams['curve'], pubkey);
+	} else {
+	    throw "Invalid format for pubkey value, must be byte array or ECPointFp";
+	}
+	var e = BigInteger.fromByteArrayUnsigned(hash);
+
+	return this.verifyRaw(e, r, s, Q);
+    };
+
+    this.verifyRaw = function (e, r, s, Q) {
+	var n = this.ecparams['n'];
+	var G = this.ecparams['G'];
+
+	if (r.compareTo(BigInteger.ONE) < 0 ||
+	    r.compareTo(n) >= 0)
+	    return false;
+
+	if (s.compareTo(BigInteger.ONE) < 0 ||
+	    s.compareTo(n) >= 0)
+	    return false;
+
+	var c = s.modInverse(n);
+
+	var u1 = e.multiply(c).mod(n);
+	var u2 = r.multiply(c).mod(n);
+
+	// TODO(!!!): For some reason Shamir's trick isn't working with
+	// signed message verification!? Probably an implementation
+	// error!
+	//var point = implShamirsTrick(G, u1, Q, u2);
+	var point = G.multiply(u1).add(Q.multiply(u2));
+
+	var v = point.getX().toBigInteger().mod(n);
+
+	return v.equals(r);
+    };
+
+    /**
+     * Serialize a signature into DER format.
+     *
+     * Takes two BigIntegers representing r and s and returns a byte array.
+     */
+    this.serializeSig = function (r, s) {
+	var rBa = r.toByteArraySigned();
+	var sBa = s.toByteArraySigned();
+
+	var sequence = [];
+	sequence.push(0x02); // INTEGER
+	sequence.push(rBa.length);
+	sequence = sequence.concat(rBa);
+
+	sequence.push(0x02); // INTEGER
+	sequence.push(sBa.length);
+	sequence = sequence.concat(sBa);
+
+	sequence.unshift(sequence.length);
+	sequence.unshift(0x30); // SEQUENCE
+	return sequence;
+    };
+
+    /**
+     * Parses a byte array containing a DER-encoded signature.
+     *
+     * This function will return an object of the form:
+     *
+     * {
+     *   r: BigInteger,
+     *   s: BigInteger
+     * }
+     */
+    this.parseSig = function (sig) {
+	var cursor;
+	if (sig[0] != 0x30)
+	    throw new Error("Signature not a valid DERSequence");
+
+	cursor = 2;
+	if (sig[cursor] != 0x02)
+	    throw new Error("First element in signature must be a DERInteger");;
+	var rBa = sig.slice(cursor+2, cursor+2+sig[cursor+1]);
+
+	cursor += 2+sig[cursor+1];
+	if (sig[cursor] != 0x02)
+	    throw new Error("Second element in signature must be a DERInteger");
+	var sBa = sig.slice(cursor+2, cursor+2+sig[cursor+1]);
+
+	cursor += 2+sig[cursor+1];
+
+	//if (cursor != sig.length)
+	//  throw new Error("Extra bytes in signature");
+
+	var r = BigInteger.fromByteArrayUnsigned(rBa);
+	var s = BigInteger.fromByteArrayUnsigned(sBa);
+
+	return {r: r, s: s};
+    };
+
+    this.parseSigCompact = function (sig) {
+	if (sig.length !== 65) {
+	    throw "Signature has the wrong length";
+	}
+
+	// Signature is prefixed with a type byte storing three bits of
+	// information.
+	var i = sig[0] - 27;
+	if (i < 0 || i > 7) {
+	    throw "Invalid signature type";
+	}
+
+	var n = this.ecparams['n'];
+	var r = BigInteger.fromByteArrayUnsigned(sig.slice(1, 33)).mod(n);
+	var s = BigInteger.fromByteArrayUnsigned(sig.slice(33, 65)).mod(n);
+
+	return {r: r, s: s, i: i};
+    };
+
+    /*
+     * Recover a public key from a signature.
+     *
+     * See SEC 1: Elliptic Curve Cryptography, section 4.1.6, "Public
+     * Key Recovery Operation".
+     *
+     * http://www.secg.org/download/aid-780/sec1-v2.pdf
+     */
+    /*
+    recoverPubKey: function (r, s, hash, i) {
+	// The recovery parameter i has two bits.
+	i = i & 3;
+
+	// The less significant bit specifies whether the y coordinate
+	// of the compressed point is even or not.
+	var isYEven = i & 1;
+
+	// The more significant bit specifies whether we should use the
+	// first or second candidate key.
+	var isSecondKey = i >> 1;
+
+	var n = this.ecparams['n'];
+	var G = this.ecparams['G'];
+	var curve = this.ecparams['curve'];
+	var p = curve.getQ();
+	var a = curve.getA().toBigInteger();
+	var b = curve.getB().toBigInteger();
+
+	// We precalculate (p + 1) / 4 where p is if the field order
+	if (!P_OVER_FOUR) {
+	    P_OVER_FOUR = p.add(BigInteger.ONE).divide(BigInteger.valueOf(4));
+	}
+
+	// 1.1 Compute x
+	var x = isSecondKey ? r.add(n) : r;
+
+	// 1.3 Convert x to point
+	var alpha = x.multiply(x).multiply(x).add(a.multiply(x)).add(b).mod(p);
+	var beta = alpha.modPow(P_OVER_FOUR, p);
+
+	var xorOdd = beta.isEven() ? (i % 2) : ((i+1) % 2);
+	// If beta is even, but y isn't or vice versa, then convert it,
+	// otherwise we're done and y == beta.
+	var y = (beta.isEven() ? !isYEven : isYEven) ? beta : p.subtract(beta);
+
+	// 1.4 Check that nR is at infinity
+	var R = new ECPointFp(curve,
+			      curve.fromBigInteger(x),
+			      curve.fromBigInteger(y));
+	R.validate();
+
+	// 1.5 Compute e from M
+	var e = BigInteger.fromByteArrayUnsigned(hash);
+	var eNeg = BigInteger.ZERO.subtract(e).mod(n);
+
+	// 1.6 Compute Q = r^-1 (sR - eG)
+	var rInv = r.modInverse(n);
+	var Q = implShamirsTrick(R, s, G, eNeg).multiply(rInv);
+
+	Q.validate();
+	if (!this.verifyRaw(e, r, s, Q)) {
+	    throw "Pubkey recovery unsuccessful";
+	}
+
+	var pubKey = new Bitcoin.ECKey();
+	pubKey.pub = Q;
+	return pubKey;
+    },
+    */
+
+    /*
+     * Calculate pubkey extraction parameter.
+     *
+     * When extracting a pubkey from a signature, we have to
+     * distinguish four different cases. Rather than putting this
+     * burden on the verifier, Bitcoin includes a 2-bit value with the
+     * signature.
+     *
+     * This function simply tries all four cases and returns the value
+     * that resulted in a successful pubkey recovery.
+     */
+    /*
+    calcPubkeyRecoveryParam: function (address, r, s, hash) {
+	for (var i = 0; i < 4; i++) {
+	    try {
+		var pubkey = Bitcoin.ECDSA.recoverPubKey(r, s, hash, i);
+		if (pubkey.getBitcoinAddress().toString() == address) {
+		    return i;
+		}
+	    } catch (e) {}
+	}
+	throw "Unable to find valid recovery factor";
+    }
+    */
+
+    if (params !== undefined) {
+	if (params['curve'] !== undefined) {
+	    this.curveName = params['curve'];
+	}
+    }
+    if (this.curveName === undefined) this.curveName = curveName;
+    this.setNamedCurve(this.curveName);
+    if (params !== undefined) {
+	if (params['prv'] !== undefined) this.setPrivateKeyHex(params['prv']);
+	if (params['pub'] !== undefined) this.setPublicKeyHex(params['pub']);
+    }
+};
+
+/**
+ * parse ASN.1 DER encoded ECDSA signature
+ * @name parseSigHex
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {String} sigHex hexadecimal string of ECDSA signature value
+ * @return {Array} associative array of signature field r and s of BigInteger
+ * @since ecdsa-modified 1.0.1
+ * @example
+ * var ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+ * var sig = ec.parseSigHex('30...');
+ * var biR = sig.r; // BigInteger object for 'r' field of signature.
+ * var biS = sig.s; // BigInteger object for 's' field of signature.
+ */
+KJUR.crypto.ECDSA.parseSigHex = function(sigHex) {
+    var p = KJUR.crypto.ECDSA.parseSigHexInHexRS(sigHex);
+    var biR = new BigInteger(p.r, 16);
+    var biS = new BigInteger(p.s, 16);
+    
+    return {'r': biR, 's': biS};
+};
+
+/**
+ * parse ASN.1 DER encoded ECDSA signature
+ * @name parseSigHexInHexRS
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {String} sigHex hexadecimal string of ECDSA signature value
+ * @return {Array} associative array of signature field r and s in hexadecimal
+ * @since ecdsa-modified 1.0.3
+ * @example
+ * var ec = new KJUR.crypto.ECDSA({'curve': 'secp256r1'});
+ * var sig = ec.parseSigHexInHexRS('30...');
+ * var hR = sig.r; // hexadecimal string for 'r' field of signature.
+ * var hS = sig.s; // hexadecimal string for 's' field of signature.
+ */
+KJUR.crypto.ECDSA.parseSigHexInHexRS = function(sigHex) {
+    // 1. ASN.1 Sequence Check
+    if (sigHex.substr(0, 2) != "30")
+	throw "signature is not a ASN.1 sequence";
+
+    // 2. Items of ASN.1 Sequence Check
+    var a = ASN1HEX.getPosArrayOfChildren_AtObj(sigHex, 0);
+    if (a.length != 2)
+	throw "number of signature ASN.1 sequence elements seem wrong";
+    
+    // 3. Integer check
+    var iTLV1 = a[0];
+    var iTLV2 = a[1];
+    if (sigHex.substr(iTLV1, 2) != "02")
+	throw "1st item of sequene of signature is not ASN.1 integer";
+    if (sigHex.substr(iTLV2, 2) != "02")
+	throw "2nd item of sequene of signature is not ASN.1 integer";
+
+    // 4. getting value
+    var hR = ASN1HEX.getHexOfV_AtObj(sigHex, iTLV1);
+    var hS = ASN1HEX.getHexOfV_AtObj(sigHex, iTLV2);
+    
+    return {'r': hR, 's': hS};
+};
+
+/**
+ * convert hexadecimal ASN.1 encoded signature to concatinated signature
+ * @name asn1SigToConcatSig
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {String} asn1Hex hexadecimal string of ASN.1 encoded ECDSA signature value
+ * @return {String} r-s concatinated format of ECDSA signature value
+ * @since ecdsa-modified 1.0.3
+ */
+KJUR.crypto.ECDSA.asn1SigToConcatSig = function(asn1Sig) {
+    var pSig = KJUR.crypto.ECDSA.parseSigHexInHexRS(asn1Sig);
+    var hR = pSig.r;
+    var hS = pSig.s;
+
+    if (hR.substr(0, 2) == "00" && (((hR.length / 2) * 8) % (16 * 8)) == 8) 
+	hR = hR.substr(2);
+
+    if (hS.substr(0, 2) == "00" && (((hS.length / 2) * 8) % (16 * 8)) == 8) 
+	hS = hS.substr(2);
+
+    if ((((hR.length / 2) * 8) % (16 * 8)) != 0)
+	throw "unknown ECDSA sig r length error";
+
+    if ((((hS.length / 2) * 8) % (16 * 8)) != 0)
+	throw "unknown ECDSA sig s length error";
+
+    return hR + hS;
+};
+
+/**
+ * convert hexadecimal concatinated signature to ASN.1 encoded signature
+ * @name concatSigToASN1Sig
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {String} concatSig r-s concatinated format of ECDSA signature value
+ * @return {String} hexadecimal string of ASN.1 encoded ECDSA signature value
+ * @since ecdsa-modified 1.0.3
+ */
+KJUR.crypto.ECDSA.concatSigToASN1Sig = function(concatSig) {
+    if ((((concatSig.length / 2) * 8) % (16 * 8)) != 0)
+	throw "unknown ECDSA concatinated r-s sig  length error";
+
+    var hR = concatSig.substr(0, concatSig.length / 2);
+    var hS = concatSig.substr(concatSig.length / 2);
+    return KJUR.crypto.ECDSA.hexRSSigToASN1Sig(hR, hS);
+};
+
+/**
+ * convert hexadecimal R and S value of signature to ASN.1 encoded signature
+ * @name hexRSSigToASN1Sig
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {String} hR hexadecimal string of R field of ECDSA signature value
+ * @param {String} hS hexadecimal string of S field of ECDSA signature value
+ * @return {String} hexadecimal string of ASN.1 encoded ECDSA signature value
+ * @since ecdsa-modified 1.0.3
+ */
+KJUR.crypto.ECDSA.hexRSSigToASN1Sig = function(hR, hS) {
+    var biR = new BigInteger(hR, 16);
+    var biS = new BigInteger(hS, 16);
+    return KJUR.crypto.ECDSA.biRSSigToASN1Sig(biR, biS);
+};
+
+/**
+ * convert R and S BigInteger object of signature to ASN.1 encoded signature
+ * @name biRSSigToASN1Sig
+ * @memberOf KJUR.crypto.ECDSA
+ * @function
+ * @static
+ * @param {BigInteger} biR BigInteger object of R field of ECDSA signature value
+ * @param {BigInteger} biS BIgInteger object of S field of ECDSA signature value
+ * @return {String} hexadecimal string of ASN.1 encoded ECDSA signature value
+ * @since ecdsa-modified 1.0.3
+ */
+KJUR.crypto.ECDSA.biRSSigToASN1Sig = function(biR, biS) {
+    var derR = new KJUR.asn1.DERInteger({'bigint': biR});
+    var derS = new KJUR.asn1.DERInteger({'bigint': biS});
+    var derSeq = new KJUR.asn1.DERSequence({'array': [derR, derS]});
+    return derSeq.getEncodedHex();
+};
+
 /*! asn1hex-1.1.6.js (c) 2012-2015 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
