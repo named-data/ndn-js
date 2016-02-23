@@ -49,6 +49,33 @@ exports.createHash = function(alg)
   return obj;
 };
 
+// Factory method to create HMAC objects.
+exports.createHmac = function(algorithm, key)
+{
+  if (algorithm !== 'sha256')
+    throw new Error('createHmac: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.md = new KJUR.crypto.Mac({alg: "HmacSHA256", pass: {hex: key.toString('hex')}});
+
+  obj.update = function(buf) {
+    this.md.updateHex(buf.toString('hex'));
+  };
+
+  obj.digest = function(encoding) {
+    var hexDigest = this.md.doFinal();
+    if (encoding == 'hex')
+      return hexDigest;
+    else if (encoding == 'base64')
+      return new Buffer(hexDigest, 'hex').toString('base64');
+    else
+      return new Buffer(hexDigest, 'hex');
+  };
+
+  return obj;
+};
+
 // Factory method to create RSA signer objects
 exports.createSign = function(alg)
 {
