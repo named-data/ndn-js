@@ -17,6 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+
 /**
  * An ExponentialReExpress uses an internal onTimeout to express the interest again
  * with double the interestLifetime. See ExponentialReExpress.makeOnTimeout,
@@ -60,7 +62,8 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onTimeout If the interesLifetime goes over
- * maxInterestLifetime, this calls onTimeout(interest).
+ * maxInterestLifetime, this calls onTimeout(interest). However, if onTimeout is
+ * null, this does not use it.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -80,13 +83,29 @@ ExponentialReExpress.makeOnTimeout = function(face, onData, onTimeout, settings)
 ExponentialReExpress.prototype.onTimeout = function(interest)
 {
   var interestLifetime = interest.getInterestLifetimeMilliseconds();
-  if (interestLifetime == null)
+  if (interestLifetime == null) {
     // Can't re-express.
-    return this.callerOnTimeout(interest);
+    if (this.callerOnTimeout) {
+      try {
+        this.callerOnTimeout(interest);
+      } catch (ex) {
+        console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
+    return;
+  }
 
   var nextInterestLifetime = interestLifetime * 2;
-  if (nextInterestLifetime > this.maxInterestLifetime)
-    return this.callerOnTimeout(interest);
+  if (nextInterestLifetime > this.maxInterestLifetime) {
+    if (this.callerOnTimeout) {
+      try {
+        this.callerOnTimeout(interest);
+      } catch (ex) {
+        console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
+    return;
+  }
 
   var nextInterest = interest.clone();
   nextInterest.setInterestLifetimeMilliseconds(nextInterestLifetime);
