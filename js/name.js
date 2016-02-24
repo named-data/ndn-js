@@ -827,9 +827,11 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
 };
 
 /**
- * Return true if the N components of this name are the same as the first N components of the given name.
+ * Return true if the N components of this name are the same as the first N
+ * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name.  This always returns true if this name is empty.
+ * @returns {Boolean} true if this matches the given name. This always returns
+ * true if this name is empty.
  */
 Name.prototype.match = function(name)
 {
@@ -849,6 +851,15 @@ Name.prototype.match = function(name)
 
   return true;
 };
+
+/**
+ * Return true if the N components of this name are the same as the first N
+ * components of the given name.
+ * @param {Name} name The name to check.
+ * @returns {Boolean} true if this matches the given name. This always returns
+ * true if this name is empty.
+ */
+Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
