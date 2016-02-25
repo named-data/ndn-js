@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Crypto = require('./crypto.js');
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
@@ -460,6 +461,31 @@ Interest.prototype.wireDecode = function(input, wireFormat)
       WireFormat.getDefaultWireFormat());
   else
     this.setDefaultWireEncoding(new SignedBlob(), null);
+};
+
+/**
+ * Update the bytes of the nonce with new random values. This ensures that the
+ * new nonce value is different than the current one. If the current nonce is
+ * not specified, this does nothing.
+ */
+Interest.prototype.refreshNonce = function()
+{
+  var currentNonce = this.getNonce();
+  if (currentNonce.size() === 0)
+    return;
+
+  var newNonce;
+  while (true) {
+    newNonce = new Blob(Crypto.randomBytes(currentNonce.size()), false);
+    if (!newNonce.equals(currentNonce))
+      break;
+  }
+
+  this.nonce_ = newNonce;
+  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // this.nonce_.
+  ++this.changeCount_;
+  this.getNonceChangeCount_ = this.getChangeCount();
 };
 
 /**

@@ -7,6 +7,7 @@ Changes
 * http://redmine.named-data.net/issues/2366 Default KeyChain constructor for Node.js in Linux.
 * Added HmacWithSha256Signature. In KeyChain, added experimental static methods
   sign/verifyDataWithHmacWithSha256.
+* http://redmine.named-data.net/issues/3452 Added Interest.refreshNonce.
 * Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 * Examples: Added test-sign-verify-data-hmac.
 
