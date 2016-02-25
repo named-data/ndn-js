@@ -34,6 +34,7 @@ describe('TestNameConventions', function() {
 
   it('Segment', function() {
     var expected = new Name("/%00%27%10");
+    assert.ok(expected.get(0).isSegment());
     var number = 10000;
     assert.ok(new Name().appendSegment(number).equals(expected), "appendSegment did not create the expected component");
     assert.equal(expected.get(0).toSegment(), number, "toSegment did not return the expected value");
@@ -41,6 +42,7 @@ describe('TestNameConventions', function() {
 
   it('SegmentOffset', function() {
     var expected = new Name("/%FB%00%01%86%A0");
+    assert.ok(expected.get(0).isSegmentOffset());
     var number = 100000;
     assert.ok(new Name().appendSegmentOffset(number).equals(expected), "appendSegmentOffset did not create the expected component");
     assert.equal(expected.get(0).toSegmentOffset(), number, "toSegmentOffset did not return the expected value");
@@ -48,6 +50,7 @@ describe('TestNameConventions', function() {
 
   it('Version', function() {
     var expected = new Name("/%FD%00%0FB%40");
+    assert.ok(expected.get(0).isVersion());
     var number = 1000000;
     assert.ok(new Name().appendVersion(number).equals(expected), "appendVersion did not create the expected component");
     assert.equal(expected.get(0).toVersion(), number, "toVersion did not return the expected value");
@@ -55,6 +58,7 @@ describe('TestNameConventions', function() {
 
   it('SequenceNumber', function() {
     var expected = new Name("/%FE%00%98%96%80");
+    assert.ok(expected.get(0).isSequenceNumber());
     var number = 10000000;
     assert.ok(new Name().appendSequenceNumber(number).equals(expected), "appendSequenceNumber did not create the expected component");
     assert.equal(expected.get(0).toSequenceNumber(), number, "toSequenceNumber did not return the expected value");
@@ -62,6 +66,7 @@ describe('TestNameConventions', function() {
 
   it('Timestamp', function() {
     var expected = new Name("/%FC%00%04%7BE%E3%1B%00%00");
+    assert.ok(expected.get(0).isTimestamp());
     // 40 years (not counting leap years) in microseconds.
     var number = 40 * 365 * 24 * 3600 * 1000000;
     assert.ok(new Name().appendTimestamp(number).equals(expected), "appendTimestamp did not create the expected component");
