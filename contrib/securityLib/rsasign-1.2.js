@@ -22,6 +22,10 @@
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
+var intShim = require('jsbn');
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+var RSAKey = require('./rsapem-1.1.js').RSAKey
+
 var _RE_HEXDECONLY = new RegExp("");
 _RE_HEXDECONLY.compile("[^0-9a-f]", "gi");
 
@@ -454,3 +458,6 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey;
+module.exports = exports;

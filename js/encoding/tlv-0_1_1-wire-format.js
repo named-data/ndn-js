@@ -30,6 +30,7 @@ var ContentType = require('../meta-info.js').ContentType;
 var KeyLocator = require('../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var DecodingException = require('./decoding-exception.js').DecodingException;
@@ -716,6 +717,12 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof HmacWithSha256Signature) {
+    Tlv0_1_1WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureHmacWithSha256);
+  }
   else if (signature instanceof DigestSha256Signature)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
@@ -734,6 +741,12 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
       data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
+      var signatureInfo = data.getSignature();
+      Tlv0_1_1WireFormat.decodeKeyLocator
+        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+  }
+  else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
+      data.setSignature(new HmacWithSha256Signature());
       var signatureInfo = data.getSignature();
       Tlv0_1_1WireFormat.decodeKeyLocator
         (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);

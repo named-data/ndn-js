@@ -21,6 +21,7 @@ var Data = require('../..').Data;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('../..').HmacWithSha256Signature;
 var DigestSha256Signature = require('../..').DigestSha256Signature;
 var ContentType = require('../..').ContentType;
 var KeyType = require('../..').KeyType;
@@ -197,6 +198,13 @@ function dumpData(data)
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     console.log("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof HmacWithSha256Signature) {
+    var signature = data.getSignature();
+    console.log("HmacWithSha256 signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();

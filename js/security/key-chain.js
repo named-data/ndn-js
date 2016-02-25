@@ -892,6 +892,57 @@ KeyChain.prototype.setFace = function(face)
   this.face = face;
 };
 
+/**
+ * Wire encode the target, compute an HmacWithSha256 and update the signature
+ * value.
+ * @param {Data} target If this is a Data object, update its signature and wire
+ * encoding.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the target. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (target instanceof Data) {
+    var data = target;
+    // Encode once to get the signed portion.
+    var encoding = data.wireEncode(wireFormat);
+
+    var signer = Crypto.createHmac('sha256', key.buf());
+    signer.update(encoding.signedBuf());
+    data.getSignature().setSignature(
+      new Blob(signer.digest(), false));
+  }
+  else
+    throw new SecurityException(new Error
+      ("signWithHmacWithSha256: Unrecognized target type"));
+};
+
+/**
+ * Compute a new HmacWithSha256 for the target and verify it against the
+ * signature value.
+ * @param {Data} target The Data object to verify.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the target. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // wireEncode returns the cached encoding if available.
+  var encoding = data.wireEncode(wireFormat);
+
+  var signer = Crypto.createHmac('sha256', key.buf());
+  signer.update(encoding.signedBuf());
+  var newSignatureBits = new Blob(signer.digest(), false);
+
+  // Use the flexible Blob.equals operator.
+  return newSignatureBits.equals(data.getSignature().getSignature());
+};
+
 KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)

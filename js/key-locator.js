@@ -146,7 +146,7 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
- * If the signature is a type that has a KeyLocator (so that
+ * If the signature is a type that has a KeyLocator (so that,
  * getFromSignature will succeed), return true.
  * Note: This is a static method of KeyLocator instead of a method of
  * Signature so that the Signature base class does not need to be overloaded
@@ -158,7 +158,8 @@ KeyLocator.prototype.clear = function()
  */
 KeyLocator.canGetFromSignature = function(signature)
 {
-  return signature instanceof Sha256WithRsaSignature;
+  return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof HmacWithSha256Signature;
 }
 
 /**
@@ -170,7 +171,8 @@ KeyLocator.canGetFromSignature = function(signature)
  */
 KeyLocator.getFromSignature = function(signature)
 {
-  if (signature instanceof Sha256WithRsaSignature)
+  if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof HmacWithSha256Signature)
     return signature.getKeyLocator();
   else
     throw new Error
@@ -206,3 +208,4 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
