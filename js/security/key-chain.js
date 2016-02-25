@@ -895,6 +895,7 @@ KeyChain.prototype.setFace = function(face)
 /**
  * Wire encode the target, compute an HmacWithSha256 and update the signature
  * value.
+ * Note: This method is an experimental feature. The API may change.
  * @param {Data} target If this is a Data object, update its signature and wire
  * encoding.
  * @param {Blob} key The key for the HmacWithSha256.
@@ -923,6 +924,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
 /**
  * Compute a new HmacWithSha256 for the target and verify it against the
  * signature value.
+ * Note: This method is an experimental feature. The API may change.
  * @param {Data} target The Data object to verify.
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
