@@ -21,6 +21,10 @@
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
 
+var CryptoJS = require('./sha256.js').CryptoJS
+  , intShim = require('jsbn');
+
+
 /** 
  * kjur's class library name space
  * @name KJUR
@@ -1227,3 +1231,6 @@ KJUR.crypto.OID = new function() {
 	'608648016503040302': 'SHA256withDSA'  // 2.16.840.1.101.3.4.3.2
     };
 };
+
+exports.KJUR = KJUR;
+module.exports = exports;

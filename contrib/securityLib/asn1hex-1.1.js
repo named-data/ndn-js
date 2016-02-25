@@ -39,6 +39,8 @@
  * @class ASN.1 DER encoded hexadecimal string utility class
  * @since jsrsasign 1.1
  */
+var intShim = require('jsbn');
+
 var ASN1HEX = new function() {
     /**
      * get byte length for ASN.1 L(length) bytes
@@ -564,3 +566,6 @@ ASN1HEX.isASN1HEX = function(hex) {
 
     return false;
 };
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;

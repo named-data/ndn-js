@@ -32,6 +32,11 @@
  * @version 1.1
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa2.js').RSAKey;
+
 function _rsapem_pemToBase64(sPEMPrivateKey) {
   var s = sPEMPrivateKey;
   s = s.replace("-----BEGIN RSA PRIVATE KEY-----", "");
@@ -100,3 +105,6 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
 RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN1HexString;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;

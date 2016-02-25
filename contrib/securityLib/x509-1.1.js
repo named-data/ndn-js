@@ -39,6 +39,11 @@
  * @version 1.0.1 (08 May 2012)
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  */
+
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js').RSAKey;
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+
 function X509() {
     this.subjectPublicKeyRSA = null;
     this.subjectPublicKeyRSA_hN = null;
@@ -721,3 +726,6 @@ X509.getExtAIAInfo = function(hCert) {
   X509.prototype.getNotBefore = _x509_getNotBefore;
   X509.prototype.getNotAfter = _x509_getNotAfter;
 */
+
+exports.X509 = X509;
+module.exports = exports;
