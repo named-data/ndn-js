@@ -1336,6 +1336,9 @@ var CryptoJS = CryptoJS || (function (Math, undefined) {
 
     return C;
 }(Math));
+
+exports.CryptoJS = CryptoJS;
+module.exports = exports;
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1352,7 +1355,7 @@ The above copyright notice and this permission notice shall be included in all c
 code.google.com/p/crypto-js/wiki/License
 */
 
-var C = CryptoJS;
+var C = require('./core.js').CryptoJS;
 (function (Math) {
     // Shortcuts
     var C_lib = C.lib;
@@ -1531,6 +1534,9 @@ var C = CryptoJS;
      */
     C.HmacSHA256 = Hasher._createHmacHelper(SHA256);
 }(Math));
+
+exports.CryptoJS = C;
+module.exports = exports;
 /*
 CryptoJS v3.1.2
 code.google.com/p/crypto-js
@@ -1736,6 +1742,12 @@ function b64toBA(s) {
   }
   return a;
 }
+
+exports.b64tohex = b64tohex;
+exports.b64toBA  = b64toBA;
+exports.hex2b64  = hex2b64;
+
+module.exports = exports;
 /*! (c) Tom Wu | http://www-cs-students.stanford.edu/~tjw/jsbn/
  */
 // prng4.js - uses Arcfour as a PRNG
@@ -1858,6 +1870,8 @@ SecureRandom.prototype.nextBytes = rng_get_bytes;
 // Depends on jsbn.js and rng.js
 
 // Version 1.1: support utf-8 encoding in pkcs1pad2
+
+var intShim = require("jsbn");
 
 // convert a (hex) string to a bignum object
 function parseBigInt(str,r) {
@@ -2044,11 +2058,18 @@ RSAKey.prototype.encryptOAEP = RSAEncryptOAEP;
 //RSAKey.prototype.encrypt_b64 = RSAEncryptB64;
 
 RSAKey.prototype.type = "RSA";
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! (c) Tom Wu | http://www-cs-students.stanford.edu/~tjw/jsbn/
  */
 // Depends on rsa.js and jsbn2.js
 
 // Version 1.1: support utf-8 decoding in pkcs1unpad2
+
+var intShim = require("jsbn");
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim ;
+var RSAKey = require('./rsa.js').RSAKey;
 
 // Undo PKCS#1 (type 2, random) padding and, if valid, return the plaintext
 function pkcs1unpad2(d,n) {
@@ -2291,6 +2312,9 @@ RSAKey.prototype.generate = RSAGenerate;
 RSAKey.prototype.decrypt = RSADecrypt;
 RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
 //RSAKey.prototype.b64_decrypt = RSAB64Decrypt;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! crypto-1.1.7.js (c) 2013-2015 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
@@ -2313,6 +2337,10 @@ RSAKey.prototype.decryptOAEP = RSADecryptOAEP;
  * @since jsrsasign 2.2
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var CryptoJS = require('./sha256.js').CryptoJS
+  , intShim = require('jsbn');
+
 
 /** 
  * kjur's class library name space
@@ -3520,6 +3548,9 @@ KJUR.crypto.OID = new function() {
 	'608648016503040302': 'SHA256withDSA'  // 2.16.840.1.101.3.4.3.2
     };
 };
+
+exports.KJUR = KJUR;
+module.exports = exports;
 /*! rsapem-1.1.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 //
@@ -3554,6 +3585,11 @@ KJUR.crypto.OID = new function() {
  * @version 1.1
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa2.js').RSAKey;
+
 function _rsapem_pemToBase64(sPEMPrivateKey) {
   var s = sPEMPrivateKey;
   s = s.replace("-----BEGIN RSA PRIVATE KEY-----", "");
@@ -3622,6 +3658,9 @@ function _rsapem_readPrivateKeyFromPEMString(keyPEM) {
 
 RSAKey.prototype.readPrivateKeyFromPEMString = _rsapem_readPrivateKeyFromPEMString;
 RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN1HexString;
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! rsasign-1.2.7.js (c) 2012 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /*
@@ -3645,6 +3684,10 @@ RSAKey.prototype.readPrivateKeyFromASN1HexString = _rsapem_readPrivateKeyFromASN
  * @version rsasign 1.2.7
  * @license <a href="http://kjur.github.io/jsrsasign/license/">MIT License</a>
  */
+
+var intShim = require('jsbn');
+var BigInteger = intShim.BigInteger ? intShim.BigInteger : intShim;
+var RSAKey = require('./rsapem-1.1.js').RSAKey
 
 var _RE_HEXDECONLY = new RegExp("");
 _RE_HEXDECONLY.compile("[^0-9a-f]", "gi");
@@ -4078,6 +4121,9 @@ RSAKey.SALT_LEN_RECOVER = -2;
  * @class key of RSA public key algorithm
  * @description Tom Wu's RSA Key class and extension
  */
+
+exports.RSAKey = RSAKey;
+module.exports = exports;
 /*! ecdsa-modified-1.0.4.js (c) Stephan Thomas, Kenji Urushima | github.com/bitcoinjs/bitcoinjs-lib/blob/master/LICENSE
  */
 /*
@@ -4727,6 +4773,8 @@ KJUR.crypto.ECDSA.biRSSigToASN1Sig = function(biR, biS) {
  * @class ASN.1 DER encoded hexadecimal string utility class
  * @since jsrsasign 1.1
  */
+var intShim = require('jsbn');
+
 var ASN1HEX = new function() {
     /**
      * get byte length for ASN.1 L(length) bytes
@@ -5252,6 +5300,9 @@ ASN1HEX.isASN1HEX = function(hex) {
 
     return false;
 };
+
+exports.ASN1HEX = ASN1HEX;
+module.exports = exports;
 /*! x509-1.1.6.js (c) 2012-2015 Kenji Urushima | kjur.github.com/jsrsasign/license
  */
 /* 
@@ -5293,6 +5344,11 @@ ASN1HEX.isASN1HEX = function(hex) {
  * @version 1.0.1 (08 May 2012)
  * @see <a href="http://kjur.github.com/jsrsasigns/">'jwrsasign'(RSA Sign JavaScript Library) home page http://kjur.github.com/jsrsasign/</a>
  */
+
+var b64tohex = require('./base64.js').b64tohex;
+var RSAKey = require('./rsa.js').RSAKey;
+var ASN1HEX = require('./asn1hex-1.1.js').ASN1HEX;
+
 function X509() {
     this.subjectPublicKeyRSA = null;
     this.subjectPublicKeyRSA_hN = null;
@@ -5975,6 +6031,9 @@ X509.getExtAIAInfo = function(hCert) {
   X509.prototype.getNotBefore = _x509_getNotBefore;
   X509.prototype.getNotAfter = _x509_getNotAfter;
 */
+
+exports.X509 = X509;
+module.exports = exports;
 /*! (c) Tom Wu | http://www-cs-students.stanford.edu/~tjw/jsbn/
  */
 // Copyright (c) 2005  Tom Wu
@@ -5991,7 +6050,7 @@ var canary = 0xdeadbeefcafe;
 var j_lm = ((canary&0xffffff)==0xefcafe);
 
 // (public) Constructor
-function BigInteger(a,b,c) {
+var BigInteger = function BigInteger(a,b,c) {
   if(a != null)
     if("number" == typeof a) this.fromNumber(a,b,c);
     else if(b == null && "string" != typeof a) this.fromString(a,256);
@@ -7194,6 +7253,9 @@ BigInteger.prototype.square = bnSquare;
 // int hashCode()
 // long longValue()
 // static BigInteger valueOf(long val)
+
+exports.BigInteger = BigInteger;
+module.exports = exports;
 /**
  * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Wentao Shang
@@ -7212,6 +7274,11 @@ BigInteger.prototype.square = bnSquare;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
+
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
 // Library namespace
 var ndn = ndn || {};
@@ -7234,6 +7301,33 @@ exports.createHash = function(alg)
 
   obj.digest = function(encoding) {
     var hexDigest = this.md.digest();
+    if (encoding == 'hex')
+      return hexDigest;
+    else if (encoding == 'base64')
+      return new Buffer(hexDigest, 'hex').toString('base64');
+    else
+      return new Buffer(hexDigest, 'hex');
+  };
+
+  return obj;
+};
+
+// Factory method to create HMAC objects.
+exports.createHmac = function(algorithm, key)
+{
+  if (algorithm !== 'sha256')
+    throw new Error('createHmac: unsupported algorithm.');
+
+  var obj = {};
+
+  obj.md = new KJUR.crypto.Mac({alg: "HmacSHA256", pass: {hex: key.toString('hex')}});
+
+  obj.update = function(buf) {
+    this.md.updateHex(buf.toString('hex'));
+  };
+
+  obj.digest = function(encoding) {
+    var hexDigest = this.md.doFinal();
     if (encoding == 'hex')
       return hexDigest;
     else if (encoding == 'base64')
@@ -8829,6 +8923,8 @@ NdnCommon.getErrorWithStackTrace = function(error)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var NdnCommon = require('./ndn-common.js').NdnCommon;
+
 /**
  * An ExponentialReExpress uses an internal onTimeout to express the interest again
  * with double the interestLifetime. See ExponentialReExpress.makeOnTimeout,
@@ -8872,7 +8968,8 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onTimeout If the interesLifetime goes over
- * maxInterestLifetime, this calls onTimeout(interest).
+ * maxInterestLifetime, this calls onTimeout(interest). However, if onTimeout is
+ * null, this does not use it.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -8892,13 +8989,29 @@ ExponentialReExpress.makeOnTimeout = function(face, onData, onTimeout, settings)
 ExponentialReExpress.prototype.onTimeout = function(interest)
 {
   var interestLifetime = interest.getInterestLifetimeMilliseconds();
-  if (interestLifetime == null)
+  if (interestLifetime == null) {
     // Can't re-express.
-    return this.callerOnTimeout(interest);
+    if (this.callerOnTimeout) {
+      try {
+        this.callerOnTimeout(interest);
+      } catch (ex) {
+        console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
+    return;
+  }
 
   var nextInterestLifetime = interestLifetime * 2;
-  if (nextInterestLifetime > this.maxInterestLifetime)
-    return this.callerOnTimeout(interest);
+  if (nextInterestLifetime > this.maxInterestLifetime) {
+    if (this.callerOnTimeout) {
+      try {
+        this.callerOnTimeout(interest);
+      } catch (ex) {
+        console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
+      }
+    }
+    return;
+  }
 
   var nextInterest = interest.clone();
   nextInterest.setInterestLifetimeMilliseconds(nextInterestLifetime);
@@ -10048,6 +10161,7 @@ Tlv.StatusText =       140;
 Tlv.SignatureType_DigestSha256 = 0;
 Tlv.SignatureType_SignatureSha256WithRsa = 1;
 Tlv.SignatureType_SignatureSha256WithEcdsa = 3;
+Tlv.SignatureType_SignatureHmacWithSha256 = 4;
 
 Tlv.ContentType_Default = 0;
 Tlv.ContentType_Link =    1;
@@ -14907,9 +15021,11 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
 };
 
 /**
- * Return true if the N components of this name are the same as the first N components of the given name.
+ * Return true if the N components of this name are the same as the first N
+ * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name.  This always returns true if this name is empty.
+ * @returns {Boolean} true if this matches the given name. This always returns
+ * true if this name is empty.
  */
 Name.prototype.match = function(name)
 {
@@ -14929,6 +15045,15 @@ Name.prototype.match = function(name)
 
   return true;
 };
+
+/**
+ * Return true if the N components of this name are the same as the first N
+ * components of the given name.
+ * @param {Name} name The name to check.
+ * @returns {Boolean} true if this matches the given name. This always returns
+ * true if this name is empty.
+ */
+Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
@@ -15090,7 +15215,7 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
- * If the signature is a type that has a KeyLocator (so that
+ * If the signature is a type that has a KeyLocator (so that,
  * getFromSignature will succeed), return true.
  * Note: This is a static method of KeyLocator instead of a method of
  * Signature so that the Signature base class does not need to be overloaded
@@ -15102,7 +15227,8 @@ KeyLocator.prototype.clear = function()
  */
 KeyLocator.canGetFromSignature = function(signature)
 {
-  return signature instanceof Sha256WithRsaSignature;
+  return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof HmacWithSha256Signature;
 }
 
 /**
@@ -15114,7 +15240,8 @@ KeyLocator.canGetFromSignature = function(signature)
  */
 KeyLocator.getFromSignature = function(signature)
 {
-  if (signature instanceof Sha256WithRsaSignature)
+  if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof HmacWithSha256Signature)
     return signature.getKeyLocator();
   else
     throw new Error
@@ -15150,6 +15277,7 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
 /**
  * This class represents an NDN Data MetaInfo object.
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -15486,6 +15614,143 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "keyLocator",
  * @@deprecated Use getSignature and setSignature.
  */
 Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
+  { get: function() { return this.getSignatureAsBuffer(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * This class represents an NDN Data Signature object.
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('./util/blob.js').Blob;
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+var KeyLocator = require('./key-locator.js').KeyLocator;
+
+/**
+ * An HmacWithSha256Signature holds the signature bits and other info
+ * representing an HmacWithSha256 signature in a packet.
+ * Create a new HmacWithSha256Signature object, possibly copying values from
+ * another object.
+ *
+ * @param {HmacWithSha256Signature} value (optional) If value is a
+ * HmacWithSha256Signature, copy its values.  If value is omitted, the keyLocator
+ * is the default with unspecified values and the signature is unspecified.
+ * @constructor
+ */
+var HmacWithSha256Signature = function HmacWithSha256Signature(value)
+{
+  if (typeof value === 'object' && value instanceof HmacWithSha256Signature) {
+    // Copy the values.
+    this.keyLocator_ = new ChangeCounter(new KeyLocator(value.getKeyLocator()));
+    this.signature_ = value.signature_;
+  }
+  else {
+    this.keyLocator_ = new ChangeCounter(new KeyLocator());
+    this.signature_ = new Blob();
+  }
+
+  this.changeCount_ = 0;
+};
+
+exports.HmacWithSha256Signature = HmacWithSha256Signature;
+
+/**
+ * Create a new HmacWithSha256Signature which is a copy of this object.
+ * @returns {HmacWithSha256Signature} A new object which is a copy of this object.
+ */
+HmacWithSha256Signature.prototype.clone = function()
+{
+  return new HmacWithSha256Signature(this);
+};
+
+/**
+ * Get the key locator.
+ * @returns {KeyLocator} The key locator.
+ */
+HmacWithSha256Signature.prototype.getKeyLocator = function()
+{
+  return this.keyLocator_.get();
+};
+
+/**
+ * Get the data packet's signature bytes.
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ */
+HmacWithSha256Signature.prototype.getSignature = function()
+{
+  return this.signature_;
+};
+
+/**
+ * @deprecated Use getSignature. This method returns a Buffer which is the former
+ * behavior of getSignature, and should only be used while updating your code.
+ */
+HmacWithSha256Signature.prototype.getSignatureAsBuffer = function()
+{
+  return this.signature_.buf();
+};
+
+/**
+ * Set the key locator to a copy of the given keyLocator.
+ * @param {KeyLocator} keyLocator The KeyLocator to copy.
+ */
+HmacWithSha256Signature.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set(typeof keyLocator === 'object' &&
+                       keyLocator instanceof KeyLocator ?
+    new KeyLocator(keyLocator) : new KeyLocator());
+  ++this.changeCount_;
+};
+
+/**
+ * Set the data packet's signature bytes.
+ * @param {Blob} signature
+ */
+HmacWithSha256Signature.prototype.setSignature = function(signature)
+{
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
+  ++this.changeCount_;
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+HmacWithSha256Signature.prototype.getChangeCount = function()
+{
+  // Make sure each of the checkChanged is called.
+  var changed = this.keyLocator_.checkChanged();
+  if (changed)
+    // A child object has changed, so update the change count.
+    ++this.changeCount_;
+
+  return this.changeCount_;
+};
+
+// Define properties so we can change member variable types and implement changeCount_.
+Object.defineProperty(HmacWithSha256Signature.prototype, "keyLocator",
+  { get: function() { return this.getKeyLocator(); },
+    set: function(val) { this.setKeyLocator(val); } });
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(HmacWithSha256Signature.prototype, "signature",
   { get: function() { return this.getSignatureAsBuffer(); },
     set: function(val) { this.setSignature(val); } });
 /**
@@ -23205,6 +23470,57 @@ KeyChain.prototype.setFace = function(face)
   this.face = face;
 };
 
+/**
+ * Wire encode the target, compute an HmacWithSha256 and update the signature
+ * value.
+ * @param {Data} target If this is a Data object, update its signature and wire
+ * encoding.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the target. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (target instanceof Data) {
+    var data = target;
+    // Encode once to get the signed portion.
+    var encoding = data.wireEncode(wireFormat);
+
+    var signer = Crypto.createHmac('sha256', key.buf());
+    signer.update(encoding.signedBuf());
+    data.getSignature().setSignature(
+      new Blob(signer.digest(), false));
+  }
+  else
+    throw new SecurityException(new Error
+      ("signWithHmacWithSha256: Unrecognized target type"));
+};
+
+/**
+ * Compute a new HmacWithSha256 for the target and verify it against the
+ * signature value.
+ * @param {Data} target The Data object to verify.
+ * @param {Blob} key The key for the HmacWithSha256.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the target. If omitted, use WireFormat getDefaultWireFormat().
+ */
+KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // wireEncode returns the cached encoding if available.
+  var encoding = data.wireEncode(wireFormat);
+
+  var signer = Crypto.createHmac('sha256', key.buf());
+  signer.update(encoding.signedBuf());
+  var newSignatureBits = new Blob(signer.digest(), false);
+
+  // Use the flexible Blob.equals operator.
+  return newSignatureBits.equals(data.getSignature().getSignature());
+};
+
 KeyChain.DEFAULT_KEY_PARAMS = new RsaKeyParams();
 
 KeyChain.prototype.onCertificateData = function(interest, data, nextStep)
@@ -24582,6 +24898,7 @@ var ContentType = require('../meta-info.js').ContentType;
 var KeyLocator = require('../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var DecodingException = require('./decoding-exception.js').DecodingException;
@@ -25268,6 +25585,12 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof HmacWithSha256Signature) {
+    Tlv0_1_1WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureHmacWithSha256);
+  }
   else if (signature instanceof DigestSha256Signature)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_DigestSha256);
@@ -25286,6 +25609,12 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
       data.setSignature(new Sha256WithRsaSignature());
       // Modify data's signature object because if we create an object
       //   and set it, then data will have to copy all the fields.
+      var signatureInfo = data.getSignature();
+      Tlv0_1_1WireFormat.decodeKeyLocator
+        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+  }
+  else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
+      data.setSignature(new HmacWithSha256Signature());
       var signatureInfo = data.getSignature();
       Tlv0_1_1WireFormat.decodeKeyLocator
         (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
@@ -25486,9 +25815,10 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Interest = require('../interest.js').Interest;
 var Data = require('../data.js').Data;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ContentType = require('../meta-info.js').ContentType;
 var WireFormat = require('./wire-format.js').WireFormat;
-var LOG = require('../log.js').Log.LOG;
 
 /**
  * An EncodingUtils has static methods for encoding data.
@@ -25589,6 +25919,13 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     append("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof HmacWithSha256Signature) {
+    var signature = data.getSignature();
+    append("HmacWithSha256 signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
