@@ -218,6 +218,18 @@ describe('TestInterestMethods', function() {
     assert.ok(interest.getNonce().isNull(), 'Interest should not have a nonce after changing fields');
   });
 
+  it('RefreshNonce', function() {
+    var interest = new Interest(referenceInterest);
+    var oldNonce = interest.getNonce();
+    assert.equal(oldNonce.size(), 4);
+
+    interest.refreshNonce();
+    assert.equal(interest.getNonce().size(), oldNonce.size(),
+                 "The refreshed nonce should be the same size");
+    assert.equal(interest.getNonce().equals(oldNonce), false,
+                 "The refreshed nonce should be different");
+  });
+
   it('ExcludeMatches', function() {
     var exclude = new Exclude();
     exclude.appendComponent(new Name("%00%02").get(0));
