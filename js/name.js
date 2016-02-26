@@ -556,8 +556,9 @@ Name.prototype.addSegment = function(number)
  * @param {number} iStartComponent The index if the first component to get. If
  * iStartComponent is -N then return return components starting from
  * name.size() - N.
- * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
- * return components starting at iStartComponent until the end of the name.
+ * @param {number} (optional) nComponents The number of components starting at 
+ * iStartComponent. If omitted or greater than the size of this name, get until
+ * the end of the name.
  * @returns {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
