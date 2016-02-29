@@ -7,6 +7,8 @@ Changes
 * http://redmine.named-data.net/issues/2366 Default KeyChain constructor for Node.js in Linux.
 * Added HmacWithSha256Signature. In KeyChain, added experimental static methods
   sign/verifyDataWithHmacWithSha256.
+* http://redmine.named-data.net/issues/3449 Added Name.isPrefixOf and getSuccessor.
+  In compare, support compare(int, int, Name, int, int).
 * http://redmine.named-data.net/issues/3450 Added Name.Component.isSegment,
   isSegmentOffset, isVersion, isTimestamp and isSequenceNumber.
 * http://redmine.named-data.net/issues/3452 Added Interest.refreshNonce.
