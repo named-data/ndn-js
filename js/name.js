@@ -711,14 +711,57 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {Name} other The other Name to compare with.
  * @returns {boolean} If they compare equal, -1 if *this comes before other in
  * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering. The first form of compare is simply compare(other). The second form is
+ * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
+ * which is equivalent to
+ * self.getSubName(iStartComponent, nComponents).compare
+ * (other.getSubName(iOtherStartComponent, nOtherComponents)) .
+ * @param {number} iStartComponent The index if the first component of this name
+ * to get. If iStartComponent is -N then compare components starting from
+ * name.size() - N.
+ * @param {number} nComponents The number of components starting at
+ * iStartComponent. If greater than the size of this name, compare until the end
+ * of the name.
+ * @param {Name other: The other Name to compare with.
+ * @param {number} iOtherStartComponent (optional) The index if the first
+ * component of the other name to compare. If iOtherStartComponent is -N then
+ * compare components starting from other.size() - N. If omitted, compare
+ * starting from index 0.
+ * @param {number} nOtherComponents (optional) The number of components
+ * starting at iOtherStartComponent. If omitted or greater than the size of this
+ * name, compare until the end of the name.
+ * @returns {number} 0 If they compare equal, -1 if self comes before other in 
+ * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
- *
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
  */
-Name.prototype.compare = function(other)
+Name.prototype.compare = function
+  (iStartComponent, nComponents, other, iOtherStartComponent, nOtherComponents)
 {
-  for (var i = 0; i < this.size() && i < other.size(); ++i) {
-    var comparison = this.components[i].compare(other.components[i]);
+  if (iStartComponent instanceof Name) {
+    // compare(other)
+    other = iStartComponent;
+    iStartComponent = 0;
+    nComponents = this.size();
+  }
+
+  if (iOtherStartComponent == undefined)
+    iOtherStartComponent = 0;
+  if (nOtherComponents == undefined)
+    nOtherComponents = other.size();
+
+  if (iStartComponent < 0)
+    iStartComponent = this.size() - (-iStartComponent);
+  if (iOtherStartComponent < 0)
+    iOtherStartComponent = other.size() - (-iOtherStartComponent);
+
+  nComponents = Math.min(nComponents, this.size() - iStartComponent);
+  nOtherComponents = Math.min(nOtherComponents, other.size() - iOtherStartComponent);
+
+  var count = Math.min(nComponents, nOtherComponents);
+  for (var i = 0; i < count; ++i) {
+    var comparison = this.components[iStartComponent + i].compare
+      (other.components[iOtherStartComponent + i]);
     if (comparison == 0)
       // The components at this index are equal, so check the next components.
       continue;
@@ -729,9 +772,9 @@ Name.prototype.compare = function(other)
 
   // The components up to min(this.size(), other.size()) are equal, so the
   // shorter name is less.
-  if (this.size() < other.size())
+  if (nComponents < nOtherComponents)
     return -1;
-  else if (this.size() > other.size())
+  else if (nComponents > nOtherComponents)
     return 1;
   else
     return 0;
