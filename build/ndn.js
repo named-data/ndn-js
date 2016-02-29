@@ -14483,6 +14483,69 @@ Name.Component.fromNumberWithMarker = function(number, marker)
 };
 
 /**
+ * Create a component with the encoded segment number according to NDN
+ * naming conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * param {number} segment The segment number.
+ * returns {Name.Component} The new Component.
+ */
+Name.Component.fromSegment = function(segment)
+{
+  return Name.Component.fromNumberWithMarker(segment, 0x00);
+};
+
+/**
+ * Create a component with the encoded segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * param {number} segmentOffset The segment byte offset.
+ * returns {Name.Component} The new Component.
+ */
+Name.Component.fromSegmentOffset = function(segmentOffset)
+{
+  return Name.Component.fromNumberWithMarker(segmentOffset, 0xFB);
+};
+
+/**
+ * Create a component with the encoded version number according to NDN
+ * naming conventions for "Versioning" (marker 0xFD).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * Note that this encodes the exact value of version without converting from a
+ * time representation.
+ * param {number} version The version number.
+ * returns {Name.Component} The new Component.
+ */
+Name.Component.fromVersion = function(version)
+{
+  return Name.Component.fromNumberWithMarker(version, 0xFD);
+};
+
+/**
+ * Create a component with the encoded timestamp according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
+ * 1 January 1970) not counting leap seconds.
+ * returns {Name.Component} The new Component.
+ */
+Name.Component.fromTimestamp = function(timestamp)
+{
+  return Name.Component.fromNumberWithMarker(timestamp, 0xFC);
+};
+
+/**
+ * Create a component with the encoded sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * param {number} sequenceNumber The sequence number.
+ * returns {Name.Component} The new Component.
+ */
+Name.Component.fromSequenceNumber = function(sequenceNumber)
+{
+  return Name.Component.fromNumberWithMarker(sequenceNumber, 0xFE);
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
  * @returns {Name.Component} A new Name.Component which is the successor of this.
  */
@@ -14715,7 +14778,7 @@ Name.prototype.toString = function() { return this.toUri(); }
  */
 Name.prototype.appendSegment = function(segment)
 {
-  return this.append(Name.Component.fromNumberWithMarker(segment, 0x00));
+  return this.append(Name.Component.fromSegment(segment));
 };
 
 /**
@@ -14727,7 +14790,7 @@ Name.prototype.appendSegment = function(segment)
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
-  return this.append(Name.Component.fromNumberWithMarker(segmentOffset, 0xFB));
+  return this.append(Name.Component.fromSegmentOffset(segmentOffset));
 };
 
 /**
@@ -14740,7 +14803,7 @@ Name.prototype.appendSegmentOffset = function(segmentOffset)
  */
 Name.prototype.appendVersion = function(version)
 {
-  return this.append(Name.Component.fromNumberWithMarker(version, 0xFD));
+  return this.append(Name.Component.fromVersion(version));
 };
 
 /**
@@ -14753,7 +14816,7 @@ Name.prototype.appendVersion = function(version)
  */
 Name.prototype.appendTimestamp = function(timestamp)
 {
-  return this.append(Name.Component.fromNumberWithMarker(timestamp, 0xFC));
+  return this.append(Name.Component.fromTimestamp(timestamp));
 };
 
 /**
@@ -14765,7 +14828,7 @@ Name.prototype.appendTimestamp = function(timestamp)
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
-  return this.append(Name.Component.fromNumberWithMarker(sequenceNumber, 0xFE));
+  return this.append(Name.Component.fromSequenceNumber(sequenceNumber));
 };
 
 /**
