@@ -192,4 +192,12 @@ describe('TestNameMethods', function() {
     assert.ok(!name.match(name2), 'Name should not match shorter name');
     assert.ok(new Name().match(name), 'Empty name should always match another');
   });
+
+  it('GetSuccessor', function() {
+    assert.ok(new Name("ndn:/%00%01/%01%03").equals(new Name("ndn:/%00%01/%01%02").getSuccessor()));
+    assert.ok(new Name("ndn:/%00%01/%02%00").equals(new Name("ndn:/%00%01/%01%FF").getSuccessor()));
+    assert.ok(new Name("ndn:/%00%01/%00%00%00").equals(new Name("ndn:/%00%01/%FF%FF").getSuccessor()));
+    assert.ok(new Name("/%00").equals(new Name().getSuccessor()));
+    assert.ok(new Name("/%00%01/%00").equals(new Name("/%00%01/...").getSuccessor()));
+  });
 });
