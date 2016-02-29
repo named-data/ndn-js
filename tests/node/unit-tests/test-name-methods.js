@@ -134,6 +134,52 @@ describe('TestNameMethods', function() {
     for (var i = 0; i < names.length; ++i)
       sortedURIs.push(names[i].toUri());
     assert.deepEqual(sortedURIs, expectedOrder, 'Name comparison gave incorrect order');
+
+    // Tests from ndn-cxx name.t.cpp Compare.
+    assert.equal(new Name("/A")  .compare(new Name("/A")),    0);
+    assert.equal(new Name("/A")  .compare(new Name("/A")),    0);
+    assert.ok   (new Name("/A")  .compare(new Name("/B"))   < 0);
+    assert.ok   (new Name("/B")  .compare(new Name("/A"))   > 0);
+    assert.ok   (new Name("/A")  .compare(new Name("/AA"))  < 0);
+    assert.ok   (new Name("/AA") .compare(new Name("/A"))   > 0);
+    assert.ok   (new Name("/A")  .compare(new Name("/A/C")) < 0);
+    assert.ok   (new Name("/A/C").compare(new Name("/A"))   > 0);
+
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/A")),    0);
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/A")),    0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/B"))   < 0);
+    assert.ok   (new Name("/Z/B/Y")  .compare(1, 1, new Name("/A"))   > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/AA"))  < 0);
+    assert.ok   (new Name("/Z/AA/Y") .compare(1, 1, new Name("/A"))   > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/A/C")) < 0);
+    assert.ok   (new Name("/Z/A/C/Y").compare(1, 2, new Name("/A"))   > 0);
+
+    assert.equal(new Name("/Z/A")  .compare(1, 9, new Name("/A")),    0);
+    assert.equal(new Name("/Z/A")  .compare(1, 9, new Name("/A")),    0);
+    assert.ok   (new Name("/Z/A")  .compare(1, 9, new Name("/B"))   < 0);
+    assert.ok   (new Name("/Z/B")  .compare(1, 9, new Name("/A"))   > 0);
+    assert.ok   (new Name("/Z/A")  .compare(1, 9, new Name("/AA"))  < 0);
+    assert.ok   (new Name("/Z/AA") .compare(1, 9, new Name("/A"))   > 0);
+    assert.ok   (new Name("/Z/A")  .compare(1, 9, new Name("/A/C")) < 0);
+    assert.ok   (new Name("/Z/A/C").compare(1, 9, new Name("/A"))   > 0);
+
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A/W"),   1, 1),  0);
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A/W"),   1, 1),  0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/B/W"),   1, 1) < 0);
+    assert.ok   (new Name("/Z/B/Y")  .compare(1, 1, new Name("/X/A/W"),   1, 1) > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/AA/W"),  1, 1) < 0);
+    assert.ok   (new Name("/Z/AA/Y") .compare(1, 1, new Name("/X/A/W"),   1, 1) > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A/C/W"), 1, 2) < 0);
+    assert.ok   (new Name("/Z/A/C/Y").compare(1, 2, new Name("/X/A/W"),   1, 1) > 0);
+
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A"),   1),  0);
+    assert.equal(new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A"),   1),  0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/B"),   1) < 0);
+    assert.ok   (new Name("/Z/B/Y")  .compare(1, 1, new Name("/X/A"),   1) > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/AA"),  1) < 0);
+    assert.ok   (new Name("/Z/AA/Y") .compare(1, 1, new Name("/X/A"),   1) > 0);
+    assert.ok   (new Name("/Z/A/Y")  .compare(1, 1, new Name("/X/A/C"), 1) < 0);
+    assert.ok   (new Name("/Z/A/C/Y").compare(1, 2, new Name("/X/A"),   1) > 0);
   });
 
   it('Match', function() {
