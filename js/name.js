@@ -289,6 +289,37 @@ Name.Component.fromNumberWithMarker = function(number, marker)
 };
 
 /**
+ * Get the successor of this component, as described in Name.getSuccessor.
+ * @returns {Name.Component} A new Name.Component which is the successor of this.
+ */
+Name.Component.prototype.getSuccessor = function()
+{
+  // Allocate an extra byte in case the result is larger.
+  var result = new Buffer(this.value.length + 1);
+
+  var carry = true;
+  for (var i = this.value.length - 1; i >= 0; --i) {
+    if (carry) {
+      result[i] = (this.value[i] + 1) & 0xff;
+      carry = (result[i] === 0);
+    }
+    else
+      result[i] = this.value[i];
+  }
+
+  if (carry)
+    // Assume all the bytes were set to zero (or the component was empty). In 
+    // NDN ordering, carry does not mean to prepend a 1, but to make a component
+    // one byte longer of all zeros.
+    result[result.length - 1] = 0;
+  else
+    // We didn't need the extra byte.
+    result = result.slice(0, this.value.length);
+
+  return new Name.Component(new Blob(result, false));
+};
+
+/**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
  * @returns {Boolean} true if the components are equal, otherwise false.
@@ -923,6 +954,37 @@ Name.fromEscapedString = function(escapedString)
 Name.fromEscapedStringAsBuffer = function(escapedString)
 {
   return Name.fromEscapedString(escapedString).buf();
+};
+
+/**
+ * Get the successor of this name which is defined as follows.
+ *
+ *     N represents the set of NDN Names, and X,Y ∈ N.
+ *     Operator < is defined by the NDN canonical order on N.
+ *     Y is the successor of X, if (a) X < Y, and (b) ∄ Z ∈ N s.t. X < Z < Y.
+ *
+ * In plain words, the successor of a name is the same name, but with its last
+ * component advanced to a next possible value.
+ *
+ * Examples:
+ *
+ * - The successor of / is /%00
+ * - The successor of /%00%01/%01%02 is /%00%01/%01%03
+ * - The successor of /%00%01/%01%FF is /%00%01/%02%00
+ * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
+ *
+ * @returns {Name} A new name which is the successor of this.
+ */
+Name.prototype.getSuccessor = function()
+{
+  if (this.size() == 0) {
+    // Return "/%00".
+    var result = new Name();
+    result.append(new Blob(new Buffer([0]), false));
+    return result;
+  }
+  else
+    return this.getPrefix(-1).append(this.get(-1).getSuccessor());
 };
 
 /**

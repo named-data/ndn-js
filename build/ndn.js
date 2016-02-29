@@ -14313,6 +14313,61 @@ Name.Component.prototype.toEscapedString = function()
 };
 
 /**
+ * Check if this component is a segment number according to NDN naming
+ * conventions for "Segment number" (marker 0x00).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns {number}  True if this is a segment number.
+ */
+Name.Component.prototype.isSegment = function()
+{
+  return this.value.length >= 1 && this.value[0] == 0x00;
+};
+
+/**
+ * Check if this component is a segment byte offset according to NDN
+ * naming conventions for segment "Byte offset" (marker 0xFB).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns  True if this is a segment byte offset.
+ */
+Name.Component.prototype.isSegmentOffset = function()
+{
+  return this.value.length >= 1 && this.value[0] == 0xFB;
+};
+
+/**
+ * Check if this component is a version number  according to NDN naming
+ * conventions for "Versioning" (marker 0xFD).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns {number}  True if this is a version number.
+ */
+Name.Component.prototype.isVersion = function()
+{
+  return this.value.length >= 1 && this.value[0] == 0xFD;
+};
+
+/**
+ * Check if this component is a timestamp  according to NDN naming
+ * conventions for "Timestamp" (marker 0xFC).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns  True if this is a timestamp.
+ */
+Name.Component.prototype.isTimestamp = function()
+{
+  return this.value.length >= 1 && this.value[0] == 0xFC;
+};
+
+/**
+ * Check if this component is a sequence number according to NDN naming
+ * conventions for "Sequencing" (marker 0xFE).
+ * http://named-data.net/doc/tech-memos/naming-conventions.pdf
+ * @returns  True if this is a sequence number.
+ */
+Name.Component.prototype.isSequenceNumber = function()
+{
+  return this.value.length >= 1 && this.value[0] == 0xFE;
+};
+
+/**
  * Interpret this name component as a network-ordered number and return an integer.
  * @returns {number} The integer number.
  */
@@ -14425,6 +14480,37 @@ Name.Component.fromNumberWithMarker = function(number, marker)
   encoder.writeNonNegativeInteger(number);
   encoder.writeNonNegativeInteger(marker);
   return new Name.Component(new Blob(encoder.getOutput(), false));
+};
+
+/**
+ * Get the successor of this component, as described in Name.getSuccessor.
+ * @returns {Name.Component} A new Name.Component which is the successor of this.
+ */
+Name.Component.prototype.getSuccessor = function()
+{
+  // Allocate an extra byte in case the result is larger.
+  var result = new Buffer(this.value.length + 1);
+
+  var carry = true;
+  for (var i = this.value.length - 1; i >= 0; --i) {
+    if (carry) {
+      result[i] = (this.value[i] + 1) & 0xff;
+      carry = (result[i] === 0);
+    }
+    else
+      result[i] = this.value[i];
+  }
+
+  if (carry)
+    // Assume all the bytes were set to zero (or the component was empty). In 
+    // NDN ordering, carry does not mean to prepend a 1, but to make a component
+    // one byte longer of all zeros.
+    result[result.length - 1] = 0;
+  else
+    // We didn't need the extra byte.
+    result = result.slice(0, this.value.length);
+
+  return new Name.Component(new Blob(result, false));
 };
 
 /**
@@ -14695,8 +14781,9 @@ Name.prototype.addSegment = function(number)
  * @param {number} iStartComponent The index if the first component to get. If
  * iStartComponent is -N then return return components starting from
  * name.size() - N.
- * @param {number} (optional) nComponents The number of components starting at iStartComponent.  If omitted,
- * return components starting at iStartComponent until the end of the name.
+ * @param {number} (optional) nComponents The number of components starting at 
+ * iStartComponent. If omitted or greater than the size of this name, get until
+ * the end of the name.
  * @returns {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
@@ -14849,14 +14936,57 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {Name} other The other Name to compare with.
  * @returns {boolean} If they compare equal, -1 if *this comes before other in
  * the canonical ordering, or 1 if *this comes after other in the canonical
+ * ordering. The first form of compare is simply compare(other). The second form is
+ * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
+ * which is equivalent to
+ * self.getSubName(iStartComponent, nComponents).compare
+ * (other.getSubName(iOtherStartComponent, nOtherComponents)) .
+ * @param {number} iStartComponent The index if the first component of this name
+ * to get. If iStartComponent is -N then compare components starting from
+ * name.size() - N.
+ * @param {number} nComponents The number of components starting at
+ * iStartComponent. If greater than the size of this name, compare until the end
+ * of the name.
+ * @param {Name other: The other Name to compare with.
+ * @param {number} iOtherStartComponent (optional) The index if the first
+ * component of the other name to compare. If iOtherStartComponent is -N then
+ * compare components starting from other.size() - N. If omitted, compare
+ * starting from index 0.
+ * @param {number} nOtherComponents (optional) The number of components
+ * starting at iOtherStartComponent. If omitted or greater than the size of this
+ * name, compare until the end of the name.
+ * @returns {number} 0 If they compare equal, -1 if self comes before other in 
+ * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
- *
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
  */
-Name.prototype.compare = function(other)
+Name.prototype.compare = function
+  (iStartComponent, nComponents, other, iOtherStartComponent, nOtherComponents)
 {
-  for (var i = 0; i < this.size() && i < other.size(); ++i) {
-    var comparison = this.components[i].compare(other.components[i]);
+  if (iStartComponent instanceof Name) {
+    // compare(other)
+    other = iStartComponent;
+    iStartComponent = 0;
+    nComponents = this.size();
+  }
+
+  if (iOtherStartComponent == undefined)
+    iOtherStartComponent = 0;
+  if (nOtherComponents == undefined)
+    nOtherComponents = other.size();
+
+  if (iStartComponent < 0)
+    iStartComponent = this.size() - (-iStartComponent);
+  if (iOtherStartComponent < 0)
+    iOtherStartComponent = other.size() - (-iOtherStartComponent);
+
+  nComponents = Math.min(nComponents, this.size() - iStartComponent);
+  nOtherComponents = Math.min(nOtherComponents, other.size() - iOtherStartComponent);
+
+  var count = Math.min(nComponents, nOtherComponents);
+  for (var i = 0; i < count; ++i) {
+    var comparison = this.components[iStartComponent + i].compare
+      (other.components[iOtherStartComponent + i]);
     if (comparison == 0)
       // The components at this index are equal, so check the next components.
       continue;
@@ -14867,9 +14997,9 @@ Name.prototype.compare = function(other)
 
   // The components up to min(this.size(), other.size()) are equal, so the
   // shorter name is less.
-  if (this.size() < other.size())
+  if (nComponents < nOtherComponents)
     return -1;
-  else if (this.size() > other.size())
+  else if (nComponents > nOtherComponents)
     return 1;
   else
     return 0;
@@ -15018,6 +15148,37 @@ Name.fromEscapedString = function(escapedString)
 Name.fromEscapedStringAsBuffer = function(escapedString)
 {
   return Name.fromEscapedString(escapedString).buf();
+};
+
+/**
+ * Get the successor of this name which is defined as follows.
+ *
+ *     N represents the set of NDN Names, and X,Y ∈ N.
+ *     Operator < is defined by the NDN canonical order on N.
+ *     Y is the successor of X, if (a) X < Y, and (b) ∄ Z ∈ N s.t. X < Z < Y.
+ *
+ * In plain words, the successor of a name is the same name, but with its last
+ * component advanced to a next possible value.
+ *
+ * Examples:
+ *
+ * - The successor of / is /%00
+ * - The successor of /%00%01/%01%02 is /%00%01/%01%03
+ * - The successor of /%00%01/%01%FF is /%00%01/%02%00
+ * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
+ *
+ * @returns {Name} A new name which is the successor of this.
+ */
+Name.prototype.getSuccessor = function()
+{
+  if (this.size() == 0) {
+    // Return "/%00".
+    var result = new Name();
+    result.append(new Blob(new Buffer([0]), false));
+    return result;
+  }
+  else
+    return this.getPrefix(-1).append(this.get(-1).getSuccessor());
 };
 
 /**
@@ -23473,6 +23634,7 @@ KeyChain.prototype.setFace = function(face)
 /**
  * Wire encode the target, compute an HmacWithSha256 and update the signature
  * value.
+ * Note: This method is an experimental feature. The API may change.
  * @param {Data} target If this is a Data object, update its signature and wire
  * encoding.
  * @param {Blob} key The key for the HmacWithSha256.
@@ -23501,6 +23663,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
 /**
  * Compute a new HmacWithSha256 for the target and verify it against the
  * signature value.
+ * Note: This method is an experimental feature. The API may change.
  * @param {Data} target The Data object to verify.
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
@@ -23856,6 +24019,7 @@ Exclude.prototype.getChangeCount = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+var Crypto = require('./crypto.js');
 var Blob = require('./util/blob.js').Blob;
 var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
@@ -24297,6 +24461,31 @@ Interest.prototype.wireDecode = function(input, wireFormat)
       WireFormat.getDefaultWireFormat());
   else
     this.setDefaultWireEncoding(new SignedBlob(), null);
+};
+
+/**
+ * Update the bytes of the nonce with new random values. This ensures that the
+ * new nonce value is different than the current one. If the current nonce is
+ * not specified, this does nothing.
+ */
+Interest.prototype.refreshNonce = function()
+{
+  var currentNonce = this.getNonce();
+  if (currentNonce.size() === 0)
+    return;
+
+  var newNonce;
+  while (true) {
+    newNonce = new Blob(Crypto.randomBytes(currentNonce.size()), false);
+    if (!newNonce.equals(currentNonce))
+      break;
+  }
+
+  this.nonce_ = newNonce;
+  // Set _getNonceChangeCount so that the next call to getNonce() won't clear
+  // this.nonce_.
+  ++this.changeCount_;
+  this.getNonceChangeCount_ = this.getChangeCount();
 };
 
 /**
