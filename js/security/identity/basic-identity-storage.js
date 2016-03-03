@@ -165,7 +165,7 @@ BasicIdentityStorage.prototype.addKeyPromise = function
     .then(function() {
       var keyId = keyName.get(-1).toEscapedString();
       var keyBuffer = publicKeyDer.buf();
-      
+
       return thisStorage.runPromise_
         ("INSERT INTO Key (identity_name, key_identifier, key_type, public_key) VALUES(?,?,?,?)",
          [identityUri, keyId, keyType, keyBuffer]);
@@ -235,7 +235,7 @@ BasicIdentityStorage.prototype.doesCertificateExistPromise = function
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the certificate is added, or 
+ * @return {Promise} A promise which fulfills when the certificate is added, or
  * a promise rejected with SecurityException if the certificate is already
  * installed.
  */
@@ -262,7 +262,7 @@ BasicIdentityStorage.prototype.addCertificatePromise = function(certificate, use
       if (exists)
         return Promise.reject(new SecurityException(new Error
           ("Certificate has already been installed!")));
-      
+
       var keyId = keyName.get(-1).toEscapedString();
       var identity = keyName.getPrefix(-1);
 
@@ -364,7 +364,7 @@ BasicIdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which returns the default key Name, or a promise 
+ * @return {Promise} A promise which returns the default key Name, or a promise
  * rejected with SecurityException if the default key name for the identity is
  * not set.
  */
@@ -392,7 +392,7 @@ BasicIdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
  * @param {Name} keyName The key name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which returns the default certificate Name, or a 
+ * @return {Promise} A promise which returns the default certificate Name, or a
  * promise rejected with SecurityException if the default certificate name for
  * the key name is not set.
  */
@@ -649,7 +649,7 @@ BasicIdentityStorage.getUserHomePath = function() {
 BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
 {
   return this.database_.runPromise(sql, params)
-  .catch(function(error) { 
+  .catch(function(error) {
     return Promise.reject(new SecurityException(error));
   });
 };
@@ -660,7 +660,7 @@ BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
 BasicIdentityStorage.prototype.getPromise_ = function(sql, params)
 {
   return this.database_.getPromise(sql, params)
-  .catch(function(error) { 
+  .catch(function(error) {
     return Promise.reject(new SecurityException(error));
   });
 };
@@ -671,7 +671,7 @@ BasicIdentityStorage.prototype.getPromise_ = function(sql, params)
 BasicIdentityStorage.prototype.eachPromise_ = function(sql, params, onRow)
 {
   return this.database_.eachPromise(sql, params, onRow)
-  .catch(function(error) { 
+  .catch(function(error) {
     return Promise.reject(new SecurityException(error));
   });
 };

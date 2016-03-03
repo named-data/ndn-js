@@ -46,7 +46,7 @@ var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivate
  * PrivateKeyStorage.
  * @param {IdentityStorage} identityStorage An object of a subclass of
  * IdentityStorage. In Node.js, if this is omitted then use BasicIdentityStorage.
- * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of 
+ * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of
  * PrivateKeyStorage. In Node.js, if this is omitted then use the default
  * PrivateKeyStorage for your system, which is FilePrivateKeyStorage for any
  * system other than OS X. (OS X key chain storage is not yet implemented, so

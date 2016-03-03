@@ -343,7 +343,7 @@ IdentityStorage.prototype.getCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny If false, only a valid certificate will be returned,
  * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found, 
+ * @returns {IdentityCertificate} The requested certificate.  If not found,
  * return null.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.

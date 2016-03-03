@@ -371,7 +371,7 @@ Name.Component.prototype.getSuccessor = function()
   }
 
   if (carry)
-    // Assume all the bytes were set to zero (or the component was empty). In 
+    // Assume all the bytes were set to zero (or the component was empty). In
     // NDN ordering, carry does not mean to prepend a 1, but to make a component
     // one byte longer of all zeros.
     result[result.length - 1] = 0;
@@ -650,7 +650,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} iStartComponent The index if the first component to get. If
  * iStartComponent is -N then return return components starting from
  * name.size() - N.
- * @param {number} (optional) nComponents The number of components starting at 
+ * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
  * @returns {Name} A new name.
@@ -824,7 +824,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in 
+ * @returns {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html

@@ -183,7 +183,7 @@ describe('SqlIdentityStorage', function() {
     var keyName2;
     var certName1;
     var certName2;
-    
+
     var decodedKey = new Buffer(RSA_DER, 'base64');
     identityStorage.addKeyPromise(keyName1, KeyType.RSA, new Blob(decodedKey))
     .then(function() {
@@ -292,7 +292,7 @@ describe('SqlIdentityStorage', function() {
 
     new Promise(function(resolve, reject) {
       identityManager.createIdentityAndCertificate
-        (identityName, KeyChain.DEFAULT_KEY_PARAMS, 
+        (identityName, KeyChain.DEFAULT_KEY_PARAMS,
          function(certificateName) { resolve(certificateName); },
          function(error) { reject(error); });
     })

@@ -94,7 +94,7 @@ IndexedDbGroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync
       ("IndexedDbGroupManagerDb.listAllScheduleNamesPromise is only supported for async")));
 
   var list = [];
-  return this.database.schedules.each(function(entry) { 
+  return this.database.schedules.each(function(entry) {
     list.push(entry.scheduleName);
   })
   .then(function() {
@@ -172,7 +172,7 @@ IndexedDbGroupManagerDb.prototype.getScheduleMembersPromise = function
     if (scheduleId == -1)
       // Return the empty list.
       return Promise.resolve(list);
-    
+
     var onEntryError = null;
     return thisManager.database.members.where("scheduleId").equals(scheduleId)
     .each(function(entry) {

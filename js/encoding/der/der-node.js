@@ -513,7 +513,7 @@ DerNode.DerInteger = function DerInteger(integer)
 
       this.payloadAppend(temp.slice(temp.array.length - length));
     }
-    
+
     this.encodeHeader(this.payloadPosition);
   }
 };
