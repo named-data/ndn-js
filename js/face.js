@@ -23,6 +23,7 @@ var Name = require('./name.js').Name;
 var Interest = require('./interest.js').Interest;
 var Data = require('./data.js').Data;
 var ControlParameters = require('./control-parameters.js').ControlParameters;
+var ControlResponse = require('./control-response.js').ControlResponse;
 var InterestFilter = require('./interest-filter.js').InterestFilter;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
@@ -840,12 +841,9 @@ Face.RegisterResponse = function RegisterResponse
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
 {
   // Decode responseData.getContent() and check for a success code.
-  // TODO: Move this into the TLV code.
-  var statusCode;
+  var controlResponse = new ControlResponse();
   try {
-    var decoder = new TlvDecoder(responseData.getContent().buf());
-    decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
-    statusCode = decoder.readNonNegativeIntegerTlv(Tlv.NfdCommand_StatusCode);
+    controlResponse.wireDecode(responseData.getContent(), TlvWireFormat.get());
   }
   catch (e) {
     // Error decoding the ControlResponse.
@@ -862,10 +860,10 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
   }
 
   // Status code 200 is "OK".
-  if (statusCode != 200) {
+  if (controlResponse.getStatusCode() != 200) {
     if (LOG > 0)
       console.log("Register prefix failed: Expected NFD status code 200, got: " +
-                  statusCode);
+                  controlResponse.getStatusCode());
     if (this.onRegisterFailed) {
       try {
         this.onRegisterFailed(this.prefix);
