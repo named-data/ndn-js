@@ -9706,7 +9706,7 @@ SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
         else
           // We are in an async promise callback, so a thrown exception won't
           // reach the caller. Just log it.
-          console.log("Uncaught exception from a Promise: " + 
+          console.log("Uncaught exception from a Promise: " +
             NdnCommon.getErrorWithStackTrace(err));
       }
     });
@@ -11464,6 +11464,32 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
 };
 
 /**
+ * Encode controlResponse and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlResponse = function(controlResponse)
+{
+  throw new Error("encodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlResponse and set the fields of the
+ * controlResponse object. Your derived class should override.
+ * @param {ControlResponse} controlResponse The ControlResponse object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+{
+  throw new Error("decodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Encode signature as a SignatureInfo and return the encoding. Your derived
  * class should override.
  * @param {Signature} signature An object of a subclass of Signature to encode.
@@ -11528,7 +11554,7 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
+WireFormat.prototype.decodeEncryptedContent = function(encryptedContent, input)
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -12320,7 +12346,7 @@ DerNode.DerInteger = function DerInteger(integer)
 
       this.payloadAppend(temp.slice(temp.array.length - length));
     }
-    
+
     this.encodeHeader(this.payloadPosition);
   }
 };
@@ -14565,7 +14591,7 @@ Name.Component.prototype.getSuccessor = function()
   }
 
   if (carry)
-    // Assume all the bytes were set to zero (or the component was empty). In 
+    // Assume all the bytes were set to zero (or the component was empty). In
     // NDN ordering, carry does not mean to prepend a 1, but to make a component
     // one byte longer of all zeros.
     result[result.length - 1] = 0;
@@ -14844,7 +14870,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} iStartComponent The index if the first component to get. If
  * iStartComponent is -N then return return components starting from
  * name.size() - N.
- * @param {number} (optional) nComponents The number of components starting at 
+ * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
  * @returns {Name} A new name.
@@ -15018,7 +15044,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in 
+ * @returns {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
@@ -17729,7 +17755,7 @@ IdentityStorage.prototype.getCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} allowAny If false, only a valid certificate will be returned,
  * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found, 
+ * @returns {IdentityCertificate} The requested certificate.  If not found,
  * return null.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
@@ -20095,7 +20121,7 @@ var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivate
  * PrivateKeyStorage.
  * @param {IdentityStorage} identityStorage An object of a subclass of
  * IdentityStorage. In Node.js, if this is omitted then use BasicIdentityStorage.
- * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of 
+ * @param {PrivateKeyStorage} privateKeyStorage An object of a subclass of
  * PrivateKeyStorage. In Node.js, if this is omitted then use the default
  * PrivateKeyStorage for your system, which is FilePrivateKeyStorage for any
  * system other than OS X. (OS X key chain storage is not yet implemented, so
@@ -24978,6 +25004,156 @@ ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
   this.expirationPeriod = expirationPeriod;
 };
 /**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var ControlParameters = require('./control-parameters.js').ControlParameters;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var Blob = require('./util/blob.js').Blob;
+
+/**
+ * A ControlResponse holds a status code, status text and other fields for a
+ * ControlResponse which is used, for example, in the response from sending a
+ * register prefix control command to a forwarder.
+ * @see http://redmine.named-data.net/projects/nfd/wiki/ControlCommand
+ * @constructor
+ */
+var ControlResponse = function ControlResponse(value)
+{
+  if (typeof value === 'object' && value instanceof ControlResponse) {
+    // Make a deep copy.
+    this.statusCode_ = value.statusCode_;
+    this.statusText_ = value.statusText_;
+    this.bodyAsControlParameters_ = value.bodyAsControlParameters_ == null ? null
+      : new ControlParameters(value.bodyAsControlParameters_);
+  }
+  else {
+    this.statusCode_ = null;
+    this.statusText_ = "";
+    this.bodyAsControlParameters_ = null;
+  }
+};
+
+exports.ControlResponse = ControlResponse;
+
+ControlResponse.prototype.clear = function()
+{
+  this.statusCode_ = null;
+  this.statusText_ = "";
+  this.bodyAsControlParameters_ = null;
+};
+
+/**
+ * Encode this ControlResponse for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+ControlResponse.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeControlResponse(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this
+ * ControlResponse.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+ControlResponse.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeControlResponse(this, decodeBuffer);
+};
+
+/**
+ * Get the status code.
+ * @return {number} The status code. If not specified, return null.
+ */
+ControlResponse.prototype.getStatusCode = function()
+{
+  return this.statusCode_;
+};
+
+/**
+ * Get the status text.
+ * @return {string} The status text. If not specified, return "".
+ */
+ControlResponse.prototype.getStatusText = function()
+{
+  return this.statusText_;
+};
+
+/**
+ * Get the control response body as a ControlParameters.
+ * @return {ControlParameters} The ControlParameters, or null if the body is not
+ * specified or if it is not a ControlParameters.
+ */
+ControlResponse.prototype.getBodyAsControlParameters = function()
+{
+  return this.bodyAsControlParameters_;
+};
+
+/**
+ * Set the status code.
+ * @param statusCode {number} The status code. If not specified, set to null.
+ * @return {ControlResponse} This ControlResponse so that you can chain calls to
+ * update values.
+ */
+ControlResponse.prototype.setStatusCode = function(statusCode)
+{
+  this.statusCode_ = statusCode;
+  return this;
+};
+
+/**
+ * Set the status text.
+ * @param statusText {string} The status text. If not specified, set to "".
+ * @return {ControlResponse} This ControlResponse so that you can chain calls to
+ * update values.
+ */
+ControlResponse.prototype.setStatusText = function(statusText)
+{
+  this.statusText_ = statusText || "";
+  return this;
+};
+
+/**
+ * Set the control response body as a ControlParameters.
+ * @param {ControlParameters} controlParameters The ControlParameters for the
+ * body. This makes a copy of the ControlParameters. If not specified or if the
+ * body is not a ControlParameters, set to null.
+ * @return {ControlResponse} This ControlResponse so that you can chain calls to
+ * update values.
+ */
+ControlResponse.prototype.setBodyAsControlParameters = function(controlParameters)
+{
+  this.bodyAsControlParameters_ =
+    typeof controlParameters === 'object' && controlParameters instanceof ControlParameters ?
+      new ControlParameters(controlParameters) : null;
+  return this;
+};
+/**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -25147,11 +25323,11 @@ var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
-var KeyLocator = require('../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
+var ControlParameters = require('../control-parameters.js').ControlParameters;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -25367,46 +25543,7 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
 Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
-  var saveLength = encoder.getLength();
-
-  // Encode backwards.
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_ExpirationPeriod,
-     controlParameters.getExpirationPeriod());
-
-  if (controlParameters.getStrategy().size() > 0){
-    var strategySaveLength = encoder.getLength();
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
-    encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
-      encoder.getLength() - strategySaveLength);
-  }
-
-  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
-  if (flags != new ForwardingFlags().getNfdForwardingFlags())
-      // The flags are not the default value.
-      encoder.writeNonNegativeIntegerTlv
-        (Tlv.ControlParameters_Flags, flags);
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_Cost, controlParameters.getCost());
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_LocalControlFeature,
-     controlParameters.getLocalControlFeature());
-
-  if (controlParameters.getUri().length != 0)
-    encoder.writeBlobTlv
-      (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
-  if (controlParameters.getName() != null)
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
-
-  encoder.writeTypeAndLength
-    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
-
+  Tlv0_1_1WireFormat.encodeControlParameters(controlParameters, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -25419,58 +25556,66 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
-  controlParameters.clear();
   var decoder = new TlvDecoder(input);
-  var endOffset = decoder.
-    readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+  Tlv0_1_1WireFormat.decodeControlParameters(controlParameters, decoder);
+};
 
-  // decode name
-  if (decoder.peekType(Tlv.Name, endOffset)) {
-    var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
-    controlParameters.setName(name);
+/**
+ * Encode controlResponse as NDN-TLV and return the encoding.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+
+  // Encode the body.
+  if (controlResponse.getBodyAsControlParameters() != null)
+    Tlv0_1_1WireFormat.encodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), encoder);
+
+  encoder.writeBlobTlv
+    (Tlv.NfdCommand_StatusText, new Blob(controlResponse.getStatusText()).buf());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode, controlResponse.getStatusCode());
+
+  encoder.writeTypeAndLength
+    (Tlv.NfdCommand_ControlResponse, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+  * Decode controlResponse in NDN-TLV and return the encoding.
+  * @param {ControlResponse} controlResponse The ControlResponse object to
+  * encode.
+  * @param {Buffer} input The buffer with the bytes to decode.
+  * @throws EncodingException For invalid encoding
+  */
+Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+
+  controlResponse.setStatusCode(decoder.readNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode));
+  var statusText = new Blob
+    (decoder.readBlobTlv(Tlv.NfdCommand_StatusText), false);
+  controlResponse.setStatusText(statusText.toString());
+
+  // Decode the body.
+  if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
+    controlResponse.setBodyAsControlParameters(new ControlParameters());
+    // Decode into the existing ControlParameters to avoid copying.
+    Tlv0_1_1WireFormat.decodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), decoder);
   }
-
-  // decode face ID
-  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_FaceId, endOffset));
-
-  // decode URI
-  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
-    var uri = new Blob
-      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
-    controlParameters.setUri(uri.toString());
-  }
-
-  // decode integers
-  controlParameters.setLocalControlFeature(decoder.
-    readOptionalNonNegativeIntegerTlv(
-      Tlv.ControlParameters_LocalControlFeature, endOffset));
-  controlParameters.setOrigin(decoder.
-    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin,
-      endOffset));
-  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
-    Tlv.ControlParameters_Cost, endOffset));
-
-  // set forwarding flags
-  if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
-    var flags = new ForwardingFlags();
-    flags.setNfdForwardingFlags(decoder.
-      readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
-    controlParameters.setForwardingFlags(flags);
-  }
-
-  // decode strategy
-  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
-    var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
-    decoder.finishNestedTlvs(strategyEndOffset);
-  }
-
-  // decode expiration period
-  controlParameters.setExpirationPeriod(
-    decoder.readOptionalNonNegativeIntegerTlv(
-      Tlv.ControlParameters_ExpirationPeriod, endOffset));
+  else
+    controlResponse.setBodyAsControlParameters(null);
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -25928,6 +26073,106 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
   }
   else
     metaInfo.setFinalBlockId(null);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  if (controlParameters.getStrategy().size() > 0){
+    var strategySaveLength = encoder.getLength();
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
+      encoder.getLength() - strategySaveLength);
+  }
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  if (controlParameters.getUri().length != 0)
+    encoder.writeBlobTlv
+      (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
+  if (controlParameters.getName() != null)
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+};
+
+Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder)
+{
+  controlParameters.clear();
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+
+  // decode name
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    var name = new Name();
+    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    controlParameters.setName(name);
+  }
+
+  // decode face ID
+  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, endOffset));
+
+  // decode URI
+  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+    var uri = new Blob
+      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
+    controlParameters.setUri(uri.toString());
+  }
+
+  // decode integers
+  controlParameters.setLocalControlFeature(decoder.
+    readOptionalNonNegativeIntegerTlv(
+      Tlv.ControlParameters_LocalControlFeature, endOffset));
+  controlParameters.setOrigin(decoder.
+    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin,
+      endOffset));
+  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
+    Tlv.ControlParameters_Cost, endOffset));
+
+  // set forwarding flags
+  if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
+    var flags = new ForwardingFlags();
+    flags.setNfdForwardingFlags(decoder.
+      readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
+    controlParameters.setForwardingFlags(flags);
+  }
+
+  // decode strategy
+  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
+    var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
+    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    decoder.finishNestedTlvs(strategyEndOffset);
+  }
+
+  // decode expiration period
+  controlParameters.setExpirationPeriod(
+    decoder.readOptionalNonNegativeIntegerTlv(
+      Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -30639,7 +30884,7 @@ IndexedDbGroupManagerDb.prototype.listAllScheduleNamesPromise = function(useSync
       ("IndexedDbGroupManagerDb.listAllScheduleNamesPromise is only supported for async")));
 
   var list = [];
-  return this.database.schedules.each(function(entry) { 
+  return this.database.schedules.each(function(entry) {
     list.push(entry.scheduleName);
   })
   .then(function() {
@@ -30717,7 +30962,7 @@ IndexedDbGroupManagerDb.prototype.getScheduleMembersPromise = function
     if (scheduleId == -1)
       // Return the empty list.
       return Promise.resolve(list);
-    
+
     var onEntryError = null;
     return thisManager.database.members.where("scheduleId").equals(scheduleId)
     .each(function(entry) {
