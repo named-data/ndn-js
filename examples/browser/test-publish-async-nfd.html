@@ -153,14 +153,15 @@ Echo.prototype.onInterest = function
   var data = new Data(interest.getName());
   var content = "Echo " + interest.getName().toUri();
   data.setContent(content);
-  this.keyChain.sign(data, this.certificateName);
-
-  try {
-    printLine("Sent content " + content);
-    face.putData(data);
-  } catch (e) {
-    printLine(e.toString());
-  }
+  // Use KeyChain.sign with the onComplete callback so that it works with Crypto.subtle.
+  this.keyChain.sign(data, this.certificateName, function() {
+    try {
+      printLine("Sent content " + content);
+      face.putData(data);
+    } catch (e) {
+      printLine(e.toString());
+    }
+  });
 };
 
 Echo.prototype.onRegisterFailed = function(prefix)
