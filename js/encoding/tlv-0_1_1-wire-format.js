@@ -27,11 +27,11 @@ var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
 var WireFormat = require('./wire-format.js').WireFormat;
 var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
-var KeyLocator = require('../key-locator.js').KeyLocator;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
+var ControlParameters = require('../control-parameters.js').ControlParameters;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -247,46 +247,7 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
 Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
-  var saveLength = encoder.getLength();
-
-  // Encode backwards.
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_ExpirationPeriod,
-     controlParameters.getExpirationPeriod());
-
-  if (controlParameters.getStrategy().size() > 0){
-    var strategySaveLength = encoder.getLength();
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
-    encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
-      encoder.getLength() - strategySaveLength);
-  }
-
-  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
-  if (flags != new ForwardingFlags().getNfdForwardingFlags())
-      // The flags are not the default value.
-      encoder.writeNonNegativeIntegerTlv
-        (Tlv.ControlParameters_Flags, flags);
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_Cost, controlParameters.getCost());
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_LocalControlFeature,
-     controlParameters.getLocalControlFeature());
-
-  if (controlParameters.getUri().length != 0)
-    encoder.writeBlobTlv
-      (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
-
-  encoder.writeOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
-  if (controlParameters.getName() != null)
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
-
-  encoder.writeTypeAndLength
-    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
-
+  Tlv0_1_1WireFormat.encodeControlParameters(controlParameters, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -299,58 +260,66 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
-  controlParameters.clear();
   var decoder = new TlvDecoder(input);
-  var endOffset = decoder.
-    readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+  Tlv0_1_1WireFormat.decodeControlParameters(controlParameters, decoder);
+};
 
-  // decode name
-  if (decoder.peekType(Tlv.Name, endOffset)) {
-    var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
-    controlParameters.setName(name);
+/**
+ * Encode controlResponse as NDN-TLV and return the encoding.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+
+  // Encode the body.
+  if (controlResponse.getBodyAsControlParameters() != null)
+    Tlv0_1_1WireFormat.encodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), encoder);
+
+  encoder.writeBlobTlv
+    (Tlv.NfdCommand_StatusText, new Blob(controlResponse.getStatusText()).buf());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode, controlResponse.getStatusCode());
+
+  encoder.writeTypeAndLength
+    (Tlv.NfdCommand_ControlResponse, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+  * Decode controlResponse in NDN-TLV and return the encoding.
+  * @param {ControlResponse} controlResponse The ControlResponse object to
+  * encode.
+  * @param {Buffer} input The buffer with the bytes to decode.
+  * @throws EncodingException For invalid encoding
+  */
+Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+
+  controlResponse.setStatusCode(decoder.readNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode));
+  var statusText = new Blob
+    (decoder.readBlobTlv(Tlv.NfdCommand_StatusText), false);
+  controlResponse.setStatusText(statusText.toString());
+
+  // Decode the body.
+  if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
+    controlResponse.setBodyAsControlParameters(new ControlParameters());
+    // Decode into the existing ControlParameters to avoid copying.
+    Tlv0_1_1WireFormat.decodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), decoder);
   }
-
-  // decode face ID
-  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.ControlParameters_FaceId, endOffset));
-
-  // decode URI
-  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
-    var uri = new Blob
-      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
-    controlParameters.setUri(uri.toString());
-  }
-
-  // decode integers
-  controlParameters.setLocalControlFeature(decoder.
-    readOptionalNonNegativeIntegerTlv(
-      Tlv.ControlParameters_LocalControlFeature, endOffset));
-  controlParameters.setOrigin(decoder.
-    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin,
-      endOffset));
-  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
-    Tlv.ControlParameters_Cost, endOffset));
-
-  // set forwarding flags
-  if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
-    var flags = new ForwardingFlags();
-    flags.setNfdForwardingFlags(decoder.
-      readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
-    controlParameters.setForwardingFlags(flags);
-  }
-
-  // decode strategy
-  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
-    var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
-    decoder.finishNestedTlvs(strategyEndOffset);
-  }
-
-  // decode expiration period
-  controlParameters.setExpirationPeriod(
-    decoder.readOptionalNonNegativeIntegerTlv(
-      Tlv.ControlParameters_ExpirationPeriod, endOffset));
+  else
+    controlResponse.setBodyAsControlParameters(null);
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -808,6 +777,106 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
   }
   else
     metaInfo.setFinalBlockId(null);
+
+  decoder.finishNestedTlvs(endOffset);
+};
+
+Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder)
+{
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_ExpirationPeriod,
+     controlParameters.getExpirationPeriod());
+
+  if (controlParameters.getStrategy().size() > 0){
+    var strategySaveLength = encoder.getLength();
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
+      encoder.getLength() - strategySaveLength);
+  }
+
+  var flags = controlParameters.getForwardingFlags().getNfdForwardingFlags();
+  if (flags != new ForwardingFlags().getNfdForwardingFlags())
+      // The flags are not the default value.
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ControlParameters_Flags, flags);
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Cost, controlParameters.getCost());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_Origin, controlParameters.getOrigin());
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_LocalControlFeature,
+     controlParameters.getLocalControlFeature());
+
+  if (controlParameters.getUri().length != 0)
+    encoder.writeBlobTlv
+      (Tlv.ControlParameters_Uri, new Blob(controlParameters.getUri()).buf());
+
+  encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
+  if (controlParameters.getName() != null)
+    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
+
+  encoder.writeTypeAndLength
+    (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
+};
+
+Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder)
+{
+  controlParameters.clear();
+  var endOffset = decoder.
+    readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
+
+  // decode name
+  if (decoder.peekType(Tlv.Name, endOffset)) {
+    var name = new Name();
+    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    controlParameters.setName(name);
+  }
+
+  // decode face ID
+  controlParameters.setFaceId(decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ControlParameters_FaceId, endOffset));
+
+  // decode URI
+  if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+    var uri = new Blob
+      (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
+    controlParameters.setUri(uri.toString());
+  }
+
+  // decode integers
+  controlParameters.setLocalControlFeature(decoder.
+    readOptionalNonNegativeIntegerTlv(
+      Tlv.ControlParameters_LocalControlFeature, endOffset));
+  controlParameters.setOrigin(decoder.
+    readOptionalNonNegativeIntegerTlv(Tlv.ControlParameters_Origin,
+      endOffset));
+  controlParameters.setCost(decoder.readOptionalNonNegativeIntegerTlv(
+    Tlv.ControlParameters_Cost, endOffset));
+
+  // set forwarding flags
+  if (decoder.peekType(Tlv.ControlParameters_Flags, endOffset)) {
+    var flags = new ForwardingFlags();
+    flags.setNfdForwardingFlags(decoder.
+      readNonNegativeIntegerTlv(Tlv.ControlParameters_Flags, endOffset));
+    controlParameters.setForwardingFlags(flags);
+  }
+
+  // decode strategy
+  if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
+    var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
+    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    decoder.finishNestedTlvs(strategyEndOffset);
+  }
+
+  // decode expiration period
+  controlParameters.setExpirationPeriod(
+    decoder.readOptionalNonNegativeIntegerTlv(
+      Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
 };

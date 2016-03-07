@@ -159,6 +159,7 @@ def build (bld):
                  "js/interest.js",
                  "js/forwarding-flags.js",
                  "js/control-parameters.js",
+                 "js/control-response.js",
                  "js/interest-filter.js",
                  "js/encoding/tlv-0_1_1-wire-format.js",
                  "js/encoding/tlv-0_1-wire-format.js",

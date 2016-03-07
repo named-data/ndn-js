@@ -19,8 +19,8 @@
  */
 
 var assert = require('assert');
-var ControlParameters = require('../../../js/control-parameters').ControlParameters;
-var Name = require('../../../js/name').Name;
+var ControlParameters = require('../../..').ControlParameters;
+var Name = require('../../..').Name;
 
 describe('ControlParameters', function() {
   it('should encode and decode', function() {
