@@ -147,6 +147,32 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
 };
 
 /**
+ * Encode controlResponse and return the encoding.  Your derived class should
+ * override.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.encodeControlResponse = function(controlResponse)
+{
+  throw new Error("encodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as a controlResponse and set the fields of the
+ * controlResponse object. Your derived class should override.
+ * @param {ControlResponse} controlResponse The ControlResponse object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class should override.
+ */
+WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+{
+  throw new Error("decodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
  * Encode signature as a SignatureInfo and return the encoding. Your derived
  * class should override.
  * @param {Signature} signature An object of a subclass of Signature to encode.
@@ -211,7 +237,7 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeEncryptedContent = function(controlParameters, input)
+WireFormat.prototype.decodeEncryptedContent = function(encryptedContent, input)
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");

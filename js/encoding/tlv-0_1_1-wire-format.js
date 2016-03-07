@@ -31,6 +31,7 @@ var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
+var ControlParameters = require('../control-parameters.js').ControlParameters;
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
@@ -261,6 +262,66 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
 {
   var decoder = new TlvDecoder(input);
   Tlv0_1_1WireFormat.decodeControlParameters(controlParameters, decoder);
+};
+
+/**
+ * Encode controlResponse as NDN-TLV and return the encoding.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
+{
+  var encoder = new TlvEncoder(256);
+  var saveLength = encoder.getLength();
+
+  // Encode backwards.
+
+  // Encode the body.
+  if (controlResponse.getBodyAsControlParameters() != null)
+    Tlv0_1_1WireFormat.encodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), encoder);
+
+  encoder.writeBlobTlv
+    (Tlv.NfdCommand_StatusText, new Blob(controlResponse.getStatusText()).buf());
+  encoder.writeNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode, controlResponse.getStatusCode());
+
+  encoder.writeTypeAndLength
+    (Tlv.NfdCommand_ControlResponse, encoder.getLength() - saveLength);
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+  * Decode controlResponse in NDN-TLV and return the encoding.
+  * @param {ControlResponse} controlResponse The ControlResponse object to
+  * encode.
+  * @param {Buffer} input The buffer with the bytes to decode.
+  * @throws EncodingException For invalid encoding
+  */
+Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
+
+  controlResponse.setStatusCode(decoder.readNonNegativeIntegerTlv
+    (Tlv.NfdCommand_StatusCode));
+  var statusText = new Blob
+    (decoder.readBlobTlv(Tlv.NfdCommand_StatusText), false);
+  controlResponse.setStatusText(statusText.toString());
+
+  // Decode the body.
+  if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
+    controlResponse.setBodyAsControlParameters(new ControlParameters());
+    // Decode into the existing ControlParameters to avoid copying.
+    Tlv0_1_1WireFormat.decodeControlParameters
+      (controlResponse.getBodyAsControlParameters(), decoder);
+  }
+  else
+    controlResponse.setBodyAsControlParameters(null);
+
+  decoder.finishNestedTlvs(endOffset);
 };
 
 /**
