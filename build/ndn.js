@@ -10144,6 +10144,7 @@ Tlv.FinalBlockId =     26;
 Tlv.SignatureType =    27;
 Tlv.KeyLocator =       28;
 Tlv.KeyLocatorDigest = 29;
+Tlv.SelectedDelegation = 32;
 Tlv.FaceInstance =     128;
 Tlv.ForwardingEntry =  129;
 Tlv.StatusResponse =   130;
@@ -10186,6 +10187,9 @@ Tlv.LocalControlHeader_IncomingFaceId = 81;
 Tlv.LocalControlHeader_NextHopFaceId = 82;
 Tlv.LocalControlHeader_CachingPolicy = 83;
 Tlv.LocalControlHeader_NoCache = 96;
+
+Tlv.Link_Preference = 30;
+Tlv.Link_Delegation = 31;
 
 Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;
@@ -10410,6 +10414,21 @@ TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
 };
 
 /**
+ * Write the buffer value to this.output just before this.length from the back.
+ * Advance this.length.
+ * @param {Buffer} buffer The byte array with the bytes to write.  If value is
+ * null, then do nothing.
+ */
+TlvEncoder.prototype.writeBuffer = function(buffer)
+{
+  if (buffer == null)
+    return;
+
+  this.length += buffer.length;
+  this.output.copyFromBack(buffer, this.length);
+};
+
+/**
  * Write the type, then the length of the buffer then the buffer value to
  * this.output just before this.length from the back. Advance this.length.
  * @param {number} type The type of the TLV.
@@ -10424,9 +10443,7 @@ TlvEncoder.prototype.writeBlobTlv = function(type, value)
   }
 
   // Write backwards, starting with the blob array.
-  this.length += value.length;
-  this.output.copyFromBack(value, this.length);
-
+  this.writeBuffer(value);
   this.writeTypeAndLength(type, value.length);
 };
 
@@ -10795,6 +10812,20 @@ TlvDecoder.prototype.getOffset = function()
 TlvDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
+};
+
+/**
+ * Return an array of a slice of the input for the given offset range.
+ * @param {number} beginOffset The offset in the input of the beginning of the
+ * slice.
+ * @param {number} endOffset The offset in the input of the end of the slice.
+ * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * not a copy of the bytes in the input buffer.  If you need a copy, then you
+ * must make a copy of the return value.
+ */
+TlvDecoder.prototype.getSlice = function(beginOffset, endOffset)
+{
+  return this.input.slice(beginOffset, endOffset);
 };
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -11528,6 +11559,36 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
 WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Encode the DelegationSet and return the encoding.  Your derived class
+ * should override.
+ * @param {DelegationSet} delegationSet The DelegationSet object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+{
+  throw new Error
+    ("encodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an DelegationSet and set the fields of the
+ * delegationSet object. Your derived class should override.
+ * @param {DelegationSet} delegationSet The DelegationSet object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+{
+  throw new Error
+    ("decodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -24114,6 +24175,7 @@ var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
+var Link = require('./link.js').Link;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -24154,6 +24216,11 @@ var Interest = function Interest
     this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
+    this.linkWireEncoding_ = interest.linkWireEncoding_;
+    this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
+    if (interest.link_.get() != null)
+      this.link_.set(new Link(interest.link_.get()));
+    this.selectedDelegationIndex_ = interest.selectedDelegationIndex_;
     this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
     this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
@@ -24172,6 +24239,10 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
+    this.linkWireEncoding_ = new Blob();
+    this.linkWireEncodingFormat_ = null;
+    this.link_ = new ChangeCounter(null);
+    this.selectedDelegationIndex_ = null;
     this.defaultWireEncoding_ = new SignedBlob();
     this.defaultWireEncodingFormat_ = null;
   }
@@ -24315,6 +24386,74 @@ Interest.prototype.getNonceAsBuffer = function()
 };
 
 /**
+ * Check if this interest has a link object (or a link wire encoding which
+ * can be decoded to make the link object).
+ * @return {boolean} True if this interest has a link object, false if not.
+ */
+Interest.prototype.hasLink = function()
+{
+  return this.link_.get() != null || !this.linkWireEncoding_.isNull();
+};
+
+/**
+ * Get the link object. If necessary, decode it from the link wire encoding.
+ * @return {Link} The link object, or null if not specified.
+ * @throws DecodingException For error decoding the link wire encoding (if
+ * necessary).
+ */
+Interest.prototype.getLink = function()
+{
+  if (this.link_.get() != null)
+    return this.link_.get();
+  else if (!this.linkWireEncoding_.isNull()) {
+    // Decode the link object from linkWireEncoding_.
+    var link = new Link();
+    link.wireDecode(this.linkWireEncoding_, this.linkWireEncodingFormat_);
+    this.link_.set(link);
+
+    // Clear linkWireEncoding_ since it is now managed by the link object.
+    this.linkWireEncoding_ = new Blob();
+    this.linkWireEncodingFormat_ = null;
+
+    return link;
+  }
+  else
+    return null;
+};
+
+/**
+ * Get the wire encoding of the link object. If there is already a wire
+ * encoding then return it. Otherwise encode from the link object (if
+ * available).
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * the Link. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Blob} The wire encoding, or an isNull Blob if the link is not
+ * specified.
+ */
+Interest.prototype.getLinkWireEncoding = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.linkWireEncoding_.isNull() && this.linkWireEncodingFormat_ == wireFormat)
+    return this.linkWireEncoding_;
+
+  var link = this.getLink();
+  if (link != null)
+    return link.wireEncode(wireFormat);
+  else
+    return new Blob();
+};
+
+/**
+ * Get the selected delegation index.
+ * @return {number} The selected delegation index. If not specified, return null.
+ */
+Interest.prototype.getSelectedDelegationIndex = function()
+{
+  return this.selectedDelegationIndex_;
+};
+
+/**
  * Get the interest lifetime.
  * @returns {number} The interest lifetime in milliseconds, or null if not
  * specified.
@@ -24404,6 +24543,52 @@ Interest.prototype.setExclude = function(exclude)
 {
   this.exclude_.set(typeof exclude === 'object' && exclude instanceof Exclude ?
     new Exclude(exclude) : new Exclude());
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the link wire encoding bytes, without decoding them. If there is
+ * a link object, set it to null. If you later call getLink(), it will
+ * decode the wireEncoding to create the link object.
+ * @param {Blob} encoding The Blob with the bytes of the link wire encoding.
+ * If no link is specified, set to an empty Blob() or call unsetLink().
+ * @param {WireFormat} wireFormat The wire format of the encoding, to be used
+ * later if necessary to decode. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  this.linkWireEncoding_ = encoding;
+  this.linkWireEncodingFormat_ = wireFormat;
+
+  // Clear the link object, assuming that it has a different encoding.
+  this.link_.set(null);
+
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Clear the link wire encoding and link object so that getLink() returns null.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.unsetLink = function()
+{
+  return this.setLinkWireEncoding(new Blob(), null);
+};
+
+/**
+ * Set the selected delegation index.
+ * @param {number} selectedDelegationIndex The selected delegation index. If not
+ * specified, set to null.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex)
+{
+  this.selectedDelegationIndex_ = selectedDelegationIndex;
   ++this.changeCount_;
   return this;
 };
@@ -25295,6 +25480,372 @@ InterestFilter.makePattern = function(regexFilter)
   return pattern;
 };
 /**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Name = require('./name.js').Name;
+var Blob = require('./util/blob.js').Blob;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+
+/**
+ * A DelegationSet holds a list of DelegationSet.Delegation entries which is
+ * used as the content of a Link instance. If you add elements with add(), then
+ * the list is a set sorted by preference number then by name. But wireDecode
+ * will add the elements from the wire encoding, preserving the given order and
+ * possible duplicates (in which case a DelegationSet really holds a "list" and
+ * not necessarily a "set").
+ *
+ * Create a new DelegationSet object, possibly copying values from another
+ * object.
+ *
+ * @param {DelegationSet} value (optional) If value is a DelegationSet, copy its
+ * values.
+ * @constructor
+ */
+var DelegationSet = function DelegationSet(value)
+{
+  if (typeof value === 'object' && value instanceof DelegationSet)
+    // Copy the list.
+    this.delegations_ = value.delegations_.slice(0);
+  else
+    this.delegations_ = []; // of DelegationSet.Delegation.
+};
+
+exports.DelegationSet = DelegationSet;
+
+/**
+ * A DelegationSet.Delegation holds a preference number and delegation name.
+ * Create a new DelegationSet.Delegation with the given values.
+ * @param {number} preference The preference number.
+ * @param {Name} name The delegation name. This makes a copy of the name.
+ * @constructor
+ */
+DelegationSet.Delegation = function DelegationSetDelegation(preference, name)
+{
+  this.preference_ = preference;
+  this.name_ = new Name(name);
+};
+
+/**
+ * Get the preference number.
+ * @return {number} The preference number.
+ */
+DelegationSet.Delegation.prototype.getPreference = function()
+{
+  return this.preference_;
+};
+
+/**
+ * Get the delegation name.
+ * @return {Name} The delegation name. NOTE: You must not change the name object -
+ * if you need to change it then make a copy.
+ */
+DelegationSet.Delegation.prototype.getName = function()
+{
+  return this.name_;
+};
+
+/**
+ * Compare this Delegation with other according to the ordering, based first
+ * on the preference number, then on the delegation name.
+ * @param {DelegationSet.Delegation} other The other Delegation to compare with.
+ * @return {number} 0 If they compare equal, -1 if this Delegation comes before
+ * other in the ordering, or 1 if this Delegation comes after.
+ */
+DelegationSet.Delegation.prototype.compare = function(other)
+{
+  if (this.preference_ < other.preference_)
+    return -1;
+  if (this.preference_ > other.preference_)
+    return 1;
+
+  return this.name_.compare(other.name_);
+};
+
+/**
+ * Add a new DelegationSet.Delegation to the list of delegations, sorted by
+ * preference number then by name. If there is already a delegation with the
+ * same name, update its preference, and remove any extra delegations with the
+ * same name.
+ * @param {number} preference The preference number.
+ * @param {Name} name The delegation name. This makes a copy of the name.
+ */
+DelegationSet.prototype.add = function(preference, name)
+{
+  this.remove(name);
+
+  var newDelegation = new DelegationSet.Delegation(preference, name);
+  // Find the index of the first entry where it is not less than newDelegation.
+  var i = 0;
+  while (i < this.delegations_.length) {
+    if (this.delegations_[i].compare(newDelegation) >= 0)
+      break;
+
+    ++i;
+  }
+
+  this.delegations_.splice(i, 0, newDelegation);
+};
+
+/**
+ * Add a new DelegationSet.Delegation to the end of the list of delegations,
+ * without sorting or updating any existing entries. This is useful for adding
+ * preferences from a wire encoding, preserving the supplied ordering and
+ * possible duplicates.
+ * @param {number} preference The preference number.
+ * @param {Name} name The delegation name. This makes a copy of the name.
+ */
+DelegationSet.prototype.addUnsorted = function(preference, name)
+{
+  this.delegations_.push(new DelegationSet.Delegation(preference, name));
+};
+
+/**
+ * Remove every DelegationSet.Delegation with the given name.
+ * @param {Name} name Then name to match the name of the delegation(s) to be
+ * removed.
+ * @return {boolean} True if a DelegationSet.Delegation was removed, otherwise
+ * false.
+ */
+DelegationSet.prototype.remove = function(name)
+{
+  var wasRemoved = false;
+  // Go backwards through the list so we can remove entries.
+  for (var i = this.delegations_.length - 1; i >= 0; --i) {
+    if (this.delegations_[i].getName().equals(name)) {
+      wasRemoved = true;
+      this.delegations_.splice(i, 1);
+    }
+  }
+
+  return wasRemoved;
+};
+
+/**
+ * Clear the list of delegations.
+ */
+DelegationSet.prototype.clear = function() { this.delegations_ = []; };
+
+/**
+ * Get the number of delegation entries.
+ * @return {number} The number of delegation entries.
+ */
+DelegationSet.prototype.size = function() { return this.delegations_.length; };
+
+/**
+ * Get the delegation at the given index, according to the ordering described
+ * in add().
+ * @param {number} i The index of the component, starting from 0.
+ * @return {DelegationSet.Delegation} The delegation at the index.
+ */
+DelegationSet.prototype.get = function(i) { return this.delegations_[i]; };
+
+/**
+ * Find the first delegation with the given name and return its index.
+ * @param {Name} name Then name of the delegation to find.
+ * @return {number} The index of the delegation, or -1 if not found.
+ */
+DelegationSet.prototype.find = function(name)
+{
+  for (var i = 0; i < this.delegations_.length; ++i) {
+    if (this.delegations_[i].getName().equals(name))
+      return i;
+  }
+
+  return -1;
+};
+
+/**
+ * Encode this DelegationSet for a particular wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @returns {Blob} The encoded buffer in a Blob object.
+ */
+DelegationSet.prototype.wireEncode = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  return wireFormat.encodeDelegationSet(this);
+};
+
+/**
+ * Decode the input using a particular wire format and update this DelegationSet.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+DelegationSet.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  // If input is a blob, get its buf().
+  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
+                     input.buf() : input;
+  wireFormat.decodeDelegationSet(this, decodeBuffer);
+};
+/**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var DelegationSet = require('./delegation-set.js').DelegationSet;
+var ContentType = require('./meta-info.js').ContentType;
+var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var Data = require('./data.js').Data;
+
+/**
+ * The Link class extends Data and represents a Link instance where the Data
+ * content is an encoded delegation set. The format is defined in "link.pdf"
+ * attached to Redmine issue http://redmine.named-data.net/issues/2587 .
+ *
+ * Create a new Link with the optional values. There are 3 forms of the constructor:
+ * Link(name);
+ * Link(data);
+ * Link();
+ * @param {Name} name The name for constructing the base Data.
+ * @param {Data} data The Data object to copy values from. If the content can be
+ * decoded using the default wire encoding, then update the list of delegations.
+ * @constructor
+ */
+var Link = function Link(value)
+{
+  this.delegations_ = new DelegationSet();
+
+  // Call the base constructor.
+  if (value instanceof Data) {
+    // The copy constructor.
+    Data.call(this, value);
+
+    if (!this.getContent().isNull()) {
+      try {
+        this.delegations_.wireDecode(getContent());
+        this.getMetaInfo().setType(ContentType.LINK);
+      }
+      catch (ex) {
+        this.delegations_.clear();
+      }
+    }
+  }
+  else {
+    if (value != undefined)
+      // value is a Name.
+      Data.call(this, value);
+    else
+      Data.call(this);
+
+    this.getMetaInfo().setType(ContentType.LINK);
+  }
+};
+
+Link.prototype = new Data();
+Link.prototype.name = "Link";
+
+exports.Link = Link;
+
+/**
+ * Override to call the base class wireDecode then populate the list of
+ * delegations from the content.
+ * @param {Blob|Buffer} input The buffer with the bytes to decode.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to decode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ */
+Link.prototype.wireDecode = function(input, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  Data.prototype.wireDecode.call(this, input, wireFormat);
+  if (this.getMetaInfo().getType() != ContentType.LINK)
+    throw new Error
+      ("Link.wireDecode: MetaInfo ContentType is not LINK.");
+
+  this.delegations_.wireDecode(this.getContent());
+};
+
+/**
+ * Add a new delegation to the list of delegations, sorted by preference number
+ * then by name. Re-encode this object's content using the optional wireFormat.
+ * @param {number} preference The preference number.
+ * @param {Name} name The delegation name. This makes a copy of the name. If
+ * there is already a delegation with the same name, this updates its preference.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the DelegationSet. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Link} This Link so that you can chain calls to update values.
+ */
+Link.prototype.addDelegation = function(preference, name, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  this.delegations_.add(preference, name);
+  this.encodeContent(wireFormat);
+
+  return this;
+};
+
+/**
+ * Remove every delegation with the given name. Re-encode this object's content
+ * using the optional wireFormat.
+ * @param {Name} name Then name to match the name of the delegation(s) to be
+ * removed.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the DelegationSet. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {boolean} True if a delegation was removed, otherwise false.
+ */
+Link.prototype.removeDelegation = function(name, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  var wasRemoved = this.delegations_.remove(name);
+  if (wasRemoved)
+    this.encodeContent(wireFormat);
+
+  return wasRemoved;
+};
+
+/**
+ * Get the list of delegation for read only.
+ * @return {DelegationSet} The list of delegation, which you should treat as
+ * read-only. To modify it, call Link.addDelegation, etc.
+ */
+Link.prototype.getDelegations = function() { return this.delegations_; };
+
+/**
+ * A private method to encode the delegations_ and set this object's content.
+ * Also set the meta info content type to LINK.
+ * @param wireFormat A WireFormat object used to encode the DelegationSet.
+ */
+Link.prototype.encodeContent = function(wireFormat)
+{
+  this.setContent(this.delegations_.wireEncode(wireFormat));
+  this.getMetaInfo().setType(ContentType.LINK);
+};
+/**
  * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -25392,6 +25943,13 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
 
   // Encode backwards.
   encoder.writeOptionalNonNegativeIntegerTlv
+    (Tlv.SelectedDelegation, interest.getSelectedDelegationIndex());
+  var linkWireEncoding = interest.getLinkWireEncoding(this);
+  if (!linkWireEncoding.isNull())
+    // Encode the entire link as is.
+    encoder.writeBuffer(linkWireEncoding.buf());
+
+  encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.InterestLifetime, interest.getInterestLifetimeMilliseconds());
 
   // Encode the Nonce as 4 bytes.
@@ -25459,6 +26017,23 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.InterestLifetime, endOffset));
+
+  if (decoder.peekType(Tlv.Data, endOffset)) {
+    // Get the bytes of the Link TLV.
+    var linkBeginOffset = decoder.getOffset();
+    var linkEndOffset = decoder.readNestedTlvsStart(Tlv.Data);
+    decoder.seek(linkEndOffset);
+
+    interest.setLinkWireEncoding
+      (new Blob(decoder.getSlice(linkBeginOffset, linkEndOffset), true), this);
+  }
+  else
+    interest.unsetLink();
+  interest.setSelectedDelegationIndex
+    (decoder.readOptionalNonNegativeIntegerTlv(Tlv.SelectedDelegation, endOffset));
+  if (interest.getSelectedDelegationIndex() != null &&
+      interest.getSelectedDelegationIndex() >= 0 && !interest.hasLink())
+    throw new Error("Interest has a selected delegation, but no link object");
 
   // Set the nonce last because setting other interest fields clears it.
   interest.setNonce(nonce);
@@ -25684,6 +26259,61 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Encode delegationSet as a sequence of NDN-TLV Delegation, and return the
+ * encoding. Note that the sequence of Delegation does not have an outer TLV
+ * type and length because it is intended to use the type and length of a Data
+ * packet's Content.
+ * @param {DelegationSet} delegationSet The DelegationSet object to encode.
+ * @returns {Blob} A Blob containing the encoding.
+ */
+Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+{
+  var encoder = new TlvEncoder(256);
+
+  // Encode backwards.
+  for (var i = delegationSet.size() - 1; i >= 0; --i) {
+    var saveLength = encoder.getLength();
+
+    Tlv0_1_1WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.Link_Preference, delegationSet.get(i).getPreference());
+
+    encoder.writeTypeAndLength
+      (Tlv.Link_Delegation, encoder.getLength() - saveLength);
+  }
+
+  return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as a sequence of NDN-TLV Delegation and set the fields of the
+ * delegationSet object. Note that the sequence of Delegation does not have an
+ * outer TLV type and length because it is intended to use the type and length
+ * of a Data packet's Content. This ignores any elements after the sequence
+ * of Delegation.
+ * @param {DelegationSet} delegationSet The DelegationSet object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+{
+  var decoder = new TlvDecoder(input);
+  var endOffset = input.length;
+
+  delegationSet.clear();
+  while (decoder.getOffset() < endOffset) {
+    decoder.readTypeAndLength(Tlv.Link_Delegation);
+    var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
+    var name = new Name();
+    Tlv0_1_1WireFormat.decodeName(name, decoder);
+
+    // Add unsorted to preserve the order so that Interest selected delegation
+    // index will work.
+    delegationSet.addUnsorted(preference, name);
+  }
 };
 
 /**

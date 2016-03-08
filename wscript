@@ -161,6 +161,8 @@ def build (bld):
                  "js/control-parameters.js",
                  "js/control-response.js",
                  "js/interest-filter.js",
+                 "js/delegation-set.js",
+                 "js/link.js",
                  "js/encoding/tlv-0_1_1-wire-format.js",
                  "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
