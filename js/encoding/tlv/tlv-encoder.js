@@ -187,6 +187,21 @@ TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
 };
 
 /**
+ * Write the buffer value to this.output just before this.length from the back.
+ * Advance this.length.
+ * @param {Buffer} buffer The byte array with the bytes to write.  If value is
+ * null, then do nothing.
+ */
+TlvEncoder.prototype.writeBuffer = function(buffer)
+{
+  if (buffer == null)
+    return;
+
+  this.length += buffer.length;
+  this.output.copyFromBack(buffer, this.length);
+};
+
+/**
  * Write the type, then the length of the buffer then the buffer value to
  * this.output just before this.length from the back. Advance this.length.
  * @param {number} type The type of the TLV.
@@ -201,9 +216,7 @@ TlvEncoder.prototype.writeBlobTlv = function(type, value)
   }
 
   // Write backwards, starting with the blob array.
-  this.length += value.length;
-  this.output.copyFromBack(value, this.length);
-
+  this.writeBuffer(value);
   this.writeTypeAndLength(type, value.length);
 };
 
