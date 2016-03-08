@@ -136,7 +136,7 @@ DelegationSet.prototype.addUnsorted = function(preference, name)
 
 /**
  * Remove every DelegationSet.Delegation with the given name.
- * @param {Name} name Then name to match the name of the delegation(s) to be
+ * @param {Name} name The name to match the name of the delegation(s) to be
  * removed.
  * @return {boolean} True if a DelegationSet.Delegation was removed, otherwise
  * false.
