@@ -343,3 +343,17 @@ TlvDecoder.prototype.seek = function(offset)
 {
   this.offset = offset;
 };
+
+/**
+ * Return an array of a slice of the input for the given offset range.
+ * @param {number} beginOffset The offset in the input of the beginning of the
+ * slice.
+ * @param {number} endOffset The offset in the input of the end of the slice.
+ * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * not a copy of the bytes in the input buffer.  If you need a copy, then you
+ * must make a copy of the return value.
+ */
+TlvDecoder.prototype.getSlice = function(beginOffset, endOffset)
+{
+  return this.input.slice(beginOffset, endOffset);
+};
