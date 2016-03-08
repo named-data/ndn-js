@@ -25,6 +25,7 @@ var SignedBlob = require('./util/signed-blob.js').SignedBlob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var Name = require('./name.js').Name;
 var Exclude = require('./exclude.js').Exclude;
+var Link = require('./link.js').Link;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
@@ -65,6 +66,11 @@ var Interest = function Interest
     this.mustBeFresh_ = interest.mustBeFresh_;
     this.interestLifetimeMilliseconds_ = interest.interestLifetimeMilliseconds_;
     this.nonce_ = interest.nonce_;
+    this.linkWireEncoding_ = interest.linkWireEncoding_;
+    this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
+    if (interest.link_.get() != null)
+      this.link_.set(new Link(interest.link_.get()));
+    this.selectedDelegationIndex_ = interest.selectedDelegationIndex_;
     this.defaultWireEncoding_ = interest.getDefaultWireEncoding();
     this.defaultWireEncodingFormat_ = interest.defaultWireEncodingFormat_;
   }
@@ -83,6 +89,10 @@ var Interest = function Interest
     this.interestLifetimeMilliseconds_ = interestLifetimeMilliseconds;
     this.nonce_ = typeof nonce === 'object' && nonce instanceof Blob ?
       nonce : new Blob(nonce, true);
+    this.linkWireEncoding_ = new Blob();
+    this.linkWireEncodingFormat_ = null;
+    this.link_ = new ChangeCounter(null);
+    this.selectedDelegationIndex_ = null;
     this.defaultWireEncoding_ = new SignedBlob();
     this.defaultWireEncodingFormat_ = null;
   }
@@ -226,6 +236,74 @@ Interest.prototype.getNonceAsBuffer = function()
 };
 
 /**
+ * Check if this interest has a link object (or a link wire encoding which
+ * can be decoded to make the link object).
+ * @return {boolean} True if this interest has a link object, false if not.
+ */
+Interest.prototype.hasLink = function()
+{
+  return this.link_.get() != null || !this.linkWireEncoding_.isNull();
+};
+
+/**
+ * Get the link object. If necessary, decode it from the link wire encoding.
+ * @return {Link} The link object, or null if not specified.
+ * @throws DecodingException For error decoding the link wire encoding (if
+ * necessary).
+ */
+Interest.prototype.getLink = function()
+{
+  if (this.link_.get() != null)
+    return this.link_.get();
+  else if (!this.linkWireEncoding_.isNull()) {
+    // Decode the link object from linkWireEncoding_.
+    var link = new Link();
+    link.wireDecode(this.linkWireEncoding_, this.linkWireEncodingFormat_);
+    this.link_.set(link);
+
+    // Clear linkWireEncoding_ since it is now managed by the link object.
+    this.linkWireEncoding_ = new Blob();
+    this.linkWireEncodingFormat_ = null;
+
+    return link;
+  }
+  else
+    return null;
+};
+
+/**
+ * Get the wire encoding of the link object. If there is already a wire
+ * encoding then return it. Otherwise encode from the link object (if
+ * available).
+ * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
+ * the Link. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Blob} The wire encoding, or an isNull Blob if the link is not
+ * specified.
+ */
+Interest.prototype.getLinkWireEncoding = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  if (!this.linkWireEncoding_.isNull() && this.linkWireEncodingFormat_ == wireFormat)
+    return this.linkWireEncoding_;
+
+  var link = this.getLink();
+  if (link != null)
+    return link.wireEncode(wireFormat);
+  else
+    return new Blob();
+};
+
+/**
+ * Get the selected delegation index.
+ * @return {number} The selected delegation index. If not specified, return null.
+ */
+Interest.prototype.getSelectedDelegationIndex = function()
+{
+  return this.selectedDelegationIndex_;
+};
+
+/**
  * Get the interest lifetime.
  * @returns {number} The interest lifetime in milliseconds, or null if not
  * specified.
@@ -315,6 +393,52 @@ Interest.prototype.setExclude = function(exclude)
 {
   this.exclude_.set(typeof exclude === 'object' && exclude instanceof Exclude ?
     new Exclude(exclude) : new Exclude());
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set the link wire encoding bytes, without decoding them. If there is
+ * a link object, set it to null. If you later call getLink(), it will
+ * decode the wireEncoding to create the link object.
+ * @param {Blob} encoding The Blob with the bytes of the link wire encoding.
+ * If no link is specified, set to an empty Blob() or call unsetLink().
+ * @param {WireFormat} wireFormat The wire format of the encoding, to be used
+ * later if necessary to decode. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setLinkWireEncoding = function(encoding, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  this.linkWireEncoding_ = encoding;
+  this.linkWireEncodingFormat_ = wireFormat;
+
+  // Clear the link object, assuming that it has a different encoding.
+  this.link_.set(null);
+
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Clear the link wire encoding and link object so that getLink() returns null.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.unsetLink = function()
+{
+  return this.setLinkWireEncoding(new Blob(), null);
+};
+
+/**
+ * Set the selected delegation index.
+ * @param {number} selectedDelegationIndex The selected delegation index. If not
+ * specified, set to null.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex)
+{
+  this.selectedDelegationIndex_ = selectedDelegationIndex;
   ++this.changeCount_;
   return this;
 };
