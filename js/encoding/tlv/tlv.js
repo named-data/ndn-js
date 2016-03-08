@@ -52,6 +52,7 @@ Tlv.FinalBlockId =     26;
 Tlv.SignatureType =    27;
 Tlv.KeyLocator =       28;
 Tlv.KeyLocatorDigest = 29;
+Tlv.SelectedDelegation = 32;
 Tlv.FaceInstance =     128;
 Tlv.ForwardingEntry =  129;
 Tlv.StatusResponse =   130;
@@ -94,6 +95,9 @@ Tlv.LocalControlHeader_IncomingFaceId = 81;
 Tlv.LocalControlHeader_NextHopFaceId = 82;
 Tlv.LocalControlHeader_CachingPolicy = 83;
 Tlv.LocalControlHeader_NoCache = 96;
+
+Tlv.Link_Preference = 30;
+Tlv.Link_Delegation = 31;
 
 Tlv.Encrypt_EncryptedContent = 130;
 Tlv.Encrypt_EncryptionAlgorithm = 131;

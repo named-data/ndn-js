@@ -214,6 +214,36 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Encode the DelegationSet and return the encoding.  Your derived class
+ * should override.
+ * @param {DelegationSet} delegationSet The DelegationSet object to
+ * encode.
+ * @returns {Blob} A Blob containing the encoding.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+{
+  throw new Error
+    ("encodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
+ * Decode input as an DelegationSet and set the fields of the
+ * delegationSet object. Your derived class should override.
+ * @param {DelegationSet} delegationSet The DelegationSet object
+ * whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+{
+  throw new Error
+    ("decodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
  * Encode the EncryptedContent and return the encoding.  Your derived class
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
