@@ -40,9 +40,8 @@ var Link = function Link(value)
 {
   this.delegations_ = new DelegationSet();
 
-  // Call the base constructor.
   if (value instanceof Data) {
-    // The copy constructor.
+    // Call the base constructor.
     Data.call(this, value);
 
     if (!this.getContent().isNull()) {
@@ -140,7 +139,8 @@ Link.prototype.getDelegations = function() { return this.delegations_; };
 /**
  * A private method to encode the delegations_ and set this object's content.
  * Also set the meta info content type to LINK.
- * @param wireFormat A WireFormat object used to encode the DelegationSet.
+ * @param {WireFormat} wireFormat A WireFormat object used to encode the
+ * DelegationSet.
  */
 Link.prototype.encodeContent = function(wireFormat)
 {
