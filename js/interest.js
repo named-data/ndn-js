@@ -68,6 +68,7 @@ var Interest = function Interest
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
+    this.link_ = new ChangeCounter(null);
     if (interest.link_.get() != null)
       this.link_.set(new Link(interest.link_.get()));
     this.selectedDelegationIndex_ = interest.selectedDelegationIndex_;

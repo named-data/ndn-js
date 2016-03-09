@@ -24218,6 +24218,7 @@ var Interest = function Interest
     this.nonce_ = interest.nonce_;
     this.linkWireEncoding_ = interest.linkWireEncoding_;
     this.linkWireEncodingFormat_ = interest.linkWireEncodingFormat_;
+    this.link_ = new ChangeCounter(null);
     if (interest.link_.get() != null)
       this.link_.set(new Link(interest.link_.get()));
     this.selectedDelegationIndex_ = interest.selectedDelegationIndex_;
@@ -25617,7 +25618,7 @@ DelegationSet.prototype.addUnsorted = function(preference, name)
 
 /**
  * Remove every DelegationSet.Delegation with the given name.
- * @param {Name} name Then name to match the name of the delegation(s) to be
+ * @param {Name} name The name to match the name of the delegation(s) to be
  * removed.
  * @return {boolean} True if a DelegationSet.Delegation was removed, otherwise
  * false.
@@ -25738,9 +25739,8 @@ var Link = function Link(value)
 {
   this.delegations_ = new DelegationSet();
 
-  // Call the base constructor.
   if (value instanceof Data) {
-    // The copy constructor.
+    // Call the base constructor.
     Data.call(this, value);
 
     if (!this.getContent().isNull()) {
@@ -25838,7 +25838,8 @@ Link.prototype.getDelegations = function() { return this.delegations_; };
 /**
  * A private method to encode the delegations_ and set this object's content.
  * Also set the meta info content type to LINK.
- * @param wireFormat A WireFormat object used to encode the DelegationSet.
+ * @param {WireFormat} wireFormat A WireFormat object used to encode the
+ * DelegationSet.
  */
 Link.prototype.encodeContent = function(wireFormat)
 {
