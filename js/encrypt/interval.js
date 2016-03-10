@@ -64,6 +64,17 @@ var Interval = function Interval(value, endTime)
 exports.Interval = Interval;
 
 /**
+ * Set this interval to have the same values as the other interval.
+ * @param {Interval} other The other Interval with values to copy.
+ */
+Interval.prototype.set = function(other)
+{
+  this.startTime_ = other.startTime_;
+  this.endTime_ = other.endTime_;
+  this.isValid_ = other.isValid_;
+};
+
+/**
  * Check if the time point is in this interval.
  * @param {number} timePoint The time point to check as milliseconds since
  * Jan 1, 1970 UTC.
