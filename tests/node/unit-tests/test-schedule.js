@@ -217,7 +217,7 @@ describe('TestSchedule', function() {
     assert.equal(Common.toIsoString(result.interval.getEndTime()), "20150825T040000");
   });
 
-  it('CalculateIntervalWithoutBlack', function() {
+  it('CalculateIntervalWithoutWhite', function() {
     var schedule = new Schedule();
     var interval1 = new RepetitiveInterval
       (Common.fromIsoString("20150825T000000"),
