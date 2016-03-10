@@ -82,18 +82,18 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
 };
 
 /**
- * Get the interval that covers the time point. This iterates over the two
+ * Get the interval that covers the time stamp. This iterates over the two
  * repetitive interval sets and find the shortest interval that allows a group
- * member to access the data. If there is no interval covering the time point,
+ * member to access the data. If there is no interval covering the time stamp,
  * this returns false for isPositive and a negative interval.
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is positive or false if negative,
- * and interval is the Interval covering the time point, or a negative interval
+ * and interval is the Interval covering the time stamp, or a negative interval
  * if not found.
  */
-Schedule.prototype.getCoveringInterval = function(timePoint)
+Schedule.prototype.getCoveringInterval = function(timeStamp)
 {
   var blackPositiveResult = new Interval(true);
   var whitePositiveResult = new Interval(true);
@@ -105,20 +105,20 @@ Schedule.prototype.getCoveringInterval = function(timePoint)
   for (var i = 0; i < this.blackIntervalList_.length; ++i) {
     var element = this.blackIntervalList_[i];
 
-    var result = element.getInterval(timePoint);
+    var result = element.getInterval(timeStamp);
     var tempInterval = result.interval;
     if (result.isPositive == true)
-      // tempInterval covers the time point, so union the black negative
+      // tempInterval covers the time stamp, so union the black negative
       // result with it.
       // Get the union interval of all the black intervals covering the
-      // time point.
+      // time stamp.
       // Return false for isPositive and the union interval.
       blackPositiveResult.unionWith(tempInterval);
     else {
-      // tempInterval does not cover the time point, so intersect the black
+      // tempInterval does not cover the time stamp, so intersect the black
       // negative result with it.
       // Get the intersection interval of all the black intervals not covering
-      // the time point.
+      // the time stamp.
       // Return true for isPositive if the white positive result is not empty,
       // false if it is empty.
       if (!blackNegativeResult.isValid())
@@ -136,20 +136,20 @@ Schedule.prototype.getCoveringInterval = function(timePoint)
   for (var i = 0; i < this.whiteIntervalList_.length; ++i) {
     var element = this.whiteIntervalList_[i];
 
-    var result = element.getInterval(timePoint);
+    var result = element.getInterval(timeStamp);
     var tempInterval = result.interval;
     if (result.isPositive == true)
-      // tempInterval covers the time point, so union the white positive
+      // tempInterval covers the time stamp, so union the white positive
       // result with it.
       // Get the union interval of all the white intervals covering the time
-      // point.
+      // stamp.
       // Return true for isPositive.
       whitePositiveResult.unionWith(tempInterval);
     else {
-      // tempInterval does not cover the time point, so intersect the white
+      // tempInterval does not cover the time stamp, so intersect the white
       // negative result with it.
       // Get the intersection of all the white intervals not covering the time
-      // point.
+      // stamp.
       // Return false for isPositive if the positive result is empty, or
       // true if it is not empty.
       if (!whiteNegativeResult.isValid())
