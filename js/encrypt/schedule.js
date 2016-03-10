@@ -113,12 +113,29 @@ Schedule.prototype.getCoveringInterval = function(timeStamp)
   Schedule.calculateIntervalResult_
     (this.whiteIntervalList_, timeStamp, whitePositiveResult, whiteNegativeResult);
 
-  // If the positive result is empty then return false for isPositive. If it
-  // is not empty then return true for isPositive.
-  if (!whitePositiveResult.isEmpty())
-    return { isPositive: true,
-             interval: whitePositiveResult.intersectWith(blackNegativeResult) };
+  if (whitePositiveResult.isEmpty() && !whiteNegativeResult.isValid()) {
+    // There is no white interval covering the time stamp.
+    // Return false and a 24-hour interval.
+    var timeStampDateOnly =
+      RepetitiveInterval.toDateOnlyMilliseconds_(timeStamp);
+    return { isPositive: false,
+             interval:  new Interval
+               (timeStampDateOnly,
+                timeStampDateOnly + RepetitiveInterval.MILLISECONDS_IN_DAY) };
+  }
+
+  if (!whitePositiveResult.isEmpty()) {
+    // There is white interval covering the time stamp.
+    // Return true and calculate the intersection.
+    if (blackNegativeResult.isValid())
+      return { isPositive: true,
+               interval: whitePositiveResult.intersectWith(blackNegativeResult) };
+    else
+      return  { isPositive: true, interval: whitePositiveResult };
+  }
   else
+    // There is no white interval covering the time stamp.
+    // Return false.
     return { isPositive: false, interval: whiteNegativeResult };
 };
 
