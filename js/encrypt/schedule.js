@@ -290,9 +290,9 @@ Schedule.decodeRepetitiveInterval_ = function(decoder)
  * results.
  * @param {Array} list The set of RepetitiveInterval, which can be the white
  * list or the black list.
- * @param number timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
- * @param positiveResult {Interval} The positive result which is updated.
- * @param negativeResult {Interval} The negative result which is updated.
+ * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
+ * @param {Interval} positiveResult The positive result which is updated.
+ * @param {Interval} negativeResult The negative result which is updated.
  */
 Schedule.calculateIntervalResult_ = function
   (list, timeStamp, positiveResult, negativeResult)
