@@ -160,4 +160,46 @@ describe('TestRepetitiveInterval', function() {
     result = repetitiveInterval3.getInterval(timePoint12);
     assert.equal(result.isPositive, false);
   });
+
+  it('Comparison', function() {
+    function check(small, big)
+    {
+      return small.compare(big) < 0 && !(big.compare(small) < 0);
+    }
+
+    assert.ok(check(new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY),
+                    new RepetitiveInterval(Common.fromIsoString("20150826T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY)));
+
+    assert.ok(check(new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY),
+                    new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        6, 10, 2, RepetitiveInterval.RepeatUnit.DAY)));
+
+    assert.ok(check(new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY),
+                    new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 11, 2, RepetitiveInterval.RepeatUnit.DAY)));
+
+    assert.ok(check(new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY),
+                    new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 3, RepetitiveInterval.RepeatUnit.DAY)));
+
+    assert.ok(check(new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.DAY),
+                    new RepetitiveInterval(Common.fromIsoString("20150825T000000"),
+                                           Common.fromIsoString("20150828T000000"),
+                                        5, 10, 2, RepetitiveInterval.RepeatUnit.MONTH)));
+  });
 });
