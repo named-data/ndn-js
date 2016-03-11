@@ -278,21 +278,14 @@ describe('TestEncryptedContent', function() {
     assert.ok(content.getPayload().isNull());
     assert.ok(content.getInitialVector().isNull());
 
-    var payload = new Blob(message, false);
-    content.setPayload(payload);
+    content.setPayload(new Blob(message, false));
+    assert.ok(content.getPayload().equals(new Blob(message, false)));
 
-    var contentPayload = content.getPayload();
-    assert.ok(contentPayload.equals(payload));
-
-    var initialVector = new Blob(iv, false);
-    content.setInitialVector(initialVector);
-
-    var contentInitialVector = content.getInitialVector();
-    assert.ok(contentInitialVector.equals(initialVector));
+    content.setInitialVector(new Blob(iv, false));
+    assert.ok(content.getInitialVector().equals(new Blob(iv, false)));
 
     var encoded = content.wireEncode();
     var contentBlob = new Blob(encrypted, false);
-
     assert.ok(contentBlob.equals(encoded));
   });
 });
