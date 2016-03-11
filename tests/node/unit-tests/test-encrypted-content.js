@@ -81,24 +81,17 @@ describe('TestEncryptedContent', function() {
     assert.equal(content.getKeyLocator().getType(), null);
 
     // Check an encrypted content with IV.
-    var payload = new Blob(message, false);
-    var initialVector = new Blob(iv, false);
-
     var keyLocator = new KeyLocator();
     keyLocator.setType(KeyLocatorType.KEYNAME);
     keyLocator.getKeyName().set("/test/key/locator");
-    content.setAlgorithmType(EncryptAlgorithmType.RsaOaep)
-      .setKeyLocator(keyLocator).setPayload(payload)
-      .setInitialVector(initialVector);
-
-    // Test the copy constructor.
-    var rsaOaepContent = new EncryptedContent(content);
-    var contentPayload = rsaOaepContent.getPayload();
-    var contentInitialVector = rsaOaepContent.getInitialVector();
+    var rsaOaepContent = new EncryptedContent();
+    rsaOaepContent.setAlgorithmType(EncryptAlgorithmType.RsaOaep)
+      .setKeyLocator(keyLocator).setPayload(new Blob(message, false))
+      .setInitialVector(new Blob(iv, false));
 
     assert.equal(rsaOaepContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
-    assert.ok(contentPayload.equals(payload));
-    assert.ok(contentInitialVector.equals(initialVector));
+    assert.ok(rsaOaepContent.getPayload().equals(new Blob(message, false)));
+    assert.ok(rsaOaepContent.getInitialVector().equals(new Blob(iv, false)));
     assert.ok(rsaOaepContent.getKeyLocator().getType() != null);
     assert.ok(rsaOaepContent.getKeyLocator().getKeyName().equals
               (new Name("/test/key/locator")));
@@ -110,47 +103,39 @@ describe('TestEncryptedContent', function() {
     assert.ok(encryptedBlob.equals(encoded));
 
     // Decoding.
-    rsaOaepContent = new EncryptedContent();
-    rsaOaepContent.wireDecode(encryptedBlob);
-    contentPayload = rsaOaepContent.getPayload();
-    contentInitialVector = rsaOaepContent.getInitialVector();
-
-    assert.equal(rsaOaepContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
-    assert.ok(contentPayload.equals(payload));
-    assert.ok(contentInitialVector.equals(initialVector));
-    assert.ok(rsaOaepContent.getKeyLocator().getType() != null);
-    assert.ok(rsaOaepContent.getKeyLocator().getKeyName().equals
+    var rsaOaepContent2 = new EncryptedContent();
+    rsaOaepContent2.wireDecode(encryptedBlob);
+    assert.equal(rsaOaepContent2.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
+    assert.ok(rsaOaepContent2.getPayload().equals(new Blob(message, false)));
+    assert.ok(rsaOaepContent2.getInitialVector().equals(new Blob(iv, false)));
+    assert.ok(rsaOaepContent2.getKeyLocator().getType() != null);
+    assert.ok(rsaOaepContent2.getKeyLocator().getKeyName().equals
               (new Name("/test/key/locator")));
 
     // Check the no IV case.
-    rsaOaepContent = new EncryptedContent();
-    rsaOaepContent.setAlgorithmType(EncryptAlgorithmType.RsaOaep)
-      .setKeyLocator(keyLocator).setPayload(payload);
-    contentPayload = rsaOaepContent.getPayload();
-
-    assert.equal(rsaOaepContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
-    assert.ok(contentPayload.equals(payload));
-    assert.ok(rsaOaepContent.getInitialVector().isNull());
-    assert.ok(rsaOaepContent.getKeyLocator().getType() != null);
-    assert.ok(rsaOaepContent.getKeyLocator().getKeyName().equals
+    var rsaOaepContentNoIv = new EncryptedContent();
+    rsaOaepContentNoIv.setAlgorithmType(EncryptAlgorithmType.RsaOaep)
+      .setKeyLocator(keyLocator).setPayload(new Blob(message, false));
+    assert.equal(rsaOaepContentNoIv.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
+    assert.ok(rsaOaepContentNoIv.getPayload().equals(new Blob(message, false)));
+    assert.ok(rsaOaepContentNoIv.getInitialVector().isNull());
+    assert.ok(rsaOaepContentNoIv.getKeyLocator().getType() != null);
+    assert.ok(rsaOaepContentNoIv.getKeyLocator().getKeyName().equals
               (new Name("/test/key/locator")));
 
     // Encoding.
-    encryptedBlob = new Blob(encryptedNoIv, false);
-    var encodedNoIV = rsaOaepContent.wireEncode();
-
-    assert.ok(encryptedBlob.equals(encodedNoIV));
+    var encryptedBlob2 = new Blob(encryptedNoIv, false);
+    var encodedNoIV = rsaOaepContentNoIv.wireEncode();
+    assert.ok(encryptedBlob2.equals(encodedNoIV));
 
     // Decoding.
-    rsaOaepContent = new EncryptedContent();
-    rsaOaepContent.wireDecode(encryptedBlob);
-    var contentPayloadNoIV = rsaOaepContent.getPayload();
-
-    assert.equal(rsaOaepContent.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
-    assert.ok(contentPayloadNoIV.equals(payload));
-    assert.ok(rsaOaepContent.getInitialVector().isNull());
-    assert.ok(rsaOaepContent.getKeyLocator().getType() != null);
-    assert.ok(rsaOaepContent.getKeyLocator().getKeyName().equals
+    var rsaOaepContentNoIv2 = new EncryptedContent();
+    rsaOaepContentNoIv2.wireDecode(encryptedBlob2);
+    assert.equal(rsaOaepContentNoIv2.getAlgorithmType(), EncryptAlgorithmType.RsaOaep);
+    assert.ok(rsaOaepContentNoIv2.getPayload().equals(new Blob(message, false)));
+    assert.ok(rsaOaepContentNoIv2.getInitialVector().isNull());
+    assert.ok(rsaOaepContentNoIv2.getKeyLocator().getType() != null);
+    assert.ok(rsaOaepContentNoIv2.getKeyLocator().getKeyName().equals
               (new Name("/test/key/locator")));
   });
 
