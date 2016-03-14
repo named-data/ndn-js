@@ -347,13 +347,13 @@ Producer.prototype.handleCoveringKey_ = function
   var keyName = data.getName();
 
   var begin = Schedule.fromIsoString
-    (keyName.get(Producer.iStartTimeStamp).getValue().toString());
+    (keyName.get(Producer.START_TIME_STAMP_INDEX).getValue().toString());
   var end = Schedule.fromIsoString
-    (keyName.get(Producer.iEndTimeStamp).getValue().toString());
+    (keyName.get(Producer.END_TIME_STAMP_INDEX).getValue().toString());
 
   if (timeSlot >= end) {
     var timeRange = new Exclude(interest.getExclude());
-    Producer.excludeBefore(timeRange, keyName.get(Producer.iStartTimeStamp));
+    Producer.excludeBefore(timeRange, keyName.get(Producer.START_TIME_STAMP_INDEX));
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
       (interestName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
@@ -643,5 +643,5 @@ Producer.excludeRange = function(exclude, from, to)
   Producer.setExcludeEntries(exclude, entries);
 };
 
-Producer.iStartTimeStamp = -2;
-Producer.iEndTimeStamp = -1;
+Producer.START_TIME_STAMP_INDEX = -2;
+Producer.END_TIME_STAMP_INDEX = -1;
