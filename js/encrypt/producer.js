@@ -29,6 +29,7 @@ var AesKeyParams = require('../security/key-params.js').AesKeyParams;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Schedule = require('./schedule.js').Schedule;
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
  * A Producer manages content keys used to encrypt a data packet in the
@@ -176,7 +177,7 @@ Producer.prototype.createContentKey = function
           var eKeyName = new Name(entry.keyName);
           eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
           eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
-          thisProducer.encryptContentKey_
+          thisProducer.encryptContentKeyPromise_
             (keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
         }
       }
@@ -387,13 +388,17 @@ Producer.prototype.handleCoveringKey_ = function
   else {
     // If the received E-KEY covers the content key, encrypt the content.
     var encryptionKey = data.getContent();
-    var keyInfo = this.eKeyInfo_[interestNameUrl].keyInfo;
-    keyInfo.beginTimeSlot = begin;
-    keyInfo.endTimeSlot = end;
-    keyInfo.keyBits = encryptionKey;
-
-    this.encryptContentKey_
-      (encryptionKey, keyName, timeSlot, onEncryptedKeys);
+    var thisProducer = this;
+    this.encryptContentKeyPromise_
+      (encryptionKey, keyName, timeSlot, onEncryptedKeys)
+    .then(function(success) {
+      if (success) {
+        var keyInfo = thisProducer.eKeyInfo_[interestNameUrl].keyInfo;
+        keyInfo.beginTimeSlot = begin;
+        keyInfo.endTimeSlot = end;
+        keyInfo.keyBits = encryptionKey;
+      }
+    });
   }
 };
 
@@ -406,8 +411,10 @@ Producer.prototype.handleCoveringKey_ = function
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
+ * @return {Promise} A promise that returns true if encryption succeeds,
+ * otherwise false.
  */
-Producer.prototype.encryptContentKey_ = function
+Producer.prototype.encryptContentKeyPromise_ = function
   (encryptionKey, eKeyName, timeSlot, onEncryptedKeys)
 {
   var timeCount = Math.round(timeSlot);
@@ -420,12 +427,12 @@ Producer.prototype.encryptContentKey_ = function
   var cKeyData;
   var thisProducer = this;
 
-  this.database_.getContentKeyPromise(timeSlot)
+  return this.database_.getContentKeyPromise(timeSlot)
   .then(function(contentKey) {
     cKeyData = new Data();
     cKeyData.setName(keyName);
     var params = new EncryptParams(EncryptAlgorithmType.RsaOaep);
-    return Encryptor.encryptData
+    return Encryptor.encryptDataPromise
       (cKeyData, contentKey, eKeyName, encryptionKey, params);
   })
   .then(function() {
@@ -434,6 +441,7 @@ Producer.prototype.encryptContentKey_ = function
   .then(function() {
     keyRequest.encryptedKeys.push(cKeyData);
     thisProducer.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+    return SyncPromise.resolve(true);
   });
 };
 
