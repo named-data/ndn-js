@@ -163,9 +163,9 @@ Producer.prototype.createContentKey = function
          // For each current E-KEY.
         var entry = thisProducer.eKeyInfo_[keyNameUri];
         var keyInfo = entry.keyInfo;
-        keyRequest.repeatAttempts[keyNameUri] = 0;
         if (timeSlot < keyInfo.beginTimeSlot || timeSlot >= keyInfo.endTimeSlot) {
           // The current E-KEY cannot cover the content key, so retrieve one.
+          keyRequest.repeatAttempts[keyNameUri] = 0;
           thisProducer.sendKeyInterest_
             (new Interest(entry.keyName).setExclude(timeRange).setChildSelector(1),
              timeSlot, keyRequest, onEncryptedKeys, timeRange);
