@@ -33,5 +33,6 @@ EncryptError.ErrorCode = {
   UnsupportedEncryptionScheme: 32,
   InvalidEncryptedFormat:      33,
   NoDecryptKey:                34,
+  EncryptionFailure:           35,
   General:                     100
 };
