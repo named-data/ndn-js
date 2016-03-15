@@ -321,15 +321,30 @@ Producer.prototype.handleTimeout_ = function
   }
   else
     // No more retrials.
-    --keyRequest.interestCount;
+    this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+};
 
+/**
+ * Decrease the count of outstanding E-KEY interests for the C-KEY for
+ * timeCount. If the count decrease to 0, invoke onEncryptedKeys.
+ * @param {Producer.KeyRequest_} keyRequest The KeyRequest with the
+ * interestCount to update.
+ * @param {number} timeCount The time count for indexing keyRequests_.
+ * @param {function} onEncryptedKeys When there are no more interests to
+ * process, this calls onEncryptedKeys(keys) where keys is a list of encrypted
+ * content key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.updateKeyRequest_ = function
+  (keyRequest, timeCount, onEncryptedKeys)
+{
+  --keyRequest.interestCount;
   if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
     try {
       onEncryptedKeys(keyRequest.encryptedKeys);
     } catch (ex) {
       console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
     }
-    delete this.keyRequests_[timeSlot];
+    delete this.keyRequests_[timeCount];
   }
 };
 
@@ -418,16 +433,7 @@ Producer.prototype.encryptContentKey_ = function
   })
   .then(function() {
     keyRequest.encryptedKeys.push(cKeyData);
-
-    --keyRequest.interestCount;
-    if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
-      try {
-        onEncryptedKeys(keyRequest.encryptedKeys);
-      } catch (ex) {
-        console.log("Error in onEncryptedKeys: " + NdnCommon.getErrorWithStackTrace(ex));
-      }
-      delete thisProducer.keyRequests_[timeSlot];
-    }
+    thisProducer.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
   });
 };
 
