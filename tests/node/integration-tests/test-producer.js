@@ -385,16 +385,12 @@ describe ("TestProducer", function() {
     // out. The result vector should not contain elements that have timed out.
     var testDb = new Sqlite3ProducerDb(databaseFilePath);
     var producer = new Producer(prefix, suffix, face, keyChain, testDb);
-    var onEncryptedKeysCount = 0;
     producer.createContentKey
       (testTime, function(result) {
       try {
-        ++onEncryptedKeysCount;
         assert.equal(timeoutCount, 4);
         assert.equal(result.length, 0);
-
-        if (onEncryptedKeysCount == 4)
-          done();
+        done();
       } catch (ex) { done(ex); }
     });
   });
