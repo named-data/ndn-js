@@ -150,7 +150,7 @@ Producer.prototype.createContentKey = function
     thisProducer.database_.addContentKeyPromise(timeSlot, contentKeyBits)
     .then(function() {
       // Now we need to retrieve the E-KEYs for content key encryption.
-      var timeCount = timeSlot;
+      var timeCount = Math.round(timeSlot);
       thisProducer.keyRequests_[timeCount] =
         new Producer.KeyRequest_(thisProducer.getEKeyInfoSize_());
       var keyRequest = thisProducer.keyRequests_[timeCount];
@@ -168,7 +168,7 @@ Producer.prototype.createContentKey = function
           keyRequest.repeatAttempts[keyNameUri] = 0;
           thisProducer.sendKeyInterest_
             (new Interest(entry.keyName).setExclude(timeRange).setChildSelector(1),
-             timeSlot, keyRequest, onEncryptedKeys, timeRange);
+             timeSlot, onEncryptedKeys);
         }
         else {
           // The current E-KEY can cover the content key.
@@ -177,7 +177,7 @@ Producer.prototype.createContentKey = function
           eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
           eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
           thisProducer.encryptContentKey_
-            (keyRequest, keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
+            (keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
         }
       }
 
@@ -275,23 +275,21 @@ Producer.getRoundedTimeSlot_ = function(timeSlot)
  * @param {Interest} interest The interest to send.
  * @param {number} timeSlot The time slot, passed to handleCoveringKey_ and
  * handleTimeout_.
- * @param {Producer.KeyRequest_} keyRequest The KeyRequest, passed to
- * handleCoveringKey_ and handleTimeout_.
  * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
  * handleCoveringKey_ and handleTimeout_.
  */
 Producer.prototype.sendKeyInterest_ = function
-  (interest, timeSlot, keyRequest, onEncryptedKeys)
+  (interest, timeSlot, onEncryptedKeys)
 {
   var thisProducer = this;
 
   function onKey(interest, data) {
     thisProducer.handleCoveringKey_
-      (interest, data, timeSlot, keyRequest, onEncryptedKeys);
+      (interest, data, timeSlot, onEncryptedKeys);
   }
 
   function onTimeout(interest) {
-    thisProducer.handleTimeout_(interest, timeSlot, keyRequest, onEncryptedKeys);
+    thisProducer.handleTimeout_(interest, timeSlot, onEncryptedKeys);
   }
 
   this.face_.expressInterest(interest, onKey, onTimeout);
@@ -299,25 +297,27 @@ Producer.prototype.sendKeyInterest_ = function
 
 /**
  * This is called from an expressInterest timeout to update the state of
- * keyRequest.
+ * keyRequest. Re-express the interest if the number of retrials is less than
+ * the max limit.
  * @param {Interest} interest The timed-out interest.
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
- * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.handleTimeout_ = function
-  (interest, timeSlot, keyRequest, onEncryptedKeys)
+  (interest, timeSlot, onEncryptedKeys)
 {
+  var timeCount = Math.round(timeSlot);
+  var keyRequest = this.keyRequests_[timeCount];
+
   var interestName = interest.getName();
   var interestNameUri = interestName.toUri();
 
   if (keyRequest.repeatAttempts[interestNameUri] < this.maxRepeatAttempts_) {
     // Increase the retrial count.
     ++keyRequest.repeatAttempts[interestNameUri];
-    this.sendKeyInterest_
-      (interest, timeSlot, keyRequest, onEncryptedKeys);
+    this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys);
   }
   else
     // No more retrials.
@@ -340,14 +340,16 @@ Producer.prototype.handleTimeout_ = function
  * @param {Interest} interest The interest given to expressInterest.
  * @param {Data} data The fetched Data packet.
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
- * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.handleCoveringKey_ = function
-  (interest, data, timeSlot, keyRequest, onEncryptedKeys)
+  (interest, data, timeSlot, onEncryptedKeys)
 {
+  var timeCount = Math.round(timeSlot);
+  var keyRequest = this.keyRequests_[timeCount];
+
   var interestName = interest.getName();
   var interestNameUrl = interestName.toUri();
   var keyName = data.getName();
@@ -365,7 +367,7 @@ Producer.prototype.handleCoveringKey_ = function
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
       (new Interest(interestName).setExclude(timeRange).setChildSelector(1),
-       timeSlot, keyRequest, onEncryptedKeys);
+       timeSlot, onEncryptedKeys);
   }
   else {
     // If the received E-KEY covers the content key, encrypt the content.
@@ -376,14 +378,13 @@ Producer.prototype.handleCoveringKey_ = function
     keyInfo.keyBits = encryptionKey;
 
     this.encryptContentKey_
-      (keyRequest, encryptionKey, keyName, timeSlot, onEncryptedKeys);
+      (encryptionKey, keyName, timeSlot, onEncryptedKeys);
   }
 };
 
 /**
  * Get the content key from the database_ and encrypt it for the timeSlot
  * using encryptionKey.
- * @param {Producer.KeyRequest_} keyRequest The KeyRequest which is updated.
  * @param {Blob} encryptionKey The encryption key value.
  * @param {Name} eKeyName The key name for the EncryptedContent.
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
@@ -392,8 +393,11 @@ Producer.prototype.handleCoveringKey_ = function
  * key Data packets. If onEncryptedKeys is null, this does not use it.
  */
 Producer.prototype.encryptContentKey_ = function
-  (keyRequest, encryptionKey, eKeyName, timeSlot, onEncryptedKeys)
+  (encryptionKey, eKeyName, timeSlot, onEncryptedKeys)
 {
+  var timeCount = Math.round(timeSlot);
+  var keyRequest = this.keyRequests_[timeCount];
+
   var keyName = new Name(this.namespace_);
   keyName.append(Encryptor.NAME_COMPONENT_C_KEY);
   keyName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
