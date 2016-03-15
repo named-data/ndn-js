@@ -159,7 +159,6 @@ Producer.prototype.createContentKey = function
       var timeRange = new Exclude();
       Producer.excludeAfter
         (timeRange, new Name.Component(Schedule.toIsoString(timeSlot)));
-      // Send interests for all nodes in the tree.
       for (var keyNameUri in thisProducer.eKeyInfo_) {
          // For each current E-KEY.
         var entry = thisProducer.eKeyInfo_[keyNameUri];
@@ -168,7 +167,8 @@ Producer.prototype.createContentKey = function
         if (timeSlot < keyInfo.beginTimeSlot || timeSlot >= keyInfo.endTimeSlot) {
           // The current E-KEY cannot cover the content key, so retrieve one.
           thisProducer.sendKeyInterest_
-            (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+            (new Interest(entry.keyName).setExclude(timeRange).setChildSelector(1),
+             timeSlot, keyRequest, onEncryptedKeys, timeRange);
         }
         else {
           // The current E-KEY can cover the content key.
@@ -272,17 +272,16 @@ Producer.getRoundedTimeSlot_ = function(timeSlot)
 /**
  * Send an interest with the given name through the face with callbacks to
  * handleCoveringKey_ and handleTimeout_.
- * @param {Name} name The name of the interest to send.
+ * @param {Interest} interest The interest to send.
  * @param {number} timeSlot The time slot, passed to handleCoveringKey_ and
  * handleTimeout_.
  * @param {Producer.KeyRequest_} keyRequest The KeyRequest, passed to
  * handleCoveringKey_ and handleTimeout_.
  * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
  * handleCoveringKey_ and handleTimeout_.
- * @param {Exclude} timeRange The Exclude for the interest.
  */
 Producer.prototype.sendKeyInterest_ = function
-  (name, timeSlot, keyRequest, onEncryptedKeys, timeRange)
+  (interest, timeSlot, keyRequest, onEncryptedKeys)
 {
   var thisProducer = this;
 
@@ -295,11 +294,7 @@ Producer.prototype.sendKeyInterest_ = function
     thisProducer.handleTimeout_(interest, timeSlot, keyRequest, onEncryptedKeys);
   }
 
-  var keyInterest = new Interest(name);
-  keyInterest.setExclude(timeRange);
-  keyInterest.setChildSelector(1);
-
-  this.face_.expressInterest(keyInterest, onKey, onTimeout);
+  this.face_.expressInterest(interest, onKey, onTimeout);
 };
 
 /**
@@ -322,8 +317,7 @@ Producer.prototype.handleTimeout_ = function
     // Increase the retrial count.
     ++keyRequest.repeatAttempts[interestNameUri];
     this.sendKeyInterest_
-      (interestName, timeSlot, keyRequest, onEncryptedKeys,
-       interest.getExclude());
+      (interest, timeSlot, keyRequest, onEncryptedKeys);
   }
   else
     // No more retrials.
@@ -370,7 +364,8 @@ Producer.prototype.handleCoveringKey_ = function
     Producer.excludeBefore(timeRange, keyName.get(Producer.START_TIME_STAMP_INDEX));
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
-      (interestName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
+      (new Interest(interestName).setExclude(timeRange).setChildSelector(1),
+       timeSlot, keyRequest, onEncryptedKeys);
   }
   else {
     // If the received E-KEY covers the content key, encrypt the content.
