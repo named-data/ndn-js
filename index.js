@@ -64,6 +64,7 @@ exports.RsaAlgorithm = require('./js/encrypt/algo/rsa-algorithm.js').RsaAlgorith
 exports.Consumer = require('./js/encrypt/consumer.js').Consumer;
 exports.ConsumerDb = require('./js/encrypt/consumer-db.js').ConsumerDb;
 exports.DecryptKey = require('./js/encrypt/decrypt-key.js').DecryptKey;
+exports.EncryptError = require('./js/encrypt/encrypt-error.js').EncryptError;
 exports.EncryptKey = require('./js/encrypt/encrypt-key.js').EncryptKey;
 exports.EncryptedContent = require('./js/encrypt/encrypted-content.js').EncryptedContent;
 exports.GroupManagerDb = require('./js/encrypt/group-manager-db.js').GroupManagerDb;

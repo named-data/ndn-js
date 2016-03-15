@@ -174,6 +174,7 @@ def build (bld):
                  "js/encrypt/consumer-db.js",
                  "js/encrypt/consumer.js",
                  "js/encrypt/decrypt-key.js",
+                 "js/encrypt/encrypt-error.js",
                  "js/encrypt/encrypt-key.js",
                  "js/encrypt/encrypted-content.js",
                  "js/encrypt/group-manager-db.js",

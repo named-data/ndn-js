@@ -22,6 +22,7 @@ var Blob = require('../util/blob.js').Blob;
 var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
+var EncryptError = require('./encrypt-error.js').EncryptError;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
 var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
@@ -63,15 +64,6 @@ var Consumer = function Consumer
 
 exports.Consumer = Consumer;
 
-Consumer.ErrorCode = {
-  Timeout:                     1,
-  Validation:                  2,
-  UnsupportedEncryptionScheme: 32,
-  InvalidEncryptedFormat:      33,
-  NoDecryptKey:                34,
-  General:                     100
-};
-
 /**
  * Express an Interest to fetch the content packet with contentName, and
  * decrypt it, fetching keys as needed.
@@ -84,7 +76,7 @@ Consumer.ErrorCode = {
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -111,7 +103,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
         }, onError);
       }, function(d) {
         try {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -127,7 +119,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
       thisConsumer.face_.expressInterest
         (interest, onData, function(contentInterest) {
         try {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -202,7 +194,7 @@ Consumer.prototype.addDecryptionKey = function
  * Consume.Error is used internally from promised-based methods to reject with
  * an error object that has the errorCode and message returned through the
  * onError callback.
- * @param {number} errorCode An error code from Consumer.ErrorCode.
+ * @param {number} errorCode An error code from EncryptError.ErrorCode.
  * @param {string} message The error message.
  */
 Consumer.Error = function ConsumerError(errorCode, message)
@@ -229,7 +221,7 @@ Consumer.Error.callOnError = function(onError, exception, messagePrefix)
   }
   else {
     try {
-      onError(Consumer.ErrorCode.General, messagePrefix + exception);
+      onError(EncryptError.ErrorCode.General, messagePrefix + exception);
     } catch (ex) {
       console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
     }
@@ -274,7 +266,7 @@ Consumer.decryptPromise_ = function(encryptedContent, keyBits)
     }
     else
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.UnsupportedEncryptionScheme,
+        (EncryptError.ErrorCode.UnsupportedEncryptionScheme,
           "" + encryptedContent.getAlgorithmType()));
   });
 };
@@ -287,7 +279,7 @@ Consumer.decryptPromise_ = function(encryptedContent, keyBits)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
 {
@@ -305,7 +297,7 @@ Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
 {
@@ -343,7 +335,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
               (dataEncryptedContent, cKeyBits, onPlainText, onError);
           }, onError);
         }, function(d) {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -355,7 +347,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
       try {
         thisConsumer.face_.expressInterest
           (interest, onData, function(contentInterest) {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
          });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -377,7 +369,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
 {
@@ -421,7 +413,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
             Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
           });
         }, function(d) {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -433,7 +425,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
       try {
         thisConsumer.face_.expressInterest
           (interest, onData, function(contentInterest) {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
          });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -479,7 +471,7 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
   .then(function(consumerKeyBlob) {
     if (consumerKeyBlob.size() == 0)
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.NoDecryptKey,
+        (EncryptError.ErrorCode.NoDecryptKey,
          "The desired consumer decryption key in not in the database"));
 
     // Process the D-KEY.
@@ -489,7 +481,7 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
     encryptedPayloadBlob = new Blob(encryptedPayloadBuffer, false);
     if (encryptedPayloadBlob.size() == 0)
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.InvalidEncryptedFormat,
+        (EncryptError.ErrorCode.InvalidEncryptedFormat,
          "The data packet does not satisfy the D-KEY packet format"));
 
     // Decrypt the D-KEY.
