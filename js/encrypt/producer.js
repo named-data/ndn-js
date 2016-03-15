@@ -99,11 +99,11 @@ var Producer = function Producer
 exports.Producer = Producer;
 
 /**
- * Create the content key. This first checks if the content key exists. For an
- * existing content key, this returns the content key name directly. If the
- * key does not exist, this creates one and encrypts it using the
- * corresponding E-KEYs. The encrypted content keys are passed to the
- * onProducerEKey callback.
+ * Create the content key corresponding to the timeSlot. This first checks if
+ * the content key exists. For an existing content key, this returns the
+ * content key name directly. If the key does not exist, this creates one and
+ * encrypts it using the corresponding E-KEYs. The encrypted content keys are
+ * passed to the onEncryptedKeys callback.
  * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
  * @param {function} onEncryptedKeys If this creates a content key, then this
  * calls onEncryptedKeys(keys) where keys is a list of encrypted content key
@@ -132,6 +132,7 @@ Producer.prototype.createContentKey = function
   var contentKeyBits;
   var thisProducer = this;
 
+  // Check if we have created the content key before.
   this.database_.hasContentKeyPromise(timeSlot)
   .then(function(exists) {
     if (exists) {
@@ -143,28 +144,35 @@ Producer.prototype.createContentKey = function
       return;
     }
 
+    // We haven't created the content key. Create one and add it into the database.
     var aesParams = new AesKeyParams(128);
     contentKeyBits = AesAlgorithm.generateKey(aesParams).getKeyBits();
     thisProducer.database_.addContentKeyPromise(timeSlot, contentKeyBits)
     .then(function() {
+      // Now we need to retrieve the E-KEYs for content key encryption.
       var timeCount = timeSlot;
       thisProducer.keyRequests_[timeCount] =
         new Producer.KeyRequest_(thisProducer.getEKeyInfoSize_());
       var keyRequest = thisProducer.keyRequests_[timeCount];
 
+      // Check if the current E-KEYs can cover the content key.
       var timeRange = new Exclude();
       Producer.excludeAfter
         (timeRange, new Name.Component(Schedule.toIsoString(timeSlot)));
       // Send interests for all nodes in the tree.
       for (var keyNameUri in thisProducer.eKeyInfo_) {
+         // For each current E-KEY.
         var entry = thisProducer.eKeyInfo_[keyNameUri];
         var keyInfo = entry.keyInfo;
         keyRequest.repeatAttempts[keyNameUri] = 0;
         if (timeSlot < keyInfo.beginTimeSlot || timeSlot >= keyInfo.endTimeSlot) {
+          // The current E-KEY cannot cover the content key, so retrieve one.
           thisProducer.sendKeyInterest_
             (entry.keyName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
         }
         else {
+          // The current E-KEY can cover the content key.
+          // Encrypt the content key directly.
           var eKeyName = new Name(entry.keyName);
           eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
           eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
@@ -202,9 +210,11 @@ Producer.prototype.produce = function
 {
   var thisProducer = this;
 
+  // Get a content key.
   this.createContentKey(timeSlot, null, function(contentKeyName) {
     thisProducer.database_.getContentKeyPromise(timeSlot)
     .then(function(contentKey) {
+      // Produce data.
       var dataName = new Name(thisProducer.namespace_);
       dataName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
 
@@ -309,12 +319,14 @@ Producer.prototype.handleTimeout_ = function
   var interestNameUri = interestName.toUri();
 
   if (keyRequest.repeatAttempts[interestNameUri] < this.maxRepeatAttempts_) {
+    // Increase the retrial count.
     ++keyRequest.repeatAttempts[interestNameUri];
     this.sendKeyInterest_
       (interestName, timeSlot, keyRequest, onEncryptedKeys,
        interest.getExclude());
   }
   else
+    // No more retrials.
     --keyRequest.interestCount;
 
   if (keyRequest.interestCount == 0 && onEncryptedKeys != null) {
@@ -352,22 +364,25 @@ Producer.prototype.handleCoveringKey_ = function
     (keyName.get(Producer.END_TIME_STAMP_INDEX).getValue().toString());
 
   if (timeSlot >= end) {
+    // If the received E-KEY covers some earlier period, try to retrieve an
+    // E-KEY covering a later one.
     var timeRange = new Exclude(interest.getExclude());
     Producer.excludeBefore(timeRange, keyName.get(Producer.START_TIME_STAMP_INDEX));
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
       (interestName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
-    return;
   }
+  else {
+    // If the received E-KEY covers the content key, encrypt the content.
+    var encryptionKey = data.getContent();
+    var keyInfo = this.eKeyInfo_[interestNameUrl].keyInfo;
+    keyInfo.beginTimeSlot = begin;
+    keyInfo.endTimeSlot = end;
+    keyInfo.keyBits = encryptionKey;
 
-  var encryptionKey = data.getContent();
-  var keyInfo = this.eKeyInfo_[interestNameUrl].keyInfo;
-  keyInfo.beginTimeSlot = begin;
-  keyInfo.endTimeSlot = end;
-  keyInfo.keyBits = encryptionKey;
-
-  this.encryptContentKey_
-    (keyRequest, encryptionKey, keyName, timeSlot, onEncryptedKeys);
+    this.encryptContentKey_
+      (keyRequest, encryptionKey, keyName, timeSlot, onEncryptedKeys);
+  }
 };
 
 /**
