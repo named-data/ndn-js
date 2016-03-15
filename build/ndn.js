@@ -28105,6 +28105,7 @@ var Blob = require('../util/blob.js').Blob;
 var Name = require('../name.js').Name;
 var Interest = require('../interest.js').Interest;
 var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
+var EncryptError = require('./encrypt-error.js').EncryptError;
 var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
 var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
 var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
@@ -28146,15 +28147,6 @@ var Consumer = function Consumer
 
 exports.Consumer = Consumer;
 
-Consumer.ErrorCode = {
-  Timeout:                     1,
-  Validation:                  2,
-  UnsupportedEncryptionScheme: 32,
-  InvalidEncryptedFormat:      33,
-  NoDecryptKey:                34,
-  General:                     100
-};
-
 /**
  * Express an Interest to fetch the content packet with contentName, and
  * decrypt it, fetching keys as needed.
@@ -28167,7 +28159,7 @@ Consumer.ErrorCode = {
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -28194,7 +28186,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
         }, onError);
       }, function(d) {
         try {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -28210,7 +28202,7 @@ Consumer.prototype.consume = function(contentName, onConsumeComplete, onError)
       thisConsumer.face_.expressInterest
         (interest, onData, function(contentInterest) {
         try {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
         } catch (ex) {
           console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
         }
@@ -28285,7 +28277,7 @@ Consumer.prototype.addDecryptionKey = function
  * Consume.Error is used internally from promised-based methods to reject with
  * an error object that has the errorCode and message returned through the
  * onError callback.
- * @param {number} errorCode An error code from Consumer.ErrorCode.
+ * @param {number} errorCode An error code from EncryptError.ErrorCode.
  * @param {string} message The error message.
  */
 Consumer.Error = function ConsumerError(errorCode, message)
@@ -28312,7 +28304,7 @@ Consumer.Error.callOnError = function(onError, exception, messagePrefix)
   }
   else {
     try {
-      onError(Consumer.ErrorCode.General, messagePrefix + exception);
+      onError(EncryptError.ErrorCode.General, messagePrefix + exception);
     } catch (ex) {
       console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
     }
@@ -28357,7 +28349,7 @@ Consumer.decryptPromise_ = function(encryptedContent, keyBits)
     }
     else
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.UnsupportedEncryptionScheme,
+        (EncryptError.ErrorCode.UnsupportedEncryptionScheme,
           "" + encryptedContent.getAlgorithmType()));
   });
 };
@@ -28370,7 +28362,7 @@ Consumer.decryptPromise_ = function(encryptedContent, keyBits)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
 {
@@ -28388,7 +28380,7 @@ Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
 {
@@ -28426,7 +28418,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
               (dataEncryptedContent, cKeyBits, onPlainText, onError);
           }, onError);
         }, function(d) {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -28438,7 +28430,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
       try {
         thisConsumer.face_.expressInterest
           (interest, onData, function(contentInterest) {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
          });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -28460,7 +28452,7 @@ Consumer.prototype.decryptContent_ = function(data, onPlainText, onError)
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
- * where errorCode is an error code from Consumer.ErrorCode.
+ * where errorCode is an error code from EncryptError.ErrorCode.
  */
 Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
 {
@@ -28504,7 +28496,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
             Consumer.Error.callOnError(onError, ex, "decryptDKey error: ");
           });
         }, function(d) {
-          onError(Consumer.ErrorCode.Validation, "verifyData failed");
+          onError(EncryptError.ErrorCode.Validation, "verifyData failed");
         });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "verifyData error: ");
@@ -28516,7 +28508,7 @@ Consumer.prototype.decryptCKey_ = function(cKeyData, onPlainText, onError)
       try {
         thisConsumer.face_.expressInterest
           (interest, onData, function(contentInterest) {
-          onError(Consumer.ErrorCode.Timeout, interest.getName().toUri());
+          onError(EncryptError.ErrorCode.Timeout, interest.getName().toUri());
          });
       } catch (ex) {
         Consumer.Error.callOnError(onError, ex, "expressInterest error: ");
@@ -28562,7 +28554,7 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
   .then(function(consumerKeyBlob) {
     if (consumerKeyBlob.size() == 0)
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.NoDecryptKey,
+        (EncryptError.ErrorCode.NoDecryptKey,
          "The desired consumer decryption key in not in the database"));
 
     // Process the D-KEY.
@@ -28572,7 +28564,7 @@ Consumer.prototype.decryptDKeyPromise_ = function(dKeyData)
     encryptedPayloadBlob = new Blob(encryptedPayloadBuffer, false);
     if (encryptedPayloadBlob.size() == 0)
       return SyncPromise.reject(new Consumer.Error
-        (Consumer.ErrorCode.InvalidEncryptedFormat,
+        (EncryptError.ErrorCode.InvalidEncryptedFormat,
          "The data packet does not satisfy the D-KEY packet format"));
 
     // Decrypt the D-KEY.
@@ -28645,6 +28637,43 @@ exports.DecryptKey = DecryptKey;
  * @return {Blob} The key value.
  */
 DecryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
+/**
+ * Copyright (C) 2015-2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-group-encrypt src/error-code https://github.com/named-data/ndn-group-encrypt
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * EncryptError holds the ErrorCode enum for errors from the encrypt library.
+ */
+var EncryptError = function EncryptError()
+{
+};
+
+exports.EncryptError = EncryptError;
+
+EncryptError.ErrorCode = {
+  Timeout:                     1,
+  Validation:                  2,
+  UnsupportedEncryptionScheme: 32,
+  InvalidEncryptedFormat:      33,
+  NoDecryptKey:                34,
+  General:                     100
+};
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -29703,6 +29732,17 @@ var Interval = function Interval(value, endTime)
 exports.Interval = Interval;
 
 /**
+ * Set this interval to have the same values as the other interval.
+ * @param {Interval} other The other Interval with values to copy.
+ */
+Interval.prototype.set = function(other)
+{
+  this.startTime_ = other.startTime_;
+  this.endTime_ = other.endTime_;
+  this.isValid_ = other.isValid_;
+};
+
+/**
  * Check if the time point is in this interval.
  * @param {number} timePoint The time point to check as milliseconds since
  * Jan 1, 1970 UTC.
@@ -30326,13 +30366,13 @@ Producer.prototype.handleCoveringKey_ = function
   var keyName = data.getName();
 
   var begin = Schedule.fromIsoString
-    (keyName.get(Producer.iStartTimeStamp).getValue().toString());
+    (keyName.get(Producer.START_TIME_STAMP_INDEX).getValue().toString());
   var end = Schedule.fromIsoString
-    (keyName.get(Producer.iEndTimeStamp).getValue().toString());
+    (keyName.get(Producer.END_TIME_STAMP_INDEX).getValue().toString());
 
   if (timeSlot >= end) {
     var timeRange = new Exclude(interest.getExclude());
-    Producer.excludeBefore(timeRange, keyName.get(Producer.iStartTimeStamp));
+    Producer.excludeBefore(timeRange, keyName.get(Producer.START_TIME_STAMP_INDEX));
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
       (interestName, timeSlot, keyRequest, onEncryptedKeys, timeRange);
@@ -30622,8 +30662,8 @@ Producer.excludeRange = function(exclude, from, to)
   Producer.setExcludeEntries(exclude, entries);
 };
 
-Producer.iStartTimeStamp = -2;
-Producer.iEndTimeStamp = -1;
+Producer.START_TIME_STAMP_INDEX = -2;
+Producer.END_TIME_STAMP_INDEX = -1;
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -31018,18 +31058,18 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
 };
 
 /**
- * Get the interval that covers the time point. This iterates over the two
+ * Get the interval that covers the time stamp. This iterates over the two
  * repetitive interval sets and find the shortest interval that allows a group
- * member to access the data. If there is no interval covering the time point,
+ * member to access the data. If there is no interval covering the time stamp,
  * this returns false for isPositive and a negative interval.
- * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
+ * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
  * @returns {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is positive or false if negative,
- * and interval is the Interval covering the time point, or a negative interval
+ * and interval is the Interval covering the time stamp, or a negative interval
  * if not found.
  */
-Schedule.prototype.getCoveringInterval = function(timePoint)
+Schedule.prototype.getCoveringInterval = function(timeStamp)
 {
   var blackPositiveResult = new Interval(true);
   var whitePositiveResult = new Interval(true);
@@ -31038,69 +31078,40 @@ Schedule.prototype.getCoveringInterval = function(timePoint)
   var whiteNegativeResult = new Interval();
 
   // Get the black result.
-  for (var i = 0; i < this.blackIntervalList_.length; ++i) {
-    var element = this.blackIntervalList_[i];
+  Schedule.calculateIntervalResult_
+    (this.blackIntervalList_, timeStamp, blackPositiveResult, blackNegativeResult);
 
-    var result = element.getInterval(timePoint);
-    var tempInterval = result.interval;
-    if (result.isPositive == true)
-      // tempInterval covers the time point, so union the black negative
-      // result with it.
-      // Get the union interval of all the black intervals covering the
-      // time point.
-      // Return false for isPositive and the union interval.
-      blackPositiveResult.unionWith(tempInterval);
-    else {
-      // tempInterval does not cover the time point, so intersect the black
-      // negative result with it.
-      // Get the intersection interval of all the black intervals not covering
-      // the time point.
-      // Return true for isPositive if the white positive result is not empty,
-      // false if it is empty.
-      if (!blackNegativeResult.isValid())
-        blackNegativeResult = tempInterval;
-      else
-        blackNegativeResult.intersectWith(tempInterval);
-    }
-  }
-
-  // If the black positive result is not full, then isPositive must be false.
+  // If the black positive result is not empty, then isPositive must be false.
   if (!blackPositiveResult.isEmpty())
     return { isPositive: false, interval: blackPositiveResult };
 
   // Get the whiteResult.
-  for (var i = 0; i < this.whiteIntervalList_.length; ++i) {
-    var element = this.whiteIntervalList_[i];
+  Schedule.calculateIntervalResult_
+    (this.whiteIntervalList_, timeStamp, whitePositiveResult, whiteNegativeResult);
 
-    var result = element.getInterval(timePoint);
-    var tempInterval = result.interval;
-    if (result.isPositive == true)
-      // tempInterval covers the time point, so union the white positive
-      // result with it.
-      // Get the union interval of all the white intervals covering the time
-      // point.
-      // Return true for isPositive.
-      whitePositiveResult.unionWith(tempInterval);
-    else {
-      // tempInterval does not cover the time point, so intersect the white
-      // negative result with it.
-      // Get the intersection of all the white intervals not covering the time
-      // point.
-      // Return false for isPositive if the positive result is empty, or
-      // true if it is not empty.
-      if (!whiteNegativeResult.isValid())
-        whiteNegativeResult = tempInterval;
-      else
-        whiteNegativeResult.intersectWith(tempInterval);
-    }
+  if (whitePositiveResult.isEmpty() && !whiteNegativeResult.isValid()) {
+    // There is no white interval covering the time stamp.
+    // Return false and a 24-hour interval.
+    var timeStampDateOnly =
+      RepetitiveInterval.toDateOnlyMilliseconds_(timeStamp);
+    return { isPositive: false,
+             interval:  new Interval
+               (timeStampDateOnly,
+                timeStampDateOnly + RepetitiveInterval.MILLISECONDS_IN_DAY) };
   }
 
-  // If the positive result is empty then return false for isPositive. If it
-  // is not empty then return true for isPositive.
-  if (!whitePositiveResult.isEmpty())
-    return { isPositive: true,
-             interval: whitePositiveResult.intersectWith(blackNegativeResult) };
+  if (!whitePositiveResult.isEmpty()) {
+    // There is white interval covering the time stamp.
+    // Return true and calculate the intersection.
+    if (blackNegativeResult.isValid())
+      return { isPositive: true,
+               interval: whitePositiveResult.intersectWith(blackNegativeResult) };
+    else
+      return  { isPositive: true, interval: whitePositiveResult };
+  }
   else
+    // There is no white interval covering the time stamp.
+    // Return false.
     return { isPositive: false, interval: whiteNegativeResult };
 };
 
@@ -31248,6 +31259,34 @@ Schedule.decodeRepetitiveInterval_ = function(decoder)
   decoder.finishNestedTlvs(endOffset);
   return new RepetitiveInterval
     (startDate, endDate, startHour, endHour, nRepeats, repeatUnit);
+};
+
+/**
+ * A helper function to calculate black interval results or white interval
+ * results.
+ * @param {Array} list The set of RepetitiveInterval, which can be the white
+ * list or the black list.
+ * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
+ * @param {Interval} positiveResult The positive result which is updated.
+ * @param {Interval} negativeResult The negative result which is updated.
+ */
+Schedule.calculateIntervalResult_ = function
+  (list, timeStamp, positiveResult, negativeResult)
+{
+  for (var i = 0; i < list.length; ++i) {
+    var element = list[i];
+
+    var result = element.getInterval(timeStamp);
+    var tempInterval = result.interval;
+    if (result.isPositive == true)
+      positiveResult.unionWith(tempInterval);
+    else {
+      if (!negativeResult.isValid())
+        negativeResult.set(tempInterval);
+      else
+        negativeResult.intersectWith(tempInterval);
+    }
+  }
 };
 
 /**
