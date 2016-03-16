@@ -757,6 +757,32 @@ IdentityManager.prototype.getDefaultCertificateName = function
 };
 
 /**
+ * Append all the key names of a particular identity to the nameList.
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
+ * add only the non-default key names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllKeyNamesOfIdentity = function
+  (identityName, nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllKeyNamesOfIdentityPromise
+      (identityName, nameList, isDefault, !onComplete));
+};
+
+/**
  * Sign the Data packet or byte array data based on the certificate name.
  * @param {Data|Buffer} target If this is a Data object, wire encode for signing,
  * update its signature and key locator field and wireEncoding. If it is a
