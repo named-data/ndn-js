@@ -155,13 +155,11 @@ describe ("TestProducer", function() {
     var contentKey = null; // Blob
 
     // We don't know which callback will be called first, so count.
-    var nCallbacksNeeded = 3;
+    var nCallbacksNeeded = 4;
     var nCallbacksCalled = 0;
 
     function checkEncryptionKeys
         (result, testTime, roundedTime, expectedExpressInterestCallCount) {
-      ++nCallbacksCalled;
-
       try {
         assert.equal(expressInterestCallCount, expectedExpressInterestCallCount);
       } catch (ex) { done(ex); return; }
@@ -198,7 +196,7 @@ describe ("TestProducer", function() {
 
         assert.equal(result.length, 3);
 
-        if (nCallbacksCalled == nCallbacksNeeded)
+        if (++nCallbacksCalled == nCallbacksNeeded)
           done();
       })
       .catch(function(ex) {
@@ -207,40 +205,22 @@ describe ("TestProducer", function() {
     }
 
     var contentKeyName1;
-    var contentKeyName2;
 
     // An initial test to confirm that keys are created for this time slot.
-    producer.createContentKey
-      (testTime1,
-       function(keys) { checkEncryptionKeys(keys, testTime1, testTimeRounded1, 3); },
-       function(contentKeyName) {
+    producer.createContentKey(testTime1, function(keys) {
       try {
-        contentKeyName1 = contentKeyName;
-
+        checkEncryptionKeys(keys, testTime1, testTimeRounded1, 3);
         // Verify that we do not repeat the search for e-keys. The total
         //   expressInterestCallCount should be the same.
-        producer.createContentKey
-          (testTime2,
-           function(keys) { checkEncryptionKeys(keys, testTime2, testTimeRounded2, 3); },
-           function(contentKeyName) {
+        producer.createContentKey(testTime2, function(keys) {
+          checkEncryptionKeys(keys, testTime2, testTimeRounded2, 3);
           try {
-            contentKeyName2 = contentKeyName;
-
-            // Confirm content key names are correct
-            assert.ok(cKeyName.equals(contentKeyName1.getPrefix(-1)));
-            assert.ok(testTimeRounded1.equals(contentKeyName1.get(6)));
-            assert.ok(cKeyName.equals(contentKeyName2.getPrefix(-1)));
-            assert.ok(testTimeRounded2.equals(contentKeyName2.get(6)));
-
             // Confirm that produce encrypts with the correct key and has the
             //   right name.
             var testData = new Data();
             producer.produce
-              (testData, testTime2, new Blob(DATA_CONTENT, false),
-               function() {
+              (testData, testTime2, new Blob(DATA_CONTENT, false), function() {
               try {
-                ++nCallbacksCalled;
-
                 var producedName = testData.getName();
                 assert.ok(cKeyName.getPrefix(-1).equals(producedName.getSubName(0, 5)));
                 assert.ok(testTimeRounded2.equals(producedName.get(5)));
@@ -260,13 +240,26 @@ describe ("TestProducer", function() {
                 var decryptTest = AesAlgorithm.decrypt(contentKey, encryptedData, params);
                 assert.ok(decryptTest.equals(new Blob(DATA_CONTENT, false)));
 
-                if (nCallbacksCalled == nCallbacksNeeded)
+                if (++nCallbacksCalled == nCallbacksNeeded)
                   done();
               } catch (ex) { done(ex); }
             }, function(errorCode, message) { done(new Error(message)); });
           } catch (ex) { done(ex); }
+        }, function(contentKeyName2) {
+          try {
+            // Confirm content key names are correct.
+            assert.ok(cKeyName.equals(contentKeyName1.getPrefix(-1)));
+            assert.ok(testTimeRounded1.equals(contentKeyName1.get(6)));
+            assert.ok(cKeyName.equals(contentKeyName2.getPrefix(-1)));
+            assert.ok(testTimeRounded2.equals(contentKeyName2.get(6)));
+
+            if (++nCallbacksCalled == nCallbacksNeeded)
+              done();
+          } catch (ex) { done(ex); }
         }, function(errorCode, message) { done(new Error(message)); });
       } catch (ex) { done(ex); }
+    }, function(contentKeyName) {
+      contentKeyName1 = contentKeyName;
     }, function(errorCode, message) { done(new Error(message)); });
   });
 
