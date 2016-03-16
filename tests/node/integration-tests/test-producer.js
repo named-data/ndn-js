@@ -263,11 +263,11 @@ describe ("TestProducer", function() {
                 if (nCallbacksCalled == nCallbacksNeeded)
                   done();
               } catch (ex) { done(ex); }
-            }, function(error) { done(error); });
+            }, function(errorCode, message) { done(new Error(message)); });
           } catch (ex) { done(ex); }
-        });
+        }, function(errorCode, message) { done(new Error(message)); });
       } catch (ex) { done(ex); }
-    });
+    }, function(errorCode, message) { done(new Error(message)); });
   });
 
   it("ContentKeySearch", function(done) {
@@ -351,7 +351,9 @@ describe ("TestProducer", function() {
 
         done();
       } catch (ex) { done(ex); }
-    });
+    },
+      function(contentKeyName) {},
+      function(errorCode, message) { done(new Error(message)); });
   });
 
   it("ContentKeyTimeout", function(done) {
@@ -392,6 +394,8 @@ describe ("TestProducer", function() {
         assert.equal(result.length, 0);
         done();
       } catch (ex) { done(ex); }
-    });
+    },
+      function(contentKeyName) {},
+      function(errorCode, message) { done(new Error(message)); });
   });
 });
