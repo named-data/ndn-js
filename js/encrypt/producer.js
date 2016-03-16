@@ -115,7 +115,7 @@ exports.Producer = Producer;
  * exceptions.
  * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
  * with the content key name for the time slot. If onContentKeyName is null,
- * this does not use it. (A callback is neede because of async database
+ * this does not use it. (A callback is needed because of async database
  * operations.)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
@@ -147,11 +147,8 @@ Producer.prototype.createContentKey = function
   this.database_.hasContentKeyPromise(timeSlot)
   .then(function(exists) {
     if (exists) {
-      thisProducer.database_.getContentKeyPromise(timeSlot)
-      .then(function(localContentKeyBits) {
-        if (onContentKeyName != null)
-          onContentKeyName(contentKeyName);
-      });
+      if (onContentKeyName != null)
+        onContentKeyName(contentKeyName);
       return;
     }
 
