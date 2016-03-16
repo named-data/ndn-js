@@ -28,6 +28,7 @@ var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmT
 var AesKeyParams = require('../security/key-params.js').AesKeyParams;
 var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
 var Schedule = require('./schedule.js').Schedule;
+var EncryptError = require('./encrypt-error.js').EncryptError;
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
@@ -119,10 +120,19 @@ exports.Producer = Producer;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param {function} onError (optional) This calls onError(errorCode, message)
+ * for an error, where errorCode is from EncryptError.ErrorCode and message is a
+ * string. If omitted, use a default callback which does nothing.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  */
 Producer.prototype.createContentKey = function
-  (timeSlot, onEncryptedKeys, onContentKeyName)
+  (timeSlot, onEncryptedKeys, onContentKeyName, onError)
 {
+  if (!onError)
+    onError = Producer.defaultOnError;
+
   var hourSlot = Producer.getRoundedTimeSlot_(timeSlot);
 
   // Create the content key name.
@@ -169,7 +179,7 @@ Producer.prototype.createContentKey = function
           keyRequest.repeatAttempts[keyNameUri] = 0;
           thisProducer.sendKeyInterest_
             (new Interest(entry.keyName).setExclude(timeRange).setChildSelector(1),
-             timeSlot, onEncryptedKeys);
+             timeSlot, onEncryptedKeys, onError);
         }
         else {
           // The current E-KEY can cover the content key.
@@ -178,7 +188,7 @@ Producer.prototype.createContentKey = function
           eKeyName.append(Schedule.toIsoString(keyInfo.beginTimeSlot));
           eKeyName.append(Schedule.toIsoString(keyInfo.endTimeSlot));
           thisProducer.encryptContentKeyPromise_
-            (keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys);
+            (keyInfo.keyBits, eKeyName, timeSlot, onEncryptedKeys, onError);
         }
       }
 
@@ -200,8 +210,9 @@ Producer.prototype.createContentKey = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @param {function} onError (optional) If there is an exception, then this
- * calls onError(exception) with the exception. If omitted, this does not use it.
+ * @param {function} onError (optional) This calls onError(errorCode, message)
+ * for an error, where errorCode is from EncryptError.ErrorCode and message is a
+ * string. If omitted, use a default callback which does nothing.
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -209,6 +220,9 @@ Producer.prototype.createContentKey = function
 Producer.prototype.produce = function
   (data, timeSlot, content, onComplete, onError)
 {
+  if (!onError)
+    onError = Producer.defaultOnError;
+
   var thisProducer = this;
 
   // Get a content key.
@@ -235,13 +249,21 @@ Producer.prototype.produce = function
       }
     }, function(error) {
       try {
-        onError(error);
+        onError(EncryptError.ErrorCode.General, "" + error);
       } catch (ex) {
         console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
       }
     });
-  });
-}
+  }, onError);
+};
+
+/**
+ * The default onError callback which does nothing.
+ */
+Producer.defaultOnError = function(errorCode, message)
+{
+  // Do nothing.
+};
 
 Producer.KeyInfo_ = function ProducerKeyInfo()
 {
@@ -278,19 +300,20 @@ Producer.getRoundedTimeSlot_ = function(timeSlot)
  * handleTimeout_.
  * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
  * handleCoveringKey_ and handleTimeout_.
+ * @param {function} onError This calls onError(errorCode, message) for an error.
  */
 Producer.prototype.sendKeyInterest_ = function
-  (interest, timeSlot, onEncryptedKeys)
+  (interest, timeSlot, onEncryptedKeys, onError)
 {
   var thisProducer = this;
 
   function onKey(interest, data) {
     thisProducer.handleCoveringKey_
-      (interest, data, timeSlot, onEncryptedKeys);
+      (interest, data, timeSlot, onEncryptedKeys, onError);
   }
 
   function onTimeout(interest) {
-    thisProducer.handleTimeout_(interest, timeSlot, onEncryptedKeys);
+    thisProducer.handleTimeout_(interest, timeSlot, onEncryptedKeys, onError);
   }
 
   this.face_.expressInterest(interest, onKey, onTimeout);
@@ -305,9 +328,10 @@ Producer.prototype.sendKeyInterest_ = function
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
+ * @param {function} onError This calls onError(errorCode, message) for an error.
  */
 Producer.prototype.handleTimeout_ = function
-  (interest, timeSlot, onEncryptedKeys)
+  (interest, timeSlot, onEncryptedKeys, onError)
 {
   var timeCount = Math.round(timeSlot);
   var keyRequest = this.keyRequests_[timeCount];
@@ -318,7 +342,7 @@ Producer.prototype.handleTimeout_ = function
   if (keyRequest.repeatAttempts[interestNameUri] < this.maxRepeatAttempts_) {
     // Increase the retrial count.
     ++keyRequest.repeatAttempts[interestNameUri];
-    this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys);
+    this.sendKeyInterest_(interest, timeSlot, onEncryptedKeys, onError);
   }
   else
     // No more retrials.
@@ -327,7 +351,7 @@ Producer.prototype.handleTimeout_ = function
 
 /**
  * Decrease the count of outstanding E-KEY interests for the C-KEY for
- * timeCount. If the count decrease to 0, invoke onEncryptedKeys.
+ * timeCount. If the count decreases to 0, invoke onEncryptedKeys.
  * @param {Producer.KeyRequest_} keyRequest The KeyRequest with the
  * interestCount to update.
  * @param {number} timeCount The time count for indexing keyRequests_.
@@ -359,9 +383,10 @@ Producer.prototype.updateKeyRequest_ = function
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
+ * @param {function} onError This calls onError(errorCode, message) for an error.
  */
 Producer.prototype.handleCoveringKey_ = function
-  (interest, data, timeSlot, onEncryptedKeys)
+  (interest, data, timeSlot, onEncryptedKeys, onError)
 {
   var timeCount = Math.round(timeSlot);
   var keyRequest = this.keyRequests_[timeCount];
@@ -383,14 +408,14 @@ Producer.prototype.handleCoveringKey_ = function
     keyRequest.repeatAttempts[interestNameUrl] = 0;
     this.sendKeyInterest_
       (new Interest(interestName).setExclude(timeRange).setChildSelector(1),
-       timeSlot, onEncryptedKeys);
+       timeSlot, onEncryptedKeys, onError);
   }
   else {
     // If the received E-KEY covers the content key, encrypt the content.
     var encryptionKey = data.getContent();
     var thisProducer = this;
     this.encryptContentKeyPromise_
-      (encryptionKey, keyName, timeSlot, onEncryptedKeys)
+      (encryptionKey, keyName, timeSlot, onEncryptedKeys, onError)
     .then(function(success) {
       if (success) {
         var keyInfo = thisProducer.eKeyInfo_[interestNameUrl].keyInfo;
@@ -411,11 +436,12 @@ Producer.prototype.handleCoveringKey_ = function
  * @param {function} onEncryptedKeys When there are no more interests to process,
  * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
  * key Data packets. If onEncryptedKeys is null, this does not use it.
+ * @param {function} onError This calls onError(errorCode, message) for an error.
  * @return {Promise} A promise that returns true if encryption succeeds,
  * otherwise false.
  */
 Producer.prototype.encryptContentKeyPromise_ = function
-  (encryptionKey, eKeyName, timeSlot, onEncryptedKeys)
+  (encryptionKey, eKeyName, timeSlot, onEncryptedKeys, onError)
 {
   var timeCount = Math.round(timeSlot);
   var keyRequest = this.keyRequests_[timeCount];
@@ -436,12 +462,27 @@ Producer.prototype.encryptContentKeyPromise_ = function
       (cKeyData, contentKey, eKeyName, encryptionKey, params);
   })
   .then(function() {
-    return thisProducer.keyChain_.signPromise(cKeyData);
-  })
-  .then(function() {
-    keyRequest.encryptedKeys.push(cKeyData);
-    thisProducer.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
     return SyncPromise.resolve(true);
+  }, function(error) {
+    try {
+      onError(EncryptError.ErrorCode.EncryptionFailure,
+              "encryptData failed: " + error);
+    } catch (ex) {
+      console.log("Error in onError: " + NdnCommon.getErrorWithStackTrace(ex));
+    }
+    return SyncPromise.resolve(false);
+  })
+  .then(function(success) {
+    if (success) {
+      return thisProducer.keyChain_.signPromise(cKeyData)
+      .then(function() {
+        keyRequest.encryptedKeys.push(cKeyData);
+        thisProducer.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+        return SyncPromise.resolve(true);
+      });
+    }
+    else
+      return SyncPromise.resolve(false);
   });
 };
 
