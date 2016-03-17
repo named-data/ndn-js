@@ -24,6 +24,7 @@ var Data = require('../../..').Data;
 var Name = require('../../..').Name;
 var Blob = require('../../..').Blob;
 var Sha256WithRsaSignature = require('../../..').Sha256WithRsaSignature;
+var GenericSignature = require('../../..').GenericSignature;
 var ContentType = require('../../..').ContentType;
 var KeyType = require('../../..').KeyType;
 var KeyLocatorType = require('../../..').KeyLocatorType;
@@ -159,6 +160,24 @@ var codedData = new Buffer([
     0x31, 0xCB, 0x6C, 0x1C, 0x0A, 0xA4, 0x01, 0x10, 0xFC, 0xC8, 0x66, 0xCE, 0x2E, 0x9C, 0x0B, 0x2D,
     0x7F, 0xB4, 0x64, 0xA0, 0xEE, 0x22, 0x82, 0xC8, 0x34, 0xF7, 0x9A, 0xF5, 0x51, 0x12, 0x2A, 0x84,
 1
+]);
+
+var experimentalSignatureType = 100;
+var experimentalSignatureInfo = new Buffer([
+0x16, 0x08, // SignatureInfo
+  0x1B, 0x01, experimentalSignatureType, // SignatureType
+  0x81, 0x03, 1, 2, 3 // Experimental info
+]);
+
+var experimentalSignatureInfoNoSignatureType = new Buffer([
+0x16, 0x05, // SignatureInfo
+  0x81, 0x03, 1, 2, 3 // Experimental info
+]);
+
+var experimentalSignatureInfoBadTlv = new Buffer([
+0x16, 0x08, // SignatureInfo
+  0x1B, 0x01, experimentalSignatureType, // SignatureType
+  0x81, 0x10, 1, 2, 3 // Bad TLV encoding (length 0x10 doesn't match the value length.
 ]);
 
 function dump(s1, s2)
@@ -367,5 +386,55 @@ describe('TestDataMethods', function() {
        function() { ++failedCallCount; });
     assert.equal(failedCallCount, 0, 'Signature verification failed');
     assert.equal(verifiedCallCount, 1, 'Verification callback was not used.');
+  });
+
+  it('GenericSignature', function() {
+    // Test correct encoding.
+    var signature = new GenericSignature();
+    signature.setSignatureInfoEncoding
+      (new Blob(experimentalSignatureInfo, false), null);
+    var signatureValue = new Blob([1, 2, 3, 4], false);
+    signature.setSignature(signatureValue);
+
+    freshData.setSignature(signature);
+    var encoding = freshData.wireEncode();
+
+    var decodedData = new Data();
+    decodedData.wireDecode(encoding);
+
+    var decodedSignature = decodedData.getSignature();
+    assert.equal(decodedSignature.getTypeCode(), experimentalSignatureType);
+    assert.ok(new Blob(experimentalSignatureInfo, false).equals
+              (decodedSignature.getSignatureInfoEncoding()));
+    assert.ok(signatureValue.equals(decodedSignature.getSignature()));
+
+    // Test bad encoding.
+    signature = new GenericSignature();
+    signature.setSignatureInfoEncoding
+      (new Blob(experimentalSignatureInfoNoSignatureType, false), null);
+    signature.setSignature(signatureValue);
+    freshData.setSignature(signature);
+    var gotError = true;
+    try {
+      freshData.wireEncode();
+      gotError = false;
+    } catch (ex) {}
+    if (!gotError)
+      assert.fail('', '',
+        "Expected encoding error for experimentalSignatureInfoNoSignatureType");
+
+    signature = new GenericSignature();
+    signature.setSignatureInfoEncoding
+      (new Blob(experimentalSignatureInfoBadTlv, false), null);
+    signature.setSignature(signatureValue);
+    freshData.setSignature(signature);
+    gotError = true;
+    try {
+      freshData.wireEncode();
+      gotError = false;
+    } catch (ex) {}
+    if (!gotError)
+      assert.fail('', '',
+        "Expected encoding error for experimentalSignatureInfoBadTlv");
   });
 });
