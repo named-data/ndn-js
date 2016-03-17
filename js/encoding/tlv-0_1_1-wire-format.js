@@ -29,6 +29,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var GenericSignature = require('../generic-signature.js').GenericSignature;
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ControlParameters = require('../control-parameters.js').ControlParameters;
@@ -756,6 +757,26 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
  */
 Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
+  if (signature instanceof GenericSignature) {
+    // Handle GenericSignature separately since it has the entire encoding.
+    var encoding = signature.getSignatureInfoEncoding();
+
+    // Do a test decoding to sanity check that it is valid TLV.
+    try {
+      var decoder = new TlvDecoder(encoding.buf());
+      var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
+      decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
+      decoder.finishNestedTlvs(endOffset);
+    } catch (ex) {
+      throw new Error
+        ("The GenericSignature encoding is not a valid NDN-TLV SignatureInfo: " +
+         ex.message);
+    }
+
+    encoder.writeBuffer(encoding.buf());
+    return;
+  }
+
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -782,28 +803,34 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 
 Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
 {
+  var beginOffset = decoder.getOffset();
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
   var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(new Sha256WithRsaSignature());
-      // Modify data's signature object because if we create an object
-      //   and set it, then data will have to copy all the fields.
-      var signatureInfo = data.getSignature();
-      Tlv0_1_1WireFormat.decodeKeyLocator
-        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    data.setSignature(new Sha256WithRsaSignature());
+    // Modify data's signature object because if we create an object
+    //   and set it, then data will have to copy all the fields.
+    var signatureInfo = data.getSignature();
+    Tlv0_1_1WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
-      data.setSignature(new HmacWithSha256Signature());
-      var signatureInfo = data.getSignature();
-      Tlv0_1_1WireFormat.decodeKeyLocator
-        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    data.setSignature(new HmacWithSha256Signature());
+    var signatureInfo = data.getSignature();
+    Tlv0_1_1WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
-      data.setSignature(new DigestSha256Signature());
-  else
-      throw new DecodingException(new Error
-       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType));
+    data.setSignature(new DigestSha256Signature());
+  else {
+    data.setSignature(new GenericSignature());
+    var signatureInfo = data.getSignature();
+
+    // Get the bytes of the SignatureInfo TLV.
+    signatureInfo.setSignatureInfoEncoding
+      (new Blob(decoder.getSlice(beginOffset, endOffset), true), signatureType);
+  }
 
   decoder.finishNestedTlvs(endOffset);
 };
