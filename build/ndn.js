@@ -15948,6 +15948,150 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  */
 
 var Blob = require('./util/blob.js').Blob;
+
+/**
+ * A GenericSignature extends Signature and holds the encoding bytes of the
+ * SignatureInfo so that the application can process experimental signature
+ * types. When decoding a packet, if the type of SignatureInfo is not
+ * recognized, the library creates a GenericSignature.
+ * Create a new GenericSignature object, possibly copying values from another
+ * object.
+ *
+ * @param {GenericSignature} value (optional) If value is a GenericSignature,
+ * copy its values.
+ * @constructor
+ */
+var GenericSignature = function GenericSignature(value)
+{
+  if (typeof value === 'object' && value instanceof GenericSignature) {
+    // Copy the values.
+    this.signature_ = value.signature_;
+    this.signatureInfoEncoding_ = value.signatureInfoEncoding_;
+    this.typeCode_ = value.typeCode_;
+  }
+  else {
+    this.signature_ = new Blob();
+    this.signatureInfoEncoding_ = new Blob();
+    this.typeCode_ = null;
+  }
+
+  this.changeCount_ = 0;
+};
+
+exports.GenericSignature = GenericSignature;
+
+/**
+ * Create a new GenericSignature which is a copy of this object.
+ * @returns {GenericSignature} A new object which is a copy of this object.
+ */
+GenericSignature.prototype.clone = function()
+{
+  return new GenericSignature(this);
+};
+
+/**
+ * Get the data packet's signature bytes.
+ * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ */
+GenericSignature.prototype.getSignature = function()
+{ 
+  return this.signature_;
+};
+
+/**
+ * @deprecated Use getSignature. This method returns a Buffer which is the former
+ * behavior of getSignature, and should only be used while updating your code.
+ */
+GenericSignature.prototype.getSignatureAsBuffer = function()
+{
+  return this.signature_.buf();
+};
+
+/**
+ * Get the bytes of the entire signature info encoding (including the type
+ * code).
+ * @returns {Blob} The encoding bytes. If not specified, the value isNull().
+ */
+GenericSignature.prototype.getSignatureInfoEncoding = function()
+{
+  return this.signatureInfoEncoding_;
+};
+
+/**
+ * Get the type code of the signature type. When wire decode calls
+ * setSignatureInfoEncoding, it sets the type code. Note that the type code
+ * is ignored during wire encode, which simply uses getSignatureInfoEncoding()
+ * where the encoding already has the type code.
+ * @returns {number} The type code, or null if not known.
+ */
+GenericSignature.prototype.getTypeCode = function() { return this.typeCode_; };
+
+/**
+ * Set the data packet's signature bytes.
+ * @param {Blob} signature
+ */
+GenericSignature.prototype.setSignature = function(signature)
+{
+  this.signature_ = typeof signature === 'object' && signature instanceof Blob ?
+    signature : new Blob(signature);
+  ++this.changeCount_;
+};
+
+/**
+ * Set the bytes of the entire signature info encoding (including the type
+ * code).
+ * @param {Blob} signatureInfoEncoding A Blob with the encoding bytes.
+ * @param {number} (optional) The type code of the signature type, or null if
+ * not known. (When a GenericSignature is created by wire decoding, it sets
+ * the typeCode.)
+ */
+GenericSignature.prototype.setSignatureInfoEncoding = function
+  (signatureInfoEncoding, typeCode)
+{
+  this.signatureInfoEncoding_ =
+    typeof signatureInfoEncoding === 'object' && signatureInfoEncoding instanceof Blob ?
+      signatureInfoEncoding : new Blob(signatureInfoEncoding);
+  this.typeCode_ = typeCode;
+  ++this.changeCount_;
+};
+
+/**
+ * Get the change count, which is incremented each time this object (or a child
+ * object) is changed.
+ * @returns {number} The change count.
+ */
+GenericSignature.prototype.getChangeCount = function()
+{
+  return this.changeCount_;
+};
+
+/**
+ * @@deprecated Use getSignature and setSignature.
+ */
+Object.defineProperty(GenericSignature.prototype, "signature",
+  { get: function() { return this.getSignatureAsBuffer(); },
+    set: function(val) { this.setSignature(val); } });
+/**
+ * This class represents an NDN Data Signature object.
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+var Blob = require('./util/blob.js').Blob;
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
 var KeyLocator = require('./key-locator.js').KeyLocator;
 
@@ -20890,6 +21034,32 @@ IdentityManager.prototype.getDefaultCertificateName = function
       return thisManager.identityStorage.getDefaultCertificateNameForIdentityPromise
         (identityName, useSync);
     }));
+};
+
+/**
+ * Append all the key names of a particular identity to the nameList.
+ * @param {Name} identityName The identity name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default key name. If false,
+ * add only the non-default key names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllKeyNamesOfIdentity = function
+  (identityName, nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllKeyNamesOfIdentityPromise
+      (identityName, nameList, isDefault, !onComplete));
 };
 
 /**
@@ -25877,6 +26047,7 @@ var Exclude = require('../exclude.js').Exclude;
 var ContentType = require('../meta-info.js').ContentType;
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var GenericSignature = require('../generic-signature.js').GenericSignature;
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
 var ControlParameters = require('../control-parameters.js').ControlParameters;
@@ -26604,6 +26775,26 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
  */
 Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
+  if (signature instanceof GenericSignature) {
+    // Handle GenericSignature separately since it has the entire encoding.
+    var encoding = signature.getSignatureInfoEncoding();
+
+    // Do a test decoding to sanity check that it is valid TLV.
+    try {
+      var decoder = new TlvDecoder(encoding.buf());
+      var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
+      decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
+      decoder.finishNestedTlvs(endOffset);
+    } catch (ex) {
+      throw new Error
+        ("The GenericSignature encoding is not a valid NDN-TLV SignatureInfo: " +
+         ex.message);
+    }
+
+    encoder.writeBuffer(encoding.buf());
+    return;
+  }
+
   var saveLength = encoder.getLength();
 
   // Encode backwards.
@@ -26630,28 +26821,34 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 
 Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
 {
+  var beginOffset = decoder.getOffset();
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
   var signatureType = decoder.readNonNegativeIntegerTlv(Tlv.SignatureType);
   if (signatureType == Tlv.SignatureType_SignatureSha256WithRsa) {
-      data.setSignature(new Sha256WithRsaSignature());
-      // Modify data's signature object because if we create an object
-      //   and set it, then data will have to copy all the fields.
-      var signatureInfo = data.getSignature();
-      Tlv0_1_1WireFormat.decodeKeyLocator
-        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    data.setSignature(new Sha256WithRsaSignature());
+    // Modify data's signature object because if we create an object
+    //   and set it, then data will have to copy all the fields.
+    var signatureInfo = data.getSignature();
+    Tlv0_1_1WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
-      data.setSignature(new HmacWithSha256Signature());
-      var signatureInfo = data.getSignature();
-      Tlv0_1_1WireFormat.decodeKeyLocator
-        (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+    data.setSignature(new HmacWithSha256Signature());
+    var signatureInfo = data.getSignature();
+    Tlv0_1_1WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
-      data.setSignature(new DigestSha256Signature());
-  else
-      throw new DecodingException(new Error
-       ("decodeSignatureInfo: unrecognized SignatureInfo type" + signatureType));
+    data.setSignature(new DigestSha256Signature());
+  else {
+    data.setSignature(new GenericSignature());
+    var signatureInfo = data.getSignature();
+
+    // Get the bytes of the SignatureInfo TLV.
+    signatureInfo.setSignatureInfoEncoding
+      (new Blob(decoder.getSlice(beginOffset, endOffset), true), signatureType);
+  }
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -30135,7 +30332,7 @@ exports.Producer = Producer;
  * exceptions.
  * @param {function} onContentKeyName This calls onContentKeyName(contentKeyName)
  * with the content key name for the time slot. If onContentKeyName is null,
- * this does not use it. (A callback is neede because of async database
+ * this does not use it. (A callback is needed because of async database
  * operations.)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
@@ -30167,11 +30364,8 @@ Producer.prototype.createContentKey = function
   this.database_.hasContentKeyPromise(timeSlot)
   .then(function(exists) {
     if (exists) {
-      thisProducer.database_.getContentKeyPromise(timeSlot)
-      .then(function(localContentKeyBits) {
-        if (onContentKeyName != null)
-          onContentKeyName(contentKeyName);
-      });
+      if (onContentKeyName != null)
+        onContentKeyName(contentKeyName);
       return;
     }
 
