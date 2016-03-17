@@ -130,6 +130,7 @@ def build (bld):
                  "js/key-locator.js",
                  "js/meta-info.js",
                  "js/sha256-with-rsa-signature.js",
+                 "js/generic-signature.js",
                  "js/hmac-with-sha256-signature.js",
                  "js/digest-sha256-signature.js",
                  "js/data.js",

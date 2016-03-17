@@ -14,6 +14,7 @@ Changes
 * Added classes Link and DelegationSet to support link objects.
 * In Interest, added methods to support link objects and SelectedDelegation:
   hasLink, getLink, unsetLink, get/setLinkWireEncoding, get/setSelectedDelegationIndex.
+* http://redmine.named-data.net/issues/3260 Added GenericSignature.
 * http://redmine.named-data.net/issues/3449 Added Name.isPrefixOf and getSuccessor.
   In compare, support compare(int, int, Name, int, int).
 * http://redmine.named-data.net/issues/3450 Added Name.Component.isSegment,
