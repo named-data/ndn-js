@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Regents of the University of California.
+ * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -36,10 +36,11 @@ var PitEntry = function PitEntry(interest, face)
   this.face = face;
 }
 
-var ForwarderFace = function ForwarderFace(host, port, registeredPrefix)
+var ForwarderFace = function ForwarderFace
+  (connectionInfoOrSocketTransport, registeredPrefix)
 {
   this.transport = new XpcomTransport();
-  this.transport.connectHelper(host, port, this);
+  this.transport.connectHelper(connectionInfoOrSocketTransport, this);
   // An HTTP request will be redirected to this.onHttpRequest.
   this.transport.setHttpListener(this);
   
@@ -48,6 +49,7 @@ var ForwarderFace = function ForwarderFace(host, port, registeredPrefix)
 
 ForwarderFace.prototype.onReceivedElement = function(element)
 {
+  if (LOG > 3) dump("onReceivedElement called\n");
   var decoder = new BinaryXMLDecoder(element);
   // Dispatch according to packet type
   if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
@@ -100,7 +102,8 @@ ForwarderFace.prototype.onHttpRequest = function(transport, request)
   
   response += "<h4>Faces</h4><ul>\r\n";
   for (var i = 0; i < FIB.length; ++i)
-    response += "<li>" + FIB[i].transport.connectedHost + ":" + FIB[i].transport.connectedPort + 
+    response += "<li>" + FIB[i].transport.connectionInfo.host + ":" +
+      FIB[i].transport.connectionInfo.port +
       (FIB[i].registeredPrefix == null ? "" : " " + FIB[i].registeredPrefix.toUri()) + "</li>\r\n";
   response += "</ul>\r\n";        
           
@@ -124,4 +127,5 @@ serverSocket.init(6363, true, -1);
 serverSocket.asyncListen(socketListener);
 
 // For now, hard code an initial forwarding connection.
-FIB.push(new ForwarderFace("borges.metwi.ucla.edu", 9695, new Name("/ndn")));
+FIB.push(new ForwarderFace
+  (new XpcomTransport.ConnectionInfo("memoria.ndn.ucla.edu", 6363), new Name("/ndn")));
