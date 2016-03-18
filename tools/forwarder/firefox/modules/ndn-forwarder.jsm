@@ -49,13 +49,25 @@ var ForwarderFace = function ForwarderFace
 
 ForwarderFace.prototype.onReceivedElement = function(element)
 {
-  if (LOG > 3) dump("onReceivedElement called\n");
-  var decoder = new BinaryXMLDecoder(element);
-  // Dispatch according to packet type
-  if (decoder.peekDTag(NDNProtocolDTags.Interest)) {
-    var interest = new Interest();
-    interest.from_ndnb(decoder);
-    if (LOG > 3) dump("Interest packet received: " + interest.name.toUri() + "\n");
+  if (LOG > 3) dump("Complete element received. Length " + element.length + "\n");
+  // First, decode as Interest or Data.
+  var interest = null;
+  var data = null;
+  if (element[0] == Tlv.Interest || element[0] == Tlv.Data) {
+    var decoder = new TlvDecoder (element);
+    if (decoder.peekType(Tlv.Interest, element.length)) {
+      interest = new Interest();
+      interest.wireDecode(element, TlvWireFormat.get());
+    }
+    else if (decoder.peekType(Tlv.Data, element.length)) {
+      data = new Data();
+      data.wireDecode(element, TlvWireFormat.get());
+    }
+  }
+
+  // Now process as Interest or Data.
+  if (interest !== null) {
+    if (LOG > 3) dump("Interest packet received: " + interest.getName().toUri() + "\n");
     
     // Add to the PIT.
     PIT.push(new PitEntry(interest, this));
@@ -67,20 +79,18 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         // Don't send the interest back to where it came from.
         continue;
       
-      if (face.registeredPrefix != null && face.registeredPrefix.match(interest.name))
+      if (face.registeredPrefix != null && face.registeredPrefix.match(interest.getName()))
         face.transport.send(element);
     }
   } 
-  else if (decoder.peekDTag(NDNProtocolDTags.Data)) { 
-    var data = new Data();
-    data.from_ndnb(decoder);
-    if (LOG > 3) dump("Data packet received: " + data.name.toUri() + "\n");
+  else if (data !== null) {
+    if (LOG > 3) dump("Data packet received: " + data.getName().toUri() + "\n");
     
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
     for (var i = PIT.length - 1; i >= 0; --i) {
-      if (PIT[i].interest.matchesName(data.name)) {
-        if (LOG > 3) dump("Sending Data to match interest " + PIT[i].interest.name.toUri() + "\n");
+      if (PIT[i].interest.matchesName(data.getName())) {
+        if (LOG > 3) dump("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
         PIT[i].face.transport.send(element);
         
         // Remove this entry.
@@ -128,4 +138,4 @@ serverSocket.asyncListen(socketListener);
 
 // For now, hard code an initial forwarding connection.
 FIB.push(new ForwarderFace
-  (new XpcomTransport.ConnectionInfo("memoria.ndn.ucla.edu", 6363), new Name("/ndn")));
+  (new XpcomTransport.ConnectionInfo("memoria.ndn.ucla.edu", 6363), new Name("/")));
