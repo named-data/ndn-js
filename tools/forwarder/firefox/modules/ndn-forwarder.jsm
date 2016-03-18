@@ -30,12 +30,26 @@ Components.utils.import("resource://gre/modules/NetUtil.jsm");
 var FIB = [];
 var PIT = [];
 
+/**
+ * A PitEntry is used in the PIT to record the face on which an Interest came in.
+ * @param {Interest} interest
+ * @param {ForwarderFace} face
+ * @constructor
+ */
 var PitEntry = function PitEntry(interest, face)
 {
   this.interest = interest;
   this.face = face;
 }
 
+/**
+ * A ForwrderFace is used by the FIB to represent a connection using an
+ * XpcomTransport.
+ * @param {Transport.ConnectionInfo|nsIServerSocket} connectionInfoOrSocketTransport
+ * This is passed to XpcomTransport.connectHelper.
+ * @param {Name} registeredPrefix The prefix for forwarding interests.
+ * @constructor
+ */
 var ForwarderFace = function ForwarderFace
   (connectionInfoOrSocketTransport, registeredPrefix)
 {
@@ -47,6 +61,12 @@ var ForwarderFace = function ForwarderFace
   this.registeredPrefix = registeredPrefix;
 };
 
+/**
+ * This is called by the Transport when an entire TLV element is received.
+ * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
+ * look in the PIT to match an Interest.
+ * @param {Buffer} element
+ */
 ForwarderFace.prototype.onReceivedElement = function(element)
 {
   if (LOG > 3) dump("Complete element received. Length " + element.length + "\n");
@@ -100,6 +120,13 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   }    
 };
 
+/**
+ * This is called by the Transport if the incoming packet looks like an HTTP
+ * request. This simply replies the the transport with an HTML forwarder status
+ * page.
+ * @param {Transport} transport
+ * @param {Buffer} request
+ */
 ForwarderFace.prototype.onHttpRequest = function(transport, request)
 {
   // Remove the FIB entry with this transport since it is not NDN.
