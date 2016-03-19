@@ -40,14 +40,14 @@ var PitEntry = function PitEntry(interest, face)
 {
   this.interest = interest;
   this.face = face;
-}
+};
 
 /**
  * A ForwrderFace is used by the FIB to represent a connection using an
  * XpcomTransport.
- * @param {Transport.ConnectionInfo|nsIServerSocket} connectionInfoOrSocketTransport
+ * @param {XpcomTransport.ConnectionInfo|nsIServerSocket} connectionInfoOrSocketTransport
  * This is passed to XpcomTransport.connectHelper.
- * @param {Name} registeredPrefix The prefix for forwarding interests.
+ * @param {Name} registeredPrefix (optional) The prefix for forwarding interests.
  * @constructor
  */
 var ForwarderFace = function ForwarderFace
@@ -58,7 +58,9 @@ var ForwarderFace = function ForwarderFace
   // An HTTP request will be redirected to this.onHttpRequest.
   this.transport.setHttpListener(this);
   
-  this.registeredPrefix = registeredPrefix;
+  this.registeredPrefixes = [];
+  if (registeredPrefix)
+    this.registeredPrefixes.push(registeredPrefix)
 };
 
 /**
@@ -89,18 +91,39 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   if (interest !== null) {
     if (LOG > 3) dump("Interest packet received: " + interest.getName().toUri() + "\n");
     
+    if (ForwarderFace.localhostNamePrefix.match(interest.getName())) {
+      this.onReceivedLocalhostInterest(interest);
+      return;
+    }
+
     // Add to the PIT.
-    PIT.push(new PitEntry(interest, this));
-    
+    var pitEntry = new PitEntry(interest, this);
+    PIT.push(pitEntry);
+    // Set the interest timeout timer.
+    var thisFace = this;
+    var timeoutCallback = function() {
+      if (LOG > 3) dump("Interest time out: " + interest.getName().toUri() + "\n");
+      // Remove this entry from the PIT
+      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
+      if (index >= 0)
+        thisFace.PIT.splice(index, 1);
+    };
+    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
+    setTimeout(timeoutCallback, timeoutMilliseconds);
+
     // Send the interest to the matching faces in the FIB.
     for (var i = 0; i < FIB.length; ++i) {
       var face = FIB[i];
       if (face == this)
         // Don't send the interest back to where it came from.
         continue;
-      
-      if (face.registeredPrefix != null && face.registeredPrefix.match(interest.getName()))
-        face.transport.send(element);
+
+      for (var j = 0; j < face.registeredPrefixes.length; ++j) {
+        var registeredPrefix = face.registeredPrefixes[j];
+
+        if (registeredPrefix.match(interest.getName()))
+          face.transport.send(element);
+      }
     }
   } 
   else if (data !== null) {
@@ -121,6 +144,41 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 };
 
 /**
+ * Process a received interest if it begins with /localhost.
+ * @param {Interest} interest The received interest.
+ */
+ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
+{
+  if (ForwarderFace.registerNamePrefix.match(interest.getName())) {
+    // Decode the ControlParameters.
+    var controlParameters = new ControlParameters();
+    try {
+      controlParameters.wireDecode(interest.getName().get(4).getValue());
+    } catch (ex) {
+      if (LOG > 3) dump("Error decoding register interest ControlParameters " + ex + "\n");
+      return;
+    }
+    // TODO: Verify the signature?
+
+    if (LOG > 3) dump("Received register request " + controlParameters.getName().toUri() + "\n");
+    this.registeredPrefixes.push(controlParameters.getName());
+
+    // Send the ControlResponse.
+    var controlResponse = new ControlResponse();
+    controlResponse.setStatusText("Success");
+    controlResponse.setStatusCode(200);
+    controlResponse.setBodyAsControlParameters(controlParameters);
+    var responseData = new Data(interest.getName());
+    responseData.setContent(controlResponse.wireEncode());
+    // TODO: Sign the responseData.
+    this.transport.send(responseData.wireEncode().buf());
+  }
+  else {
+    if (LOG > 3) dump("Unrecognized localhost prefix " + interest.getName() + "\n");
+  }
+};
+
+/**
  * This is called by the Transport if the incoming packet looks like an HTTP
  * request. This simply replies the the transport with an HTML forwarder status
  * page.
@@ -138,18 +196,24 @@ ForwarderFace.prototype.onHttpRequest = function(transport, request)
   var response = "<html><title>NDN Forwarder</title><body>\r\n";
   
   response += "<h4>Faces</h4><ul>\r\n";
-  for (var i = 0; i < FIB.length; ++i)
+  for (var i = 0; i < FIB.length; ++i) {
     response += "<li>" + FIB[i].transport.connectionInfo.host + ":" +
-      FIB[i].transport.connectionInfo.port +
-      (FIB[i].registeredPrefix == null ? "" : " " + FIB[i].registeredPrefix.toUri()) + "</li>\r\n";
+      FIB[i].transport.connectionInfo.port;
+    for (var j = 0; j < FIB[i].registeredPrefixes.length; ++j)
+      response += " " + FIB[i].registeredPrefixes[j].toUri();
+    response += "</li>\r\n";
+  }
   response += "</ul>\r\n";        
           
   response += "\r\n</body></html>\r\n";
-  
   transport.send(DataUtils.toNumbersFromString
     ("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nContent-Length: " +
      response.length + "\r\n\r\n" + response));
 };
+
+ForwarderFace.localhostNamePrefix = new Name("/localhost");
+ForwarderFace.registerNamePrefix = new Name("/localhost/nfd/rib/register");
+ForwarderFace.broadcastNamePrefix = new Name("/ndn/broadcast");
 
 var socketListener = {
   onSocketAccepted: function(aServer, socket) {
