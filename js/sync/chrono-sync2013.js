@@ -337,8 +337,8 @@ ChronoSync2013.prototype.onInterest = function
       var content = [];
       if(index == -1) {
         var self = this;
-        // Are we sure that using a "/timeout" interest is the best future call approach?
-        var timeout = new Interest(new Name("/timeout"));
+        // Are we sure that using a "/local/timeout" interest is the best future call approach?
+        var timeout = new Interest(new Name("/local/timeout"));
         timeout.setInterestLifetimeMilliseconds(2000);
         this.face.expressInterest
           (timeout, this.dummyOnData,

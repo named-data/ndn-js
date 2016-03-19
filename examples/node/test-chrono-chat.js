@@ -212,7 +212,7 @@ ChronoChat.prototype.onRegisterFailed = function(prefix)
 
 ChronoChat.prototype.initial = function()
 {
-  var timeout = new Interest(new Name("/timeout"));
+  var timeout = new Interest(new Name("/local/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
 
   this.face.expressInterest(timeout, this.dummyOnData, this.heartbeat.bind(this));
@@ -320,7 +320,7 @@ ChronoChat.prototype.onData = function(interest, co)
       this.roster.push(name + session);
       console.log("JOIN: " + name + session);
     }
-    var timeout = new Interest(new Name("/timeout"));
+    var timeout = new Interest(new Name("/local/timeout"));
     timeout.setInterestLifetimeMilliseconds(120000);
     this.face.expressInterest(timeout, this.dummyOnData, this.alive.bind(this, timeout, seqno, name, session, prefix));
 
@@ -370,7 +370,7 @@ ChronoChat.prototype.heartbeat = function(interest)
   this.messageCacheAppend("HELLO", "xxx");
 
   // Making a timeout interest for heartbeat...
-  var timeout = new Interest(new Name("/timeout"));
+  var timeout = new Interest(new Name("/local/timeout"));
   timeout.setInterestLifetimeMilliseconds(60000);
 
   //console.log("*** Chat heartbeat expressed interest with name: " + timeout.getName().toUri() + " ***");
