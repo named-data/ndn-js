@@ -22,7 +22,8 @@
  */
 
 var EXPORTED_SYMBOLS = ["Data", "DataUtils", "Interest", "Face", "LOG", "Name",
-  "XpcomTransport", "Buffer", "Tlv", "TlvDecoder", "TlvWireFormat"];
+  "XpcomTransport", "Buffer", "Tlv", "TlvDecoder", "TlvWireFormat",
+  "ControlParameters", "ControlResponse", "setTimeout", "clearTimeout"];
 
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/NetUtil.jsm");
