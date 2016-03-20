@@ -23988,6 +23988,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
+ * @returns {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 {
@@ -32720,8 +32721,10 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
   var data = new Data(this.applicationBroadcastPrefix);
   data.getName().append(digest);
   data.setContent(new Blob(array, false));
-  this.keyChain.sign(data, this.certificateName);
-  this.contentCache.add(data);
+  var thisChronoSync = this;
+  this.keyChain.sign(data, this.certificateName, function() {
+    thisChronoSync.contentCache.add(data);
+  });
 };
 
 /**
@@ -32790,8 +32793,8 @@ ChronoSync2013.prototype.onInterest = function
       var content = [];
       if(index == -1) {
         var self = this;
-        // Are we sure that using a "/timeout" interest is the best future call approach?
-        var timeout = new Interest(new Name("/timeout"));
+        // Are we sure that using a "/local/timeout" interest is the best future call approach?
+        var timeout = new Interest(new Name("/local/timeout"));
         timeout.setInterestLifetimeMilliseconds(2000);
         this.face.expressInterest
           (timeout, this.dummyOnData,
@@ -32918,12 +32921,13 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
         // Limit the lifetime of replies to interest for "00" since they can be different.
         co.getMetaInfo().setFreshnessPeriod(1000);
 
-      this.keyChain.sign(co, this.certificateName);
-      try {
-        face.putData(co);
-      } catch (e) {
-        console.log(e.toString());
-      }
+      this.keyChain.sign(co, this.certificateName, function() {
+        try {
+          face.putData(co);
+        } catch (e) {
+          console.log(e.toString());
+        }
+      });
     }
   }
 };
@@ -32977,13 +32981,14 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
 
     var co = new Data(n);
     co.setContent(new Blob(str, false));
-    this.keyChain.sign(co, this.certificateName);
-    try {
-      face.putData(co);
-    }
-    catch (e) {
-      console.log(e.toString());
-    }
+    this.keyChain.sign(co, this.certificateName, function() {
+      try {
+        face.putData(co);
+      }
+      catch (e) {
+        console.log(e.toString());
+      }
+    });
   }
 };
 
