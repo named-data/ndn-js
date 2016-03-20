@@ -267,8 +267,10 @@ ChronoSync2013.prototype.broadcastSyncState = function(digest, syncMessage)
   var data = new Data(this.applicationBroadcastPrefix);
   data.getName().append(digest);
   data.setContent(new Blob(array, false));
-  this.keyChain.sign(data, this.certificateName);
-  this.contentCache.add(data);
+  var thisChronoSync = this;
+  this.keyChain.sign(data, this.certificateName, function() {
+    thisChronoSync.contentCache.add(data);
+  });
 };
 
 /**
@@ -465,12 +467,13 @@ ChronoSync2013.prototype.processRecoveryInst = function(interest, syncdigest, fa
         // Limit the lifetime of replies to interest for "00" since they can be different.
         co.getMetaInfo().setFreshnessPeriod(1000);
 
-      this.keyChain.sign(co, this.certificateName);
-      try {
-        face.putData(co);
-      } catch (e) {
-        console.log(e.toString());
-      }
+      this.keyChain.sign(co, this.certificateName, function() {
+        try {
+          face.putData(co);
+        } catch (e) {
+          console.log(e.toString());
+        }
+      });
     }
   }
 };
@@ -524,13 +527,14 @@ ChronoSync2013.prototype.processSyncInst = function(index, syncdigest_t, face)
 
     var co = new Data(n);
     co.setContent(new Blob(str, false));
-    this.keyChain.sign(co, this.certificateName);
-    try {
-      face.putData(co);
-    }
-    catch (e) {
-      console.log(e.toString());
-    }
+    this.keyChain.sign(co, this.certificateName, function() {
+      try {
+        face.putData(co);
+      }
+      catch (e) {
+        console.log(e.toString());
+      }
+    });
   }
 };
 
