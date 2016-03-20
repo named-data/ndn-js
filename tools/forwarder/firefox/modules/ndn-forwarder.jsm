@@ -96,17 +96,25 @@ ForwarderFace.prototype.onReceivedElement = function(element)
       return;
     }
 
+    for (var i = 0; i < PIT.length; ++i) {
+      // TODO: Check interest equality of appropriate selectors.
+      if (PIT[i].face == this &&
+          PIT[i].interest.getName().equals(interest.getName()))
+        // Duplicate PIT entry.
+        // TODO: Update the interest timeout?
+        return;
+    }
+
     // Add to the PIT.
     var pitEntry = new PitEntry(interest, this);
     PIT.push(pitEntry);
     // Set the interest timeout timer.
-    var thisFace = this;
     var timeoutCallback = function() {
       if (LOG > 3) dump("Interest time out: " + interest.getName().toUri() + "\n");
       // Remove this entry from the PIT
-      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
+      var index = PIT.indexOf(pitEntry);
       if (index >= 0)
-        thisFace.PIT.splice(index, 1);
+        PIT.splice(index, 1);
     };
     var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     setTimeout(timeoutCallback, timeoutMilliseconds);
