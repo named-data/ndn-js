@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -57,7 +57,7 @@ var ForwarderFace = function ForwarderFace
   this.transport.connectHelper(connectionInfoOrSocketTransport, this);
   // An HTTP request will be redirected to this.onHttpRequest.
   this.transport.setHttpListener(this);
-  
+
   this.registeredPrefixes = [];
   if (registeredPrefix)
     this.registeredPrefixes.push(registeredPrefix)
@@ -90,7 +90,6 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   // Now process as Interest or Data.
   if (interest !== null) {
     if (LOG > 3) dump("Interest packet received: " + interest.getName().toUri() + "\n");
-    
     if (ForwarderFace.localhostNamePrefix.match(interest.getName())) {
       this.onReceivedLocalhostInterest(interest);
       return;
@@ -126,6 +125,11 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         // Don't send the interest back to where it came from.
         continue;
 
+      if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
+        face.transport.send(element);
+        continue;
+      }
+
       for (var j = 0; j < face.registeredPrefixes.length; ++j) {
         var registeredPrefix = face.registeredPrefixes[j];
 
@@ -133,22 +137,22 @@ ForwarderFace.prototype.onReceivedElement = function(element)
           face.transport.send(element);
       }
     }
-  } 
+  }
   else if (data !== null) {
     if (LOG > 3) dump("Data packet received: " + data.getName().toUri() + "\n");
-    
+
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
     for (var i = PIT.length - 1; i >= 0; --i) {
       if (PIT[i].interest.matchesName(data.getName())) {
         if (LOG > 3) dump("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
         PIT[i].face.transport.send(element);
-        
+
         // Remove this entry.
         PIT.splice(i, 1);
       }
     }
-  }    
+  }
 };
 
 /**
@@ -200,9 +204,9 @@ ForwarderFace.prototype.onHttpRequest = function(transport, request)
     if (FIB[i].transport == transport)
       FIB.splice(i, 1);
   }
-  
+
   var response = "<html><title>NDN Forwarder</title><body>\r\n";
-  
+
   response += "<h4>Faces</h4><ul>\r\n";
   for (var i = 0; i < FIB.length; ++i) {
     response += "<li>" + FIB[i].transport.connectionInfo.host + ":" +
@@ -211,8 +215,8 @@ ForwarderFace.prototype.onHttpRequest = function(transport, request)
       response += " " + FIB[i].registeredPrefixes[j].toUri();
     response += "</li>\r\n";
   }
-  response += "</ul>\r\n";        
-          
+  response += "</ul>\r\n";
+
   response += "\r\n</body></html>\r\n";
   transport.send(DataUtils.toNumbersFromString
     ("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\nContent-Length: " +
@@ -232,9 +236,9 @@ var socketListener = {
 };
 
 var serverSocket = Cc["@mozilla.org/network/server-socket;1"].createInstance(Ci.nsIServerSocket);
-serverSocket.init(6363, true, -1);
+serverSocket.init(6364, true, -1);
 serverSocket.asyncListen(socketListener);
 
 // For now, hard code an initial forwarding connection.
 FIB.push(new ForwarderFace
-  (new XpcomTransport.ConnectionInfo("memoria.ndn.ucla.edu", 6363), new Name("/")));
+  (new XpcomTransport.ConnectionInfo("localhost", 6363), new Name("/")));
