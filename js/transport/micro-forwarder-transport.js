@@ -22,15 +22,18 @@
  * A MicroForwarderTransport extends Transport to connect to the browser's
  * micro forwarder service. This assumes that the MicroForwarder extensions has
  * been installed.
+ * @param {function} onReceivedObject (optional) If supplied and the received
+ * object type field is not "Buffer" then just call this.onReceivedObject(obj).
  * @constructor
  */
-var MicroForwarderTransport = function MicroForwarderTransport()
+var MicroForwarderTransport = function MicroForwarderTransport(onReceivedObject)
 {
   // Call the base constructor.
   Transport.call(this);
 
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
+  this.onReceivedObject = onReceivedObject;
 };
 
 MicroForwarderTransport.prototype = new Transport();
@@ -83,7 +86,8 @@ MicroForwarderTransport.prototype.isLocal = function(connectionInfo, onResult, o
 /**
  * Connect to the micro forwarder according to the info in connectionInfo.
  * Listen on the connection to read an entire packet element and call
- * elementListener.onReceivedElement(element).
+ * elementListener.onReceivedElement(element). However, if the received object
+ * type field is not "Buffer" then just call this.onReceivedObject(obj).
  * @param {MicroForwarderTransport.ConnectionInfo} connectionInfo
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
@@ -103,7 +107,13 @@ MicroForwarderTransport.prototype.connect = function
       return;
 
     if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
-      thisTransport.elementReader.onReceivedData(new Buffer(event.data.object.data));
+      var obj = event.data.object;
+      if (obj.type && obj.type == "Buffer")
+        thisTransport.elementReader.onReceivedData(new Buffer(obj.data));
+      else {
+        if (this.onReceivedObject)
+          this.onReceivedObject(obj);
+      }
     }
   }, false);
 
@@ -112,10 +122,11 @@ MicroForwarderTransport.prototype.connect = function
 };
 
 /**
- * Send the data over the connection created by connect.
- * @param {Buffer} buffer The bytes to send.
+ * Send the JavaScript over the connection created by connect.
+ * @param {object} obj The object to send. It should have a field "type". If
+ * "type" is "Buffer" then it is processed like an NDN packet.
  */
-MicroForwarderTransport.prototype.send = function(buffer)
+MicroForwarderTransport.prototype.sendObject = function(obj)
 {
   if (this.connectionInfo == null) {
     console.log("MicroForwarderTransport connection is not established.");
@@ -124,6 +135,15 @@ MicroForwarderTransport.prototype.send = function(buffer)
 
   window.postMessage({
     type: "FromMicroForwarderTransport",
-    object: buffer.toJSON()
+    object: obj
   }, "*");
+};
+
+/**
+ * Send the buffer over the connection created by connect.
+ * @param {Buffer} buffer The bytes to send.
+ */
+MicroForwarderTransport.prototype.send = function(buffer)
+{
+  this.sendObject(buffer.toJSON());
 };
