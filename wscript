@@ -124,6 +124,7 @@ def build (bld):
                  "js/util/ndn-regex-matcher.js",
                  "js/util/segment-fetcher.js",
                  "js/transport/transport.js",
+                 "js/transport/micro-forwarder-transport.js",
                  "js/transport/web-socket-transport.js",
                  "js/browserify-tcp-transport.js",
                  "js/name.js",
