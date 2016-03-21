@@ -3,7 +3,7 @@ var port = chrome.runtime.connect();
 port.onMessage.addListener(function(msg) {
 	window.postMessage({
 		type: "FromMicroForwarderStub",
-		buffer: msg
+		object: msg
 	}, "*");
 });
 
@@ -14,7 +14,7 @@ window.addEventListener("message", function(event) {
 	  return;
 	
 	if (event.data.type && (event.data.type == "FromMicroForwarderTransport")) {
-	  port.postMessage(event.data.buffer);
+	  port.postMessage(event.data.object);
 	}
 }, false);
 

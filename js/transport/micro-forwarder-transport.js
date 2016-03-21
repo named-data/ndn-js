@@ -103,7 +103,7 @@ MicroForwarderTransport.prototype.connect = function
       return;
 
     if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
-      thisTransport.elementReader.onReceivedData(event.data.buffer);
+      thisTransport.elementReader.onReceivedData(new Buffer(event.data.object.data));
     }
   }, false);
 
@@ -124,6 +124,6 @@ MicroForwarderTransport.prototype.send = function(buffer)
 
   window.postMessage({
     type: "FromMicroForwarderTransport",
-    buffer: buffer
+    object: buffer.toJSON()
   }, "*");
 };

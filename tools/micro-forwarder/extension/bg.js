@@ -32,8 +32,9 @@ var ForwarderFace = function ForwarderFace(port)
 
 	// Add a listener to wait for msg from the tab
   var thisFace = this;
-	this.port.onMessage.addListener(function(buffer) {
-		thisFace.elementReader.onReceivedData(buffer);
+	this.port.onMessage.addListener(function(message) {
+    // Assume message is from Buffer.toJSON.
+		thisFace.elementReader.onReceivedData(new Buffer(message.data));
 	});
 };
 
@@ -100,7 +101,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         continue;
 
       if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
-        face.port.postMessage(element);
+        face.send(element);
         continue;
       }
 
@@ -108,7 +109,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         var registeredPrefix = face.registeredPrefixes[j];
 
         if (registeredPrefix.match(interest.getName()))
-          face.port.postMessage(element);
+          face.send(element);
       }
     }
   }
@@ -120,13 +121,22 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     for (var i = PIT.length - 1; i >= 0; --i) {
       if (PIT[i].interest.matchesName(data.getName())) {
         if (LOG > 3) console.log("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
-        PIT[i].face.port.postMessage(element);
+        PIT[i].face.send(element);
 
         // Remove this entry.
         PIT.splice(i, 1);
       }
     }
   }
+};
+
+/**
+ * Send the buffer to the port.
+ * @param {Buffer} buffer The bytes to send.
+ */
+ForwarderFace.prototype.send = function(buffer)
+{
+  this.port.postMessage(buffer.toJSON());
 };
 
 /**
@@ -157,7 +167,7 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     var responseData = new Data(interest.getName());
     responseData.setContent(controlResponse.wireEncode());
     // TODO: Sign the responseData.
-    this.port.postMessage(responseData.wireEncode().buf());
+    this.send(responseData.wireEncode().buf());
   }
   else {
     if (LOG > 3) console.log("Unrecognized localhost prefix " + interest.getName() + "\n");
