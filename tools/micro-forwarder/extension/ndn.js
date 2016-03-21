@@ -14022,6 +14022,7 @@ Transport.prototype.isLocal = function(connectionInfo, onResult, onError)
 /**
  * Copyright (C) 2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: Wentao Shang
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -14049,7 +14050,7 @@ var MicroForwarderTransport = function MicroForwarderTransport()
   // Call the base constructor.
   Transport.call(this);
 
-  this.elementListener = null;
+  this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
 };
 
@@ -14114,8 +14115,9 @@ MicroForwarderTransport.prototype.isLocal = function(connectionInfo, onResult, o
 MicroForwarderTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
 {
-  this.elementListener = elementListener;
+  this.elementReader = new ElementReader(elementListener);
 
+  var thisTransport = this;
   window.addEventListener("message", function(event) {
     // We only accept messages from ourselves
     if (event.source != window)
@@ -14123,7 +14125,7 @@ MicroForwarderTransport.prototype.connect = function
 
     if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
       console.log("debug: Content script received n bytes: " + event.data.buffer.length);
-      self.elementReader.onReceivedData(event.data.buffer);
+      thisTransport.elementReader.onReceivedData(event.data.buffer);
     }
   }, false);
 
