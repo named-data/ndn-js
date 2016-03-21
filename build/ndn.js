@@ -14124,7 +14124,6 @@ MicroForwarderTransport.prototype.connect = function
       return;
 
     if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
-      console.log("debug: Content script received n bytes: " + event.data.buffer.length);
       thisTransport.elementReader.onReceivedData(event.data.buffer);
     }
   }, false);
