@@ -14151,7 +14151,6 @@ MicroForwarderTransport.prototype.connect = function
  */
 MicroForwarderTransport.prototype.sendObject = function(obj)
 {
-  console.log("Debug MicroForwarderTransport.prototype.sendObject " + obj.type);
   window.postMessage({
     type: "FromMicroForwarderTransport",
     object: obj
