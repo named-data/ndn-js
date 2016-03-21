@@ -20,32 +20,80 @@ var PitEntry = function PitEntry(interest, face)
 
 /**
  * A ForwarderFace is used by the FIB to represent a connection using a
- * runtime.Port.
- * @param {runtime.Port} port
+ * runtime.Port or a WebSocket.
+ * @param {runtime.Port} port If supplied, communicate with the port. Otherwise
+ * if this is null then use webSocket.
+ * @param {WebSocket} webSocket If a port is not supplied, communicate using the
+ * WebSocket object which is already created with the host name.
  * @constructor
  */
-var ForwarderFace = function ForwarderFace(port)
+var ForwarderFace = function ForwarderFace(port, webSocket)
 {
   this.port = port;
+  this.webSocket = webSocket;
   this.registeredPrefixes = [];
   this.elementReader = new ElementReader(this);
 
-  // Add a listener to wait for msg from the tab
   var thisFace = this;
-  this.port.onMessage.addListener(function(message) {
-    // Assume message is from Buffer.toJSON.
-    thisFace.elementReader.onReceivedData(new Buffer(message.data));
-  });
+  if (port) {
+    // Add a listener to wait for a message object from the tab
+    this.port.onMessage.addListener(function(obj) {
+      if (obj.type == "Buffer")
+        thisFace.elementReader.onReceivedData(new Buffer(obj.data));
+    });
 
-  this.port.onDisconnect.addListener(function() {
-    for (var i = 0; i < FIB.length; ++i) {
-      if (FIB[i] === thisFace) {
-	FIB.splice(i, 1);
-	break;
+    this.port.onDisconnect.addListener(function() {
+      for (var i = 0; i < FIB.length; ++i) {
+        if (FIB[i] === thisFace) {
+          FIB.splice(i, 1);
+          break;
+        }
       }
-    }
-    thisFace.port = null;
-  });
+      thisFace.port = null;
+    });
+  }
+  else {
+    this.webSocket.binaryType = "arraybuffer";
+
+    var thisFace = this;
+    this.webSocket.onmessage = function(ev) {
+      var result = ev.data;
+
+      if (result == null || result == undefined || result == "")
+        console.log('INVALID ANSWER');
+      else if (result instanceof ArrayBuffer) {
+        // The Buffer constructor expects an instantiated array.
+        var bytearray = new Buffer(new Uint8Array(result));
+
+        if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
+
+        try {
+          // Find the end of the element and call onReceivedElement.
+          thisFace.elementReader.onReceivedData(bytearray);
+        } catch (ex) {
+          console.log("NDN.webSocket.onmessage exception: " + ex);
+          return;
+        }
+      }
+    };
+
+    this.webSocket.onopen = function(ev) {
+      if (LOG > 3) console.log(ev);
+      if (LOG > 3) console.log('webSocket.onopen: WebSocket connection opened.');
+      if (LOG > 3) console.log('webSocket.onopen: ReadyState: ' + this.readyState);
+    };
+
+    this.webSocket.onerror = function(ev) {
+      console.log('webSocket.onerror: ReadyState: ' + this.readyState);
+      console.log(ev);
+      console.log('webSocket.onerror: WebSocket error: ' + ev.data);
+    };
+
+    this.webSocket.onclose = function(ev) {
+      console.log('webSocket.onclose: WebSocket connection closed.');
+      thisFace.webSocket = null;
+    };
+  }
 };
 
 /**
@@ -111,7 +159,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         continue;
 
       if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
-        face.send(element);
+        face.sendBuffer(element);
         continue;
       }
 
@@ -119,7 +167,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         var registeredPrefix = face.registeredPrefixes[j];
 
         if (registeredPrefix.match(interest.getName()))
-          face.send(element);
+          face.sendBuffer(element);
       }
     }
   }
@@ -131,7 +179,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     for (var i = PIT.length - 1; i >= 0; --i) {
       if (PIT[i].interest.matchesName(data.getName())) {
         if (LOG > 3) console.log("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
-        PIT[i].face.send(element);
+        PIT[i].face.sendBuffer(element);
 
         // Remove this entry.
         PIT.splice(i, 1);
@@ -141,13 +189,25 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 };
 
 /**
- * Send the buffer to the port.
+ * Send the buffer to the port or WebSocket.
  * @param {Buffer} buffer The bytes to send.
  */
-ForwarderFace.prototype.send = function(buffer)
+ForwarderFace.prototype.sendBuffer = function(buffer)
 {
-	if (this.port == null) return;
-  this.port.postMessage(buffer.toJSON());
+  if (this.port)
+    this.port.postMessage(buffer.toJSON());
+  else if (this.webSocket) {
+    // If we directly use data.buffer to feed ws.send(),
+    // WebSocket may end up sending a packet with 10000 bytes of data.
+    // That is, WebSocket will flush the entire buffer
+    // regardless of the offset of the Uint8Array. So we have to create
+    // a new Uint8Array buffer with just the right size and copy the
+    // content from binaryInterest to the new buffer.
+    //    ---Wentao
+    var bytearray = new Uint8Array(buffer.length);
+    bytearray.set(buffer);
+    this.webSocket.send(bytearray.buffer);
+  }
 };
 
 /**
@@ -178,7 +238,7 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     var responseData = new Data(interest.getName());
     responseData.setContent(controlResponse.wireEncode());
     // TODO: Sign the responseData.
-    this.send(responseData.wireEncode().buf());
+    this.sendBuffer(responseData.wireEncode().buf());
   }
   else {
     if (LOG > 3) console.log("Unrecognized localhost prefix " + interest.getName() + "\n");
