@@ -1,0 +1,29 @@
+{
+    "manifest_version": 2,
+    "name": "NDN Micro Forwarder",
+    "description": "NDN Micro Forwarder in the browser!",
+    "version": "1.0",
+    "icons": {
+	"48": "icons/link-48.png"
+    },
+
+    "applications": {
+	"gecko": {
+	    "id": "micro-forwarder@named-data.net",
+	    "strict_min_version": "45.0"
+	}
+    },
+
+    "permissions": ["tabs", "notifications"],
+
+    "background": {
+	"scripts": ["ndn.js", "bg.js"]
+    },
+  
+    "content_scripts": [
+	{
+	    "matches": ["<all_urls>"],
+	    "js": ["content.js"]
+	}
+    ]
+}
