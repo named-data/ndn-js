@@ -30,12 +30,22 @@ var ForwarderFace = function ForwarderFace(port)
   this.registeredPrefixes = [];
   this.elementReader = new ElementReader(this);
 
-	// Add a listener to wait for msg from the tab
+  // Add a listener to wait for msg from the tab
   var thisFace = this;
-	this.port.onMessage.addListener(function(message) {
+  this.port.onMessage.addListener(function(message) {
     // Assume message is from Buffer.toJSON.
-		thisFace.elementReader.onReceivedData(new Buffer(message.data));
-	});
+    thisFace.elementReader.onReceivedData(new Buffer(message.data));
+  });
+
+  this.port.onDisconnect.addListener(function() {
+    for (var i = 0; i < FIB.length; ++i) {
+      if (FIB[i] === thisFace) {
+	FIB.splice(i, 1);
+	break;
+      }
+    }
+    thisFace.port = null;
+  });
 };
 
 /**
@@ -136,6 +146,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
  */
 ForwarderFace.prototype.send = function(buffer)
 {
+	if (this.port == null) return;
   this.port.postMessage(buffer.toJSON());
 };
 
