@@ -131,10 +131,12 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     for (var i = 0; i < PIT.length; ++i) {
       // TODO: Check interest equality of appropriate selectors.
       if (PIT[i].face == this &&
-          PIT[i].interest.getName().equals(interest.getName()))
+          PIT[i].interest.getName().equals(interest.getName())) {
         // Duplicate PIT entry.
         // TODO: Update the interest timeout?
+	if (LOG > 3) console.log("Duplicate Interest: " + interest.getName().toUri());
         return;
+      }
     }
 
     // Add to the PIT.
@@ -177,9 +179,11 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     // Send the data packet to the face for each matching PIT entry.
     // Iterate backwards so we can remove the entry and keep iterating.
     for (var i = PIT.length - 1; i >= 0; --i) {
-      if (PIT[i].interest.matchesName(data.getName())) {
+      if (PIT[i].face != this && PIT[i].face != null &&
+	  PIT[i].interest.matchesName(data.getName())) {
         if (LOG > 3) console.log("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
         PIT[i].face.sendBuffer(element);
+	PIT[i].face = null;
 
         // Remove this entry.
         PIT.splice(i, 1);
