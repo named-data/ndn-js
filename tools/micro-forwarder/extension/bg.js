@@ -33,13 +33,16 @@ var ForwarderFace = function ForwarderFace(port, webSocket)
   this.webSocket = webSocket;
   this.registeredPrefixes = [];
   this.elementReader = new ElementReader(this);
+  this.faceId = ++ForwarderFace.lastFaceId;
 
   var thisFace = this;
-  if (port) {
+  if (port != null) {
     // Add a listener to wait for a message object from the tab
     this.port.onMessage.addListener(function(obj) {
       if (obj.type == "Buffer")
         thisFace.elementReader.onReceivedData(new Buffer(obj.data));
+      else
+        thisFace.onReceivedObject(obj);
     });
 
     this.port.onDisconnect.addListener(function() {
@@ -96,6 +99,8 @@ var ForwarderFace = function ForwarderFace(port, webSocket)
   }
 };
 
+ForwarderFace.lastFaceId = 0;
+
 /**
  * This is called by the port listener when an entire TLV element is received.
  * If it is an Interest, look in the FIB for forwarding. If it is a Data packet,
@@ -134,8 +139,8 @@ ForwarderFace.prototype.onReceivedElement = function(element)
           PIT[i].interest.getName().equals(interest.getName())) {
         // Duplicate PIT entry.
         // TODO: Update the interest timeout?
-	if (LOG > 3) console.log("Duplicate Interest: " + interest.getName().toUri());
-        return;
+        if (LOG > 3) console.log("Duplicate Interest: " + interest.getName().toUri());
+          return;
       }
     }
 
@@ -192,15 +197,22 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   }
 };
 
+ForwarderFace.prototype.sendObject = function(obj)
+{
+  if (this.port == null)
+    return;
+  this.port.postMessage(obj);
+};
+
 /**
  * Send the buffer to the port or WebSocket.
  * @param {Buffer} buffer The bytes to send.
  */
 ForwarderFace.prototype.sendBuffer = function(buffer)
 {
-  if (this.port)
-    this.port.postMessage(buffer.toJSON());
-  else if (this.webSocket) {
+  if (this.port != null)
+    this.sendObject(buffer.toJSON());
+  else if (this.webSocket != null) {
     // If we directly use data.buffer to feed ws.send(),
     // WebSocket may end up sending a packet with 10000 bytes of data.
     // That is, WebSocket will flush the entire buffer
@@ -246,6 +258,42 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
   }
   else {
     if (LOG > 3) console.log("Unrecognized localhost prefix " + interest.getName() + "\n");
+  }
+};
+
+ForwarderFace.prototype.onReceivedObject = function(obj)
+{
+  if (obj.type == "faces/query") {
+    // TODO: Try to set faceId
+    faceId = null;
+    this.sendObject(obj);
+  }
+  else if (obj.type == "faces/create") {
+    // TODO: Re-check that the face doesn't exist.
+    var face = new ForwarderFace(null, new WebSocket(obj.uri));
+    FIB.push(face);
+    obj.faceId = face.faceId;
+    this.sendObject(obj);
+  }
+  else if (obj.type == "rib/register") {
+    // Find the face with the faceId.
+    var face = null;
+    for (var i = 0; i < FIB.length; ++i) {
+      if (FIB[i].faceId = obj.faceId) {
+        face = FIB[i];
+        break;
+      }
+    }
+
+    if (face == null) {
+      // TODO: Send error reply.
+      return;
+    }
+
+    // TODO: Check if it already has the prefix.
+    face.registeredPrefixes.push(new Name(obj.nameUri));
+    obj.statusCode = 400;
+    this.sendObject(obj);
   }
 };
 
