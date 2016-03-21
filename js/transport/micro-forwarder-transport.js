@@ -34,6 +34,25 @@ var MicroForwarderTransport = function MicroForwarderTransport(onReceivedObject)
   this.elementReader = null;
   this.connectionInfo = null; // Read by Face.
   this.onReceivedObject = onReceivedObject;
+
+  var thisTransport = this;
+  window.addEventListener("message", function(event) {
+    // We only accept messages from ourselves
+    if (event.source != window)
+      return;
+
+    if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
+      var obj = event.data.object;
+      if (obj.type && obj.type == "Buffer") {
+        if (thisTransport.elementReader != null)
+          thisTransport.elementReader.onReceivedData(new Buffer(obj.data));
+      }
+      else {
+        if (thisTransport.onReceivedObject)
+          thisTransport.onReceivedObject(obj);
+      }
+    }
+  }, false);
 };
 
 MicroForwarderTransport.prototype = new Transport();
@@ -98,25 +117,8 @@ MicroForwarderTransport.prototype.isLocal = function(connectionInfo, onResult, o
 MicroForwarderTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
 {
+  // The window listener is already set up.
   this.elementReader = new ElementReader(elementListener);
-
-  var thisTransport = this;
-  window.addEventListener("message", function(event) {
-    // We only accept messages from ourselves
-    if (event.source != window)
-      return;
-
-    if (event.data.type && (event.data.type == "FromMicroForwarderStub")) {
-      var obj = event.data.object;
-      if (obj.type && obj.type == "Buffer")
-        thisTransport.elementReader.onReceivedData(new Buffer(obj.data));
-      else {
-        if (this.onReceivedObject)
-          this.onReceivedObject(obj);
-      }
-    }
-  }, false);
-
   this.connectionInfo = connectionInfo;
   onopenCallback();
 };
@@ -128,11 +130,6 @@ MicroForwarderTransport.prototype.connect = function
  */
 MicroForwarderTransport.prototype.sendObject = function(obj)
 {
-  if (this.connectionInfo == null) {
-    console.log("MicroForwarderTransport connection is not established.");
-    return;
-  }
-
   window.postMessage({
     type: "FromMicroForwarderTransport",
     object: obj
@@ -145,5 +142,10 @@ MicroForwarderTransport.prototype.sendObject = function(obj)
  */
 MicroForwarderTransport.prototype.send = function(buffer)
 {
+  if (this.connectionInfo == null) {
+    console.log("MicroForwarderTransport connection is not established.");
+    return;
+  }
+
   this.sendObject(buffer.toJSON());
 };
