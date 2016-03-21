@@ -14,7 +14,6 @@ window.addEventListener("message", function(event) {
 	  return;
 	
 	if (event.data.type && (event.data.type == "FromMicroForwarderTransport")) {
-	  console.log("Content script received n bytes: " + event.data.buffer.length);
 	  port.postMessage(event.data.buffer);
 	}
 }, false);
