@@ -4,7 +4,7 @@
     "description": "NDN Micro Forwarder in the browser!",
     "version": "1.0",
     "icons": {
-	"48": "icons/link-48.png"
+	"48": "icons/N-48.png"
     },
 
     "applications": {
@@ -17,11 +17,11 @@
     "permissions": ["tabs", "notifications"],
 
     "background": {
-	   "scripts": ["ndn.js", "bg.js"]
+      "scripts": ["ndn.js", "bg.js"]
     },
 
     "browser_action": {
-        "default_icon": "icons/link-48.png",
+        "default_icon": "icons/N-48.png",
         "default_title": "MicroForwarder",
         "default_popup": "popup/choose_option.html"
     },

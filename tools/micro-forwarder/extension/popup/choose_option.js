@@ -1,7 +1,7 @@
-function enterRoute() {
-  var route = prompt("Enter route:");
-}
-
 function showStatus() {
-  window.alert("status");
+  chrome.tabs.create(
+    {
+      url: chrome.extension.getURL("config.html")
+    }
+  );
 }
