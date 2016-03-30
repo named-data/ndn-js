@@ -30446,7 +30446,7 @@ Producer.prototype.produce = function
     .then(function(contentKey) {
       // Produce data.
       var dataName = new Name(thisProducer.namespace_);
-      dataName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
+      dataName.append(Schedule.toIsoString(timeSlot));
 
       data.setName(dataName);
       var params = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);

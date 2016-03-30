@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-03-16)
+Interim changes since NDN-JS v0.10 (2016-03-30)
 -----------------------------------------------
 
 Breaking changes
@@ -31,6 +31,7 @@ Changes
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.
 * Fix bug in encrypt/Schedule to solve problems when the black repetitive interval list is empty.
+* In Producer, the produced data name should not use a rounded timestamp.
 
 NDN-JS v0.10 (2016-01-07)
 -------------------------
