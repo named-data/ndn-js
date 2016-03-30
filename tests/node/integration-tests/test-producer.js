@@ -120,6 +120,7 @@ describe ("TestProducer", function() {
     var testTime2 = Common.fromIsoString("20150101T110001");
     var testTimeRounded1 = new Name.Component("20150101T100000");
     var testTimeRounded2 = new Name.Component("20150101T110000");
+    var testTimeComponent2 = new Name.Component("20150101T110001");
 
     // Create content keys required for this test case:
     for (var i = 0; i < suffix.size(); ++i) {
@@ -223,7 +224,7 @@ describe ("TestProducer", function() {
               try {
                 var producedName = testData.getName();
                 assert.ok(cKeyName.getPrefix(-1).equals(producedName.getSubName(0, 5)));
-                assert.ok(testTimeRounded2.equals(producedName.get(5)));
+                assert.ok(testTimeComponent2.equals(producedName.get(5)));
                 assert.ok(Encryptor.NAME_COMPONENT_FOR.equals(producedName.get(6)));
                 assert.ok(cKeyName.equals(producedName.getSubName(7, 6)));
                 assert.ok(testTimeRounded2.equals(producedName.get(13)));
