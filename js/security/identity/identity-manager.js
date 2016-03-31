@@ -855,33 +855,9 @@ IdentityManager.prototype.addCertificateAsDefault = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some database libraries only use a callback, so
- * onComplete is required to use these.)
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
- */
-IdentityManager.prototype.getCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return SyncPromise.complete(onComplete, onError,
-    this.identityStorage.getCertificatePromise
-      (certificateName, false, !onComplete));
-};
-
-/**
- * Get a certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some database libraries only use a callback, so onComplete is
- * required to use these.)
+ * with the requested IdentityCertificate. If omitted, the return value is 
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
@@ -891,12 +867,12 @@ IdentityManager.prototype.getCertificate = function
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
  */
-IdentityManager.prototype.getAnyCertificate = function
+IdentityManager.prototype.getCertificate = function
   (certificateName, onComplete, onError)
 {
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.getCertificatePromise
-      (certificateName, true, !onComplete));
+      (certificateName, false, !onComplete));
 };
 
 /**
