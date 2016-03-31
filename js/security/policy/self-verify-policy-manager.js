@@ -233,9 +233,14 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            this.identityStorage != null)
     // Assume the key name is a certificate name.
     SyncPromise.complete
-      (onComplete, this.identityStorage.getKeyPromise
-       (IdentityCertificate.certificateNameToPublicKeyName
-        (keyLocator.getKeyName())));
+      (onComplete,
+       function(err) {
+         // The storage doesn't have the key.
+         onComplete(new Blob());
+       },
+       this.identityStorage.getKeyPromise
+         (IdentityCertificate.certificateNameToPublicKeyName
+          (keyLocator.getKeyName())));
   else
     // Can't find a key to verify.
     onComplete(new Blob());
