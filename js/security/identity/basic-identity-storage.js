@@ -130,16 +130,15 @@ BasicIdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+   * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise} A promise which fulfills when complete.
  */
 BasicIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -149,14 +148,13 @@ BasicIdentityStorage.prototype.addKeyPromise = function
       ("BasicIdentityStorage.addKeyPromise is only supported for async")));
 
   if (keyName.size() == 0)
-    return;
+    return Promise.resolve();
 
   var thisStorage = this;
   return this.doesKeyExistPromise(keyName)
   .then(function(exists) {
     if (exists)
-      return Promise.reject(new SecurityException(new Error
-        ("a key with the same name already exists!")));
+      return Promise.resolve();
 
     var identityName = keyName.getPrefix(-1);
     var identityUri = identityName.toUri();
@@ -586,7 +584,7 @@ BasicIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, us
       ("BasicIdentityStorage.deletePublicKeyInfoPromise is only supported for async")));
 
   if (keyName.size() == 0)
-    return;
+    return Promise.resolve();
 
   var thisStorage = this;
   var keyId = keyName.get(-1).toEscapedString();

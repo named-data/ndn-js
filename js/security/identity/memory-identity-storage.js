@@ -99,25 +99,26 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @return {SyncPromise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {SyncPromise} A promise which fulfills when complete.
  */
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
 {
+  if (keyName.size() == 0)
+    return SyncPromise.resolve();
+
+  if (this.doesKeyExist(keyName))
+    return SyncPromise.resolve();
+
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
   this.addIdentity(identityName);
-
-  if (this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("A key with the same name already exists!")));
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };

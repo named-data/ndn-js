@@ -178,7 +178,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -186,9 +187,7 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the key is added,
- * or a promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise|SyncPromise} A promise which fulfills when complete.
  */
 IdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)

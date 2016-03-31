@@ -129,16 +129,15 @@ IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+   * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise} A promise which fulfills when complete.
  */
 IndexedDbIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -147,22 +146,23 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.addKeyPromise is only supported for async")));
 
-  var identityName = keyName.getSubName(0, keyName.size() - 1);
+  if (keyName.size() == 0)
+    return Promise.resolve();
 
   var thisStorage = this;
-  return this.addIdentityPromise(identityName)
-  .then(function() {
-    return thisStorage.doesKeyExistPromise(keyName);
-  })
+  return this.doesKeyExistPromise(keyName)
   .then(function(exists) {
     if (exists)
-      throw new SecurityException(new Error
-        ("A key with the same name already exists!"));
+      return Promise.resolve();
 
-    return thisStorage.database.publicKey.put
-      ({ keyNameUri: keyName.toUri(), keyType: keyType,
-         keyDer: new Blob(publicKeyDer, true).buf(),
-         defaultCertificate: null });
+    var identityName = keyName.getPrefix(-1);
+    return thisStorage.addIdentityPromise(identityName)
+    .then(function() {
+      return thisStorage.database.publicKey.put
+        ({ keyNameUri: keyName.toUri(), keyType: keyType,
+           keyDer: new Blob(publicKeyDer, true).buf(),
+           defaultCertificate: null });
+    });
   });
 };
 
