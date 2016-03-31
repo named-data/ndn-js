@@ -323,8 +323,6 @@ IdentityStorage.prototype.addCertificate = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
@@ -332,7 +330,7 @@ IdentityStorage.prototype.addCertificate = function(certificate)
  * IdentityCertificate or null if not found.
  */
 IdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny, useSync)
+  (certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.getCertificatePromise is not implemented"));
@@ -341,17 +339,14 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
  * @returns {IdentityCertificate} The requested certificate.  If not found,
  * return null.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
-IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+IdentityStorage.prototype.getCertificate = function(certificateName)
 {
-  return SyncPromise.getValue
-    (this.getValuePromise(certificateName, allowAny, true));
+  return SyncPromise.getValue(this.getValuePromise(certificateName, true));
 };
 
 /*****************************************
@@ -640,7 +635,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
     if (certName == null)
       return SyncPromise.resolve(null);
 
-    return thisStorage.getCertificatePromise(certName, true, useSync);
+    return thisStorage.getCertificatePromise(certName, useSync);
   });
 };
 

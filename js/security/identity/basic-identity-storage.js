@@ -296,15 +296,13 @@ BasicIdentityStorage.prototype.addCertificatePromise = function(certificate, use
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
  * @return {Promise} A promise which returns the requested IdentityCertificate
  * or null if not found.
  */
 BasicIdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny, useSync)
+  (certificateName, useSync)
 {
   if (useSync)
     return Promise.reject(new SecurityException(new Error
@@ -315,10 +313,6 @@ BasicIdentityStorage.prototype.getCertificatePromise = function
   .then(function(exists) {
     if (!exists)
       return Promise.resolve(null);
-
-    if (!allowAny)
-      return Promise.reject(new Error
-        ("BasicIdentityStorage.getCertificate for not allowAny is not implemented"));
 
     return thisStorage.getPromise_
       ("SELECT certificate_data FROM Certificate WHERE cert_name=?",

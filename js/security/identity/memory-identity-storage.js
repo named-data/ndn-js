@@ -195,18 +195,12 @@ MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will
- * be returned, otherwise validity is disregarded.
  * @return {SyncPromise} A promise which returns the requested
  * IdentityCertificate or null if not found.
  */
 MemoryIdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny)
+  (certificateName)
 {
-  if (!allowAny)
-    return SyncPromise.reject(new Error
-      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented"));
-
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
     // Not found.  Silently return null.
