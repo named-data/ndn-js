@@ -510,6 +510,230 @@ IdentityManager.prototype.getPublicKey = function(keyName, onComplete, onError)
 // TODO: Add two versions of createIdentityCertificate.
 
 /**
+ * Prepare an unsigned identity certificate.
+ * @param {Name} keyName The key name, e.g., `/{identity_name}/ksk-123456`.
+ * @param {PublicKey} publicKey (optional) The public key to sign. If ommited,
+ * use the keyName to get the public key from the identity storage.
+ * @param {Name} signingIdentity The signing identity.
+ * @param {number} notBefore See IdentityCertificate.
+ * @param {number} notAfter See IdentityCertificate.
+ * @param {Array<CertificateSubjectDescription>} subjectDescription A list of
+ * CertificateSubjectDescription. See IdentityCertificate. If null or empty,
+ * this adds a an ATTRIBUTE_NAME based on the keyName.
+ * @param {Name} certPrefix (optional) The prefix before the `KEY` component. If
+ * null or omitted, this infers the certificate name according to the relation
+ * between the signingIdentity and the subject identity. If the signingIdentity
+ * is a prefix of the subject identity, `KEY` will be inserted after the
+ * signingIdentity, otherwise `KEY` is inserted after subject identity (i.e.,
+ * before `ksk-...`).
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the unsigned IdentityCertificate, or null if the inputs are invalid. If
+ * omitted, the return value is described below. (Some database libraries only
+ * use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {IdentityCertificate} If onComplete is omitted, return the the
+ * unsigned IdentityCertificate, or null if the inputs are invalid. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+IdentityManager.prototype.prepareUnsignedIdentityCertificate = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix, onComplete, onError)
+{
+  if (!(publicKey instanceof PublicKey)) {
+    // The publicKey was omitted. Shift arguments.
+    onError = onComplete;
+    onComplete = certPrefix;
+    certPrefix = subjectDescription;
+    subjectDescription = notAfter;
+    notAfter = notBefore;
+    notBefore = signingIdentity;
+    signingIdentity = publicKey;
+    publicKey = null;
+  }
+
+  // certPrefix may be omitted or null, so check for it and the following args.
+  var arg7 = certPrefix;
+  var arg8 = onComplete;
+  var arg9 = onError;
+  if (arg7 instanceof Name)
+    certPrefix = arg7;
+  else
+    certPrefix = null;
+
+  if (typeof arg7 === 'function') {
+    onComplete = arg7;
+    onError = arg8;
+  }
+  else if (typeof arg8 === 'function') {
+    onComplete = arg8;
+    onError = arg9;
+  }
+  else {
+    onComplete = null;
+    onError = null;
+  }
+
+  var promise;
+  if (publicKey == null)
+    promise =  this.prepareUnsignedIdentityCertificatePromise
+      (keyName, signingIdentity, notBefore, notAfter, subjectDescription,
+       certPrefix, !onComplete);
+  else
+    promise =  this.prepareUnsignedIdentityCertificatePromise
+      (keyName, publicKey, signingIdentity, notBefore, notAfter,
+       subjectDescription, certPrefix, !onComplete);
+  return SyncPromise.complete(onComplete, onError, promise);
+};
+
+/**
+ * Prepare an unsigned identity certificate.
+ * @param {Name} keyName The key name, e.g., `/{identity_name}/ksk-123456`.
+ * @param {PublicKey} publicKey (optional) The public key to sign. If ommited,
+ * use the keyName to get the public key from the identity storage.
+ * @param {Name} signingIdentity The signing identity.
+ * @param {number} notBefore See IdentityCertificate.
+ * @param {number} notAfter See IdentityCertificate.
+ * @param {Array<CertificateSubjectDescription>} subjectDescription A list of
+ * CertificateSubjectDescription. See IdentityCertificate. If null or empty,
+ * this adds a an ATTRIBUTE_NAME based on the keyName.
+ * @param {Name} certPrefix (optional) The prefix before the `KEY` component. If
+ * null or omitted, this infers the certificate name according to the relation
+ * between the signingIdentity and the subject identity. If the signingIdentity
+ * is a prefix of the subject identity, `KEY` will be inserted after the
+ * signingIdentity, otherwise `KEY` is inserted after subject identity (i.e.,
+ * before `ksk-...`).
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the unsigned
+ * IdentityCertificate, or that returns null if the inputs are invalid.
+ */
+IdentityManager.prototype.prepareUnsignedIdentityCertificatePromise = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix, useSync)
+{
+  if (!(publicKey instanceof PublicKey)) {
+    // The publicKey was omitted. Shift arguments.
+    useSync = certPrefix;
+    certPrefix = subjectDescription;
+    subjectDescription = notAfter;
+    notAfter = notBefore;
+    notBefore = signingIdentity;
+    signingIdentity = publicKey;
+    publicKey = null;
+  }
+
+  // certPrefix may be omitted or null, so check for it and the following arg.
+  var arg7 = certPrefix;
+  var arg8 = useSync;
+  if (arg7 instanceof Name)
+    certPrefix = arg7;
+  else
+    certPrefix = null;
+
+  if (typeof arg7 === 'boolean')
+    useSync = arg7;
+  else if (typeof arg8 === 'boolean')
+    useSync = arg8;
+  else
+    useSync = false;
+
+  var promise;
+  if (publicKey == null) {
+    promise = this.identityStorage.getKeyPromise(keyName, useSync)
+    .then(function(keyDer) {
+      publicKey = new PublicKey(keyDer);
+      return SyncPromise.resolve();
+    });
+  }
+  else
+    promise = SyncPromise.resolve();
+
+  return promise
+  .then(function() {
+    return SyncPromise.resolve
+      (IdentityManager.prepareUnsignedIdentityCertificateHelper_
+       (keyName, publicKey, signingIdentity, notBefore, notAfter,
+        subjectDescription, certPrefix));
+  });
+};
+
+/**
+ * A helper for prepareUnsignedIdentityCertificatePromise where the publicKey
+ * is known.
+ */
+IdentityManager.prepareUnsignedIdentityCertificateHelper_ = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix)
+{
+  if (keyName.size() < 1)
+    return null;
+
+  var tempKeyIdPrefix = keyName.get(-1).toEscapedString();
+  if (tempKeyIdPrefix.length < 4)
+    return null;
+  keyIdPrefix = tempKeyIdPrefix.substr(0, 4);
+  if (keyIdPrefix != "ksk-" && keyIdPrefix != "dsk-")
+    return null;
+
+  var certificate = new IdentityCertificate();
+  var certName = new Name();
+
+  if (certPrefix == null) {
+    // No certificate prefix hint, so infer the prefix.
+    if (signingIdentity.match(keyName))
+      certName.append(signingIdentity)
+        .append("KEY")
+        .append(keyName.getSubName(signingIdentity.size()))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+    else
+      certName.append(keyName.getPrefix(-1))
+        .append("KEY")
+        .append(keyName.get(-1))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+  }
+  else {
+    // A cert prefix hint is supplied, so determine the cert name.
+    if (certPrefix.match(keyName) && !certPrefix.equals(keyName))
+      certName.append(certPrefix)
+        .append("KEY")
+        .append(keyName.getSubName(certPrefix.size()))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+    else
+      return null;
+  }
+
+  certificate.setName(certName);
+  certificate.setNotBefore(notBefore);
+  certificate.setNotAfter(notAfter);
+  certificate.setPublicKeyInfo(publicKey);
+
+  if (subjectDescription == null || subjectDescription.length === 0)
+    certificate.addSubjectDescription(new CertificateSubjectDescription
+      ("2.5.4.41", keyName.getPrefix(-1).toUri()));
+  else {
+    for (var i = 0; i < subjectDescription.length; ++i)
+      certificate.addSubjectDescription(subjectDescription[i]);
+  }
+
+  try {
+    certificate.encode();
+  } catch (ex) {
+    throw SecurityException(new Error("DerEncodingException: " + ex));
+  }
+
+  return certificate;
+};
+
+/**
  * Add a certificate into the public key identity storage.
  * @param {IdentityCertificate} certificate The certificate to to added. This
  * makes a copy of the certificate.
