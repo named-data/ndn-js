@@ -19,19 +19,20 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var assert = require("assert");
+var assert = require('assert');
 var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
 var KeyType = require('../../..').KeyType;
-var DerNode = require("../../../js/encoding/der/der-node.js").DerNode;
-var DerSequence = require("../../../js/encoding/der/der-node.js").DerNode.DerSequence;
-var DerOctetString = require("../../../js/encoding/der/der-node.js").DerNode.DerOctetString;
-var DerInteger = require("../../../js/encoding/der/der-node.js").DerNode.DerInteger;
-var PublicKey = require("../../../js/security/certificate/public-key.js").PublicKey;
-var Certificate = require("../../../js/security/certificate/certificate.js").Certificate;
-var CertificateSubjectDescription = require("../../../js/security/certificate/certificate-subject-description.js").CertificateSubjectDescription;
-var CertificateExtension = require("../../../js/security/certificate/certificate-extension.js").CertificateExtension;
+var DerNode = require('../../../js/encoding/der/der-node.js').DerNode;
+var DerSequence = require('../../../js/encoding/der/der-node.js').DerNode.DerSequence;
+var DerOctetString = require('../../../js/encoding/der/der-node.js').DerNode.DerOctetString;
+var DerInteger = require('../../../js/encoding/der/der-node.js').DerNode.DerInteger;
+var PublicKey = require('../../..').PublicKey;
+var Certificate = require('../../..').Certificate;
+var CertificateSubjectDescription = require('../../..').CertificateSubjectDescription;
+var CertificateExtension = require('../../..').CertificateExtension;
+var IdentityCertificate = require('../../..').IdentityCertificate;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
 var IdentityManager = require('../../..').IdentityManager;
@@ -221,5 +222,32 @@ describe('TestDerEncodeDecode', function() {
     assert.equal(expectedEncoding, derOid.encode().toHex(),
                  "Incorrect OID encoding");
     assert.equal(oidString, derOid.toVal(), "Incorrect decoded OID");
+  });
+
+  it('PrepareUnsignedCertificate', function() {
+    var identityStorage = new MemoryIdentityStorage();
+    var privateKeyStorage = new MemoryPrivateKeyStorage();
+    var identityManager = new IdentityManager(identityStorage, privateKeyStorage);
+    var keyName = new Name("/test/ksk-1457560485494");
+    identityStorage.addKey(keyName, KeyType.RSA, new Blob(PUBLIC_KEY, false));
+
+    var subjectDescriptions = [];
+    subjectDescriptions.push(new CertificateSubjectDescription
+      (TEST_OID, "TEST NAME"));
+    var debugCertPrefix = null;
+    var newCertificate = identityManager.prepareUnsignedIdentityCertificate
+      (keyName, keyName.getPrefix(1), toyCertNotBefore, toyCertNotAfter,
+       subjectDescriptions, debugCertPrefix);
+
+    // Update the generated certificate version to equal the one in toyCert.
+    newCertificate.setName
+      (new Name(newCertificate.getName().getPrefix(-1).append
+       (toyCert.getName().get(-1))));
+
+    // Make a copy to test encoding.
+    var certificateCopy = new IdentityCertificate(newCertificate);
+    assert.equal
+      (certificateCopy.toString(), toyCert.toString(),
+      "Prepared unsigned certificate dump does not have the expected format");
   });
 });
