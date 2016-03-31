@@ -156,35 +156,23 @@ MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {SyncPromise} A promise which fulfills when finished.
  */
 MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
   var certificateName = certificate.getName();
   var keyName = certificate.getPublicKeyName();
 
-  if (!this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("No corresponding Key record for certificate! " +
-       keyName.toUri() + " " + certificateName.toUri())));
+  this.addKey(keyName, certificate.getPublicKeyInfo().getKeyType(),
+         certificate.getPublicKeyInfo().getKeyDer());
 
-  // Check if the certificate already exists.
   if (this.doesCertificateExist(certificateName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("Certificate has already been installed!")));
-
-  // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = this.getKey(keyName);
-  if (keyBlob.isNull() ||
-      !DataUtils.arraysEqual(keyBlob.buf(),
-        certificate.getPublicKeyInfo().getKeyDer().buf()))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("The certificate does not match the public key!")));
+    return SyncPromise.resolve();
 
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.

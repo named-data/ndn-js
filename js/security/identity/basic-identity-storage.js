@@ -228,16 +228,17 @@ BasicIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the certificate is added, or
- * a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {Promise} A promise which fulfills when finished.
  */
-BasicIdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
+BasicIdentityStorage.prototype.addCertificatePromise = function
+  (certificate, useSync)
 {
   if (useSync)
     return Promise.reject(new SecurityException(new Error
@@ -247,47 +248,33 @@ BasicIdentityStorage.prototype.addCertificatePromise = function(certificate, use
   var keyName = certificate.getPublicKeyName();
 
   var thisStorage = this;
-  return this.doesKeyExistPromise(keyName)
+  return this.addKeyPromise
+    (keyName, certificate.getPublicKeyInfo().getKeyType(),
+     certificate.getPublicKeyInfo().getKeyDer(), useSync)
+  .then(function() {
+    return thisStorage.doesCertificateExistPromise(certificateName);
+  })
   .then(function(exists) {
-    if (!exists)
-      return Promise.reject(new SecurityException(new Error
-        ("No corresponding Key record for certificate! " +
-         keyName.toUri() + " " + certificateName.toUri())));
+    if (exists)
+      return Promise.resolve();
 
-    // Check if the certificate already exists.
-    return thisStorage.doesCertificateExistPromise(certificateName)
-    .then(function(exists) {
-      if (exists)
-        return Promise.reject(new SecurityException(new Error
-          ("Certificate has already been installed!")));
+    var keyId = keyName.get(-1).toEscapedString();
+    var identity = keyName.getPrefix(-1);
 
-      var keyId = keyName.get(-1).toEscapedString();
-      var identity = keyName.getPrefix(-1);
+    // Insert the certificate.
 
-      // Check if the public key of the certificate is the same as the key record.
-      return thisStorage.getKeyPromise(keyName)
-      .then(function(keyBlob) {
-        if (keyBlob.isNull() ||
-            !keyBlob.equals(certificate.getPublicKeyInfo().getKeyDer()))
-          return Promise.reject(new SecurityException(new Error
-            ("Certificate does not match public key")));
+    var signature = certificate.getSignature();
+    var signerName = KeyLocator.getFromSignature(signature).getKeyName();
+    // Convert from milliseconds to seconds since 1/1/1970.
+    var notBefore = Math.floor(certificate.getNotBefore() / 1000.0);
+    var notAfter = Math.floor(certificate.getNotAfter() / 1000.0);
+    var encodedCert = certificate.wireEncode().buf();
 
-        // Insert the certificate.
-
-        var signature = certificate.getSignature();
-        var signerName = KeyLocator.getFromSignature(signature).getKeyName();
-        // Convert from milliseconds to seconds since 1/1/1970.
-        var notBefore = Math.floor(certificate.getNotBefore() / 1000.0);
-        var notAfter = Math.floor(certificate.getNotAfter() / 1000.0);
-        var encodedCert = certificate.wireEncode().buf();
-
-        return thisStorage.runPromise_
-          ("INSERT INTO Certificate (cert_name, cert_issuer, identity_name, key_identifier, not_before, not_after, certificate_data) " +
-           "VALUES (?,?,?,?,?,?,?)",
-           [certificateName.toUri(), signerName.toUri(), identity.toUri(), keyId,
-            notBefore, notAfter, encodedCert]);
-      });
-    });
+    return thisStorage.runPromise_
+      ("INSERT INTO Certificate (cert_name, cert_issuer, identity_name, key_identifier, not_before, not_after, certificate_data) " +
+       "VALUES (?,?,?,?,?,?,?)",
+       [certificateName.toUri(), signerName.toUri(), identity.toUri(), keyId,
+        notBefore, notAfter, encodedCert]);
   });
 };
 

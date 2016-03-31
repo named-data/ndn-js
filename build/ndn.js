@@ -17795,7 +17795,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -17803,9 +17804,7 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the key is added,
- * or a promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise|SyncPromise} A promise which fulfills when complete.
  */
 IdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -17908,15 +17907,15 @@ IdentityStorage.prototype.doesCertificateExist = function(certificateName)
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the certificate
- * is added, or a promise rejected with SecurityException if the certificate is
- * already installed.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
 {
@@ -18489,16 +18488,15 @@ IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+   * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise} A promise which fulfills when complete.
  */
 IndexedDbIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -18507,22 +18505,23 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.addKeyPromise is only supported for async")));
 
-  var identityName = keyName.getSubName(0, keyName.size() - 1);
+  if (keyName.size() == 0)
+    return Promise.resolve();
 
   var thisStorage = this;
-  return this.addIdentityPromise(identityName)
-  .then(function() {
-    return thisStorage.doesKeyExistPromise(keyName);
-  })
+  return this.doesKeyExistPromise(keyName)
   .then(function(exists) {
     if (exists)
-      throw new SecurityException(new Error
-        ("A key with the same name already exists!"));
+      return Promise.resolve();
 
-    return thisStorage.database.publicKey.put
-      ({ keyNameUri: keyName.toUri(), keyType: keyType,
-         keyDer: new Blob(publicKeyDer, true).buf(),
-         defaultCertificate: null });
+    var identityName = keyName.getPrefix(-1);
+    return thisStorage.addIdentityPromise(identityName)
+    .then(function() {
+      return thisStorage.database.publicKey.put
+        ({ keyNameUri: keyName.toUri(), keyType: keyType,
+           keyDer: new Blob(publicKeyDer, true).buf(),
+           defaultCertificate: null });
+    });
   });
 };
 
@@ -18573,14 +18572,14 @@ IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {Promise} A promise which fulfills when finished.
  */
 IndexedDbIdentityStorage.prototype.addCertificatePromise = function
   (certificate, useSync)
@@ -18593,30 +18592,15 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
   var keyName = certificate.getPublicKeyName();
 
   var thisStorage = this;
-  return this.doesKeyExistPromise(keyName)
-  .then(function(exists) {
-    if (!exists)
-      throw new SecurityException(new Error
-        ("No corresponding Key record for certificate! " +
-         keyName.toUri() + " " + certificateName.toUri()));
-
-    // Check if the certificate already exists.
+  return this.addKeyPromise
+    (keyName, certificate.getPublicKeyInfo().getKeyType(),
+     certificate.getPublicKeyInfo().getKeyDer(), useSync)
+  .then(function() {
     return thisStorage.doesCertificateExistPromise(certificateName);
   })
   .then(function(exists) {
     if (exists)
-      throw new SecurityException(new Error
-        ("Certificate has already been installed!"));
-
-    // Check if the public key of the certificate is the same as the key record.
-    return thisStorage.getKeyPromise(keyName);
-  })
-  .then(function(keyBlob) {
-    if (keyBlob.isNull() ||
-        !DataUtils.arraysEqual(keyBlob.buf(),
-          certificate.getPublicKeyInfo().getKeyDer().buf()))
-      throw new SecurityException(new Error
-        ("The certificate does not match the public key!"));
+      return Promise.resolve();
 
     // Insert the certificate.
     // wireEncode returns the cached encoding if available.
@@ -19067,25 +19051,26 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @return {SyncPromise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {SyncPromise} A promise which fulfills when complete.
  */
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
 {
+  if (keyName.size() == 0)
+    return SyncPromise.resolve();
+
+  if (this.doesKeyExist(keyName))
+    return SyncPromise.resolve();
+
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
   this.addIdentity(identityName);
-
-  if (this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("A key with the same name already exists!")));
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
@@ -19123,35 +19108,23 @@ MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {SyncPromise} A promise which fulfills when finished.
  */
 MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
   var certificateName = certificate.getName();
   var keyName = certificate.getPublicKeyName();
 
-  if (!this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("No corresponding Key record for certificate! " +
-       keyName.toUri() + " " + certificateName.toUri())));
+  this.addKey(keyName, certificate.getPublicKeyInfo().getKeyType(),
+         certificate.getPublicKeyInfo().getKeyDer());
 
-  // Check if the certificate already exists.
   if (this.doesCertificateExist(certificateName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("Certificate has already been installed!")));
-
-  // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = this.getKey(keyName);
-  if (keyBlob.isNull() ||
-      !DataUtils.arraysEqual(keyBlob.buf(),
-        certificate.getPublicKeyInfo().getKeyDer().buf()))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("The certificate does not match the public key!")));
+    return SyncPromise.resolve();
 
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.

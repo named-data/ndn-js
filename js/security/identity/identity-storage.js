@@ -290,15 +290,15 @@ IdentityStorage.prototype.doesCertificateExist = function(certificateName)
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the certificate
- * is added, or a promise rejected with SecurityException if the certificate is
- * already installed.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
 {
