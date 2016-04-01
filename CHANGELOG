@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-03-31)
+Interim changes since NDN-JS v0.10 (2016-04-01)
 -----------------------------------------------
 
 Breaking changes
@@ -26,6 +26,8 @@ Changes
   added an optional onError callback.
 * In IdentityManager, added prepareUnsignedIdentityCertificate.
 * In KeyChain, removed getAnyCertificate and getAnyIdentityCertificate.
+* In transport, added MicroForwarderTransport from the NDN Hackathon.
+* Merged tools/micro-forwarder from the NDN Hackathon. Removed outdated tools/forwarder.
 * Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 * Examples: Added test-sign-verify-data-hmac.
 * Unit tests: Added test-link.
