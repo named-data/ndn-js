@@ -527,28 +527,40 @@ KeyChain.prototype.sign = function
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  */
 KeyChain.prototype.signPromise = function
-  (target, certificateNameOrWireFormat, wireFormat, useSync)
+  (target, certificateName, wireFormat, useSync)
 {
-  var certificateName;
-  if (certificateNameOrWireFormat instanceof Name)
-    // sign(target, certificateName [, wireFormat] [, useSync]).
-    // sign(target, certificateName [, useSync]).
-    certificateName = certificateNameOrWireFormat;
-    // If wireFormat is omitted, we'll shift below.
-  else {
-    // sign(target [, wireFormat] [, useSync]).
-    // sign(target [, useSync]).
-    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
-    useSync = wireFormat;
-    wireFormat = certificateNameOrWireFormat;
+  var arg2 = certificateName;
+  var arg3 = wireFormat;
+  var arg4 = useSync;
+  // arg2,            arg3,       arg4
+  // certificateName, wireFormat, useSync
+  // certificateName, wireFormat, null
+  // certificateName, useSync,    null
+  // certificateName, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (arg2 instanceof Name)
+    certificateName = arg2;
+  else
     certificateName = null;
-  }
 
-  if (!(wireFormat instanceof WireFormat)) {
-    // wireFormat is omitted. Shift the parameters.
-    useSync = wireFormat;
-    wireFormat = undefined;
-  }
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === 'boolean')
+    useSync = arg2;
+  else if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else
+    useSync = false;
 
   var thisKeyChain = this;
   return SyncPromise.resolve()
