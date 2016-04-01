@@ -147,7 +147,7 @@ BasicIdentityStorage.prototype.addKeyPromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.addKeyPromise is only supported for async")));
 
-  if (keyName.size() == 0)
+  if (keyName.size() === 0)
     return Promise.resolve();
 
   var thisStorage = this;
@@ -176,8 +176,8 @@ BasicIdentityStorage.prototype.addKeyPromise = function
  * @param {Name} keyName The name of the requested public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which returns the DER Blob, or a Blob with a null
- * pointer if not found.
+ * @return {Promise} A promise which returns the DER Blob, or a promise rejected
+ * with SecurityException if the key doesn't exist.
  */
 BasicIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
@@ -185,21 +185,22 @@ BasicIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.getKeyPromise is only supported for async")));
 
-  var thisStorage = this;
-  return this.doesKeyExistPromise(keyName)
-  .then(function(exists) {
-    if (!exists)
-      return Promise.resolve(new Blob());
+  if (keyName.size() === 0)
+    return Promise.reject(new SecurityException(new Error
+      ("BasicIdentityStorage::getKeyPromise: Empty keyName")));
 
-    var identityUri = keyName.getPrefix(-1).toUri();
-    var keyId = keyName.get(-1).toEscapedString();
+  var identityUri = keyName.getPrefix(-1).toUri();
+  var keyId = keyName.get(-1).toEscapedString();
 
-    return thisStorage.getPromise_
-      ("SELECT public_key FROM Key WHERE identity_name=? AND key_identifier=?",
-       [identityUri, keyId])
-    .then(function(row) {
+  return this.getPromise_
+    ("SELECT public_key FROM Key WHERE identity_name=? AND key_identifier=?",
+     [identityUri, keyId])
+  .then(function(row) {
+    if (row)
       return Promise.resolve(new Blob(row.public_key, false));
-    });
+    else
+      return Promise.reject(new SecurityException(new Error
+        ("BasicIdentityStorage::getKeyPromise: The key does not exist")));
   });
 };
 
@@ -283,8 +284,9 @@ BasicIdentityStorage.prototype.addCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which returns the requested IdentityCertificate
- * or null if not found.
+ * @return {Promise} A promise which returns the requested
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 BasicIdentityStorage.prototype.getCertificatePromise = function
   (certificateName, useSync)
@@ -293,20 +295,23 @@ BasicIdentityStorage.prototype.getCertificatePromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.getCertificatePromise is only supported for async")));
 
-  var thisStorage = this;
-  return this.doesCertificateExistPromise(certificateName)
-  .then(function(exists) {
-    if (!exists)
-      return Promise.resolve(null);
-
-    return thisStorage.getPromise_
-      ("SELECT certificate_data FROM Certificate WHERE cert_name=?",
-       certificateName.toUri())
-    .then(function(row) {
+  return this.getPromise_
+    ("SELECT certificate_data FROM Certificate WHERE cert_name=?",
+     certificateName.toUri())
+  .then(function(row) {
+    if (row) {
       var certificate = new IdentityCertificate()
-      certificate.wireDecode(new Blob(row.certificate_data, false))
+      try {
+        certificate.wireDecode(new Blob(row.certificate_data, false))
+      } catch (ex) {
+        return Promise.reject(new SecurityException(new Error
+          ("BasicIdentityStorage.getCertificatePromise: The certificate cannot be decoded")));
+      }
       return Promise.resolve(certificate);
-    });
+    }
+    else
+      return Promise.reject(new SecurityException(new Error
+        ("BasicIdentityStorage.getCertificatePromise: The certificate does not exist")));
   });
 };
 
@@ -549,7 +554,7 @@ BasicIdentityStorage.prototype.deleteCertificateInfoPromise = function
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.deleteCertificateInfoPromise is only supported for async")));
 
-  if (certificateName.size() == 0)
+  if (certificateName.size() === 0)
     return
 
   return this.runPromise_
@@ -570,7 +575,7 @@ BasicIdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, us
     return Promise.reject(new SecurityException(new Error
       ("BasicIdentityStorage.deletePublicKeyInfoPromise is only supported for async")));
 
-  if (keyName.size() == 0)
+  if (keyName.size() === 0)
     return Promise.resolve();
 
   var thisStorage = this;

@@ -219,8 +219,8 @@ IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a Blob
- * with a null pointer if not found.
+ * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a
+ * promise rejected with SecurityException if the key doesn't exist.
  */
 IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
@@ -231,7 +231,8 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ * @returns {Blob} The DER Blob.
+ * @throws SecurityException if the key doesn't exist.
  * @throws {Error} If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -326,7 +327,8 @@ IdentityStorage.prototype.addCertificate = function(certificate)
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 IdentityStorage.prototype.getCertificatePromise = function
   (certificateName, useSync)
@@ -338,8 +340,8 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {IdentityCertificate} The requested certificate.  If not found,
- * return null.
+ * @returns {IdentityCertificate} The requested certificate.
+ * @throws SecurityException if the certificate doesn't exist.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */

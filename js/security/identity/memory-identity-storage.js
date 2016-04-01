@@ -110,7 +110,7 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
 {
-  if (keyName.size() == 0)
+  if (keyName.size() === 0)
     return SyncPromise.resolve();
 
   if (this.doesKeyExist(keyName))
@@ -129,16 +129,20 @@ MemoryIdentityStorage.prototype.addKeyPromise = function
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @return {SyncPromise} A promise which returns the DER Blob, or a Blob with a
- * null pointer if not found.
+ * @return {SyncPromise} A promise which returns the DER Blob, or a promise
+ * rejected with SecurityException if the key doesn't exist.
  */
 MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
+  if (keyName.size() === 0)
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: Empty keyName")));
+
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
-    // Not found.  Silently return a null Blob.
-    return SyncPromise.resolve(new Blob());
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: The key does not exist")));
 
   return SyncPromise.resolve(entry.keyDer);
 };
@@ -185,19 +189,25 @@ MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
  * @return {SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 MemoryIdentityStorage.prototype.getCertificatePromise = function
   (certificateName)
 {
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
-    // Not found.  Silently return null.
-    return SyncPromise.resolve(null);
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate does not exist")));
 
-  var certificiate = new IdentityCertificate();
-  certificiate.wireDecode(this.certificateStore[certificateNameUri]);
-  return SyncPromise.resolve(certificiate);
+  var certificate = new IdentityCertificate();
+  try {
+    certificate.wireDecode(this.certificateStore[certificateNameUri]);
+  } catch (ex) {
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+  }
+  return SyncPromise.resolve(certificate);
 };
 
 /*****************************************
