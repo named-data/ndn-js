@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-03-16)
+Interim changes since NDN-JS v0.10 (2016-03-31)
 -----------------------------------------------
 
 Breaking changes
@@ -24,13 +24,19 @@ Changes
 * http://redmine.named-data.net/issues/3452 Added Interest.refreshNonce.
 * http://redmine.named-data.net/issues/3355 In Producer.createContentKey and produce,
   added an optional onError callback.
+* In IdentityManager, added prepareUnsignedIdentityCertificate.
+* In KeyChain, removed getAnyCertificate and getAnyIdentityCertificate.
 * Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 * Examples: Added test-sign-verify-data-hmac.
 * Unit tests: Added test-link.
 
+Deprecated
+* In KeyChain, deprecated getIdentityCertificate. Use getCertificate.
+
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.
 * Fix bug in encrypt/Schedule to solve problems when the black repetitive interval list is empty.
+* In Producer, the produced data name should not use a rounded timestamp.
 
 NDN-JS v0.10 (2016-01-07)
 -------------------------

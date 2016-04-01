@@ -53,7 +53,7 @@ PrivateKeyStorage.prototype.generateKeyPairPromise = function
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @throws {Error} If generateKeyPairPromise doesn't return a SyncPromise which
+ * @throws Error If generateKeyPairPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
@@ -79,7 +79,7 @@ PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
- * @throws {Error} If deleteKeyPairPromise doesn't return a SyncPromise which
+ * @throws Error If deleteKeyPairPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
@@ -105,7 +105,7 @@ PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @return {PublicKey} The public key.
- * @throws {Error} If getPublicKeyPromise doesn't return a SyncPromise which
+ * @throws Error If getPublicKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.getPublicKey = function(keyName)
@@ -139,7 +139,7 @@ PrivateKeyStorage.prototype.signPromise = function
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
  * @return {Blob} The signature Blob.
- * @throws {Error} If signPromise doesn't return a SyncPromise which is already
+ * @throws Error If signPromise doesn't return a SyncPromise which is already
  * fulfilled.
  */
 PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
@@ -209,7 +209,7 @@ PrivateKeyStorage.prototype.doesKeyExistPromise = function
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
  * @return {boolean} True if the key exists.
- * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)

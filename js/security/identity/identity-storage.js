@@ -54,7 +54,7 @@ IdentityStorage.prototype.doesIdentityExistPromise = function
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
  * @returns {boolean} true if the identity exists, otherwise false.
- * @throws {Error} If doesIdentityExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesIdentityExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.doesIdentityExist = function(identityName)
@@ -80,7 +80,7 @@ IdentityStorage.prototype.addIdentityPromise = function(identityName, useSync)
 /**
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
- * @throws {Error} If addIdentityPromise doesn't return a SyncPromise which
+ * @throws Error If addIdentityPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addIdentity = function(identityName)
@@ -141,7 +141,7 @@ IdentityStorage.prototype.getNewKeyNamePromise = function
  * @param {Name} identityName The identity name.
  * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
  * @returns {Name} The generated key name.
- * @throws {Error} If getNewKeyNamePromise doesn't return a SyncPromise which
+ * @throws Error If getNewKeyNamePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
@@ -168,7 +168,7 @@ IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @returns {boolean} true if the key exists, otherwise false.
- * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.doesKeyExist = function(keyName)
@@ -178,7 +178,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -186,9 +187,7 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the key is added,
- * or a promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise|SyncPromise} A promise which fulfills when complete.
  */
 IdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -204,8 +203,8 @@ IdentityStorage.prototype.addKeyPromise = function
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @throws {SecurityException} if a key with the keyName already exists.
- * @throws {Error} If addKeyPromise doesn't return a SyncPromise which
+ * @throws SecurityException if a key with the keyName already exists.
+ * @throws Error If addKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
@@ -220,8 +219,8 @@ IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a Blob
- * with a null pointer if not found.
+ * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a
+ * promise rejected with SecurityException if the key doesn't exist.
  */
 IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
@@ -232,8 +231,9 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
- * @throws {Error} If getKeyPromise doesn't return a SyncPromise which
+ * @returns {Blob} The DER Blob.
+ * @throws SecurityException if the key doesn't exist.
+ * @throws Error If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.getKey = function(keyName)
@@ -281,7 +281,7 @@ IdentityStorage.prototype.doesCertificateExistPromise = function
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
  * @returns {boolean} true if the certificate exists, otherwise false.
- * @throws {Error} If doesCertificateExistPromise doesn't return a SyncPromise
+ * @throws Error If doesCertificateExistPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.doesCertificateExist = function(certificateName)
@@ -291,15 +291,15 @@ IdentityStorage.prototype.doesCertificateExist = function(certificateName)
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the certificate
- * is added, or a promise rejected with SecurityException if the certificate is
- * already installed.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
 {
@@ -311,8 +311,8 @@ IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
  * Add a certificate to the identity storage.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @throws {SecurityException} if the certificate is already installed.
- * @throws {Error} If addCertificatePromise doesn't return a SyncPromise which
+ * @throws SecurityException if the certificate is already installed.
+ * @throws Error If addCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addCertificate = function(certificate)
@@ -323,16 +323,15 @@ IdentityStorage.prototype.addCertificate = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 IdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny, useSync)
+  (certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.getCertificatePromise is not implemented"));
@@ -341,17 +340,14 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found,
- * return null.
- * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
+ * @returns {IdentityCertificate} The requested certificate.
+ * @throws SecurityException if the certificate doesn't exist.
+ * @throws Error If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
-IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+IdentityStorage.prototype.getCertificate = function(certificateName)
 {
-  return SyncPromise.getValue
-    (this.getValuePromise(certificateName, allowAny, true));
+  return SyncPromise.getValue(this.getValuePromise(certificateName, true));
 };
 
 /*****************************************
@@ -377,7 +373,7 @@ IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
  * Get the default identity.
  * @returns {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
- * @throws {Error} If getDefaultIdentityPromise doesn't return a SyncPromise
+ * @throws Error If getDefaultIdentityPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultIdentity = function()
@@ -408,7 +404,7 @@ IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
  * @param {Name} identityName The identity name.
  * @returns {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
- * @throws {Error} If getDefaultKeyNameForIdentityPromise doesn't return a
+ * @throws Error If getDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultKeyNameForIdentity = function(identityName)
@@ -444,7 +440,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentityPromise = function
  * @returns {Name} The default certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
- * @throws {Error} If getDefaultCertificateNameForIdentityPromise doesn't return
+ * @throws Error If getDefaultCertificateNameForIdentityPromise doesn't return
  * a SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
@@ -477,7 +473,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
  * @returns {Name} The default certificate name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
- * @throws {Error} If getDefaultCertificateNameForKeyPromise doesn't return a
+ * @throws Error If getDefaultCertificateNameForKeyPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
@@ -511,7 +507,7 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
  * @param {Array<Name>} nameList Append result names to nameList.
  * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
- * @throws {Error} If getAllKeyNamesOfIdentityPromise doesn't return a
+ * @throws Error If getAllKeyNamesOfIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
@@ -542,7 +538,7 @@ IdentityStorage.prototype.setDefaultIdentityPromise = function
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
- * @throws {Error} If setDefaultIdentityPromise doesn't return a SyncPromise which
+ * @throws Error If setDefaultIdentityPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultIdentity = function(identityName)
@@ -576,7 +572,7 @@ IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
  * @param {Name} keyName The name of the key.
  * @param {Name} identityNameCheck (optional) The identity name to check that the
  * keyName contains the same identity name. If an empty name, it is ignored.
- * @throws {Error} If setDefaultKeyNameForIdentityPromise doesn't return a
+ * @throws Error If setDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultKeyNameForIdentity = function
@@ -607,7 +603,7 @@ IdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
  * Set the default key name for the specified identity.
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
- * @throws {Error} If setDefaultCertificateNameForKeyPromise doesn't return a
+ * @throws Error If setDefaultCertificateNameForKeyPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultCertificateNameForKey = function
@@ -640,7 +636,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
     if (certName == null)
       return SyncPromise.resolve(null);
 
-    return thisStorage.getCertificatePromise(certName, true, useSync);
+    return thisStorage.getCertificatePromise(certName, useSync);
   });
 };
 
@@ -648,7 +644,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
  * Get the certificate of the default identity.
  * @returns {IdentityCertificate} The requested certificate.  If not found,
  * return null.
- * @throws {Error} If getDefaultCertificatePromise doesn't return a SyncPromise
+ * @throws Error If getDefaultCertificatePromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificate = function()
@@ -680,7 +676,7 @@ IdentityStorage.prototype.deleteCertificateInfoPromise = function
 /**
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
- * @throws {Error} If deleteCertificateInfoPromise doesn't return a SyncPromise
+ * @throws Error If deleteCertificateInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
@@ -707,7 +703,7 @@ IdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, useSync
 /**
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
- * @throws {Error} If deletePublicKeyInfoPromise doesn't return a SyncPromise
+ * @throws Error If deletePublicKeyInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
@@ -735,7 +731,7 @@ IdentityStorage.prototype.deleteIdentityInfoPromise = function
 /**
  * Delete an identity and related public keys and certificates.
  * @param {Name} identityName The identity name.
- * @throws {Error} If deleteIdentityInfoPromise doesn't return a SyncPromise
+ * @throws Error If deleteIdentityInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteIdentityInfo = function(identityName)

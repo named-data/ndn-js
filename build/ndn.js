@@ -17946,7 +17946,8 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
@@ -17954,9 +17955,7 @@ IdentityStorage.prototype.doesKeyExist = function(keyName)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the key is added,
- * or a promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise|SyncPromise} A promise which fulfills when complete.
  */
 IdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -17988,8 +17987,8 @@ IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a Blob
- * with a null pointer if not found.
+ * @return {Promise|SyncPromise} A promise which returns the DER Blob, or a
+ * promise rejected with SecurityException if the key doesn't exist.
  */
 IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
@@ -18000,7 +17999,8 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.  If not found, return a Blob with a null pointer.
+ * @returns {Blob} The DER Blob.
+ * @throws SecurityException if the key doesn't exist.
  * @throws {Error} If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18059,15 +18059,15 @@ IdentityStorage.prototype.doesCertificateExist = function(certificateName)
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @return {Promise|SyncPromise} A promise which fulfills when the certificate
- * is added, or a promise rejected with SecurityException if the certificate is
- * already installed.
+ * @return {Promise|SyncPromise} A promise which fulfills when finished.
  */
 IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
 {
@@ -18091,16 +18091,15 @@ IdentityStorage.prototype.addCertificate = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
  * @return {Promise|SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 IdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny, useSync)
+  (certificateName, useSync)
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.getCertificatePromise is not implemented"));
@@ -18109,17 +18108,14 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will be returned,
- * otherwise validity is disregarded.
- * @returns {IdentityCertificate} The requested certificate.  If not found,
- * return null.
+ * @returns {IdentityCertificate} The requested certificate.
+ * @throws SecurityException if the certificate doesn't exist.
  * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
-IdentityStorage.prototype.getCertificate = function(certificateName, allowAny)
+IdentityStorage.prototype.getCertificate = function(certificateName)
 {
-  return SyncPromise.getValue
-    (this.getValuePromise(certificateName, allowAny, true));
+  return SyncPromise.getValue(this.getValuePromise(certificateName, true));
 };
 
 /*****************************************
@@ -18408,7 +18404,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
     if (certName == null)
       return SyncPromise.resolve(null);
 
-    return thisStorage.getCertificatePromise(certName, true, useSync);
+    return thisStorage.getCertificatePromise(certName, useSync);
   });
 };
 
@@ -18645,16 +18641,15 @@ IndexedDbIdentityStorage.prototype.doesKeyExistPromise = function
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+   * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {Promise} A promise which fulfills when complete.
  */
 IndexedDbIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer, useSync)
@@ -18663,22 +18658,23 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.addKeyPromise is only supported for async")));
 
-  var identityName = keyName.getSubName(0, keyName.size() - 1);
+  if (keyName.size() === 0)
+    return Promise.resolve();
 
   var thisStorage = this;
-  return this.addIdentityPromise(identityName)
-  .then(function() {
-    return thisStorage.doesKeyExistPromise(keyName);
-  })
+  return this.doesKeyExistPromise(keyName)
   .then(function(exists) {
     if (exists)
-      throw new SecurityException(new Error
-        ("A key with the same name already exists!"));
+      return Promise.resolve();
 
-    return thisStorage.database.publicKey.put
-      ({ keyNameUri: keyName.toUri(), keyType: keyType,
-         keyDer: new Blob(publicKeyDer, true).buf(),
-         defaultCertificate: null });
+    var identityName = keyName.getPrefix(-1);
+    return thisStorage.addIdentityPromise(identityName)
+    .then(function() {
+      return thisStorage.database.publicKey.put
+        ({ keyNameUri: keyName.toUri(), keyType: keyType,
+           keyDer: new Blob(publicKeyDer, true).buf(),
+           defaultCertificate: null });
+    });
   });
 };
 
@@ -18687,8 +18683,8 @@ IndexedDbIdentityStorage.prototype.addKeyPromise = function
  * @param {Name} keyName The name of the requested public key.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which returns the DER Blob, or a Blob with a
- * null pointer if not found.
+ * @return {Promise} A promise which returns the DER Blob, or a promise rejected
+ * with SecurityException if the key doesn't exist.
  */
 IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 {
@@ -18696,13 +18692,17 @@ IndexedDbIdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.getKeyPromise is only supported for async")));
 
+  if (keyName.size() === 0)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbIdentityStorage::getKeyPromise: Empty keyName")));
+
   return this.database.publicKey.get(keyName.toUri())
   .then(function(publicKeyEntry) {
     if (publicKeyEntry)
       return Promise.resolve(new Blob(publicKeyEntry.keyDer));
     else
-      // Not found.  Silently return a null Blob.
-      return Promise.resolve(new Blob());
+      return Promise.reject(new SecurityException(new Error
+        ("IndexedDbIdentityStorage::getKeyPromise: The key does not exist")));
   });
 };
 
@@ -18729,14 +18729,14 @@ IndexedDbIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @return {Promise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {Promise} A promise which fulfills when finished.
  */
 IndexedDbIdentityStorage.prototype.addCertificatePromise = function
   (certificate, useSync)
@@ -18749,30 +18749,15 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
   var keyName = certificate.getPublicKeyName();
 
   var thisStorage = this;
-  return this.doesKeyExistPromise(keyName)
-  .then(function(exists) {
-    if (!exists)
-      throw new SecurityException(new Error
-        ("No corresponding Key record for certificate! " +
-         keyName.toUri() + " " + certificateName.toUri()));
-
-    // Check if the certificate already exists.
+  return this.addKeyPromise
+    (keyName, certificate.getPublicKeyInfo().getKeyType(),
+     certificate.getPublicKeyInfo().getKeyDer(), useSync)
+  .then(function() {
     return thisStorage.doesCertificateExistPromise(certificateName);
   })
   .then(function(exists) {
     if (exists)
-      throw new SecurityException(new Error
-        ("Certificate has already been installed!"));
-
-    // Check if the public key of the certificate is the same as the key record.
-    return thisStorage.getKeyPromise(keyName);
-  })
-  .then(function(keyBlob) {
-    if (keyBlob.isNull() ||
-        !DataUtils.arraysEqual(keyBlob.buf(),
-          certificate.getPublicKeyInfo().getKeyDer().buf()))
-      throw new SecurityException(new Error
-        ("The certificate does not match the public key!"));
+      return Promise.resolve();
 
     // Insert the certificate.
     // wireEncode returns the cached encoding if available.
@@ -18785,34 +18770,34 @@ IndexedDbIdentityStorage.prototype.addCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will
- * be returned, otherwise validity is disregarded.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
  * @return {Promise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 IndexedDbIdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny, useSync)
+  (certificateName, useSync)
 {
   if (useSync)
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.getCertificatePromise is only supported for async")));
 
-  if (!allowAny)
-    return Promise.reject(new Error
-      ("IndexedDbIdentityStorage.getCertificate for !allowAny is not implemented"));
-
   return this.database.certificate.get(certificateName.toUri())
   .then(function(certificateEntry) {
     if (certificateEntry) {
       var certificate = new IdentityCertificate();
-      certificate.wireDecode(certificateEntry.encoding);
+      try {
+        certificate.wireDecode(certificateEntry.encoding);
+      } catch (ex) {
+        return Promise.reject(new SecurityException(new Error
+          ("IndexedDbIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+      }
       return Promise.resolve(certificate);
     }
     else
-      // Not found.  Silently return null.
-      return Promise.resolve(null);
+      return Promise.reject(new SecurityException(new Error
+        ("IndexedDbIdentityStorage::getCertificatePromise: The certificate does not exist")));
   });
 };
 
@@ -19048,7 +19033,7 @@ IndexedDbIdentityStorage.prototype.deleteCertificateInfoPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.deleteCertificateInfoPromise is only supported for async")));
 
-  if (certificateName.size() == 0)
+  if (certificateName.size() === 0)
     return Promise.resolve();
 
   return this.database.certificate.delete(certificateName.toUri());
@@ -19069,7 +19054,7 @@ IndexedDbIdentityStorage.prototype.deletePublicKeyInfoPromise = function
     return Promise.reject(new SecurityException(new Error
       ("IndexedDbIdentityStorage.deletePublicKeyInfoPromise is only supported for async")));
 
-  if (keyName.size() == 0)
+  if (keyName.size() === 0)
     return Promise.resolve();
 
   var thisStorage = this;
@@ -19229,25 +19214,26 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @return {SyncPromise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {SyncPromise} A promise which fulfills when complete.
  */
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
 {
+  if (keyName.size() === 0)
+    return SyncPromise.resolve();
+
+  if (this.doesKeyExist(keyName))
+    return SyncPromise.resolve();
+
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
   this.addIdentity(identityName);
-
-  if (this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("A key with the same name already exists!")));
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
@@ -19258,16 +19244,20 @@ MemoryIdentityStorage.prototype.addKeyPromise = function
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @return {SyncPromise} A promise which returns the DER Blob, or a Blob with a
- * null pointer if not found.
+ * @return {SyncPromise} A promise which returns the DER Blob, or a promise
+ * rejected with SecurityException if the key doesn't exist.
  */
 MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
+  if (keyName.size() === 0)
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: Empty keyName")));
+
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
-    // Not found.  Silently return a null Blob.
-    return SyncPromise.resolve(new Blob());
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: The key does not exist")));
 
   return SyncPromise.resolve(entry.keyDer);
 };
@@ -19285,35 +19275,23 @@ MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {SyncPromise} A promise which fulfills when finished.
  */
 MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
   var certificateName = certificate.getName();
   var keyName = certificate.getPublicKeyName();
 
-  if (!this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("No corresponding Key record for certificate! " +
-       keyName.toUri() + " " + certificateName.toUri())));
+  this.addKey(keyName, certificate.getPublicKeyInfo().getKeyType(),
+         certificate.getPublicKeyInfo().getKeyDer());
 
-  // Check if the certificate already exists.
   if (this.doesCertificateExist(certificateName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("Certificate has already been installed!")));
-
-  // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = this.getKey(keyName);
-  if (keyBlob.isNull() ||
-      !DataUtils.arraysEqual(keyBlob.buf(),
-        certificate.getPublicKeyInfo().getKeyDer().buf()))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("The certificate does not match the public key!")));
+    return SyncPromise.resolve();
 
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.
@@ -19325,26 +19303,26 @@ MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will
- * be returned, otherwise validity is disregarded.
  * @return {SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 MemoryIdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny)
+  (certificateName)
 {
-  if (!allowAny)
-    return SyncPromise.reject(new Error
-      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented"));
-
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
-    // Not found.  Silently return null.
-    return SyncPromise.resolve(null);
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate does not exist")));
 
-  var certificiate = new IdentityCertificate();
-  certificiate.wireDecode(this.certificateStore[certificateNameUri]);
-  return SyncPromise.resolve(certificiate);
+  var certificate = new IdentityCertificate();
+  try {
+    certificate.wireDecode(this.certificateStore[certificateNameUri]);
+  } catch (ex) {
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+  }
+  return SyncPromise.resolve(certificate);
 };
 
 /*****************************************
@@ -20941,6 +20919,230 @@ IdentityManager.prototype.getPublicKey = function(keyName, onComplete, onError)
 // TODO: Add two versions of createIdentityCertificate.
 
 /**
+ * Prepare an unsigned identity certificate.
+ * @param {Name} keyName The key name, e.g., `/{identity_name}/ksk-123456`.
+ * @param {PublicKey} publicKey (optional) The public key to sign. If ommited,
+ * use the keyName to get the public key from the identity storage.
+ * @param {Name} signingIdentity The signing identity.
+ * @param {number} notBefore See IdentityCertificate.
+ * @param {number} notAfter See IdentityCertificate.
+ * @param {Array<CertificateSubjectDescription>} subjectDescription A list of
+ * CertificateSubjectDescription. See IdentityCertificate. If null or empty,
+ * this adds a an ATTRIBUTE_NAME based on the keyName.
+ * @param {Name} certPrefix (optional) The prefix before the `KEY` component. If
+ * null or omitted, this infers the certificate name according to the relation
+ * between the signingIdentity and the subject identity. If the signingIdentity
+ * is a prefix of the subject identity, `KEY` will be inserted after the
+ * signingIdentity, otherwise `KEY` is inserted after subject identity (i.e.,
+ * before `ksk-...`).
+ * @param {function} onComplete (optional) This calls onComplete(certificate)
+ * with the unsigned IdentityCertificate, or null if the inputs are invalid. If
+ * omitted, the return value is described below. (Some database libraries only
+ * use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {IdentityCertificate} If onComplete is omitted, return the the
+ * unsigned IdentityCertificate, or null if the inputs are invalid. Otherwise,
+ * if onComplete is supplied then return undefined and use onComplete as
+ * described above.
+ */
+IdentityManager.prototype.prepareUnsignedIdentityCertificate = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix, onComplete, onError)
+{
+  if (!(publicKey instanceof PublicKey)) {
+    // The publicKey was omitted. Shift arguments.
+    onError = onComplete;
+    onComplete = certPrefix;
+    certPrefix = subjectDescription;
+    subjectDescription = notAfter;
+    notAfter = notBefore;
+    notBefore = signingIdentity;
+    signingIdentity = publicKey;
+    publicKey = null;
+  }
+
+  // certPrefix may be omitted or null, so check for it and the following args.
+  var arg7 = certPrefix;
+  var arg8 = onComplete;
+  var arg9 = onError;
+  if (arg7 instanceof Name)
+    certPrefix = arg7;
+  else
+    certPrefix = null;
+
+  if (typeof arg7 === 'function') {
+    onComplete = arg7;
+    onError = arg8;
+  }
+  else if (typeof arg8 === 'function') {
+    onComplete = arg8;
+    onError = arg9;
+  }
+  else {
+    onComplete = null;
+    onError = null;
+  }
+
+  var promise;
+  if (publicKey == null)
+    promise =  this.prepareUnsignedIdentityCertificatePromise
+      (keyName, signingIdentity, notBefore, notAfter, subjectDescription,
+       certPrefix, !onComplete);
+  else
+    promise =  this.prepareUnsignedIdentityCertificatePromise
+      (keyName, publicKey, signingIdentity, notBefore, notAfter,
+       subjectDescription, certPrefix, !onComplete);
+  return SyncPromise.complete(onComplete, onError, promise);
+};
+
+/**
+ * Prepare an unsigned identity certificate.
+ * @param {Name} keyName The key name, e.g., `/{identity_name}/ksk-123456`.
+ * @param {PublicKey} publicKey (optional) The public key to sign. If ommited,
+ * use the keyName to get the public key from the identity storage.
+ * @param {Name} signingIdentity The signing identity.
+ * @param {number} notBefore See IdentityCertificate.
+ * @param {number} notAfter See IdentityCertificate.
+ * @param {Array<CertificateSubjectDescription>} subjectDescription A list of
+ * CertificateSubjectDescription. See IdentityCertificate. If null or empty,
+ * this adds a an ATTRIBUTE_NAME based on the keyName.
+ * @param {Name} certPrefix (optional) The prefix before the `KEY` component. If
+ * null or omitted, this infers the certificate name according to the relation
+ * between the signingIdentity and the subject identity. If the signingIdentity
+ * is a prefix of the subject identity, `KEY` will be inserted after the
+ * signingIdentity, otherwise `KEY` is inserted after subject identity (i.e.,
+ * before `ksk-...`).
+ * @param {boolean} useSync (optional) If true then return a SyncPromise which
+ * is already fulfilled. If omitted or false, this may return a SyncPromise or
+ * an async Promise.
+ * @return {Promise|SyncPromise} A promise that returns the unsigned
+ * IdentityCertificate, or that returns null if the inputs are invalid.
+ */
+IdentityManager.prototype.prepareUnsignedIdentityCertificatePromise = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix, useSync)
+{
+  if (!(publicKey instanceof PublicKey)) {
+    // The publicKey was omitted. Shift arguments.
+    useSync = certPrefix;
+    certPrefix = subjectDescription;
+    subjectDescription = notAfter;
+    notAfter = notBefore;
+    notBefore = signingIdentity;
+    signingIdentity = publicKey;
+    publicKey = null;
+  }
+
+  // certPrefix may be omitted or null, so check for it and the following arg.
+  var arg7 = certPrefix;
+  var arg8 = useSync;
+  if (arg7 instanceof Name)
+    certPrefix = arg7;
+  else
+    certPrefix = null;
+
+  if (typeof arg7 === 'boolean')
+    useSync = arg7;
+  else if (typeof arg8 === 'boolean')
+    useSync = arg8;
+  else
+    useSync = false;
+
+  var promise;
+  if (publicKey == null) {
+    promise = this.identityStorage.getKeyPromise(keyName, useSync)
+    .then(function(keyDer) {
+      publicKey = new PublicKey(keyDer);
+      return SyncPromise.resolve();
+    });
+  }
+  else
+    promise = SyncPromise.resolve();
+
+  return promise
+  .then(function() {
+    return SyncPromise.resolve
+      (IdentityManager.prepareUnsignedIdentityCertificateHelper_
+       (keyName, publicKey, signingIdentity, notBefore, notAfter,
+        subjectDescription, certPrefix));
+  });
+};
+
+/**
+ * A helper for prepareUnsignedIdentityCertificatePromise where the publicKey
+ * is known.
+ */
+IdentityManager.prepareUnsignedIdentityCertificateHelper_ = function
+  (keyName, publicKey, signingIdentity, notBefore, notAfter, subjectDescription,
+   certPrefix)
+{
+  if (keyName.size() < 1)
+    return null;
+
+  var tempKeyIdPrefix = keyName.get(-1).toEscapedString();
+  if (tempKeyIdPrefix.length < 4)
+    return null;
+  keyIdPrefix = tempKeyIdPrefix.substr(0, 4);
+  if (keyIdPrefix != "ksk-" && keyIdPrefix != "dsk-")
+    return null;
+
+  var certificate = new IdentityCertificate();
+  var certName = new Name();
+
+  if (certPrefix == null) {
+    // No certificate prefix hint, so infer the prefix.
+    if (signingIdentity.match(keyName))
+      certName.append(signingIdentity)
+        .append("KEY")
+        .append(keyName.getSubName(signingIdentity.size()))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+    else
+      certName.append(keyName.getPrefix(-1))
+        .append("KEY")
+        .append(keyName.get(-1))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+  }
+  else {
+    // A cert prefix hint is supplied, so determine the cert name.
+    if (certPrefix.match(keyName) && !certPrefix.equals(keyName))
+      certName.append(certPrefix)
+        .append("KEY")
+        .append(keyName.getSubName(certPrefix.size()))
+        .append("ID-CERT")
+        .appendVersion(new Date().getTime());
+    else
+      return null;
+  }
+
+  certificate.setName(certName);
+  certificate.setNotBefore(notBefore);
+  certificate.setNotAfter(notAfter);
+  certificate.setPublicKeyInfo(publicKey);
+
+  if (subjectDescription == null || subjectDescription.length === 0)
+    certificate.addSubjectDescription(new CertificateSubjectDescription
+      ("2.5.4.41", keyName.getPrefix(-1).toUri()));
+  else {
+    for (var i = 0; i < subjectDescription.length; ++i)
+      certificate.addSubjectDescription(subjectDescription[i]);
+  }
+
+  try {
+    certificate.encode();
+  } catch (ex) {
+    throw SecurityException(new Error("DerEncodingException: " + ex));
+  }
+
+  return certificate;
+};
+
+/**
  * Add a certificate into the public key identity storage.
  * @param {IdentityCertificate} certificate The certificate to to added. This
  * makes a copy of the certificate.
@@ -21062,33 +21264,9 @@ IdentityManager.prototype.addCertificateAsDefault = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some database libraries only use a callback, so
- * onComplete is required to use these.)
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
- */
-IdentityManager.prototype.getCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return SyncPromise.complete(onComplete, onError,
-    this.identityStorage.getCertificatePromise
-      (certificateName, false, !onComplete));
-};
-
-/**
- * Get a certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some database libraries only use a callback, so onComplete is
- * required to use these.)
+ * with the requested IdentityCertificate. If omitted, the return value is 
+ * described below. (Some database libraries only use a callback, so onComplete
+ * is required to use these.)
  * @param {function} onError (optional) If defined, then onComplete must be
  * defined and if there is an exception, then this calls onError(exception)
  * with the exception. If onComplete is defined but onError is undefined, then
@@ -21098,12 +21276,12 @@ IdentityManager.prototype.getCertificate = function
  * certificate. Otherwise, if onComplete is supplied then return undefined and
  * use onComplete as described above.
  */
-IdentityManager.prototype.getAnyCertificate = function
+IdentityManager.prototype.getCertificate = function
   (certificateName, onComplete, onError)
 {
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.getCertificatePromise
-      (certificateName, true, !onComplete));
+      (certificateName, false, !onComplete));
 };
 
 /**
@@ -23201,9 +23379,14 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
            this.identityStorage != null)
     // Assume the key name is a certificate name.
     SyncPromise.complete
-      (onComplete, this.identityStorage.getKeyPromise
-       (IdentityCertificate.certificateNameToPublicKeyName
-        (keyLocator.getKeyName())));
+      (onComplete,
+       function(err) {
+         // The storage doesn't have the key.
+         onComplete(new Blob());
+       },
+       this.identityStorage.getKeyPromise
+         (IdentityCertificate.certificateNameToPublicKeyName
+          (keyLocator.getKeyName())));
   else
     // Can't find a key to verify.
     onComplete(new Blob());
@@ -23547,9 +23730,9 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some crypto libraries only use a callback, so
- * onComplete is required to use these.)
+ * with the requested IdentityCertificate. If omitted, the return value is 
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -23562,8 +23745,8 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * certificate. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
  */
 KeyChain.prototype.getCertificate = function
   (certificateName, onComplete, onError)
@@ -23573,89 +23756,12 @@ KeyChain.prototype.getCertificate = function
 };
 
 /**
- * Get a certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate. Otherwise, if onComplete is supplied then return undefined and
- * use onComplete as described above.
- */
-KeyChain.prototype.getAnyCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return this.identityManager.getAnyCertificate
-    (certificateName, onComplete, onError);
-};
-
-/**
- * Get an identity certificate which is still valid with the specified name.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some crypto libraries only use a callback, so
- * onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * @deprecated Use getCertificate.
  */
 KeyChain.prototype.getIdentityCertificate = function
   (certificateName, onComplete, onError)
 {
   return this.identityManager.getCertificate
-    (certificateName, onComplete, onError);
-};
-
-/**
- * Get an identity certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate. Otherwise, if onComplete is supplied then return undefined and
- * use onComplete as described above.
- */
-KeyChain.prototype.getAnyIdentityCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return this.identityManager.getAnyCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -23814,28 +23920,40 @@ KeyChain.prototype.sign = function
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  */
 KeyChain.prototype.signPromise = function
-  (target, certificateNameOrWireFormat, wireFormat, useSync)
+  (target, certificateName, wireFormat, useSync)
 {
-  var certificateName;
-  if (certificateNameOrWireFormat instanceof Name)
-    // sign(target, certificateName [, wireFormat] [, useSync]).
-    // sign(target, certificateName [, useSync]).
-    certificateName = certificateNameOrWireFormat;
-    // If wireFormat is omitted, we'll shift below.
-  else {
-    // sign(target [, wireFormat] [, useSync]).
-    // sign(target [, useSync]).
-    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
-    useSync = wireFormat;
-    wireFormat = certificateNameOrWireFormat;
+  var arg2 = certificateName;
+  var arg3 = wireFormat;
+  var arg4 = useSync;
+  // arg2,            arg3,       arg4
+  // certificateName, wireFormat, useSync
+  // certificateName, wireFormat, null
+  // certificateName, useSync,    null
+  // certificateName, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (arg2 instanceof Name)
+    certificateName = arg2;
+  else
     certificateName = null;
-  }
 
-  if (!(wireFormat instanceof WireFormat)) {
-    // wireFormat is omitted. Shift the parameters.
-    useSync = wireFormat;
-    wireFormat = undefined;
-  }
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === 'boolean')
+    useSync = arg2;
+  else if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else
+    useSync = false;
 
   var thisKeyChain = this;
   return SyncPromise.resolve()
@@ -30597,7 +30715,7 @@ Producer.prototype.produce = function
     .then(function(contentKey) {
       // Produce data.
       var dataName = new Name(thisProducer.namespace_);
-      dataName.append(Schedule.toIsoString(Producer.getRoundedTimeSlot_(timeSlot)));
+      dataName.append(Schedule.toIsoString(timeSlot));
 
       data.setName(dataName);
       var params = new EncryptParams(EncryptAlgorithmType.AesCbc, 16);

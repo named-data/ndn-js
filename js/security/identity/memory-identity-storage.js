@@ -99,25 +99,26 @@ MemoryIdentityStorage.prototype.doesKeyExistPromise = function(keyName)
 
 /**
  * Add a public key to the identity storage. Also call addIdentity to ensure
- * that the identityName for the key exists.
+ * that the identityName for the key exists. However, if the key already
+ * exists, do nothing.
  * @param {Name} keyName The name of the public key to be added.
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @return {SyncPromise} A promise which fulfills when the key is added, or a
- * promise rejected with SecurityException if a key with the keyName already
- * exists.
+ * @return {SyncPromise} A promise which fulfills when complete.
  */
 MemoryIdentityStorage.prototype.addKeyPromise = function
   (keyName, keyType, publicKeyDer)
 {
+  if (keyName.size() === 0)
+    return SyncPromise.resolve();
+
+  if (this.doesKeyExist(keyName))
+    return SyncPromise.resolve();
+
   var identityName = keyName.getSubName(0, keyName.size() - 1);
 
   this.addIdentity(identityName);
-
-  if (this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("A key with the same name already exists!")));
 
   this.keyStore[keyName.toUri()] =
     { keyType: keyType, keyDer: new Blob(publicKeyDer), defaultCertificate: null };
@@ -128,16 +129,20 @@ MemoryIdentityStorage.prototype.addKeyPromise = function
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @return {SyncPromise} A promise which returns the DER Blob, or a Blob with a
- * null pointer if not found.
+ * @return {SyncPromise} A promise which returns the DER Blob, or a promise
+ * rejected with SecurityException if the key doesn't exist.
  */
 MemoryIdentityStorage.prototype.getKeyPromise = function(keyName)
 {
+  if (keyName.size() === 0)
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: Empty keyName")));
+
   var keyNameUri = keyName.toUri();
   var entry = this.keyStore[keyNameUri];
   if (entry === undefined)
-    // Not found.  Silently return a null Blob.
-    return SyncPromise.resolve(new Blob());
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getKeyPromise: The key does not exist")));
 
   return SyncPromise.resolve(entry.keyDer);
 };
@@ -155,35 +160,23 @@ MemoryIdentityStorage.prototype.doesCertificateExistPromise = function
 };
 
 /**
- * Add a certificate to the identity storage.
+ * Add a certificate to the identity storage. Also call addKey to ensure that
+ * the certificate key exists. If the certificate is already installed, don't
+ * replace it.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @return {SyncPromise} A promise which fulfills when the certificate is added,
- * or a promise rejected with SecurityException if the certificate is already
- * installed.
+ * @return {SyncPromise} A promise which fulfills when finished.
  */
 MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 {
   var certificateName = certificate.getName();
   var keyName = certificate.getPublicKeyName();
 
-  if (!this.doesKeyExist(keyName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("No corresponding Key record for certificate! " +
-       keyName.toUri() + " " + certificateName.toUri())));
+  this.addKey(keyName, certificate.getPublicKeyInfo().getKeyType(),
+         certificate.getPublicKeyInfo().getKeyDer());
 
-  // Check if the certificate already exists.
   if (this.doesCertificateExist(certificateName))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("Certificate has already been installed!")));
-
-  // Check if the public key of the certificate is the same as the key record.
-  var keyBlob = this.getKey(keyName);
-  if (keyBlob.isNull() ||
-      !DataUtils.arraysEqual(keyBlob.buf(),
-        certificate.getPublicKeyInfo().getKeyDer().buf()))
-    return SyncPromise.reject(new SecurityException(new Error
-      ("The certificate does not match the public key!")));
+    return SyncPromise.resolve();
 
   // Insert the certificate.
   // wireEncode returns the cached encoding if available.
@@ -195,26 +188,26 @@ MemoryIdentityStorage.prototype.addCertificatePromise = function(certificate)
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @param {boolean} allowAny If false, only a valid certificate will
- * be returned, otherwise validity is disregarded.
  * @return {SyncPromise} A promise which returns the requested
- * IdentityCertificate or null if not found.
+ * IdentityCertificate, or a promise rejected with SecurityException if the
+ * certificate doesn't exist.
  */
 MemoryIdentityStorage.prototype.getCertificatePromise = function
-  (certificateName, allowAny)
+  (certificateName)
 {
-  if (!allowAny)
-    return SyncPromise.reject(new Error
-      ("MemoryIdentityStorage.getCertificate for !allowAny is not implemented"));
-
   var certificateNameUri = certificateName.toUri();
   if (this.certificateStore[certificateNameUri] === undefined)
-    // Not found.  Silently return null.
-    return SyncPromise.resolve(null);
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate does not exist")));
 
-  var certificiate = new IdentityCertificate();
-  certificiate.wireDecode(this.certificateStore[certificateNameUri]);
-  return SyncPromise.resolve(certificiate);
+  var certificate = new IdentityCertificate();
+  try {
+    certificate.wireDecode(this.certificateStore[certificateNameUri]);
+  } catch (ex) {
+    return SyncPromise.reject(new SecurityException(new Error
+      ("MemoryIdentityStorage::getCertificatePromise: The certificate cannot be decoded")));
+  }
+  return SyncPromise.resolve(certificate);
 };
 
 /*****************************************

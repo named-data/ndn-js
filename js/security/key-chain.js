@@ -337,9 +337,9 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * Get a certificate which is still valid with the specified name.
  * @param {Name} certificateName The name of the requested certificate.
  * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some crypto libraries only use a callback, so
- * onComplete is required to use these.)
+ * with the requested IdentityCertificate. If omitted, the return value is 
+ * described below. (Some crypto libraries only use a callback, so onComplete is
+ * required to use these.)
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
@@ -352,8 +352,8 @@ KeyChain.prototype.setDefaultCertificateForKey = function
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * certificate. Otherwise, if onComplete is supplied then return undefined and
+ * use onComplete as described above.
  */
 KeyChain.prototype.getCertificate = function
   (certificateName, onComplete, onError)
@@ -363,89 +363,12 @@ KeyChain.prototype.getCertificate = function
 };
 
 /**
- * Get a certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate. Otherwise, if onComplete is supplied then return undefined and
- * use onComplete as described above.
- */
-KeyChain.prototype.getAnyCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return this.identityManager.getAnyCertificate
-    (certificateName, onComplete, onError);
-};
-
-/**
- * Get an identity certificate which is still valid with the specified name.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate which is valid. If omitted, the return
- * value is described below. (Some crypto libraries only use a callback, so
- * onComplete is required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate which is valid. Otherwise, if onComplete is supplied then return
- * undefined and use onComplete as described above.
+ * @deprecated Use getCertificate.
  */
 KeyChain.prototype.getIdentityCertificate = function
   (certificateName, onComplete, onError)
 {
   return this.identityManager.getCertificate
-    (certificateName, onComplete, onError);
-};
-
-/**
- * Get an identity certificate even if the certificate is not valid anymore.
- * @param {Name} certificateName The name of the requested certificate.
- * @param {function} onComplete (optional) This calls onComplete(certificate)
- * with the requested IdentityCertificate. If omitted, the return value is
- * described below. (Some crypto libraries only use a callback, so onComplete is
- * required to use these.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @param {function} onError (optional) If defined, then onComplete must be
- * defined and if there is an exception, then this calls onError(exception)
- * with the exception. If onComplete is defined but onError is undefined, then
- * this will log any thrown exception. (Some database libraries only use a
- * callback, so onError is required to be notified of an exception.)
- * NOTE: The library will log any exceptions thrown by this callback, but for
- * better error handling the callback should catch and properly handle any
- * exceptions.
- * @return {IdentityCertificate} If onComplete is omitted, return the requested
- * certificate. Otherwise, if onComplete is supplied then return undefined and
- * use onComplete as described above.
- */
-KeyChain.prototype.getAnyIdentityCertificate = function
-  (certificateName, onComplete, onError)
-{
-  return this.identityManager.getAnyCertificate
     (certificateName, onComplete, onError);
 };
 
@@ -604,28 +527,40 @@ KeyChain.prototype.sign = function
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  */
 KeyChain.prototype.signPromise = function
-  (target, certificateNameOrWireFormat, wireFormat, useSync)
+  (target, certificateName, wireFormat, useSync)
 {
-  var certificateName;
-  if (certificateNameOrWireFormat instanceof Name)
-    // sign(target, certificateName [, wireFormat] [, useSync]).
-    // sign(target, certificateName [, useSync]).
-    certificateName = certificateNameOrWireFormat;
-    // If wireFormat is omitted, we'll shift below.
-  else {
-    // sign(target [, wireFormat] [, useSync]).
-    // sign(target [, useSync]).
-    // Shift the parameters. If wireFormat is omitted, we'll shift again below.
-    useSync = wireFormat;
-    wireFormat = certificateNameOrWireFormat;
+  var arg2 = certificateName;
+  var arg3 = wireFormat;
+  var arg4 = useSync;
+  // arg2,            arg3,       arg4
+  // certificateName, wireFormat, useSync
+  // certificateName, wireFormat, null
+  // certificateName, useSync,    null
+  // certificateName, null,       null
+  // wireFormat,      useSync,    null
+  // wireFormat,      null,       null
+  // useSync,         null,       null
+  // null,            null,       null
+  if (arg2 instanceof Name)
+    certificateName = arg2;
+  else
     certificateName = null;
-  }
 
-  if (!(wireFormat instanceof WireFormat)) {
-    // wireFormat is omitted. Shift the parameters.
-    useSync = wireFormat;
-    wireFormat = undefined;
-  }
+  if (arg2 instanceof WireFormat)
+    wireFormat = arg2;
+  else if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else
+    wireFormat = null;
+
+  if (typeof arg2 === 'boolean')
+    useSync = arg2;
+  else if (typeof arg3 === 'boolean')
+    useSync = arg3;
+  else if (typeof arg4 === 'boolean')
+    useSync = arg4;
+  else
+    useSync = false;
 
   var thisKeyChain = this;
   return SyncPromise.resolve()

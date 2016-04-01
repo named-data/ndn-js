@@ -19,19 +19,23 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var assert = require("assert");
+var assert = require('assert');
 var Name = require('../../..').Name;
 var Data = require('../../..').Data;
 var Blob = require('../../..').Blob;
 var KeyType = require('../../..').KeyType;
-var DerNode = require("../../../js/encoding/der/der-node.js").DerNode;
-var DerSequence = require("../../../js/encoding/der/der-node.js").DerNode.DerSequence;
-var DerOctetString = require("../../../js/encoding/der/der-node.js").DerNode.DerOctetString;
-var DerInteger = require("../../../js/encoding/der/der-node.js").DerNode.DerInteger;
-var PublicKey = require("../../../js/security/certificate/public-key.js").PublicKey;
-var Certificate = require("../../../js/security/certificate/certificate.js").Certificate;
-var CertificateSubjectDescription = require("../../../js/security/certificate/certificate-subject-description.js").CertificateSubjectDescription;
-var CertificateExtension = require("../../../js/security/certificate/certificate-extension.js").CertificateExtension;
+var DerNode = require('../../../js/encoding/der/der-node.js').DerNode;
+var DerSequence = require('../../../js/encoding/der/der-node.js').DerNode.DerSequence;
+var DerOctetString = require('../../../js/encoding/der/der-node.js').DerNode.DerOctetString;
+var DerInteger = require('../../../js/encoding/der/der-node.js').DerNode.DerInteger;
+var PublicKey = require('../../..').PublicKey;
+var Certificate = require('../../..').Certificate;
+var CertificateSubjectDescription = require('../../..').CertificateSubjectDescription;
+var CertificateExtension = require('../../..').CertificateExtension;
+var IdentityCertificate = require('../../..').IdentityCertificate;
+var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
+var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
+var IdentityManager = require('../../..').IdentityManager;
 
 var PUBLIC_KEY = new Buffer([
 0x30, 0x81, 0x9d, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -47,31 +51,10 @@ var PUBLIC_KEY = new Buffer([
 0xea, 0x76, 0x7c, 0xbb, 0x08, 0x26, 0xc7, 0x02, 0x01, 0x11
 ]);
 
-var CERT_DUMP = new Buffer([
-0x30, 0x81, 0xff, 0x30, 0x22, 0x18, 0x0f, 0x32, 0x30, 0x31, 0x33, 0x31, 0x32, 0x32, 0x36,
-0x32, 0x33, 0x32, 0x32, 0x35, 0x34, 0x5a, 0x18, 0x0f, 0x32, 0x30, 0x31, 0x33, 0x31, 0x32,
-0x32, 0x36, 0x32, 0x33, 0x32, 0x32, 0x35, 0x34, 0x5a, 0x30, 0x12, 0x30, 0x10, 0x06, 0x03,
-0x55, 0x04, 0x29, 0x13, 0x09, 0x54, 0x45, 0x53, 0x54, 0x20, 0x4e, 0x41, 0x4d, 0x45, 0x30,
-0x81, 0x9d, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
-0x05, 0x00, 0x03, 0x81, 0x8b, 0x00, 0x30, 0x81, 0x87, 0x02, 0x81, 0x81, 0x00, 0x9e, 0x06,
-0x3e, 0x47, 0x85, 0xb2, 0x34, 0x37, 0xaa, 0x85, 0x47, 0xac, 0x03, 0x24, 0x83, 0xb5, 0x9c,
-0xa8, 0x05, 0x3a, 0x24, 0x1e, 0xeb, 0x89, 0x01, 0xbb, 0xe9, 0x9b, 0xb2, 0xc3, 0x22, 0xac,
-0x68, 0xe3, 0xf0, 0x6c, 0x02, 0xce, 0x68, 0xa6, 0xc4, 0xd0, 0xa7, 0x06, 0x90, 0x9c, 0xaa,
-0x1b, 0x08, 0x1d, 0x8b, 0x43, 0x9a, 0x33, 0x67, 0x44, 0x6d, 0x21, 0xa3, 0x1b, 0x88, 0x9a,
-0x97, 0x5e, 0x59, 0xc4, 0x15, 0x0b, 0xd9, 0x2c, 0xbd, 0x51, 0x07, 0x61, 0x82, 0xad, 0xc1,
-0xb8, 0xd7, 0xbf, 0x9b, 0xcf, 0x7d, 0x24, 0xc2, 0x63, 0xf3, 0x97, 0x17, 0xeb, 0xfe, 0x62,
-0x25, 0xba, 0x5b, 0x4d, 0x8a, 0xc2, 0x7a, 0xbd, 0x43, 0x8a, 0x8f, 0xb8, 0xf2, 0xf1, 0xc5,
-0x6a, 0x30, 0xd3, 0x50, 0x8c, 0xc8, 0x9a, 0xdf, 0xef, 0xed, 0x35, 0xe7, 0x7a, 0x62, 0xea,
-0x76, 0x7c, 0xbb, 0x08, 0x26, 0xc7, 0x02, 0x01, 0x11, 0x30, 0x25, 0x30, 0x23, 0x06, 0x06,
-0x2b, 0x06, 0x01, 0x05, 0x20, 0x01, 0x01, 0x01, 0xff, 0x04, 0x16, 0x30, 0x14, 0x04, 0x0c,
-0x2f, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x2f, 0x6b, 0x69, 0x74, 0x74, 0x79, 0x02, 0x01, 0x00,
-0x02, 0x01, 0x0a
-]);
-
 var TEST_OID = "2.5.4.41";
 
 var CERT_STRING = "Certificate name:\n"
- + "  /\n"
+ + "  /test/KEY/ksk-1457560485494/ID-CERT/%FD%00%00%01S%80H%E1%F3\n"
  + "Validity:\n"
  + "  NotBefore: 20131226T232254\n"
  + "  NotAfter: 20131226T232254\n"
@@ -127,14 +110,19 @@ var REAL_CERT_STRING =
 +"cnIEwyzAFAupQH5GoXUWGiee8oKWwH2vGHX7u6sWZsCp15NMSG3OC4jUIZOEiVUF\n"
 +"1QIBEQ==\n";
 
+var toyCertNotBefore;
+var toyCertNotAfter;
 var toyCert;
 
 describe('TestDerEncodeDecode', function() {
   beforeEach(function() {
+    toyCertNotBefore = 1388100174000;
+    toyCertNotAfter = 1388100174000;
     var cert = new Certificate();
-    cert.setNotBefore(1388100174000);
-    cert.setNotAfter(1388100174000);
-
+    cert.setNotBefore(toyCertNotBefore);
+    cert.setNotAfter(toyCertNotAfter);
+    cert.setName(new Name
+      ("/test/KEY/ksk-1457560485494/ID-CERT/%FD%00%00%01S%80H%E1%F3"));
     cert.addSubjectDescription(new CertificateSubjectDescription(TEST_OID, "TEST NAME"));
     cert.setPublicKeyInfo(new PublicKey(new Blob(PUBLIC_KEY, false)));
 
@@ -150,6 +138,7 @@ describe('TestDerEncodeDecode', function() {
     toyCert.encode();
     var cert_data = toyCert.getContent();
     var plainData = new Data();
+    plainData.setName(toyCert.getName());
     plainData.setContent(cert_data);
     // The constructor Certificate(Data) calls decode().
     var decoded_cert = new Certificate(plainData);
@@ -233,5 +222,32 @@ describe('TestDerEncodeDecode', function() {
     assert.equal(expectedEncoding, derOid.encode().toHex(),
                  "Incorrect OID encoding");
     assert.equal(oidString, derOid.toVal(), "Incorrect decoded OID");
+  });
+
+  it('PrepareUnsignedCertificate', function() {
+    var identityStorage = new MemoryIdentityStorage();
+    var privateKeyStorage = new MemoryPrivateKeyStorage();
+    var identityManager = new IdentityManager(identityStorage, privateKeyStorage);
+    var keyName = new Name("/test/ksk-1457560485494");
+    identityStorage.addKey(keyName, KeyType.RSA, new Blob(PUBLIC_KEY, false));
+
+    var subjectDescriptions = [];
+    subjectDescriptions.push(new CertificateSubjectDescription
+      (TEST_OID, "TEST NAME"));
+    var debugCertPrefix = null;
+    var newCertificate = identityManager.prepareUnsignedIdentityCertificate
+      (keyName, keyName.getPrefix(1), toyCertNotBefore, toyCertNotAfter,
+       subjectDescriptions, debugCertPrefix);
+
+    // Update the generated certificate version to equal the one in toyCert.
+    newCertificate.setName
+      (new Name(newCertificate.getName().getPrefix(-1).append
+       (toyCert.getName().get(-1))));
+
+    // Make a copy to test encoding.
+    var certificateCopy = new IdentityCertificate(newCertificate);
+    assert.equal
+      (certificateCopy.toString(), toyCert.toString(),
+      "Prepared unsigned certificate dump does not have the expected format");
   });
 });

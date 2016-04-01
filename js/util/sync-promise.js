@@ -130,8 +130,8 @@ SyncPromise.reject = function(err)
  * you expect to always return a SyncPromise to operate in synchronous mode.
  * @param {SyncPromise} promise The SyncPromise with the value to get.
  * @return {any} The value of the promise.
- * @throws {Error} If promise is not a SyncPromise.
- * @throws {any} If promise is a SyncPromise in the rejected state, this throws
+ * @throws Error If promise is not a SyncPromise.
+ * @throws any If promise is a SyncPromise in the rejected state, this throws
  * the error.
  */
 SyncPromise.getValue = function(promise)
@@ -174,8 +174,8 @@ SyncPromise.getValue = function(promise)
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
  * Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
- * @throws {Error} If onComplete is undefined and promise is not a SyncPromise.
- * @throws {any} If onComplete is undefined and promise is a SyncPromise in the
+ * @throws Error If onComplete is undefined and promise is not a SyncPromise.
+ * @throws any If onComplete is undefined and promise is a SyncPromise in the
  * rejected state.
  */
 SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)

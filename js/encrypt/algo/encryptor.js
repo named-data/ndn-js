@@ -152,7 +152,7 @@ Encryptor.encryptDataPromise = function
  * @param {Name} keyName The key name for the EncryptedContent.
  * @param {Blob} key The encryption key value.
  * @param {EncryptParams} params The parameters for encryption.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 Encryptor.encryptData = function(data, payload, keyName, key, params)
