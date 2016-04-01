@@ -1,0 +1,103 @@
+<?xml version = "1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<!--
+ * Copyright (C) 2014-2016 Regents of the University of California.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+-->
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<meta charset="UTF-8">
+
+<head>
+  <title>Micro Forwarder Status Page</title>
+
+  <script type="text/javascript" src="ndn.js"></script>
+
+  <script type="text/javascript">
+    function run() {
+      var prefixUri = document.getElementById("prefix");
+      var host = document.getElementById("uri");
+      var uri = "ws://" + host + ":9696";
+
+      var transport;
+      function onReceivedObject(obj) {
+        console.log("debug received object " + obj.type);
+        if (obj.type == "faces/query") {
+          if (obj.faceId != null) {
+            // We have the obj.faceId. Create the route.
+            transport.sendObject({
+              type: "rib/register",
+              nameUri: prefixUri,
+              faceId: obj.faceId
+            });
+          }
+          else {
+            // The face doesn't exist yet. Create it.
+            transport.sendObject({
+              type: "faces/create",
+              uri: uri
+            });
+          }
+        }
+        else if (obj.type == "faces/create") {
+          // We have the obj.faceId. Create the route.
+          transport.sendObject({
+            type: "rib/register",
+            nameUri: prefixUri,
+            faceId: obj.faceId
+          });
+        }
+        else if (obj.type == "rib/register") {
+          console.log("Debug rib register status " + obj.statusCode);
+          if (obj.statusCode == 400) {
+            console.log("setting timeout");
+            setTimeout(function() {
+              console.log("expresing interest");
+//              face.expressInterest(new Name(document.getElementById('interest').value), onData, onTimeout);
+            }, 3000);
+          }
+        }
+      }
+
+      transport = new MicroForwarderTransport(onReceivedObject);
+      var face = new Face(transport, new MicroForwarderTransport.ConnectionInfo());
+      transport.sendObject({
+        type: "faces/query",
+        uri: uri
+      });
+      
+    }
+
+  </script>
+
+</head>
+<body >
+
+  <!-- <form> -->
+  <!--   Domain name of remote forwarder:<br /> -->
+  <!--   <input id="uri" type="text" name="URI" size="50" -->
+  <!-- 	   value="memoria.ndn.ucla.edu" /> -->
+  <!--   <br /> -->
+  <!--   Prefix:<br /> -->
+  <!--   <input id="prefix" type="text" name="PREFIX" size="50" value="/" /> -->
+  <!-- </form> -->
+
+  <!-- <button id="testBtn" onclick="run()">Add Route</button> -->
+
+  <h1>Coming Soon...</h1>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# html, body {
+#  width: 100px;
+#  height: 100px;
+# }
+
+.options {
+  margin: 3% auto;
+  padding: 4px;
+  text-align: center;
+  font-size: 1.0em;
+#  background-color: #E5F2F2;
+  cursor: pointer;
+}
