@@ -139,7 +139,7 @@ PolicyManager.verifyUsesString = null;
  * signature.
  * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
- * @throws {SecurityException} if the signature type is not recognized or if
+ * @throws SecurityException if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
  */
 PolicyManager.verifySignature = function

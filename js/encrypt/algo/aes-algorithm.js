@@ -134,7 +134,7 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The decrypted data.
- * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * @throws Error If decryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
@@ -209,7 +209,7 @@ AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The encrypted data.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 AesAlgorithm.encrypt = function(keyBits, plainData, params)

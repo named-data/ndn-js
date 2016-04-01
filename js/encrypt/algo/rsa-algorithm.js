@@ -105,7 +105,7 @@ RsaAlgorithm.generateKeyPromise = function(params, useSync)
  * @param {RsaKeyParams} params The key params with the key size (in bits).
  * @return {DecryptKey} The new decrypt key (containing a PKCS8-encoded private
  * key).
- * @throws {Error} If generateKeyPromise doesn't return a SyncPromise which is
+ * @throws Error If generateKeyPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.generateKey = function(params)
@@ -215,7 +215,7 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The decrypted data.
- * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * @throws Error If decryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
@@ -289,7 +289,7 @@ RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The encrypted data.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params)
