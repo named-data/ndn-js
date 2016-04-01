@@ -30,11 +30,13 @@ The compressed version is what we recommend including in applications.
 
 DOCUMENTATION
 =============
-The documentation is auto-generated using JSDoc.  If you don't have JSDoc installed, download and unzip from:
-https://github.com/jsdoc3/jsdoc/archive/master.zip
+The documentation is auto-generated using JSDoc.  If you don't have JSDoc installed, in a terminal enter:
 
-To make doc, cd to the root directory of ndn-js and run the following command to put the output in subdirectory doc:
-<path-to-jsdoc>/jsdoc --recurse --destination doc js README.md
+    sudo npm install -g jsdoc
+
+To make documentation, cd to the root directory of ndn-js and run the following command to put the output in subdirectory doc:
+
+    jsdoc --recurse --destination doc js README.md
 
 WEBSOCKETS PROXY
 ================
