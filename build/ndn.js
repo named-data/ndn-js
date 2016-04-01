@@ -9626,8 +9626,8 @@ SyncPromise.reject = function(err)
  * you expect to always return a SyncPromise to operate in synchronous mode.
  * @param {SyncPromise} promise The SyncPromise with the value to get.
  * @return {any} The value of the promise.
- * @throws {Error} If promise is not a SyncPromise.
- * @throws {any} If promise is a SyncPromise in the rejected state, this throws
+ * @throws Error If promise is not a SyncPromise.
+ * @throws any If promise is a SyncPromise in the rejected state, this throws
  * the error.
  */
 SyncPromise.getValue = function(promise)
@@ -9670,8 +9670,8 @@ SyncPromise.getValue = function(promise)
  * @return {any} If onComplete is undefined, return SyncPromise.getValue(promise).
  * Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
- * @throws {Error} If onComplete is undefined and promise is not a SyncPromise.
- * @throws {any} If onComplete is undefined and promise is a SyncPromise in the
+ * @throws Error If onComplete is undefined and promise is not a SyncPromise.
+ * @throws any If onComplete is undefined and promise is a SyncPromise in the
  * rejected state.
  */
 SyncPromise.complete = function(onComplete, onErrorOrPromise, promise)
@@ -17034,7 +17034,7 @@ var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
  * Create a new PublicKey by decoding the keyDer. Set the key type from the
  * decoding.
  * @param {Blob} keyDer The blob of the SubjectPublicKeyInfo DER.
- * @throws {UnrecognizedKeyFormatException} if can't decode the key DER.
+ * @throws UnrecognizedKeyFormatException if can't decode the key DER.
  * @constructor
  */
 var PublicKey = function PublicKey(keyDer)
@@ -17822,7 +17822,7 @@ IdentityStorage.prototype.doesIdentityExistPromise = function
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
  * @returns {boolean} true if the identity exists, otherwise false.
- * @throws {Error} If doesIdentityExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesIdentityExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.doesIdentityExist = function(identityName)
@@ -17848,7 +17848,7 @@ IdentityStorage.prototype.addIdentityPromise = function(identityName, useSync)
 /**
  * Add a new identity. Do nothing if the identity already exists.
  * @param {Name} identityName The identity name to be added.
- * @throws {Error} If addIdentityPromise doesn't return a SyncPromise which
+ * @throws Error If addIdentityPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addIdentity = function(identityName)
@@ -17909,7 +17909,7 @@ IdentityStorage.prototype.getNewKeyNamePromise = function
  * @param {Name} identityName The identity name.
  * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
  * @returns {Name} The generated key name.
- * @throws {Error} If getNewKeyNamePromise doesn't return a SyncPromise which
+ * @throws Error If getNewKeyNamePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.getNewKeyName = function(identityName, useKsk)
@@ -17936,7 +17936,7 @@ IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
  * @returns {boolean} true if the key exists, otherwise false.
- * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.doesKeyExist = function(keyName)
@@ -17971,8 +17971,8 @@ IdentityStorage.prototype.addKeyPromise = function
  * @param {number} keyType Type of the public key to be added from KeyType, such
  * as KeyType.RSA..
  * @param {Blob} publicKeyDer A blob of the public key DER to be added.
- * @throws {SecurityException} if a key with the keyName already exists.
- * @throws {Error} If addKeyPromise doesn't return a SyncPromise which
+ * @throws SecurityException if a key with the keyName already exists.
+ * @throws Error If addKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addKey = function(keyName, keyType, publicKeyDer)
@@ -18001,7 +18001,7 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
  * @param {Name} keyName The name of the requested public key.
  * @returns {Blob} The DER Blob.
  * @throws SecurityException if the key doesn't exist.
- * @throws {Error} If getKeyPromise doesn't return a SyncPromise which
+ * @throws Error If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.getKey = function(keyName)
@@ -18049,7 +18049,7 @@ IdentityStorage.prototype.doesCertificateExistPromise = function
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
  * @returns {boolean} true if the certificate exists, otherwise false.
- * @throws {Error} If doesCertificateExistPromise doesn't return a SyncPromise
+ * @throws Error If doesCertificateExistPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.doesCertificateExist = function(certificateName)
@@ -18079,8 +18079,8 @@ IdentityStorage.prototype.addCertificatePromise = function(certificate, useSync)
  * Add a certificate to the identity storage.
  * @param {IdentityCertificate} certificate The certificate to be added.  This
  * makes a copy of the certificate.
- * @throws {SecurityException} if the certificate is already installed.
- * @throws {Error} If addCertificatePromise doesn't return a SyncPromise which
+ * @throws SecurityException if the certificate is already installed.
+ * @throws Error If addCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.addCertificate = function(certificate)
@@ -18110,7 +18110,7 @@ IdentityStorage.prototype.getCertificatePromise = function
  * @param {Name} certificateName The name of the requested certificate.
  * @returns {IdentityCertificate} The requested certificate.
  * @throws SecurityException if the certificate doesn't exist.
- * @throws {Error} If getCertificatePromise doesn't return a SyncPromise which
+ * @throws Error If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.getCertificate = function(certificateName)
@@ -18141,7 +18141,7 @@ IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
  * Get the default identity.
  * @returns {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
- * @throws {Error} If getDefaultIdentityPromise doesn't return a SyncPromise
+ * @throws Error If getDefaultIdentityPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultIdentity = function()
@@ -18172,7 +18172,7 @@ IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
  * @param {Name} identityName The identity name.
  * @returns {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
- * @throws {Error} If getDefaultKeyNameForIdentityPromise doesn't return a
+ * @throws Error If getDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultKeyNameForIdentity = function(identityName)
@@ -18208,7 +18208,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentityPromise = function
  * @returns {Name} The default certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
- * @throws {Error} If getDefaultCertificateNameForIdentityPromise doesn't return
+ * @throws Error If getDefaultCertificateNameForIdentityPromise doesn't return
  * a SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificateNameForIdentity = function
@@ -18241,7 +18241,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
  * @returns {Name} The default certificate name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
- * @throws {Error} If getDefaultCertificateNameForKeyPromise doesn't return a
+ * @throws Error If getDefaultCertificateNameForKeyPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
@@ -18275,7 +18275,7 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
  * @param {Array<Name>} nameList Append result names to nameList.
  * @param {boolean} isDefault If true, add only the default key name. If false,
  * add only the non-default key names.
- * @throws {Error} If getAllKeyNamesOfIdentityPromise doesn't return a
+ * @throws Error If getAllKeyNamesOfIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.getAllKeyNamesOfIdentity = function
@@ -18306,7 +18306,7 @@ IdentityStorage.prototype.setDefaultIdentityPromise = function
  * Set the default identity.  If the identityName does not exist, then clear the
  * default identity so that getDefaultIdentity() throws an exception.
  * @param {Name} identityName The default identity name.
- * @throws {Error} If setDefaultIdentityPromise doesn't return a SyncPromise which
+ * @throws Error If setDefaultIdentityPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultIdentity = function(identityName)
@@ -18340,7 +18340,7 @@ IdentityStorage.prototype.setDefaultKeyNameForIdentityPromise = function
  * @param {Name} keyName The name of the key.
  * @param {Name} identityNameCheck (optional) The identity name to check that the
  * keyName contains the same identity name. If an empty name, it is ignored.
- * @throws {Error} If setDefaultKeyNameForIdentityPromise doesn't return a
+ * @throws Error If setDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultKeyNameForIdentity = function
@@ -18371,7 +18371,7 @@ IdentityStorage.prototype.setDefaultCertificateNameForKeyPromise = function
  * Set the default key name for the specified identity.
  * @param {Name} keyName The key name.
  * @param {Name} certificateName The certificate name.
- * @throws {Error} If setDefaultCertificateNameForKeyPromise doesn't return a
+ * @throws Error If setDefaultCertificateNameForKeyPromise doesn't return a
  * SyncPromise which is already fulfilled.
  */
 IdentityStorage.prototype.setDefaultCertificateNameForKey = function
@@ -18412,7 +18412,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
  * Get the certificate of the default identity.
  * @returns {IdentityCertificate} The requested certificate.  If not found,
  * return null.
- * @throws {Error} If getDefaultCertificatePromise doesn't return a SyncPromise
+ * @throws Error If getDefaultCertificatePromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.getDefaultCertificate = function()
@@ -18444,7 +18444,7 @@ IdentityStorage.prototype.deleteCertificateInfoPromise = function
 /**
  * Delete a certificate.
  * @param {Name} certificateName The certificate name.
- * @throws {Error} If deleteCertificateInfoPromise doesn't return a SyncPromise
+ * @throws Error If deleteCertificateInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteCertificateInfo = function(certificateName)
@@ -18471,7 +18471,7 @@ IdentityStorage.prototype.deletePublicKeyInfoPromise = function(keyName, useSync
 /**
  * Delete a public key and related certificates.
  * @param {Name} keyName The key name.
- * @throws {Error} If deletePublicKeyInfoPromise doesn't return a SyncPromise
+ * @throws Error If deletePublicKeyInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deletePublicKeyInfo = function(keyName)
@@ -18499,7 +18499,7 @@ IdentityStorage.prototype.deleteIdentityInfoPromise = function
 /**
  * Delete an identity and related public keys and certificates.
  * @param {Name} identityName The identity name.
- * @throws {Error} If deleteIdentityInfoPromise doesn't return a SyncPromise
+ * @throws Error If deleteIdentityInfoPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
 IdentityStorage.prototype.deleteIdentityInfo = function(identityName)
@@ -19547,7 +19547,7 @@ PrivateKeyStorage.prototype.generateKeyPairPromise = function
  * Generate a pair of asymmetric keys.
  * @param {Name} keyName The name of the key pair.
  * @param {KeyParams} params The parameters of the key.
- * @throws {Error} If generateKeyPairPromise doesn't return a SyncPromise which
+ * @throws Error If generateKeyPairPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.generateKeyPair = function(keyName, params)
@@ -19573,7 +19573,7 @@ PrivateKeyStorage.prototype.deleteKeyPairPromise = function(keyName, useSync)
 /**
  * Delete a pair of asymmetric keys. If the key doesn't exist, do nothing.
  * @param {Name} keyName The name of the key pair.
- * @throws {Error} If deleteKeyPairPromise doesn't return a SyncPromise which
+ * @throws Error If deleteKeyPairPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.deleteKeyPair = function(keyName)
@@ -19599,7 +19599,7 @@ PrivateKeyStorage.prototype.getPublicKeyPromise = function(keyName, useSync)
  * Get the public key
  * @param {Name} keyName The name of public key.
  * @return {PublicKey} The public key.
- * @throws {Error} If getPublicKeyPromise doesn't return a SyncPromise which
+ * @throws Error If getPublicKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.getPublicKey = function(keyName)
@@ -19633,7 +19633,7 @@ PrivateKeyStorage.prototype.signPromise = function
  * DigestAlgorithm, such as DigestAlgorithm.SHA256. If omitted, use
  * DigestAlgorithm.SHA256.
  * @return {Blob} The signature Blob.
- * @throws {Error} If signPromise doesn't return a SyncPromise which is already
+ * @throws Error If signPromise doesn't return a SyncPromise which is already
  * fulfilled.
  */
 PrivateKeyStorage.prototype.sign = function(data, keyName, digestAlgorithm)
@@ -19703,7 +19703,7 @@ PrivateKeyStorage.prototype.doesKeyExistPromise = function
  * @param {number} keyClass The class of the key, e.g. KeyClass.PUBLIC,
  * KeyClass.PRIVATE, or KeyClass.SYMMETRIC.
  * @return {boolean} True if the key exists.
- * @throws {Error} If doesKeyExistPromise doesn't return a SyncPromise which
+ * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
 PrivateKeyStorage.prototype.doesKeyExist = function(keyName, keyClass)
@@ -21977,7 +21977,7 @@ PolicyManager.verifyUsesString = null;
  * signature.
  * @param {function} onComplete This calls onComplete(true) if the signature
  * verifies, otherwise onComplete(false).
- * @throws {SecurityException} if the signature type is not recognized or if
+ * @throws SecurityException if the signature type is not recognized or if
  * publicKeyDer can't be decoded.
  */
 PolicyManager.verifySignature = function
@@ -27693,7 +27693,7 @@ AesAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The decrypted data.
- * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * @throws Error If decryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 AesAlgorithm.decrypt = function(keyBits, encryptedData, params)
@@ -27768,7 +27768,7 @@ AesAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  * params.getAlgorithmType() and other params as needed such as
  * params.getInitialVector().
  * @return {Blob} The encrypted data.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 AesAlgorithm.encrypt = function(keyBits, plainData, params)
@@ -28038,7 +28038,7 @@ Encryptor.encryptDataPromise = function
  * @param {Name} keyName The key name for the EncryptedContent.
  * @param {Blob} key The encryption key value.
  * @param {EncryptParams} params The parameters for encryption.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 Encryptor.encryptData = function(data, payload, keyName, key, params)
@@ -28231,7 +28231,7 @@ RsaAlgorithm.generateKeyPromise = function(params, useSync)
  * @param {RsaKeyParams} params The key params with the key size (in bits).
  * @return {DecryptKey} The new decrypt key (containing a PKCS8-encoded private
  * key).
- * @throws {Error} If generateKeyPromise doesn't return a SyncPromise which is
+ * @throws Error If generateKeyPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.generateKey = function(params)
@@ -28341,7 +28341,7 @@ RsaAlgorithm.decryptPromise = function(keyBits, encryptedData, params, useSync)
  * @param {EncryptParams} params This decrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The decrypted data.
- * @throws {Error} If decryptPromise doesn't return a SyncPromise which is
+ * @throws Error If decryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.decrypt = function(keyBits, encryptedData, params)
@@ -28415,7 +28415,7 @@ RsaAlgorithm.encryptPromise = function(keyBits, plainData, params, useSync)
  * @param {EncryptParams} params This encrypts according to
  * params.getAlgorithmType().
  * @return {Blob} The encrypted data.
- * @throws {Error} If encryptPromise doesn't return a SyncPromise which is
+ * @throws Error If encryptPromise doesn't return a SyncPromise which is
  * already fulfilled.
  */
 RsaAlgorithm.encrypt = function(keyBits, plainData, params)
