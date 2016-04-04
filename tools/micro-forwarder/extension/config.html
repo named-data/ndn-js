@@ -33,7 +33,28 @@
     // one communication channel from the window to the Micro Forwarder.
     var transport;
     function onReceivedObject(obj) {
-      if (obj.type == "faces/query") {
+      if (obj.type == "fib/list") {
+        var text = "FIB:<br/>\n";
+        for (var i = 0; i < obj.fib.length; ++i) {
+          text += "&nbsp;&nbsp;" + obj.fib[i].name + " nexthops=";
+          for (var j = 0; j < obj.fib[i].nextHops.length; ++j)
+            text += "{faceId=" + obj.fib[i].nextHops[j].faceId + "} ";
+          text += "<br/>\n";
+        }
+
+        document.getElementById('showStatusResult').innerHTML += text;
+        // Now show the faces.
+        transport.sendObject({ type: "faces/list" });
+      }
+      else if (obj.type == "faces/list") {
+        var text = "Faces<br/>\n";
+        for (var i = 0; i < obj.faces.length; ++i)
+          text += "&nbsp;&nbsp;faceId=" + obj.faces[i].faceId +
+            " " + obj.faces[i].uri + "<br/>\n";
+
+        document.getElementById('showStatusResult').innerHTML += text;
+      }
+      else if (obj.type == "faces/query") {
         if (obj.faceId != null) {
           // We have the obj.faceId. Create the route.
           transport.sendObject({
@@ -82,6 +103,12 @@
       });      
     }
 
+    function showStatus() {
+      // Clear the results text. onReceivedObject will fill it.
+      document.getElementById('showStatusResult').innerHTML = "";
+      transport.sendObject({ type: "fib/list" });
+    }
+
   </script>
 
 </head>
@@ -96,7 +123,10 @@
     <input id="prefix" type="text" name="PREFIX" size="50" value="/" />
   </form>
 
-  <button id="testBtn" onclick="addRoute()">Add Route</button>
+  <button id="testBtn" onclick="addRoute()">Add Route</button><br/>
+  <br/>
+  <button onclick="showStatus()">Show Status</button>
+  <p id="showStatusResult"></p>
 
 </body>
 </html>
