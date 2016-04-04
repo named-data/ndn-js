@@ -40,13 +40,13 @@ var PitEntry = function PitEntry(interest, face)
 };
 
 /**
- * A FibEntry is used in the FIB to match a registered prefix with related faces.
- * @param {Name} prefix The prefix for this FIB entry.
+ * A FibEntry is used in the FIB to match a registered name with related faces.
+ * @param {Name} name The registered name for this FIB entry.
  * @constructor
  */
-var FibEntry = function FibEntry(prefix)
+var FibEntry = function FibEntry(name)
 {
-  this.prefix = prefix;
+  this.name = name;
   this.faces = []; // of ForwarderFace
 };
 
@@ -207,7 +207,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
         var fibEntry = FIB[i];
 
         // TODO: Need to do longest prefix match?
-        if (fibEntry.prefix.match(interest.getName())) {
+        if (fibEntry.name.match(interest.getName())) {
           for (var j = 0; j < fibEntry.faces.length; ++j) {
             var face = fibEntry.faces[j];
             // Don't send the interest back to where it came from.
@@ -285,12 +285,12 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
 
     if (LOG > 3) console.log("Received register request " + controlParameters.getName().toUri() + "\n");
 
-    var prefix = controlParameters.getName();
-    // Check for a FIB entry for the prefix and add this face.
+    var name = controlParameters.getName();
+    // Check for a FIB entry for the name and add this face.
     var foundFibEntry = false;
     for (var i = 0; i < FIB.length; ++i) {
       var fibEntry = FIB[i];
-      if (fibEntry.prefix.equals(prefix)) {
+      if (fibEntry.name.equals(name)) {
         // Make sure the face is not already added.
         if (fibEntry.faces.indexOf(this) < 0)
           fibEntry.faces.push(this);
@@ -302,7 +302,7 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
 
     if (!foundFibEntry) {
       // Make a new FIB entry.
-      var fibEntry = new FibEntry(prefix);
+      var fibEntry = new FibEntry(name);
       fibEntry.faces.push(this);
       FIB.push(fibEntry);
     }
@@ -356,12 +356,12 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       return;
     }
 
-    var prefix = new Name(obj.nameUri);
-    // Check for a FIB entry for the prefix and add the face.
+    var name = new Name(obj.nameUri);
+    // Check for a FIB entry for the name and add the face.
     var foundFibEntry = false;
     for (var i = 0; i < FIB.length; ++i) {
       var fibEntry = FIB[i];
-      if (fibEntry.prefix.equals(prefix)) {
+      if (fibEntry.name.equals(name)) {
         // Make sure the face is not already added.
         if (fibEntry.faces.indexOf(face) < 0)
           fibEntry.faces.push(face);
@@ -373,7 +373,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
 
     if (!foundFibEntry) {
       // Make a new FIB entry.
-      var fibEntry = new FibEntry(prefix);
+      var fibEntry = new FibEntry(name);
       fibEntry.faces.push(face);
       FIB.push(fibEntry);
     }
