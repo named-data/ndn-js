@@ -370,7 +370,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
     // Find the face with the faceId.
     var face = null;
     for (var i = 0; i < Faces.length; ++i) {
-      if (Faces[i].faceId = obj.faceId) {
+      if (Faces[i].faceId == obj.faceId) {
         face = Faces[i];
         break;
       }
