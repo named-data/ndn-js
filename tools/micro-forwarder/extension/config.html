@@ -1,6 +1,9 @@
 <?xml version = "1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "DTD/xhtml1-strict.dtd">
+<html xmlns = "http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8"/>
 <!--
  * Copyright (C) 2014-2016 Regents of the University of California.
  *
@@ -18,23 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
 -->
-<html xmlns = "http://www.w3.org/1999/xhtml">
-<meta charset="UTF-8">
-
-<head>
   <title>Micro Forwarder Status Page</title>
 
   <script type="text/javascript" src="ndn.js"></script>
 
   <script type="text/javascript">
     function run() {
-      var prefixUri = document.getElementById("prefix");
-      var host = document.getElementById("uri");
+      var prefixUri = document.getElementById("prefix").value;
+      var host = document.getElementById("uri").value;
       var uri = "ws://" + host + ":9696";
 
       var transport;
       function onReceivedObject(obj) {
-        console.log("debug received object " + obj.type);
         if (obj.type == "faces/query") {
           if (obj.faceId != null) {
             // We have the obj.faceId. Create the route.
@@ -61,43 +59,38 @@
           });
         }
         else if (obj.type == "rib/register") {
-          console.log("Debug rib register status " + obj.statusCode);
-          if (obj.statusCode == 400) {
-            console.log("setting timeout");
-            setTimeout(function() {
-              console.log("expresing interest");
-//              face.expressInterest(new Name(document.getElementById('interest').value), onData, onTimeout);
-            }, 3000);
+          var lowestErrorCode = 400;
+          if (obj.statusCode >= lowestErrorCode) {
+            console.log("rib/register error code " + obj.statusCode);
+            // TODO: Display the error to the user.
           }
+          else
+            console.log("Registered " + prefixUri + " to " + uri);
         }
       }
 
       transport = new MicroForwarderTransport(onReceivedObject);
-      var face = new Face(transport, new MicroForwarderTransport.ConnectionInfo());
       transport.sendObject({
         type: "faces/query",
         uri: uri
-      });
-      
+      });      
     }
 
   </script>
 
 </head>
-<body >
+<body>
 
-  <!-- <form> -->
-  <!--   Domain name of remote forwarder:<br /> -->
-  <!--   <input id="uri" type="text" name="URI" size="50" -->
-  <!-- 	   value="memoria.ndn.ucla.edu" /> -->
-  <!--   <br /> -->
-  <!--   Prefix:<br /> -->
-  <!--   <input id="prefix" type="text" name="PREFIX" size="50" value="/" /> -->
-  <!-- </form> -->
+  <form>
+    Domain name of remote forwarder:<br />
+    <input id="uri" type="text" name="URI" size="50"
+           value="memoria.ndn.ucla.edu" />
+    <br />
+    Prefix:<br />
+    <input id="prefix" type="text" name="PREFIX" size="50" value="/" />
+  </form>
 
-  <!-- <button id="testBtn" onclick="run()">Add Route</button> -->
-
-  <h1>Coming Soon...</h1>
+  <button id="testBtn" onclick="run()">Add Route</button>
 
 </body>
 </html>
