@@ -24,7 +24,7 @@ var Faces = []; // of ForwarderFace
 
 // Add a listener to wait for a connection request from a tab.
 chrome.runtime.onConnect.addListener(function(port) {
-  Faces.push(new ForwarderFace(port));
+  Faces.push(new ForwarderFace("internal://port", port));
 });
 
 /**
@@ -53,14 +53,16 @@ var FibEntry = function FibEntry(prefix)
 /**
  * A ForwarderFace is used by the Faces list to represent a connection using a
  * runtime.Port or a WebSocket.
+ * @param {string} The URI to use in the faces/query and faces/list commands.
  * @param {runtime.Port} port If supplied, communicate with the port. Otherwise
  * if this is null then use webSocket.
  * @param {WebSocket} webSocket If a port is not supplied, communicate using the
  * WebSocket object which is already created with the host name.
  * @constructor
  */
-var ForwarderFace = function ForwarderFace(port, webSocket)
+var ForwarderFace = function ForwarderFace(uri, port, webSocket)
 {
+  this.uri = uri;
   this.port = port;
   this.webSocket = webSocket;
   this.elementReader = new ElementReader(this);
@@ -323,13 +325,18 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
 ForwarderFace.prototype.onReceivedObject = function(obj)
 {
   if (obj.type == "faces/query") {
-    // TODO: Try to set faceId
-    faceId = null;
+    for (var i = 0; i < Faces.length; ++i) {
+      if (Faces[i].uri == obj.uri) {
+        // We found the desired face.
+        obj.faceId = Faces[i].faceId;
+        break;
+      }
+    }
     this.sendObject(obj);
   }
   else if (obj.type == "faces/create") {
     // TODO: Re-check that the face doesn't exist.
-    var face = new ForwarderFace(null, new WebSocket(obj.uri));
+    var face = new ForwarderFace(obj.uri, null, new WebSocket(obj.uri));
     Faces.push(face);
     obj.faceId = face.faceId;
     this.sendObject(obj);
@@ -371,7 +378,7 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       FIB.push(fibEntry);
     }
 
-    obj.statusCode = 400;
+    obj.statusCode = 200;
     this.sendObject(obj);
   }
 };
