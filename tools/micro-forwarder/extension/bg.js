@@ -324,7 +324,32 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
 
 ForwarderFace.prototype.onReceivedObject = function(obj)
 {
-  if (obj.type == "faces/query") {
+  if (obj.type == "fib/list") {
+    obj.fib = [];
+    for (var i = 0; i < FIB.length; ++i) {
+      var fibEntry = FIB[i];
+
+      var entry = { name: fibEntry.name.toUri(),
+                    nextHops: [] };
+      for (var j = 0; j < fibEntry.faces.length; ++j)
+        entry.nextHops.push({ faceId: fibEntry.faces[j].faceId });
+      obj.fib.push(entry);
+    }
+
+    this.sendObject(obj);
+  }
+  else if (obj.type == "faces/list") {
+    obj.faces = [];
+    for (var i = 0; i < Faces.length; ++i) {
+      obj.faces.push({
+        faceId: Faces[i].faceId,
+        uri: Faces[i].uri
+      });
+    }
+
+    this.sendObject(obj);
+  }
+  else if (obj.type == "faces/query") {
     for (var i = 0; i < Faces.length; ++i) {
       if (Faces[i].uri == obj.uri) {
         // We found the desired face.
