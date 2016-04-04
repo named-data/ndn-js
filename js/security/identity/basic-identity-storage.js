@@ -403,6 +403,34 @@ BasicIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+BasicIdentityStorage.prototype.getAllIdentitiesPromise = function
+  (nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("BasicIdentityStorage.getAllIdentitiesPromise is only supported for async")));
+
+  var query;
+  if (isDefault)
+    query = "SELECT identity_name FROM Identity WHERE default_identity=1";
+  else
+    query = "SELECT identity_name FROM Identity WHERE default_identity=0";
+
+  return this.eachPromise_(query, [], function(err, row) {
+    nameList.push(new Name(row.identity_name));
+  });
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -427,7 +455,40 @@ BasicIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
     query = "SELECT key_identifier FROM Key WHERE default_key=0 and identity_name=?";
 
   return this.eachPromise_(query, identityName.toUri(), function(err, row) {
-    nameList.push(new Name(identityName).append(row.key_identifier))
+    nameList.push(new Name(identityName).append(row.key_identifier));
+  });
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name.
+ * If false, add only the non-default certificate names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+BasicIdentityStorage.prototype.getAllCertificateNamesOfKeyPromise = function
+  (keyName, nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("BasicIdentityStorage.getAllCertificateNamesOfKeyPromise is only supported for async")));
+
+  var query;
+  if (isDefault)
+    query = "SELECT cert_name FROM Certificate" +
+            "  WHERE default_cert=1 and identity_name=? and key_identifier=?";
+  else
+    query = "SELECT cert_name FROM Certificate" +
+            "  WHERE default_cert=0 and identity_name=? and key_identifier=?";
+
+  return this.eachPromise_
+    (query, [keyName.getPrefix(-1).toUri(), keyName.get(-1).toEscapedString()],
+     function(err, row) {
+    nameList.push(new Name(row.cert_name));
   });
 };
 

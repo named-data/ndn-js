@@ -483,6 +483,23 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IdentityStorage.prototype.getAllIdentitiesPromise = function
+  (nameList, isDefault, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getAllIdentitiesPromise is not implemented"));
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -499,6 +516,24 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.getAllKeyNamesOfIdentityPromise is not implemented"));
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name.
+ * If false, add only the non-default certificate names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IdentityStorage.prototype.getAllCertificateNamesOfKeyPromise = function
+  (keyName, nameList, isDefault, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getAllCertificateNamesOfKeyPromise is not implemented"));
 };
 
 /**

@@ -957,6 +957,31 @@ IdentityManager.prototype.getDefaultCertificateName = function
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllIdentities = function
+  (nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllIdentitiesPromise
+      (nameList, isDefault, !onComplete));
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -980,6 +1005,32 @@ IdentityManager.prototype.getAllKeyNamesOfIdentity = function
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.getAllKeyNamesOfIdentityPromise
       (identityName, nameList, isDefault, !onComplete));
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name. If
+ * false, add only the non-default certificate names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllCertificateNamesOfKey = function
+  (keyName, nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllCertificateNamesOfKeyPromise
+      (keyName, nameList, isDefault, !onComplete));
 };
 
 /**
