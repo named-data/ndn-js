@@ -18,12 +18,13 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var FIB = [];
-var PIT = [];
+var PIT = [];   // of PitEntry
+var FIB = [];   // of FibEntry
+var Faces = []; // of ForwarderFace
 
-// Add a listener to wait for connection request from tab
+// Add a listener to wait for a connection request from a tab.
 chrome.runtime.onConnect.addListener(function(port) {
-  FIB.push(new ForwarderFace(port));
+  Faces.push(new ForwarderFace(port));
 });
 
 /**
@@ -39,7 +40,18 @@ var PitEntry = function PitEntry(interest, face)
 };
 
 /**
- * A ForwarderFace is used by the FIB to represent a connection using a
+ * A FibEntry is used in the FIB to match a registered prefix with related faces.
+ * @param {Name} prefix The prefix for this FIB entry.
+ * @constructor
+ */
+var FibEntry = function FibEntry(prefix)
+{
+  this.prefix = prefix;
+  this.faces = []; // of ForwarderFace
+};
+
+/**
+ * A ForwarderFace is used by the Faces list to represent a connection using a
  * runtime.Port or a WebSocket.
  * @param {runtime.Port} port If supplied, communicate with the port. Otherwise
  * if this is null then use webSocket.
@@ -51,7 +63,6 @@ var ForwarderFace = function ForwarderFace(port, webSocket)
 {
   this.port = port;
   this.webSocket = webSocket;
-  this.registeredPrefixes = [];
   this.elementReader = new ElementReader(this);
   this.faceId = ++ForwarderFace.lastFaceId;
 
@@ -66,9 +77,10 @@ var ForwarderFace = function ForwarderFace(port, webSocket)
     });
 
     this.port.onDisconnect.addListener(function() {
-      for (var i = 0; i < FIB.length; ++i) {
-        if (FIB[i] === thisFace) {
-          FIB.splice(i, 1);
+      for (var i = 0; i < Faces.length; ++i) {
+        if (Faces[i] === thisFace) {
+          // TODO: Mark this face as disconnected so the FIB doesn't use it.
+          Faces.splice(i, 1);
           break;
         }
       }
@@ -178,23 +190,29 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
     setTimeout(timeoutCallback, timeoutMilliseconds);
 
-    // Send the interest to the matching faces in the FIB.
-    for (var i = 0; i < FIB.length; ++i) {
-      var face = FIB[i];
-      if (face == this)
+    if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
+      // Special case: broadcast to all faces.
+      for (var i = 0; i < Faces.length; ++i) {
+        var face = Faces[i];
         // Don't send the interest back to where it came from.
-        continue;
-
-      if (ForwarderFace.broadcastNamePrefix.match(interest.getName())) {
-        face.sendBuffer(element);
-        continue;
-      }
-
-      for (var j = 0; j < face.registeredPrefixes.length; ++j) {
-        var registeredPrefix = face.registeredPrefixes[j];
-
-        if (registeredPrefix.match(interest.getName()))
+        if (face != this)
           face.sendBuffer(element);
+      }
+    }
+    else {
+      // Send the interest to the faces in matching FIB entries.
+      for (var i = 0; i < FIB.length; ++i) {
+        var fibEntry = FIB[i];
+
+        // TODO: Need to do longest prefix match?
+        if (fibEntry.prefix.match(interest.getName())) {
+          for (var j = 0; j < fibEntry.faces.length; ++j) {
+            var face = fibEntry.faces[j];
+            // Don't send the interest back to where it came from.
+            if (face != this)
+              face.sendBuffer(element);
+          }
+        }
       }
     }
   }
@@ -205,10 +223,10 @@ ForwarderFace.prototype.onReceivedElement = function(element)
     // Iterate backwards so we can remove the entry and keep iterating.
     for (var i = PIT.length - 1; i >= 0; --i) {
       if (PIT[i].face != this && PIT[i].face != null &&
-	  PIT[i].interest.matchesName(data.getName())) {
+          PIT[i].interest.matchesName(data.getName())) {
         if (LOG > 3) console.log("Sending Data to match interest " + PIT[i].interest.getName().toUri() + "\n");
         PIT[i].face.sendBuffer(element);
-	PIT[i].face = null;
+        PIT[i].face = null;
 
         // Remove this entry.
         PIT.splice(i, 1);
@@ -264,7 +282,28 @@ ForwarderFace.prototype.onReceivedLocalhostInterest = function(interest)
     // TODO: Verify the signature?
 
     if (LOG > 3) console.log("Received register request " + controlParameters.getName().toUri() + "\n");
-    this.registeredPrefixes.push(controlParameters.getName());
+
+    var prefix = controlParameters.getName();
+    // Check for a FIB entry for the prefix and add this face.
+    var foundFibEntry = false;
+    for (var i = 0; i < FIB.length; ++i) {
+      var fibEntry = FIB[i];
+      if (fibEntry.prefix.equals(prefix)) {
+        // Make sure the face is not already added.
+        if (fibEntry.faces.indexOf(this) < 0)
+          fibEntry.faces.push(this);
+
+        foundFibEntry = true;
+        break;
+      }
+    }
+
+    if (!foundFibEntry) {
+      // Make a new FIB entry.
+      var fibEntry = new FibEntry(prefix);
+      fibEntry.faces.push(this);
+      FIB.push(fibEntry);
+    }
 
     // Send the ControlResponse.
     var controlResponse = new ControlResponse();
@@ -291,16 +330,16 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
   else if (obj.type == "faces/create") {
     // TODO: Re-check that the face doesn't exist.
     var face = new ForwarderFace(null, new WebSocket(obj.uri));
-    FIB.push(face);
+    Faces.push(face);
     obj.faceId = face.faceId;
     this.sendObject(obj);
   }
   else if (obj.type == "rib/register") {
     // Find the face with the faceId.
     var face = null;
-    for (var i = 0; i < FIB.length; ++i) {
-      if (FIB[i].faceId = obj.faceId) {
-        face = FIB[i];
+    for (var i = 0; i < Faces.length; ++i) {
+      if (Faces[i].faceId = obj.faceId) {
+        face = Faces[i];
         break;
       }
     }
@@ -310,8 +349,28 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
       return;
     }
 
-    // TODO: Check if it already has the prefix.
-    face.registeredPrefixes.push(new Name(obj.nameUri));
+    var prefix = new Name(obj.nameUri);
+    // Check for a FIB entry for the prefix and add the face.
+    var foundFibEntry = false;
+    for (var i = 0; i < FIB.length; ++i) {
+      var fibEntry = FIB[i];
+      if (fibEntry.prefix.equals(prefix)) {
+        // Make sure the face is not already added.
+        if (fibEntry.faces.indexOf(face) < 0)
+          fibEntry.faces.push(face);
+
+        foundFibEntry = true;
+        break;
+      }
+    }
+
+    if (!foundFibEntry) {
+      // Make a new FIB entry.
+      var fibEntry = new FibEntry(prefix);
+      fibEntry.faces.push(face);
+      FIB.push(fibEntry);
+    }
+
     obj.statusCode = 400;
     this.sendObject(obj);
   }
