@@ -14495,31 +14495,21 @@ exports.Name = Name;
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'string')
-    this.value = DataUtils.stringToUtf8Array(value);
-  else if (typeof value === 'object' && value instanceof Name.Component)
-    this.value = new Buffer(value.value);
-  else if (typeof value === 'object' && value instanceof Blob) {
-    if (value.isNull())
-      this.value = new Buffer(0);
-    else
-      this.value = new Buffer(value.buf());
-  }
-  else if (Buffer.isBuffer(value))
-    this.value = new Buffer(value);
-  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer)
+  if (typeof value === 'object' && value instanceof Name.Component)
+    this.value_ = value.value_;
+  else if (!value)
+    this.value_ = new Blob([]);
+  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
+           value instanceof ArrayBuffer)
     // Make a copy.  Turn the value into a Uint8Array since the Buffer
     //   constructor doesn't take an ArrayBuffer.
-    this.value = new Buffer(new Uint8Array(value));
-  else if (!value)
-    this.value = new Buffer(0);
-  else if (typeof value === 'object')
-    // Assume value is a byte array.  We can't check instanceof Array because
-    //   this doesn't work in JavaScript if the array comes from a different module.
-    this.value = new Buffer(value);
+    this.value_ = new Blob(new Buffer(new Uint8Array(value)), false);
+  else if (typeof value === 'object' && value instanceof Blob)
+    this.value_ = value;
   else
-    throw new Error("Name.Component constructor: Invalid type");
-}
+    // Blob will make a copy if needed.
+    this.value_ = new Blob(value);
+};
 
 /**
  * Get the component value.
@@ -14527,9 +14517,8 @@ Name.Component = function NameComponent(value)
  */
 Name.Component.prototype.getValue = function()
 {
-  // For temporary backwards compatibility, leave this.value as a Buffer but return a Blob.
-  return new Blob(this.value, false);
-}
+  return this.value_;
+};
 
 /**
  * @deprecated Use getValue. This method returns a Buffer which is the former
@@ -14537,8 +14526,15 @@ Name.Component.prototype.getValue = function()
  */
 Name.Component.prototype.getValueAsBuffer = function()
 {
-  return this.value;
+  // Assume the caller won't modify it.
+  return this.value_.buf();
 };
+
+/**
+ * @deprecated Use getValue which returns a Blob.
+ */
+Object.defineProperty(Name.Component.prototype, "value",
+  { get: function() { return this.getValueAsBuffer(); } });
 
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
@@ -14547,7 +14543,7 @@ Name.Component.prototype.getValueAsBuffer = function()
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  return Name.toEscapedString(this.value);
+  return Name.toEscapedString(this.value_.buf());
 };
 
 /**
@@ -14558,7 +14554,7 @@ Name.Component.prototype.toEscapedString = function()
  */
 Name.Component.prototype.isSegment = function()
 {
-  return this.value.length >= 1 && this.value[0] == 0x00;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00;
 };
 
 /**
@@ -14569,7 +14565,7 @@ Name.Component.prototype.isSegment = function()
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
-  return this.value.length >= 1 && this.value[0] == 0xFB;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB;
 };
 
 /**
@@ -14580,7 +14576,7 @@ Name.Component.prototype.isSegmentOffset = function()
  */
 Name.Component.prototype.isVersion = function()
 {
-  return this.value.length >= 1 && this.value[0] == 0xFD;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD;
 };
 
 /**
@@ -14591,7 +14587,7 @@ Name.Component.prototype.isVersion = function()
  */
 Name.Component.prototype.isTimestamp = function()
 {
-  return this.value.length >= 1 && this.value[0] == 0xFC;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC;
 };
 
 /**
@@ -14602,7 +14598,7 @@ Name.Component.prototype.isTimestamp = function()
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
-  return this.value.length >= 1 && this.value[0] == 0xFE;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE;
 };
 
 /**
@@ -14611,7 +14607,7 @@ Name.Component.prototype.isSequenceNumber = function()
  */
 Name.Component.prototype.toNumber = function()
 {
-  return DataUtils.bigEndianToUnsignedInt(this.value);
+  return DataUtils.bigEndianToUnsignedInt(this.value_.buf());
 };
 
 /**
@@ -14623,10 +14619,10 @@ Name.Component.prototype.toNumber = function()
  */
 Name.Component.prototype.toNumberWithMarker = function(marker)
 {
-  if (this.value.length == 0 || this.value[0] != marker)
+  if (this.value_.size() == 0 || this.value_.buf()[0] != marker)
     throw new Error("Name component does not begin with the expected marker");
 
-  return DataUtils.bigEndianToUnsignedInt(this.value.slice(1));
+  return DataUtils.bigEndianToUnsignedInt(this.value_.buf().slice(1));
 };
 
 /**
@@ -14790,16 +14786,16 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
 Name.Component.prototype.getSuccessor = function()
 {
   // Allocate an extra byte in case the result is larger.
-  var result = new Buffer(this.value.length + 1);
+  var result = new Buffer(this.value_.size() + 1);
 
   var carry = true;
-  for (var i = this.value.length - 1; i >= 0; --i) {
+  for (var i = this.value_.size() - 1; i >= 0; --i) {
     if (carry) {
-      result[i] = (this.value[i] + 1) & 0xff;
+      result[i] = (this.value_.buf()[i] + 1) & 0xff;
       carry = (result[i] === 0);
     }
     else
-      result[i] = this.value[i];
+      result[i] = this.value_.buf()[i];
   }
 
   if (carry)
@@ -14809,7 +14805,7 @@ Name.Component.prototype.getSuccessor = function()
     result[result.length - 1] = 0;
   else
     // We didn't need the extra byte.
-    result = result.slice(0, this.value.length);
+    result = result.slice(0, this.value_.size());
 
   return new Name.Component(new Blob(result, false));
 };
@@ -14821,7 +14817,8 @@ Name.Component.prototype.getSuccessor = function()
  */
 Name.Component.prototype.equals = function(other)
 {
-  return DataUtils.arraysEqual(this.value, other.value);
+  return typeof other === 'object' && other instanceof Name.Component &&
+    this.value_.equals(other.value_);
 };
 
 /**
@@ -14835,7 +14832,7 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
-  return Name.Component.compareBuffers(this.value, other.value);
+  return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
 };
 
 /**
