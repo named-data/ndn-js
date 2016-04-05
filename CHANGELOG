@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-04-04)
+Interim changes since NDN-JS v0.10 (2016-04-05)
 -----------------------------------------------
 
 Breaking changes
@@ -35,6 +35,8 @@ Changes
 
 Deprecated
 * In KeyChain, deprecated getIdentityCertificate. Use getCertificate.
+* http://redmine.named-data.net/issues/3587 In Name.Component, deprecated direct access
+  to value. Use getValue() which returns Blob.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.
