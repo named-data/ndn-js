@@ -63,31 +63,21 @@ exports.Name = Name;
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'string')
-    this.value = DataUtils.stringToUtf8Array(value);
-  else if (typeof value === 'object' && value instanceof Name.Component)
-    this.value = new Buffer(value.value);
-  else if (typeof value === 'object' && value instanceof Blob) {
-    if (value.isNull())
-      this.value = new Buffer(0);
-    else
-      this.value = new Buffer(value.buf());
-  }
-  else if (Buffer.isBuffer(value))
-    this.value = new Buffer(value);
-  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&  value instanceof ArrayBuffer)
+  if (typeof value === 'object' && value instanceof Name.Component)
+    this.value_ = value.value_;
+  else if (!value)
+    this.value_ = new Blob([]);
+  else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
+           value instanceof ArrayBuffer)
     // Make a copy.  Turn the value into a Uint8Array since the Buffer
     //   constructor doesn't take an ArrayBuffer.
-    this.value = new Buffer(new Uint8Array(value));
-  else if (!value)
-    this.value = new Buffer(0);
-  else if (typeof value === 'object')
-    // Assume value is a byte array.  We can't check instanceof Array because
-    //   this doesn't work in JavaScript if the array comes from a different module.
-    this.value = new Buffer(value);
+    this.value_ = new Blob(new Buffer(new Uint8Array(value)), false);
+  else if (typeof value === 'object' && value instanceof Blob)
+    this.value_ = value;
   else
-    throw new Error("Name.Component constructor: Invalid type");
-}
+    // Blob will make a copy if needed.
+    this.value_ = new Blob(value);
+};
 
 /**
  * Get the component value.
@@ -95,9 +85,8 @@ Name.Component = function NameComponent(value)
  */
 Name.Component.prototype.getValue = function()
 {
-  // For temporary backwards compatibility, leave this.value as a Buffer but return a Blob.
-  return new Blob(this.value, false);
-}
+  return this.value_;
+};
 
 /**
  * @deprecated Use getValue. This method returns a Buffer which is the former
@@ -105,8 +94,15 @@ Name.Component.prototype.getValue = function()
  */
 Name.Component.prototype.getValueAsBuffer = function()
 {
-  return this.value;
+  // Assume the caller won't modify it.
+  return this.value_.buf();
 };
+
+/**
+ * @deprecated Use getValue which returns a Blob.
+ */
+Object.defineProperty(Name.Component.prototype, "value",
+  { get: function() { return this.getValueAsBuffer(); } });
 
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
