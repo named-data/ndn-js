@@ -18251,6 +18251,23 @@ IdentityStorage.prototype.getDefaultCertificateNameForKey = function(keyName)
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IdentityStorage.prototype.getAllIdentitiesPromise = function
+  (nameList, isDefault, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getAllIdentitiesPromise is not implemented"));
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -18267,6 +18284,24 @@ IdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
 {
   return SyncPromise.reject(new Error
     ("IdentityStorage.getAllKeyNamesOfIdentityPromise is not implemented"));
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name.
+ * If false, add only the non-default certificate names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IdentityStorage.prototype.getAllCertificateNamesOfKeyPromise = function
+  (keyName, nameList, isDefault, useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getAllCertificateNamesOfKeyPromise is not implemented"));
 };
 
 /**
@@ -18884,6 +18919,46 @@ IndexedDbIdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = func
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IndexedDbIdentityStorage.prototype.getAllIdentitiesPromise = function
+  (nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbIdentityStorage.getAllIdentitiesPromise is only supported for async")));
+
+  var defaultIdentityName = null;
+  var thisStorage = this;
+  return this.getDefaultIdentityPromise()
+  .then(function(localDefaultIdentityName) {
+    defaultIdentityName = localDefaultIdentityName;
+    return SyncPromise.resolve();
+  }, function(err) {
+    // The default identity name was not found.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    return thisStorage.database.identity.each(function(identityEntry) {
+      var identityName = new Name(identityEntry.identityNameUri);
+      var identityNameIsDefault =
+        (defaultIdentityName !== null && identityName.equals(defaultIdentityName));
+      if (isDefault && identityNameIsDefault)
+        nameList.push(identityName);
+      else if (!isDefault && !identityNameIsDefault)
+        nameList.push(identityName);
+    });
+  });
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -18913,7 +18988,7 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
   })
   .then(function() {
     // Iterate through each publicKey a to find ones that match identityName.
-    // This is a little inefficient, but we don't expect the in-browswer
+    // This is a little inefficient, but we don't expect the in-browser
     // database to be very big, we don't expect to use this function often (for
     // deleting an identity), and this is simpler than complicating the database
     // schema to store the identityName with each publicKey.
@@ -18923,11 +18998,63 @@ IndexedDbIdentityStorage.prototype.getAllKeyNamesOfIdentityPromise = function
 
       if (keyIdentityName.equals(identityName)) {
         var keyNameIsDefault =
-          (defaultKeyName != null && keyName.equals(defaultKeyName));
+          (defaultKeyName !== null && keyName.equals(defaultKeyName));
         if (isDefault && keyNameIsDefault)
           nameList.push(keyName);
         else if (!isDefault && !keyNameIsDefault)
           nameList.push(keyName);
+      }
+    });
+  });
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name.
+ * If false, add only the non-default certificate names.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which fulfills when the names are added to
+ * nameList.
+ */
+IndexedDbIdentityStorage.prototype.getAllCertificateNamesOfKeyPromise = function
+  (keyName, nameList, isDefault, useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("IndexedDbIdentityStorage.getAllCertificateNamesOfKeyPromise is only supported for async")));
+
+  var defaultCertificateName = null;
+  var thisStorage = this;
+  return this.getDefaultCertificateNameForKeyPromise(keyName)
+  .then(function(localDefaultCertificateName) {
+    defaultCertificateName = localDefaultCertificateName;
+    return SyncPromise.resolve();
+  }, function(err) {
+    // The default certificate name was not found.
+    return SyncPromise.resolve();
+  })
+  .then(function() {
+    // Iterate through each certificate record a to find ones that match keyName.
+    // This is a little inefficient, but we don't expect the in-browser
+    // database to be very big, we don't expect to use this function often (for
+    // deleting an identity), and this is simpler than complicating the database
+    // schema to store the keyName with each certificate record.
+    return thisStorage.database.certificate.each(function(certificateEntry) {
+      var certificateName = new Name(certificateEntry.certificateNameUri);
+      var certificateKeyName = IdentityCertificate.certificateNameToPublicKeyName
+        (certificateName);
+
+      if (certificateKeyName.equals(keyName)) {
+        var certificateNameIsDefault =
+          (defaultCertificateName !== null &&
+           certificateName.equals(defaultCertificateName));
+        if (isDefault && certificateNameIsDefault)
+          nameList.push(certificateName);
+        else if (!isDefault && !certificateNameIsDefault)
+          nameList.push(certificateName);
       }
     });
   });
@@ -21366,6 +21493,31 @@ IdentityManager.prototype.getDefaultCertificateName = function
 };
 
 /**
+ * Append all the identity names to the nameList.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default identity name. If
+ * false, add only the non-default identity names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllIdentities = function
+  (nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllIdentitiesPromise
+      (nameList, isDefault, !onComplete));
+};
+
+/**
  * Append all the key names of a particular identity to the nameList.
  * @param {Name} identityName The identity name to search for.
  * @param {Array<Name>} nameList Append result names to nameList.
@@ -21389,6 +21541,32 @@ IdentityManager.prototype.getAllKeyNamesOfIdentity = function
   return SyncPromise.complete(onComplete, onError,
     this.identityStorage.getAllKeyNamesOfIdentityPromise
       (identityName, nameList, isDefault, !onComplete));
+};
+
+/**
+ * Append all the certificate names of a particular key name to the nameList.
+ * @param {Name} keyName The key name to search for.
+ * @param {Array<Name>} nameList Append result names to nameList.
+ * @param {boolean} isDefault If true, add only the default certificate name. If
+ * false, add only the non-default certificate names.
+ * @param {function} onComplete (optional) This calls onComplete() when finished
+ * adding to nameList. If omitted, this returns when complete. (Some database
+ * libraries only use a callback, so onComplete is required to use these.)
+ * @param {function} onError (optional) If defined, then onComplete must be
+ * defined and if there is an exception, then this calls onError(exception)
+ * with the exception. If onComplete is defined but onError is undefined, then
+ * this will log any thrown exception. (Some database libraries only use a
+ * callback, so onError is required to be notified of an exception.)
+ * @return {void} If onComplete is omitted, return when complete. Otherwise, if
+ * onComplete is supplied then return undefined and use onComplete as described
+ * above.
+ */
+IdentityManager.prototype.getAllCertificateNamesOfKey = function
+  (keyName, nameList, isDefault, onComplete, onError)
+{
+  return SyncPromise.complete(onComplete, onError,
+    this.identityStorage.getAllCertificateNamesOfKeyPromise
+      (keyName, nameList, isDefault, !onComplete));
 };
 
 /**
