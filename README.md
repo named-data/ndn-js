@@ -163,7 +163,6 @@ The following selector keys are supported:
 ndn.MinSuffixComponent= non-negative int
 ndn.MaxSuffixComponents= non-negative int
 ndn.ChildSelector= non-negative int
-ndn.AnswerOriginKind= non-negative int
 ndn.Scope= non-negative int
 ndn.InterestLifetime= non-negative int (milliseconds)
 ndn.PublisherPublicKeyDigest= % escaped value
