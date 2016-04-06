@@ -237,6 +237,11 @@ ForwarderFace.prototype.onReceivedElement = function(element)
   }
 };
 
+ForwarderFace.prototype.isEnabled = function()
+{
+  return this.port != null || this.webSocket != null;
+};
+
 ForwarderFace.prototype.sendObject = function(obj)
 {
   if (this.port == null)
@@ -331,9 +336,13 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
 
       var entry = { name: fibEntry.name.toUri(),
                     nextHops: [] };
-      for (var j = 0; j < fibEntry.faces.length; ++j)
-        entry.nextHops.push({ faceId: fibEntry.faces[j].faceId });
-      obj.fib.push(entry);
+      for (var j = 0; j < fibEntry.faces.length; ++j) {
+        // Don't show disabled faces, e.g. for a closed browser tab.
+        if (fibEntry.faces[j].isEnabled())
+          entry.nextHops.push({ faceId: fibEntry.faces[j].faceId });
+      }
+      if (entry.nextHops.length > 0)
+        obj.fib.push(entry);
     }
 
     this.sendObject(obj);
