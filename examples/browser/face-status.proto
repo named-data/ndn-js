@@ -16,8 +16,10 @@ message FaceStatusMessage {
     required uint64 link_type = 134;
     required uint64 n_in_interests = 144;
     required uint64 n_in_datas = 145;
+    required uint64 n_in_nacks = 151;
     required uint64 n_out_interests = 146;
     required uint64 n_out_datas = 147;
+    required uint64 n_out_nacks = 152;
     required uint64 n_in_bytes = 148;
     required uint64 n_out_bytes = 149;
   }
