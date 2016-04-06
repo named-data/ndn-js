@@ -89,6 +89,11 @@ To use NDN-JS in a web page, one of two scripts must be included using a script 
 ndn.js is a combined library or ndn.min.js is a compressed version of the combined library
 which loads faster but doesn't show the original source for debugging.
 
+A web page script tag can load a [released version](https://github.com/named-data/ndn-js/releases) from RawGit.
+This URL loads version v0.10.0:
+
+- https://cdn.rawgit.com/named-data/ndn-js/v0.10.0/build/ndn.min.js
+
 For development, see INSTALL for instructions on how to build these files.
 Or the latest development snapshot can be downloaded from the `build` directory:
 
