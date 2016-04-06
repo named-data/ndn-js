@@ -86,10 +86,11 @@ the same host. The Node.js API can use the Node.js native support for TCP (remot
 ** Including the scripts in a web page **
 To use NDN-JS in a web page, one of two scripts must be included using a script tag:
 
-ndn.js is a combined library (and ndn-js.min.js is a compressed version of the combined library).
-See INSTALL for instructions on how to build these files.
+ndn.js is a combined library or ndn.min.js is a compressed version of the combined library
+which loads faster but doesn't show the original source for debugging.
 
-Or they can be downloaded from the `build` directory:
+For development, see INSTALL for instructions on how to build these files.
+Or the latest development snapshot can be downloaded from the `build` directory:
 
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.js
 - https://github.com/named-data/ndn-js/raw/master/build/ndn.min.js
