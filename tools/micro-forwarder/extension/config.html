@@ -48,7 +48,7 @@
         transport.sendObject({ type: "faces/list" });
       }
       else if (obj.type == "faces/list") {
-        var text = "Faces<br/>\n";
+        var text = "Faces:<br/>\n";
         for (var i = 0; i < obj.faces.length; ++i)
           text += "&nbsp;&nbsp;faceId=" + obj.faces[i].faceId +
             " " + obj.faces[i].uri + "<br/>\n";
