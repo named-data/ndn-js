@@ -37,6 +37,7 @@ var CommandInterestGenerator = require('./util/command-interest-generator.js').C
 var NdnCommon = require('./util/ndn-common.js').NdnCommon;
 var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable;
 var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable;
+var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -166,8 +167,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
 
   this.pendingInterestTable_ = new PendingInterestTable();
   this.interestFilterTable_ = new InterestFilterTable();
-  this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
-  this.registeredPrefixRemoveRequests = new Array(); // of number
+  this.registeredPrefixTable_ = new RegisteredPrefixTable(this.interestFilterTable_);
   this.lastEntryId = 0;
 };
 
@@ -250,53 +250,6 @@ Face.prototype.close = function()
 Face.prototype.getNextEntryId = function()
 {
   return ++this.lastEntryId;
-};
-
-/**
- * A RegisteredPrefix holds a registeredPrefixId and information necessary to
- * remove the registration later. It optionally holds a related interestFilterId
- * if the InterestFilter was set in the same registerPrefix operation.
- * @param {number} registeredPrefixId A unique ID for this entry, which you
- * should get with getNextEntryId().
- * @param {Name} prefix The name prefix.
- * @param {number} relatedInterestFilterId (optional) The related
- * interestFilterId for the filter set in the same registerPrefix operation. If
- * omitted, set to 0.
- * @constructor
- */
-Face.RegisteredPrefix = function FaceRegisteredPrefix
-  (registeredPrefixId, prefix, relatedInterestFilterId)
-{
-  this.registeredPrefixId = registeredPrefixId;
-  this.prefix = prefix;
-  this.relatedInterestFilterId = relatedInterestFilterId;
-};
-
-/**
- * Get the registeredPrefixId given to the constructor.
- * @returns {number} The registeredPrefixId.
- */
-Face.RegisteredPrefix.prototype.getRegisteredPrefixId = function()
-{
-  return this.registeredPrefixId;
-};
-
-/**
- * Get the name prefix given to the constructor.
- * @returns {Name} The name prefix.
- */
-Face.RegisteredPrefix.prototype.getPrefix = function()
-{
-  return this.prefix;
-};
-
-/**
- * Get the related interestFilterId given to the constructor.
- * @returns {number} The related interestFilterId.
- */
-Face.RegisteredPrefix.prototype.getRelatedInterestFilterId = function()
-{
-  return this.relatedInterestFilterId;
 };
 
 /**
@@ -478,18 +431,19 @@ Face.prototype.reconnectAndExpressInterest = function
 Face.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var pitEntry = this.pendingInterestTable_.add
-    (pendingInterestId, interest, onData, onTimeout);
-  if (pitEntry !== null) {
-    // Special case: For timeoutPrefix we don't actually send the interest.
-    if (!this.timeoutPrefix.match(interest.getName())) {
-      var binaryInterest = interest.wireEncode(wireFormat);
-      if (binaryInterest.size() > Face.getMaxNdnPacketSize())
-        throw new Error
-          ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
+  if (this.pendingInterestTable_.add
+      (pendingInterestId, interest, onData, onTimeout) == null)
+    // removePendingInterest was already called with the pendingInterestId.
+    return;
 
-      this.transport.send(binaryInterest.buf());
-    }
+  // Special case: For timeoutPrefix we don't actually send the interest.
+  if (!this.timeoutPrefix.match(interest.getName())) {
+    var binaryInterest = interest.wireEncode(wireFormat);
+    if (binaryInterest.size() > Face.getMaxNdnPacketSize())
+      throw new Error
+        ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
+
+    this.transport.send(binaryInterest.buf());
   }
 };
 
@@ -776,18 +730,6 @@ Face.prototype.nfdRegisterPrefix = function
   (registeredPrefixId, prefix, onInterest, flags, onRegisterFailed,
    onRegisterSuccess, commandKeyChain, commandCertificateName, wireFormat)
 {
-  var removeRequestIndex = -1;
-  if (removeRequestIndex != null)
-    removeRequestIndex = this.registeredPrefixRemoveRequests.indexOf
-      (registeredPrefixId);
-  if (removeRequestIndex >= 0) {
-    // removeRegisteredPrefix was called with the registeredPrefixId returned by
-    //   registerPrefix before we got here, so don't add a registeredPrefixTable
-    //   entry.
-    this.registeredPrefixRemoveRequests.splice(removeRequestIndex, 1);
-    return;
-  }
-
   if (commandKeyChain == null)
       throw new Error
         ("registerPrefix: The command KeyChain has not been set. You must call setCommandSigningInfo.");
@@ -827,8 +769,10 @@ Face.prototype.nfdRegisterPrefix = function
           interestFilterId = thisFace.setInterestFilter
             (new InterestFilter(prefix), onInterest);
 
-        thisFace.registeredPrefixTable.push
-          (new Face.RegisteredPrefix(registeredPrefixId, prefix, interestFilterId));
+        if (!thisFace.registeredPrefixTable_.add
+            (registeredPrefixId, prefix, interestFilterId))
+          // removeRegisteredPrefix was already called with the registeredPrefixId.
+          return;
       }
 
       // Send the registration interest.
@@ -866,35 +810,7 @@ Face.prototype.nfdRegisterPrefix = function
  */
 Face.prototype.removeRegisteredPrefix = function(registeredPrefixId)
 {
-  // Go backwards through the list so we can erase entries.
-  // Remove all entries even though registeredPrefixId should be unique.
-  var count = 0;
-  for (var i = this.registeredPrefixTable.length - 1; i >= 0; --i) {
-    var entry = this.registeredPrefixTable[i];
-    if (entry.getRegisteredPrefixId() == registeredPrefixId) {
-      ++count;
-
-      if (entry.getRelatedInterestFilterId() > 0)
-        // Remove the related interest filter.
-        this.unsetInterestFilter(entry.getRelatedInterestFilterId());
-
-      this.registeredPrefixTable.splice(i, 1);
-    }
-  }
-
-  if (count == 0)
-    if (LOG > 0) console.log
-      ("removeRegisteredPrefix: Didn't find registeredPrefixId " + registeredPrefixId);
-
-  if (count == 0) {
-    // The registeredPrefixId was not found. Perhaps this has been called before
-    //   the callback in registerPrefix can add to the registeredPrefixTable. Add
-    //   this removal request which will be checked before adding to the
-    //   registeredPrefixTable.
-    if (this.registeredPrefixRemoveRequests.indexOf(registeredPrefixId) < 0)
-      // Not already requested, so add the request.
-      this.registeredPrefixRemoveRequests.push(registeredPrefixId);
-  }
+  this.registeredPrefixTable_.removeRegisteredPrefix(registeredPrefixId);
 };
 
 /**

@@ -195,6 +195,7 @@ def build (bld):
                  "js/util/command-interest-generator.js",
                  "js/impl/interest-filter-table.js",
                  "js/impl/pending-interest-table.js",
+                 "js/impl/registered-prefix-table.js",
                  "js/face.js",
                  "contrib/dexie/dexie.min.js"]
 
