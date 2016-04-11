@@ -35,6 +35,7 @@ var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
 var NdnCommon = require('./util/ndn-common.js').NdnCommon;
+var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable;
 var fs = require('fs');
 var LOG = require('./log.js').Log.LOG;
 
@@ -162,8 +163,7 @@ var Face = function Face(transportOrSettings, connectionInfo)
   this.commandInterestGenerator = new CommandInterestGenerator();
   this.timeoutPrefix = new Name("/local/timeout");
 
-  this.pendingInterestTable = new Array();  // of Face.PendingInterest
-  this.pitRemoveRequests = new Array();     // of number
+  this.pendingInterestTable_ = new PendingInterestTable();
   this.registeredPrefixTable = new Array(); // of Face.RegisteredPrefix
   this.registeredPrefixRemoveRequests = new Array(); // of number
   this.interestFilterTable = new Array();   // of Face.InterestFilterEntry
@@ -249,49 +249,6 @@ Face.prototype.close = function()
 Face.prototype.getNextEntryId = function()
 {
   return ++this.lastEntryId;
-};
-
-/**
- * A PendingInterestTable is an internal class to hold a list of pending
- * interests with their callbacks.
- * @constructor
- */
-Face.PendingInterest = function FacePendingInterest
-  (pendingInterestId, interest, onData, onTimeout)
-{
-  this.pendingInterestId = pendingInterestId;
-  this.interest = interest;
-  this.onData = onData;
-  this.onTimeout = onTimeout;
-  this.timerID = -1;
-};
-
-/**
- * Find all entries from this.pendingInterestTable where the name conforms to the entry's
- * interest selectors, remove the entries from the table, cancel their timeout
- * timers and return them.
- * @param {Name} name The name to find the interest for (from the incoming data
- * packet).
- * @returns {Array<Face.PendingInterest>} The matching entries from this.pendingInterestTable, or [] if
- * none are found.
- */
-Face.prototype.extractEntriesForExpressedInterest = function(name)
-{
-  var result = [];
-
-  // Go backwards through the list so we can erase entries.
-  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
-    var entry = this.pendingInterestTable[i];
-    if (entry.interest.matchesName(name)) {
-      // Cancel the timeout timer.
-      clearTimeout(entry.timerID);
-
-      result.push(entry);
-      this.pendingInterestTable.splice(i, 1);
-    }
-  }
-
-  return result;
 };
 
 /**
@@ -564,49 +521,19 @@ Face.prototype.reconnectAndExpressInterest = function
 Face.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var binaryInterest = interest.wireEncode(wireFormat);
-  if (binaryInterest.size() > Face.getMaxNdnPacketSize())
-    throw new Error
-      ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
+  var pitEntry = this.pendingInterestTable_.add
+    (pendingInterestId, interest, onData, onTimeout);
+  if (pitEntry !== null) {
+    // Special case: For timeoutPrefix we don't actually send the interest.
+    if (!this.timeoutPrefix.match(interest.getName())) {
+      var binaryInterest = interest.wireEncode(wireFormat);
+      if (binaryInterest.size() > Face.getMaxNdnPacketSize())
+        throw new Error
+          ("The encoded interest size exceeds the maximum limit getMaxNdnPacketSize()");
 
-  var removeRequestIndex = removeRequestIndex = this.pitRemoveRequests.indexOf
-    (pendingInterestId);
-  if (removeRequestIndex >= 0)
-    // removePendingInterest was called with the pendingInterestId returned by
-    //   expressInterest before we got here, so don't add a PIT entry.
-    this.pitRemoveRequests.splice(removeRequestIndex, 1);
-  else {
-    var pitEntry = new Face.PendingInterest
-      (pendingInterestId, interest, onData, onTimeout);
-    this.pendingInterestTable.push(pitEntry);
-
-    // Set interest timer.
-    var timeoutMilliseconds = (interest.getInterestLifetimeMilliseconds() || 4000);
-    var thisFace = this;
-    var timeoutCallback = function() {
-      if (LOG > 1) console.log("Interest time out: " + interest.getName().toUri());
-
-      // Remove PIT entry from thisFace.pendingInterestTable.
-      var index = thisFace.pendingInterestTable.indexOf(pitEntry);
-      if (index >= 0)
-        thisFace.pendingInterestTable.splice(index, 1);
-
-      // Call onTimeout.
-      if (pitEntry.onTimeout) {
-        try {
-          pitEntry.onTimeout(pitEntry.interest);
-        } catch (ex) {
-          console.log("Error in onTimeout: " + NdnCommon.getErrorWithStackTrace(ex));
-        }
-      }
-    };
-
-    pitEntry.timerID = setTimeout(timeoutCallback, timeoutMilliseconds);
+      this.transport.send(binaryInterest.buf());
+    }
   }
-
-  // Special case: For timeoutPrefix we don't actually send the interest.
-  if (!this.timeoutPrefix.match(interest.getName()))
-    this.transport.send(binaryInterest.buf());
 };
 
 /**
@@ -618,35 +545,7 @@ Face.prototype.expressInterestHelper = function
  */
 Face.prototype.removePendingInterest = function(pendingInterestId)
 {
-  if (pendingInterestId == null)
-    return;
-
-  // Go backwards through the list so we can erase entries.
-  // Remove all entries even though pendingInterestId should be unique.
-  var count = 0;
-  for (var i = this.pendingInterestTable.length - 1; i >= 0; --i) {
-    var entry = this.pendingInterestTable[i];
-    if (entry.pendingInterestId == pendingInterestId) {
-      // Cancel the timeout timer.
-      clearTimeout(entry.timerID);
-
-      this.pendingInterestTable.splice(i, 1);
-      ++count;
-    }
-  }
-
-  if (count == 0)
-    if (LOG > 0) console.log
-      ("removePendingInterest: Didn't find pendingInterestId " + pendingInterestId);
-
-  if (count == 0) {
-    // The pendingInterestId was not found. Perhaps this has been called before
-    //   the callback in expressInterest can add to the PIT. Add this
-    //   removal request which will be checked before adding to the PIT.
-    if (this.pitRemoveRequests.indexOf(pendingInterestId) < 0)
-      // Not already requested, so add the request.
-      this.pitRemoveRequests.push(pendingInterestId);
-  }
+  this.pendingInterestTable_.removePendingInterest(pendingInterestId);
 };
 
 /**
@@ -1203,12 +1102,14 @@ Face.prototype.onReceivedElement = function(element)
   else if (data !== null) {
     if (LOG > 3) console.log('Data packet received.');
 
-    var pendingInterests = this.extractEntriesForExpressedInterest(data.getName());
+    var pendingInterests = [];
+    this.pendingInterestTable_.extractEntriesForExpressedInterest
+      (data.getName(), pendingInterests);
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];
       try {
-        pendingInterest.onData(pendingInterest.interest, data);
+        pendingInterest.getOnData()(pendingInterest.getInterest(), data);
       } catch (ex) {
         console.log("Error in onData: " + NdnCommon.getErrorWithStackTrace(ex));
       }
