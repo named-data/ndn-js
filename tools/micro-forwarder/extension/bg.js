@@ -58,9 +58,14 @@ var FibEntry = function FibEntry(name)
  * if this is null then use webSocket.
  * @param {WebSocket} webSocket If a port is not supplied, communicate using the
  * WebSocket object which is already created with the host name.
+ * @param {function} onComplete (optional) When the operation is complete,
+ * this calls onComplete(success) where success is true if the face is created
+ * or false if the face cannot be completed. If onComplete is omitted, this does
+ * not call it. (This is mainly to get the result of opening a WebSocket but is
+ * also called for a port.)
  * @constructor
  */
-var ForwarderFace = function ForwarderFace(uri, port, webSocket)
+var ForwarderFace = function ForwarderFace(uri, port, webSocket, onComplete)
 {
   this.uri = uri;
   this.port = port;
@@ -88,6 +93,9 @@ var ForwarderFace = function ForwarderFace(uri, port, webSocket)
       }
       thisFace.port = null;
     });
+
+    if (onComplete)
+      onComplete(true);
   }
   else {
     this.webSocket.binaryType = "arraybuffer";
@@ -114,16 +122,24 @@ var ForwarderFace = function ForwarderFace(uri, port, webSocket)
       }
     };
 
+    // Make sure we only call onComplete once.
+    var calledOnComplete = false;
     this.webSocket.onopen = function(ev) {
       if (LOG > 3) console.log(ev);
       if (LOG > 3) console.log('webSocket.onopen: WebSocket connection opened.');
-      if (LOG > 3) console.log('webSocket.onopen: ReadyState: ' + this.readyState);
+      if (onComplete && !calledOnComplete) {
+        calledOnComplete = true;
+        onComplete(true);
+      }
     };
 
     this.webSocket.onerror = function(ev) {
-      console.log('webSocket.onerror: ReadyState: ' + this.readyState);
       console.log(ev);
       console.log('webSocket.onerror: WebSocket error: ' + ev.data);
+      if (onComplete && !calledOnComplete) {
+        calledOnComplete = true;
+        onComplete(false);
+      }
     };
 
     this.webSocket.onclose = function(ev) {
@@ -370,10 +386,19 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
   }
   else if (obj.type == "faces/create") {
     // TODO: Re-check that the face doesn't exist.
-    var face = new ForwarderFace(obj.uri, null, new WebSocket(obj.uri));
-    Faces.push(face);
-    obj.faceId = face.faceId;
-    this.sendObject(obj);
+    var thisFace = this;
+    var face = new ForwarderFace(obj.uri, null, new WebSocket(obj.uri), function(success) {
+      if (success) {
+        Faces.push(face);
+        obj.faceId = face.faceId;
+        obj.statusCode = 200;
+      }
+      else
+        // A problem opening the WebSocket.
+        obj.statusCode = 503;
+
+      thisFace.sendObject(obj);
+    });
   }
   else if (obj.type == "rib/register") {
     // Find the face with the faceId.
