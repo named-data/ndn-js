@@ -73,12 +73,19 @@
         }
       }
       else if (obj.type == "faces/create") {
-        // We have the obj.faceId. Create the route.
-        transport.sendObject({
-          type: "rib/register",
-          nameUri: addRoutePrefixUri,
-          faceId: obj.faceId
-        });
+        var lowestErrorCode = 400;
+        if (obj.statusCode >= lowestErrorCode) {
+          console.log("faces/create error code " + obj.statusCode);
+          // TODO: Display the error to the user.
+        }
+        else {
+          // We have the obj.faceId. Create the route.
+          transport.sendObject({
+            type: "rib/register",
+            nameUri: addRoutePrefixUri,
+            faceId: obj.faceId
+          });
+        }
       }
       else if (obj.type == "rib/register") {
         var lowestErrorCode = 400;
