@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-04-06)
+Interim changes since NDN-JS v0.10 (2016-04-13)
 -----------------------------------------------
 
 Breaking changes
@@ -32,6 +32,7 @@ Changes
 * Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 * Examples: Added test-sign-verify-data-hmac.
 * Unit tests: Added test-link.
+* Integration tests: In test-face-methods, added TestFaceRegisterMethods.
 
 Deprecated
 * In KeyChain, deprecated getIdentityCertificate. Use getCertificate.
