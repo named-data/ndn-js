@@ -635,6 +635,14 @@ function extractNdnSearch(search, template)
                     template.setMaxSuffixComponents(nonNegativeInt);
                 else if (key == "ndn.ChildSelector" && nonNegativeInt >= 0)
                     template.setChildSelector(nonNegativeInt);
+                else if (key == "ndn.MustBeFresh") {
+                  if (nonNegativeInt >= 0)
+                    template.setMustBeFresh(nonNegativeInt != 0);
+                  else if (value.toLowerCase() == "true")
+                    template.setMustBeFresh(true);
+                  else if (value.toLowerCase() == "false")
+                    template.setMustBeFresh(false);
+                }
                 else if (key == "ndn.InterestLifetime" && nonNegativeInt >= 0)
                     template.setInterestLifetimeMilliseconds(nonNegativeInt);
                 else if (key == "ndn.Nonce")
