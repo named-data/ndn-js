@@ -34376,8 +34376,8 @@ RegisteredPrefixTable.prototype.add = function
   var removeRequestIndex = this.removeRequests_.indexOf(registeredPrefixId);
   if (removeRequestIndex >= 0) {
     // removeRegisteredPrefix was called with the registeredPrefixId returned by
-    //   registerPrefix before we got here, so don't add a registeredPrefixTable
-    //   entry.
+    //   registerPrefix before we got here, so don't add a registered prefix
+    //   table entry.
     this.removeRequests_.splice(removeRequestIndex, 1);
     return false;
   }
@@ -34422,9 +34422,9 @@ RegisteredPrefixTable.prototype.removeRegisteredPrefix = function
 
   if (count === 0) {
     // The registeredPrefixId was not found. Perhaps this has been called before
-    //   the callback in registerPrefix can add to the registeredPrefixTable. Add
-    //   this removal request which will be checked before adding to the
-    //   registeredPrefixTable.
+    //   the callback in registerPrefix can add to the registered prefix table.
+    //   Add this removal request which will be checked before adding to the
+    //   registered prefix table.
     if (this.removeRequests_.indexOf(registeredPrefixId) < 0)
       // Not already requested, so add the request.
       this.removeRequests_.push(registeredPrefixId);
@@ -34911,9 +34911,8 @@ Face.prototype.reconnectAndExpressInterest = function
 Face.prototype.expressInterestHelper = function
   (pendingInterestId, interest, onData, onTimeout, wireFormat)
 {
-  var pitEntry = this.pendingInterestTable_.add
-    (pendingInterestId, interest, onData, onTimeout);
-  if (pitEntry == null)
+  if (this.pendingInterestTable_.add
+      (pendingInterestId, interest, onData, onTimeout) == null)
     // removePendingInterest was already called with the pendingInterestId.
     return;
 
@@ -35121,12 +35120,15 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId)
+  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId, parent,
+   onInterest)
 {
   this.prefix = prefix;
   this.onRegisterFailed = onRegisterFailed;
   this.onRegisterSuccess= onRegisterSuccess;
   this.registeredPrefixId = registeredPrefixId;
+  this.parent = parent;
+  this.onInterest = onInterest;
 };
 
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
@@ -35163,6 +35165,26 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
       }
     }
     return;
+  }
+
+  // Success, so we can add to the registered prefix table.
+  if (this.registeredPrefixId != 0) {
+    var interestFilterId = 0;
+    if (this.onInterest != null)
+      // registerPrefix was called with the "combined" form that includes the
+      // callback, so add an InterestFilterEntry.
+      interestFilterId = this.parent.setInterestFilter
+        (new InterestFilter(this.prefix), this.onInterest);
+
+    if (!this.parent.registeredPrefixTable_.add
+        (this.registeredPrefixId, this.prefix, interestFilterId)) {
+      // removeRegisteredPrefix was already called with the registeredPrefixId.
+      if (interestFilterId > 0)
+        // Remove the related interest filter we just added.
+        this.parent.unsetInterestFilter(interestFilterId);
+
+      return;
+    }
   }
 
   if (LOG > 2)
@@ -35242,23 +35264,10 @@ Face.prototype.nfdRegisterPrefix = function
     thisFace.nodeMakeCommandInterest
       (commandInterest, commandKeyChain, commandCertificateName,
        TlvWireFormat.get(), function() {
-      if (registeredPrefixId != 0) {
-        var interestFilterId = 0;
-        if (onInterest != null)
-          // registerPrefix was called with the "combined" form that includes the
-          // callback, so add an InterestFilterEntry.
-          interestFilterId = thisFace.setInterestFilter
-            (new InterestFilter(prefix), onInterest);
-
-        if (!thisFace.registeredPrefixTable_.add
-            (registeredPrefixId, prefix, interestFilterId))
-          // removeRegisteredPrefix was already called with the registeredPrefixId.
-          return;
-      }
-
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
+         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId,
+          thisFace, onInterest);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
          response.onTimeout.bind(response), wireFormat);
