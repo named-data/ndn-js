@@ -64,8 +64,11 @@ function onReceivedObject(obj) {
             console.log("rib/register error code " + obj.statusCode);
             // TODO: Display the error to the user.
         }
-        else
+        else {
             console.log("Registered " + addRoutePrefixUri + " to " + addRouteUri);
+            // Show the new route.
+            showStatus();
+        }
     }
 }
 
