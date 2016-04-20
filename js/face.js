@@ -640,12 +640,15 @@ Face.getMaxNdnPacketSize = function() { return NdnCommon.MAX_NDN_PACKET_SIZE; };
  * response or onTimeout is called, then call onRegisterFailed.
  */
 Face.RegisterResponse = function RegisterResponse
-  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId)
+  (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId, parent,
+   onInterest)
 {
   this.prefix = prefix;
   this.onRegisterFailed = onRegisterFailed;
   this.onRegisterSuccess= onRegisterSuccess;
   this.registeredPrefixId = registeredPrefixId;
+  this.parent = parent;
+  this.onInterest = onInterest;
 };
 
 Face.RegisterResponse.prototype.onData = function(interest, responseData)
@@ -682,6 +685,26 @@ Face.RegisterResponse.prototype.onData = function(interest, responseData)
       }
     }
     return;
+  }
+
+  // Success, so we can add to the registered prefix table.
+  if (this.registeredPrefixId != 0) {
+    var interestFilterId = 0;
+    if (this.onInterest != null)
+      // registerPrefix was called with the "combined" form that includes the
+      // callback, so add an InterestFilterEntry.
+      interestFilterId = this.parent.setInterestFilter
+        (new InterestFilter(this.prefix), this.onInterest);
+
+    if (!this.parent.registeredPrefixTable_.add
+        (this.registeredPrefixId, this.prefix, interestFilterId)) {
+      // removeRegisteredPrefix was already called with the registeredPrefixId.
+      if (interestFilterId > 0)
+        // Remove the related interest filter we just added.
+        this.parent.unsetInterestFilter(interestFilterId);
+
+      return;
+    }
   }
 
   if (LOG > 2)
@@ -761,28 +784,10 @@ Face.prototype.nfdRegisterPrefix = function
     thisFace.nodeMakeCommandInterest
       (commandInterest, commandKeyChain, commandCertificateName,
        TlvWireFormat.get(), function() {
-      if (registeredPrefixId != 0) {
-        var interestFilterId = 0;
-        if (onInterest != null)
-          // registerPrefix was called with the "combined" form that includes the
-          // callback, so add an InterestFilterEntry.
-          interestFilterId = thisFace.setInterestFilter
-            (new InterestFilter(prefix), onInterest);
-
-        if (!thisFace.registeredPrefixTable_.add
-            (registeredPrefixId, prefix, interestFilterId)) {
-          // removeRegisteredPrefix was already called with the registeredPrefixId.
-          if (interestFilterId > 0)
-            // Remove the related interest filter we just added.
-            thisFace.unsetInterestFilter(interestFilterId);
-
-          return;
-        }
-      }
-
       // Send the registration interest.
       var response = new Face.RegisterResponse
-         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId);
+         (prefix, onRegisterFailed, onRegisterSuccess, registeredPrefixId,
+          thisFace, onInterest);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
          response.onTimeout.bind(response), wireFormat);

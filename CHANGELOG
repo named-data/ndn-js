@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-04-13)
+Interim changes since NDN-JS v0.10 (2016-04-20)
 -----------------------------------------------
 
 Breaking changes
@@ -42,6 +42,7 @@ Deprecated
 Bug fixes
 * http://redmine.named-data.net/issues/3401 Sign the Firefox add-on.
 * http://redmine.named-data.net/issues/3589 Update examples face-status.proto.
+* http://redmine.named-data.net/issues/1517 Use the onInterest callback only on registerPrefix success.
 * Fix bug in encrypt/Schedule to solve problems when the black repetitive interval list is empty.
 * In Producer, the produced data name should not use a rounded timestamp.
 
