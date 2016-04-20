@@ -47,7 +47,8 @@ function onReceivedObject(obj) {
         var lowestErrorCode = 400;
         if (obj.statusCode >= lowestErrorCode) {
             console.log("faces/create error code " + obj.statusCode);
-            // TODO: Display the error to the user.
+            document.getElementById('showStatusResult').innerHTML =
+              "Error in faces/create. Error code " + obj.statusCode + ".<br/>\n";
         }
         else {
             // We have the obj.faceId. Create the route.
@@ -62,7 +63,8 @@ function onReceivedObject(obj) {
         var lowestErrorCode = 400;
         if (obj.statusCode >= lowestErrorCode) {
             console.log("rib/register error code " + obj.statusCode);
-            // TODO: Display the error to the user.
+            document.getElementById('showStatusResult').innerHTML =
+              "Error in rib/register. Error code " + obj.statusCode + ".<br/>\n";
         }
         else {
             console.log("Registered " + addRoutePrefixUri + " to " + addRouteUri);
