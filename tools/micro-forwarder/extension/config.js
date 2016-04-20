@@ -10,7 +10,7 @@ function onReceivedObject(obj) {
         for (var i = 0; i < obj.fib.length; ++i) {
             text += "&nbsp;&nbsp;" + obj.fib[i].name + " nexthops=";
             for (var j = 0; j < obj.fib[i].nextHops.length; ++j)
-		text += "{faceId=" + obj.fib[i].nextHops[j].faceId + "} ";
+              text += "{faceId=" + obj.fib[i].nextHops[j].faceId + "} ";
             text += "<br/>\n";
         }
 
@@ -30,16 +30,16 @@ function onReceivedObject(obj) {
         if (obj.faceId != null) {
             // We have the obj.faceId. Create the route.
             transport.sendObject({
-		type: "rib/register",
-		nameUri: addRoutePrefixUri,
-		faceId: obj.faceId
+              type: "rib/register",
+              nameUri: addRoutePrefixUri,
+              faceId: obj.faceId
             });
         }
         else {
             // The face doesn't exist yet. Create it.
             transport.sendObject({
-		type: "faces/create",
-		uri: addRouteUri
+              type: "faces/create",
+              uri: addRouteUri
             });
         }
     }
@@ -52,9 +52,9 @@ function onReceivedObject(obj) {
         else {
             // We have the obj.faceId. Create the route.
             transport.sendObject({
-		type: "rib/register",
-		nameUri: addRoutePrefixUri,
-		faceId: obj.faceId
+              type: "rib/register",
+              nameUri: addRoutePrefixUri,
+              faceId: obj.faceId
             });
         }
     }
@@ -77,8 +77,8 @@ function addRoute() {
     addRouteUri = "ws://" + host + ":9696";
 
     transport.sendObject({
-        type: "faces/query",
-        uri: addRouteUri
+      type: "faces/query",
+      uri: addRouteUri
     });      
 }
 
@@ -91,10 +91,10 @@ function showStatus() {
 document.addEventListener("DOMContentLoaded", function() {
     var ssBtn = document.getElementById("showStatus");
     ssBtn.addEventListener("click", function() {
-	showStatus();
+      showStatus();
     });
     var arBtn = document.getElementById("addRoute");
     arBtn.addEventListener("click", function() {
-	addRoute();
+      addRoute();
     });
 });
