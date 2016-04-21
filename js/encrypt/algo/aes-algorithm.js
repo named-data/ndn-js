@@ -21,12 +21,13 @@
 // (This is ported from ndn::gep::algo::Aes, and named AesAlgorithm because
 // "Aes" is very short and not all the Common Client Libraries have namespaces.)
 
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DecryptKey = require('../decrypt-key.js').DecryptKey;
-var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
+var EncryptKey = require('../encrypt-key.js').EncryptKey; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**

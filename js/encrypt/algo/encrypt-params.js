@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../../crypto.js');
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob;
 
 var EncryptAlgorithmType = function EncryptAlgorithmType()

@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**

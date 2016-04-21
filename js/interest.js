@@ -19,14 +19,15 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('./crypto.js');
-var Blob = require('./util/blob.js').Blob;
-var SignedBlob = require('./util/signed-blob.js').SignedBlob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var Name = require('./name.js').Name;
-var Exclude = require('./exclude.js').Exclude;
-var Link = require('./link.js').Link;
-var KeyLocator = require('./key-locator.js').KeyLocator;
+/** @ignore */
+var Crypto = require('./crypto.js'); /** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Exclude = require('./exclude.js').Exclude; /** @ignore */
+var Link = require('./link.js').Link; /** @ignore */
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**

@@ -18,14 +18,15 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./data-utils.js').DataUtils;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
-var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
-var ContentType = require('../meta-info.js').ContentType;
+/** @ignore */
+var DataUtils = require('./data-utils.js').DataUtils; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat;
 
 /**

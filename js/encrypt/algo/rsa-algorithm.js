@@ -21,17 +21,18 @@
 // (This is ported from ndn::gep::algo::Rsa, and named RsaAlgorithm because
 // "Rsa" is very short and not all the Common Client Libraries have namespaces.)
 
-var constants = require('constants');
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DecryptKey = require('../decrypt-key.js').DecryptKey;
-var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var OID = require('../../encoding/oid.js').OID;
-var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var constants = require('constants'); /** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
+var EncryptKey = require('../encrypt-key.js').EncryptKey; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen

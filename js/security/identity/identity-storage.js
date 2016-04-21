@@ -18,8 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var SecurityException = require('../security-exception.js').SecurityException;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**

@@ -17,11 +17,12 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./data-utils.js').DataUtils;
-var Tlv = require('./tlv/tlv.js').Tlv;
-var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
-var DecodingException = require('./decoding-exception.js').DecodingException;
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+/** @ignore */
+var DataUtils = require('./data-utils.js').DataUtils; /** @ignore */
+var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
+var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder; /** @ignore */
+var DecodingException = require('./decoding-exception.js').DecodingException; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**

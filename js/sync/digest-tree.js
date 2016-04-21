@@ -19,8 +19,8 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
+/** @ignore */
 var Crypto = require('../crypto.js');
-var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 /**
  * @constructor

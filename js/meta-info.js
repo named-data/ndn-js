@@ -19,11 +19,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var KeyLocator = require('./key-locator.js').KeyLocator;
-var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var Name = require('./name.js').Name;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 var ContentType = {

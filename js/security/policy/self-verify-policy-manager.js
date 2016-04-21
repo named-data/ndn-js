@@ -18,17 +18,18 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var Interest = require('../../interest.js').Interest;
-var Data = require('../../data.js').Data;
-var Blob = require('../../util/blob.js').Blob;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var SecurityException = require('../security-exception.js').SecurityException;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**

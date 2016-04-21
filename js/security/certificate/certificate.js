@@ -18,13 +18,14 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var ContentType = require('../../meta-info.js').ContentType;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var KeyType = require('../../security/security-types.js').KeyType;
-var PublicKey = require('./public-key.js').PublicKey;
-var CertificateSubjectDescription = require('./certificate-subject-description.js').CertificateSubjectDescription;
+/** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var ContentType = require('../../meta-info.js').ContentType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var KeyType = require('../../security/security-types.js').KeyType; /** @ignore */
+var PublicKey = require('./public-key.js').PublicKey; /** @ignore */
+var CertificateSubjectDescription = require('./certificate-subject-description.js').CertificateSubjectDescription; /** @ignore */
 var CertificateExtension = require('./certificate-extension.js').CertificateExtension;
 
 /**

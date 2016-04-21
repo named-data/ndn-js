@@ -18,6 +18,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var printStackTrace = require('../../contrib/stacktrace/stacktrace.js').printStackTrace;
 
 /**

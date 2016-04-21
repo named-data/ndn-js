@@ -19,8 +19,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('./name.js').Name;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**

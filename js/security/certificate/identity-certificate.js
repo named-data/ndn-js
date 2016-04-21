@@ -18,10 +18,11 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var Name = require('../../name.js').Name;
-var SecurityException = require('../../security//security-exception.js').SecurityException;
-var Certificate = require('./certificate.js').Certificate;
+/** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SecurityException = require('../../security//security-exception.js').SecurityException; /** @ignore */
+var Certificate = require('./certificate.js').Certificate; /** @ignore */
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 
 /**

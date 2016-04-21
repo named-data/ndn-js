@@ -18,11 +18,12 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Interval = require('./interval.js').Interval;
-var RepetitiveInterval = require('./repetitive-interval.js').RepetitiveInterval;
-var Tlv = require('../encoding/tlv/tlv.js').Tlv;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder;
+/** @ignore */
+var Interval = require('./interval.js').Interval; /** @ignore */
+var RepetitiveInterval = require('./repetitive-interval.js').RepetitiveInterval; /** @ignore */
+var Tlv = require('../encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**

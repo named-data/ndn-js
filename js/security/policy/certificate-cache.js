@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 
 /**

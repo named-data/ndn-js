@@ -19,8 +19,12 @@
 
 // define a shim require function so that a node/browserify require calls dont cause errors when ndn-js is used via <script> tag
 
+/** @ignore */
 var ndn = ndn || {}
+/** @ignore */
 var exports = ndn;
 
+/** @ignore */
 var module = {}
+/** @ignore */
 function require(){return ndn;}

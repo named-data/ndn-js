@@ -19,11 +19,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator;
-var LOG = require('./log.js').Log.LOG;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new Sha256WithRsaSignature object, possibly copying values from

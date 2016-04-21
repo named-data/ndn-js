@@ -18,17 +18,18 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../../crypto.js');
-var Name = require('../../name.js').Name;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat;
-var Blob = require('../../util/blob.js').Blob;
-var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm;
-var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm;
-var EncryptParams = require('./encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var EncryptedContent = require('../encrypted-content.js').EncryptedContent;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm; /** @ignore */
+var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var EncryptParams = require('./encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var EncryptedContent = require('../encrypted-content.js').EncryptedContent; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**

@@ -18,27 +18,28 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Interest = require('./interest.js').Interest;
-var Data = require('./data.js').Data;
-var ControlParameters = require('./control-parameters.js').ControlParameters;
-var ControlResponse = require('./control-response.js').ControlResponse;
-var InterestFilter = require('./interest-filter.js').InterestFilter;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var Tlv = require('./encoding/tlv/tlv.js').Tlv;
-var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Transport = require('./transport/transport.js').Transport;
-var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
-var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
-var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
-var NdnCommon = require('./util/ndn-common.js').NdnCommon;
-var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable;
-var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable;
-var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable;
-var fs = require('fs');
+/** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Interest = require('./interest.js').Interest; /** @ignore */
+var Data = require('./data.js').Data; /** @ignore */
+var ControlParameters = require('./control-parameters.js').ControlParameters; /** @ignore */
+var ControlResponse = require('./control-response.js').ControlResponse; /** @ignore */
+var InterestFilter = require('./interest-filter.js').InterestFilter; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
+var Tlv = require('./encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var Transport = require('./transport/transport.js').Transport; /** @ignore */
+var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
+var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** @ignore */
+var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator; /** @ignore */
+var NdnCommon = require('./util/ndn-common.js').NdnCommon; /** @ignore */
+var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable; /** @ignore */
+var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable; /** @ignore */
+var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable; /** @ignore */
+var fs = require('fs'); /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 /**

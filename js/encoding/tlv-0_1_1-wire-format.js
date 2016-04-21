@@ -17,23 +17,24 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../crypto.js');
-var Blob = require('../util/blob.js').Blob;
-var Name = require('../name.js').Name;
-var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
-var Tlv = require('./tlv/tlv.js').Tlv;
-var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
-var WireFormat = require('./wire-format.js').WireFormat;
-var Exclude = require('../exclude.js').Exclude;
-var ContentType = require('../meta-info.js').ContentType;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var GenericSignature = require('../generic-signature.js').GenericSignature;
-var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
-var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
-var ControlParameters = require('../control-parameters.js').ControlParameters;
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags').ForwardingFlags; /** @ignore */
+var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
+var Exclude = require('../exclude.js').Exclude; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var GenericSignature = require('../generic-signature.js').GenericSignature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**

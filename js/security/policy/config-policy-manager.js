@@ -19,22 +19,23 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var fs = require('fs');
-var path = require('path');
-var Name = require('../../name.js').Name;
-var Data = require('../../data.js').Data;
-var Interest = require('../../interest.js').Interest;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var Blob = require('../../util/blob.js').Blob;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser;
-var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher;
-var CertificateCache = require('./certificate-cache.js').CertificateCache;
-var ValidationRequest = require('./validation-request.js').ValidationRequest;
-var SecurityException = require('../security-exception.js').SecurityException;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var fs = require('fs'); /** @ignore */
+var path = require('path'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
+var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher; /** @ignore */
+var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
+var ValidationRequest = require('./validation-request.js').ValidationRequest; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**

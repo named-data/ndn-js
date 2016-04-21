@@ -18,14 +18,12 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var Name = require('../../name.js').Name;
-var Blob = require('../../util/blob.js').Blob;
-var KeyType = require('../security-types.js').KeyType;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var SecurityException = require('../security-exception.js').SecurityException;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 
 /**

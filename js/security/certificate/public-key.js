@@ -19,13 +19,14 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var SecurityException = require('../security-exception.js').SecurityException;
-var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException;
-var KeyType = require('../security-types.js').KeyType;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException; /** @ignore */
+var KeyType = require('../security-types.js').KeyType; /** @ignore */
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**

@@ -18,8 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -56,10 +57,9 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- *
- * @constructor
  * Create a new Name.Component with a copy of the given value.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
+ * @constructor
  */
 Name.Component = function NameComponent(value)
 {

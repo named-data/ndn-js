@@ -18,17 +18,18 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../name.js').Name;
-var Data = require('../data.js').Data;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
-var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate;
-var SecurityException = require('../security/security-exception.js').SecurityException;
-var RsaKeyParams = require('../security/key-params.js').RsaKeyParams;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var Encryptor = require('./algo/encryptor.js').Encryptor;
-var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
-var Interval = require('./interval.js').Interval;
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SecurityException = require('../security/security-exception.js').SecurityException; /** @ignore */
+var RsaKeyParams = require('../security/key-params.js').RsaKeyParams; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var Interval = require('./interval.js').Interval; /** @ignore */
 var Schedule = require('./schedule.js').Schedule;
 
 /**

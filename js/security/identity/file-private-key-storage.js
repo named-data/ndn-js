@@ -18,22 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
-var KeyClass = require('../security-types').KeyClass;
-var KeyType = require('../security-types').KeyType;
-var DigestAlgorithm = require('../security-types').DigestAlgorithm;
-var SecurityException = require('../security-exception.js').SecurityException;
-var PublicKey = require('../certificate/public-key.js').PublicKey;
-var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
-var Blob = require('../../util/blob.js').Blob;
-var OID = require('../../encoding/oid.js').OID;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+
+/** @ignore */
+var KeyClass = require('../security-types').KeyClass; /** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
+var DigestAlgorithm = require('../security-types').DigestAlgorithm; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var util = require('util');
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var fs = require('fs');
-var path = require('path');
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var fs = require('fs'); /** @ignore */
+var path = require('path'); /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
