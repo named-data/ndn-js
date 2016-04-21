@@ -17,6 +17,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('./blob.js').Blob;
 
 /**

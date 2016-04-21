@@ -19,10 +19,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var Name = require('./name.js').Name;
-var LOG = require('./log.js').Log.LOG;
 
 /**
  * KeyLocator

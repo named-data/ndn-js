@@ -17,8 +17,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ControlParameters = require('./control-parameters.js').ControlParameters;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var ControlParameters = require('./control-parameters.js').ControlParameters; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**

@@ -17,6 +17,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**

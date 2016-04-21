@@ -17,9 +17,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DelegationSet = require('./delegation-set.js').DelegationSet;
-var ContentType = require('./meta-info.js').ContentType;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var DelegationSet = require('./delegation-set.js').DelegationSet; /** @ignore */
+var ContentType = require('./meta-info.js').ContentType; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Data = require('./data.js').Data;
 
 /**

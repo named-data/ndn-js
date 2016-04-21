@@ -18,9 +18,10 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../crypto.js');
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var Blob = require('./blob.js').Blob;
 
 /**

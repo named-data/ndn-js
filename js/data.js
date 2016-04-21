@@ -19,14 +19,15 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var SignedBlob = require('./util/signed-blob.js').SignedBlob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var MetaInfo = require('./meta-info.js').MetaInfo;
-var KeyLocator = require('./key-locator.js').KeyLocator;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**

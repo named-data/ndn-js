@@ -18,8 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Interest = require('../interest.js').Interest;
-var Blob = require('./blob.js').Blob;
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Blob = require('./blob.js').Blob; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**

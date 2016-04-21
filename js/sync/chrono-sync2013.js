@@ -18,13 +18,14 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DigestTree = require('./digest-tree.js').DigestTree;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Name = require('../name.js').Name;
-var Blob = require('../util/blob.js').Blob;
-var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
-var SyncStateProto = require('./sync-state.js').SyncStateProto;
+/** @ignore */
+var DigestTree = require('./digest-tree.js').DigestTree; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache; /** @ignore */
+var SyncStateProto = require('./sync-state.js').SyncStateProto; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**

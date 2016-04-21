@@ -17,8 +17,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
+/** @ignore */
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**

@@ -17,7 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('./name.js').Name;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
 var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
 
 /**

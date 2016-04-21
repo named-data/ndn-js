@@ -17,9 +17,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ElementReader = require('../encoding/element-reader.js').ElementReader;
-var LOG = require('../log.js').Log.LOG;
-var Transport = require('./transport.js').Transport;
+/** @ignore */
+var ElementReader = require('../encoding/element-reader.js').ElementReader; /** @ignore */
+var LOG = require('../log.js').Log.LOG; /** @ignore */
+var Transport = require('./transport.js').Transport; /** @ignore */
 var Face;
 
 /**

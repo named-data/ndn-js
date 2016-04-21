@@ -530,10 +530,14 @@
 
 // define a shim require function so that a node/browserify require calls dont cause errors when ndn-js is used via <script> tag
 
+/** @ignore */
 var ndn = ndn || {}
+/** @ignore */
 var exports = ndn;
 
+/** @ignore */
 var module = {}
+/** @ignore */
 function require(){return ndn;}
 /**
  * Copyright (C) 2016 Regents of the University of California.
@@ -7275,14 +7279,17 @@ module.exports = exports;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
-var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
-var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+/** @ignore */
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX /** @ignore */
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR /** @ignore */
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey /** @ignore */
 var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
 // Library namespace
+/** @ignore */
 var ndn = ndn || {};
 
+/** @ignore */
 var exports = ndn;
 
 // Factory method to create hasher objects
@@ -8875,6 +8882,7 @@ Log.LOG = 0;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var printStackTrace = require('../../contrib/stacktrace/stacktrace.js').printStackTrace;
 
 /**
@@ -8923,6 +8931,7 @@ NdnCommon.getErrorWithStackTrace = function(error)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -9189,6 +9198,7 @@ Blob.prototype.equals = function(other)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('./blob.js').Blob;
 
 /**
@@ -9513,6 +9523,7 @@ ChangeCounter.prototype.checkChanged = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -10244,7 +10255,8 @@ Tlv.getHighBytes = function(x)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+/** @ignore */
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer; /** @ignore */
 var Tlv = require('./tlv.js').Tlv;
 
 /**
@@ -10487,6 +10499,7 @@ TlvEncoder.prototype.getOutput = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var DecodingException = require('../decoding-exception.js').DecodingException;
 
 /**
@@ -10846,6 +10859,7 @@ TlvDecoder.prototype.getSlice = function(beginOffset, endOffset)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**
@@ -11068,8 +11082,9 @@ TlvStructureDecoder.prototype.seek = function(offset)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
+/** @ignore */
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**
@@ -11664,11 +11679,12 @@ var TlvWireFormat = require('./tlv-wire-format.js').TlvWireFormat;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./data-utils.js').DataUtils;
-var Tlv = require('./tlv/tlv.js').Tlv;
-var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder;
-var DecodingException = require('./decoding-exception.js').DecodingException;
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+/** @ignore */
+var DataUtils = require('./data-utils.js').DataUtils; /** @ignore */
+var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
+var TlvStructureDecoder = require('./tlv/tlv-structure-decoder.js').TlvStructureDecoder; /** @ignore */
+var DecodingException = require('./decoding-exception.js').DecodingException; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -11913,10 +11929,11 @@ DerNodeType.BmpString = 30;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
-var Blob = require('../../util/blob.js').Blob;
-var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException;
-var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException;
+/** @ignore */
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException; /** @ignore */
+var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException; /** @ignore */
 var DerNodeType = require('./der-node-type.js').DerNodeType;
 
 /**
@@ -12739,6 +12756,7 @@ DerNode.DerGeneralizedTime.prototype.toVal = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var fs = require('fs');
 
 /**
@@ -13103,9 +13121,10 @@ BoostInfoParser.prototype.parseLine = function(line, context)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../name.js').Name;
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -13579,6 +13598,7 @@ MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMillisecon
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Name = require('../name.js').Name;
 
 /**
@@ -13669,8 +13689,9 @@ NdnRegexMatcher.sanitizeSets = function(pattern)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Interest = require('../interest.js').Interest;
-var Blob = require('./blob.js').Blob;
+/** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Blob = require('./blob.js').Blob; /** @ignore */
 var NdnCommon = require('./ndn-common.js').NdnCommon;
 
 /**
@@ -14189,9 +14210,10 @@ MicroForwarderTransport.prototype.send = function(buffer)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ElementReader = require('../encoding/element-reader.js').ElementReader;
-var LOG = require('../log.js').Log.LOG;
-var Transport = require('./transport.js').Transport;
+/** @ignore */
+var ElementReader = require('../encoding/element-reader.js').ElementReader; /** @ignore */
+var LOG = require('../log.js').Log.LOG; /** @ignore */
+var Transport = require('./transport.js').Transport; /** @ignore */
 var Face;
 
 /**
@@ -14450,8 +14472,9 @@ exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTran
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 /**
@@ -14488,10 +14511,9 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- *
- * @constructor
  * Create a new Name.Component with a copy of the given value.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
+ * @constructor
  */
 Name.Component = function NameComponent(value)
 {
@@ -15547,10 +15569,10 @@ var WireFormat = require('./encoding/wire-format.js').WireFormat;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var Name = require('./name.js').Name;
-var LOG = require('./log.js').Log.LOG;
 
 /**
  * KeyLocator
@@ -15758,11 +15780,8 @@ var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWit
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var KeyLocator = require('./key-locator.js').KeyLocator;
-var KeyLocatorType = require('./key-locator.js').KeyLocatorType;
-var Name = require('./name.js').Name;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 var ContentType = {
@@ -15958,11 +15977,10 @@ Object.defineProperty(MetaInfo.prototype, "finalBlockID",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator;
-var LOG = require('./log.js').Log.LOG;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
  * Create a new Sha256WithRsaSignature object, possibly copying values from
@@ -16095,6 +16113,7 @@ Object.defineProperty(Sha256WithRsaSignature.prototype, "signature",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**
@@ -16239,8 +16258,9 @@ Object.defineProperty(GenericSignature.prototype, "signature",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator;
 
 /**
@@ -16376,6 +16396,7 @@ Object.defineProperty(HmacWithSha256Signature.prototype, "signature",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**
@@ -16470,14 +16491,15 @@ Object.defineProperty(DigestSha256Signature.prototype, "signature",
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('./util/blob.js').Blob;
-var SignedBlob = require('./util/signed-blob.js').SignedBlob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var MetaInfo = require('./meta-info.js').MetaInfo;
-var KeyLocator = require('./key-locator.js').KeyLocator;
+/** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -16906,6 +16928,7 @@ DigestAlgorithm.SHA256 = 1;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var KeyType = require('./security-types.js').KeyType;
 
 /**
@@ -17018,13 +17041,14 @@ AesKeyParams.getType = function() { return KeyType.AES; };
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var SecurityException = require('../security-exception.js').SecurityException;
-var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException;
-var KeyType = require('../security-types.js').KeyType;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DerDecodingException = require('../../encoding/der/der-decoding-exception.js').DerDecodingException; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var UnrecognizedKeyFormatException = require('../security-exception.js').UnrecognizedKeyFormatException; /** @ignore */
+var KeyType = require('../security-types.js').KeyType; /** @ignore */
 var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
 
 /**
@@ -17139,7 +17163,8 @@ PublicKey.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
+/** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var OID = require('../../encoding/oid.js').OID;
 
 /**
@@ -17224,8 +17249,9 @@ CertificateExtension.prototype.getValue = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('../../util/blob.js').Blob;
-var OID = require('../../encoding/oid.js').OID;
+/** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
@@ -17297,13 +17323,14 @@ CertificateSubjectDescription.prototype.getValue = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var ContentType = require('../../meta-info.js').ContentType;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var KeyType = require('../../security/security-types.js').KeyType;
-var PublicKey = require('./public-key.js').PublicKey;
-var CertificateSubjectDescription = require('./certificate-subject-description.js').CertificateSubjectDescription;
+/** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var ContentType = require('../../meta-info.js').ContentType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var KeyType = require('../../security/security-types.js').KeyType; /** @ignore */
+var PublicKey = require('./public-key.js').PublicKey; /** @ignore */
+var CertificateSubjectDescription = require('./certificate-subject-description.js').CertificateSubjectDescription; /** @ignore */
 var CertificateExtension = require('./certificate-extension.js').CertificateExtension;
 
 /**
@@ -17612,10 +17639,11 @@ Certificate.to2DigitString = function(x)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var Name = require('../../name.js').Name;
-var SecurityException = require('../../security//security-exception.js').SecurityException;
-var Certificate = require('./certificate.js').Certificate;
+/** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SecurityException = require('../../security//security-exception.js').SecurityException; /** @ignore */
+var Certificate = require('./certificate.js').Certificate; /** @ignore */
 var WireFormat = require('../../encoding/wire-format.js').WireFormat;
 
 /**
@@ -17783,8 +17811,9 @@ IdentityCertificate.prototype.setPublicKeyName = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var SecurityException = require('../security-exception.js').SecurityException;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -19257,14 +19286,12 @@ IndexedDbIdentityStorage.prototype.deleteIdentityInfoPromise = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Data = require('../../data.js').Data;
-var Name = require('../../name.js').Name;
-var Blob = require('../../util/blob.js').Blob;
-var KeyType = require('../security-types.js').KeyType;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var SecurityException = require('../security-exception.js').SecurityException;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var IdentityStorage = require('./identity-storage.js').IdentityStorage;
 
 /**
@@ -19636,7 +19663,8 @@ MemoryIdentityStorage.prototype.deleteIdentityInfoPromise = function(identity)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**
@@ -19955,19 +19983,20 @@ PrivateKeyStorage.EC_ENCRYPTION_OID = "1.2.840.10045.2.1";
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var SecurityException = require('../security-exception.js').SecurityException;
-var PublicKey = require('../certificate/public-key.js').PublicKey;
-var KeyClass = require('../security-types.js').KeyClass;
-var KeyType = require('../security-types').KeyType;
-var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var OID = require('../../encoding/oid.js').OID;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var KeyClass = require('../security-types.js').KeyClass; /** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -20552,23 +20581,24 @@ IndexedDbPrivateKeyStorage.transformName = function(keyName)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Name = require('../../name.js').Name;
-var Data = require('../../data.js').Data;
-var Blob = require('../../util/blob.js').Blob;
-var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
-var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SecurityException = require('../security-exception.js').SecurityException;
-var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
-var KeyType = require('../security-types.js').KeyType;
-var RsaKeyParams = require('../key-params.js').RsaKeyParams;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var PublicKey = require('../certificate/public-key.js').PublicKey;
-var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var KeyType = require('../security-types.js').KeyType; /** @ignore */
+var RsaKeyParams = require('../key-params.js').RsaKeyParams; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivateKeyStorage;
 
 /**
@@ -22032,12 +22062,13 @@ exports.ValidationRequest = ValidationRequest;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var SecurityException = require('../security-exception.js').SecurityException;
-var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
-var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
@@ -22259,6 +22290,7 @@ PolicyManager.verifyDigestSha256Signature = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
 
 /**
@@ -22341,22 +22373,23 @@ CertificateCache.prototype.reset = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var fs = require('fs');
-var path = require('path');
-var Name = require('../../name.js').Name;
-var Data = require('../../data.js').Data;
-var Interest = require('../../interest.js').Interest;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var Blob = require('../../util/blob.js').Blob;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser;
-var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher;
-var CertificateCache = require('./certificate-cache.js').CertificateCache;
-var ValidationRequest = require('./validation-request.js').ValidationRequest;
-var SecurityException = require('../security-exception.js').SecurityException;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var fs = require('fs'); /** @ignore */
+var path = require('path'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var BoostInfoParser = require('../../util/boost-info-parser.js').BoostInfoParser; /** @ignore */
+var NdnRegexMatcher = require('../../util/ndn-regex-matcher.js').NdnRegexMatcher; /** @ignore */
+var CertificateCache = require('./certificate-cache.js').CertificateCache; /** @ignore */
+var ValidationRequest = require('./validation-request.js').ValidationRequest; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
@@ -23224,8 +23257,9 @@ ConfigPolicyManager.TrustAnchorRefreshManager.prototype.refreshAnchors = functio
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
@@ -23339,17 +23373,18 @@ NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var Interest = require('../../interest.js').Interest;
-var Data = require('../../data.js').Data;
-var Blob = require('../../util/blob.js').Blob;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var SecurityException = require('../security-exception.js').SecurityException;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Interest = require('../../interest.js').Interest; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
@@ -23586,18 +23621,19 @@ SelfVerifyPolicyManager.prototype.getPublicKeyDer = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../crypto.js');
-var Name = require('../name.js').Name;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Blob = require('../util/blob.js').Blob;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var SecurityException = require('./security-exception.js').SecurityException;
-var RsaKeyParams = require('./key-params.js').RsaKeyParams;
-var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
-var IdentityManager = require('./identity/identity-manager.js').IdentityManager;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
+var SecurityException = require('./security-exception.js').SecurityException; /** @ignore */
+var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
+var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
+var IdentityManager = require('./identity/identity-manager.js').IdentityManager; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**
@@ -24580,8 +24616,9 @@ KeyChain.prototype.setDefaultCertificatePromise_ = function(useSync)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('./name.js').Name;
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**
@@ -24784,14 +24821,15 @@ Exclude.prototype.getChangeCount = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('./crypto.js');
-var Blob = require('./util/blob.js').Blob;
-var SignedBlob = require('./util/signed-blob.js').SignedBlob;
-var ChangeCounter = require('./util/change-counter.js').ChangeCounter;
-var Name = require('./name.js').Name;
-var Exclude = require('./exclude.js').Exclude;
-var Link = require('./link.js').Link;
-var KeyLocator = require('./key-locator.js').KeyLocator;
+/** @ignore */
+var Crypto = require('./crypto.js'); /** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
+var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
+var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Exclude = require('./exclude.js').Exclude; /** @ignore */
+var Link = require('./link.js').Link; /** @ignore */
+var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -25553,9 +25591,10 @@ ForwardingFlags.prototype.setCapture = function(value) { this.capture = value; }
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Name = require('./name.js').Name;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**
@@ -25823,8 +25862,9 @@ ControlParameters.prototype.setExpirationPeriod = function(expirationPeriod)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ControlParameters = require('./control-parameters.js').ControlParameters;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var ControlParameters = require('./control-parameters.js').ControlParameters; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('./util/blob.js').Blob;
 
 /**
@@ -25973,7 +26013,8 @@ ControlResponse.prototype.setBodyAsControlParameters = function(controlParameter
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('./name.js').Name;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
 var NdnRegexMatcher = require('./util/ndn-regex-matcher.js').NdnRegexMatcher;
 
 /**
@@ -26114,8 +26155,9 @@ InterestFilter.makePattern = function(regexFilter)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('./name.js').Name;
-var Blob = require('./util/blob.js').Blob;
+/** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -26331,9 +26373,10 @@ DelegationSet.prototype.wireDecode = function(input, wireFormat)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DelegationSet = require('./delegation-set.js').DelegationSet;
-var ContentType = require('./meta-info.js').ContentType;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+/** @ignore */
+var DelegationSet = require('./delegation-set.js').DelegationSet; /** @ignore */
+var ContentType = require('./meta-info.js').ContentType; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
 var Data = require('./data.js').Data;
 
 /**
@@ -26480,23 +26523,24 @@ Link.prototype.encodeContent = function(wireFormat)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../crypto.js');
-var Blob = require('../util/blob.js').Blob;
-var Name = require('../name.js').Name;
-var ForwardingFlags = require('../forwarding-flags').ForwardingFlags;
-var Tlv = require('./tlv/tlv.js').Tlv;
-var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder;
-var WireFormat = require('./wire-format.js').WireFormat;
-var Exclude = require('../exclude.js').Exclude;
-var ContentType = require('../meta-info.js').ContentType;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var GenericSignature = require('../generic-signature.js').GenericSignature;
-var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
-var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
-var ControlParameters = require('../control-parameters.js').ControlParameters;
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags').ForwardingFlags; /** @ignore */
+var Tlv = require('./tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
+var Exclude = require('../exclude.js').Exclude; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var GenericSignature = require('../generic-signature.js').GenericSignature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -27468,7 +27512,8 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var WireFormat = require('./wire-format.js').WireFormat;
+/** @ignore */
+var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
 var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 
 /**
@@ -27521,7 +27566,8 @@ Tlv0_1WireFormat.get = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var WireFormat = require('./wire-format.js').WireFormat;
+/** @ignore */
+var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
 var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 
 /**
@@ -27580,14 +27626,15 @@ WireFormat.setDefaultWireFormat(TlvWireFormat.get());
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./data-utils.js').DataUtils;
-var KeyLocatorType = require('../key-locator.js').KeyLocatorType;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature;
-var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature;
-var ContentType = require('../meta-info.js').ContentType;
+/** @ignore */
+var DataUtils = require('./data-utils.js').DataUtils; /** @ignore */
+var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
+var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat;
 
 /**
@@ -27755,12 +27802,13 @@ function encodeToBinaryInterest(interest) { return interest.wireEncode().buf(); 
 // (This is ported from ndn::gep::algo::Aes, and named AesAlgorithm because
 // "Aes" is very short and not all the Common Client Libraries have namespaces.)
 
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DecryptKey = require('../decrypt-key.js').DecryptKey;
-var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
+var EncryptKey = require('../encrypt-key.js').EncryptKey; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -27973,7 +28021,8 @@ AesAlgorithm.BLOCK_SIZE = 16;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../../crypto.js');
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
 var Blob = require('../../util/blob.js').Blob;
 
 var EncryptAlgorithmType = function EncryptAlgorithmType()
@@ -28079,17 +28128,18 @@ EncryptParams.prototype.setInitialVector = function(initialVector)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../../crypto.js');
-var Name = require('../../name.js').Name;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat;
-var Blob = require('../../util/blob.js').Blob;
-var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm;
-var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm;
-var EncryptParams = require('./encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var EncryptedContent = require('../encrypted-content.js').EncryptedContent;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var TlvWireFormat = require('../../encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var AesAlgorithm = require('./aes-algorithm.js').AesAlgorithm; /** @ignore */
+var RsaAlgorithm = require('./rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var EncryptParams = require('./encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var EncryptedContent = require('../encrypted-content.js').EncryptedContent; /** @ignore */
 var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
 
 /**
@@ -28322,17 +28372,18 @@ Encryptor.encryptAsymmetricPromise_ = function
 // (This is ported from ndn::gep::algo::Rsa, and named RsaAlgorithm because
 // "Rsa" is very short and not all the Common Client Libraries have namespaces.)
 
-var constants = require('constants');
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DecryptKey = require('../decrypt-key.js').DecryptKey;
-var EncryptKey = require('../encrypt-key.js').EncryptKey;
-var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var OID = require('../../encoding/oid.js').OID;
-var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var constants = require('constants'); /** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DecryptKey = require('../decrypt-key.js').DecryptKey; /** @ignore */
+var EncryptKey = require('../encrypt-key.js').EncryptKey; /** @ignore */
+var EncryptAlgorithmType = require('./encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var PrivateKeyStorage = require('../../security/identity/private-key-storage.js').PrivateKeyStorage; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen
@@ -28637,6 +28688,7 @@ RsaAlgorithm.getRsaPrivateKeyDer = function(pkcs8PrivateKeyDer)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
@@ -28743,17 +28795,18 @@ ConsumerDb.prototype.deleteKeyPromise = function(keyName, useSync)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('../util/blob.js').Blob;
-var Name = require('../name.js').Name;
-var Interest = require('../interest.js').Interest;
-var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
-var EncryptError = require('./encrypt-error.js').EncryptError;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
-var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
-var Encryptor = require('./algo/encryptor.js').Encryptor;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm; /** @ignore */
+var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
@@ -29249,6 +29302,7 @@ Consumer.prototype.getDecryptionKeyPromise_ = function(decryptionKeyName)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**
@@ -29337,6 +29391,7 @@ EncryptError.ErrorCode = {
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**
@@ -29387,8 +29442,9 @@ EncryptKey.prototype.getKeyBits = function() { return this.keyBits_; }
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var KeyLocator = require('../key-locator.js').KeyLocator;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
+/** @ignore */
+var KeyLocator = require('../key-locator.js').KeyLocator; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**
@@ -29560,6 +29616,7 @@ EncryptedContent.prototype.wireDecode = function(input, wireFormat)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
@@ -29866,17 +29923,18 @@ GroupManagerDb.prototype.deleteMemberPromise = function(identity, useSync)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../name.js').Name;
-var Data = require('../data.js').Data;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
-var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate;
-var SecurityException = require('../security/security-exception.js').SecurityException;
-var RsaKeyParams = require('../security/key-params.js').RsaKeyParams;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var Encryptor = require('./algo/encryptor.js').Encryptor;
-var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
-var Interval = require('./interval.js').Interval;
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var IdentityCertificate = require('../security/certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SecurityException = require('../security/security-exception.js').SecurityException; /** @ignore */
+var RsaKeyParams = require('../security/key-params.js').RsaKeyParams; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var Interval = require('./interval.js').Interval; /** @ignore */
 var Schedule = require('./schedule.js').Schedule;
 
 /**
@@ -30545,6 +30603,7 @@ Interval.prototype.isEmpty = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
@@ -30680,18 +30739,19 @@ ProducerDb.Error.prototype.name = "ProducerDbError";
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../name.js').Name;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Exclude = require('../exclude.js').Exclude;
-var Encryptor = require('./algo/encryptor.js').Encryptor;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var AesKeyParams = require('../security/key-params.js').AesKeyParams;
-var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
-var Schedule = require('./schedule.js').Schedule;
-var EncryptError = require('./encrypt-error.js').EncryptError;
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Exclude = require('../exclude.js').Exclude; /** @ignore */
+var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var AesKeyParams = require('../security/key-params.js').AesKeyParams; /** @ignore */
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm; /** @ignore */
+var Schedule = require('./schedule.js').Schedule; /** @ignore */
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
@@ -31393,6 +31453,7 @@ Producer.END_TIME_STAMP_INDEX = -1;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var Interval = require('./interval.js').Interval;
 
 /**
@@ -31703,11 +31764,12 @@ RepetitiveInterval.MILLISECONDS_IN_DAY = 24 * 3600 * 1000;
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Interval = require('./interval.js').Interval;
-var RepetitiveInterval = require('./repetitive-interval.js').RepetitiveInterval;
-var Tlv = require('../encoding/tlv/tlv.js').Tlv;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
-var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder;
+/** @ignore */
+var Interval = require('./interval.js').Interval; /** @ignore */
+var RepetitiveInterval = require('./repetitive-interval.js').RepetitiveInterval; /** @ignore */
+var Tlv = require('../encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
+var TlvDecoder = require('../encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
 var Blob = require('../util/blob.js').Blob;
 
 /**
@@ -32916,13 +32978,14 @@ IndexedDbProducerDb.prototype.deleteContentKeyPromise = function(timeSlot, useSy
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DigestTree = require('./digest-tree.js').DigestTree;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Name = require('../name.js').Name;
-var Blob = require('../util/blob.js').Blob;
-var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache;
-var SyncStateProto = require('./sync-state.js').SyncStateProto;
+/** @ignore */
+var DigestTree = require('./digest-tree.js').DigestTree; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var MemoryContentCache = require('../util/memory-content-cache.js').MemoryContentCache; /** @ignore */
+var SyncStateProto = require('./sync-state.js').SyncStateProto; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**
@@ -33581,8 +33644,8 @@ ChronoSync2013.prototype.dummyOnData = function(interest, data)
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
+/** @ignore */
 var Crypto = require('../crypto.js');
-var DataUtils = require("../encoding/data-utils.js").DataUtils;
 
 /**
  * @constructor
@@ -33882,9 +33945,10 @@ exports.SyncStateProto = SyncStateProto;
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../crypto.js');
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
+var TlvEncoder = require('../encoding/tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var Blob = require('./blob.js').Blob;
 
 /**
@@ -33971,6 +34035,7 @@ CommandInterestGenerator.prototype.generate = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -34117,7 +34182,8 @@ InterestFilterTable.prototype.unsetInterestFilter = function(interestFilterId)
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+/** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -34341,6 +34407,7 @@ PendingInterestTable.prototype.removePendingInterest = function
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+/** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**
@@ -34498,27 +34565,28 @@ RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DataUtils = require('./encoding/data-utils.js').DataUtils;
-var Name = require('./name.js').Name;
-var Interest = require('./interest.js').Interest;
-var Data = require('./data.js').Data;
-var ControlParameters = require('./control-parameters.js').ControlParameters;
-var ControlResponse = require('./control-response.js').ControlResponse;
-var InterestFilter = require('./interest-filter.js').InterestFilter;
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
-var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat;
-var Tlv = require('./encoding/tlv/tlv.js').Tlv;
-var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder;
-var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags;
-var Transport = require('./transport/transport.js').Transport;
-var TcpTransport = require('./transport/tcp-transport.js').TcpTransport;
-var UnixTransport = require('./transport/unix-transport.js').UnixTransport;
-var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator;
-var NdnCommon = require('./util/ndn-common.js').NdnCommon;
-var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable;
-var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable;
-var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable;
-var fs = require('fs');
+/** @ignore */
+var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
+var Name = require('./name.js').Name; /** @ignore */
+var Interest = require('./interest.js').Interest; /** @ignore */
+var Data = require('./data.js').Data; /** @ignore */
+var ControlParameters = require('./control-parameters.js').ControlParameters; /** @ignore */
+var ControlResponse = require('./control-response.js').ControlResponse; /** @ignore */
+var InterestFilter = require('./interest-filter.js').InterestFilter; /** @ignore */
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var TlvWireFormat = require('./encoding/tlv-wire-format.js').TlvWireFormat; /** @ignore */
+var Tlv = require('./encoding/tlv/tlv.js').Tlv; /** @ignore */
+var TlvDecoder = require('./encoding/tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
+var ForwardingFlags = require('./forwarding-flags.js').ForwardingFlags; /** @ignore */
+var Transport = require('./transport/transport.js').Transport; /** @ignore */
+var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
+var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** @ignore */
+var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator; /** @ignore */
+var NdnCommon = require('./util/ndn-common.js').NdnCommon; /** @ignore */
+var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable; /** @ignore */
+var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable; /** @ignore */
+var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable; /** @ignore */
+var fs = require('fs'); /** @ignore */
 var LOG = require('./log.js').Log.LOG;
 
 /**

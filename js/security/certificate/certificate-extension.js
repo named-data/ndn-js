@@ -18,7 +18,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
+/** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
 var OID = require('../../encoding/oid.js').OID;
 
 /**

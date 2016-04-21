@@ -17,14 +17,17 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX
-var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR
-var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey
+/** @ignore */
+var ASN1HEX = require('../contrib/securityLib/asn1hex-1.1.js').ASN1HEX /** @ignore */
+var KJUR = require('../contrib/securityLib/crypto-1.0.js').KJUR /** @ignore */
+var RSAKey = require('../contrib/securityLib/rsasign-1.2.js').RSAKey /** @ignore */
 var b64tohex = require('../contrib/securityLib/base64.js').b64tohex
 
 // Library namespace
+/** @ignore */
 var ndn = ndn || {};
 
+/** @ignore */
 var exports = ndn;
 
 // Factory method to create hasher objects

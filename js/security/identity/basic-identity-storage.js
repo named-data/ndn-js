@@ -18,13 +18,14 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var Blob = require('../../util/blob.js').Blob;
-var Sqlite3Promise = require('../../util/sqlite3-promise.js').Sqlite3Promise;
-var KeyLocator = require('../../key-locator.js').KeyLocator;
-var SecurityException = require('../security-exception.js').SecurityException;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var IdentityStorage = require('./identity-storage.js').IdentityStorage;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var Sqlite3Promise = require('../../util/sqlite3-promise.js').Sqlite3Promise; /** @ignore */
+var KeyLocator = require('../../key-locator.js').KeyLocator; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var IdentityStorage = require('./identity-storage.js').IdentityStorage; /** @ignore */
 var path = require('path');
 
 /**

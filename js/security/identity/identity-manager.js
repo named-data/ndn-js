@@ -19,23 +19,24 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Name = require('../../name.js').Name;
-var Data = require('../../data.js').Data;
-var Blob = require('../../util/blob.js').Blob;
-var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
-var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
-var KeyLocatorType = require('../../key-locator.js').KeyLocatorType;
-var WireFormat = require('../../encoding/wire-format.js').WireFormat;
-var SecurityException = require('../security-exception.js').SecurityException;
-var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
-var KeyType = require('../security-types.js').KeyType;
-var RsaKeyParams = require('../key-params.js').RsaKeyParams;
-var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate;
-var PublicKey = require('../certificate/public-key.js').PublicKey;
-var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var Data = require('../../data.js').Data; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
+var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var KeyType = require('../security-types.js').KeyType; /** @ignore */
+var RsaKeyParams = require('../key-params.js').RsaKeyParams; /** @ignore */
+var IdentityCertificate = require('../certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var CertificateSubjectDescription = require('../certificate/certificate-subject-description.js').CertificateSubjectDescription; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var BasicIdentityStorage = require('./basic-identity-storage.js').BasicIdentityStorage; /** @ignore */
 var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivateKeyStorage;
 
 /**

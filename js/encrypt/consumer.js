@@ -18,17 +18,18 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('../util/blob.js').Blob;
-var Name = require('../name.js').Name;
-var Interest = require('../interest.js').Interest;
-var EncryptedContent = require('./encrypted-content.js').EncryptedContent;
-var EncryptError = require('./encrypt-error.js').EncryptError;
-var EncryptParams = require('./algo/encrypt-params.js').EncryptParams;
-var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType;
-var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm;
-var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm;
-var Encryptor = require('./algo/encryptor.js').Encryptor;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var EncryptedContent = require('./encrypted-content.js').EncryptedContent; /** @ignore */
+var EncryptError = require('./encrypt-error.js').EncryptError; /** @ignore */
+var EncryptParams = require('./algo/encrypt-params.js').EncryptParams; /** @ignore */
+var EncryptAlgorithmType = require('./algo/encrypt-params.js').EncryptAlgorithmType; /** @ignore */
+var RsaAlgorithm = require('./algo/rsa-algorithm.js').RsaAlgorithm; /** @ignore */
+var AesAlgorithm = require('./algo/aes-algorithm.js').AesAlgorithm; /** @ignore */
+var Encryptor = require('./algo/encryptor.js').Encryptor; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var NdnCommon = require('../util/ndn-common.js').NdnCommon;
 
 /**

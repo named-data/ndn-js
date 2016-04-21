@@ -17,9 +17,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../name.js').Name;
-var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
+/** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**

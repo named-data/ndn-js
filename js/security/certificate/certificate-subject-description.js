@@ -18,8 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Blob = require('../../util/blob.js').Blob;
-var OID = require('../../encoding/oid.js').OID;
+/** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
 var DerNode = require('../../encoding/der/der-node.js').DerNode;
 
 /**

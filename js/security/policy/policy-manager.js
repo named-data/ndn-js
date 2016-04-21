@@ -19,12 +19,13 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var SecurityException = require('../security-exception.js').SecurityException;
-var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature;
-var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
+var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**

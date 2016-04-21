@@ -19,10 +19,11 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
-var Blob = require('../../util/blob.js').Blob;
-var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException;
-var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException;
+/** @ignore */
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer; /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var DerDecodingException = require('./der-decoding-exception.js').DerDecodingException; /** @ignore */
+var DerEncodingException = require('./der-encoding-exception.js').DerEncodingException; /** @ignore */
 var DerNodeType = require('./der-node-type.js').DerNodeType;
 
 /**

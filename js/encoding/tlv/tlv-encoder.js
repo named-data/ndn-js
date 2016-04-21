@@ -17,7 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer;
+/** @ignore */
+var DynamicBuffer = require('../../util/dynamic-buffer.js').DynamicBuffer; /** @ignore */
 var Tlv = require('./tlv.js').Tlv;
 
 /**

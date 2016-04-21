@@ -18,12 +18,13 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Schedule = require('./schedule.js').Schedule;
-var Blob = require('../util/blob.js').Blob;
-var Sqlite3Promise = require('../util/sqlite3-promise.js').Sqlite3Promise;
-var Name = require('../name.js').Name;
-var TlvWireFormat = require('../encoding/tlv-wire-format').TlvWireFormat;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
+/** @ignore */
+var Schedule = require('./schedule.js').Schedule; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Sqlite3Promise = require('../util/sqlite3-promise.js').Sqlite3Promise; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var TlvWireFormat = require('../encoding/tlv-wire-format').TlvWireFormat; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
 var GroupManagerDb = require('./group-manager-db.js').GroupManagerDb;
 
 /**

@@ -19,19 +19,20 @@
  */
 
 // Use capitalized Crypto to not clash with the browser's crypto.subtle.
-var Crypto = require('../../crypto.js');
-var Blob = require('../../util/blob.js').Blob;
-var SecurityException = require('../security-exception.js').SecurityException;
-var PublicKey = require('../certificate/public-key.js').PublicKey;
-var KeyClass = require('../security-types.js').KeyClass;
-var KeyType = require('../security-types').KeyType;
-var DigestAlgorithm = require('../security-types.js').DigestAlgorithm;
-var DataUtils = require('../../encoding/data-utils.js').DataUtils;
-var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage;
-var DerNode = require('../../encoding/der/der-node.js').DerNode;
-var OID = require('../../encoding/oid.js').OID;
-var SyncPromise = require('../../util/sync-promise.js').SyncPromise;
-var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto;
+/** @ignore */
+var Crypto = require('../../crypto.js'); /** @ignore */
+var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
+var PublicKey = require('../certificate/public-key.js').PublicKey; /** @ignore */
+var KeyClass = require('../security-types.js').KeyClass; /** @ignore */
+var KeyType = require('../security-types').KeyType; /** @ignore */
+var DigestAlgorithm = require('../security-types.js').DigestAlgorithm; /** @ignore */
+var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore */
+var PrivateKeyStorage = require('./private-key-storage.js').PrivateKeyStorage; /** @ignore */
+var DerNode = require('../../encoding/der/der-node.js').DerNode; /** @ignore */
+var OID = require('../../encoding/oid.js').OID; /** @ignore */
+var SyncPromise = require('../../util/sync-promise.js').SyncPromise; /** @ignore */
+var UseSubtleCrypto = require('../../use-subtle-crypto-node.js').UseSubtleCrypto; /** @ignore */
 var rsaKeygen = null;
 try {
   // This should be installed with: sudo npm install rsa-keygen

@@ -18,18 +18,19 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Crypto = require('../crypto.js');
-var Name = require('../name.js').Name;
-var Interest = require('../interest.js').Interest;
-var Data = require('../data.js').Data;
-var Blob = require('../util/blob.js').Blob;
-var WireFormat = require('../encoding/wire-format.js').WireFormat;
-var SecurityException = require('./security-exception.js').SecurityException;
-var RsaKeyParams = require('./key-params.js').RsaKeyParams;
-var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate;
-var SyncPromise = require('../util/sync-promise.js').SyncPromise;
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
-var IdentityManager = require('./identity/identity-manager.js').IdentityManager;
+/** @ignore */
+var Crypto = require('../crypto.js'); /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
+var Interest = require('../interest.js').Interest; /** @ignore */
+var Data = require('../data.js').Data; /** @ignore */
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
+var SecurityException = require('./security-exception.js').SecurityException; /** @ignore */
+var RsaKeyParams = require('./key-params.js').RsaKeyParams; /** @ignore */
+var IdentityCertificate = require('./certificate/identity-certificate.js').IdentityCertificate; /** @ignore */
+var SyncPromise = require('../util/sync-promise.js').SyncPromise; /** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
+var IdentityManager = require('./identity/identity-manager.js').IdentityManager; /** @ignore */
 var NoVerifyPolicyManager = require('./policy/no-verify-policy-manager.js').NoVerifyPolicyManager;
 
 /**

@@ -17,7 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var WireFormat = require('./wire-format.js').WireFormat;
+/** @ignore */
+var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
 var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
 
 /**

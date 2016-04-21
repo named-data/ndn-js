@@ -17,7 +17,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var NdnCommon = require('../util/ndn-common.js').NdnCommon;
+/** @ignore */
+var NdnCommon = require('../util/ndn-common.js').NdnCommon; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
 
 /**

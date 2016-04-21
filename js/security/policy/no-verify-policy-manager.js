@@ -18,8 +18,9 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-var Name = require('../../name.js').Name;
-var PolicyManager = require('./policy-manager.js').PolicyManager;
+/** @ignore */
+var Name = require('../../name.js').Name; /** @ignore */
+var PolicyManager = require('./policy-manager.js').PolicyManager; /** @ignore */
 var NdnCommon = require('../../util/ndn-common.js').NdnCommon;
 
 /**
