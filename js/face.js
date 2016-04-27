@@ -35,6 +35,7 @@ var Transport = require('./transport/transport.js').Transport; /** @ignore */
 var TcpTransport = require('./transport/tcp-transport.js').TcpTransport; /** @ignore */
 var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** @ignore */
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator; /** @ignore */
+var Blob = require('./util/blob.js').Blob; /** @ignore */
 var NdnCommon = require('./util/ndn-common.js').NdnCommon; /** @ignore */
 var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable; /** @ignore */
 var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable; /** @ignore */
@@ -352,6 +353,10 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
   }
 
   var pendingInterestId = this.getNextEntryId();
+
+  // Set the nonce in our copy of the Interest so it is saved in the PIT.
+  interest.setNonce(Face.nonceTemplate_);
+  interest.refreshNonce();
 
   if (this.connectionInfo == null) {
     if (this.getConnectionInfo == null)
@@ -1044,3 +1049,5 @@ Face.prototype.closeByTransport = function()
   this.readyStatus = Face.CLOSED;
   this.onclose();
 };
+
+Face.nonceTemplate_ = new Blob(new Buffer(4), false);
