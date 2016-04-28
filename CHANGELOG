@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-04-20)
+Interim changes since NDN-JS v0.10 (2016-04-28)
 -----------------------------------------------
 
 Breaking changes
@@ -24,6 +24,7 @@ Changes
 * http://redmine.named-data.net/issues/3452 Added Interest.refreshNonce.
 * http://redmine.named-data.net/issues/3355 In Producer.createContentKey and produce,
   added an optional onError callback.
+* http://redmine.named-data.net/issues/3590 Added MemoryContentCache.setInterestFilter.
 * In IdentityManager, added prepareUnsignedIdentityCertificate, getAllIdentities
   and getAllCertificateNamesOfKey.
 * In KeyChain, removed getAnyCertificate and getAnyIdentityCertificate.
