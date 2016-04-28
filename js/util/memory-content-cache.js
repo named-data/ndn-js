@@ -19,6 +19,7 @@
 
 /** @ignore */
 var Name = require('../name.js').Name; /** @ignore */
+var InterestFilter = require('../interest-filter.js').InterestFilter; /** @ignore */
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
 var WireFormat = require('../encoding/wire-format.js').WireFormat; /** @ignore */
 var LOG = require('../log.js').Log.LOG;
@@ -32,8 +33,8 @@ var LOG = require('../log.js').Log.LOG;
  *
  * Create a new MemoryContentCache to use the given Face.
  *
- * @param {Face} face The Face to use to call registerPrefix and which will call
- * the OnInterest callback.
+ * @param {Face} face The Face to use to call registerPrefix and
+ * setInterestFilter, and which will call this object's OnInterest callback.
  * @param {number} cleanupIntervalMilliseconds (optional) The interval
  * in milliseconds between each check to clean up stale content in the cache. If
  * omitted, use a default of 1000 milliseconds. If this is a large number, then
@@ -51,6 +52,7 @@ var MemoryContentCache = function MemoryContentCache
 
   this.onDataNotFoundForPrefix = {}; /**< The map key is the prefix.toUri().
                                           The value is an OnInterest function. */
+  this.interestFilterIdList = []; /**< elements are number */
   this.registeredPrefixIdList = []; /**< elements are number */
   this.noStaleTimeCache = []; /**< elements are MemoryContentCache.Content */
   this.staleTimeCache = [];   /**< elements are MemoryContentCache.StaleTimeContent */
@@ -70,6 +72,8 @@ exports.MemoryContentCache = MemoryContentCache;
 /**
  * Call registerPrefix on the Face given to the constructor so that this
  * MemoryContentCache will answer interests whose name has the prefix.
+ * Alternatively, if the Face's registerPrefix has already been called,
+ * then you can call this object's setInterestFilter.
  * @param {Name} prefix The Name for the prefix to register. This copies the Name.
  * @param {function} onRegisterFailed If this fails to register the prefix for
  * any reason, this calls onRegisterFailed(prefix) where prefix is the prefix
@@ -168,13 +172,61 @@ MemoryContentCache.prototype.registerPrefix = function
 };
 
 /**
- * Call Face.removeRegisteredPrefix for all the prefixes given to the
- * registerPrefix method on this MemoryContentCache object so that it will not
- * receive interests any more. You can call this if you want to "shut down"
- * this MemoryContentCache while your application is still running.
+ * Call setInterestFilter on the Face given to the constructor so that this
+ * MemoryContentCache will answer interests whose name matches the filter.
+ * There are two forms of setInterestFilter.
+ * The first form uses the exact given InterestFilter:
+ * setInterestFilter(filter, [onDataNotFound]).
+ * The second form creates an InterestFilter from the given prefix Name:
+ * setInterestFilter(prefix, [onDataNotFound]).
+ * @param {InterestFilter} filter The InterestFilter with a prefix and optional
+ * regex filter used to match the name of an incoming Interest. This makes a
+ * copy of filter.
+ * @param {Name} prefix The Name prefix used to match the name of an incoming
+ * Interest.
+ * @param {function} onDataNotFound (optional) If a data packet for an interest
+ * is not found in the cache, this forwards the interest by calling
+ * onDataNotFound(prefix, interest, face, interestFilterId, filter). Your
+ * callback can find the Data packet for the interest and call
+ * face.putData(data). If your callback cannot find the Data packet, it can
+ * optionally call storePendingInterest(interest, face) to store the pending
+ * interest in this object to be satisfied by a later call to add(data). If you
+ * want to automatically store all pending interests, you can simply use
+ * getStorePendingInterest() for onDataNotFound. If onDataNotFound is omitted or
+ * null, this does not use it.
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
+ */
+MemoryContentCache.prototype.setInterestFilter = function
+  (filterOrPrefix, onDataNotFound)
+{
+  if (onDataNotFound) {
+    var prefix;
+    if (typeof filterOrPrefix === 'object' && filterOrPrefix instanceof InterestFilter)
+      prefix = filterOrPrefix.getPrefix();
+    else
+      prefix = filterOrPrefix;
+    this.onDataNotFoundForPrefix[prefix.toUri()] = onDataNotFound;
+  }
+  var interestFilterId = this.face.setInterestFilter
+    (filterOrPrefix, this.onInterest.bind(this));
+  this.interestFilterIdList.push(interestFilterId);
+};
+
+/**
+ * Call Face.unsetInterestFilter and Face.removeRegisteredPrefix for all the
+ * prefixes given to the setInterestFilter and registerPrefix method on this
+ * MemoryContentCache object so that it will not receive interests any more. You
+ * can call this if you want to "shut down" this MemoryContentCache while your
+ * application is still running.
  */
 MemoryContentCache.prototype.unregisterAll = function()
 {
+  for (var i = 0; i < this.interestFilterIdList.length; ++i)
+    this.face.unsetInterestFilter(this.interestFilterIdList[i]);
+  this.interestFilterIdList = [];
+
   for (var i = 0; i < this.registeredPrefixIdList.length; ++i)
     this.face.removeRegisteredPrefix(this.registeredPrefixIdList[i]);
   this.registeredPrefixIdList = [];
