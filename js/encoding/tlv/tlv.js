@@ -90,11 +90,19 @@ Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
-Tlv.LocalControlHeader_LocalControlHeader = 80;
-Tlv.LocalControlHeader_IncomingFaceId = 81;
-Tlv.LocalControlHeader_NextHopFaceId = 82;
-Tlv.LocalControlHeader_CachingPolicy = 83;
-Tlv.LocalControlHeader_NoCache = 96;
+Tlv.LpPacket_LpPacket =        100;
+Tlv.LpPacket_Fragment =         80;
+Tlv.LpPacket_Sequence =         81;
+Tlv.LpPacket_FragIndex =        82;
+Tlv.LpPacket_FragCount =        83;
+Tlv.LpPacket_Nack =            800;
+Tlv.LpPacket_NackReason =      801;
+Tlv.LpPacket_NextHopFaceId =   816;
+Tlv.LpPacket_IncomingFaceId =  817;
+Tlv.LpPacket_CachePolicy =     820;
+Tlv.LpPacket_CachePolicyType = 821;
+Tlv.LpPacket_IGNORE_MIN =      800;
+Tlv.LpPacket_IGNORE_MAX =      959;
 
 Tlv.Link_Preference = 30;
 Tlv.Link_Delegation = 31;
