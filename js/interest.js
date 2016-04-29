@@ -28,6 +28,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Exclude = require('./exclude.js').Exclude; /** @ignore */
 var Link = require('./link.js').Link; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -102,6 +103,7 @@ var Interest = function Interest
   this.getNonceChangeCount_ = 0;
   this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
+  this.lpPacket_ = null;
 };
 
 exports.Interest = Interest;
@@ -341,6 +343,17 @@ Interest.prototype.getDefaultWireEncoding = function()
 Interest.prototype.getDefaultWireEncodingFormat = function()
 {
   return this.defaultWireEncodingFormat_;
+};
+
+/**
+ * Get the incoming face ID according to the incoming packet header.
+ * @return {number} The incoming face ID. If not specified, return null.
+ */
+Interest.prototype.getIncomingFaceId = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
+  return field === null ? null : field.getFaceId();
 };
 
 /**
@@ -613,6 +626,20 @@ Interest.prototype.refreshNonce = function()
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
 };
+
+/**
+ * An internal library method to set the LpPacket for an incoming packet. The
+ * application should not call this.
+ * @param {LpPacket} lpPacket The LpPacket. This does not make a copy.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ * @note This is an experimental feature. This API may change in the future.
+ */
+Interest.prototype.setLpPacket = function(lpPacket)
+{
+  this.lpPacket_ = lpPacket;
+  // Don't update changeCount_ since this doesn't affect the wire encoding.
+  return this;
+}
 
 /**
  * Get the change count, which is incremented each time this object (or a child
