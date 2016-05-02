@@ -37,6 +37,8 @@ var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** 
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator; /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var NdnCommon = require('./util/ndn-common.js').NdnCommon; /** @ignore */
+var NetworkNack = require('./network-nack.js').NetworkNack; /** @ignore */
+var LpPacket = require('./lp/lp-packet.js').LpPacket; /** @ignore */
 var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable; /** @ignore */
 var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable; /** @ignore */
 var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable; /** @ignore */
@@ -279,12 +281,13 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 };
 
 /**
- * Send the interest through the transport, read the entire response and call onData.
- * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
- * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
- * expressInterest(interest, onData [, onTimeout] [, wireFormat]).  The second form creates the interest from
- * a name and optional interest template:
- * expressInterest(name [, template], onData [, onTimeout] [, wireFormat]).
+ * Send the interest through the transport, read the entire response and call 
+ * onData, onTimeout or onNetworkNack as described below.
+ * There are two forms of expressInterest. The first form takes the exact
+ * interest (including lifetime):
+ * expressInterest(interest, onData [, onTimeout] [, onNetworkNack] [, wireFormat]).
+ * The second form creates the interest from a name and optional interest template:
+ * expressInterest(name [, template], onData [, onTimeout] [, onNetworkNack] [, wireFormat]).
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -299,6 +302,17 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param {function} onNetworkNack (optional) When a network Nack packet for the
+ * interest is received and onNetworkNack is not null, this calls
+ * onNetworkNack(interest, networkNack) and does not call onTimeout. interest is
+ * the sent Interest and networkNack is the received NetworkNack. If
+ * onNetworkNack is supplied, then onTimeout must be supplied too. However, if a
+ * network Nack is received and onNetworkNack is null, do nothing and wait for
+ * the interest to time out. (Therefore, an application which does not yet
+ * process a network Nack reason treats a Nack the same as a timeout.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
@@ -306,9 +320,9 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
-
  */
-Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
+Face.prototype.expressInterest = function
+  (interestOrName, arg2, arg3, arg4, arg5, arg6)
 {
   var interest;
   if (typeof interestOrName === 'object' && interestOrName instanceof Interest)
@@ -326,6 +340,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
       arg2 = arg3;
       arg3 = arg4;
       arg4 = arg5;
+      arg5 = arg6;
     }
     else {
       // No template.
@@ -336,21 +351,31 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
 
   var onData = arg2;
   var onTimeout;
+  var onNetworkNack;
   var wireFormat;
-  // arg3, arg4 may be:
-  // OnTimeout,  WireFormat
-  // OnTimeout,  null
-  // WireFormat, null
-  // null,       null
+  // arg3,       arg4,          arg5 may be:
+  // OnTimeout,  OnNetworkNack, WireFormat
+  // OnTimeout,  OnNetworkNack, null
+  // OnTimeout,  WireFormat,    null
+  // OnTimeout,  null,          null
+  // WireFormat, null,          null
+  // null,       null,          null
   if (typeof arg3 === "function")
     onTimeout = arg3;
   else
     onTimeout = function() {};
 
+  if (typeof arg4 === "function")
+    onNetworkNack = arg4;
+  else
+    onNetworkNack = null;
+
   if (arg3 instanceof WireFormat)
     wireFormat = arg3;
   else if (arg4 instanceof WireFormat)
     wireFormat = arg4;
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5;
   else
     wireFormat = WireFormat.getDefaultWireFormat();
 
@@ -367,13 +392,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
       var thisFace = this;
       this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest
-          (pendingInterestId, interest, onData, onTimeout, wireFormat);
+          (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+           wireFormat);
       });
     }
   }
   else
     this.reconnectAndExpressInterest
-      (pendingInterestId, interest, onData, onTimeout, wireFormat);
+      (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat);
 
   return pendingInterestId;
 };
@@ -384,7 +410,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
  * Then call expressInterestHelper.
  */
 Face.prototype.reconnectAndExpressInterest = function
-  (pendingInterestId, interest, onData, onTimeout, wireFormat)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
@@ -392,7 +418,8 @@ Face.prototype.reconnectAndExpressInterest = function
     this.onConnectedCallbacks.push
       (function() {
         thisFace.expressInterestHelper
-          (pendingInterestId, interest, onData, onTimeout, wireFormat);
+          (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+           wireFormat);
       });
 
     this.transport.connect
@@ -421,11 +448,13 @@ Face.prototype.reconnectAndExpressInterest = function
       this.onConnectedCallbacks.push
         (function() {
           thisFace.expressInterestHelper
-            (pendingInterestId, interest, onData, onTimeout, wireFormat);
+            (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+             wireFormat);
         });
     else if (this.readyStatus === Face.OPENED)
       this.expressInterestHelper
-        (pendingInterestId, interest, onData, onTimeout, wireFormat);
+        (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+         wireFormat);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -437,10 +466,10 @@ Face.prototype.reconnectAndExpressInterest = function
  * Add the PendingInterest and call this.transport.send to send the interest.
  */
 Face.prototype.expressInterestHelper = function
-  (pendingInterestId, interest, onData, onTimeout, wireFormat)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
 {
   if (this.pendingInterestTable_.add
-      (pendingInterestId, interest, onData, onTimeout) == null)
+      (pendingInterestId, interest, onData, onTimeout, onNetworkNack) == null)
     // removePendingInterest was already called with the pendingInterestId.
     return;
 
@@ -798,7 +827,7 @@ Face.prototype.nfdRegisterPrefix = function
           thisFace, onInterest);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
-         response.onTimeout.bind(response), wireFormat);
+         response.onTimeout.bind(response), null, wireFormat);
     });
   };
 
@@ -933,6 +962,15 @@ Face.prototype.isLocal = function(onResult, onError)
 Face.prototype.onReceivedElement = function(element)
 {
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
+
+  var lpPacket = null;
+  if (element[0] == Tlv.LpPacket_LpPacket) {
+    // Decode the LpPacket and replace element with the fragment.
+    lpPacket = new LpPacket();
+    TlvWireFormat.get().decodeLpPacket(lpPacket, element);
+    element = lpPacket.getFragmentWireEncoding().buf();
+  }
+
   // First, decode as Interest or Data.
   var interest = null;
   var data = null;
@@ -941,10 +979,42 @@ Face.prototype.onReceivedElement = function(element)
     if (decoder.peekType(Tlv.Interest, element.length)) {
       interest = new Interest();
       interest.wireDecode(element, TlvWireFormat.get());
+
+      if (lpPacket != null)
+        interest.setLpPacket(lpPacket);
     }
     else if (decoder.peekType(Tlv.Data, element.length)) {
       data = new Data();
       data.wireDecode(element, TlvWireFormat.get());
+
+      if (lpPacket != null)
+        data.setLpPacket(lpPacket);
+    }
+  }
+
+  if (lpPacket !== null) {
+    // We have decoded the fragment, so remove the wire encoding to save memory.
+    lpPacket.setFragmentWireEncoding(new Blob());
+
+    var networkNack = NetworkNack.getFirstHeader(lpPacket);
+    if (networkNack != null) {
+      if (interest == null)
+        // We got a Nack but not for an Interest, so drop the packet.
+        return;
+
+      var pitEntries = [];
+      this.pendingInterestTable_.extractEntriesForNackInterest(interest, pitEntries);
+      for (var i = 0; i < pitEntries.length; ++i) {
+        var pendingInterest = pitEntries[i];
+        try {
+          pendingInterest.getOnNetworkNack()(pendingInterest.getInterest(), networkNack);
+        } catch (ex) {
+          console.log("Error in onNetworkNack: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+
+      // We have process the network Nack packet.
+      return;
     }
   }
 
@@ -1040,7 +1110,7 @@ Face.prototype.connectAndExecute = function(onConnected)
         onConnected();
      },
      function(localInterest) { /* Ignore timeout */ },
-     WireFormat.getDefaultWireFormat());
+     null, WireFormat.getDefaultWireFormat());
 };
 
 /**
