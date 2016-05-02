@@ -311,46 +311,48 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
 {
   var interest;
-  var onData;
-  var onTimeout;
-  var wireFormat;
-  // expressInterest(Interest interest, function onData);
-  // expressInterest(Interest interest, function onData, function onTimeout);
-  // expressInterest(Interest interest, function onData, function onTimeout, WireFormat wireFormat);
-  if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
+  if (typeof interestOrName === 'object' && interestOrName instanceof Interest)
     // Just use a copy of the interest.
     interest = new Interest(interestOrName);
-    onData = arg2;
-    onTimeout = (arg3 ? arg3 : function() {});
-    wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
-  }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
-
-    // expressInterest(Name name, Interest template, function onData);
-    // expressInterest(Name name, Interest template, function onData, function onTimeout);
-    // expressInterest(Name name, Interest template, function onData, function onTimeout, WireFormat wireFormat);
-    if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
+    if (arg2 && typeof arg2 === 'object' && arg2 instanceof Interest) {
       var template = arg2;
       // Copy the template.
       interest = new Interest(template);
       interest.setName(interestOrName);
 
-      onData = arg3;
-      onTimeout = (arg4 ? arg4 : function() {});
-      wireFormat = (arg5 ? arg5 : WireFormat.getDefaultWireFormat());
+      // Shift the remaining args to be processed below.
+      arg2 = arg3;
+      arg3 = arg4;
+      arg4 = arg5;
     }
-    // expressInterest(Name name, function onData);
-    // expressInterest(Name name, function onData, function onTimeout);
-    // expressInterest(Name name, function onData, function onTimeout, WireFormat wireFormat);
     else {
+      // No template.
       interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
-      onData = arg2;
-      onTimeout = (arg3 ? arg3 : function() {});
-      wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
     }
   }
+
+  var onData = arg2;
+  var onTimeout;
+  var wireFormat;
+  // arg3, arg4 may be:
+  // OnTimeout,  WireFormat
+  // OnTimeout,  null
+  // WireFormat, null
+  // null,       null
+  if (typeof arg3 === "function")
+    onTimeout = arg3;
+  else
+    onTimeout = function() {};
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else
+    wireFormat = WireFormat.getDefaultWireFormat();
 
   var pendingInterestId = this.getNextEntryId();
 
