@@ -38,7 +38,7 @@ IncomingFaceId.prototype.getFaceId = function() { return this.faceId_; };
 
 /**
  * Set the face ID value.
- * @param faceId The incoming face ID value.
+ * @param {number} faceId The incoming face ID value.
  */
 IncomingFaceId.prototype.setFaceId = function(faceId)
 {
