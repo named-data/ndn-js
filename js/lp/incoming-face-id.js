@@ -25,7 +25,7 @@
  */
 var IncomingFaceId = function IncomingFaceId()
 {
-  this.faceId_ = -1;
+  this.faceId_ = null;
 };
 
 exports.IncomingFaceId = IncomingFaceId;
