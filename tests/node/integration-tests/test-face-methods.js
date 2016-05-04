@@ -323,7 +323,7 @@ describe('TestFaceInterestMethods', function() {
                  "Expected 1 network Nack call");
 
     assert.equal(counter.networkNack.getReason(), NetworkNack.Reason.NO_ROUTE,
-                 "Netowork Nack has unexpected reason");
+                 "Network Nack has unexpected reason");
   });
 });
 
