@@ -165,6 +165,7 @@ def build (bld):
                  "js/interest-filter.js",
                  "js/delegation-set.js",
                  "js/link.js",
+                 "js/network-nack.js",
                  "js/encoding/tlv-0_1_1-wire-format.js",
                  "js/encoding/tlv-0_1-wire-format.js",
                  "js/encoding/tlv-wire-format.js",
@@ -196,6 +197,8 @@ def build (bld):
                  "js/impl/interest-filter-table.js",
                  "js/impl/pending-interest-table.js",
                  "js/impl/registered-prefix-table.js",
+                 "js/lp/incoming-face-id.js",
+                 "js/lp/lp-packet.js",
                  "js/face.js",
                  "contrib/dexie/dexie.min.js"]
 

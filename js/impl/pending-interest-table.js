@@ -42,12 +42,13 @@ exports.PendingInterestTable = PendingInterestTable;
  * @constructor
  */
 PendingInterestTable.Entry = function PendingInterestTableEntry
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack)
 {
   this.pendingInterestId_ = pendingInterestId;
   this.interest_ = interest;
   this.onData_ = onData;
   this.onTimeout_ = onTimeout;
+  this.onNetworkNack_ = onNetworkNack;
   this.timerId_ = -1;
 };
 
@@ -77,6 +78,15 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
   return this.onData_;
+};
+
+/**
+ * Get the OnNetworkNack callback given to the constructor.
+ * @returns {function} The OnNetworkNack callback.
+ */
+PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
+{
+  return this.onNetworkNack_;
 };
 
 /**
@@ -125,11 +135,12 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {Interest} interestCopy
  * @param {function} onData
  * @param {function} onTimeout
+ * @param {function} onNetworkNack
  * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function
-  (pendingInterestId, interestCopy, onData, onTimeout)
+  (pendingInterestId, interestCopy, onData, onTimeout, onNetworkNack)
 {
   var removeRequestIndex = this.removeRequests_.indexOf(pendingInterestId);
   if (removeRequestIndex >= 0) {
@@ -140,7 +151,7 @@ PendingInterestTable.prototype.add = function
   }
 
   var entry = new PendingInterestTable.Entry
-    (pendingInterestId, interestCopy, onData, onTimeout);
+    (pendingInterestId, interestCopy, onData, onTimeout, onNetworkNack);
   this.table_.push(entry);
 
   // Set interest timer.
@@ -167,7 +178,7 @@ PendingInterestTable.prototype.add = function
  * the entries list.
  * @param {Name} name The name to find the interest for (from the incoming data
  * packet).
- * @param {Array<Face.PendingInterest>} entries Add matching
+ * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
@@ -176,10 +187,45 @@ PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
-    var entry = this.table_[i];
-    if (entry.getInterest().matchesName(name)) {
-      entry.clearTimeout();
-      entries.push(entry);
+    var pendingInterest = this.table_[i];
+    if (pendingInterest.getInterest().matchesName(name)) {
+      pendingInterest.clearTimeout();
+      entries.push(pendingInterest);
+      this.table_.splice(i, 1);
+    }
+  }
+};
+
+/**
+ * Find all entries from the pending interest table where the OnNetworkNack
+ * callback is not null and the entry's interest is the same as the given
+ * interest, remove the entries from the table, and add to the entries list. 
+ * (We don't remove the entry if the OnNetworkNack callback is null so that
+ * OnTimeout will be called later.) The interests are the same if their default
+ * wire encoding is the same (which has everything including the name, nonce,
+ * link object and selectors).
+ * @param {Interest} interest The Interest to search for (typically from a Nack
+ * packet).
+ * @param {Array<PendingInterestTable.Entry>} entries Add matching
+ * PendingInterestTable.Entry from the pending interest table. The caller should
+ * pass in an empty array.
+ */
+PendingInterestTable.prototype.extractEntriesForNackInterest = function
+  (interest, entries)
+{
+  var encoding = interest.wireEncode();
+
+  // Go backwards through the list so we can erase entries.
+  for (var i = this.table_.length - 1; i >= 0; --i) {
+    var pendingInterest = this.table_[i];
+    if (pendingInterest.getOnNetworkNack() == null)
+      continue;
+
+    // wireEncode returns the encoding cached when the interest was sent (if
+    // it was the default wire encoding).
+    if (pendingInterest.getInterest().wireEncode().equals(encoding)) {
+      pendingInterest.clearTimeout();
+      entries.push(pendingInterest);
       this.table_.splice(i, 1);
     }
   }

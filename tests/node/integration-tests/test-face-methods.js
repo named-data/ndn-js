@@ -26,6 +26,7 @@ var Data = require('../../..').Data;
 var Interest = require('../../..').Interest;
 var Face = require('../../..').Face;
 var KeyType = require('../../..').KeyType;
+var NetworkNack = require('../../..').NetworkNack;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
 var MemoryPrivateKeyStorage = require('../../..').MemoryPrivateKeyStorage;
 var IdentityManager = require('../../..').IdentityManager;
@@ -145,28 +146,40 @@ var DEFAULT_RSA_PRIVATE_KEY_DER = new Buffer([
  * Mocha should wait until the callback calls done before continuing to check
  * the returned object.
  */
-function runExpressNameTest(done, face, interestName)
+function runExpressNameTest(done, face, interestName, useOnNack)
 {
   var name = new Name(interestName);
-  var counter = { onDataCallCount: 0, onTimeoutCallCount: 0,
-                 interest: null, data: null };
-  face.expressInterest
-    (name,
-     function(interest, data) {
-       counter.interest = interest;
-       counter.data = data;
-       ++counter.onDataCallCount;
-       // Mocha doesn't like "done" being called multiple times, so only call the first time.
-       if (counter.onDataCallCount == 1)
-         done();
-     },
-     function(interest) {
-       counter.interest = interest;
-       ++counter.onTimeoutCallCount;
-       // Mocha doesn't like "done" being called multiple times, so only call the first time.
-       if (counter.onTimeoutCallCount == 1)
-         done();
-     });
+  var counter = { onDataCallCount: 0, onTimeoutCallCount: 0, onNetworkNackCallCount: 0,
+                 interest: null, data: null, networkNack: null };
+
+  function onData(interest, data) {
+    counter.interest = interest;
+    counter.data = data;
+    ++counter.onDataCallCount;
+    // Mocha doesn't like "done" being called multiple times, so only call the first time.
+    if (counter.onDataCallCount === 1)
+      done();
+  }
+  function onTimeout(interest) {
+    counter.interest = interest;
+    ++counter.onTimeoutCallCount;
+    // Mocha doesn't like "done" being called multiple times, so only call the first time.
+    if (counter.onTimeoutCallCount === 1)
+      done();
+  }
+  function onNetworkNack(interest, networkNack) {
+    counter.interest = interest;
+    counter.networkNack = networkNack;
+    ++counter.onNetworkNackCallCount;
+    // Mocha doesn't like "done" being called multiple times, so only call the first time.
+    if (counter.onNetworkNackCallCount === 1)
+      done();
+  }
+
+  if (useOnNack)
+    face.expressInterest(name, onData, onTimeout, onNetworkNack);
+  else
+    face.expressInterest(name, onData, onTimeout);
 
   return counter;
 }
@@ -290,6 +303,27 @@ describe('TestFaceInterestMethods', function() {
            (interest, function(interest, data) {}, function(interest) {}); },
        Error,
        "expressInterest didn't throw an exception when the interest size exceeds getMaxNdnPacketSize()");
+  });
+});
+
+describe('TestFaceInterestMethods', function() {
+  // Mocha will wait until a callback calls "done" before running the "it" test.
+  beforeEach(function(done) {
+    uri ="/noroute" + new Date().getTime();
+    counter = runExpressNameTest(done, face, uri, true);
+  });
+
+  it('NetworkNack', function() {
+    // We're expecting a network Nack callback, and only 1.
+    assert.equal(counter.onDataCallCount, 0,
+                 "Data callback called for unroutable interest");
+    assert.equal(counter.onTimeoutCallCount, 0,
+                 "Timeout callback called for unroutable interest");
+    assert.equal(counter.onNetworkNackCallCount, 1,
+                 "Expected 1 network Nack call");
+
+    assert.equal(counter.networkNack.getReason(), NetworkNack.Reason.NO_ROUTE,
+                 "Network Nack has unexpected reason");
   });
 });
 

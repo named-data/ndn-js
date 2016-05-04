@@ -35,6 +35,8 @@ var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWi
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
+var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -414,6 +416,81 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
+ * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+{
+  lpPacket.clear();
+
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.LpPacket_LpPacket);
+
+  while (decoder.getOffset() < endOffset) {
+    // Imitate TlvDecoder.readTypeAndLength.
+    var fieldType = decoder.readVarNumber();
+    var fieldLength = decoder.readVarNumber();
+    var fieldEndOffset = decoder.getOffset() + fieldLength;
+    if (fieldEndOffset > input.length)
+      throw new DecodingException(new Error("TLV length exceeds the buffer length"));
+
+    if (fieldType == Tlv.LpPacket_Fragment) {
+      // Set the fragment to the bytes of the TLV value.
+      lpPacket.setFragmentWireEncoding
+        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), true));
+      decoder.seek(fieldEndOffset);
+
+      // The fragment is supposed to be the last field.
+      break;
+    }
+    else if (fieldType == Tlv.LpPacket_Nack) {
+      var networkNack = new NetworkNack();
+      var code = decoder.readOptionalNonNegativeIntegerTlv
+        (Tlv.LpPacket_NackReason, fieldEndOffset);
+      var reason;
+      // The enum numeric values are the same as this wire format, so use as is.
+      if (code < 0 || code == NetworkNack.Reason.NONE)
+        // This includes an omitted NackReason.
+        networkNack.setReason(NetworkNack.Reason.NONE);
+      else if (code == NetworkNack.Reason.CONGESTION ||
+               code == NetworkNack.Reason.DUPLICATE ||
+               code == NetworkNack.Reason.NO_ROUTE)
+        networkNack.setReason(code);
+      else {
+        // Unrecognized reason.
+        networkNack.setReason(NetworkNack.Reason.OTHER_CODE);
+        networkNack.setOtherReasonCode(code);
+      }
+
+      lpPacket.addHeaderField(networkNack);
+    }
+    else if (fieldType == Tlv.LpPacket_IncomingFaceId) {
+      var incomingFaceId = new IncomingFaceId();
+      incomingFaceId.setFaceId(decoder.readNonNegativeInteger(fieldLength));
+      lpPacket.addHeaderField(incomingFaceId);
+    }
+    else {
+      // Unrecognized field type. The conditions for ignoring are here:
+      // http://redmine.named-data.net/projects/nfd/wiki/NDNLPv2
+      var canIgnore =
+        (fieldType >= Tlv.LpPacket_IGNORE_MIN &&
+         fieldType <= Tlv.LpPacket_IGNORE_MAX &&
+         (fieldType & 0x01) === 1);
+      if  (!canIgnore)
+        throw new DecodingException(new Error("Did not get the expected TLV type"));
+
+      // Ignore.
+      decoder.seek(fieldEndOffset);
+    }
+
+    decoder.finishNestedTlvs(fieldEndOffset);
+  }
+
+  decoder.finishNestedTlvs(endOffset);
 };
 
 /**

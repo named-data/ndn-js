@@ -17,6 +17,7 @@ exports.KeyLocator = require('./js/key-locator.js').KeyLocator;
 exports.KeyLocatorType = require('./js/key-locator.js').KeyLocatorType;
 exports.InterestFilter = require('./js/interest-filter.js').InterestFilter;
 exports.DelegationSet = require('./js/delegation-set.js').DelegationSet;
+exports.NetworkNack = require('./js/network-nack.js').NetworkNack;
 exports.Link = require('./js/link.js').Link;
 exports.WireFormat = require('./js/encoding/wire-format.js').WireFormat;
 exports.TlvWireFormat = require('./js/encoding/tlv-wire-format.js').TlvWireFormat;

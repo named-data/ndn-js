@@ -214,6 +214,20 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
 };
 
 /**
+ * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
+ * Your derived class should override.
+ * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+{
+  throw new Error
+    ("decodeLpPacket is unimplemented in the base WireFormat class. You should use a derived class.");
+};
+
+/**
  * Encode the DelegationSet and return the encoding.  Your derived class
  * should override.
  * @param {DelegationSet} delegationSet The DelegationSet object to

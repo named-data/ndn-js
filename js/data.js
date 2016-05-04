@@ -23,11 +23,10 @@
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
-var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
-var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -87,6 +86,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
   this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
+  this.lpPacket_ = null;
 };
 
 exports.Data = Data;
@@ -162,6 +162,17 @@ Data.prototype.getDefaultWireEncoding = function()
 Data.prototype.getDefaultWireEncodingFormat = function()
 {
   return this.defaultWireEncodingFormat_;
+};
+
+/**
+ * Get the incoming face ID according to the incoming packet header.
+ * @return {number} The incoming face ID. If not specified, return null.
+ */
+Data.prototype.getIncomingFaceId = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
+  return field === null ? null : field.getFaceId();
 };
 
 /**
@@ -273,6 +284,20 @@ Data.prototype.wireDecode = function(input, wireFormat)
   else
     this.setDefaultWireEncoding(new SignedBlob(), null);
 };
+
+/**
+ * An internal library method to set the LpPacket for an incoming packet. The
+ * application should not call this.
+ * @param {LpPacket} lpPacket The LpPacket. This does not make a copy.
+ * @return {Data} This Data so that you can chain calls to update values.
+ * @note This is an experimental feature. This API may change in the future.
+ */
+Data.prototype.setLpPacket = function(lpPacket)
+{
+  this.lpPacket_ = lpPacket;
+  // Don't update changeCount_ since this doesn't affect the wire encoding.
+  return this;
+}
 
 /**
  * Get the change count, which is incremented each time this object (or a child
