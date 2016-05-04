@@ -199,11 +199,11 @@ PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
 /**
  * Find all entries from the pending interest table where the OnNetworkNack
  * callback is not null and the entry's interest is the same as the given
- * interest, remove the entries from the table, set each entry's isRemoved
- * flag, and add to the entries list. (We don't remove the entry if the
- * OnNetworkNack callback is null so that OnTimeout will be called later.) The
- * interests are the same if their default wire encoding is the same (which
- * has everything including the name, nonce, link object and selectors).
+ * interest, remove the entries from the table, and add to the entries list. 
+ * (We don't remove the entry if the OnNetworkNack callback is null so that
+ * OnTimeout will be called later.) The interests are the same if their default
+ * wire encoding is the same (which has everything including the name, nonce,
+ * link object and selectors).
  * @param {Interest} interest The Interest to search for (typically from a Nack
  * packet).
  * @param {Array<PendingInterestTable.Entry>} entries Add matching
@@ -222,7 +222,7 @@ PendingInterestTable.prototype.extractEntriesForNackInterest = function
       continue;
 
     // wireEncode returns the encoding cached when the interest was sent (if
-    // it was the default wire encoding.
+    // it was the default wire encoding).
     if (pendingInterest.getInterest().wireEncode().equals(encoding)) {
       pendingInterest.clearTimeout();
       entries.push(pendingInterest);
