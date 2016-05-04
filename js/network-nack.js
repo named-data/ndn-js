@@ -30,10 +30,16 @@ var NetworkNack = function NetworkNack()
 
 exports.NetworkNack = NetworkNack;
 
+/**
+ * A NetworkNack.Reason specifies the reason in a NetworkNack packet. If the
+ * reason code in the packet is not a recognized enum value, then we use
+ * Reason.OTHER_CODE and you can call getOtherReasonCode(). We do this to keep
+ * the recognized reason values independent of packet encoding formats.
+ */
 NetworkNack.Reason = {
-  NONE:       0,
-  OTHER_CODE: 1,
-  CONGESTION: 50,
+  NONE:         0,
+  OTHER_CODE:   1,
+  CONGESTION:  50,
   DUPLICATE:  100,
   NO_ROUTE:   150
 };
