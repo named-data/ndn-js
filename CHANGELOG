@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.10 (2016-04-28)
+Interim changes since NDN-JS v0.10 (2016-05-04)
 -----------------------------------------------
 
 Breaking changes
@@ -14,6 +14,9 @@ Changes
 * Added classes Link and DelegationSet to support link objects.
 * In Interest, added methods to support link objects and SelectedDelegation:
   hasLink, getLink, unsetLink, get/setLinkWireEncoding, get/setSelectedDelegationIndex.
+* Added support for NDNLPv2:
+  In Face.expressInterest, added an OnNetworkNack callback.
+  In Interest and Data, the method getIncomingFaceId provides the incoming face ID (if configured).
 * http://redmine.named-data.net/issues/3260 Added GenericSignature.
 * http://redmine.named-data.net/issues/3449 Added Name.isPrefixOf and getSuccessor.
   In compare, support compare(int, int, Name, int, int).
@@ -33,7 +36,7 @@ Changes
 * Updated pure JavaScript crypto to KJUR 5.05. https://github.com/kjur/jsrsasign/commit/30711ac6e1b9c600b0bf3904234f2eacf9314868
 * Examples: Added test-sign-verify-data-hmac.
 * Unit tests: Added test-link.
-* Integration tests: In test-face-methods, added TestFaceRegisterMethods.
+* Integration tests: In test-face-methods, added test NetworkNack and TestFaceRegisterMethods.
 
 Deprecated
 * In KeyChain, deprecated getIdentityCertificate. Use getCertificate.
