@@ -10193,11 +10193,19 @@ Tlv.ControlParameters_Flags =               108;
 Tlv.ControlParameters_Strategy =            107;
 Tlv.ControlParameters_ExpirationPeriod =    109;
 
-Tlv.LocalControlHeader_LocalControlHeader = 80;
-Tlv.LocalControlHeader_IncomingFaceId = 81;
-Tlv.LocalControlHeader_NextHopFaceId = 82;
-Tlv.LocalControlHeader_CachingPolicy = 83;
-Tlv.LocalControlHeader_NoCache = 96;
+Tlv.LpPacket_LpPacket =        100;
+Tlv.LpPacket_Fragment =         80;
+Tlv.LpPacket_Sequence =         81;
+Tlv.LpPacket_FragIndex =        82;
+Tlv.LpPacket_FragCount =        83;
+Tlv.LpPacket_Nack =            800;
+Tlv.LpPacket_NackReason =      801;
+Tlv.LpPacket_NextHopFaceId =   816;
+Tlv.LpPacket_IncomingFaceId =  817;
+Tlv.LpPacket_CachePolicy =     820;
+Tlv.LpPacket_CachePolicyType = 821;
+Tlv.LpPacket_IGNORE_MIN =      800;
+Tlv.LpPacket_IGNORE_MAX =      959;
 
 Tlv.Link_Preference = 30;
 Tlv.Link_Delegation = 31;
@@ -11574,6 +11582,20 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
 WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   throw new Error("encodeSignatureValue is unimplemented in the base WireFormat class.  You should use a derived class.");
+};
+
+/**
+ * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
+ * Your derived class should override.
+ * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @throws Error This always throws an "unimplemented" error. The derived class
+ * should override.
+ */
+WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+{
+  throw new Error
+    ("decodeLpPacket is unimplemented in the base WireFormat class. You should use a derived class.");
 };
 
 /**
@@ -16547,11 +16569,10 @@ Object.defineProperty(DigestSha256Signature.prototype, "signature",
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var SignedBlob = require('./util/signed-blob.js').SignedBlob; /** @ignore */
 var ChangeCounter = require('./util/change-counter.js').ChangeCounter; /** @ignore */
-var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
-var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -16611,6 +16632,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
   this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
+  this.lpPacket_ = null;
 };
 
 exports.Data = Data;
@@ -16686,6 +16708,17 @@ Data.prototype.getDefaultWireEncoding = function()
 Data.prototype.getDefaultWireEncodingFormat = function()
 {
   return this.defaultWireEncodingFormat_;
+};
+
+/**
+ * Get the incoming face ID according to the incoming packet header.
+ * @return {number} The incoming face ID. If not specified, return null.
+ */
+Data.prototype.getIncomingFaceId = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
+  return field === null ? null : field.getFaceId();
 };
 
 /**
@@ -16797,6 +16830,20 @@ Data.prototype.wireDecode = function(input, wireFormat)
   else
     this.setDefaultWireEncoding(new SignedBlob(), null);
 };
+
+/**
+ * An internal library method to set the LpPacket for an incoming packet. The
+ * application should not call this.
+ * @param {LpPacket} lpPacket The LpPacket. This does not make a copy.
+ * @return {Data} This Data so that you can chain calls to update values.
+ * @note This is an experimental feature. This API may change in the future.
+ */
+Data.prototype.setLpPacket = function(lpPacket)
+{
+  this.lpPacket_ = lpPacket;
+  // Don't update changeCount_ since this doesn't affect the wire encoding.
+  return this;
+}
 
 /**
  * Get the change count, which is incremented each time this object (or a child
@@ -24882,6 +24929,7 @@ var Name = require('./name.js').Name; /** @ignore */
 var Exclude = require('./exclude.js').Exclude; /** @ignore */
 var Link = require('./link.js').Link; /** @ignore */
 var KeyLocator = require('./key-locator.js').KeyLocator; /** @ignore */
+var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var WireFormat = require('./encoding/wire-format.js').WireFormat;
 
 /**
@@ -24956,6 +25004,7 @@ var Interest = function Interest
   this.getNonceChangeCount_ = 0;
   this.getDefaultWireEncodingChangeCount_ = 0;
   this.changeCount_ = 0;
+  this.lpPacket_ = null;
 };
 
 exports.Interest = Interest;
@@ -25195,6 +25244,17 @@ Interest.prototype.getDefaultWireEncoding = function()
 Interest.prototype.getDefaultWireEncodingFormat = function()
 {
   return this.defaultWireEncodingFormat_;
+};
+
+/**
+ * Get the incoming face ID according to the incoming packet header.
+ * @return {number} The incoming face ID. If not specified, return null.
+ */
+Interest.prototype.getIncomingFaceId = function()
+{
+  var field =
+    this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
+  return field === null ? null : field.getFaceId();
 };
 
 /**
@@ -25467,6 +25527,20 @@ Interest.prototype.refreshNonce = function()
   ++this.changeCount_;
   this.getNonceChangeCount_ = this.getChangeCount();
 };
+
+/**
+ * An internal library method to set the LpPacket for an incoming packet. The
+ * application should not call this.
+ * @param {LpPacket} lpPacket The LpPacket. This does not make a copy.
+ * @return {Interest} This Interest so that you can chain calls to update values.
+ * @note This is an experimental feature. This API may change in the future.
+ */
+Interest.prototype.setLpPacket = function(lpPacket)
+{
+  this.lpPacket_ = lpPacket;
+  // Don't update changeCount_ since this doesn't affect the wire encoding.
+  return this;
+}
 
 /**
  * Get the change count, which is incremented each time this object (or a child
@@ -26557,6 +26631,107 @@ Link.prototype.encodeContent = function(wireFormat)
   this.getMetaInfo().setType(ContentType.LINK);
 };
 /**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx nack.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/nack.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * NetworkNack represents a network Nack packet and includes a Nack reason.
+ * @constructor
+ */
+var NetworkNack = function NetworkNack()
+{
+  this.reason_ = NetworkNack.Reason.NONE;
+  this.otherReasonCode_ = -1;
+};
+
+exports.NetworkNack = NetworkNack;
+
+/**
+ * A NetworkNack.Reason specifies the reason in a NetworkNack packet. If the
+ * reason code in the packet is not a recognized enum value, then we use
+ * Reason.OTHER_CODE and you can call getOtherReasonCode(). We do this to keep
+ * the recognized reason values independent of packet encoding formats.
+ */
+NetworkNack.Reason = {
+  NONE:         0,
+  OTHER_CODE:   1,
+  CONGESTION:  50,
+  DUPLICATE:  100,
+  NO_ROUTE:   150
+};
+
+/**
+ * Get the network Nack reason.
+ * @return {number from NetworkNack.Reason} The reason enum value. If this is
+ * Reason.OTHER_CODE, then call getOtherReasonCode() to get the unrecognized
+ * reason code.
+ */
+NetworkNack.prototype.getReason = function() { return this.reason_; };
+
+/**
+ * Get the reason code from the packet which is other than a recognized
+ * Reason enum value. This is only meaningful if getReason() is
+ * Reason.OTHER_CODE.
+ * @return {number} The reason code.
+ */
+NetworkNack.prototype.getOtherReasonCode = function()
+{ 
+  return this.otherReasonCode_;
+};
+
+/**
+ * Set the network Nack reason.
+ * @param {number from NetworkNack.Reason} reason The network Nack reason enum
+ * value. If the packet's reason code is not a recognized Reason enum value, use
+ * Reason.OTHER_CODE and call setOtherReasonCode().
+ */
+NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
+
+/**
+ * Set the packet's reason code to use when the reason enum is
+ * Reason.OTHER_CODE. If the packet's reason code is a recognized enum value,
+ * just call setReason().
+ * @param {number} otherReasonCode The packet's unrecognized reason code.
+ */
+NetworkNack.prototype.setOtherReasonCode = function(otherReasonCode)
+{ 
+  this.otherReasonCode_ = otherReasonCode;
+};
+
+/**
+ * Get the first header field in lpPacket which is a NetworkNack. This is
+ * an internal method which the application normally would not use.
+ * @param {LpPacket} lpPacket The LpPacket with the header fields to search.
+ * @return {NetworkNack} The first NetworkNack header field, or null if not
+ * found.
+ */
+NetworkNack.getFirstHeader = function(lpPacket)
+{
+  for (var i = 0; i < lpPacket.countHeaderFields(); ++i) {
+    var field = lpPacket.getHeaderField(i);
+    if (field instanceof NetworkNack)
+      return field;
+  }
+
+  return null;
+};
+/**
  * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
@@ -26593,6 +26768,8 @@ var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWi
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var ControlParameters = require('../control-parameters.js').ControlParameters; /** @ignore */
 var ForwardingFlags = require('../forwarding-flags.js').ForwardingFlags; /** @ignore */
+var NetworkNack = require('../network-nack.js').NetworkNack; /** @ignore */
+var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
@@ -26972,6 +27149,81 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
 
   return new Blob(encoder.getOutput(), false);
+};
+
+/**
+ * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
+ * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ */
+Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+{
+  lpPacket.clear();
+
+  var decoder = new TlvDecoder(input);
+  var endOffset = decoder.readNestedTlvsStart(Tlv.LpPacket_LpPacket);
+
+  while (decoder.getOffset() < endOffset) {
+    // Imitate TlvDecoder.readTypeAndLength.
+    var fieldType = decoder.readVarNumber();
+    var fieldLength = decoder.readVarNumber();
+    var fieldEndOffset = decoder.getOffset() + fieldLength;
+    if (fieldEndOffset > input.length)
+      throw new DecodingException(new Error("TLV length exceeds the buffer length"));
+
+    if (fieldType == Tlv.LpPacket_Fragment) {
+      // Set the fragment to the bytes of the TLV value.
+      lpPacket.setFragmentWireEncoding
+        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), true));
+      decoder.seek(fieldEndOffset);
+
+      // The fragment is supposed to be the last field.
+      break;
+    }
+    else if (fieldType == Tlv.LpPacket_Nack) {
+      var networkNack = new NetworkNack();
+      var code = decoder.readOptionalNonNegativeIntegerTlv
+        (Tlv.LpPacket_NackReason, fieldEndOffset);
+      var reason;
+      // The enum numeric values are the same as this wire format, so use as is.
+      if (code < 0 || code == NetworkNack.Reason.NONE)
+        // This includes an omitted NackReason.
+        networkNack.setReason(NetworkNack.Reason.NONE);
+      else if (code == NetworkNack.Reason.CONGESTION ||
+               code == NetworkNack.Reason.DUPLICATE ||
+               code == NetworkNack.Reason.NO_ROUTE)
+        networkNack.setReason(code);
+      else {
+        // Unrecognized reason.
+        networkNack.setReason(NetworkNack.Reason.OTHER_CODE);
+        networkNack.setOtherReasonCode(code);
+      }
+
+      lpPacket.addHeaderField(networkNack);
+    }
+    else if (fieldType == Tlv.LpPacket_IncomingFaceId) {
+      var incomingFaceId = new IncomingFaceId();
+      incomingFaceId.setFaceId(decoder.readNonNegativeInteger(fieldLength));
+      lpPacket.addHeaderField(incomingFaceId);
+    }
+    else {
+      // Unrecognized field type. The conditions for ignoring are here:
+      // http://redmine.named-data.net/projects/nfd/wiki/NDNLPv2
+      var canIgnore =
+        (fieldType >= Tlv.LpPacket_IGNORE_MIN &&
+         fieldType <= Tlv.LpPacket_IGNORE_MAX &&
+         (fieldType & 0x01) === 1);
+      if  (!canIgnore)
+        throw new DecodingException(new Error("Did not get the expected TLV type"));
+
+      // Ignore.
+      decoder.seek(fieldEndOffset);
+    }
+
+    decoder.finishNestedTlvs(fieldEndOffset);
+  }
+
+  decoder.finishNestedTlvs(endOffset);
 };
 
 /**
@@ -34259,12 +34511,13 @@ exports.PendingInterestTable = PendingInterestTable;
  * @constructor
  */
 PendingInterestTable.Entry = function PendingInterestTableEntry
-  (pendingInterestId, interest, onData, onTimeout)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack)
 {
   this.pendingInterestId_ = pendingInterestId;
   this.interest_ = interest;
   this.onData_ = onData;
   this.onTimeout_ = onTimeout;
+  this.onNetworkNack_ = onNetworkNack;
   this.timerId_ = -1;
 };
 
@@ -34294,6 +34547,15 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
   return this.onData_;
+};
+
+/**
+ * Get the OnNetworkNack callback given to the constructor.
+ * @returns {function} The OnNetworkNack callback.
+ */
+PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
+{
+  return this.onNetworkNack_;
 };
 
 /**
@@ -34342,11 +34604,12 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {Interest} interestCopy
  * @param {function} onData
  * @param {function} onTimeout
+ * @param {function} onNetworkNack
  * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function
-  (pendingInterestId, interestCopy, onData, onTimeout)
+  (pendingInterestId, interestCopy, onData, onTimeout, onNetworkNack)
 {
   var removeRequestIndex = this.removeRequests_.indexOf(pendingInterestId);
   if (removeRequestIndex >= 0) {
@@ -34357,7 +34620,7 @@ PendingInterestTable.prototype.add = function
   }
 
   var entry = new PendingInterestTable.Entry
-    (pendingInterestId, interestCopy, onData, onTimeout);
+    (pendingInterestId, interestCopy, onData, onTimeout, onNetworkNack);
   this.table_.push(entry);
 
   // Set interest timer.
@@ -34384,7 +34647,7 @@ PendingInterestTable.prototype.add = function
  * the entries list.
  * @param {Name} name The name to find the interest for (from the incoming data
  * packet).
- * @param {Array<Face.PendingInterest>} entries Add matching
+ * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
@@ -34393,10 +34656,45 @@ PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
-    var entry = this.table_[i];
-    if (entry.getInterest().matchesName(name)) {
-      entry.clearTimeout();
-      entries.push(entry);
+    var pendingInterest = this.table_[i];
+    if (pendingInterest.getInterest().matchesName(name)) {
+      pendingInterest.clearTimeout();
+      entries.push(pendingInterest);
+      this.table_.splice(i, 1);
+    }
+  }
+};
+
+/**
+ * Find all entries from the pending interest table where the OnNetworkNack
+ * callback is not null and the entry's interest is the same as the given
+ * interest, remove the entries from the table, and add to the entries list. 
+ * (We don't remove the entry if the OnNetworkNack callback is null so that
+ * OnTimeout will be called later.) The interests are the same if their default
+ * wire encoding is the same (which has everything including the name, nonce,
+ * link object and selectors).
+ * @param {Interest} interest The Interest to search for (typically from a Nack
+ * packet).
+ * @param {Array<PendingInterestTable.Entry>} entries Add matching
+ * PendingInterestTable.Entry from the pending interest table. The caller should
+ * pass in an empty array.
+ */
+PendingInterestTable.prototype.extractEntriesForNackInterest = function
+  (interest, entries)
+{
+  var encoding = interest.wireEncode();
+
+  // Go backwards through the list so we can erase entries.
+  for (var i = this.table_.length - 1; i >= 0; --i) {
+    var pendingInterest = this.table_[i];
+    if (pendingInterest.getOnNetworkNack() == null)
+      continue;
+
+    // wireEncode returns the encoding cached when the interest was sent (if
+    // it was the default wire encoding).
+    if (pendingInterest.getInterest().wireEncode().equals(encoding)) {
+      pendingInterest.clearTimeout();
+      entries.push(pendingInterest);
       this.table_.splice(i, 1);
     }
   }
@@ -34598,6 +34896,166 @@ RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
   return this.relatedInterestFilterId;
 };
 /**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx fields.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/fields.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/**
+ * IncomingFaceId represents the incoming face ID header field in an NDNLPv2 packet.
+ * http://redmine.named-data.net/projects/nfd/wiki/NDNLPv2
+ * @constructor
+ */
+var IncomingFaceId = function IncomingFaceId()
+{
+  this.faceId_ = null;
+};
+
+exports.IncomingFaceId = IncomingFaceId;
+
+/**
+ * Get the incoming face ID value.
+ * @return {number} The face ID value.
+ */
+IncomingFaceId.prototype.getFaceId = function() { return this.faceId_; };
+
+/**
+ * Set the face ID value.
+ * @param {number} faceId The incoming face ID value.
+ */
+IncomingFaceId.prototype.setFaceId = function(faceId)
+{
+  this.faceId_ = faceId;
+};
+
+/**
+ * Get the first header field in lpPacket which is an IncomingFaceId. This is
+ * an internal method which the application normally would not use.
+ * @param {LpPacket} lpPacket The LpPacket with the header fields to search.
+ * @return {IncomingFaceId} The first IncomingFaceId header field, or null if
+ * not found.
+ */
+IncomingFaceId.getFirstHeader = function(lpPacket)
+{
+  for (var i = 0; i < lpPacket.countHeaderFields(); ++i) {
+    var field = lpPacket.getHeaderField(i);
+    if (field instanceof IncomingFaceId)
+      return field;
+  }
+
+  return null;
+};
+/**
+ * Copyright (C) 2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ * @author: From ndn-cxx packet.hpp https://github.com/named-data/ndn-cxx/blob/master/src/lp/packet.hpp
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Blob = require('../util/blob.js').Blob;
+
+/**
+ * An LpPacket represents an NDNLPv2 packet including header fields an an
+ * optional fragment. This is an internal class which the application normally
+ * would not use.
+ * http://redmine.named-data.net/projects/nfd/wiki/NDNLPv2
+ * @constructor
+ */
+var LpPacket = function LpPacket()
+{
+  this.headerFields_ = [];
+  this.fragmentWireEncoding_ = new Blob();
+};
+
+exports.LpPacket = LpPacket;
+
+/**
+ * Get the fragment wire encoding.
+ * @return {Blob} The wire encoding, or an isNull Blob if not specified.
+ */
+LpPacket.prototype.getFragmentWireEncoding = function()
+{
+  return this.fragmentWireEncoding_;
+};
+
+/**
+ * Get the number of header fields. This does not include the fragment.
+ * @return {number} The number of header fields.
+ */
+LpPacket.prototype.countHeaderFields = function()
+{ 
+  return this.headerFields_.length;
+};
+
+/**
+ * Get the header field at the given index.
+ * @param {number} index The index, starting from 0. It is an error if index is
+ * greater to or equal to countHeaderFields().
+ * @return {object} The header field at the index.
+ */
+LpPacket.prototype.getHeaderField = function(index)
+{ 
+  return this.headerFields_[index];
+};
+
+/**
+ * Remove all header fields and set the fragment to an isNull Blob.
+ */
+LpPacket.prototype.clear = function()
+{
+  this.headerFields_ = [];
+  this.fragmentWireEncoding_ = new Blob();
+};
+
+/**
+ * Set the fragment wire encoding.
+ * @param {Blob} fragmentWireEncoding The fragment wire encoding or an isNull
+ * Blob if not specified.
+ */
+LpPacket.prototype.setFragmentWireEncoding = function(fragmentWireEncoding)
+{
+  this.fragmentWireEncoding_ =
+    typeof fragmentWireEncoding === 'object' && fragmentWireEncoding instanceof Blob ?
+      fragmentWireEncoding : new Blob(fragmentWireEncoding);
+};
+
+/**
+ * Add a header field. To add the fragment, use setFragmentWireEncoding().
+ * @param {object} headerField The header field to add.
+ */
+LpPacket.prototype.addHeaderField = function(headerField)
+{ 
+  this.headerFields_.push(headerField);
+};
+/**
  * This class represents the top-level object for communicating with an NDN host.
  * Copyright (C) 2013-2016 Regents of the University of California.
  * @author: Meki Cherkaoui, Jeff Thompson <jefft0@remap.ucla.edu>, Wentao Shang
@@ -34636,6 +35094,8 @@ var UnixTransport = require('./transport/unix-transport.js').UnixTransport; /** 
 var CommandInterestGenerator = require('./util/command-interest-generator.js').CommandInterestGenerator; /** @ignore */
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var NdnCommon = require('./util/ndn-common.js').NdnCommon; /** @ignore */
+var NetworkNack = require('./network-nack.js').NetworkNack; /** @ignore */
+var LpPacket = require('./lp/lp-packet.js').LpPacket; /** @ignore */
 var InterestFilterTable = require('./impl/interest-filter-table.js').InterestFilterTable; /** @ignore */
 var PendingInterestTable = require('./impl/pending-interest-table.js').PendingInterestTable; /** @ignore */
 var RegisteredPrefixTable = require('./impl/registered-prefix-table.js').RegisteredPrefixTable; /** @ignore */
@@ -34878,12 +35338,13 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
 };
 
 /**
- * Send the interest through the transport, read the entire response and call onData.
- * If the interest times out according to interest lifetime, call onTimeout (if not omitted).
- * There are two forms of expressInterest.  The first form takes the exact interest (including lifetime):
- * expressInterest(interest, onData [, onTimeout] [, wireFormat]).  The second form creates the interest from
- * a name and optional interest template:
- * expressInterest(name [, template], onData [, onTimeout] [, wireFormat]).
+ * Send the interest through the transport, read the entire response and call 
+ * onData, onTimeout or onNetworkNack as described below.
+ * There are two forms of expressInterest. The first form takes the exact
+ * interest (including lifetime):
+ * expressInterest(interest, onData [, onTimeout] [, onNetworkNack] [, wireFormat]).
+ * The second form creates the interest from a name and optional interest template:
+ * expressInterest(name [, template], onData [, onTimeout] [, onNetworkNack] [, wireFormat]).
  * @param {Interest} interest The Interest to send which includes the interest lifetime for the timeout.
  * @param {function} onData When a matching data packet is received, this calls onData(interest, data) where
  * interest is the interest given to expressInterest and data is the received
@@ -34898,6 +35359,17 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
+ * @param {function} onNetworkNack (optional) When a network Nack packet for the
+ * interest is received and onNetworkNack is not null, this calls
+ * onNetworkNack(interest, networkNack) and does not call onTimeout. interest is
+ * the sent Interest and networkNack is the received NetworkNack. If
+ * onNetworkNack is supplied, then onTimeout must be supplied too. However, if a
+ * network Nack is received and onNetworkNack is null, do nothing and wait for
+ * the interest to time out. (Therefore, an application which does not yet
+ * process a network Nack reason treats a Nack the same as a timeout.)
+ * NOTE: The library will log any exceptions thrown by this callback, but for
+ * better error handling the callback should catch and properly handle any
+ * exceptions.
  * @param {Name} name The Name for the interest. (only used for the second form of expressInterest).
  * @param {Interest} template (optional) If not omitted, copy the interest selectors from this Interest.
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
@@ -34905,51 +35377,64 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use WireFormat.getDefaultWireFormat().
  * @returns {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
-
  */
-Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5)
+Face.prototype.expressInterest = function
+  (interestOrName, arg2, arg3, arg4, arg5, arg6)
 {
   var interest;
-  var onData;
-  var onTimeout;
-  var wireFormat;
-  // expressInterest(Interest interest, function onData);
-  // expressInterest(Interest interest, function onData, function onTimeout);
-  // expressInterest(Interest interest, function onData, function onTimeout, WireFormat wireFormat);
-  if (typeof interestOrName == 'object' && interestOrName instanceof Interest) {
+  if (typeof interestOrName === 'object' && interestOrName instanceof Interest)
     // Just use a copy of the interest.
     interest = new Interest(interestOrName);
-    onData = arg2;
-    onTimeout = (arg3 ? arg3 : function() {});
-    wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
-  }
   else {
     // The first argument is a name. Make the interest from the name and possible template.
-
-    // expressInterest(Name name, Interest template, function onData);
-    // expressInterest(Name name, Interest template, function onData, function onTimeout);
-    // expressInterest(Name name, Interest template, function onData, function onTimeout, WireFormat wireFormat);
-    if (arg2 && typeof arg2 == 'object' && arg2 instanceof Interest) {
+    if (arg2 && typeof arg2 === 'object' && arg2 instanceof Interest) {
       var template = arg2;
       // Copy the template.
       interest = new Interest(template);
       interest.setName(interestOrName);
 
-      onData = arg3;
-      onTimeout = (arg4 ? arg4 : function() {});
-      wireFormat = (arg5 ? arg5 : WireFormat.getDefaultWireFormat());
+      // Shift the remaining args to be processed below.
+      arg2 = arg3;
+      arg3 = arg4;
+      arg4 = arg5;
+      arg5 = arg6;
     }
-    // expressInterest(Name name, function onData);
-    // expressInterest(Name name, function onData, function onTimeout);
-    // expressInterest(Name name, function onData, function onTimeout, WireFormat wireFormat);
     else {
+      // No template.
       interest = new Interest(interestOrName);
       interest.setInterestLifetimeMilliseconds(4000);   // default interest timeout
-      onData = arg2;
-      onTimeout = (arg3 ? arg3 : function() {});
-      wireFormat = (arg4 ? arg4 : WireFormat.getDefaultWireFormat());
     }
   }
+
+  var onData = arg2;
+  var onTimeout;
+  var onNetworkNack;
+  var wireFormat;
+  // arg3,       arg4,          arg5 may be:
+  // OnTimeout,  OnNetworkNack, WireFormat
+  // OnTimeout,  OnNetworkNack, null
+  // OnTimeout,  WireFormat,    null
+  // OnTimeout,  null,          null
+  // WireFormat, null,          null
+  // null,       null,          null
+  if (typeof arg3 === "function")
+    onTimeout = arg3;
+  else
+    onTimeout = function() {};
+
+  if (typeof arg4 === "function")
+    onNetworkNack = arg4;
+  else
+    onNetworkNack = null;
+
+  if (arg3 instanceof WireFormat)
+    wireFormat = arg3;
+  else if (arg4 instanceof WireFormat)
+    wireFormat = arg4;
+  else if (arg5 instanceof WireFormat)
+    wireFormat = arg5;
+  else
+    wireFormat = WireFormat.getDefaultWireFormat();
 
   var pendingInterestId = this.getNextEntryId();
 
@@ -34964,13 +35449,14 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
       var thisFace = this;
       this.connectAndExecute(function() {
         thisFace.reconnectAndExpressInterest
-          (pendingInterestId, interest, onData, onTimeout, wireFormat);
+          (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+           wireFormat);
       });
     }
   }
   else
     this.reconnectAndExpressInterest
-      (pendingInterestId, interest, onData, onTimeout, wireFormat);
+      (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat);
 
   return pendingInterestId;
 };
@@ -34981,7 +35467,7 @@ Face.prototype.expressInterest = function(interestOrName, arg2, arg3, arg4, arg5
  * Then call expressInterestHelper.
  */
 Face.prototype.reconnectAndExpressInterest = function
-  (pendingInterestId, interest, onData, onTimeout, wireFormat)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
 {
   var thisFace = this;
   if (!this.connectionInfo.equals(this.transport.connectionInfo) || this.readyStatus === Face.UNOPEN) {
@@ -34989,7 +35475,8 @@ Face.prototype.reconnectAndExpressInterest = function
     this.onConnectedCallbacks.push
       (function() {
         thisFace.expressInterestHelper
-          (pendingInterestId, interest, onData, onTimeout, wireFormat);
+          (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+           wireFormat);
       });
 
     this.transport.connect
@@ -35018,11 +35505,13 @@ Face.prototype.reconnectAndExpressInterest = function
       this.onConnectedCallbacks.push
         (function() {
           thisFace.expressInterestHelper
-            (pendingInterestId, interest, onData, onTimeout, wireFormat);
+            (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+             wireFormat);
         });
     else if (this.readyStatus === Face.OPENED)
       this.expressInterestHelper
-        (pendingInterestId, interest, onData, onTimeout, wireFormat);
+        (pendingInterestId, interest, onData, onTimeout, onNetworkNack,
+         wireFormat);
     else
       throw new Error
         ("reconnectAndExpressInterest: unexpected connection is not opened");
@@ -35034,10 +35523,10 @@ Face.prototype.reconnectAndExpressInterest = function
  * Add the PendingInterest and call this.transport.send to send the interest.
  */
 Face.prototype.expressInterestHelper = function
-  (pendingInterestId, interest, onData, onTimeout, wireFormat)
+  (pendingInterestId, interest, onData, onTimeout, onNetworkNack, wireFormat)
 {
   if (this.pendingInterestTable_.add
-      (pendingInterestId, interest, onData, onTimeout) == null)
+      (pendingInterestId, interest, onData, onTimeout, onNetworkNack) == null)
     // removePendingInterest was already called with the pendingInterestId.
     return;
 
@@ -35395,7 +35884,7 @@ Face.prototype.nfdRegisterPrefix = function
           thisFace, onInterest);
       thisFace.reconnectAndExpressInterest
         (null, commandInterest, response.onData.bind(response),
-         response.onTimeout.bind(response), wireFormat);
+         response.onTimeout.bind(response), null, wireFormat);
     });
   };
 
@@ -35530,6 +36019,15 @@ Face.prototype.isLocal = function(onResult, onError)
 Face.prototype.onReceivedElement = function(element)
 {
   if (LOG > 3) console.log('Complete element received. Length ' + element.length + '. Start decoding.');
+
+  var lpPacket = null;
+  if (element[0] == Tlv.LpPacket_LpPacket) {
+    // Decode the LpPacket and replace element with the fragment.
+    lpPacket = new LpPacket();
+    TlvWireFormat.get().decodeLpPacket(lpPacket, element);
+    element = lpPacket.getFragmentWireEncoding().buf();
+  }
+
   // First, decode as Interest or Data.
   var interest = null;
   var data = null;
@@ -35538,10 +36036,42 @@ Face.prototype.onReceivedElement = function(element)
     if (decoder.peekType(Tlv.Interest, element.length)) {
       interest = new Interest();
       interest.wireDecode(element, TlvWireFormat.get());
+
+      if (lpPacket != null)
+        interest.setLpPacket(lpPacket);
     }
     else if (decoder.peekType(Tlv.Data, element.length)) {
       data = new Data();
       data.wireDecode(element, TlvWireFormat.get());
+
+      if (lpPacket != null)
+        data.setLpPacket(lpPacket);
+    }
+  }
+
+  if (lpPacket !== null) {
+    // We have decoded the fragment, so remove the wire encoding to save memory.
+    lpPacket.setFragmentWireEncoding(new Blob());
+
+    var networkNack = NetworkNack.getFirstHeader(lpPacket);
+    if (networkNack != null) {
+      if (interest == null)
+        // We got a Nack but not for an Interest, so drop the packet.
+        return;
+
+      var pitEntries = [];
+      this.pendingInterestTable_.extractEntriesForNackInterest(interest, pitEntries);
+      for (var i = 0; i < pitEntries.length; ++i) {
+        var pendingInterest = pitEntries[i];
+        try {
+          pendingInterest.getOnNetworkNack()(pendingInterest.getInterest(), networkNack);
+        } catch (ex) {
+          console.log("Error in onNetworkNack: " + NdnCommon.getErrorWithStackTrace(ex));
+        }
+      }
+
+      // We have process the network Nack packet.
+      return;
     }
   }
 
@@ -35637,7 +36167,7 @@ Face.prototype.connectAndExecute = function(onConnected)
         onConnected();
      },
      function(localInterest) { /* Ignore timeout */ },
-     WireFormat.getDefaultWireFormat());
+     null, WireFormat.getDefaultWireFormat());
 };
 
 /**
