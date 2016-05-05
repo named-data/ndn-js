@@ -1,5 +1,5 @@
-Interim changes since NDN-JS v0.10 (2016-05-04)
------------------------------------------------
+NDN-JS v0.11 (2016-05-05)
+-------------------------
 
 Breaking changes
 * In encrypt/Consumer, moved ErrorCode to encrypt/EncryptError, affecting the
