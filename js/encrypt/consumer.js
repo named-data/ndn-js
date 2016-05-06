@@ -294,7 +294,7 @@ Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
 
 /**
  * Decrypt the data packet.
- * @param {Data} data The data packet.
+ * @param {Data} data The data packet. This does not verify the packet.
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
