@@ -682,14 +682,6 @@ BasicIdentityStorage.prototype.deleteIdentityInfoPromise = function
 };
 
 /**
- * Retrieve the user's current home directory
- * @returns {string} path to the user's home directory
- */
-BasicIdentityStorage.getUserHomePath = function() {
-  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
-};
-
-/**
  * Call Sqlite3Promise.runPromise, wrapping an Error in SecurityException.
  */
 BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
