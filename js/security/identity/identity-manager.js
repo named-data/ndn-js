@@ -59,27 +59,10 @@ var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivate
 var IdentityManager = function IdentityManager
   (identityStorage, privateKeyStorage)
 {
-  if (!identityStorage) {
-    if (!BasicIdentityStorage)
-      // Assume we are in the browser.
-      throw new SecurityException(new Error
-        ("IdentityManager: If not in Node.js then you must supply an identityStorage."));
-
-    identityStorage = new BasicIdentityStorage();
-  }
-  if (!privateKeyStorage) {
-    if (!FilePrivateKeyStorage)
-      // Assume we are in the browser.
-      throw new SecurityException(new Error
-        ("IdentityManager: If not in Node.js then you must supply a privateKeyStorage."));
-
-    // Assume we are in Node.js, so check the system.
-    if (process.platform === "darwin")
-      throw new SecurityException(new Error
-        ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
-    else
-      privateKeyStorage = new FilePrivateKeyStorage();
-  }
+  if (!identityStorage)
+    identityStorage = IdentityManager.getDefaultIdentityStorage_();
+  if (!privateKeyStorage)
+    privateKeyStorage = IdentityManager.getDefaultPrivateKeyStorage_();
 
   this.identityStorage = identityStorage;
   this.privateKeyStorage = privateKeyStorage;
@@ -1432,4 +1415,29 @@ IdentityManager.prototype.generateKeyPairPromise = function
   .then(function() {
     return SyncPromise.resolve(keyName);
   });
+};
+
+IdentityManager.getDefaultIdentityStorage_ = function()
+{
+  if (!BasicIdentityStorage)
+    // Assume we are in the browser.
+    throw new SecurityException(new Error
+      ("IdentityManager: If not in Node.js then you must supply an identityStorage."));
+
+  return new BasicIdentityStorage();
+};
+
+IdentityManager.getDefaultPrivateKeyStorage_ = function()
+{
+  if (!FilePrivateKeyStorage)
+    // Assume we are in the browser.
+    throw new SecurityException(new Error
+      ("IdentityManager: If not in Node.js then you must supply a privateKeyStorage."));
+
+  // Assume we are in Node.js, so check the system.
+  if (process.platform === "darwin")
+    throw new SecurityException(new Error
+      ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
+  else
+    return new FilePrivateKeyStorage();
 };
