@@ -316,6 +316,29 @@ BasicIdentityStorage.prototype.getCertificatePromise = function
   });
 };
 
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which returns the TPM locator, or a promise
+ * rejected with SecurityException if the TPM locator doesn't exist.
+ */
+BasicIdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("BasicIdentityStorage.getTpmLocatorPromise is only supported for async")));
+
+  return this.getPromise_("SELECT tpm_locator FROM TpmInfo")
+  .then(function(row) {
+    if (row)
+      return Promise.resolve(row.tpm_locator);
+    else
+      return Promise.reject(new SecurityException(new Error
+        ("BasicIdentityStorage::getTpmLocatorPromise: The TPM info does not exist.")));
+  });
+};
+
 /*****************************************
  *           Get/Set Default             *
  *****************************************/
@@ -724,9 +747,20 @@ BasicIdentityStorage.getUserHomePath = function() {
 
 BasicIdentityStorage.initializeDatabasePromise_ = function(database)
 {
-  // Check if the ID table exists.
+  // Check if the TpmInfo table exists.
   return database.getPromise
-    ("SELECT name FROM sqlite_master WHERE type='table' And name='Identity'")
+    ("SELECT name FROM sqlite_master WHERE type='table' And name='TpmInfo'")
+  .then(function(row) {
+    if (row)
+      return Promise.resolve();
+    else
+      return database.runPromise(BasicIdentityStorage.INIT_TPM_INFO_TABLE);
+  })
+  .then(function() {
+    // Check if the ID table exists.
+    return database.getPromise
+      ("SELECT name FROM sqlite_master WHERE type='table' And name='Identity'");
+  })
   .then(function(row) {
     if (row)
       return Promise.resolve();
@@ -771,6 +805,14 @@ BasicIdentityStorage.initializeDatabasePromise_ = function(database)
     }
   });
 };
+
+BasicIdentityStorage.INIT_TPM_INFO_TABLE =
+"CREATE TABLE IF NOT EXISTS                                           \n" +
+"  TpmInfo(                                                           \n" +
+"      tpm_locator BLOB NOT NULL,                                     \n" +
+"      PRIMARY KEY (tpm_locator)                                      \n" +
+"  );                                                                 \n" +
+"                                                                     \n";
 
 BasicIdentityStorage.INIT_ID_TABLE1 =
 "CREATE TABLE IF NOT EXISTS                                           \n" +

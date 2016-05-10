@@ -351,6 +351,31 @@ IdentityStorage.prototype.getCertificate = function(certificateName)
   return SyncPromise.getValue(this.getValuePromise(certificateName, true));
 };
 
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator, or a
+ * promise rejected with SecurityException if the TPM locator doesn't exist.
+ */
+IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getTpmLocatorPromise is not implemented"));
+};
+
+/**
+ * Get the TPM locator associated with this storage.
+ * @returns {string} The TPM locator.
+ * @throws SecurityException if the TPM locator doesn't exist.
+ * @throws Error If getTpmLocatorPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+IdentityStorage.prototype.getTpmLocator = function()
+{
+  return SyncPromise.getValue(this.getTpmLocatorPromise(true));
+};
+
 /*****************************************
  *           Get/Set Default             *
  *****************************************/

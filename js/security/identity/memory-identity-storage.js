@@ -208,6 +208,18 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
   return SyncPromise.resolve(certificate);
 };
 
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator, or a
+ * promise rejected with SecurityException if the TPM locator doesn't exist.
+ */
+IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return SyncPromise.resolve("tpm-memory:");
+};
+
 /*****************************************
  *           Get/Set Default             *
  *****************************************/
