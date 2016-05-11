@@ -607,9 +607,9 @@ Face.prototype.registerPrefix = function
   (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
 {
   // Temporarlity reassign to resolve the different overloaded forms.
-  arg4 = onRegisterSuccess;
-  arg5 = flags;
-  arg6 = wireFormat;
+  var arg4 = onRegisterSuccess;
+  var arg5 = flags;
+  var arg6 = wireFormat;
   // arg4, arg5, arg6 may be:
   // OnRegisterSuccess, ForwardingFlags, WireFormat
   // OnRegisterSuccess, ForwardingFlags, null
