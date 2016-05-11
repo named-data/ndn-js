@@ -1,3 +1,9 @@
+Interim changes since NDN-JS v0.11 (2016-05-11)
+-----------------------------------------------
+
+Bug fixes
+* http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.
+
 NDN-JS v0.11 (2016-05-05)
 -------------------------
 

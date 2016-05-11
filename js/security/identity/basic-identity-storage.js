@@ -35,17 +35,54 @@ var path = require('path');
  * location, or the optional given file.
  * @param {string} databaseFilePath (optional) The path of the SQLite3 file. If
  * omitted, use the default file (~/.ndn/ndnsec-public-info.db).
+ * @param {function} initialCheckPromise (optional) If supplied, then after
+ * initializing the database this calls initialCheckPromise() which returns a 
+ * Promise that resolves when the initial check passes or is rejected for a
+ * problem.
  * @constructor
  */
-var BasicIdentityStorage = function BasicIdentityStorage(databaseFilePath)
+var BasicIdentityStorage = function BasicIdentityStorage
+  (databaseFilePath, initialCheckPromise)
 {
   // Call the base constructor.
   IdentityStorage.call(this);
 
+  // Temporarlity reassign to resolve the different overloaded forms.
+  var arg1 = databaseFilePath;
+  var arg2 = initialCheckPromise;
+  // arg1,     arg2 may be:
+  // string,   function
+  // string,   null
+  // function, null
+  // null,     null
+  if (typeof arg1 === "string")
+    databaseFilePath = arg1;
+  else
+    databaseFilePath = null;
+
+  if (typeof arg1 === "function")
+    initialCheckPromise = arg1;
+  else if (typeof arg2 === "function")
+    initialCheckPromise = arg2;
+  else
+    initialCheckPromise = null;
+
   databaseFilePath = databaseFilePath || path.join
     (BasicIdentityStorage.getUserHomePath(), ".ndn", "ndnsec-public-info.db");
+
+  var initializeDatabasePromise;
+  if (initialCheckPromise) {
+    // Call our initializeDatabasePromise_ and then initialCheckPromise.
+    initializeDatabasePromise = function(database) {
+      return BasicIdentityStorage.initializeDatabasePromise_(database)
+      .then(function() { return initialCheckPromise(); });
+    };
+  }
+  else
+    initializeDatabasePromise = BasicIdentityStorage.initializeDatabasePromise_;
+
   this.database_ = new Sqlite3Promise
-    (databaseFilePath, BasicIdentityStorage.initializeDatabasePromise_);
+    (databaseFilePath, initializeDatabasePromise);
 };
 
 BasicIdentityStorage.prototype = new IdentityStorage();
@@ -313,6 +350,29 @@ BasicIdentityStorage.prototype.getCertificatePromise = function
     else
       return Promise.reject(new SecurityException(new Error
         ("BasicIdentityStorage.getCertificatePromise: The certificate does not exist")));
+  });
+};
+
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise} A promise which returns the TPM locator, or a promise
+ * rejected with SecurityException if the TPM locator doesn't exist.
+ */
+BasicIdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  if (useSync)
+    return Promise.reject(new SecurityException(new Error
+      ("BasicIdentityStorage.getTpmLocatorPromise is only supported for async")));
+
+  return this.getPromise_("SELECT tpm_locator FROM TpmInfo")
+  .then(function(row) {
+    if (row)
+      return Promise.resolve(row.tpm_locator);
+    else
+      return Promise.reject(new SecurityException(new Error
+        ("BasicIdentityStorage::getTpmLocatorPromise: The TPM info does not exist.")));
   });
 };
 
@@ -682,14 +742,6 @@ BasicIdentityStorage.prototype.deleteIdentityInfoPromise = function
 };
 
 /**
- * Retrieve the user's current home directory
- * @returns {string} path to the user's home directory
- */
-BasicIdentityStorage.getUserHomePath = function() {
-  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
-};
-
-/**
  * Call Sqlite3Promise.runPromise, wrapping an Error in SecurityException.
  */
 BasicIdentityStorage.prototype.runPromise_ = function(sql, params)
@@ -732,9 +784,20 @@ BasicIdentityStorage.getUserHomePath = function() {
 
 BasicIdentityStorage.initializeDatabasePromise_ = function(database)
 {
-  // Check if the ID table exists.
+  // Check if the TpmInfo table exists.
   return database.getPromise
-    ("SELECT name FROM sqlite_master WHERE type='table' And name='Identity'")
+    ("SELECT name FROM sqlite_master WHERE type='table' And name='TpmInfo'")
+  .then(function(row) {
+    if (row)
+      return Promise.resolve();
+    else
+      return database.runPromise(BasicIdentityStorage.INIT_TPM_INFO_TABLE);
+  })
+  .then(function() {
+    // Check if the ID table exists.
+    return database.getPromise
+      ("SELECT name FROM sqlite_master WHERE type='table' And name='Identity'");
+  })
   .then(function(row) {
     if (row)
       return Promise.resolve();
@@ -779,6 +842,14 @@ BasicIdentityStorage.initializeDatabasePromise_ = function(database)
     }
   });
 };
+
+BasicIdentityStorage.INIT_TPM_INFO_TABLE =
+"CREATE TABLE IF NOT EXISTS                                           \n" +
+"  TpmInfo(                                                           \n" +
+"      tpm_locator BLOB NOT NULL,                                     \n" +
+"      PRIMARY KEY (tpm_locator)                                      \n" +
+"  );                                                                 \n" +
+"                                                                     \n";
 
 BasicIdentityStorage.INIT_ID_TABLE1 =
 "CREATE TABLE IF NOT EXISTS                                           \n" +
