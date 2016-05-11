@@ -18243,6 +18243,31 @@ IdentityStorage.prototype.getCertificate = function(certificateName)
   return SyncPromise.getValue(this.getValuePromise(certificateName, true));
 };
 
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator, or a
+ * promise rejected with SecurityException if the TPM locator doesn't exist.
+ */
+IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return SyncPromise.reject(new Error
+    ("IdentityStorage.getTpmLocatorPromise is not implemented"));
+};
+
+/**
+ * Get the TPM locator associated with this storage.
+ * @returns {string} The TPM locator.
+ * @throws SecurityException if the TPM locator doesn't exist.
+ * @throws Error If getTpmLocatorPromise doesn't return a SyncPromise which is
+ * already fulfilled.
+ */
+IdentityStorage.prototype.getTpmLocator = function()
+{
+  return SyncPromise.getValue(this.getTpmLocatorPromise(true));
+};
+
 /*****************************************
  *           Get/Set Default             *
  *****************************************/
@@ -19575,6 +19600,18 @@ MemoryIdentityStorage.prototype.getCertificatePromise = function
   return SyncPromise.resolve(certificate);
 };
 
+/**
+ * Get the TPM locator associated with this storage.
+ * @param {boolean} useSync (optional) If true then return a rejected promise
+ * since this only supports async code.
+ * @return {Promise|SyncPromise} A promise which returns the TPM locator, or a
+ * promise rejected with SecurityException if the TPM locator doesn't exist.
+ */
+IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
+{
+  return SyncPromise.resolve("tpm-memory:");
+};
+
 /*****************************************
  *           Get/Set Default             *
  *****************************************/
@@ -20685,6 +20722,7 @@ var Crypto = require('../../crypto.js'); /** @ignore */
 var Name = require('../../name.js').Name; /** @ignore */
 var Data = require('../../data.js').Data; /** @ignore */
 var Blob = require('../../util/blob.js').Blob; /** @ignore */
+var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
@@ -20720,30 +20758,37 @@ var FilePrivateKeyStorage = require('./file-private-key-storage.js').FilePrivate
 var IdentityManager = function IdentityManager
   (identityStorage, privateKeyStorage)
 {
-  if (!identityStorage) {
-    if (!BasicIdentityStorage)
+  if (privateKeyStorage) {
+    // Don't call checkTpm() when using a custom PrivateKeyStorage.
+    if (!identityStorage)
+        // We don't expect this to happen.
+        throw new Error
+          ("IdentityManager: A custom privateKeyStorage is supplied with a null identityStorage")
+
+    this.identityStorage = identityStorage;
+    this.privateKeyStorage = privateKeyStorage;
+  }
+  else {
+    if (!ConfigFile)
       // Assume we are in the browser.
       throw new SecurityException(new Error
-        ("IdentityManager: If not in Node.js then you must supply an identityStorage."));
+        ("IdentityManager: If not in Node.js then you must supply identityStorage and privateKeyStorage."));
+    var config = new ConfigFile();
 
-    identityStorage = new BasicIdentityStorage();
+    var canonicalTpmLocator = [null];
+    var thisStorage = this;
+    // Make the function that BasicIdentityStorage will call the first time it
+    // is used. It has to be an async promise becuase getTpmLocatorPromise is async.
+    function initialCheckPromise() 
+    {
+      return thisStorage.checkTpmPromise_(canonicalTpmLocator[0]);
+    }
+
+    this.identityStorage = identityStorage ? identityStorage
+      : IdentityManager.getDefaultIdentityStorage_(config, initialCheckPromise);
+    this.privateKeyStorage = IdentityManager.getDefaultPrivateKeyStorage_
+      (config, canonicalTpmLocator);
   }
-  if (!privateKeyStorage) {
-    if (!FilePrivateKeyStorage)
-      // Assume we are in the browser.
-      throw new SecurityException(new Error
-        ("IdentityManager: If not in Node.js then you must supply a privateKeyStorage."));
-
-    // Assume we are in Node.js, so check the system.
-    if (process.platform === "darwin")
-      throw new SecurityException(new Error
-        ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
-    else
-      privateKeyStorage = new FilePrivateKeyStorage();
-  }
-
-  this.identityStorage = identityStorage;
-  this.privateKeyStorage = privateKeyStorage;
 };
 
 exports.IdentityManager = IdentityManager;
@@ -22092,6 +22137,95 @@ IdentityManager.prototype.generateKeyPairPromise = function
   })
   .then(function() {
     return SyncPromise.resolve(keyName);
+  });
+};
+
+/**
+ * Get the IdentityStorage from the pib value in the configuration file if
+ * supplied. Otherwise, get the default for this platform.
+ * @param {ConfigFile} config The configuration file to check.
+ * @param {function} initialCheckPromise This is passed to the
+ * BasicIdentityStorage constructor. See it for details.
+ * @return {IdentityStorage} A new IdentityStorage.
+ */
+IdentityManager.getDefaultIdentityStorage_ = function(config, initialCheckPromise)
+{
+  // Assume we are in Node.js.
+  var pibLocator = config.get("pib", "");
+
+  if (pibLocator !== "") {
+    // Don't support non-default locations for now.
+    if (pibLocator !== "pib-sqlite3")
+      throw new SecurityException(new Error
+        ("Invalid config file pib value: " + pibLocator));
+  }
+
+  return new BasicIdentityStorage(initialCheckPromise);
+};
+
+/**
+ * Get the PrivateKeyStorage from the tpm value in the configuration file if
+ * supplied. Otherwise, get the default for this platform.
+ * @param {ConfigFile} config The configuration file to check.
+ * @param {Array<string>} canonicalTpmLocator Set canonicalTpmLocator[0] to the
+ * canonical value including the colon, * e.g. "tpm-file:".
+ * @return A new PrivateKeyStorage.
+ */
+IdentityManager.getDefaultPrivateKeyStorage_ = function
+  (config, canonicalTpmLocator)
+{
+  var tpmLocator = config.get("tpm", "");
+
+  if (tpmLocator === "") {
+    // Assume we are in Node.js, so check the system.
+    if (process.platform === "darwin") {
+      canonicalTpmLocator[0] = "tpm-osxkeychain:";
+      throw new SecurityException(new Error
+        ("IdentityManager: OS X key chain storage is not yet implemented. You must supply a privateKeyStorage."));
+    }
+    else {
+      canonicalTpmLocator[0] = "tpm-file:";
+      return new FilePrivateKeyStorage();
+    }
+  }
+  else if (tpmLocator === "tpm-osxkeychain") {
+    canonicalTpmLocator[0] = "tpm-osxkeychain:";
+    throw new SecurityException(new Error
+      ("IdentityManager: tpm-osxkeychain is not yet implemented."));
+  }
+  else if (tpmLocator === "tpm-file") {
+    canonicalTpmLocator[0] = "tpm-file:";
+    return new FilePrivateKeyStorage();
+  }
+  else
+    throw new SecurityException(new Error
+      ("Invalid config file tpm value: " + tpmLocator));
+};
+
+/**
+ * Check that identityStorage.getTpmLocatorPromise() (if defined) matches the
+ * canonicalTpmLocator. This has to be an async Promise because it calls async
+ * getTpmLocatorPromise.
+ * @param canonicalTpmLocator The canonical locator from
+ * getDefaultPrivateKeyStorage().
+ * @return {Promise} A promise which resolves if canonicalTpmLocator is OK, or a
+ * promise rejected with SecurityException if the private key storage does not
+ * match.
+ */
+IdentityManager.prototype.checkTpmPromise_ = function(canonicalTpmLocator)
+{
+  return this.identityStorage.getTpmLocatorPromise()
+  .then(function(tpmLocator) {
+    // Just check. If a PIB reset is required, expect ndn-cxx/NFD to do it.
+    if (tpmLocator !== "" && tpmLocator !== canonicalTpmLocator)
+      return Promise.reject(new SecurityException(new Error
+        ("The TPM locator supplied does not match the TPM locator in the PIB: " +
+         tpmLocator + " != " + canonicalTpmLocator)));
+    else
+      return Promise.resolve();
+  }, function(err) {
+    // The TPM locator is not set in the PIB yet.
+    return Promise.resolve();
   });
 };
 /**
@@ -26678,7 +26812,7 @@ NetworkNack.Reason = {
 
 /**
  * Get the network Nack reason.
- * @return {number from NetworkNack.Reason} The reason enum value. If this is
+ * @return {number} The reason enum value from NetworkNack.Reason. If this is
  * Reason.OTHER_CODE, then call getOtherReasonCode() to get the unrecognized
  * reason code.
  */
@@ -26697,9 +26831,9 @@ NetworkNack.prototype.getOtherReasonCode = function()
 
 /**
  * Set the network Nack reason.
- * @param {number from NetworkNack.Reason} reason The network Nack reason enum
- * value. If the packet's reason code is not a recognized Reason enum value, use
- * Reason.OTHER_CODE and call setOtherReasonCode().
+ * @param {number} reason The network Nack reason enum value from 
+ * NetworkNack.Reason. If the packet's reason code is not a recognized Reason
+ * enum value, use Reason.OTHER_CODE and call setOtherReasonCode().
  */
 NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
 
@@ -29375,7 +29509,7 @@ Consumer.decrypt_ = function(encryptedContent, keyBits, onPlainText, onError)
 
 /**
  * Decrypt the data packet.
- * @param {Data} data The data packet.
+ * @param {Data} data The data packet. This does not verify the packet.
  * @param {function} onPlainText When the data packet is decrypted, this calls
  * onPlainText(decryptedBlob) with the decrypted Blob.
  * @param {function} onError This calls onError(errorCode, message) for an error,
@@ -35664,9 +35798,9 @@ Face.prototype.registerPrefix = function
   (prefix, onInterest, onRegisterFailed, onRegisterSuccess, flags, wireFormat)
 {
   // Temporarlity reassign to resolve the different overloaded forms.
-  arg4 = onRegisterSuccess;
-  arg5 = flags;
-  arg6 = wireFormat;
+  var arg4 = onRegisterSuccess;
+  var arg5 = flags;
+  var arg6 = wireFormat;
   // arg4, arg5, arg6 may be:
   // OnRegisterSuccess, ForwardingFlags, WireFormat
   // OnRegisterSuccess, ForwardingFlags, null
