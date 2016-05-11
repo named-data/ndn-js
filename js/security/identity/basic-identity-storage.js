@@ -35,17 +35,54 @@ var path = require('path');
  * location, or the optional given file.
  * @param {string} databaseFilePath (optional) The path of the SQLite3 file. If
  * omitted, use the default file (~/.ndn/ndnsec-public-info.db).
+ * @param {function} initialCheckPromise (optional) If supplied, then after
+ * initializing the database this calls initialCheckPromise() which returns a 
+ * Promise that resolves when the initial check passes or is rejected for a
+ * problem.
  * @constructor
  */
-var BasicIdentityStorage = function BasicIdentityStorage(databaseFilePath)
+var BasicIdentityStorage = function BasicIdentityStorage
+  (databaseFilePath, initialCheckPromise)
 {
   // Call the base constructor.
   IdentityStorage.call(this);
 
+  // Temporarlity reassign to resolve the different overloaded forms.
+  var arg1 = databaseFilePath;
+  var arg2 = initialCheckPromise;
+  // arg1,     arg2 may be:
+  // string,   function
+  // string,   null
+  // function, null
+  // null,     null
+  if (typeof arg1 === "string")
+    databaseFilePath = arg1;
+  else
+    databaseFilePath = null;
+
+  if (typeof arg1 === "function")
+    initialCheckPromise = arg1;
+  else if (typeof arg2 === "function")
+    initialCheckPromise = arg2;
+  else
+    initialCheckPromise = null;
+
   databaseFilePath = databaseFilePath || path.join
     (BasicIdentityStorage.getUserHomePath(), ".ndn", "ndnsec-public-info.db");
+
+  var initializeDatabasePromise;
+  if (initialCheckPromise) {
+    // Call our initializeDatabasePromise_ and then initialCheckPromise.
+    initializeDatabasePromise = function(database) {
+      return BasicIdentityStorage.initializeDatabasePromise_(database)
+      .then(function() { return initialCheckPromise(); });
+    };
+  }
+  else
+    initializeDatabasePromise = BasicIdentityStorage.initializeDatabasePromise_;
+
   this.database_ = new Sqlite3Promise
-    (databaseFilePath, BasicIdentityStorage.initializeDatabasePromise_);
+    (databaseFilePath, initializeDatabasePromise);
 };
 
 BasicIdentityStorage.prototype = new IdentityStorage();
