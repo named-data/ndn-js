@@ -10089,12 +10089,8 @@ DataUtils.privateKeyPemToDer = function(privateKeyPem)
 function DecodingException(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = DecodingException.prototype;
+    return error;
   }
 }
 DecodingException.prototype = new Error();
@@ -11819,12 +11815,8 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 function DerDecodingException(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = DerDecodingException.prototype;
+    return error;
   }
 }
 DerDecodingException.prototype = new Error();
@@ -11859,12 +11851,8 @@ exports.DerDecodingException = DerDecodingException;
 function DerEncodingException(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = DerEncodingException.prototype;
+    return error;
   }
 }
 DerEncodingException.prototype = new Error();
@@ -16918,12 +16906,8 @@ Object.defineProperty(Data.prototype, "content",
 function SecurityException(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = SecurityException.prototype;
+    return error;
   }
 }
 
@@ -29152,12 +29136,8 @@ exports.ConsumerDb = ConsumerDb;
 ConsumerDb.Error = function ConsumerDbError(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = ConsumerDb.Error.prototype;
+    return error;
   }
 }
 
@@ -30082,12 +30062,8 @@ exports.GroupManagerDb = GroupManagerDb;
 GroupManagerDb.Error = function GroupManagerDbError(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = GroupManagerDb.Error.prototype;
+    return error;
   }
 }
 
@@ -31069,14 +31045,13 @@ exports.ProducerDb = ProducerDb;
 ProducerDb.Error = function ProducerDbError(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = ProducerDb.Error.prototype;
+    return error;
   }
 }
+
+ProducerDb.Error.prototype = new Error();
+ProducerDb.Error.prototype.name = "ProducerDbError";
 
 /**
  * Check if a content key exists for the hour covering timeSlot.
@@ -31154,9 +31129,6 @@ ProducerDb.getFixedTimeSlot = function(timeSlot)
 {
   return Math.floor(Math.round(timeSlot) / 3600000.0);
 };
-
-ProducerDb.Error.prototype = new Error();
-ProducerDb.Error.prototype.name = "ProducerDbError";
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
