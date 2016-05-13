@@ -20,14 +20,21 @@
  */
 
 /** @ignore */
-var Name = require('./name.js').Name; /** @ignore */
-var LOG = require('./log.js').Log.LOG;
+var Name = require('./name.js').Name;
 
+/**
+ * A ContentType specifies the content type in a MetaInfo object. If the
+ * content type in the packet is not a recognized enum value, then we use
+ * ContentType.OTHER_CODE and you can call MetaInfo.getOtherTypeCode(). We do
+ * this to keep the recognized content type values independent of packet
+ * encoding formats.
+ */
 var ContentType = {
   BLOB:0,
   LINK:1,
   KEY: 2,
-  NACK:3
+  NACK:3,
+  OTHER_CODE: 0x7fff
 };
 
 exports.ContentType = ContentType;
@@ -51,6 +58,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
     this.type_ = metaInfo.type_;
+    this.otherTypeCode_ = metaInfo.otherTypeCode_;
     this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
@@ -60,6 +68,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
         ("MetaInfo constructor: publisher support has been removed.");
 
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
+    this.otherTypeCode_ = -1;
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
   }
@@ -71,11 +80,24 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType.
+ * @returns {number} The content type as an int from ContentType. If this is
+ * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
+ * content type code.
  */
 MetaInfo.prototype.getType = function()
 {
   return this.type_;
+};
+
+/**
+ * Get the content type code from the packet which is other than a recognized
+ * ContentType enum value. This is only meaningful if getType() is
+ * ContentType.OTHER_CODE.
+ * @return {number} The type code.
+ */
+MetaInfo.prototype.getOtherTypeCode = function()
+{
+  return this.otherTypeCode_;
 };
 
 /**
@@ -117,12 +139,22 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 
 /**
  * Set the content type.
- * @param {number} type The content type as an int from ContentType.  If null,
- * this uses ContentType.BLOB.
+ * @param {number} type The content type as an int from ContentType. If null,
+ * this uses ContentType.BLOB. If the packet's content type is not a recognized
+ * ContentType enum value, use ContentType.OTHER_CODE and call setOtherTypeCode().
  */
 MetaInfo.prototype.setType = function(type)
 {
   this.type_ = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount_;
+};
+
+MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
+{
+  if (otherTypeCode < 0)
+    throw new Error("MetaInfo other type code must be non-negative");
+
+  this.otherTypeCode_ = otherTypeCode;
   ++this.changeCount_;
 };
 
