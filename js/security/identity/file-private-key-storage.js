@@ -70,7 +70,8 @@ exports.FilePrivateKeyStorage = FilePrivateKeyStorage;
  */
 FilePrivateKeyStorage.prototype.doesKeyExistPromise = function(keyName, keyClass)
 {
-  var exists = fs.existsSync(this.transformName(keyName, keyClass));
+  var exists = fs.existsSync
+    (this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass]));
   return SyncPromise.resolve(exists);
 };
 
@@ -147,7 +148,7 @@ FilePrivateKeyStorage.prototype.deleteKey = function (keyName)
   for (var keyClassName in KeyClass) {
     var keyClass = KeyClass[keyClassName];
     if (this.doesKeyExist(keyName, keyClass)) {
-      var filePath = this.transformName(keyName, keyClass);
+      var filePath = this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass]);
       fs.unlinkSync(filePath);
     }
   }
@@ -263,7 +264,9 @@ KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
 FilePrivateKeyStorage.prototype.write = function(keyName, keyClass, bytes) {
   var options = { mode: parseInt('0400', 8) };
   if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444', 8);
-  fs.writeFileSync(this.transformName(keyName, keyClass), bytes.toString('base64'), options);
+  fs.writeFileSync
+    (this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass]),
+     bytes.toString('base64'), options);
 };
 
 /**
@@ -274,7 +277,8 @@ FilePrivateKeyStorage.prototype.write = function(keyName, keyClass, bytes) {
  * @throws Error if the file cannot be read from
  */
 FilePrivateKeyStorage.prototype.read = function(keyName, keyClass){
-  var base64 = fs.readFileSync(this.transformName(keyName, keyClass)).toString();
+  var base64 = fs.readFileSync
+    (this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass])).toString();
   return new Buffer(base64, 'base64');
 };
 
@@ -287,23 +291,26 @@ FilePrivateKeyStorage.getUserHomePath = function() {
 };
 
 /**
- * Transform the key name into a file name
- * @param {Name} keyName
- * @param {number} keyClass An int from KeyClass.
+ * Transform a key name to its hashed file path.
+ * @param {string} keyNameUri The key name URI which is transformed to a file path.
+ * @param {string} extension The file name extension. You can use
+ * KeyClassExtensions[keyClass].
+ * @return {string} The hashed key file path.
  */
-FilePrivateKeyStorage.prototype.transformName = function(keyName, keyClass) {
+FilePrivateKeyStorage.prototype.nameTransform = function(keyNameUri, extension)
+{
   var hash = Crypto.createHash('sha256');
   if (!hash) {
     throw new SecurityException(new Error('Could not instantiate SHA256 hash algorith.'));
   }
 
   // hash the key name
-  hash.update(new Buffer(keyName.toUri()));
+  hash.update(new Buffer(keyNameUri));
   var fileName = hash.digest('base64');
   if (!fileName) {
-    throw new SecurityException(new Error('Failed to hash file name: ' + keyName.toUri()));
+    throw new SecurityException(new Error('Failed to hash file name: ' + keyNameUri));
   }
 
   // return
-  return path.join(this.tpmPath, fileName.replace(/\//g, '%') + KeyClassExtensions[keyClass]);
+  return path.join(this.tpmPath, fileName.replace(/\//g, '%') + extension);
 };
