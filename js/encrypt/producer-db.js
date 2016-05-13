@@ -46,14 +46,13 @@ exports.ProducerDb = ProducerDb;
 ProducerDb.Error = function ProducerDbError(error)
 {
   if (error) {
-    // Copy lineNumber, etc. from where new Error was called.
-    for (var prop in error)
-      this[prop] = error[prop];
-    // Make sure these are copied.
-    this.message = error.message;
-    this.stack = error.stack;
+    error.__proto__ = ProducerDb.Error.prototype;
+    return error;
   }
 }
+
+ProducerDb.Error.prototype = new Error();
+ProducerDb.Error.prototype.name = "ProducerDbError";
 
 /**
  * Check if a content key exists for the hour covering timeSlot.
@@ -131,6 +130,3 @@ ProducerDb.getFixedTimeSlot = function(timeSlot)
 {
   return Math.floor(Math.round(timeSlot) / 3600000.0);
 };
-
-ProducerDb.Error.prototype = new Error();
-ProducerDb.Error.prototype.name = "ProducerDbError";
