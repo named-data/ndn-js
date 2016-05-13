@@ -1,5 +1,8 @@
-Interim changes since NDN-JS v0.11 (2016-05-11)
+Interim changes since NDN-JS v0.11 (2016-05-13)
 -----------------------------------------------
+
+Changes
+* In FilePrivateKeyStorage.generateKeyPair, update mapping.txt for the generated key.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.

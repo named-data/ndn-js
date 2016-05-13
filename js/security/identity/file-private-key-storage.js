@@ -255,7 +255,7 @@ KeyClassExtensions[KeyClass.PRIVATE] = '.pri';
 KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
 
 /**
- * Write to a key file
+ * Write to a key file. If keyClass is PRIVATE, then also update mapping.txt.
  * @param {Name} keyName
  * @param {KeyClass} keyClass [PUBLIC, PRIVATE, SYMMETRIC]
  * @param {Buffer} bytes
@@ -264,9 +264,13 @@ KeyClassExtensions[KeyClass.SYMMETRIC] = '.key';
 FilePrivateKeyStorage.prototype.write = function(keyName, keyClass, bytes) {
   var options = { mode: parseInt('0400', 8) };
   if(keyClass === KeyClass.PUBLIC) options.mode = parseInt('0444', 8);
-  fs.writeFileSync
-    (this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass]),
-     bytes.toString('base64'), options);
+
+  var filePath;
+  if (keyClass == KeyClass.PRIVATE)
+    filePath = this.maintainMapping(keyName.toUri()) + ".pri";
+  else
+    filePath = this.nameTransform(keyName.toUri(), KeyClassExtensions[keyClass]);
+  fs.writeFileSync(filePath, bytes.toString('base64'), options);
 };
 
 /**
@@ -313,4 +317,21 @@ FilePrivateKeyStorage.prototype.nameTransform = function(keyNameUri, extension)
 
   // return
   return path.join(this.tpmPath, fileName.replace(/\//g, '%') + extension);
+};
+
+/**
+ * Use nameTransform to get the file path for keyName (without the extension)
+ * and also add to the mapping.txt file.
+ * @param {string} keyNameUri The key name URI which is transformed to a file path.
+ * @return {string} The key file path without the extension.
+ */
+FilePrivateKeyStorage.prototype.maintainMapping = function(keyNameUri)
+{
+  var keyFilePathNoExtension = this.nameTransform(keyNameUri, "");
+
+  var mappingFilePath = path.join(this.tpmPath, "mapping.txt");
+  fs.appendFileSync
+    (mappingFilePath, keyNameUri + ' ' + keyFilePathNoExtension + '\n');
+
+  return keyFilePathNoExtension;
 };
