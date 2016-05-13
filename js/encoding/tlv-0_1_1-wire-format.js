@@ -932,11 +932,16 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (metaInfo.getType() != ContentType.BLOB) {
     // Not the default, so we need to encode the type.
     if (metaInfo.getType() == ContentType.LINK ||
-        metaInfo.getType() == ContentType.KEY)
+        metaInfo.getType() == ContentType.KEY ||
+        metaInfo.getType() == ContentType.NACK)
       // The ContentType enum is set up with the correct integer for
       // each NDN-TLV ContentType.
       encoder.writeNonNegativeIntegerTlv(Tlv.ContentType, metaInfo.getType());
+    else if (metaInfo.getType() == ContentType.OTHER_CODE)
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ContentType, metaInfo.getOtherTypeCode());
     else
+      // We don't expect this to happen.
       throw new Error("unrecognized TLV ContentType");
   }
 
@@ -947,11 +952,22 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
-  // The ContentType enum is set up with the correct integer for each
-  // NDN-TLV ContentType.  If readOptionalNonNegativeIntegerTlv returns
-  // None, then setType will convert it to BLOB.
-  metaInfo.setType(decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.ContentType, endOffset));
+  var type = decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ContentType, endOffset);
+  if (type == null || type < 0 || type === ContentType.BLOB)
+    metaInfo.setType(ContentType.BLOB);
+  else if (type === ContentType.LINK ||
+           type === ContentType.KEY ||
+           type === ContentType.NACK)
+    // The ContentType enum is set up with the correct integer for each NDN-TLV
+    // ContentType.
+    metaInfo.setType(type);
+  else {
+    // Unrecognized content type.
+    metaInfo.setType(ContentType.OTHER_CODE);
+    metaInfo.setOtherTypeCode(type);
+  }
+
   metaInfo.setFreshnessPeriod
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {

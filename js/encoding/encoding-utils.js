@@ -115,6 +115,8 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
       append("metaInfo.type: LINK");
     else if (data.getMetaInfo().getType() == ContentType.NACK)
       append("metaInfo.type: NACK");
+    else if (data.getMetaInfo().getType() == ContentType.OTHER_CODE)
+      append("metaInfo.type: other code " + data.getMetaInfo().getOtherTypeCode());
   }
   append("metaInfo.freshnessPeriod (milliseconds): " +
     (data.getMetaInfo().getFreshnessPeriod() >= 0 ?

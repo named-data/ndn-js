@@ -186,6 +186,8 @@ function dumpData(data)
       console.log("metaInfo.type: LINK");
     else if (data.getMetaInfo().getType() == ContentType.NACK)
       console.log("metaInfo.type: NACK");
+    else if (data.getMetaInfo().getType() == ContentType.OTHER_CODE)
+      console.log("metaInfo.type: other code " + data.getMetaInfo().getOtherTypeCode());
   }
   console.log("metaInfo.freshnessPeriod (milliseconds): " +
     (data.getMetaInfo().getFreshnessPeriod() >= 0 ?
