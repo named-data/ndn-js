@@ -10089,8 +10089,12 @@ DataUtils.privateKeyPemToDer = function(privateKeyPem)
 function DecodingException(error)
 {
   if (error) {
-    error.__proto__ = DecodingException.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 DecodingException.prototype = new Error();
@@ -11815,8 +11819,12 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
 function DerDecodingException(error)
 {
   if (error) {
-    error.__proto__ = DerDecodingException.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 DerDecodingException.prototype = new Error();
@@ -11851,8 +11859,12 @@ exports.DerDecodingException = DerDecodingException;
 function DerEncodingException(error)
 {
   if (error) {
-    error.__proto__ = DerEncodingException.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 DerEncodingException.prototype = new Error();
@@ -15843,14 +15855,21 @@ var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWit
  */
 
 /** @ignore */
-var Name = require('./name.js').Name; /** @ignore */
-var LOG = require('./log.js').Log.LOG;
+var Name = require('./name.js').Name;
 
+/**
+ * A ContentType specifies the content type in a MetaInfo object. If the
+ * content type in the packet is not a recognized enum value, then we use
+ * ContentType.OTHER_CODE and you can call MetaInfo.getOtherTypeCode(). We do
+ * this to keep the recognized content type values independent of packet
+ * encoding formats.
+ */
 var ContentType = {
   BLOB:0,
   LINK:1,
   KEY: 2,
-  NACK:3
+  NACK:3,
+  OTHER_CODE: 0x7fff
 };
 
 exports.ContentType = ContentType;
@@ -15874,6 +15893,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
     var metaInfo = publisherOrMetaInfo;
     this.publisher_ = metaInfo.publisher_;
     this.type_ = metaInfo.type_;
+    this.otherTypeCode_ = metaInfo.otherTypeCode_;
     this.freshnessPeriod_ = metaInfo.freshnessPeriod_;
     this.finalBlockId_ = metaInfo.finalBlockId_;
   }
@@ -15883,6 +15903,7 @@ var MetaInfo = function MetaInfo(publisherOrMetaInfo, timestamp, type, locator, 
         ("MetaInfo constructor: publisher support has been removed.");
 
     this.type = type == null || type < 0 ? ContentType.BLOB : type;
+    this.otherTypeCode_ = -1;
     this.freshnessSeconds = freshnessSeconds; // deprecated
     this.finalBlockID = finalBlockId; // byte array // deprecated
   }
@@ -15894,11 +15915,24 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType.
+ * @returns {number} The content type as an int from ContentType. If this is
+ * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
+ * content type code.
  */
 MetaInfo.prototype.getType = function()
 {
   return this.type_;
+};
+
+/**
+ * Get the content type code from the packet which is other than a recognized
+ * ContentType enum value. This is only meaningful if getType() is
+ * ContentType.OTHER_CODE.
+ * @return {number} The type code.
+ */
+MetaInfo.prototype.getOtherTypeCode = function()
+{
+  return this.otherTypeCode_;
 };
 
 /**
@@ -15940,12 +15974,22 @@ MetaInfo.prototype.getFinalBlockIDAsBuffer = function()
 
 /**
  * Set the content type.
- * @param {number} type The content type as an int from ContentType.  If null,
- * this uses ContentType.BLOB.
+ * @param {number} type The content type as an int from ContentType. If null,
+ * this uses ContentType.BLOB. If the packet's content type is not a recognized
+ * ContentType enum value, use ContentType.OTHER_CODE and call setOtherTypeCode().
  */
 MetaInfo.prototype.setType = function(type)
 {
   this.type_ = type == null || type < 0 ? ContentType.BLOB : type;
+  ++this.changeCount_;
+};
+
+MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
+{
+  if (otherTypeCode < 0)
+    throw new Error("MetaInfo other type code must be non-negative");
+
+  this.otherTypeCode_ = otherTypeCode;
   ++this.changeCount_;
 };
 
@@ -16906,8 +16950,12 @@ Object.defineProperty(Data.prototype, "content",
 function SecurityException(error)
 {
   if (error) {
-    error.__proto__ = SecurityException.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 
@@ -26788,10 +26836,10 @@ exports.NetworkNack = NetworkNack;
  */
 NetworkNack.Reason = {
   NONE:         0,
-  OTHER_CODE:   1,
   CONGESTION:  50,
   DUPLICATE:  100,
-  NO_ROUTE:   150
+  NO_ROUTE:   150,
+  OTHER_CODE: 0x7fff
 };
 
 /**
@@ -26825,10 +26873,13 @@ NetworkNack.prototype.setReason = function(reason) { this.reason_ = reason; };
  * Set the packet's reason code to use when the reason enum is
  * Reason.OTHER_CODE. If the packet's reason code is a recognized enum value,
  * just call setReason().
- * @param {number} otherReasonCode The packet's unrecognized reason code.
+ * @param {number} otherReasonCode The packet's unrecognized reason code, which
+ * must be non-negative.
  */
 NetworkNack.prototype.setOtherReasonCode = function(otherReasonCode)
-{ 
+{
+  if (otherReasonCode < 0)
+    throw new Error("NetworkNack other reason code must be non-negative");
   this.otherReasonCode_ = otherReasonCode;
 };
 
@@ -27783,11 +27834,16 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (metaInfo.getType() != ContentType.BLOB) {
     // Not the default, so we need to encode the type.
     if (metaInfo.getType() == ContentType.LINK ||
-        metaInfo.getType() == ContentType.KEY)
+        metaInfo.getType() == ContentType.KEY ||
+        metaInfo.getType() == ContentType.NACK)
       // The ContentType enum is set up with the correct integer for
       // each NDN-TLV ContentType.
       encoder.writeNonNegativeIntegerTlv(Tlv.ContentType, metaInfo.getType());
+    else if (metaInfo.getType() == ContentType.OTHER_CODE)
+      encoder.writeNonNegativeIntegerTlv
+        (Tlv.ContentType, metaInfo.getOtherTypeCode());
     else
+      // We don't expect this to happen.
       throw new Error("unrecognized TLV ContentType");
   }
 
@@ -27798,11 +27854,22 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
-  // The ContentType enum is set up with the correct integer for each
-  // NDN-TLV ContentType.  If readOptionalNonNegativeIntegerTlv returns
-  // None, then setType will convert it to BLOB.
-  metaInfo.setType(decoder.readOptionalNonNegativeIntegerTlv
-    (Tlv.ContentType, endOffset));
+  var type = decoder.readOptionalNonNegativeIntegerTlv
+    (Tlv.ContentType, endOffset);
+  if (type == null || type < 0 || type === ContentType.BLOB)
+    metaInfo.setType(ContentType.BLOB);
+  else if (type === ContentType.LINK ||
+           type === ContentType.KEY ||
+           type === ContentType.NACK)
+    // The ContentType enum is set up with the correct integer for each NDN-TLV
+    // ContentType.
+    metaInfo.setType(type);
+  else {
+    // Unrecognized content type.
+    metaInfo.setType(ContentType.OTHER_CODE);
+    metaInfo.setOtherTypeCode(type);
+  }
+
   metaInfo.setFreshnessPeriod
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
@@ -29136,8 +29203,12 @@ exports.ConsumerDb = ConsumerDb;
 ConsumerDb.Error = function ConsumerDbError(error)
 {
   if (error) {
-    error.__proto__ = ConsumerDb.Error.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 
@@ -30062,8 +30133,12 @@ exports.GroupManagerDb = GroupManagerDb;
 GroupManagerDb.Error = function GroupManagerDbError(error)
 {
   if (error) {
-    error.__proto__ = GroupManagerDb.Error.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
 
@@ -31045,13 +31120,14 @@ exports.ProducerDb = ProducerDb;
 ProducerDb.Error = function ProducerDbError(error)
 {
   if (error) {
-    error.__proto__ = ProducerDb.Error.prototype;
-    return error;
+    // Copy lineNumber, etc. from where new Error was called.
+    for (var prop in error)
+      this[prop] = error[prop];
+    // Make sure these are copied.
+    this.message = error.message;
+    this.stack = error.stack;
   }
 }
-
-ProducerDb.Error.prototype = new Error();
-ProducerDb.Error.prototype.name = "ProducerDbError";
 
 /**
  * Check if a content key exists for the hour covering timeSlot.
@@ -31129,6 +31205,9 @@ ProducerDb.getFixedTimeSlot = function(timeSlot)
 {
   return Math.floor(Math.round(timeSlot) / 3600000.0);
 };
+
+ProducerDb.Error.prototype = new Error();
+ProducerDb.Error.prototype.name = "ProducerDbError";
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
