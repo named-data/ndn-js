@@ -157,7 +157,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     throw new SecurityException(new Error
       ("checkVerificationPolicy: unrecognized type for dataOrInterest"));
 
-  // No more steps, so return a None.
+  // No more steps, so return null.
   return null;
 };
 

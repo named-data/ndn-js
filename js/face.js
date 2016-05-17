@@ -572,7 +572,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * first call setCommandSigningInfo.
  * This uses the form:
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest (optional) If not None, this creates an interest
+ * @param {function} onInterest (optional) If not null, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
  * filter, this calls
  * onInterest(prefix, interest, face, interestFilterId, filter).
@@ -618,7 +618,7 @@ Face.prototype.registerPrefix = function
   // ForwardingFlags,   WireFormat,      null
   // ForwardingFlags,   null,            null
   // WireFormat,        null,            null
-  // null,              null,            None
+  // null,              null,            null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else

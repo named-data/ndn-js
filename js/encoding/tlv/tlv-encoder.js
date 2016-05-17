@@ -178,7 +178,7 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
  * If value is negative or null then do nothing, otherwise call
  * writeNonNegativeIntegerTlv.
  * @param {number} type The type of the TLV.
- * @param {number} value If negative or None do nothing, otherwise the integer
+ * @param {number} value If negative or null do nothing, otherwise the integer
  *   to encode.
  */
 TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
