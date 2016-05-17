@@ -133,7 +133,8 @@ describe ("TestProducer", function() {
 
     // Prepare a TestFace to instantly answer calls to expressInterest.
     var TestFace = function TestFace() {};
-    TestFace.prototype.expressInterest = function(interest, onData, onTimeout)
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
     {
       try {
         ++expressInterestCallCount;
@@ -292,7 +293,8 @@ describe ("TestProducer", function() {
 
     // Prepare a TestFace to instantly answer calls to expressInterest.
     var TestFace = function TestFace() {};
-    TestFace.prototype.expressInterest = function(interest, onData, onTimeout)
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
     {
       try {
         assert.ok(expectedInterest.equals(interest.getName()));
@@ -364,7 +366,8 @@ describe ("TestProducer", function() {
 
     // Prepare a TestFace to instantly answer calls to expressInterest.
     var TestFace = function TestFace() {};
-    TestFace.prototype.expressInterest = function(interest, onData, onTimeout)
+    TestFace.prototype.expressInterest = function
+      (interest, onData, onTimeout, onNetworkNack)
     {
       try {
         assert.ok(expectedInterest.equals(interest.getName()));
