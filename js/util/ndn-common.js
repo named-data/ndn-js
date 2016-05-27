@@ -47,4 +47,30 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 NdnCommon.getErrorWithStackTrace = function(error)
 {
   return error + '\n' + printStackTrace({e: error}).join('\n');
-}
+};
+
+/**
+ * Check for Indexed DB support and call onComplete with the result as described
+ * below. This has to use an onComplete callback since IndexedDB is async.
+ * @param {function} onComplete This calls onComplete(haveIndexedDb) where
+ * haveIndexedDb is true if the browser has Indexed DB support, otherwise false.
+ */
+NdnCommon.checkIndexedDb = function(onComplete)
+{
+  try {
+    var database = new Dexie("test-Dexie-support");
+    database.version(1).stores({});
+    database.open();
+
+    // Give Dexie a little time to open.
+    setTimeout(function() {
+      try {
+        onComplete(database.isOpen());
+      } catch (ex) {
+        onComplete(false);
+      }
+    }, 200);
+  } catch (ex) {
+    onComplete(false);
+  }
+};

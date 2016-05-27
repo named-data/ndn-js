@@ -8911,7 +8911,33 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 NdnCommon.getErrorWithStackTrace = function(error)
 {
   return error + '\n' + printStackTrace({e: error}).join('\n');
-}
+};
+
+/**
+ * Check for Indexed DB support and call onComplete with the result as described
+ * below. This has to use an onComplete callback since IndexedDB is async.
+ * @param {function} onComplete This calls onComplete(haveIndexedDb) where
+ * haveIndexedDb is true if the browser has Indexed DB support, otherwise false.
+ */
+NdnCommon.checkIndexedDb = function(onComplete)
+{
+  try {
+    var database = new Dexie("test-Dexie-support");
+    database.version(1).stores({});
+    database.open();
+
+    // Give Dexie a little time to open.
+    setTimeout(function() {
+      try {
+        onComplete(database.isOpen());
+      } catch (ex) {
+        onComplete(false);
+      }
+    }, 200);
+  } catch (ex) {
+    onComplete(false);
+  }
+};
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
@@ -10420,7 +10446,7 @@ TlvEncoder.prototype.writeNonNegativeIntegerTlv = function(type, value)
  * If value is negative or null then do nothing, otherwise call
  * writeNonNegativeIntegerTlv.
  * @param {number} type The type of the TLV.
- * @param {number} value If negative or None do nothing, otherwise the integer
+ * @param {number} value If negative or null do nothing, otherwise the integer
  *   to encode.
  */
 TlvEncoder.prototype.writeOptionalNonNegativeIntegerTlv = function(type, value)
@@ -23761,7 +23787,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     throw new SecurityException(new Error
       ("checkVerificationPolicy: unrecognized type for dataOrInterest"));
 
-  // No more steps, so return a None.
+  // No more steps, so return null.
   return null;
 };
 
@@ -31476,12 +31502,12 @@ Producer.getRoundedTimeSlot_ = function(timeSlot)
 
 /**
  * Send an interest with the given name through the face with callbacks to
- * handleCoveringKey_ and handleTimeout_.
+ * handleCoveringKey_, handleTimeout_ and handleNetworkNack_.
  * @param {Interest} interest The interest to send.
- * @param {number} timeSlot The time slot, passed to handleCoveringKey_ and
- * handleTimeout_.
+ * @param {number} timeSlot The time slot, passed to handleCoveringKey_,
+ * handleTimeout_ and handleNetworkNack_.
  * @param {function} onEncryptedKeys The OnEncryptedKeys callback, passed to
- * handleCoveringKey_ and handleTimeout_.
+ * handleCoveringKey_, handleTimeout_ and handleNetworkNack_.
  * @param {function} onError This calls onError(errorCode, message) for an error.
  */
 Producer.prototype.sendKeyInterest_ = function
@@ -31498,7 +31524,12 @@ Producer.prototype.sendKeyInterest_ = function
     thisProducer.handleTimeout_(interest, timeSlot, onEncryptedKeys, onError);
   }
 
-  this.face_.expressInterest(interest, onKey, onTimeout);
+  function onNetworkNack(interest, networkNack) {
+    thisProducer.handleNetworkNack_
+      (interest, networkNack, timeSlot, onEncryptedKeys);
+  }
+
+  this.face_.expressInterest(interest, onKey, onTimeout, onNetworkNack);
 };
 
 /**
@@ -31529,6 +31560,25 @@ Producer.prototype.handleTimeout_ = function
   else
     // No more retrials.
     this.updateKeyRequest_(keyRequest, timeCount, onEncryptedKeys);
+};
+
+/**
+ * This is called from an expressInterest OnNetworkNack to handle a network
+ * Nack for the E-KEY requested through the Interest. Decrease the outstanding
+ * E-KEY interest count for the C-KEY corresponding to the timeSlot.
+ * @param {Interest} interest The interest given to expressInterest.
+ * @param {NetworkNack} networkNack The returned NetworkNack (unused).
+ * @param {number} timeSlot The time slot as milliseconds since Jan 1, 1970 UTC.
+ * @param {function} onEncryptedKeys When there are no more interests to process,
+ * this calls onEncryptedKeys(keys) where keys is a list of encrypted content
+ * key Data packets. If onEncryptedKeys is null, this does not use it.
+ */
+Producer.prototype.handleNetworkNack_ = function
+  (interest, networkNack, timeSlot, onEncryptedKeys)
+{
+  var timeCount = Math.round(timeSlot);
+  this.updateKeyRequest_
+    (this.keyRequests_[timeCount], timeCount, onEncryptedKeys);
 };
 
 /**
@@ -35788,7 +35838,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * first call setCommandSigningInfo.
  * This uses the form:
  * @param {Name} prefix The Name prefix.
- * @param {function} onInterest (optional) If not None, this creates an interest
+ * @param {function} onInterest (optional) If not null, this creates an interest
  * filter from prefix so that when an Interest is received which matches the
  * filter, this calls
  * onInterest(prefix, interest, face, interestFilterId, filter).
@@ -35834,7 +35884,7 @@ Face.prototype.registerPrefix = function
   // ForwardingFlags,   WireFormat,      null
   // ForwardingFlags,   null,            null
   // WireFormat,        null,            null
-  // null,              null,            None
+  // null,              null,            null
   if (typeof arg4 === "function")
     onRegisterSuccess = arg4;
   else
