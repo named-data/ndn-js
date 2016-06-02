@@ -257,39 +257,40 @@ RepetitiveInterval.prototype.getRepeatUnit = function()
  */
 RepetitiveInterval.prototype.hasIntervalOnDate_ = function(timePoint)
 {
-  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds_(timePoint));
-  var startDate = new Date(this.startDate_);
-  var endDate = new Date(this.endDate_);
+  var timePointDateMilliseconds = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
 
-  if (timePointDate.getTime() < startDate.getTime() ||
-      timePointDate.getTime() > endDate.getTime())
+  if (timePointDateMilliseconds < this.startDate_ ||
+      timePointDateMilliseconds > this.endDate_)
     return false;
 
   if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.NONE)
     return true;
-
-  if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
-    var durationDays =
-      (timePointDate.getTime() - startDate.getTime()) /
-      RepetitiveInterval.MILLISECONDS_IN_DAY;
+  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
+    var durationDays = (timePointDateMilliseconds - this.startDate_) /
+                        RepetitiveInterval.MILLISECONDS_IN_DAY;
     if (durationDays % this.nRepeats_ == 0)
       return true;
   }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
-           timePointDate.getUTCDate() == startDate.getUTCDate()) {
-    var yearDifference =
-      timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    var monthDifference = 12 * yearDifference +
-      timePointDate.getUTCMonth() - startDate.getUTCMonth();
-    if (monthDifference % this.nRepeats_ == 0)
-      return true;
-  }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
-           timePointDate.getUTCDate() == startDate.getUTCDate() &&
-           timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
-    var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    if (difference % this.nRepeats_ == 0)
-      return true;
+  else {
+    var timePointDate = new Date(timePointDateMilliseconds);
+    var startDate = new Date(this.startDate_);
+
+    if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
+             timePointDate.getUTCDate() == startDate.getUTCDate()) {
+      var yearDifference =
+        timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      var monthDifference = 12 * yearDifference +
+        timePointDate.getUTCMonth() - startDate.getUTCMonth();
+      if (monthDifference % this.nRepeats_ == 0)
+        return true;
+    }
+    else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
+             timePointDate.getUTCDate() == startDate.getUTCDate() &&
+             timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
+      var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      if (difference % this.nRepeats_ == 0)
+        return true;
+    }
   }
 
   return false;
