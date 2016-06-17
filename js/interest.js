@@ -487,7 +487,7 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 /**
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
- * milliseconds. If not specified, set to -1.
+ * milliseconds. If not specified, set to undefined.
  * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
