@@ -310,7 +310,5 @@ SegmentFetcher.prototype.onTimeout = function(interest)
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
-  return name.size() >= 1 &&
-         name.get(-1).getValue().size() >= 1 &&
-         name.get(-1).getValue().buf()[0] == 0;
+  return name.size() >= 1 && name.get(-1).isSegment();
 };
