@@ -193,6 +193,7 @@ SegmentFetcher.prototype.fetchNextSegment = function
   var interest = new Interest(originalInterest);
   // Changing a field clears the nonce so that the library will generate a new
   // one.
+  interest.setChildSelector(0);
   interest.setMustBeFresh(false);
   interest.setName(dataName.getPrefix(-1).appendSegment(segment));
   var thisSegmentFetcher = this;
