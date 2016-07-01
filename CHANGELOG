@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-05-27)
+Interim changes since NDN-JS v0.11 (2016-07-01)
 -----------------------------------------------
 
 Changes
@@ -6,6 +6,7 @@ Changes
   to allow unrecognized content type codes in the packet.
 * In FilePrivateKeyStorage.generateKeyPair, update mapping.txt for the generated key.
 * Added NdnCommon.checkIndexedDb to check for Indexed DB support.
+* Examples: Added browser/test-list-faces.html.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.
