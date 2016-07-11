@@ -2,6 +2,8 @@
  * Copyright (C) 2014-2016 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  * From PyNDN unit-tests by Adeola Bannis.
+ * From ndn-cxx unit tests:
+ * https://github.com/named-data/ndn-cxx/blob/master/tests/unit-tests/name.t.cpp
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -22,6 +24,17 @@
 var assert = require("assert");
 var Name = require('../../..').Name;
 var Blob = require('../../..').Blob;
+var TlvWireFormat = require('../../..').TlvWireFormat;
+
+var TEST_NAME = new Buffer([
+  0x7,  0x14, // Name
+    0x8,  0x5, // NameComponent
+        0x6c,  0x6f,  0x63,  0x61,  0x6c,
+    0x8,  0x3, // NameComponent
+        0x6e,  0x64,  0x6e,
+    0x8,  0x6, // NameComponent
+        0x70,  0x72,  0x65,  0x66,  0x69,  0x78
+]);
 
 var expectedURI;
 var comp2;
@@ -199,5 +212,16 @@ describe('TestNameMethods', function() {
     assert.ok(new Name("ndn:/%00%01/%00%00%00").equals(new Name("ndn:/%00%01/%FF%FF").getSuccessor()));
     assert.ok(new Name("/%00").equals(new Name().getSuccessor()));
     assert.ok(new Name("/%00%01/%00").equals(new Name("/%00%01/...").getSuccessor()));
+  });
+
+  it('EncodeDecode', function() {
+    var name = new Name("/local/ndn/prefix");
+
+    var encoding = name.wireEncode(TlvWireFormat.get());
+    assert.ok(encoding.equals(new Blob(TEST_NAME)));
+
+    var decodedName = new Name();
+    decodedName.wireDecode(new Blob(TEST_NAME), TlvWireFormat.get());
+    assert.ok(decodedName.equals(name));
   });
 });
