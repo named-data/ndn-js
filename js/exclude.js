@@ -115,7 +115,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue().buf());
+      result += this.values[i].toEscapedString();
   }
   return result;
 };
