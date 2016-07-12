@@ -557,7 +557,7 @@ Name.prototype.toUri = function(includeScheme)
   var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
+    result += "/"+ this.components[i].toEscapedString();
 
   return result;
 };
