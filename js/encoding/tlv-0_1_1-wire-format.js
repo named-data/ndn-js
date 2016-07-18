@@ -284,7 +284,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   * @param {ControlParameters} controlParameters The ControlParameters object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
+  * @throws DecodingException For invalid encoding
   */
 Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
@@ -326,7 +326,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
   * @param {ControlResponse} controlResponse The ControlResponse object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
+  * @throws DecodingException For invalid encoding
   */
 Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
 {
