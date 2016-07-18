@@ -176,7 +176,7 @@ Schedule.prototype.wireEncode = function()
  * Decode the input and update this Schedule object.
  * @param {Blob|Buffer} input The input buffer to decode. For Buffer, this reads
  * from position() to limit(), but does not change the position.
- * @throws EncodingException For invalid encoding.
+ * @throws DecodingException For invalid encoding.
  */
 Schedule.prototype.wireDecode = function(input)
 {
