@@ -9,6 +9,8 @@ Changes
 * Added support for the Name component type ImplicitSha256Digest, and methods:
   Name.Component.fromImplicitSha256Digest, isGeneric and isImplicitSha256Digest.
   Name.appendImplicitSha256Digest.
+* https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
+  in Interest added matchesData to use it.
 * Examples: Added browser/test-list-faces.html.
 * Unit tests: In test-name-methods, added test ImplicitSha256Digest.
 

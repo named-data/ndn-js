@@ -119,7 +119,7 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
  * @param {Name} name The name to check.
  * @returns {boolean} True if the name and interest selectors match, False otherwise.
  */
-Interest.prototype.matchesName = function(/*Name*/ name)
+Interest.prototype.matchesName = function(name)
 {
   if (!this.getName().match(name))
     return false;
@@ -145,6 +145,89 @@ Interest.prototype.matchesName = function(/*Name*/ name)
 Interest.prototype.matches_name = function(/*Name*/ name)
 {
   return this.matchesName(name);
+};
+
+/**
+ * Check if the given Data packet can satisfy this Interest. This method
+ * considers the Name, MinSuffixComponents, MaxSuffixComponents,
+ * PublisherPublicKeyLocator, and Exclude. It does not consider the
+ * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
+ * Data packet encoding for the full Name.
+ * @param {Data} data
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet to get its full Name. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ * @returns {boolean} True if the given Data packet can satisfy this Interest.
+ */
+Interest.prototype.matchesData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Imitate ndn-cxx Interest::matchesData.
+  var interestNameLength = this.getName().size();
+  var dataName = data.getName();
+  var fullNameLength = dataName.size() + 1;
+
+  // Check MinSuffixComponents.
+  var hasMinSuffixComponents = (this.getMinSuffixComponents() != null);
+  var minSuffixComponents =
+    hasMinSuffixComponents ? this.getMinSuffixComponents() : 0;
+  if (!(interestNameLength + minSuffixComponents <= fullNameLength))
+    return false;
+
+  // Check MaxSuffixComponents.
+  var hasMaxSuffixComponents = (this.getMaxSuffixComponents() != null);
+  if (hasMaxSuffixComponents &&
+      !(interestNameLength + this.getMaxSuffixComponents() >= fullNameLength))
+    return false;
+
+  // Check the prefix.
+  if (interestNameLength === fullNameLength) {
+    if (this.getName().get(-1).isImplicitSha256Digest()) {
+      if (!this.getName().equals(data.getFullName(wireFormat)))
+        return false;
+    }
+    else
+      // The Interest Name is the same length as the Data full Name, but the
+      //   last component isn't a digest so there's no possibility of matching.
+      return false;
+  }
+  else {
+    // The Interest Name should be a strict prefix of the Data full Name,
+    if (!this.getName().isPrefixOf(dataName))
+      return false;
+  }
+
+  // Check the Exclude.
+  // The Exclude won't be violated if the Interest Name is the same as the
+  //   Data full Name.
+  if (this.getExclude().size() > 0 && fullNameLength > interestNameLength) {
+    if (interestNameLength == fullNameLength - 1) {
+      // The component to exclude is the digest.
+      if (this.getExclude().matches
+          (data.getFullName(wireFormat).get(interestNameLength)))
+        return false;
+    }
+    else {
+      // The component to exclude is not the digest.
+      if (this.getExclude().matches(dataName.get(interestNameLength)))
+        return false;
+    }
+  }
+
+  // Check the KeyLocator.
+  var publisherPublicKeyLocator = this.getKeyLocator();
+  if (publisherPublicKeyLocator.getType()) {
+    var signature = data.getSignature();
+    if (!KeyLocator.canGetFromSignature(signature))
+      // No KeyLocator in the Data packet.
+      return false;
+    if (!publisherPublicKeyLocator.equals
+        (KeyLocator.getFromSignature(signature)))
+      return false;
+  }
+
+  return true;
 };
 
 /**
@@ -392,6 +475,23 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
   this.maxSuffixComponents_ = maxSuffixComponents;
+  ++this.changeCount_;
+  return this;
+};
+
+/**
+ * Set this interest to use a copy of the given KeyLocator object.
+ * Note: You can also call getKeyLocator and change the key locator directly.
+ * @param {KeyLocator} keyLocator The KeyLocator object. This makes a copy of the object.
+ * If no key locator is specified, set to a new default KeyLocator(), or to a
+ * KeyLocator with an unspecified type.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set
+    (typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+     new KeyLocator(keyLocator) : new KeyLocator());
   ++this.changeCount_;
   return this;
 };

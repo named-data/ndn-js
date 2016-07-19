@@ -27,7 +27,8 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var Crypto = require('./crypto.js');
 
 /**
  * Create a new Data with the optional values.  There are 2 forms of constructor:
@@ -51,6 +52,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultfullName_ = data.defaultfullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -81,6 +83,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultfullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -173,6 +176,40 @@ Data.prototype.getIncomingFaceId = function()
   var field =
     this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
   return field === null ? null : field.getFaceId();
+};
+
+/**
+ * Get the Data packet's full name, which includes the final
+ * ImplicitSha256Digest component based on the wire encoding for a particular
+ * wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Name} The full name. You must not change the Name object - if you
+ * need to change it then make a copy.
+ */
+Data.prototype.getFullName = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // The default full name depends on the default wire encoding.
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.defaultfullName_.size() > 0 &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have a full name. A non-null default wire encoding means
+    // that the Data packet fields have not changed.
+    return this.defaultfullName_;
+
+  var fullName = new Name(this.getName());
+  var hash = Crypto.createHash('sha256');
+  // wireEncode will use the cached encoding if possible.
+  hash.update(this.wireEncode(wireFormat).buf());
+  fullName.appendImplicitSha256Digest(new Blob(hash.digest(), false));
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // wireEncode has already set defaultWireEncodingFormat_.
+    this.defaultfullName_ = fullName;
+
+  return fullName;
 };
 
 /**
