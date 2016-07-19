@@ -10155,6 +10155,7 @@ exports.Tlv = Tlv;
 Tlv.Interest =         5;
 Tlv.Data =             6;
 Tlv.Name =             7;
+Tlv.ImplicitSha256DigestComponent = 1;
 Tlv.NameComponent =    8;
 Tlv.Selectors =        9;
 Tlv.Nonce =            10;
@@ -13952,6 +13953,7 @@ SegmentFetcher.prototype.fetchNextSegment = function
   var interest = new Interest(originalInterest);
   // Changing a field clears the nonce so that the library will generate a new
   // one.
+  interest.setChildSelector(0);
   interest.setMustBeFresh(false);
   interest.setName(dataName.getPrefix(-1).appendSegment(segment));
   var thisSegmentFetcher = this;
@@ -14069,9 +14071,7 @@ SegmentFetcher.prototype.onTimeout = function(interest)
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
-  return name.size() >= 1 &&
-         name.get(-1).getValue().size() >= 1 &&
-         name.get(-1).getValue().buf()[0] == 0;
+  return name.size() >= 1 && name.get(-1).isSegment();
 };
 /**
  * Copyright (C) 2014-2016 Regents of the University of California.
@@ -14564,6 +14564,7 @@ exports.TcpTransport = require("./transport/web-socket-transport").WebSocketTran
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * Create a new Name from components.
@@ -14599,15 +14600,21 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- * Create a new Name.Component with a copy of the given value.
+ * Create a new GENERIC Name.Component with a copy of the given value.
+ * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
  * @constructor
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'object' && value instanceof Name.Component)
+  if (typeof value === 'object' && value instanceof Name.Component) {
+    // The copy constructor.
     this.value_ = value.value_;
-  else if (!value)
+    this.type_ = value.type_;
+    return;
+  }
+
+  if (!value)
     this.value_ = new Blob([]);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
            value instanceof ArrayBuffer)
@@ -14619,6 +14626,17 @@ Name.Component = function NameComponent(value)
   else
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
+
+  this.type_ = Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * A Name.Component.ComponentType specifies the recognized types of a name
+ * component.
+ */
+Name.Component.ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8
 };
 
 /**
@@ -14649,11 +14667,15 @@ Object.defineProperty(Name.Component.prototype, "value",
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
+ * This adds a type code prefix as needed, such as "sha256digest=".
  * @returns {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  return Name.toEscapedString(this.value_.buf());
+  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+    return "sha256digest=" + this.value_.toHex();
+  else
+    return Name.toEscapedString(this.value_.buf());
 };
 
 /**
@@ -14664,7 +14686,8 @@ Name.Component.prototype.toEscapedString = function()
  */
 Name.Component.prototype.isSegment = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00 &&
+         this.isGeneric();
 };
 
 /**
@@ -14675,7 +14698,8 @@ Name.Component.prototype.isSegment = function()
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB &&
+         this.isGeneric();
 };
 
 /**
@@ -14686,7 +14710,8 @@ Name.Component.prototype.isSegmentOffset = function()
  */
 Name.Component.prototype.isVersion = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD &&
+         this.isGeneric();
 };
 
 /**
@@ -14697,7 +14722,8 @@ Name.Component.prototype.isVersion = function()
  */
 Name.Component.prototype.isTimestamp = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC &&
+         this.isGeneric();
 };
 
 /**
@@ -14708,7 +14734,26 @@ Name.Component.prototype.isTimestamp = function()
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE &&
+         this.isGeneric();
+};
+
+/**
+ * Check if this component is a generic component.
+ * @returns {boolean} True if this is an generic component.
+ */
+Name.Component.prototype.isGeneric = function()
+{
+  return this.type_ === Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * Check if this component is an ImplicitSha256Digest component.
+ * @returns {boolean} True if this is an ImplicitSha256Digest component.
+ */
+Name.Component.prototype.isImplicitSha256Digest = function()
+{
+  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
@@ -14890,6 +14935,26 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
 };
 
 /**
+ * Create a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @returns {Name.Component} The new Component.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.Component.fromImplicitSha256Digest = function(digest)
+{
+  digestBlob = typeof digest === 'object' && digest instanceof Blob ?
+    digest : new Blob(digest, true);
+  if (digestBlob.size() !== 32)
+    throw new DecodingException
+      ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
+
+  var result = new Name.Component(digestBlob);
+  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return result;
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
  * @returns {Name.Component} A new Name.Component which is the successor of this.
  */
@@ -14928,7 +14993,7 @@ Name.Component.prototype.getSuccessor = function()
 Name.Component.prototype.equals = function(other)
 {
   return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_);
+    this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
@@ -14942,6 +15007,11 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
+  if (this.type_ < other.type_)
+    return -1;
+  if (this.type_ > other.type_)
+    return 1;
+
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
 };
 
@@ -15012,17 +15082,25 @@ Name.createNameArray = function(uri)
   var array = uri.split('/');
 
   // Unescape the components.
+  var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
-    var value = Name.fromEscapedString(array[i]);
+    var component;
+    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+      component = Name.Component.fromImplicitSha256Digest
+        (new Blob(new Buffer(hexString, 'hex')), false);
+    }
+    else
+      component = new Name.Component(Name.fromEscapedString(array[i]));
 
-    if (value.isNull()) {
+    if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
       continue;
     }
     else
-      array[i] = new Name.Component(value);
+      array[i] = component;
   }
 
   return array;
@@ -15040,7 +15118,7 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append to this Name.
+ * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
  * @returns {Name}
@@ -15058,6 +15136,9 @@ Name.prototype.append = function(component)
     for (var i = 0; i < components.length; ++i)
       this.components.push(new Name.Component(components[i]));
   }
+  else if (typeof component === 'object' && component instanceof Name.Component)
+    // The Component is immutalbe, so use it as is.
+    this.components.push(component);
   else
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
@@ -15099,7 +15180,7 @@ Name.prototype.toUri = function(includeScheme)
   var result = includeScheme ? "ndn:" : "";
 
   for (var i = 0; i < this.size(); ++i)
-    result += "/"+ Name.toEscapedString(this.components[i].getValue().buf());
+    result += "/"+ this.components[i].toEscapedString();
 
   return result;
 };
@@ -15174,6 +15255,18 @@ Name.prototype.appendTimestamp = function(timestamp)
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
   return this.append(Name.Component.fromSequenceNumber(sequenceNumber));
+};
+
+/**
+ * Append a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @returns This name so that you can chain calls to append.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.prototype.appendImplicitSha256Digest = function(digest)
+{
+  return this.append(Name.Component.fromImplicitSha256Digest(digest));
 };
 
 /**
@@ -15483,7 +15576,9 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ * We can't use encodeURIComponent because that doesn't encode all the 
+ * characters we want to.
+ * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
  * @returns {string} The escaped string.
  */
@@ -15525,7 +15620,9 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * component in the name.
+ * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
  * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
@@ -15781,6 +15878,28 @@ KeyLocator.prototype.clear = function()
   this.keyName_.set(new Name());
   this.keyData_ = new Blob();
   ++this.changeCount_;
+};
+
+/**
+ * Check if this key locator has the same values as the given key locator.
+ * @param {KeyLocator} other The other key locator to check.
+ * @return {boolean} true if the key locators are equal, otherwise false.
+ */
+KeyLocator.prototype.equals = function(other)
+{
+    if (this.type_ != other.type_)
+      return false;
+
+    if (this.type_ == KeyLocatorType.KEYNAME) {
+      if (!this.getKeyName().equals(other.getKeyName()))
+        return false;
+    }
+    else if (this.type_ == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      if (!this.getKeyData().equals(other.getKeyData()))
+        return false;
+    }
+
+    return true;
 };
 
 /**
@@ -16619,7 +16738,8 @@ var Name = require('./name.js').Name; /** @ignore */
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
 var MetaInfo = require('./meta-info.js').MetaInfo; /** @ignore */
 var IncomingFaceId = require('./lp/incoming-face-id.js').IncomingFaceId; /** @ignore */
-var WireFormat = require('./encoding/wire-format.js').WireFormat;
+var WireFormat = require('./encoding/wire-format.js').WireFormat; /** @ignore */
+var Crypto = require('./crypto.js');
 
 /**
  * Create a new Data with the optional values.  There are 2 forms of constructor:
@@ -16643,6 +16763,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
+    this.defaultfullName_ = data.defaultfullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -16673,6 +16794,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
+    this.defaultfullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -16765,6 +16887,40 @@ Data.prototype.getIncomingFaceId = function()
   var field =
     this.lpPacket_ === null ? null : IncomingFaceId.getFirstHeader(this.lpPacket_);
   return field === null ? null : field.getFaceId();
+};
+
+/**
+ * Get the Data packet's full name, which includes the final
+ * ImplicitSha256Digest component based on the wire encoding for a particular
+ * wire format.
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * this object. If omitted, use WireFormat.getDefaultWireFormat().
+ * @return {Name} The full name. You must not change the Name object - if you
+ * need to change it then make a copy.
+ */
+Data.prototype.getFullName = function(wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // The default full name depends on the default wire encoding.
+  if (!this.getDefaultWireEncoding().isNull() &&
+      this.defaultfullName_.size() > 0 &&
+      this.getDefaultWireEncodingFormat() == wireFormat)
+    // We already have a full name. A non-null default wire encoding means
+    // that the Data packet fields have not changed.
+    return this.defaultfullName_;
+
+  var fullName = new Name(this.getName());
+  var hash = Crypto.createHash('sha256');
+  // wireEncode will use the cached encoding if possible.
+  hash.update(this.wireEncode(wireFormat).buf());
+  fullName.appendImplicitSha256Digest(new Blob(hash.digest(), false));
+
+  if (wireFormat == WireFormat.getDefaultWireFormat())
+    // wireEncode has already set defaultWireEncodingFormat_.
+    this.defaultfullName_ = fullName;
+
+  return fullName;
 };
 
 /**
@@ -24987,7 +25143,7 @@ Exclude.prototype.toUri = function()
     if (this.values[i] == Exclude.ANY)
       result += "*";
     else
-      result += Name.toEscapedString(this.values[i].getValue().buf());
+      result += this.values[i].toEscapedString();
   }
   return result;
 };
@@ -24995,12 +25151,10 @@ Exclude.prototype.toUri = function()
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Buffer*/ component)
+Exclude.prototype.matches = function(component)
 {
-  if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue().buf();
-  else if (typeof component === 'object' && component instanceof Blob)
-    component = component.buf();
+  if (!(typeof component == 'object' && component instanceof Name.Component))
+    component = new Name.Component(component);
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -25022,12 +25176,12 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       // If upperBound != null, we will check component equals upperBound on the next pass.
       if (upperBound != null) {
         if (lowerBound != null) {
-          if (Exclude.compareComponents(component, lowerBound) > 0 &&
-              Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(lowerBound) > 0 &&
+              component.compare(upperBound) < 0)
             return true;
         }
         else {
-          if (Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(upperBound) < 0)
             return true;
         }
 
@@ -25036,7 +25190,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
       else {
         if (lowerBound != null) {
-            if (Exclude.compareComponents(component, lowerBound) > 0)
+            if (component.compare(lowerBound) > 0)
               return true;
         }
         else
@@ -25045,7 +25199,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
+      if (component.equals(this.values[i]))
         return true;
     }
   }
@@ -25196,7 +25350,7 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
  * @param {Name} name The name to check.
  * @returns {boolean} True if the name and interest selectors match, False otherwise.
  */
-Interest.prototype.matchesName = function(/*Name*/ name)
+Interest.prototype.matchesName = function(name)
 {
   if (!this.getName().match(name))
     return false;
@@ -25222,6 +25376,89 @@ Interest.prototype.matchesName = function(/*Name*/ name)
 Interest.prototype.matches_name = function(/*Name*/ name)
 {
   return this.matchesName(name);
+};
+
+/**
+ * Check if the given Data packet can satisfy this Interest. This method
+ * considers the Name, MinSuffixComponents, MaxSuffixComponents,
+ * PublisherPublicKeyLocator, and Exclude. It does not consider the
+ * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
+ * Data packet encoding for the full Name.
+ * @param {Data} data
+ * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
+ * the Data packet to get its full Name. If omitted, use
+ * WireFormat.getDefaultWireFormat().
+ * @returns {boolean} True if the given Data packet can satisfy this Interest.
+ */
+Interest.prototype.matchesData = function(data, wireFormat)
+{
+  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+
+  // Imitate ndn-cxx Interest::matchesData.
+  var interestNameLength = this.getName().size();
+  var dataName = data.getName();
+  var fullNameLength = dataName.size() + 1;
+
+  // Check MinSuffixComponents.
+  var hasMinSuffixComponents = (this.getMinSuffixComponents() != null);
+  var minSuffixComponents =
+    hasMinSuffixComponents ? this.getMinSuffixComponents() : 0;
+  if (!(interestNameLength + minSuffixComponents <= fullNameLength))
+    return false;
+
+  // Check MaxSuffixComponents.
+  var hasMaxSuffixComponents = (this.getMaxSuffixComponents() != null);
+  if (hasMaxSuffixComponents &&
+      !(interestNameLength + this.getMaxSuffixComponents() >= fullNameLength))
+    return false;
+
+  // Check the prefix.
+  if (interestNameLength === fullNameLength) {
+    if (this.getName().get(-1).isImplicitSha256Digest()) {
+      if (!this.getName().equals(data.getFullName(wireFormat)))
+        return false;
+    }
+    else
+      // The Interest Name is the same length as the Data full Name, but the
+      //   last component isn't a digest so there's no possibility of matching.
+      return false;
+  }
+  else {
+    // The Interest Name should be a strict prefix of the Data full Name,
+    if (!this.getName().isPrefixOf(dataName))
+      return false;
+  }
+
+  // Check the Exclude.
+  // The Exclude won't be violated if the Interest Name is the same as the
+  //   Data full Name.
+  if (this.getExclude().size() > 0 && fullNameLength > interestNameLength) {
+    if (interestNameLength == fullNameLength - 1) {
+      // The component to exclude is the digest.
+      if (this.getExclude().matches
+          (data.getFullName(wireFormat).get(interestNameLength)))
+        return false;
+    }
+    else {
+      // The component to exclude is not the digest.
+      if (this.getExclude().matches(dataName.get(interestNameLength)))
+        return false;
+    }
+  }
+
+  // Check the KeyLocator.
+  var publisherPublicKeyLocator = this.getKeyLocator();
+  if (publisherPublicKeyLocator.getType()) {
+    var signature = data.getSignature();
+    if (!KeyLocator.canGetFromSignature(signature))
+      // No KeyLocator in the Data packet.
+      return false;
+    if (!publisherPublicKeyLocator.equals
+        (KeyLocator.getFromSignature(signature)))
+      return false;
+  }
+
+  return true;
 };
 
 /**
@@ -25474,6 +25711,23 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 };
 
 /**
+ * Set this interest to use a copy of the given KeyLocator object.
+ * Note: You can also call getKeyLocator and change the key locator directly.
+ * @param {KeyLocator} keyLocator The KeyLocator object. This makes a copy of the object.
+ * If no key locator is specified, set to a new default KeyLocator(), or to a
+ * KeyLocator with an unspecified type.
+ * @returns {Interest} This Interest so that you can chain calls to update values.
+ */
+Interest.prototype.setKeyLocator = function(keyLocator)
+{
+  this.keyLocator_.set
+    (typeof keyLocator === 'object' && keyLocator instanceof KeyLocator ?
+     new KeyLocator(keyLocator) : new KeyLocator());
+  ++this.changeCount_;
+  return this;
+};
+
+/**
  * Set this interest to use a copy of the given exclude object. Note: You can
  * also call getExclude and change the exclude entries directly.
  * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
@@ -25564,7 +25818,7 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
 /**
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
- * milliseconds. If not specified, set to -1.
+ * milliseconds. If not specified, set to undefined.
  * @returns {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
@@ -26952,33 +27206,33 @@ var IncomingFaceId = require('../lp/incoming-face-id.js').IncomingFaceId; /** @i
 var DecodingException = require('./decoding-exception.js').DecodingException;
 
 /**
- * A Tlv0_1_1WireFormat implements the WireFormat interface for encoding and
- * decoding with the NDN-TLV wire format, version 0.1.1.
+ * A Tlv0_2WireFormat implements the WireFormat interface for encoding and
+ * decoding with the NDN-TLV wire format, version 0.2.
  * @constructor
  */
-var Tlv0_1_1WireFormat = function Tlv0_1_1WireFormat()
+var Tlv0_2WireFormat = function Tlv0_2WireFormat()
 {
   // Inherit from WireFormat.
   WireFormat.call(this);
 };
 
-Tlv0_1_1WireFormat.prototype = new WireFormat();
-Tlv0_1_1WireFormat.prototype.name = "Tlv0_1_1WireFormat";
+Tlv0_2WireFormat.prototype = new WireFormat();
+Tlv0_2WireFormat.prototype.name = "Tlv0_2WireFormat";
 
-exports.Tlv0_1_1WireFormat = Tlv0_1_1WireFormat;
+exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 
 // Default object.
-Tlv0_1_1WireFormat.instance = null;
+Tlv0_2WireFormat.instance = null;
 
 /**
  * Encode interest as NDN-TLV and return the encoding.
- * @param {Name} interest The Name to encode.
+ * @param {Name} name The Name to encode.
  * @returns {Blobl} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeName = function(name)
+Tlv0_2WireFormat.prototype.encodeName = function(name)
 {
   var encoder = new TlvEncoder();
-  Tlv0_1_1WireFormat.encodeName(name, encoder);
+  Tlv0_2WireFormat.encodeName(name, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -26987,10 +27241,10 @@ Tlv0_1_1WireFormat.prototype.encodeName = function(name)
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1_1WireFormat.prototype.decodeName = function(name, input)
+Tlv0_2WireFormat.prototype.decodeName = function(name, input)
 {
   var decoder = new TlvDecoder(input);
-  Tlv0_1_1WireFormat.decodeName(name, decoder);
+  Tlv0_2WireFormat.decodeName(name, decoder);
 };
 
 /**
@@ -27005,7 +27259,7 @@ Tlv0_1_1WireFormat.prototype.decodeName = function(name, input)
  * just before the final name component (which is assumed to be a signature for
  * a signed interest).
  */
-Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
+Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27043,8 +27297,8 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
     // Truncate.
     encoder.writeBlobTlv(Tlv.Nonce, interest.getNonce().buf().slice(0, 4));
 
-  Tlv0_1_1WireFormat.encodeSelectors(interest, encoder);
-  var tempOffsets = Tlv0_1_1WireFormat.encodeName(interest.getName(), encoder);
+  Tlv0_2WireFormat.encodeSelectors(interest, encoder);
+  var tempOffsets = Tlv0_2WireFormat.encodeName(interest.getName(), encoder);
   var signedPortionBeginOffsetFromBack =
     encoder.getLength() - tempOffsets.signedPortionBeginOffset;
   var signedPortionEndOffsetFromBack =
@@ -27074,14 +27328,14 @@ Tlv0_1_1WireFormat.prototype.encodeInterest = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
+Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_1_1WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder);
   if (decoder.peekType(Tlv.Selectors, endOffset))
-    Tlv0_1_1WireFormat.decodeSelectors(interest, decoder);
+    Tlv0_2WireFormat.decodeSelectors(interest, decoder);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
@@ -27121,7 +27375,7 @@ Tlv0_1_1WireFormat.prototype.decodeInterest = function(interest, input)
  * signedPortionEndOffset is the offset in the encoding of the end of the
  * signed portion.
  */
-Tlv0_1_1WireFormat.prototype.encodeData = function(data)
+Tlv0_2WireFormat.prototype.encodeData = function(data)
 {
   var encoder = new TlvEncoder(1500);
   var saveLength = encoder.getLength();
@@ -27130,10 +27384,10 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
   encoder.writeBlobTlv(Tlv.SignatureValue, data.getSignature().getSignature().buf());
   var signedPortionEndOffsetFromBack = encoder.getLength();
 
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
+  Tlv0_2WireFormat.encodeSignatureInfo_(data.getSignature(), encoder);
   encoder.writeBlobTlv(Tlv.Content, data.getContent().buf());
-  Tlv0_1_1WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
-  Tlv0_1_1WireFormat.encodeName(data.getName(), encoder);
+  Tlv0_2WireFormat.encodeMetaInfo(data.getMetaInfo(), encoder);
+  Tlv0_2WireFormat.encodeName(data.getName(), encoder);
   var signedPortionBeginOffsetFromBack = encoder.getLength();
 
   encoder.writeTypeAndLength(Tlv.Data, encoder.getLength() - saveLength);
@@ -27157,17 +27411,17 @@ Tlv0_1_1WireFormat.prototype.encodeData = function(data)
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
+Tlv0_2WireFormat.prototype.decodeData = function(data, input)
 {
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
   var signedPortionBeginOffset = decoder.getOffset();
 
-  Tlv0_1_1WireFormat.decodeName(data.getName(), decoder);
-  Tlv0_1_1WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
+  Tlv0_2WireFormat.decodeName(data.getName(), decoder);
+  Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
   data.setContent(decoder.readBlobTlv(Tlv.Content));
-  Tlv0_1_1WireFormat.decodeSignatureInfo(data, decoder);
+  Tlv0_2WireFormat.decodeSignatureInfo(data, decoder);
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
@@ -27184,10 +27438,10 @@ Tlv0_1_1WireFormat.prototype.decodeData = function(data, input)
  * encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameters)
+Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_1_1WireFormat.encodeControlParameters(controlParameters, encoder);
+  Tlv0_2WireFormat.encodeControlParameters(controlParameters, encoder);
   return new Blob(encoder.getOutput(), false);
 };
 
@@ -27196,12 +27450,12 @@ Tlv0_1_1WireFormat.prototype.encodeControlParameters = function(controlParameter
   * @param {ControlParameters} controlParameters The ControlParameters object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
+  * @throws DecodingException For invalid encoding
   */
-Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+Tlv0_2WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
 {
   var decoder = new TlvDecoder(input);
-  Tlv0_1_1WireFormat.decodeControlParameters(controlParameters, decoder);
+  Tlv0_2WireFormat.decodeControlParameters(controlParameters, decoder);
 };
 
 /**
@@ -27210,7 +27464,7 @@ Tlv0_1_1WireFormat.prototype.decodeControlParameters = function(controlParameter
  * encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
+Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27219,7 +27473,7 @@ Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
 
   // Encode the body.
   if (controlResponse.getBodyAsControlParameters() != null)
-    Tlv0_1_1WireFormat.encodeControlParameters
+    Tlv0_2WireFormat.encodeControlParameters
       (controlResponse.getBodyAsControlParameters(), encoder);
 
   encoder.writeBlobTlv
@@ -27238,9 +27492,9 @@ Tlv0_1_1WireFormat.prototype.encodeControlResponse = function(controlResponse)
   * @param {ControlResponse} controlResponse The ControlResponse object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws EncodingException For invalid encoding
+  * @throws DecodingException For invalid encoding
   */
-Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
 {
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
@@ -27255,7 +27509,7 @@ Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, i
   if (decoder.peekType(Tlv.ControlParameters_ControlParameters, endOffset)) {
     controlResponse.setBodyAsControlParameters(new ControlParameters());
     // Decode into the existing ControlParameters to avoid copying.
-    Tlv0_1_1WireFormat.decodeControlParameters
+    Tlv0_2WireFormat.decodeControlParameters
       (controlResponse.getBodyAsControlParameters(), decoder);
   }
   else
@@ -27269,25 +27523,25 @@ Tlv0_1_1WireFormat.prototype.decodeControlResponse = function(controlResponse, i
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeSignatureInfo = function(signature)
+Tlv0_2WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
   var encoder = new TlvEncoder(256);
-  Tlv0_1_1WireFormat.encodeSignatureInfo_(signature, encoder);
+  Tlv0_2WireFormat.encodeSignatureInfo_(signature, encoder);
 
   return new Blob(encoder.getOutput(), false);
 };
 
 // SignatureHolder is used by decodeSignatureInfoAndValue.
-Tlv0_1_1WireFormat.SignatureHolder = function Tlv0_1_1WireFormatSignatureHolder()
+Tlv0_2WireFormat.SignatureHolder = function Tlv0_2WireFormatSignatureHolder()
 {
 };
 
-Tlv0_1_1WireFormat.SignatureHolder.prototype.setSignature = function(signature)
+Tlv0_2WireFormat.SignatureHolder.prototype.setSignature = function(signature)
 {
   this.signature = signature;
 };
 
-Tlv0_1_1WireFormat.SignatureHolder.prototype.getSignature = function()
+Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
 {
   return this.signature;
 };
@@ -27300,13 +27554,13 @@ Tlv0_1_1WireFormat.SignatureHolder.prototype.getSignature = function()
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
  * @returns {Signature} A new object which is a subclass of Signature.
  */
-Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
+Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
   (signatureInfo, signatureValue)
 {
   // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
-  var signatureHolder = new Tlv0_1_1WireFormat.SignatureHolder();
+  var signatureHolder = new Tlv0_2WireFormat.SignatureHolder();
   var decoder = new TlvDecoder(signatureInfo);
-  Tlv0_1_1WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+  Tlv0_2WireFormat.decodeSignatureInfo(signatureHolder, decoder);
 
   decoder = new TlvDecoder(signatureValue);
   signatureHolder.getSignature().setSignature
@@ -27322,7 +27576,7 @@ Tlv0_1_1WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature value to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
+Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
 {
   var encoder = new TlvEncoder(256);
   encoder.writeBlobTlv(Tlv.SignatureValue, signature.getSignature().buf());
@@ -27335,7 +27589,7 @@ Tlv0_1_1WireFormat.prototype.encodeSignatureValue = function(signature)
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
 {
   lpPacket.clear();
 
@@ -27413,7 +27667,7 @@ Tlv0_1_1WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
+Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
   var encoder = new TlvEncoder(256);
 
@@ -27421,7 +27675,7 @@ Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
   for (var i = delegationSet.size() - 1; i >= 0; --i) {
     var saveLength = encoder.getLength();
 
-    Tlv0_1_1WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
+    Tlv0_2WireFormat.encodeName(delegationSet.get(i).getName(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.Link_Preference, delegationSet.get(i).getPreference());
 
@@ -27442,7 +27696,7 @@ Tlv0_1_1WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+Tlv0_2WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
 {
   var decoder = new TlvDecoder(input);
   var endOffset = input.length;
@@ -27452,7 +27706,7 @@ Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input
     decoder.readTypeAndLength(Tlv.Link_Delegation);
     var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
     var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder);
 
     // Add unsorted to preserve the order so that Interest selected delegation
     // index will work.
@@ -27466,7 +27720,7 @@ Tlv0_1_1WireFormat.prototype.decodeDelegationSet = function(delegationSet, input
  * encode.
  * @returns {Blob} A Blob containing the encoding.
  */
-Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
+Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 {
   var encoder = new TlvEncoder(256);
   var saveLength = encoder.getLength();
@@ -27479,7 +27733,7 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
   // Assume the algorithmType value is the same as the TLV type.
   encoder.writeNonNegativeIntegerTlv
     (Tlv.Encrypt_EncryptionAlgorithm, encryptedContent.getAlgorithmType());
-  Tlv0_1_1WireFormat.encodeKeyLocator
+  Tlv0_2WireFormat.encodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), encoder);
 
   encoder.writeTypeAndLength
@@ -27495,14 +27749,14 @@ Tlv0_1_1WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
  */
-Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
+Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
   (encryptedContent, input)
 {
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
-  Tlv0_1_1WireFormat.decodeKeyLocator
+  Tlv0_2WireFormat.decodeKeyLocator
     (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
   encryptedContent.setAlgorithmType
     (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
@@ -27516,15 +27770,48 @@ Tlv0_1_1WireFormat.prototype.decodeEncryptedContent = function
 };
 
 /**
- * Get a singleton instance of a Tlv0_1_1WireFormat.  To always use the
+ * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @returns {Tlv0_1_1WireFormat} The singleton instance.
+ * @returns {Tlv0_2WireFormat} The singleton instance.
  */
-Tlv0_1_1WireFormat.get = function()
+Tlv0_2WireFormat.get = function()
 {
-  if (Tlv0_1_1WireFormat.instance === null)
-    Tlv0_1_1WireFormat.instance = new Tlv0_1_1WireFormat();
-  return Tlv0_1_1WireFormat.instance;
+  if (Tlv0_2WireFormat.instance === null)
+    Tlv0_2WireFormat.instance = new Tlv0_2WireFormat();
+  return Tlv0_2WireFormat.instance;
+};
+
+/**
+ * Encode the name component to the encoder as NDN-TLV. This handles different
+ * component types such as ImplicitSha256DigestComponent.
+ * @param {Name.Component} component The name component to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ */
+Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
+{
+  var type = component.isImplicitSha256Digest() ?
+      Tlv.ImplicitSha256DigestComponent : Tlv.NameComponent;
+  encoder.writeBlobTlv(type, component.getValue().buf());
+};
+
+/**
+ * Decode the name component as NDN-TLV and return the component. This handles
+ * different component types such as ImplicitSha256DigestComponent.
+ * @param {TlvDecoder} decoder The decoder with the input.
+ * @return {Name.Component} A new Name.Component.
+ */
+Tlv0_2WireFormat.decodeNameComponent = function(decoder)
+{
+  var savePosition = decoder.getOffset();
+  var type = decoder.readVarNumber();
+  // Restore the position.
+  decoder.seek(savePosition);
+
+  var value = new Blob(decoder.readBlobTlv(type), true);
+  if (type === Tlv.ImplicitSha256DigestComponent)
+    return Name.Component.fromImplicitSha256Digest(value);
+  else
+    return new Name.Component(value);
 };
 
 /**
@@ -27539,14 +27826,14 @@ Tlv0_1_1WireFormat.get = function()
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.encodeName = function(name, encoder)
+Tlv0_2WireFormat.encodeName = function(name, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode the components backwards.
   var signedPortionEndOffsetFromBack;
   for (var i = name.size() - 1; i >= 0; --i) {
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    Tlv0_2WireFormat.encodeNameComponent(name.get(i), encoder);
     if (i == name.size() - 1)
       signedPortionEndOffsetFromBack = encoder.getLength();
   }
@@ -27580,7 +27867,7 @@ Tlv0_1_1WireFormat.encodeName = function(name, encoder)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_1_1WireFormat.decodeName = function(name, decoder)
+Tlv0_2WireFormat.decodeName = function(name, decoder)
 {
   name.clear();
 
@@ -27591,7 +27878,7 @@ Tlv0_1_1WireFormat.decodeName = function(name, decoder)
 
   while (decoder.getOffset() < endOffset) {
     signedPortionEndOffset = decoder.getOffset();
-    name.append(decoder.readBlobTlv(Tlv.NameComponent));
+    name.append(Tlv0_2WireFormat.decodeNameComponent(decoder));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -27604,7 +27891,7 @@ Tlv0_1_1WireFormat.decodeName = function(name, decoder)
  * Encode the interest selectors.  If no selectors are written, do not output a
  * Selectors TLV.
  */
-Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
+Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27614,10 +27901,10 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
   encoder.writeOptionalNonNegativeIntegerTlv(
     Tlv.ChildSelector, interest.getChildSelector());
   if (interest.getExclude().size() > 0)
-    Tlv0_1_1WireFormat.encodeExclude(interest.getExclude(), encoder);
+    Tlv0_2WireFormat.encodeExclude(interest.getExclude(), encoder);
 
   if (interest.getKeyLocator().getType() != null)
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), encoder);
 
   encoder.writeOptionalNonNegativeIntegerTlv(
@@ -27630,7 +27917,7 @@ Tlv0_1_1WireFormat.encodeSelectors = function(interest, encoder)
     encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
+Tlv0_2WireFormat.decodeSelectors = function(interest, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.Selectors);
 
@@ -27640,13 +27927,13 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
     (Tlv.MaxSuffixComponents, endOffset));
 
   if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
-    Tlv0_1_1WireFormat.decodeKeyLocator
+    Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
   else
     interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
-    Tlv0_1_1WireFormat.decodeExclude(interest.getExclude(), decoder);
+    Tlv0_2WireFormat.decodeExclude(interest.getExclude(), decoder);
   else
     interest.getExclude().clear();
 
@@ -27657,7 +27944,7 @@ Tlv0_1_1WireFormat.decodeSelectors = function(interest, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
+Tlv0_2WireFormat.encodeExclude = function(exclude, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27669,38 +27956,38 @@ Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
+      Tlv0_2WireFormat.encodeNameComponent(entry, encoder);
   }
 
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeExclude = function(exclude, decoder)
+Tlv0_2WireFormat.decodeExclude = function(exclude, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
 
   exclude.clear();
-  while (true) {
-    if (decoder.peekType(Tlv.NameComponent, endOffset))
-      exclude.appendComponent(decoder.readBlobTlv(Tlv.NameComponent));
-    else if (decoder.readBooleanTlv(Tlv.Any, endOffset))
+  while (decoder.getOffset() < endOffset) {
+    if (decoder.peekType(Tlv.Any, endOffset)) {
+      // Read past the Any TLV.
+      decoder.readBooleanTlv(Tlv.Any, endOffset);
       exclude.appendAny();
+    }
     else
-      // Else no more entries.
-      break;
+      exclude.appendComponent(Tlv0_2WireFormat.decodeNameComponent(decoder));
   }
 
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
+Tlv0_2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 {
   var saveLength = encoder.getLength();
 
   // Encode backwards.
   if (keyLocator.getType() != null) {
     if (keyLocator.getType() == KeyLocatorType.KEYNAME)
-      Tlv0_1_1WireFormat.encodeName(keyLocator.getKeyName(), encoder);
+      Tlv0_2WireFormat.encodeName(keyLocator.getKeyName(), encoder);
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST &&
              keyLocator.getKeyData().size() > 0)
       encoder.writeBlobTlv(Tlv.KeyLocatorDigest, keyLocator.getKeyData().buf());
@@ -27711,7 +27998,7 @@ Tlv0_1_1WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
   encoder.writeTypeAndLength(type, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeKeyLocator = function
+Tlv0_2WireFormat.decodeKeyLocator = function
   (expectedType, keyLocator, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(expectedType);
@@ -27725,7 +28012,7 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
   if (decoder.peekType(Tlv.Name, endOffset)) {
     // KeyLocator is a Name.
     keyLocator.setType(KeyLocatorType.KEYNAME);
-    Tlv0_1_1WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+    Tlv0_2WireFormat.decodeName(keyLocator.getKeyName(), decoder);
   }
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
@@ -27745,7 +28032,7 @@ Tlv0_1_1WireFormat.decodeKeyLocator = function
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @param {TlvEncoder} encoder The encoder.
  */
-Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
+Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 {
   if (signature instanceof GenericSignature) {
     // Handle GenericSignature separately since it has the entire encoding.
@@ -27771,13 +28058,13 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
 
   // Encode backwards.
   if (signature instanceof Sha256WithRsaSignature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
   else if (signature instanceof HmacWithSha256Signature) {
-    Tlv0_1_1WireFormat.encodeKeyLocator
+    Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureHmacWithSha256);
@@ -27791,7 +28078,7 @@ Tlv0_1_1WireFormat.encodeSignatureInfo_ = function(signature, encoder)
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
+Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder)
 {
   var beginOffset = decoder.getOffset();
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
@@ -27802,13 +28089,13 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
     // Modify data's signature object because if we create an object
     //   and set it, then data will have to copy all the fields.
     var signatureInfo = data.getSignature();
-    Tlv0_1_1WireFormat.decodeKeyLocator
+    Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
     data.setSignature(new HmacWithSha256Signature());
     var signatureInfo = data.getSignature();
-    Tlv0_1_1WireFormat.decodeKeyLocator
+    Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
@@ -27825,7 +28112,7 @@ Tlv0_1_1WireFormat.decodeSignatureInfo = function(data, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
+Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27834,7 +28121,7 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
-    encoder.writeBlobTlv(Tlv.NameComponent, finalBlockIdBuf);
+    Tlv0_2WireFormat.encodeNameComponent(metaInfo.getFinalBlockId(), encoder);
     encoder.writeTypeAndLength
       (Tlv.FinalBlockId, encoder.getLength() - finalBlockIdSaveLength);
   }
@@ -27860,7 +28147,7 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
+Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
 {
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
@@ -27884,7 +28171,7 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(Tlv0_2WireFormat.decodeNameComponent(decoder));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
@@ -27893,7 +28180,7 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
   decoder.finishNestedTlvs(endOffset);
 };
 
-Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder)
+Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
 {
   var saveLength = encoder.getLength();
 
@@ -27904,7 +28191,7 @@ Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder
 
   if (controlParameters.getStrategy().size() > 0){
     var strategySaveLength = encoder.getLength();
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getStrategy(), encoder);
+    Tlv0_2WireFormat.encodeName(controlParameters.getStrategy(), encoder);
     encoder.writeTypeAndLength(Tlv.ControlParameters_Strategy,
       encoder.getLength() - strategySaveLength);
   }
@@ -27930,13 +28217,13 @@ Tlv0_1_1WireFormat.encodeControlParameters = function(controlParameters, encoder
   encoder.writeOptionalNonNegativeIntegerTlv
     (Tlv.ControlParameters_FaceId, controlParameters.getFaceId());
   if (controlParameters.getName() != null)
-    Tlv0_1_1WireFormat.encodeName(controlParameters.getName(), encoder);
+    Tlv0_2WireFormat.encodeName(controlParameters.getName(), encoder);
 
   encoder.writeTypeAndLength
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 };
 
-Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder)
+Tlv0_2WireFormat.decodeControlParameters = function(controlParameters, decoder)
 {
   controlParameters.clear();
   var endOffset = decoder.
@@ -27945,7 +28232,7 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
   // decode name
   if (decoder.peekType(Tlv.Name, endOffset)) {
     var name = new Name();
-    Tlv0_1_1WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder);
     controlParameters.setName(name);
   }
 
@@ -27981,7 +28268,7 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
     var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_1_1WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    Tlv0_2WireFormat.decodeName(controlParameters.getStrategy(), decoder);
     decoder.finishNestedTlvs(strategyEndOffset);
   }
 
@@ -27991,6 +28278,59 @@ Tlv0_1_1WireFormat.decodeControlParameters = function(controlParameters, decoder
       Tlv.ControlParameters_ExpirationPeriod, endOffset));
 
   decoder.finishNestedTlvs(endOffset);
+};
+/**
+ * Copyright (C) 2013-2016 Regents of the University of California.
+ * @author: Jeff Thompson <jefft0@remap.ucla.edu>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * A copy of the GNU Lesser General Public License is in the file COPYING.
+ */
+
+/** @ignore */
+var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
+
+/**
+ * A Tlv0_1_1WireFormat extends Tlv0_2WireFormat so that it is an alias in case
+ * any applications use Tlv0_1_1WireFormat directly.  These two wire formats are
+ * the same except that Tlv0_2WireFormat adds support for the name component
+ * type ImplicitSha256Digest.
+ * @constructor
+ */
+var Tlv0_1_1WireFormat = function Tlv0_1_1WireFormat()
+{
+  // Inherit from Tlv0_2WireFormat.
+  Tlv0_2WireFormat.call(this);
+};
+
+Tlv0_1_1WireFormat.prototype = new Tlv0_2WireFormat();
+Tlv0_1_1WireFormat.prototype.name = "Tlv0_1_1WireFormat";
+
+exports.Tlv0_1_1WireFormat = Tlv0_1_1WireFormat;
+
+// Default object.
+Tlv0_1_1WireFormat.instance = null;
+
+/**
+ * Get a singleton instance of a Tlv0_1_1WireFormat.
+ * @returns {Tlv0_1_1WireFormat} The singleton instance.
+ */
+Tlv0_1_1WireFormat.get = function()
+{
+  if (Tlv0_1_1WireFormat.instance === null)
+    Tlv0_1_1WireFormat.instance = new Tlv0_1_1WireFormat();
+  return Tlv0_1_1WireFormat.instance;
 };
 /**
  * Copyright (C) 2013-2016 Regents of the University of California.
@@ -28067,7 +28407,7 @@ Tlv0_1WireFormat.get = function()
 
 /** @ignore */
 var WireFormat = require('./wire-format.js').WireFormat; /** @ignore */
-var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireFormat;
+var Tlv0_2WireFormat = require('./tlv-0_2-wire-format.js').Tlv0_2WireFormat;
 
 /**
  * A TlvWireFormat extends WireFormat to override its methods to
@@ -28076,11 +28416,11 @@ var Tlv0_1_1WireFormat = require('./tlv-0_1_1-wire-format.js').Tlv0_1_1WireForma
  */
 var TlvWireFormat = function TlvWireFormat()
 {
-  // Inherit from Tlv0_1_1WireFormat.
-  Tlv0_1_1WireFormat.call(this);
+  // Inherit from Tlv0_2WireFormat.
+  Tlv0_2WireFormat.call(this);
 };
 
-TlvWireFormat.prototype = new Tlv0_1_1WireFormat();
+TlvWireFormat.prototype = new Tlv0_2WireFormat();
 TlvWireFormat.prototype.name = "TlvWireFormat";
 
 exports.TlvWireFormat = TlvWireFormat;
@@ -28685,9 +29025,7 @@ Encryptor.NAME_COMPONENT_C_KEY = new Name.Component("C-KEY");
 Encryptor.encryptDataPromise = function
   (data, payload, keyName, key, params, useSync)
 {
-  var dataName = data.getName();
-  dataName.append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
-  data.setName(dataName);
+  data.getName().append(Encryptor.NAME_COMPONENT_FOR).append(keyName);
 
   var algorithmType = params.getAlgorithmType();
 
@@ -31100,7 +31438,7 @@ Interval.prototype.isEmpty = function()
 var SyncPromise = require('../util/sync-promise.js').SyncPromise;
 
 /**
- * ProducerDb is a base class the storage of keys for the producer. It contains
+ * ProducerDb is a base class for the storage of keys for the producer. It contains
  * one table that maps time slots (to the nearest hour) to the content key
  * created for that time slot. A subclass must implement the methods. For
  * example, see Sqlite3ProducerDb (for Nodejs) or IndexedDbProducerDb (for the
@@ -32205,39 +32543,40 @@ RepetitiveInterval.prototype.getRepeatUnit = function()
  */
 RepetitiveInterval.prototype.hasIntervalOnDate_ = function(timePoint)
 {
-  var timePointDate = new Date(RepetitiveInterval.toDateOnlyMilliseconds_(timePoint));
-  var startDate = new Date(this.startDate_);
-  var endDate = new Date(this.endDate_);
+  var timePointDateMilliseconds = RepetitiveInterval.toDateOnlyMilliseconds_(timePoint);
 
-  if (timePointDate.getTime() < startDate.getTime() ||
-      timePointDate.getTime() > endDate.getTime())
+  if (timePointDateMilliseconds < this.startDate_ ||
+      timePointDateMilliseconds > this.endDate_)
     return false;
 
   if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.NONE)
     return true;
-
-  if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
-    var durationDays =
-      (timePointDate.getTime() - startDate.getTime()) /
-      RepetitiveInterval.MILLISECONDS_IN_DAY;
+  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.DAY) {
+    var durationDays = (timePointDateMilliseconds - this.startDate_) /
+                        RepetitiveInterval.MILLISECONDS_IN_DAY;
     if (durationDays % this.nRepeats_ == 0)
       return true;
   }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
-           timePointDate.getUTCDate() == startDate.getUTCDate()) {
-    var yearDifference =
-      timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    var monthDifference = 12 * yearDifference +
-      timePointDate.getUTCMonth() - startDate.getUTCMonth();
-    if (monthDifference % this.nRepeats_ == 0)
-      return true;
-  }
-  else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
-           timePointDate.getUTCDate() == startDate.getUTCDate() &&
-           timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
-    var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
-    if (difference % this.nRepeats_ == 0)
-      return true;
+  else {
+    var timePointDate = new Date(timePointDateMilliseconds);
+    var startDate = new Date(this.startDate_);
+
+    if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.MONTH &&
+             timePointDate.getUTCDate() == startDate.getUTCDate()) {
+      var yearDifference =
+        timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      var monthDifference = 12 * yearDifference +
+        timePointDate.getUTCMonth() - startDate.getUTCMonth();
+      if (monthDifference % this.nRepeats_ == 0)
+        return true;
+    }
+    else if (this.repeatUnit_ == RepetitiveInterval.RepeatUnit.YEAR &&
+             timePointDate.getUTCDate() == startDate.getUTCDate() &&
+             timePointDate.getUTCMonth() == startDate.getUTCMonth()) {
+      var difference = timePointDate.getUTCFullYear() - startDate.getUTCFullYear();
+      if (difference % this.nRepeats_ == 0)
+        return true;
+    }
   }
 
   return false;
@@ -32435,7 +32774,7 @@ Schedule.prototype.wireEncode = function()
  * Decode the input and update this Schedule object.
  * @param {Blob|Buffer} input The input buffer to decode. For Buffer, this reads
  * from position() to limit(), but does not change the position.
- * @throws EncodingException For invalid encoding.
+ * @throws DecodingException For invalid encoding.
  */
 Schedule.prototype.wireDecode = function(input)
 {
@@ -34851,22 +35190,21 @@ PendingInterestTable.prototype.add = function
 };
 
 /**
- * Find all entries from the pending interest table where the name conforms to
+ * Find all entries from the pending interest table where data conforms to
  * the entry's interest selectors, remove the entries from the table, and add to
  * the entries list.
- * @param {Name} name The name to find the interest for (from the incoming data
- * packet).
+ * @param {Data} data The incoming Data packet to find the interest for.
  * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
 PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
-  (name, entries)
+  (data, entries)
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
     var pendingInterest = this.table_[i];
-    if (pendingInterest.getInterest().matchesName(name)) {
+    if (pendingInterest.getInterest().matchesData(data)) {
       pendingInterest.clearTimeout();
       entries.push(pendingInterest);
       this.table_.splice(i, 1);
@@ -36309,7 +36647,7 @@ Face.prototype.onReceivedElement = function(element)
 
     var pendingInterests = [];
     this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data.getName(), pendingInterests);
+      (data, pendingInterests);
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];
