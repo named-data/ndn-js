@@ -146,6 +146,28 @@ KeyLocator.prototype.clear = function()
 };
 
 /**
+ * Check if this key locator has the same values as the given key locator.
+ * @param {KeyLocator} other The other key locator to check.
+ * @return {boolean} true if the key locators are equal, otherwise false.
+ */
+KeyLocator.prototype.equals = function(other)
+{
+    if (this.type_ != other.type_)
+      return false;
+
+    if (this.type_ == KeyLocatorType.KEYNAME) {
+      if (!this.getKeyName().equals(other.getKeyName()))
+        return false;
+    }
+    else if (this.type_ == KeyLocatorType.KEY_LOCATOR_DIGEST) {
+      if (!this.getKeyData().equals(other.getKeyData()))
+        return false;
+    }
+
+    return true;
+};
+
+/**
  * If the signature is a type that has a KeyLocator (so that,
  * getFromSignature will succeed), return true.
  * Note: This is a static method of KeyLocator instead of a method of
