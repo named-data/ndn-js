@@ -173,22 +173,21 @@ PendingInterestTable.prototype.add = function
 };
 
 /**
- * Find all entries from the pending interest table where the name conforms to
+ * Find all entries from the pending interest table where data conforms to
  * the entry's interest selectors, remove the entries from the table, and add to
  * the entries list.
- * @param {Name} name The name to find the interest for (from the incoming data
- * packet).
+ * @param {Data} data The incoming Data packet to find the interest for.
  * @param {Array<PendingInterestTable.Entry>} entries Add matching
  * PendingInterestTable.Entry from the pending interest table. The caller should
  * pass in an empty array.
  */
 PendingInterestTable.prototype.extractEntriesForExpressedInterest = function
-  (name, entries)
+  (data, entries)
 {
   // Go backwards through the list so we can erase entries.
   for (var i = this.table_.length - 1; i >= 0; --i) {
     var pendingInterest = this.table_[i];
-    if (pendingInterest.getInterest().matchesName(name)) {
+    if (pendingInterest.getInterest().matchesData(data)) {
       pendingInterest.clearTimeout();
       entries.push(pendingInterest);
       this.table_.splice(i, 1);

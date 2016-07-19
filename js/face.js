@@ -1043,7 +1043,7 @@ Face.prototype.onReceivedElement = function(element)
 
     var pendingInterests = [];
     this.pendingInterestTable_.extractEntriesForExpressedInterest
-      (data.getName(), pendingInterests);
+      (data, pendingInterests);
     // Process each matching PIT entry (if any).
     for (var i = 0; i < pendingInterests.length; ++i) {
       var pendingInterest = pendingInterests[i];
