@@ -616,6 +616,39 @@ Tlv0_1_1WireFormat.get = function()
 };
 
 /**
+ * Encode the name component to the encoder as NDN-TLV. This handles different
+ * component types such as ImplicitSha256DigestComponent.
+ * @param {Name.Component} component The name component to encode.
+ * @param {TlvEncoder} encoder The encoder to receive the encoding.
+ */
+Tlv0_1_1WireFormat.encodeNameComponent = function(component, encoder)
+{
+  var type = component.isImplicitSha256Digest() ?
+      Tlv.ImplicitSha256DigestComponent : Tlv.NameComponent;
+  encoder.writeBlobTlv(type, component.getValue().buf());
+}
+
+/**
+ * Decode the name component as NDN-TLV and return the component. This handles
+ * different component types such as ImplicitSha256DigestComponent.
+ * @param {TlvDecoder} decoder The decoder with the input.
+ * @return {Name.Component} A new Name.Component.
+ */
+Tlv0_1_1WireFormat.decodeNameComponent = function(decoder)
+{
+  var savePosition = decoder.getOffset();
+  var type = decoder.readVarNumber();
+  // Restore the position.
+  decoder.seek(savePosition);
+
+  var value = new Blob(decoder.readBlobTlv(type), true);
+  if (type === Tlv.ImplicitSha256DigestComponent)
+    return Name.Component.fromImplicitSha256Digest(value);
+  else
+    return new Name.Component(value);
+}
+
+/**
  * Encode the name to the encoder.
  * @param {Name} name The name to encode.
  * @param {TlvEncoder} encoder The encoder to receive the encoding.
@@ -634,7 +667,7 @@ Tlv0_1_1WireFormat.encodeName = function(name, encoder)
   // Encode the components backwards.
   var signedPortionEndOffsetFromBack;
   for (var i = name.size() - 1; i >= 0; --i) {
-    encoder.writeBlobTlv(Tlv.NameComponent, name.get(i).getValue().buf());
+    Tlv0_1_1WireFormat.encodeNameComponent(name.get(i), encoder);
     if (i == name.size() - 1)
       signedPortionEndOffsetFromBack = encoder.getLength();
   }
@@ -679,7 +712,7 @@ Tlv0_1_1WireFormat.decodeName = function(name, decoder)
 
   while (decoder.getOffset() < endOffset) {
     signedPortionEndOffset = decoder.getOffset();
-    name.append(decoder.readBlobTlv(Tlv.NameComponent));
+    name.append(Tlv0_1_1WireFormat.decodeNameComponent(decoder));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -757,7 +790,7 @@ Tlv0_1_1WireFormat.encodeExclude = function(exclude, encoder)
     if (entry == Exclude.ANY)
       encoder.writeTypeAndLength(Tlv.Any, 0);
     else
-      encoder.writeBlobTlv(Tlv.NameComponent, entry.getValue().buf());
+      Tlv0_1_1WireFormat.encodeNameComponent(entry, encoder);
   }
 
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
@@ -768,14 +801,14 @@ Tlv0_1_1WireFormat.decodeExclude = function(exclude, decoder)
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
 
   exclude.clear();
-  while (true) {
-    if (decoder.peekType(Tlv.NameComponent, endOffset))
-      exclude.appendComponent(decoder.readBlobTlv(Tlv.NameComponent));
-    else if (decoder.readBooleanTlv(Tlv.Any, endOffset))
+  while (decoder.getOffset() < endOffset) {
+    if (decoder.peekType(Tlv.Any, endOffset)) {
+      // Read past the Any TLV.
+      decoder.readBooleanTlv(Tlv.Any, endOffset);
       exclude.appendAny();
+    }
     else
-      // Else no more entries.
-      break;
+      exclude.appendComponent(Tlv0_1_1WireFormat.decodeNameComponent(decoder));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -922,7 +955,7 @@ Tlv0_1_1WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   if (finalBlockIdBuf != null && finalBlockIdBuf.length > 0) {
     // FinalBlockId has an inner NameComponent.
     var finalBlockIdSaveLength = encoder.getLength();
-    encoder.writeBlobTlv(Tlv.NameComponent, finalBlockIdBuf);
+    Tlv0_1_1WireFormat.encodeNameComponent(metaInfo.getFinalBlockId(), encoder);
     encoder.writeTypeAndLength
       (Tlv.FinalBlockId, encoder.getLength() - finalBlockIdSaveLength);
   }
@@ -972,7 +1005,7 @@ Tlv0_1_1WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockId(decoder.readBlobTlv(Tlv.NameComponent));
+    metaInfo.setFinalBlockId(Tlv0_1_1WireFormat.decodeNameComponent(decoder));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
