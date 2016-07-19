@@ -13,6 +13,7 @@ Changes
   in Interest added matchesData to use it.
 * Examples: Added browser/test-list-faces.html.
 * Unit tests: In test-name-methods, added test ImplicitSha256Digest.
+* Unit tests: In TestInterestMethods, added testMatchesData.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.

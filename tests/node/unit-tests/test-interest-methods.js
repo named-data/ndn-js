@@ -23,6 +23,10 @@ var assert = require("assert");
 var Name = require('../../..').Name;
 var Interest = require('../../..').Interest;
 var Exclude = require('../../..').Exclude;
+var Data = require('../../..').Data;
+var KeyLocator = require('../../..').KeyLocator;
+var Sha256WithRsaSignature = require('../../..').Sha256WithRsaSignature;
+var DigestSha256Signature = require('../../..').DigestSha256Signature;
 var KeyLocatorType = require('../../..').KeyLocatorType;
 var Blob = require('../../..').Blob;
 var MemoryIdentityStorage = require('../../..').MemoryIdentityStorage;
@@ -178,6 +182,21 @@ describe('TestInterestDump', function() {
     assert.deepEqual(initialDump, redecodedDump, 'Re-decoded interest does not match original');
   });
 
+  it('RedecodeImplicitDigestExclude', function() {
+    // Check that we encode and decode correctly with an implicit digest exclude.
+    var interest = new Interest(new Name("/A"));
+    interest.getExclude().appendComponent(new Name("/sha256digest=" +
+      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f").get(0));
+    var dump = dumpInterest(interest);
+
+    var encoding = interest.wireEncode();
+    var reDecodedInterest = new Interest();
+    reDecodedInterest.wireDecode(encoding);
+    var redecodedDump = dumpInterest(reDecodedInterest);
+    assert.ok(interestDumpsEqual(dump, redecodedDump),
+                                 'Re-decoded interest does not match original');
+  });
+
   it('CreateFresh', function() {
     var freshInterest = createFreshInterest();
     var freshDump = dumpInterest(freshInterest);
@@ -269,6 +288,97 @@ describe('TestInterestMethods', function() {
        function() { ++failedCallCount; });
     assert.equal(failedCallCount, 0, 'Signature verification failed');
     assert.equal(verifiedCallCount, 1, 'Verification callback was not used.');
+  });
+
+  it('MatchesData', function() {
+    var interest = new Interest(new Name("/A"));
+    interest.setMinSuffixComponents(2);
+    interest.setMaxSuffixComponents(2);
+    interest.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    interest.getKeyLocator().setKeyName(new Name("/B"));
+    interest.getExclude().appendComponent(new Name.Component("J"));
+    interest.getExclude().appendAny();
+
+    var data = new Data(new Name("/A/D"));
+    var signature = new Sha256WithRsaSignature();
+    signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature.getKeyLocator().setKeyName(new Name("/B"));
+    data.setSignature(signature);
+    assert.equal(interest.matchesData(data), true);
+
+    // Check violating MinSuffixComponents.
+    var data1 = new Data(data);
+    data1.setName(new Name("/A"));
+    assert.equal(interest.matchesData(data1), false);
+
+    var interest1 = new Interest(interest);
+    interest1.setMinSuffixComponents(1);
+    assert.equal(interest1.matchesData(data1), true);
+
+    // Check violating MaxSuffixComponents.
+    var data2 = new Data(data);
+    data2.setName(new Name("/A/E/F"));
+    assert.equal(interest.matchesData(data2), false);
+
+    var interest2 = new Interest(interest);
+    interest2.setMaxSuffixComponents(3);
+    assert.equal(interest2.matchesData(data2), true);
+
+    // Check violating PublisherPublicKeyLocator.
+    var data3 = new Data(data);
+    var signature3 = new Sha256WithRsaSignature();
+    signature3.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    signature3.getKeyLocator().setKeyName(new Name("/G"));
+    data3.setSignature(signature3);
+    assert.equal(interest.matchesData(data3), false);
+
+    var interest3 = new Interest(interest);
+    interest3.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+    interest3.getKeyLocator().setKeyName(new Name("/G"));
+    assert.equal(interest3.matchesData(data3), true);
+
+    var data4 = new Data(data);
+    data4.setSignature(new DigestSha256Signature());
+    assert.equal(interest.matchesData(data4), false);
+
+    var interest4 = new Interest(interest);
+    interest4.setKeyLocator(new KeyLocator());
+    assert.equal(interest4.matchesData(data4), true);
+
+    // Check violating Exclude.
+    var data5 = new Data(data);
+    data5.setName(new Name("/A/J"));
+    assert.equal(interest.matchesData(data5), false);
+
+    var interest5 = new Interest(interest);
+    interest5.getExclude().clear();
+    interest5.getExclude().appendComponent(new Name.Component("K"));
+    interest5.getExclude().appendAny();
+    assert.equal(interest5.matchesData(data5), true);
+
+    // Check violating Name.
+    var data6 = new Data(data);
+    data6.setName(new Name("/H/I"));
+    assert.equal(interest.matchesData(data6), false);
+
+    var data7 = new Data(data);
+    data7.setName(new Name("/A/B"));
+
+    var interest7 = new Interest
+      (new Name("/A/B/sha256digest=" +
+                "54008e240a7eea2714a161dfddf0dd6ced223b3856e9da96792151e180f3b128"));
+    assert.equal(interest7.matchesData(data7), true);
+
+    // Check violating the implicit digest.
+    var interest7b = new Interest
+      (new Name("/A/B/%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00" +
+                     "%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00"));
+    assert.equal(interest7b.matchesData(data7), false);
+
+    // Check excluding the implicit digest.
+    var interest8 = new Interest(new Name("/A/B"));
+    interest8.getExclude().appendComponent(interest7.getName().get(2));
+    assert.equal(interest8.matchesData(data7), false);
   });
 
   it('InterestFilterMatching', function() {
