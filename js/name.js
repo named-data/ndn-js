@@ -22,6 +22,7 @@
 var Blob = require('./util/blob.js').Blob; /** @ignore */
 var DataUtils = require('./encoding/data-utils.js').DataUtils; /** @ignore */
 var LOG = require('./log.js').Log.LOG;
+var DecodingException = require('./encoding/decoding-exception.js').DecodingException;
 
 /**
  * Create a new Name from components.
@@ -57,15 +58,21 @@ var Name = function Name(components)
 exports.Name = Name;
 
 /**
- * Create a new Name.Component with a copy of the given value.
+ * Create a new GENERIC Name.Component with a copy of the given value.
+ * (To create an ImplicitSha256Digest component, use fromImplicitSha256Digest.)
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer} value If the value is a string, encode it as utf8 (but don't unescape).
  * @constructor
  */
 Name.Component = function NameComponent(value)
 {
-  if (typeof value === 'object' && value instanceof Name.Component)
+  if (typeof value === 'object' && value instanceof Name.Component) {
+    // The copy constructor.
     this.value_ = value.value_;
-  else if (!value)
+    this.type_ = value.type_;
+    return;
+  }
+
+  if (!value)
     this.value_ = new Blob([]);
   else if (typeof value === 'object' && typeof ArrayBuffer !== 'undefined' &&
            value instanceof ArrayBuffer)
@@ -77,6 +84,17 @@ Name.Component = function NameComponent(value)
   else
     // Blob will make a copy if needed.
     this.value_ = new Blob(value);
+
+  this.type_ = Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * A Name.Component.ComponentType specifies the recognized types of a name
+ * component.
+ */
+Name.Component.ComponentType = {
+  IMPLICIT_SHA256_DIGEST: 1,
+  GENERIC: 8
 };
 
 /**
@@ -107,11 +125,15 @@ Object.defineProperty(Name.Component.prototype, "value",
 /**
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
+ * This adds a type code prefix as needed, such as "sha256digest=".
  * @returns {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
-  return Name.toEscapedString(this.value_.buf());
+  if (this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST)
+    return "sha256digest=" + this.value_.toHex();
+  else
+    return Name.toEscapedString(this.value_.buf());
 };
 
 /**
@@ -122,7 +144,8 @@ Name.Component.prototype.toEscapedString = function()
  */
 Name.Component.prototype.isSegment = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0x00 &&
+         this.isGeneric();
 };
 
 /**
@@ -133,7 +156,8 @@ Name.Component.prototype.isSegment = function()
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFB &&
+         this.isGeneric();
 };
 
 /**
@@ -144,7 +168,8 @@ Name.Component.prototype.isSegmentOffset = function()
  */
 Name.Component.prototype.isVersion = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFD &&
+         this.isGeneric();
 };
 
 /**
@@ -155,7 +180,8 @@ Name.Component.prototype.isVersion = function()
  */
 Name.Component.prototype.isTimestamp = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFC &&
+         this.isGeneric();
 };
 
 /**
@@ -166,7 +192,26 @@ Name.Component.prototype.isTimestamp = function()
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
-  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE;
+  return this.value_.size() >= 1 && this.value_.buf()[0] == 0xFE &&
+         this.isGeneric();
+};
+
+/**
+ * Check if this component is a generic component.
+ * @returns {boolean} True if this is an generic component.
+ */
+Name.Component.prototype.isGeneric = function()
+{
+  return this.type_ === Name.Component.ComponentType.GENERIC;
+};
+
+/**
+ * Check if this component is an ImplicitSha256Digest component.
+ * @returns {boolean} True if this is an ImplicitSha256Digest component.
+ */
+Name.Component.prototype.isImplicitSha256Digest = function()
+{
+  return this.type_ === Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
 };
 
 /**
@@ -348,6 +393,26 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
 };
 
 /**
+ * Create a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @returns {Name.Component} The new Component.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.Component.fromImplicitSha256Digest = function(digest)
+{
+  digestBlob = typeof digest === 'object' && digest instanceof Blob ?
+    digest : new Blob(digest, true);
+  if (digestBlob.size() !== 32)
+    throw new DecodingException
+      ("Name.Component.fromImplicitSha256Digest: The digest length must be 32 bytes");
+
+  var result = new Name.Component(digestBlob);
+  result.type_ = Name.Component.ComponentType.IMPLICIT_SHA256_DIGEST;
+  return result;
+};
+
+/**
  * Get the successor of this component, as described in Name.getSuccessor.
  * @returns {Name.Component} A new Name.Component which is the successor of this.
  */
@@ -386,7 +451,7 @@ Name.Component.prototype.getSuccessor = function()
 Name.Component.prototype.equals = function(other)
 {
   return typeof other === 'object' && other instanceof Name.Component &&
-    this.value_.equals(other.value_);
+    this.value_.equals(other.value_) && this.type_ === other.type_;
 };
 
 /**
@@ -400,6 +465,11 @@ Name.Component.prototype.equals = function(other)
  */
 Name.Component.prototype.compare = function(other)
 {
+  if (this.type_ < other.type_)
+    return -1;
+  if (this.type_ > other.type_)
+    return 1;
+
   return Name.Component.compareBuffers(this.value_.buf(), other.value_.buf());
 };
 
@@ -470,17 +540,25 @@ Name.createNameArray = function(uri)
   var array = uri.split('/');
 
   // Unescape the components.
+  var sha256digestPrefix = "sha256digest=";
   for (var i = 0; i < array.length; ++i) {
-    var value = Name.fromEscapedString(array[i]);
+    var component;
+    if (array[i].substr(0, sha256digestPrefix.length) == sha256digestPrefix) {
+      var hexString = array[i].substr(sha256digestPrefix.length).trim();
+      component = Name.Component.fromImplicitSha256Digest
+        (new Blob(new Buffer(hexString, 'hex')), false);
+    }
+    else
+      component = new Name.Component(Name.fromEscapedString(array[i]));
 
-    if (value.isNull()) {
+    if (component.getValue().isNull()) {
       // Ignore the illegal componenent.  This also gets rid of a trailing '/'.
       array.splice(i, 1);
       --i;
       continue;
     }
     else
-      array[i] = new Name.Component(value);
+      array[i] = component;
   }
 
   return array;
@@ -498,7 +576,7 @@ Name.prototype.set = function(uri)
 };
 
 /**
- * Convert the component to a Buffer and append to this Name.
+ * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
  * @returns {Name}
@@ -516,6 +594,9 @@ Name.prototype.append = function(component)
     for (var i = 0; i < components.length; ++i)
       this.components.push(new Name.Component(components[i]));
   }
+  else if (typeof component === 'object' && component instanceof Name.Component)
+    // The Component is immutalbe, so use it as is.
+    this.components.push(component);
   else
     // Just use the Name.Component constructor.
     this.components.push(new Name.Component(component));
@@ -632,6 +713,18 @@ Name.prototype.appendTimestamp = function(timestamp)
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
   return this.append(Name.Component.fromSequenceNumber(sequenceNumber));
+};
+
+/**
+ * Append a component of type ImplicitSha256DigestComponent, so that
+ * isImplicitSha256Digest() is true.
+ * @param {Blob|Buffer} digest The SHA-256 digest value.
+ * @returns This name so that you can chain calls to append.
+ * @throws DecodingException If the digest length is not 32 bytes.
+ */
+Name.prototype.appendImplicitSha256Digest = function(digest)
+{
+  return this.append(Name.Component.fromImplicitSha256Digest(digest));
 };
 
 /**
@@ -941,7 +1034,9 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
 
 /**
  * Return value as an escaped string according to NDN URI Scheme.
- * We can't use encodeURIComponent because that doesn't encode all the characters we want to.
+ * We can't use encodeURIComponent because that doesn't encode all the 
+ * characters we want to.
+ * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
  * @returns {string} The escaped string.
  */
@@ -983,7 +1078,9 @@ Name.toEscapedString = function(value)
 
 /**
  * Make a blob value by decoding the escapedString according to NDN URI Scheme.
- * If escapedString is "", "." or ".." then return null, which means to skip the component in the name.
+ * If escapedString is "", "." or ".." then return null, which means to skip the 
+ * component in the name.
+ * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
  * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
