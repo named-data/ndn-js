@@ -36,6 +36,19 @@ var TEST_NAME = new Buffer([
         0x70,  0x72,  0x65,  0x66,  0x69,  0x78
 ]);
 
+var TEST_NAME_IMPLICIT_DIGEST = new Buffer([
+  0x7,  0x36, // Name
+    0x8,  0x5, // NameComponent
+        0x6c,  0x6f,  0x63,  0x61,  0x6c,
+    0x8,  0x3, // NameComponent
+        0x6e,  0x64,  0x6e,
+    0x8,  0x6, // NameComponent
+        0x70,  0x72,  0x65,  0x66,  0x69,  0x78,
+    0x01, 0x20, // ImplicitSha256DigestComponent
+      0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+]);
+
 var expectedURI;
 var comp2;
 
@@ -223,5 +236,93 @@ describe('TestNameMethods', function() {
     var decodedName = new Name();
     decodedName.wireDecode(new Blob(TEST_NAME), TlvWireFormat.get());
     assert.ok(decodedName.equals(name));
+
+    // Test ImplicitSha256Digest.
+    var name2 = new Name
+      ("/local/ndn/prefix/sha256digest=" +
+       "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+
+    var encoding2 = name2.wireEncode(TlvWireFormat.get());
+    assert.ok(encoding2.equals(new Blob(TEST_NAME_IMPLICIT_DIGEST)));
+
+    var decodedName2 = new Name();
+    decodedName2.wireDecode(new Blob(TEST_NAME_IMPLICIT_DIGEST), TlvWireFormat.get());
+    assert.ok(decodedName2.equals(name2));
+});
+
+  it('ImplicitSha256Digest', function() {
+    var name = new Name();
+
+    var digest = new Buffer([
+      0x28, 0xba, 0xd4, 0xb5, 0x27, 0x5b, 0xd3, 0x92,
+      0xdb, 0xb6, 0x70, 0xc7, 0x5c, 0xf0, 0xb6, 0x6f,
+      0x13, 0xf7, 0x94, 0x2b, 0x21, 0xe8, 0x0f, 0x55,
+      0xc0, 0xe8, 0x6b, 0x37, 0x47, 0x53, 0xa5, 0x48,
+      0x00, 0x00
+    ]);
+
+    name.appendImplicitSha256Digest(digest.slice(0, 32));
+    name.appendImplicitSha256Digest(digest.slice(0, 32));
+    assert.ok(name.get(0).equals(name.get(1)));
+
+    var gotError = true;
+    try {
+      name.appendImplicitSha256Digest(digest.slice(0, 34));
+      gotError = false;
+    } catch (ex) {}
+    if (!gotError)
+      assert.fail("Expected error in appendImplicitSha256Digest");
+
+    var gotError = true;
+    try {
+      name.appendImplicitSha256Digest(digest.slice(0, 30));
+      gotError = false;
+    } catch (ex) {}
+    if (!gotError)
+      assert.fail("Expected error in appendImplicitSha256Digest");
+
+    // Add name.get(2) as a generic component.
+    name.append(digest.slice(0, 32), true);
+    assert.ok(name.get(0).compare(name.get(2)) < 0);
+    assert.ok(name.get(0).getValue().equals(name.get(2).getValue()));
+
+    // Add name.get(3) as a generic component whose first byte is greater.
+    name.append(digest.slice(1, 32), true);
+    assert.ok(name.get(0).compare(name.get(3)) < 0);
+
+    assert.equal
+      (name.get(0).toEscapedString(),
+       "sha256digest=" +
+       "28bad4b5275bd392dbb670c75cf0b66f13f7942b21e80f55c0e86b374753a548");
+
+    assert.equal(name.get(0).isImplicitSha256Digest(), true);
+    assert.equal(name.get(2).isImplicitSha256Digest(), false);
+
+    gotError = true;
+    try {
+      new Name("/hello/sha256digest=hmm");
+      gotError = false;
+    } catch (ex) {}
+    if (!gotError)
+      assert.fail("Expected error in new Name from URI");
+
+    // Check canonical URI encoding (lower case).
+    var name2 = new Name
+      ("/hello/sha256digest=" +
+       "28bad4b5275bd392dbb670c75cf0b66f13f7942b21e80f55c0e86b374753a548");
+    assert.ok(name.get(0).equals(name2.get(1)));
+
+    // Check that it will accept a hex value in upper case too.
+    name2 = new Name
+      ("/hello/sha256digest=" +
+       "28BAD4B5275BD392DBB670C75CF0B66F13F7942B21E80F55C0E86B374753A548");
+    assert.ok(name.get(0).equals(name2.get(1)));
+
+    // This is not a valid sha256digest component. It should be treated as generic.
+    name2 = new Name
+      ("/hello/SHA256DIGEST=" +
+       "28BAD4B5275BD392DBB670C75CF0B66F13F7942B21E80F55C0E86B374753A548");
+    assert.ok(!name.get(0).equals(name2.get(1)));
+    assert.ok(name2.get(1).isGeneric());
   });
 });

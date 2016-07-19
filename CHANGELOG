@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-07-01)
+Interim changes since NDN-JS v0.11 (2016-07-19)
 -----------------------------------------------
 
 Changes
@@ -6,7 +6,11 @@ Changes
   to allow unrecognized content type codes in the packet.
 * In FilePrivateKeyStorage.generateKeyPair, update mapping.txt for the generated key.
 * Added NdnCommon.checkIndexedDb to check for Indexed DB support.
+* Added support for the Name component type ImplicitSha256Digest, and methods:
+  Name.Component.fromImplicitSha256Digest, isGeneric and isImplicitSha256Digest.
+  Name.appendImplicitSha256Digest.
 * Examples: Added browser/test-list-faces.html.
+* Unit tests: In test-name-methods, added test ImplicitSha256Digest.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.
