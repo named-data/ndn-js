@@ -123,12 +123,10 @@ Exclude.prototype.toUri = function()
 /**
  * Return true if the component matches any of the exclude criteria.
  */
-Exclude.prototype.matches = function(/*Buffer*/ component)
+Exclude.prototype.matches = function(component)
 {
-  if (typeof component == 'object' && component instanceof Name.Component)
-    component = component.getValue().buf();
-  else if (typeof component === 'object' && component instanceof Blob)
-    component = component.buf();
+  if (!(typeof component == 'object' && component instanceof Name.Component))
+    component = new Name.Component(component);
 
   for (var i = 0; i < this.values.length; ++i) {
     if (this.values[i] == Exclude.ANY) {
@@ -150,12 +148,12 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       // If upperBound != null, we will check component equals upperBound on the next pass.
       if (upperBound != null) {
         if (lowerBound != null) {
-          if (Exclude.compareComponents(component, lowerBound) > 0 &&
-              Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(lowerBound) > 0 &&
+              component.compare(upperBound) < 0)
             return true;
         }
         else {
-          if (Exclude.compareComponents(component, upperBound) < 0)
+          if (component.compare(upperBound) < 0)
             return true;
         }
 
@@ -164,7 +162,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
       else {
         if (lowerBound != null) {
-            if (Exclude.compareComponents(component, lowerBound) > 0)
+            if (component.compare(lowerBound) > 0)
               return true;
         }
         else
@@ -173,7 +171,7 @@ Exclude.prototype.matches = function(/*Buffer*/ component)
       }
     }
     else {
-      if (DataUtils.arraysEqual(component, this.values[i].getValue().buf()))
+      if (component.equals(this.values[i]))
         return true;
     }
   }
