@@ -20,6 +20,7 @@
  */
 
 var assert = require("assert");
+var Crypto = require("crypto");
 var Data = require('../../..').Data;
 var Name = require('../../..').Name;
 var Blob = require('../../..').Blob;
@@ -436,5 +437,31 @@ describe('TestDataMethods', function() {
     if (!gotError)
       assert.fail('', '',
         "Expected encoding error for experimentalSignatureInfoBadTlv");
+  });
+
+  it('FullName', function() {
+    var data = new Data();
+    data.wireDecode(codedData);
+
+    // Check the full name format.
+    assert.equal(data.getFullName().size(), data.getName().size() + 1);
+    assert.ok(data.getName().equals(data.getFullName().getPrefix(-1)));
+    assert.equal(data.getFullName().get(-1).getValue().size(), 32);
+
+    // Check the independent digest calculation.
+    var hash = Crypto.createHash('sha256');
+    hash.update(codedData);
+    var newDigest = new Blob(hash.digest(), false);
+    assert.ok(newDigest.equals(data.getFullName().get(-1).getValue()));
+
+    // Check the expected URI.
+    assert.equal
+      (data.getFullName().toUri(), "/ndn/abc/sha256digest=" +
+         "96556d685dcb1af04be4ae57f0e7223457d4055ea9b3d07c0d337bef4a8b3ee9");
+
+    // Changing the Data packet should change the full name.
+    var saveFullName = new Name(data.getFullName());
+    data.setContent(new Blob());
+    assert.ok(!data.getFullName().get(-1).equals(saveFullName.get(-1)));
   });
 });
