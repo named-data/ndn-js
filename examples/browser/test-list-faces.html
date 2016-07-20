@@ -43,7 +43,7 @@ function testListFaces()
   var result = document.getElementById('result');
   result.innerHTML = "";
 
-  // Connect to the local forwarder with a Unix socket.
+  // Connect to the local forwarder with a WebSocket.
   var face = new Face({host: "localhost"});
 
   var interest = new Interest(new Name("/localhost/nfd/faces/list"));
