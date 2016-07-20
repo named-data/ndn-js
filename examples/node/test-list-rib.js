@@ -71,8 +71,7 @@ function printRibEntries(encodedMessage)
     var ribEntry = ribEntryMessage.rib_entry[iRibEntry];
 
     var line = "";
-    for (var i = 0; i < ribEntry.name.component.length; ++i)
-      line += "/" + ribEntry.name.component[i].toString("utf8");
+    line += ProtobufTlv.toName(ribEntry.name.component).toUri();
 
     // Show the routes.
     for (var i = 0; i < ribEntry.routes.length; ++i) {
