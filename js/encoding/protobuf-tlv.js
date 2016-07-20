@@ -20,7 +20,8 @@
 /** @ignore */
 var TlvEncoder = require('./tlv/tlv-encoder.js').TlvEncoder; /** @ignore */
 var TlvDecoder = require('./tlv/tlv-decoder.js').TlvDecoder; /** @ignore */
-var Blob = require('../util/blob.js').Blob;
+var Blob = require('../util/blob.js').Blob; /** @ignore */
+var Name = require('../name.js').Name; /** @ignore */
 
 /**
  * ProtobufTlv has static methods to encode and decode an Protobuf Message o
@@ -221,4 +222,24 @@ ProtobufTlv._decodeFieldValue = function(field, tlvType, decoder, endOffset)
     return decoder.readBooleanTlv(tlvType, endOffset);
   else
     throw new Error("ProtobufTlv.decode: Unknown field type");
+};
+
+/**
+ * Return a Name made from the component array in a Protobuf message object,
+ * assuming that it was defined with "repeated bytes". For example:
+ * message Name {
+ *   repeated bytes component = 8;
+ * }
+ * @param {Array} componentArray The array from the Protobuf message object
+ * representing the "repeated bytes" component array.
+ * @return A new Name.
+ */
+ProtobufTlv.toName = function(componentArray)
+{
+  var name = new Name();
+  for (var i = 0; i < componentArray.length; ++i)
+    name.append
+      (new Blob(new Buffer(componentArray[i].toBinary(), "binary")), false);
+
+  return name;
 };

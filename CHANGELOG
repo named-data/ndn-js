@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-07-19)
+Interim changes since NDN-JS v0.11 (2016-07-20)
 -----------------------------------------------
 
 Changes
@@ -11,6 +11,7 @@ Changes
   Name.appendImplicitSha256Digest.
 * https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
   in Interest added matchesData to use it.
+* In ProtobufTlv, added utility method toName.
 * Examples: Added browser/test-list-faces.html.
 * Unit tests: In test-name-methods, added test ImplicitSha256Digest.
 * Unit tests: In TestInterestMethods, added testMatchesData.
