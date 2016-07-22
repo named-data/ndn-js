@@ -52,7 +52,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
-    this.defaultfullName_ = data.defaultfullName_;
+    this.defaultFullName_ = data.defaultFullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -83,7 +83,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
-    this.defaultfullName_ = new Name();
+    this.defaultFullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -193,11 +193,11 @@ Data.prototype.getFullName = function(wireFormat)
 
   // The default full name depends on the default wire encoding.
   if (!this.getDefaultWireEncoding().isNull() &&
-      this.defaultfullName_.size() > 0 &&
+      this.defaultFullName_.size() > 0 &&
       this.getDefaultWireEncodingFormat() == wireFormat)
     // We already have a full name. A non-null default wire encoding means
     // that the Data packet fields have not changed.
-    return this.defaultfullName_;
+    return this.defaultFullName_;
 
   var fullName = new Name(this.getName());
   var hash = Crypto.createHash('sha256');
@@ -207,7 +207,7 @@ Data.prototype.getFullName = function(wireFormat)
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // wireEncode has already set defaultWireEncodingFormat_.
-    this.defaultfullName_ = fullName;
+    this.defaultFullName_ = fullName;
 
   return fullName;
 };
