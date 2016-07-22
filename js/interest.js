@@ -153,7 +153,7 @@ Interest.prototype.matches_name = function(/*Name*/ name)
  * PublisherPublicKeyLocator, and Exclude. It does not consider the
  * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
  * Data packet encoding for the full Name.
- * @param {Data} data
+ * @param {Data} data The Data packet to check.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the Data packet to get its full Name. If omitted, use
  * WireFormat.getDefaultWireFormat().
@@ -193,7 +193,7 @@ Interest.prototype.matchesData = function(data, wireFormat)
       return false;
   }
   else {
-    // The Interest Name should be a strict prefix of the Data full Name,
+    // The Interest Name should be a strict prefix of the Data full Name.
     if (!this.getName().isPrefixOf(dataName))
       return false;
   }
