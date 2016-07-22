@@ -1,4 +1,4 @@
-Interim changes since NDN-JS v0.11 (2016-07-20)
+Interim changes since NDN-JS v0.11 (2016-07-22)
 -----------------------------------------------
 
 Changes
@@ -12,11 +12,13 @@ Changes
 * https://redmine.named-data.net/issues/3447 In Data, added getFullName, and
   in Interest added matchesData to use it.
 * In ProtobufTlv, added utility method toName.
+* https://redmine.named-data.net/issues/3675 In Name.get, don't copy the
+  returned component (for efficiency).
 * Examples: In test-encode-decode-fib-entry, etc, use ProtobufTlv.toName.
 * Examples: Added browser/test-list-faces.html.
 * Unit tests: In test-name-methods, added test ImplicitSha256Digest.
-* Unit tests: In TestInterestMethods, added testMatchesData.
-* Unit tests: In TestDataMethods, added testFullName.
+* Unit tests: In test-interest-methods, added test MatchesData.
+* Unit tests: In test-data-methods, added test FullName.
 
 Bug fixes
 * http://redmine.named-data.net/issues/3616 Respect tpm= setting in client.conf.

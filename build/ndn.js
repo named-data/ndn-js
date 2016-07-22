@@ -15158,7 +15158,7 @@ Name.prototype.append = function(component)
       this.components.push(new Name.Component(components[i]));
   }
   else if (typeof component === 'object' && component instanceof Name.Component)
-    // The Component is immutalbe, so use it as is.
+    // The Component is immutable, so use it as is.
     this.components.push(component);
   else
     // Just use the Name.Component constructor.
@@ -15360,7 +15360,8 @@ Name.prototype.size = function()
  * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
- * @returns {Name.Component}
+ * @return {Name.Component} The name component at the index. You must not
+ * change the Name.Component. object - if you need to change it then make a copy.
  */
 Name.prototype.get = function(i)
 {
@@ -15368,14 +15369,14 @@ Name.prototype.get = function(i)
     if (i >= this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[i]);
+    return this.components[i];
   }
   else {
     // Negative index.
     if (i < -this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[this.components.length - (-i)]);
+    return this.components[this.components.length - (-i)];
   }
 };
 
@@ -16784,7 +16785,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     this.signature_ = new ChangeCounter(data.getSignature().clone());
     this.content_ = data.content_;
     this.defaultWireEncoding_ = data.getDefaultWireEncoding();
-    this.defaultfullName_ = data.defaultfullName_;
+    this.defaultFullName_ = data.defaultFullName_;
     this.defaultWireEncodingFormat_ = data.defaultWireEncodingFormat_;
   }
   else {
@@ -16815,7 +16816,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
 
     this.signature_ = new ChangeCounter(new Sha256WithRsaSignature());
     this.defaultWireEncoding_ = new SignedBlob();
-    this.defaultfullName_ = new Name();
+    this.defaultFullName_ = new Name();
     this.defaultWireEncodingFormat_ = null;
   }
 
@@ -16925,11 +16926,11 @@ Data.prototype.getFullName = function(wireFormat)
 
   // The default full name depends on the default wire encoding.
   if (!this.getDefaultWireEncoding().isNull() &&
-      this.defaultfullName_.size() > 0 &&
+      this.defaultFullName_.size() > 0 &&
       this.getDefaultWireEncodingFormat() == wireFormat)
     // We already have a full name. A non-null default wire encoding means
     // that the Data packet fields have not changed.
-    return this.defaultfullName_;
+    return this.defaultFullName_;
 
   var fullName = new Name(this.getName());
   var hash = Crypto.createHash('sha256');
@@ -16939,7 +16940,7 @@ Data.prototype.getFullName = function(wireFormat)
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // wireEncode has already set defaultWireEncodingFormat_.
-    this.defaultfullName_ = fullName;
+    this.defaultFullName_ = fullName;
 
   return fullName;
 };
@@ -25405,7 +25406,7 @@ Interest.prototype.matches_name = function(/*Name*/ name)
  * PublisherPublicKeyLocator, and Exclude. It does not consider the
  * ChildSelector or MustBeFresh. This uses the given wireFormat to get the
  * Data packet encoding for the full Name.
- * @param {Data} data
+ * @param {Data} data The Data packet to check.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the Data packet to get its full Name. If omitted, use
  * WireFormat.getDefaultWireFormat().
@@ -25445,7 +25446,7 @@ Interest.prototype.matchesData = function(data, wireFormat)
       return false;
   }
   else {
-    // The Interest Name should be a strict prefix of the Data full Name,
+    // The Interest Name should be a strict prefix of the Data full Name.
     if (!this.getName().isPrefixOf(dataName))
       return false;
   }
