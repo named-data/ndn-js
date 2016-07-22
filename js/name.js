@@ -797,7 +797,8 @@ Name.prototype.size = function()
  * Get a Name Component by index number.
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
- * @returns {Name.Component}
+ * @return {Name.Component} The name component at the index. You must not
+ * change the returned Name.Component object.
  */
 Name.prototype.get = function(i)
 {
@@ -805,14 +806,14 @@ Name.prototype.get = function(i)
     if (i >= this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[i]);
+    return this.components[i];
   }
   else {
     // Negative index.
     if (i < -this.components.length)
       throw new Error("Name.get: Index is out of bounds");
 
-    return new Name.Component(this.components[this.components.length - (-i)]);
+    return this.components[this.components.length - (-i)];
   }
 };
 
