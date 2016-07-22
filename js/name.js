@@ -595,7 +595,7 @@ Name.prototype.append = function(component)
       this.components.push(new Name.Component(components[i]));
   }
   else if (typeof component === 'object' && component instanceof Name.Component)
-    // The Component is immutalbe, so use it as is.
+    // The Component is immutable, so use it as is.
     this.components.push(component);
   else
     // Just use the Name.Component constructor.
