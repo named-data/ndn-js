@@ -134,7 +134,7 @@ Tlv.Encrypt_Schedule = 143;
  * (This could be a general function, but we define it here so that the
  * Tlv encoder/decoder is self-contained.)
  * @param {number} x
- * @returns {number}
+ * @return {number}
  */
 Tlv.getHighBytes = function(x)
 {

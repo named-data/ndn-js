@@ -43,7 +43,7 @@ Tlv0_1_1WireFormat.instance = null;
 
 /**
  * Get a singleton instance of a Tlv0_1_1WireFormat.
- * @returns {Tlv0_1_1WireFormat} The singleton instance.
+ * @return {Tlv0_1_1WireFormat} The singleton instance.
  */
 Tlv0_1_1WireFormat.get = function()
 {

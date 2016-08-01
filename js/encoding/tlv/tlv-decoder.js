@@ -35,7 +35,7 @@ exports.TlvDecoder = TlvDecoder;
 
 /**
  * Decode VAR-NUMBER in NDN-TLV and return it. Update offset.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readVarNumber = function()
 {
@@ -53,7 +53,7 @@ TlvDecoder.prototype.readVarNumber = function()
  * which is >= 253.
  * @param {number} firstOctet The first octet which is >= 253, used to decode
  * the remaining bytes.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
@@ -96,7 +96,7 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
  * sure the decoded length does not exceed the number of bytes remaining in the
  * input.
  * @param {number} expectedType The expected type.
- * @returns {number} The length of the TLV.
+ * @return {number} The length of the TLV.
  * @throws DecodingException if (did not get the expected TLV type or the TLV length
  * exceeds the buffer length.
  */
@@ -120,7 +120,7 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
  * of the end of this parent TLV, which is used in decoding optional nested
  * TLVs. After reading all nested TLVs, call finishNestedTlvs.
  * @param {number} expectedType The expected type.
- * @returns {number} The offset of the end of the parent TLV.
+ * @return {number} The offset of the end of the parent TLV.
  * @throws DecodingException if did not get the expected TLV type or the TLV
  * length exceeds the buffer length.
  */
@@ -169,7 +169,7 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true if the type of the next TLV is the expectedType,
+ * @return {boolean} true if the type of the next TLV is the expectedType,
  *  otherwise false.
  */
 TlvDecoder.prototype.peekType = function(expectedType, endOffset)
@@ -191,7 +191,7 @@ TlvDecoder.prototype.peekType = function(expectedType, endOffset)
  * Decode a non-negative integer in NDN-TLV and return it. Update offset by
  * length.
  * @param {number} length The number of bytes in the encoded integer.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if length is an invalid length for a TLV
  * non-negative integer.
  */
@@ -233,7 +233,7 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
  * the type to be expectedType. Then decode a non-negative integer in NDN-TLV
  * and return it.  Update offset.
  * @param {number} expectedType The expected type.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if did not get the expected TLV type or can't
  * decode the value.
  */
@@ -251,7 +251,7 @@ TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {number} The integer or null if the next TLV doesn't have the
+ * @return {number} The integer or null if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
@@ -268,7 +268,7 @@ TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
  * the type to be expectedType. Then return an array of the bytes in the value.
  * Update offset.
  * @param {number} expectedType The expected type.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  * @throws DecodingException if did not get the expected TLV type.
@@ -291,7 +291,7 @@ TlvDecoder.prototype.readBlobTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {Buffer} The bytes in the value as a slice on the buffer or null if
+ * @return {Buffer} The bytes in the value as a slice on the buffer or null if
  * the next TLV doesn't have the expected type.  This is not a copy of the bytes
  * in the input buffer.  If you need a copy, then you must make a copy of the
  * return value.
@@ -312,7 +312,7 @@ TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true, or else false if the next TLV doesn't have the
+ * @return {boolean} true, or else false if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
@@ -329,7 +329,7 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
 
 /**
  * Get the offset into the input, used for the next read.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvDecoder.prototype.getOffset = function()
 {
@@ -350,7 +350,7 @@ TlvDecoder.prototype.seek = function(offset)
  * @param {number} beginOffset The offset in the input of the beginning of the
  * slice.
  * @param {number} endOffset The offset in the input of the end of the slice.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  */

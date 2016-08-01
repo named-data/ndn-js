@@ -38,7 +38,7 @@ exports.NdnRegexMatcher = NdnRegexMatcher;
  * Determine if the provided NDN regex matches the given Name.
  * @param {string} pattern The NDN regex.
  * @param {Name} name The Name to match against the regex.
- * @returns {Object} The match object from String.match, or null if the pattern
+ * @return {Object} The match object from String.match, or null if the pattern
  * does not match.
  */
 NdnRegexMatcher.match = function(pattern, name)

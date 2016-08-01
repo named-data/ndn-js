@@ -56,20 +56,20 @@ Exclude.ANY = "*";
 
 /**
  * Get the number of entries.
- * @returns {number} The number of entries.
+ * @return {number} The number of entries.
  */
 Exclude.prototype.size = function() { return this.values.length; };
 
 /**
  * Get the entry at the given index.
  * @param {number} i The index of the entry, starting from 0.
- * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ * @return {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
  */
 Exclude.prototype.get = function(i) { return this.values[i]; };
 
 /**
  * Append an Exclude.ANY element.
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendAny = function()
 {
@@ -81,7 +81,7 @@ Exclude.prototype.appendAny = function()
 /**
  * Append a component entry, copying from component.
  * @param {Name.Component|Buffer} component
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendComponent = function(component)
 {
@@ -195,7 +195,7 @@ Exclude.compareComponents = function(component1, component2)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Exclude.prototype.getChangeCount = function()
 {

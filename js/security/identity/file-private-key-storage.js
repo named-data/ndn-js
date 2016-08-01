@@ -212,7 +212,7 @@ FilePrivateKeyStorage.prototype.signPromise = function
  * A private method to get the private key.
  * @param {Name} keyName The name of private key.
  * @param {Array<KeyType>} keyType Set keyType[0] to the KeyType.
- * @returns {string} The PEM-encoded private key for use by the crypto module.
+ * @return {string} The PEM-encoded private key for use by the crypto module.
  */
 FilePrivateKeyStorage.prototype.getPrivateKey = function(keyName, keyType)
 {
@@ -288,7 +288,7 @@ FilePrivateKeyStorage.prototype.read = function(keyName, keyClass){
 
 /**
  * Retrieve the user's current home directory
- * @returns {string} path to the user's home directory
+ * @return {string} path to the user's home directory
  */
 FilePrivateKeyStorage.getUserHomePath = function() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;

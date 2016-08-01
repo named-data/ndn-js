@@ -73,7 +73,7 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * {
  *   maxInterestLifetime: 16000 // milliseconds
  * }
- * @returns {function} The onTimeout callback to pass to expressInterest.
+ * @return {function} The onTimeout callback to pass to expressInterest.
  */
 ExponentialReExpress.makeOnTimeout = function(face, onData, onTimeout, settings)
 {

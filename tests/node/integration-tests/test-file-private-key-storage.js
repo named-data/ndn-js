@@ -29,7 +29,7 @@ var FilePrivateKeyStorage = require('../../..').FilePrivateKeyStorage;
 
 /**
  * Retrieve the user's current home directory. (Copy code from file-private-key-storage.js.)
- * @returns {string} path to the user's home directory
+ * @return {string} path to the user's home directory
  */
 function getUserHomePath() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;

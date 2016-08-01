@@ -307,7 +307,7 @@ SegmentFetcher.prototype.onTimeout = function(interest)
 /**
  * Check if the last component in the name is a segment number.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name ends with a segment number, otherwise false.
+ * @return {boolean} True if the name ends with a segment number, otherwise false.
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {

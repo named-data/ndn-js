@@ -62,7 +62,7 @@ exports.SelfVerifyPolicyManager = SelfVerifyPolicyManager;
  * Never skip verification.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -73,7 +73,7 @@ SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Always return true to use the self-verification rule for the received data.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -100,7 +100,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -167,7 +167,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -180,7 +180,7 @@ SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {

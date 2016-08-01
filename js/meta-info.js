@@ -80,7 +80,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType. If this is
+ * @return {number} The content type as an int from ContentType. If this is
  * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
  * content type code.
  */
@@ -102,7 +102,7 @@ MetaInfo.prototype.getOtherTypeCode = function()
 
 /**
  * Get the freshness period.
- * @returns {number} The freshness period in milliseconds, or null if not
+ * @return {number} The freshness period in milliseconds, or null if not
  * specified.
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
@@ -112,7 +112,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Name.Component} The final block ID as a Name.Component. If the
+ * @return {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockId = function()
@@ -191,7 +191,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 MetaInfo.prototype.getChangeCount = function()
 {

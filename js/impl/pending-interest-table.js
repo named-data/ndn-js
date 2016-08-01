@@ -54,7 +54,7 @@ PendingInterestTable.Entry = function PendingInterestTableEntry
 
 /**
  * Get the pendingInterestId given to the constructor.
- * @returns {number} The pendingInterestId.
+ * @return {number} The pendingInterestId.
  */
 PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 {
@@ -63,7 +63,7 @@ PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 
 /**
  * Get the interest given to the constructor (from Face.expressInterest).
- * @returns {Interest} The interest. NOTE: You must not change the interest
+ * @return {Interest} The interest. NOTE: You must not change the interest
  * object - if you need to change it then make a copy.
  */
 PendingInterestTable.Entry.prototype.getInterest = function()
@@ -73,7 +73,7 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 
 /**
  * Get the OnData callback given to the constructor.
- * @returns {function} The OnData callback.
+ * @return {function} The OnData callback.
  */
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
@@ -82,7 +82,7 @@ PendingInterestTable.Entry.prototype.getOnData = function()
 
 /**
  * Get the OnNetworkNack callback given to the constructor.
- * @returns {function} The OnNetworkNack callback.
+ * @return {function} The OnNetworkNack callback.
  */
 PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
 {
@@ -136,7 +136,7 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {function} onData
  * @param {function} onTimeout
  * @param {function} onNetworkNack
- * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
+ * @return {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function

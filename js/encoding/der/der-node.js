@@ -48,7 +48,7 @@ exports.DerNode = DerNode;
 
 /**
  * Return the number of bytes in DER
- * @returns {number}
+ * @return {number}
  */
 DerNode.prototype.getSize = function()
 {
@@ -97,7 +97,7 @@ DerNode.prototype.encodeHeader = function(size)
  * Extract the header from an input buffer and return the size.
  * @param {Buffer} inputBuf The input buffer to read from.
  * @param {number} startIdx The offset into the buffer.
- * @returns {number} The parsed size in the header.
+ * @return {number} The parsed size in the header.
  */
 DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 {
@@ -137,7 +137,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 
 /**
  * Get the raw data encoding for this node.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.prototype.encode = function()
 {
@@ -182,7 +182,7 @@ DerNode.prototype.payloadAppend = function(buffer)
  * object of a subclass of DerNode.
  * @param {type} inputBuf The input buffer to read from.
  * @param {type} startIdx (optional) The offset into the buffer. If omitted, use 0.
- * @returns {DerNode} An object of a subclass of DerNode.
+ * @return {DerNode} An object of a subclass of DerNode.
  */
 DerNode.parse = function(inputBuf, startIdx)
 {
@@ -221,7 +221,7 @@ DerNode.parse = function(inputBuf, startIdx)
 /**
  * Convert the encoded data to a standard representation. Overridden by some
  * subclasses (e.g. DerBoolean).
- * @returns {Blob} The encoded data as a Blob.
+ * @return {Blob} The encoded data as a Blob.
  */
 DerNode.prototype.toVal = function()
 {
@@ -241,7 +241,7 @@ DerNode.prototype.getPayload = function()
  * If this object is a DerNode.DerSequence, get the children of this node.
  * Otherwise, throw an exception. (DerSequence overrides to implement this
  * method.)
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  * @throws DerDecodingException if this object is not a DerSequence.
  */
 DerNode.prototype.getChildren = function()
@@ -292,7 +292,7 @@ DerNode.DerStructure.prototype.name = "DerStructure";
 
 /**
  * Get the total length of the encoding, including children.
- * @returns {number} The total (header + payload) length.
+ * @return {number} The total (header + payload) length.
  */
 DerNode.DerStructure.prototype.getSize = function()
 {
@@ -307,7 +307,7 @@ DerNode.DerStructure.prototype.getSize = function()
 
 /**
  * Get the children of this node.
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  */
 DerNode.DerStructure.prototype.getChildren = function()
 {
@@ -359,7 +359,7 @@ DerNode.DerStructure.prototype.setChildChanged = function()
 /**
  * Override the base encode to return raw data encoding for this node and its
  * children.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.DerStructure.prototype.encode = function()
 {
@@ -426,7 +426,7 @@ DerNode.DerByteString.prototype.name = "DerByteString";
 
 /**
  * Override to return just the byte string.
- * @returns {Blob} The byte string as a copy of the payload buffer.
+ * @return {Blob} The byte string as a copy of the payload buffer.
  */
 DerNode.DerByteString.prototype.toVal = function()
 {
@@ -654,7 +654,7 @@ DerNode.DerOid.prototype.prepareEncoding = function(value)
  * Compute the encoding for one part of an OID, where values greater than 128
  * must be encoded as multiple bytes.
  * @param {number} value A component of an OID.
- * @returns {Buffer} The encoded buffer.
+ * @return {Buffer} The encoded buffer.
  */
 DerNode.DerOid.encode128 = function(value)
 {
@@ -688,7 +688,7 @@ DerNode.DerOid.encode128 = function(value)
  * Convert an encoded component of the encoded OID to the original integer.
  * @param {number} offset The offset into this node's payload.
  * @param {Array<number>} skip Set skip[0] to the number of payload bytes to skip.
- * @returns {number} The original integer.
+ * @return {number} The original integer.
  */
 DerNode.DerOid.prototype.decode128 = function(offset, skip)
 {
@@ -709,7 +709,7 @@ DerNode.DerOid.prototype.decode128 = function(offset, skip)
 
 /**
  * Override to return the string representation of the OID.
- * @returns {string} The string representation of the OID.
+ * @return {string} The string representation of the OID.
  */
 DerNode.DerOid.prototype.toVal = function()
 {
@@ -786,7 +786,7 @@ DerNode.DerGeneralizedTime.prototype.name = "DerGeneralizedTime";
 /**
  * Convert a UNIX timestamp to the internal string representation.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 {
@@ -803,7 +803,7 @@ DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 DerNode.DerGeneralizedTime.to2DigitString = function(x)
 {
@@ -813,7 +813,7 @@ DerNode.DerGeneralizedTime.to2DigitString = function(x)
 
 /**
  * Override to return the milliseconds since 1970.
- * @returns {number} The timestamp value as milliseconds since 1970.
+ * @return {number} The timestamp value as milliseconds since 1970.
  */
 DerNode.DerGeneralizedTime.prototype.toVal = function()
 {

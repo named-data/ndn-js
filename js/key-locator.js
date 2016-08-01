@@ -66,13 +66,13 @@ exports.KeyLocator = KeyLocator;
  * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
  * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
  * getKeyData() to get the digest.
- * @returns {number} The key locator type, or null if not specified.
+ * @return {number} The key locator type, or null if not specified.
  */
 KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
- * @returns {Name} The key name. If not specified, the Name is empty.
+ * @return {Name} The key name. If not specified, the Name is empty.
  */
 KeyLocator.prototype.getKeyName = function()
 {
@@ -82,7 +82,7 @@ KeyLocator.prototype.getKeyName = function()
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
  * the digest bytes.
- * @returns {Blob} The key data, or null if not specified.
+ * @return {Blob} The key data, or null if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
@@ -175,7 +175,7 @@ KeyLocator.prototype.equals = function(other)
  * with all the different kinds of information that various signature
  * algorithms may use.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * @return {boolean} True if the signature is a type that has a KeyLocator,
  * otherwise false.
  */
 KeyLocator.canGetFromSignature = function(signature)
@@ -188,7 +188,7 @@ KeyLocator.canGetFromSignature = function(signature)
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
  * throw an error.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
  */
 KeyLocator.getFromSignature = function(signature)
@@ -204,7 +204,7 @@ KeyLocator.getFromSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 KeyLocator.prototype.getChangeCount = function()
 {

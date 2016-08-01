@@ -160,7 +160,7 @@ ConfigPolicyManager.prototype.load = function(configFileNameOrInput, inputName)
  * verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data must be verified, otherwise false.
+ * @return {boolean} true if the data must be verified, otherwise false.
  */
 ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -173,7 +173,7 @@ ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 ConfigPolicyManager.prototype.checkSigningPolicy = function
@@ -188,7 +188,7 @@ ConfigPolicyManager.prototype.checkSigningPolicy = function
  * 'any', nothing is verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data or interest does not need to be verified
+ * @return {boolean} true if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -215,7 +215,7 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
@@ -443,7 +443,7 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
- * @returns {boolean} True if matches.
+ * @return {boolean} True if matches.
  */
 ConfigPolicyManager.prototype.checkSignatureMatch = function
   (signatureName, objectName, rule)
@@ -537,7 +537,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
  * the cases used by this class.
  * @param {Object} match The match object from String.match.
  * @param {string} expansion The string with \1, \2, etc. to replace from match.
- * @returns {string} The expanded string.
+ * @return {string} The expanded string.
  */
 ConfigPolicyManager.expand = function(match, expansion)
 {
@@ -552,7 +552,7 @@ ConfigPolicyManager.expand = function(match, expansion)
  * or decoding.
  * @param {string} certID
  * @param {boolean} isPath
- * @returns {IdentityCertificate}
+ * @return {IdentityCertificate}
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
@@ -586,7 +586,7 @@ ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
  * exclude the timestamp, nonce, and signature components.
  * @param {Name} objName The name to be matched.
  * @param {string} matchType The rule type to match, "data" or "interest".
- * @returns {BoostInfoTree} The matching rule, or null if not found.
+ * @return {BoostInfoTree} The matching rule, or null if not found.
  */
 ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
 {
@@ -639,7 +639,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
  *   'is-strict-prefix-of' - passes if the name has the other name as a
  *      prefix, and is not equal
  *   'equal' - passes if the two names are equal
- * @returns {boolean}
+ * @return {boolean}
  */
 ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
 {
@@ -667,7 +667,7 @@ ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
  * @param {Data|Interest} dataOrInterest The object whose signature is needed.
  * @param {WireFormat} wireFormat (optional) The wire format used to decode
  * signature information from the interest name.
- * @returns {Signature} The object of a sublcass of Signature or null if can't
+ * @return {Signature} The object of a sublcass of Signature or null if can't
  * decode.
  */
 ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
@@ -696,7 +696,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
- * @returns {boolean} True if timestamp is fresh as described above.
+ * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
   (keyName, timestamp)

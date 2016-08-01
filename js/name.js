@@ -99,7 +99,7 @@ Name.Component.ComponentType = {
 
 /**
  * Get the component value.
- * @returns {Blob} The component value.
+ * @return {Blob} The component value.
  */
 Name.Component.prototype.getValue = function()
 {
@@ -126,7 +126,7 @@ Object.defineProperty(Name.Component.prototype, "value",
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
  * This adds a type code prefix as needed, such as "sha256digest=".
- * @returns {string} The escaped string.
+ * @return {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
@@ -140,7 +140,7 @@ Name.Component.prototype.toEscapedString = function()
  * Check if this component is a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a segment number.
+ * @return {number}  True if this is a segment number.
  */
 Name.Component.prototype.isSegment = function()
 {
@@ -152,7 +152,7 @@ Name.Component.prototype.isSegment = function()
  * Check if this component is a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a segment byte offset.
+ * @return  True if this is a segment byte offset.
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
@@ -164,7 +164,7 @@ Name.Component.prototype.isSegmentOffset = function()
  * Check if this component is a version number  according to NDN naming
  * conventions for "Versioning" (marker 0xFD).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a version number.
+ * @return {number}  True if this is a version number.
  */
 Name.Component.prototype.isVersion = function()
 {
@@ -176,7 +176,7 @@ Name.Component.prototype.isVersion = function()
  * Check if this component is a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a timestamp.
+ * @return  True if this is a timestamp.
  */
 Name.Component.prototype.isTimestamp = function()
 {
@@ -188,7 +188,7 @@ Name.Component.prototype.isTimestamp = function()
  * Check if this component is a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a sequence number.
+ * @return  True if this is a sequence number.
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
@@ -198,7 +198,7 @@ Name.Component.prototype.isSequenceNumber = function()
 
 /**
  * Check if this component is a generic component.
- * @returns {boolean} True if this is an generic component.
+ * @return {boolean} True if this is an generic component.
  */
 Name.Component.prototype.isGeneric = function()
 {
@@ -207,7 +207,7 @@ Name.Component.prototype.isGeneric = function()
 
 /**
  * Check if this component is an ImplicitSha256Digest component.
- * @returns {boolean} True if this is an ImplicitSha256Digest component.
+ * @return {boolean} True if this is an ImplicitSha256Digest component.
  */
 Name.Component.prototype.isImplicitSha256Digest = function()
 {
@@ -216,7 +216,7 @@ Name.Component.prototype.isImplicitSha256Digest = function()
 
 /**
  * Interpret this name component as a network-ordered number and return an integer.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  */
 Name.Component.prototype.toNumber = function()
 {
@@ -227,7 +227,7 @@ Name.Component.prototype.toNumber = function()
  * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  * @throws Error If the first byte of the component does not equal the marker.
  */
 Name.Component.prototype.toNumberWithMarker = function(marker)
@@ -242,7 +242,7 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
  * Interpret this name component as a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number} The integer segment number.
+ * @return {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegment = function()
@@ -254,7 +254,7 @@ Name.Component.prototype.toSegment = function()
  * Interpret this name component as a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer segment byte offset.
+ * @return The integer segment byte offset.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegmentOffset = function()
@@ -267,7 +267,7 @@ Name.Component.prototype.toSegmentOffset = function()
  * conventions for "Versioning" (marker 0xFD). Note that this returns
  * the exact number from the component without converting it to a time
  * representation.
- * @returns {number} The integer version number.
+ * @return {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toVersion = function()
@@ -279,7 +279,7 @@ Name.Component.prototype.toVersion = function()
  * Interpret this name component as a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * @return The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -292,7 +292,7 @@ Name.Component.prototype.toTimestamp = function()
  * Interpret this name component as a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer sequence number.
+ * @return The integer sequence number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSequenceNumber = function()
@@ -304,7 +304,7 @@ Name.Component.prototype.toSequenceNumber = function()
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
  * @param {number} number
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumber = function(number)
 {
@@ -318,7 +318,7 @@ Name.Component.fromNumber = function(number)
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
@@ -396,7 +396,7 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
  * Create a component of type ImplicitSha256DigestComponent, so that
  * isImplicitSha256Digest() is true.
  * @param {Blob|Buffer} digest The SHA-256 digest value.
- * @returns {Name.Component} The new Component.
+ * @return {Name.Component} The new Component.
  * @throws DecodingException If the digest length is not 32 bytes.
  */
 Name.Component.fromImplicitSha256Digest = function(digest)
@@ -414,7 +414,7 @@ Name.Component.fromImplicitSha256Digest = function(digest)
 
 /**
  * Get the successor of this component, as described in Name.getSuccessor.
- * @returns {Name.Component} A new Name.Component which is the successor of this.
+ * @return {Name.Component} A new Name.Component which is the successor of this.
  */
 Name.Component.prototype.getSuccessor = function()
 {
@@ -446,7 +446,7 @@ Name.Component.prototype.getSuccessor = function()
 /**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {Boolean} true if the components are equal, otherwise false.
+ * @return {Boolean} true if the components are equal, otherwise false.
  */
 Name.Component.prototype.equals = function(other)
 {
@@ -457,7 +457,7 @@ Name.Component.prototype.equals = function(other)
 /**
  * Compare this to the other Component using NDN canonical ordering.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {number} 0 if they compare equal, -1 if this comes before other in
+ * @return {number} 0 if they compare equal, -1 if this comes before other in
  * the canonical ordering, or 1 if this comes after other in the canonical
  * ordering.
  *
@@ -477,7 +477,7 @@ Name.Component.prototype.compare = function(other)
  * Do the work of Name.Component.compare to compare the component buffers.
  * @param {Buffer} component1
  * @param {Buffer} component2
- * @returns {number} 0 if they compare equal, -1 if component1 comes before
+ * @return {number} 0 if they compare equal, -1 if component1 comes before
  * component2 in the canonical ordering, or 1 if component1 comes after
  * component2 in the canonical ordering.
  */
@@ -579,7 +579,7 @@ Name.prototype.set = function(uri)
  * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @returns {Name}
+ * @return {Name}
  */
 Name.prototype.append = function(component)
 {
@@ -628,7 +628,7 @@ Name.prototype.clear = function()
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
  * case where toUri() is used for display.
- * @returns {String}
+ * @return {String}
  */
 Name.prototype.toUri = function(includeScheme)
 {
@@ -658,7 +658,7 @@ Name.prototype.toString = function() { return this.toUri(); }
  * naming conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegment = function(segment)
 {
@@ -670,7 +670,7 @@ Name.prototype.appendSegment = function(segment)
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segmentOffset The segment byte offset.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -683,7 +683,7 @@ Name.prototype.appendSegmentOffset = function(segmentOffset)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
@@ -696,7 +696,7 @@ Name.prototype.appendVersion = function(version)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendTimestamp = function(timestamp)
 {
@@ -708,7 +708,7 @@ Name.prototype.appendTimestamp = function(timestamp)
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} sequenceNumber The sequence number.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
@@ -719,7 +719,7 @@ Name.prototype.appendSequenceNumber = function(sequenceNumber)
  * Append a component of type ImplicitSha256DigestComponent, so that
  * isImplicitSha256Digest() is true.
  * @param {Blob|Buffer} digest The SHA-256 digest value.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  * @throws DecodingException If the digest length is not 32 bytes.
  */
 Name.prototype.appendImplicitSha256Digest = function(digest)
@@ -743,7 +743,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
@@ -766,7 +766,7 @@ Name.prototype.getSubName = function(iStartComponent, nComponents)
  * Return a new Name with the first nComponents components of this Name.
  * @param {number} nComponents The number of prefix components.  If nComponents is -N then return the prefix up
  * to name.size() - N. For example getPrefix(-1) returns the name without the final component.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getPrefix = function(nComponents)
 {
@@ -786,7 +786,7 @@ Name.prototype.cut = function(nComponents)
 
 /**
  * Return the number of name components.
- * @returns {number}
+ * @return {number}
  */
 Name.prototype.size = function()
 {
@@ -859,7 +859,7 @@ Name.prototype.indexOfFileName = function()
  * Encode this Name for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 Name.prototype.wireEncode = function(wireFormat)
 {
@@ -894,7 +894,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
  * @param {Name} other The other Name to compare with.
- * @returns {boolean} If they compare equal, -1 if *this comes before other in
+ * @return {boolean} If they compare equal, -1 if *this comes before other in
  * the canonical ordering, or 1 if *this comes after other in the canonical
  * ordering. The first form of compare is simply compare(other). The second form is
  * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
@@ -915,7 +915,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in
+ * @return {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
@@ -1039,7 +1039,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
- * @returns {string} The escaped string.
+ * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
 {
@@ -1083,7 +1083,7 @@ Name.toEscapedString = function(value)
  * component in the name.
  * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
- * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * @return {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
@@ -1131,7 +1131,7 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  * - The successor of /%00%01/%01%FF is /%00%01/%02%00
  * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
  *
- * @returns {Name} A new name which is the successor of this.
+ * @return {Name} A new name which is the successor of this.
  */
 Name.prototype.getSuccessor = function()
 {
@@ -1149,7 +1149,7 @@ Name.prototype.getSuccessor = function()
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.match = function(name)
@@ -1175,14 +1175,14 @@ Name.prototype.match = function(name)
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Name.prototype.getChangeCount = function()
 {

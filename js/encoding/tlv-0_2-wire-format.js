@@ -61,7 +61,7 @@ Tlv0_2WireFormat.instance = null;
 /**
  * Encode interest as NDN-TLV and return the encoding.
  * @param {Name} name The Name to encode.
- * @returns {Blobl} A Blob containing the encoding.
+ * @return {Blobl} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeName = function(name)
 {
@@ -84,7 +84,7 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input)
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -154,7 +154,7 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -202,7 +202,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -239,7 +239,7 @@ Tlv0_2WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -270,7 +270,7 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input)
  * Encode controlParameters as NDN-TLV and return the encoding.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
@@ -296,7 +296,7 @@ Tlv0_2WireFormat.prototype.decodeControlParameters = function(controlParameters,
  * Encode controlResponse as NDN-TLV and return the encoding.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 {
@@ -355,7 +355,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, inp
 /**
  * Encode signature as a SignatureInfo and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
@@ -386,7 +386,7 @@ Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @return {Signature} A new object which is a subclass of Signature.
  */
 Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
   (signatureInfo, signatureValue)
@@ -408,7 +408,7 @@ Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature bits) and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
 {
@@ -499,7 +499,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * type and length because it is intended to use the type and length of a Data
  * packet's Content.
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
@@ -552,7 +552,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
  * Encode the EncryptedContent in NDN-TLV and return the encoding.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 {
@@ -606,7 +606,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
 /**
  * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @returns {Tlv0_2WireFormat} The singleton instance.
+ * @return {Tlv0_2WireFormat} The singleton instance.
  */
 Tlv0_2WireFormat.get = function()
 {
@@ -652,7 +652,7 @@ Tlv0_2WireFormat.decodeNameComponent = function(decoder)
  * Encode the name to the encoder.
  * @param {Name} name The name to encode.
  * @param {TlvEncoder} encoder The encoder to receive the encoding.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -693,7 +693,7 @@ Tlv0_2WireFormat.encodeName = function(name, encoder)
  * object.
  * @param {Name} name The name object whose fields are updated.
  * @param {TlvDecoder} decoder The decoder with the input.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding

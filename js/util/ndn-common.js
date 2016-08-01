@@ -41,7 +41,7 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 /**
  * Get the error message plus its stack trace.
  * @param {Error} error The error object.
- * @returns {string} The error message, plus the stack trace with each line
+ * @return {string} The error message, plus the stack trace with each line
  * separated by '\n'.
  */
 NdnCommon.getErrorWithStackTrace = function(error)

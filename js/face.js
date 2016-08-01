@@ -249,7 +249,7 @@ Face.prototype.close = function()
  * interest table (there usually are not many interest filter table entries) so
  * we use a common pool to only have to have one method which is called by Face.
  *
- * @returns {number} The next entry ID.
+ * @return {number} The next entry ID.
  */
 Face.prototype.getNextEntryId = function()
 {
@@ -264,7 +264,7 @@ Face.prototype.getNextEntryId = function()
  * @param {function} makeConnectionInfo This calls makeConnectionInfo(host, port)
  * to make the Transport.ConnectionInfo. For example:
  * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
- * @returns {function} A function which returns a Transport.ConnectionInfo.
+ * @return {function} A function which returns a Transport.ConnectionInfo.
  */
 Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnectionInfo)
 {
@@ -318,7 +318,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @return {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
  */
 Face.prototype.expressInterest = function
@@ -600,7 +600,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
- * @returns {number} The registered prefix ID which can be used with
+ * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function

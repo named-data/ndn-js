@@ -46,7 +46,7 @@ exports.CertificateExtension = CertificateExtension;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateExtension.prototype.toDer = function()
 {

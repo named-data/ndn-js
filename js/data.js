@@ -96,7 +96,7 @@ exports.Data = Data;
 
 /**
  * Get the data packet's name.
- * @returns {Name} The name.
+ * @return {Name} The name.
  */
 Data.prototype.getName = function()
 {
@@ -105,7 +105,7 @@ Data.prototype.getName = function()
 
 /**
  * Get the data packet's meta info.
- * @returns {MetaInfo} The meta info.
+ * @return {MetaInfo} The meta info.
  */
 Data.prototype.getMetaInfo = function()
 {
@@ -114,7 +114,7 @@ Data.prototype.getMetaInfo = function()
 
 /**
  * Get the data packet's signature object.
- * @returns {Signature} The signature object.
+ * @return {Signature} The signature object.
  */
 Data.prototype.getSignature = function()
 {
@@ -123,7 +123,7 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The content as a Blob, which isNull() if unspecified.
+ * @return {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
@@ -142,7 +142,7 @@ Data.prototype.getContentAsBuffer = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Data.prototype.getDefaultWireEncoding = function()
@@ -159,7 +159,7 @@ Data.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Data.prototype.getDefaultWireEncodingFormat = function()
@@ -215,7 +215,7 @@ Data.prototype.getFullName = function(wireFormat)
 /**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setName = function(name)
 {
@@ -228,7 +228,7 @@ Data.prototype.setName = function(name)
 /**
  * Set metaInfo to a copy of the given MetaInfo.
  * @param {MetaInfo} metaInfo The MetaInfo which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
@@ -241,7 +241,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
 /**
  * Set the signature to a copy of the given signature.
  * @param {Signature} signature The signature object which is cloned.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setSignature = function(signature)
 {
@@ -256,7 +256,7 @@ Data.prototype.setSignature = function(signature)
  * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
  * then create a new Blob to copy the bytes (otherwise take another pointer to
  * the same Blob).
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
@@ -271,7 +271,7 @@ Data.prototype.setContent = function(content)
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat)
 {
@@ -339,7 +339,7 @@ Data.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Data.prototype.getChangeCount = function()
 {

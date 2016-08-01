@@ -52,7 +52,7 @@ TlvStructureDecoder.READ_VALUE_BYTES =  4;
  * false which means you should read more into input and call again.
  * @param {Buffer} input The input buffer. You have to pass in input each time
  * because the buffer could be reallocated.
- * @returns {boolean} true if found the element end, false if not.
+ * @return {boolean} true if found the element end, false if not.
  */
 TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
@@ -206,7 +206,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
 /**
  * Get the current offset into the input buffer.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvStructureDecoder.prototype.getOffset = function()
 {

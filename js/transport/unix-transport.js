@@ -66,7 +66,7 @@ UnixTransport.ConnectionInfo.prototype.name = "UnixTransport.ConnectionInfo";
  * Check if the fields of this UnixTransport.ConnectionInfo equal the other
  * UnixTransport.ConnectionInfo.
  * @param {UnixTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 UnixTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -106,7 +106,7 @@ UnixTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
- * @returns {undefined}
+ * @return {undefined}
  */
 UnixTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)

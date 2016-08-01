@@ -52,7 +52,7 @@ exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
  * Create a new Sha256WithRsaSignature which is a copy of this object.
- * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
+ * @return {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
 Sha256WithRsaSignature.prototype.clone = function()
 {
@@ -61,7 +61,7 @@ Sha256WithRsaSignature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
@@ -70,7 +70,7 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 Sha256WithRsaSignature.prototype.getSignature = function()
 {
@@ -112,7 +112,7 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Sha256WithRsaSignature.prototype.getChangeCount = function()
 {

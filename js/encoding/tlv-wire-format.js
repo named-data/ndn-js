@@ -45,7 +45,7 @@ TlvWireFormat.instance = null;
  * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()),
  * you can check if this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
- * @returns {TlvWireFormat} The singleton instance.
+ * @return {TlvWireFormat} The singleton instance.
  */
 TlvWireFormat.get = function()
 {

@@ -59,7 +59,7 @@ exports.IdentityCertificate = IdentityCertificate;
  * Override the base class method to check that the name is a valid identity
  * certificate name.
  * @param {Name} name The identity certificate name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 IdentityCertificate.prototype.setName = function(name)
 {
@@ -99,7 +99,7 @@ IdentityCertificate.isIdentityCertificate = function(certificate)
 /**
  * Get the public key name from the full certificate name.
  * @param {Name} certificateName The full certificate name.
- * @returns {Name} The related public key name.
+ * @return {Name} The related public key name.
  */
 IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 {

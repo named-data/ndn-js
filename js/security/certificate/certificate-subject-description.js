@@ -47,7 +47,7 @@ exports.CertificateSubjectDescription = CertificateSubjectDescription;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateSubjectDescription.prototype.toDer = function()
 {

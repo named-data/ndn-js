@@ -89,7 +89,7 @@ exports.KeyChain = KeyChain;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
@@ -116,7 +116,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
@@ -164,7 +164,7 @@ KeyChain.prototype.deleteIdentity = function
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -217,7 +217,7 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
@@ -266,7 +266,7 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
@@ -278,7 +278,7 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
 /**
  * Create a public key signing request.
  * @param {Name} keyName The name of the key.
- * @returns {Blob} The signing request data.
+ * @return {Blob} The signing request data.
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
@@ -394,7 +394,7 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
 
 /**
  * Get the identity manager given to or created by the constructor.
- * @returns {IdentityManager} The identity manager.
+ * @return {IdentityManager} The identity manager.
  */
 KeyChain.prototype.getIdentityManager = function()
 {
@@ -407,7 +407,7 @@ KeyChain.prototype.getIdentityManager = function()
 
 /**
  * Get the policy manager given to or created by the constructor.
- * @returns {PolicyManager} The policy manager.
+ * @return {PolicyManager} The policy manager.
  */
 KeyChain.prototype.getPolicyManager = function()
 {
@@ -452,7 +452,7 @@ KeyChain.prototype.getPolicyManager = function()
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
@@ -626,7 +626,7 @@ KeyChain.prototype.signPromise = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or undefined (if target is Data).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
@@ -865,7 +865,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
- * @returns {boolean} True if the signature verifies, otherwise false.
+ * @return {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 {

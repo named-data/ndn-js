@@ -79,7 +79,7 @@ Certificate.prototype.addSubjectDescription = function(description)
 
 /**
  * Get the subject description list.
- * @returns {Array<CertificateSubjectDescription>} The subject description list.
+ * @return {Array<CertificateSubjectDescription>} The subject description list.
  */
 Certificate.prototype.getSubjectDescriptionList = function()
 {
@@ -97,7 +97,7 @@ Certificate.prototype.addExtension = function(extension)
 
 /**
  * Get the certificate extension list.
- * @returns {Array<CertificateExtension>} The extension list.
+ * @return {Array<CertificateExtension>} The extension list.
  */
 Certificate.prototype.getExtensionList = function()
 {
@@ -136,7 +136,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is earlier than notBefore.
+ * @return {Boolean} True if the current time is earlier than notBefore.
  */
 Certificate.prototype.isTooEarly = function()
 {
@@ -146,7 +146,7 @@ Certificate.prototype.isTooEarly = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is later than notAfter.
+ * @return {Boolean} True if the current time is later than notAfter.
  */
 Certificate.prototype.isTooLate = function()
 {
@@ -156,7 +156,7 @@ Certificate.prototype.isTooLate = function()
 
 /**
  * Encode the certificate fields in DER format.
- * @returns {DerSequence} The DER encoded contents of the certificate.
+ * @return {DerSequence} The DER encoded contents of the certificate.
  */
 Certificate.prototype.toDer = function()
 {
@@ -290,7 +290,7 @@ Certificate.prototype.toString = function()
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Certificate.toIsoString = function(msSince1970)
 {
@@ -307,7 +307,7 @@ Certificate.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Certificate.to2DigitString = function(x)
 {

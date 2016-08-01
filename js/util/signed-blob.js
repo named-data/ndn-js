@@ -67,7 +67,7 @@ exports.SignedBlob = SignedBlob;
 
 /**
  * Return the length of the signed portion of the immutable byte array.
- * @returns {number} The length of the signed portion.  If signedBuf() is null,
+ * @return {number} The length of the signed portion.  If signedBuf() is null,
  * return 0.
  */
 SignedBlob.prototype.signedSize = function()
@@ -80,7 +80,7 @@ SignedBlob.prototype.signedSize = function()
 
 /**
  * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.
+ * @return {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
 SignedBlob.prototype.signedBuf = function()
@@ -93,7 +93,7 @@ SignedBlob.prototype.signedBuf = function()
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionBeginOffset = function()
 {
@@ -102,7 +102,7 @@ SignedBlob.prototype.getSignedPortionBeginOffset = function()
 
 /**
  * Return the offset in the array of the end of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionEndOffset = function()
 {

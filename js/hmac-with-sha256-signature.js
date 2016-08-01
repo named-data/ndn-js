@@ -53,7 +53,7 @@ exports.HmacWithSha256Signature = HmacWithSha256Signature;
 
 /**
  * Create a new HmacWithSha256Signature which is a copy of this object.
- * @returns {HmacWithSha256Signature} A new object which is a copy of this object.
+ * @return {HmacWithSha256Signature} A new object which is a copy of this object.
  */
 HmacWithSha256Signature.prototype.clone = function()
 {
@@ -62,7 +62,7 @@ HmacWithSha256Signature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 HmacWithSha256Signature.prototype.getKeyLocator = function()
 {
@@ -71,7 +71,7 @@ HmacWithSha256Signature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 HmacWithSha256Signature.prototype.getSignature = function()
 {
@@ -113,7 +113,7 @@ HmacWithSha256Signature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 HmacWithSha256Signature.prototype.getChangeCount = function()
 {

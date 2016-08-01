@@ -111,7 +111,7 @@ RepetitiveInterval.RepeatUnit = {
  * covering the time point, this returns false for isPositive and returns a
  * negative interval.
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is
  * positive or false if negative, and interval is the Interval covering the time

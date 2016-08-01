@@ -45,7 +45,7 @@ exports.PolicyManager = PolicyManager;
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest does not need to be verified
+ * @return {boolean} True if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -59,7 +59,7 @@ PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest must be verified, otherwise
+ * @return {boolean} True if the data or interest must be verified, otherwise
  * false.
  */
 PolicyManager.prototype.requireVerify = function(dataOrInterest)
@@ -87,7 +87,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
@@ -103,7 +103,7 @@ PolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True if the signing certificate can be used to sign the
+ * @return {boolean} True if the signing certificate can be used to sign the
  * data, otherwise false.
  */
 PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
@@ -117,7 +117,7 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
  * Your derived class should override.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} The signing identity or an empty name if cannot infer.
+ * @return {Name} The signing identity or an empty name if cannot infer.
  */
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {

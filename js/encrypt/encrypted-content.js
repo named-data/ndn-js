@@ -53,7 +53,7 @@ exports.EncryptedContent = EncryptedContent;
 
 /**
  * Get the algorithm type from EncryptAlgorithmType.
- * @returns {number} The algorithm type from EncryptAlgorithmType, or null if
+ * @return {number} The algorithm type from EncryptAlgorithmType, or null if
  * not specified.
  */
 EncryptedContent.prototype.getAlgorithmType = function()
@@ -63,7 +63,7 @@ EncryptedContent.prototype.getAlgorithmType = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ * @return {KeyLocator} The key locator. If not specified, getType() is null.
  */
 EncryptedContent.prototype.getKeyLocator = function()
 {
@@ -72,7 +72,7 @@ EncryptedContent.prototype.getKeyLocator = function()
 
 /**
  * Get the initial vector.
- * @returns {Blob} The initial vector. If not specified, isNull() is true.
+ * @return {Blob} The initial vector. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getInitialVector = function()
 {
@@ -81,7 +81,7 @@ EncryptedContent.prototype.getInitialVector = function()
 
 /**
  * Get the payload.
- * @returns {Blob} The payload. If not specified, isNull() is true.
+ * @return {Blob} The payload. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getPayload = function()
 {
@@ -92,7 +92,7 @@ EncryptedContent.prototype.getPayload = function()
  * Set the algorithm type.
  * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
  * If not specified, set to null.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
@@ -105,7 +105,7 @@ EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
  * Set the key locator.
  * @param {KeyLocator} keyLocator The key locator. This makes a copy of the
  * object. If not specified, set to the default KeyLocator().
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setKeyLocator = function(keyLocator)
@@ -120,7 +120,7 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
  * Set the initial vector.
  * @param {Blob} initialVector The initial vector. If not specified, set to the
  * default Blob() where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setInitialVector = function(initialVector)
@@ -135,7 +135,7 @@ EncryptedContent.prototype.setInitialVector = function(initialVector)
  * Set the encrypted payload.
  * @param {Blob} payload The payload. If not specified, set to the default Blob()
  * where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setPayload = function(payload)
@@ -149,7 +149,7 @@ EncryptedContent.prototype.setPayload = function(payload)
  * Encode this EncryptedContent for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 EncryptedContent.prototype.wireEncode = function(wireFormat)
 {

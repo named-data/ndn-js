@@ -186,7 +186,7 @@ DataUtils.toNumbersFromString = function(str)
  * If value is a string, then interpret it as a raw string and convert to
  * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
  * @param {string|any} value
- * @returns {Buffer}
+ * @return {Buffer}
  */
 DataUtils.toNumbersIfString = function(value)
 {
@@ -321,7 +321,7 @@ DataUtils.shuffle = function(array)
 /**
  * Decode the base64-encoded private key PEM and return the binary DER.
  * @param {string} The PEM-encoded private key.
- * @returns {Buffer} The binary DER.
+ * @return {Buffer} The binary DER.
  *
  */
 DataUtils.privateKeyPemToDer = function(privateKeyPem)

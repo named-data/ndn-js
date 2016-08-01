@@ -194,7 +194,7 @@ DelegationSet.prototype.find = function(name)
  * Encode this DelegationSet for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 DelegationSet.prototype.wireEncode = function(wireFormat)
 {

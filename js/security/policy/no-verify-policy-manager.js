@@ -41,7 +41,7 @@ exports.NoVerifyPolicyManager = NoVerifyPolicyManager;
  * Override to always skip verification and trust as valid.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -53,7 +53,7 @@ NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * signed interest.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -75,7 +75,7 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * exceptions.
  * @param {function} onVerifyFailed Override to ignore this.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -95,7 +95,7 @@ NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 NoVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -108,7 +108,7 @@ NoVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {

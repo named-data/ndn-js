@@ -84,7 +84,7 @@ WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.Connectio
  * Check if the fields of this WebSocketTransport.ConnectionInfo equal the other
  * WebSocketTransport.ConnectionInfo.
  * @param {WebSocketTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 WebSocketTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -133,7 +133,7 @@ WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onErro
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
- * @returns {undefined}
+ * @return {undefined}
  */
 WebSocketTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
