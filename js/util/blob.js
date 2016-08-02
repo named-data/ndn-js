@@ -27,7 +27,7 @@
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
  * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {boolean} copy (optional) (optional) If true, copy the contents of
+ * @param {boolean} copy (optional) If true, copy the contents of
  * value into a new Buffer.  If false, just use the existing value without
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
