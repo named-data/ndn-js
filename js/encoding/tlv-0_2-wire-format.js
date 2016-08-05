@@ -59,7 +59,7 @@ exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 Tlv0_2WireFormat.instance = null;
 
 /**
- * Encode interest as NDN-TLV and return the encoding.
+ * Encode name as an NDN-TLV Name and return the encoding.
  * @param {Name} name The Name to encode.
  * @return {Blobl} A Blob containing the encoding.
  */
