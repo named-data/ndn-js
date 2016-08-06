@@ -898,7 +898,6 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * which is equivalent to
  * self.getSubName(iStartComponent, nComponents).compare
  * (other.getSubName(iOtherStartComponent, nOtherComponents)) .
- * @param {Name} other The other Name to compare with.
  * @param {number} iStartComponent The index if the first component of this name
  * to get. If iStartComponent is -N then compare components starting from
  * name.size() - N.
