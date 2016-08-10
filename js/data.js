@@ -46,7 +46,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    // Copy the name.
+    // Copy the Data object.
     this.name_ = new ChangeCounter(new Name(data.getName()));
     this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
     this.signature_ = new ChangeCounter(data.getSignature().clone());
@@ -96,7 +96,7 @@ exports.Data = Data;
 
 /**
  * Get the data packet's name.
- * @return {Name} The name.
+ * @return {Name} The name. If not specified, the name size() is 0.
  */
 Data.prototype.getName = function()
 {
