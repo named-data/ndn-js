@@ -66,7 +66,8 @@ exports.KeyLocator = KeyLocator;
  * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
  * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
  * getKeyData() to get the digest.
- * @return {number} The key locator type, or null if not specified.
+ * @return {number} The key locator type as a KeyLocatorType enum value,
+ * or null if not specified.
  */
 KeyLocator.prototype.getType = function() { return this.type_; };
 
@@ -82,7 +83,7 @@ KeyLocator.prototype.getKeyName = function()
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
  * the digest bytes.
- * @return {Blob} The key data, or null if not specified.
+ * @return {Blob} The key data, or an isNull Blob if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
@@ -102,7 +103,8 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
  * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
  * setKeyData() to the digest.
- * @param {number} type The key locator type.  If null, the type is unspecified.
+ * @param {number} type The key locator type as a KeyLocatorType enum value.  If
+ * null, the type is unspecified.
  */
 KeyLocator.prototype.setType = function(type)
 {
