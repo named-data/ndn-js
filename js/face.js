@@ -536,12 +536,18 @@ Face.prototype.setCommandCertificateName = function(certificateName)
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode the interest name for signing.  If omitted,
  * use WireFormat.getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * If omitted, block until complete. (Some crypto/database libraries only use a
+ * callback, so onComplete is required to use these.)
  */
-Face.prototype.makeCommandInterest = function(interest, wireFormat)
+Face.prototype.makeCommandInterest = function(interest, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
+                 WireFormat.getDefaultWireFormat() : wireFormat;
   this.nodeMakeCommandInterest
-    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat,
+     onComplete);
 };
 
 /**
