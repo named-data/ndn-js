@@ -8905,7 +8905,7 @@ NdnCommon.MAX_NDN_PACKET_SIZE = 8800;
 /**
  * Get the error message plus its stack trace.
  * @param {Error} error The error object.
- * @returns {string} The error message, plus the stack trace with each line
+ * @return {string} The error message, plus the stack trace with each line
  * separated by '\n'.
  */
 NdnCommon.getErrorWithStackTrace = function(error)
@@ -9013,7 +9013,7 @@ exports.ExponentialReExpress = ExponentialReExpress;
  * {
  *   maxInterestLifetime: 16000 // milliseconds
  * }
- * @returns {function} The onTimeout callback to pass to expressInterest.
+ * @return {function} The onTimeout callback to pass to expressInterest.
  */
 ExponentialReExpress.makeOnTimeout = function(face, onData, onTimeout, settings)
 {
@@ -9084,7 +9084,7 @@ ExponentialReExpress.prototype.onTimeout = function(interest)
  * @param {Blob|Buffer|Array<number>} value (optional) If value is a Blob, take
  * another pointer to the Buffer without copying. If value is a Buffer or byte
  * array, copy to create a new Buffer.  If omitted, buf() will return null.
- * @param {boolean} copy (optional) (optional) If true, copy the contents of
+ * @param {boolean} copy (optional) If true, copy the contents of
  * value into a new Buffer.  If false, just use the existing value without
  * copying. If omitted, then copy the contents (unless value is already a Blob).
  * IMPORTANT: If copy is false, if you keep a pointer to the value then you must
@@ -9128,7 +9128,7 @@ exports.Blob = Blob;
 
 /**
  * Return the length of the immutable byte array.
- * @returns {number} The length of the array.  If buf() is null, return 0.
+ * @return {number} The length of the array.  If buf() is null, return 0.
  */
 Blob.prototype.size = function()
 {
@@ -9141,7 +9141,7 @@ Blob.prototype.size = function()
 /**
  * Return the immutable byte array.  DO NOT change the contents of the Buffer.
  * If you need to change it, make a copy.
- * @returns {Buffer} The Buffer holding the immutable byte array, or null.
+ * @return {Buffer} The Buffer holding the immutable byte array, or null.
  */
 Blob.prototype.buf = function()
 {
@@ -9150,7 +9150,7 @@ Blob.prototype.buf = function()
 
 /**
  * Return true if the array is null, otherwise false.
- * @returns {boolean} True if the array is null.
+ * @return {boolean} True if the array is null.
  */
 Blob.prototype.isNull = function()
 {
@@ -9159,7 +9159,7 @@ Blob.prototype.isNull = function()
 
 /**
  * Return the hex representation of the bytes in the byte array.
- * @returns {string} The hex string.
+ * @return {string} The hex string.
  */
 Blob.prototype.toHex = function()
 {
@@ -9184,7 +9184,7 @@ Blob.prototype.toString = function()
 /**
  * Check if the value of this Blob equals the other blob.
  * @param {Blob} other The other Blob to check.
- * @returns {boolean} if this isNull and other isNull or if the bytes of this
+ * @return {boolean} if this isNull and other isNull or if the bytes of this
  * blob equal the bytes of the other.
  */
 Blob.prototype.equals = function(other)
@@ -9274,7 +9274,7 @@ exports.SignedBlob = SignedBlob;
 
 /**
  * Return the length of the signed portion of the immutable byte array.
- * @returns {number} The length of the signed portion.  If signedBuf() is null,
+ * @return {number} The length of the signed portion.  If signedBuf() is null,
  * return 0.
  */
 SignedBlob.prototype.signedSize = function()
@@ -9287,7 +9287,7 @@ SignedBlob.prototype.signedSize = function()
 
 /**
  * Return a the signed portion of the immutable byte array.
- * @returns {Buffer} A slice into the Buffer which is the signed portion.
+ * @return {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
 SignedBlob.prototype.signedBuf = function()
@@ -9300,7 +9300,7 @@ SignedBlob.prototype.signedBuf = function()
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionBeginOffset = function()
 {
@@ -9309,7 +9309,7 @@ SignedBlob.prototype.getSignedPortionBeginOffset = function()
 
 /**
  * Return the offset in the array of the end of the signed portion.
- * @returns {number} The offset in the array.
+ * @return {number} The offset in the array.
  */
 SignedBlob.prototype.getSignedPortionEndOffset = function()
 {
@@ -9376,7 +9376,7 @@ DynamicBuffer.prototype.ensureLength = function(length)
  * Copy the value to this.array at offset, reallocating if necessary.
  * @param {Buffer} value The buffer to copy.
  * @param {number} offset The offset in the buffer to start copying into.
- * @returns {number} The new offset which is offset + value.length.
+ * @return {number} The new offset which is offset + value.length.
  */
 DynamicBuffer.prototype.copy = function(value, offset)
 {
@@ -9437,7 +9437,7 @@ DynamicBuffer.prototype.copyFromBack = function(value, offsetFromBack)
  * Return this.array.slice(begin, end);
  * @param {number} begin The begin index for the slice.
  * @param {number} end (optional) The end index for the slice.
- * @returns {Buffer} The buffer slice.
+ * @return {Buffer} The buffer slice.
  */
 DynamicBuffer.prototype.slice = function(begin, end)
 {
@@ -9489,7 +9489,7 @@ exports.ChangeCounter = ChangeCounter;
 /**
  * Get the target object. If the target is changed, then checkChanged will
  * detect it.
- * @returns {object} The target, as an object with the method
+ * @return {object} The target, as an object with the method
  * getChangeCount().
  */
 ChangeCounter.prototype.get = function()
@@ -9515,7 +9515,7 @@ ChangeCounter.prototype.set = function(target)
  * meaning that the target has not changed. Also, if the target is null,
  * simply return false. This is useful since the target (or one of the target's
  * targets) may be changed and you need to find out.
- * @returns {boolean} True if the change count has been updated, false if not.
+ * @return {boolean} True if the change count has been updated, false if not.
  */
 ChangeCounter.prototype.checkChanged = function()
 {
@@ -9938,7 +9938,7 @@ DataUtils.toNumbersFromString = function(str)
  * If value is a string, then interpret it as a raw string and convert to
  * a Buffer. Otherwise assume it is a Buffer or array type and just return it.
  * @param {string|any} value
- * @returns {Buffer}
+ * @return {Buffer}
  */
 DataUtils.toNumbersIfString = function(value)
 {
@@ -10073,7 +10073,7 @@ DataUtils.shuffle = function(array)
 /**
  * Decode the base64-encoded private key PEM and return the binary DER.
  * @param {string} The PEM-encoded private key.
- * @returns {Buffer} The binary DER.
+ * @return {Buffer} The binary DER.
  *
  */
 DataUtils.privateKeyPemToDer = function(privateKeyPem)
@@ -10259,7 +10259,7 @@ Tlv.Encrypt_Schedule = 143;
  * (This could be a general function, but we define it here so that the
  * Tlv encoder/decoder is self-contained.)
  * @param {number} x
- * @returns {number}
+ * @return {number}
  */
 Tlv.getHighBytes = function(x)
 {
@@ -10311,7 +10311,7 @@ exports.TlvEncoder = TlvEncoder;
  * Get the number of bytes that have been written to the output.  You can
  * save this number, write sub TLVs, then subtract the new length from this
  * to get the total length of the sub TLVs.
- * @returns {number} The number of bytes that have been written to the output.
+ * @return {number} The number of bytes that have been written to the output.
  */
 TlvEncoder.prototype.getLength = function()
 {
@@ -10505,7 +10505,7 @@ TlvEncoder.prototype.writeOptionalBlobTlv = function(type, value)
 
 /**
  * Get a slice of the encoded bytes.
- * @returns {Buffer} A slice backed by the encoding Buffer.
+ * @return {Buffer} A slice backed by the encoding Buffer.
  */
 TlvEncoder.prototype.getOutput = function()
 {
@@ -10548,7 +10548,7 @@ exports.TlvDecoder = TlvDecoder;
 
 /**
  * Decode VAR-NUMBER in NDN-TLV and return it. Update offset.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readVarNumber = function()
 {
@@ -10566,7 +10566,7 @@ TlvDecoder.prototype.readVarNumber = function()
  * which is >= 253.
  * @param {number} firstOctet The first octet which is >= 253, used to decode
  * the remaining bytes.
- * @returns {number} The decoded VAR-NUMBER.
+ * @return {number} The decoded VAR-NUMBER.
  */
 TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
 {
@@ -10609,7 +10609,7 @@ TlvDecoder.prototype.readExtendedVarNumber = function(firstOctet)
  * sure the decoded length does not exceed the number of bytes remaining in the
  * input.
  * @param {number} expectedType The expected type.
- * @returns {number} The length of the TLV.
+ * @return {number} The length of the TLV.
  * @throws DecodingException if (did not get the expected TLV type or the TLV length
  * exceeds the buffer length.
  */
@@ -10633,7 +10633,7 @@ TlvDecoder.prototype.readTypeAndLength = function(expectedType)
  * of the end of this parent TLV, which is used in decoding optional nested
  * TLVs. After reading all nested TLVs, call finishNestedTlvs.
  * @param {number} expectedType The expected type.
- * @returns {number} The offset of the end of the parent TLV.
+ * @return {number} The offset of the end of the parent TLV.
  * @throws DecodingException if did not get the expected TLV type or the TLV
  * length exceeds the buffer length.
  */
@@ -10682,7 +10682,7 @@ TlvDecoder.prototype.finishNestedTlvs = function(endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true if the type of the next TLV is the expectedType,
+ * @return {boolean} true if the type of the next TLV is the expectedType,
  *  otherwise false.
  */
 TlvDecoder.prototype.peekType = function(expectedType, endOffset)
@@ -10704,7 +10704,7 @@ TlvDecoder.prototype.peekType = function(expectedType, endOffset)
  * Decode a non-negative integer in NDN-TLV and return it. Update offset by
  * length.
  * @param {number} length The number of bytes in the encoded integer.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if length is an invalid length for a TLV
  * non-negative integer.
  */
@@ -10746,7 +10746,7 @@ TlvDecoder.prototype.readNonNegativeInteger = function(length)
  * the type to be expectedType. Then decode a non-negative integer in NDN-TLV
  * and return it.  Update offset.
  * @param {number} expectedType The expected type.
- * @returns {number} The integer.
+ * @return {number} The integer.
  * @throws DecodingException if did not get the expected TLV type or can't
  * decode the value.
  */
@@ -10764,7 +10764,7 @@ TlvDecoder.prototype.readNonNegativeIntegerTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {number} The integer or null if the next TLV doesn't have the
+ * @return {number} The integer or null if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
@@ -10781,7 +10781,7 @@ TlvDecoder.prototype.readOptionalNonNegativeIntegerTlv = function
  * the type to be expectedType. Then return an array of the bytes in the value.
  * Update offset.
  * @param {number} expectedType The expected type.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  * @throws DecodingException if did not get the expected TLV type.
@@ -10804,7 +10804,7 @@ TlvDecoder.prototype.readBlobTlv = function(expectedType)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {Buffer} The bytes in the value as a slice on the buffer or null if
+ * @return {Buffer} The bytes in the value as a slice on the buffer or null if
  * the next TLV doesn't have the expected type.  This is not a copy of the bytes
  * in the input buffer.  If you need a copy, then you must make a copy of the
  * return value.
@@ -10825,7 +10825,7 @@ TlvDecoder.prototype.readOptionalBlobTlv = function(expectedType, endOffset)
  * @param {number} expectedType The expected type.
  * @param {number} endOffset The offset of the end of the parent TLV, returned
  * by readNestedTlvsStart.
- * @returns {boolean} true, or else false if the next TLV doesn't have the
+ * @return {boolean} true, or else false if the next TLV doesn't have the
  * expected type.
  */
 TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
@@ -10842,7 +10842,7 @@ TlvDecoder.prototype.readBooleanTlv = function(expectedType, endOffset)
 
 /**
  * Get the offset into the input, used for the next read.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvDecoder.prototype.getOffset = function()
 {
@@ -10863,7 +10863,7 @@ TlvDecoder.prototype.seek = function(offset)
  * @param {number} beginOffset The offset in the input of the beginning of the
  * slice.
  * @param {number} endOffset The offset in the input of the end of the slice.
- * @returns {Buffer} The bytes in the value as a slice on the buffer.  This is
+ * @return {Buffer} The bytes in the value as a slice on the buffer.  This is
  * not a copy of the bytes in the input buffer.  If you need a copy, then you
  * must make a copy of the return value.
  */
@@ -10925,7 +10925,7 @@ TlvStructureDecoder.READ_VALUE_BYTES =  4;
  * false which means you should read more into input and call again.
  * @param {Buffer} input The input buffer. You have to pass in input each time
  * because the buffer could be reallocated.
- * @returns {boolean} true if found the element end, false if not.
+ * @return {boolean} true if found the element end, false if not.
  */
 TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
@@ -11079,7 +11079,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
 
 /**
  * Get the current offset into the input buffer.
- * @returns {number} The offset.
+ * @return {number} The offset.
  */
 TlvStructureDecoder.prototype.getOffset = function()
 {
@@ -11163,7 +11163,7 @@ ProtobufTlv.establishField = function()
  * @param {ProtoBuf.Reflect.T} descriptor The reflection descriptor for the
  * message. For example, if the message is of type "MyNamespace.MyMessage" then
  * the descriptor is builder.lookup("MyNamespace.MyMessage").
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ProtobufTlv.encode = function(message, descriptor)
 {
@@ -11444,7 +11444,7 @@ exports.WireFormat = WireFormat;
 /**
  * Encode name and return the encoding.  Your derived class should override.
  * @param {Name} name The Name to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeName = function(name)
@@ -11467,7 +11467,7 @@ WireFormat.prototype.decodeName = function(name, input)
 /**
  * Encode interest and return the encoding.  Your derived class should override.
  * @param {Interest} interest The Interest to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -11487,7 +11487,7 @@ WireFormat.prototype.encodeInterest = function(interest)
  * Your derived class should override.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -11505,7 +11505,7 @@ WireFormat.prototype.decodeInterest = function(interest, input)
  * Encode data and return the encoding and signed offsets. Your derived class
  * should override.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -11523,7 +11523,7 @@ WireFormat.prototype.encodeData = function(data)
  * the signed offsets.  Your derived class should override.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -11540,7 +11540,7 @@ WireFormat.prototype.decodeData = function(data, input)
  * override.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlParameters = function(controlParameters)
@@ -11566,7 +11566,7 @@ WireFormat.prototype.decodeControlParameters = function(controlParameters, input
  * override.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeControlResponse = function(controlResponse)
@@ -11591,7 +11591,7 @@ WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
  * Encode signature as a SignatureInfo and return the encoding. Your derived
  * class should override.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureInfo = function(signature)
@@ -11606,7 +11606,7 @@ WireFormat.prototype.encodeSignatureInfo = function(signature)
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @return {Signature} A new object which is a subclass of Signature.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeSignatureInfoAndValue = function
@@ -11620,7 +11620,7 @@ WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature bits) and return the encoding. Your derived class should override.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.encodeSignatureValue = function(signature)
@@ -11647,7 +11647,7 @@ WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * should override.
  * @param {DelegationSet} delegationSet The DelegationSet object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -11677,7 +11677,7 @@ WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
  * should override.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
@@ -11715,7 +11715,7 @@ WireFormat.setDefaultWireFormat = function(wireFormat)
 /**
  * Return the default WireFormat used by default encoding and decoding methods
  * which was set with setDefaultWireFormat.
- * @returns {WireFormat} An object of a subclass of WireFormat.
+ * @return {WireFormat} An object of a subclass of WireFormat.
  */
 WireFormat.getDefaultWireFormat = function()
 {
@@ -12016,7 +12016,7 @@ exports.DerNode = DerNode;
 
 /**
  * Return the number of bytes in DER
- * @returns {number}
+ * @return {number}
  */
 DerNode.prototype.getSize = function()
 {
@@ -12065,7 +12065,7 @@ DerNode.prototype.encodeHeader = function(size)
  * Extract the header from an input buffer and return the size.
  * @param {Buffer} inputBuf The input buffer to read from.
  * @param {number} startIdx The offset into the buffer.
- * @returns {number} The parsed size in the header.
+ * @return {number} The parsed size in the header.
  */
 DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 {
@@ -12105,7 +12105,7 @@ DerNode.prototype.decodeHeader = function(inputBuf, startIdx)
 
 /**
  * Get the raw data encoding for this node.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.prototype.encode = function()
 {
@@ -12150,7 +12150,7 @@ DerNode.prototype.payloadAppend = function(buffer)
  * object of a subclass of DerNode.
  * @param {type} inputBuf The input buffer to read from.
  * @param {type} startIdx (optional) The offset into the buffer. If omitted, use 0.
- * @returns {DerNode} An object of a subclass of DerNode.
+ * @return {DerNode} An object of a subclass of DerNode.
  */
 DerNode.parse = function(inputBuf, startIdx)
 {
@@ -12189,7 +12189,7 @@ DerNode.parse = function(inputBuf, startIdx)
 /**
  * Convert the encoded data to a standard representation. Overridden by some
  * subclasses (e.g. DerBoolean).
- * @returns {Blob} The encoded data as a Blob.
+ * @return {Blob} The encoded data as a Blob.
  */
 DerNode.prototype.toVal = function()
 {
@@ -12209,7 +12209,7 @@ DerNode.prototype.getPayload = function()
  * If this object is a DerNode.DerSequence, get the children of this node.
  * Otherwise, throw an exception. (DerSequence overrides to implement this
  * method.)
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  * @throws DerDecodingException if this object is not a DerSequence.
  */
 DerNode.prototype.getChildren = function()
@@ -12260,7 +12260,7 @@ DerNode.DerStructure.prototype.name = "DerStructure";
 
 /**
  * Get the total length of the encoding, including children.
- * @returns {number} The total (header + payload) length.
+ * @return {number} The total (header + payload) length.
  */
 DerNode.DerStructure.prototype.getSize = function()
 {
@@ -12275,7 +12275,7 @@ DerNode.DerStructure.prototype.getSize = function()
 
 /**
  * Get the children of this node.
- * @returns {Array<DerNode>} The children as an array of DerNode.
+ * @return {Array<DerNode>} The children as an array of DerNode.
  */
 DerNode.DerStructure.prototype.getChildren = function()
 {
@@ -12327,7 +12327,7 @@ DerNode.DerStructure.prototype.setChildChanged = function()
 /**
  * Override the base encode to return raw data encoding for this node and its
  * children.
- * @returns {Blob} The raw data encoding.
+ * @return {Blob} The raw data encoding.
  */
 DerNode.DerStructure.prototype.encode = function()
 {
@@ -12394,7 +12394,7 @@ DerNode.DerByteString.prototype.name = "DerByteString";
 
 /**
  * Override to return just the byte string.
- * @returns {Blob} The byte string as a copy of the payload buffer.
+ * @return {Blob} The byte string as a copy of the payload buffer.
  */
 DerNode.DerByteString.prototype.toVal = function()
 {
@@ -12622,7 +12622,7 @@ DerNode.DerOid.prototype.prepareEncoding = function(value)
  * Compute the encoding for one part of an OID, where values greater than 128
  * must be encoded as multiple bytes.
  * @param {number} value A component of an OID.
- * @returns {Buffer} The encoded buffer.
+ * @return {Buffer} The encoded buffer.
  */
 DerNode.DerOid.encode128 = function(value)
 {
@@ -12656,7 +12656,7 @@ DerNode.DerOid.encode128 = function(value)
  * Convert an encoded component of the encoded OID to the original integer.
  * @param {number} offset The offset into this node's payload.
  * @param {Array<number>} skip Set skip[0] to the number of payload bytes to skip.
- * @returns {number} The original integer.
+ * @return {number} The original integer.
  */
 DerNode.DerOid.prototype.decode128 = function(offset, skip)
 {
@@ -12677,7 +12677,7 @@ DerNode.DerOid.prototype.decode128 = function(offset, skip)
 
 /**
  * Override to return the string representation of the OID.
- * @returns {string} The string representation of the OID.
+ * @return {string} The string representation of the OID.
  */
 DerNode.DerOid.prototype.toVal = function()
 {
@@ -12754,7 +12754,7 @@ DerNode.DerGeneralizedTime.prototype.name = "DerGeneralizedTime";
 /**
  * Convert a UNIX timestamp to the internal string representation.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 {
@@ -12771,7 +12771,7 @@ DerNode.DerGeneralizedTime.toDerTimeString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 DerNode.DerGeneralizedTime.to2DigitString = function(x)
 {
@@ -12781,7 +12781,7 @@ DerNode.DerGeneralizedTime.to2DigitString = function(x)
 
 /**
  * Override to return the milliseconds since 1970.
- * @returns {number} The timestamp value as milliseconds since 1970.
+ * @return {number} The timestamp value as milliseconds since 1970.
  */
 DerNode.DerGeneralizedTime.prototype.toVal = function()
 {
@@ -12863,7 +12863,7 @@ BoostInfoTree.prototype.addSubtree = function(treeName, newTree)
  * Create a new BoostInfo and insert it as a sub-tree with the given name.
  * @param {string} treeName The name of the new sub-tree.
  * @param {string} value The value associated with the new sub-tree.
- * @returns {BoostInfoTree} The created sub-tree.
+ * @return {BoostInfoTree} The created sub-tree.
  */
 BoostInfoTree.prototype.createSubtree = function(treeName, value)
 {
@@ -12875,7 +12875,7 @@ BoostInfoTree.prototype.createSubtree = function(treeName, value)
 /**
  * Look up using the key and return a list of the subtrees.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {Array<BoostInfoTree>} A new array with pointers to the subtrees.
+ * @return {Array<BoostInfoTree>} A new array with pointers to the subtrees.
  */
 BoostInfoTree.prototype.get = function(key)
 {
@@ -12904,7 +12904,7 @@ BoostInfoTree.prototype.get = function(key)
 /**
  * Look up using the key and return string value of the first subtree.
  * @param {string} key The key which may be a path separated with '/'.
- * @returns {string} The string value or null if not found.
+ * @return {string} The string value or null if not found.
  */
 BoostInfoTree.prototype.getFirstValue = function(key)
 {
@@ -12960,7 +12960,7 @@ BoostInfoTree.prototype.toString = function()
  * Use treeName to find the array of BoostInfoTree in this.subtrees.
  * @param {string} treeName The key in this.subtrees to search for. This does a
  * flat search in subtrees_.  It does not split by '/' into a path.
- * @returns {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
+ * @return {Array<BoostInfoTree>} A array of BoostInfoTree, or null if not found.
  */
 BoostInfoTree.prototype.find = function(treeName)
 {
@@ -13036,7 +13036,7 @@ BoostInfoParser.prototype.getRoot = function() { return this.root; };
  * regardless of whitespace between the quotes. Also allow a backslash to escape
  * the next character.
  * @param {string} s The input string to split.
- * @returns {Array<string>} An array of strings.
+ * @return {Array<string>} An array of strings.
  */
 BoostInfoParser.shlex_split = function(s)
 {
@@ -13482,7 +13482,7 @@ MemoryContentCache.prototype.storePendingInterest = function(interest, face)
  * calls storePendingInterest() to store the interest that doesn't match a
  * Data packet. add(data) will check if the added Data packet satisfies any
  * pending interest and send it.
- * @returns {function} A callback to use for onDataNotFound in registerPrefix().
+ * @return {function} A callback to use for onDataNotFound in registerPrefix().
  */
 MemoryContentCache.prototype.getStorePendingInterest = function()
 {
@@ -13635,7 +13635,7 @@ MemoryContentCache.StaleTimeContent.prototype.name = "StaleTimeContent";
  * Check if this content is stale.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this content is stale, otherwise false.
+ * @return {boolean} True if this content is stale, otherwise false.
  */
 MemoryContentCache.StaleTimeContent.prototype.isStale = function(nowMilliseconds)
 {
@@ -13680,7 +13680,7 @@ MemoryContentCache.PendingInterest.prototype.getFace = function()
  * Check if this interest is timed out.
  * @param {number} nowMilliseconds The current time in milliseconds from
  * new Date().getTime().
- * @returns {boolean} True if this interest timed out, otherwise false.
+ * @return {boolean} True if this interest timed out, otherwise false.
  */
 MemoryContentCache.PendingInterest.prototype.isTimedOut = function(nowMilliseconds)
 {
@@ -13727,7 +13727,7 @@ exports.NdnRegexMatcher = NdnRegexMatcher;
  * Determine if the provided NDN regex matches the given Name.
  * @param {string} pattern The NDN regex.
  * @param {Name} name The Name to match against the regex.
- * @returns {Object} The match object from String.match, or null if the pattern
+ * @return {Object} The match object from String.match, or null if the pattern
  * does not match.
  */
 NdnRegexMatcher.match = function(pattern, name)
@@ -14088,7 +14088,7 @@ SegmentFetcher.prototype.onTimeout = function(interest)
 /**
  * Check if the last component in the name is a segment number.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name ends with a segment number, otherwise false.
+ * @return {boolean} True if the name ends with a segment number, otherwise false.
  */
 SegmentFetcher.endsWithSegmentNumber = function(name)
 {
@@ -14226,7 +14226,7 @@ MicroForwarderTransport.ConnectionInfo.prototype.name = "MicroForwarderTransport
  * Check if the fields of this MicroForwarderTransport.ConnectionInfo equal the other
  * MicroForwarderTransport.ConnectionInfo.
  * @param {MicroForwarderTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 MicroForwarderTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -14386,7 +14386,7 @@ WebSocketTransport.ConnectionInfo.prototype.name = "WebSocketTransport.Connectio
  * Check if the fields of this WebSocketTransport.ConnectionInfo equal the other
  * WebSocketTransport.ConnectionInfo.
  * @param {WebSocketTransport.ConnectionInfo} The other object to check.
- * @returns {boolean} True if the objects have equal fields, false if not.
+ * @return {boolean} True if the objects have equal fields, false if not.
  */
 WebSocketTransport.ConnectionInfo.prototype.equals = function(other)
 {
@@ -14435,7 +14435,7 @@ WebSocketTransport.prototype.isLocal = function(connectionInfo, onResult, onErro
  * @param {function} onopenCallback Once connected, call onopenCallback().
  * @param {type} onclosedCallback If the connection is closed by the remote host,
  * call onclosedCallback().
- * @returns {undefined}
+ * @return {undefined}
  */
 WebSocketTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
@@ -14662,7 +14662,7 @@ Name.Component.ComponentType = {
 
 /**
  * Get the component value.
- * @returns {Blob} The component value.
+ * @return {Blob} The component value.
  */
 Name.Component.prototype.getValue = function()
 {
@@ -14689,7 +14689,7 @@ Object.defineProperty(Name.Component.prototype, "value",
  * Convert this component value to a string by escaping characters according to the NDN URI Scheme.
  * This also adds "..." to a value with zero or more ".".
  * This adds a type code prefix as needed, such as "sha256digest=".
- * @returns {string} The escaped string.
+ * @return {string} The escaped string.
  */
 Name.Component.prototype.toEscapedString = function()
 {
@@ -14703,7 +14703,7 @@ Name.Component.prototype.toEscapedString = function()
  * Check if this component is a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a segment number.
+ * @return {number}  True if this is a segment number.
  */
 Name.Component.prototype.isSegment = function()
 {
@@ -14715,7 +14715,7 @@ Name.Component.prototype.isSegment = function()
  * Check if this component is a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a segment byte offset.
+ * @return  True if this is a segment byte offset.
  */
 Name.Component.prototype.isSegmentOffset = function()
 {
@@ -14727,7 +14727,7 @@ Name.Component.prototype.isSegmentOffset = function()
  * Check if this component is a version number  according to NDN naming
  * conventions for "Versioning" (marker 0xFD).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number}  True if this is a version number.
+ * @return {number}  True if this is a version number.
  */
 Name.Component.prototype.isVersion = function()
 {
@@ -14739,7 +14739,7 @@ Name.Component.prototype.isVersion = function()
  * Check if this component is a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a timestamp.
+ * @return  True if this is a timestamp.
  */
 Name.Component.prototype.isTimestamp = function()
 {
@@ -14751,7 +14751,7 @@ Name.Component.prototype.isTimestamp = function()
  * Check if this component is a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns  True if this is a sequence number.
+ * @return  True if this is a sequence number.
  */
 Name.Component.prototype.isSequenceNumber = function()
 {
@@ -14761,7 +14761,7 @@ Name.Component.prototype.isSequenceNumber = function()
 
 /**
  * Check if this component is a generic component.
- * @returns {boolean} True if this is an generic component.
+ * @return {boolean} True if this is an generic component.
  */
 Name.Component.prototype.isGeneric = function()
 {
@@ -14770,7 +14770,7 @@ Name.Component.prototype.isGeneric = function()
 
 /**
  * Check if this component is an ImplicitSha256Digest component.
- * @returns {boolean} True if this is an ImplicitSha256Digest component.
+ * @return {boolean} True if this is an ImplicitSha256Digest component.
  */
 Name.Component.prototype.isImplicitSha256Digest = function()
 {
@@ -14779,7 +14779,7 @@ Name.Component.prototype.isImplicitSha256Digest = function()
 
 /**
  * Interpret this name component as a network-ordered number and return an integer.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  */
 Name.Component.prototype.toNumber = function()
 {
@@ -14790,7 +14790,7 @@ Name.Component.prototype.toNumber = function()
  * Interpret this name component as a network-ordered number with a marker and
  * return an integer.
  * @param {number} marker The required first byte of the component.
- * @returns {number} The integer number.
+ * @return {number} The integer number.
  * @throws Error If the first byte of the component does not equal the marker.
  */
 Name.Component.prototype.toNumberWithMarker = function(marker)
@@ -14805,7 +14805,7 @@ Name.Component.prototype.toNumberWithMarker = function(marker)
  * Interpret this name component as a segment number according to NDN naming
  * conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns {number} The integer segment number.
+ * @return {number} The integer segment number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegment = function()
@@ -14817,7 +14817,7 @@ Name.Component.prototype.toSegment = function()
  * Interpret this name component as a segment byte offset according to NDN
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer segment byte offset.
+ * @return The integer segment byte offset.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSegmentOffset = function()
@@ -14830,7 +14830,7 @@ Name.Component.prototype.toSegmentOffset = function()
  * conventions for "Versioning" (marker 0xFD). Note that this returns
  * the exact number from the component without converting it to a time
  * representation.
- * @returns {number} The integer version number.
+ * @return {number} The integer version number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toVersion = function()
@@ -14842,7 +14842,7 @@ Name.Component.prototype.toVersion = function()
  * Interpret this name component as a timestamp  according to NDN naming
  * conventions for "Timestamp" (marker 0xFC).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The number of microseconds since the UNIX epoch (Thursday,
+ * @return The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
  * @throws Error If the first byte of the component is not the expected marker.
  */
@@ -14855,7 +14855,7 @@ Name.Component.prototype.toTimestamp = function()
  * Interpret this name component as a sequence number according to NDN naming
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
- * @returns The integer sequence number.
+ * @return The integer sequence number.
  * @throws Error If the first byte of the component is not the expected marker.
  */
 Name.Component.prototype.toSequenceNumber = function()
@@ -14867,7 +14867,7 @@ Name.Component.prototype.toSequenceNumber = function()
  * Create a component whose value is the nonNegativeInteger encoding of the
  * number.
  * @param {number} number
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumber = function(number)
 {
@@ -14881,7 +14881,7 @@ Name.Component.fromNumber = function(number)
  * nonNegativeInteger encoding of the number.
  * @param {number} number
  * @param {number} marker
- * @returns {Name.Component}
+ * @return {Name.Component}
  */
 Name.Component.fromNumberWithMarker = function(number, marker)
 {
@@ -14959,7 +14959,7 @@ Name.Component.fromSequenceNumber = function(sequenceNumber)
  * Create a component of type ImplicitSha256DigestComponent, so that
  * isImplicitSha256Digest() is true.
  * @param {Blob|Buffer} digest The SHA-256 digest value.
- * @returns {Name.Component} The new Component.
+ * @return {Name.Component} The new Component.
  * @throws DecodingException If the digest length is not 32 bytes.
  */
 Name.Component.fromImplicitSha256Digest = function(digest)
@@ -14977,7 +14977,7 @@ Name.Component.fromImplicitSha256Digest = function(digest)
 
 /**
  * Get the successor of this component, as described in Name.getSuccessor.
- * @returns {Name.Component} A new Name.Component which is the successor of this.
+ * @return {Name.Component} A new Name.Component which is the successor of this.
  */
 Name.Component.prototype.getSuccessor = function()
 {
@@ -15009,7 +15009,7 @@ Name.Component.prototype.getSuccessor = function()
 /**
  * Check if this is the same component as other.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {Boolean} true if the components are equal, otherwise false.
+ * @return {Boolean} true if the components are equal, otherwise false.
  */
 Name.Component.prototype.equals = function(other)
 {
@@ -15020,7 +15020,7 @@ Name.Component.prototype.equals = function(other)
 /**
  * Compare this to the other Component using NDN canonical ordering.
  * @param {Name.Component} other The other Component to compare with.
- * @returns {number} 0 if they compare equal, -1 if this comes before other in
+ * @return {number} 0 if they compare equal, -1 if this comes before other in
  * the canonical ordering, or 1 if this comes after other in the canonical
  * ordering.
  *
@@ -15040,7 +15040,7 @@ Name.Component.prototype.compare = function(other)
  * Do the work of Name.Component.compare to compare the component buffers.
  * @param {Buffer} component1
  * @param {Buffer} component2
- * @returns {number} 0 if they compare equal, -1 if component1 comes before
+ * @return {number} 0 if they compare equal, -1 if component1 comes before
  * component2 in the canonical ordering, or 1 if component1 comes after
  * component2 in the canonical ordering.
  */
@@ -15142,7 +15142,7 @@ Name.prototype.set = function(uri)
  * Convert the component to a Buffer and append a GENERIC component to this Name.
  * Return this Name object to allow chaining calls to add.
  * @param {Name.Component|String|Array<number>|ArrayBuffer|Buffer|Name} component If a component is a string, encode as utf8 (but don't unescape).
- * @returns {Name}
+ * @return {Name}
  */
 Name.prototype.append = function(component)
 {
@@ -15191,7 +15191,7 @@ Name.prototype.clear = function()
  * in the URI, e.g. "ndn:/example/name". If false, just return the path, e.g.
  * "/example/name". If ommitted, then just return the path which is the default
  * case where toUri() is used for display.
- * @returns {String}
+ * @return {String}
  */
 Name.prototype.toUri = function(includeScheme)
 {
@@ -15221,7 +15221,7 @@ Name.prototype.toString = function() { return this.toUri(); }
  * naming conventions for "Segment number" (marker 0x00).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segment The segment number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegment = function(segment)
 {
@@ -15233,7 +15233,7 @@ Name.prototype.appendSegment = function(segment)
  * naming conventions for segment "Byte offset" (marker 0xFB).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} segmentOffset The segment byte offset.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendSegmentOffset = function(segmentOffset)
 {
@@ -15246,7 +15246,7 @@ Name.prototype.appendSegmentOffset = function(segmentOffset)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * Note that this encodes the exact value of version without converting from a time representation.
  * @param {number} version The version number.
- * @returns {Name} This name so that you can chain calls to append.
+ * @return {Name} This name so that you can chain calls to append.
  */
 Name.prototype.appendVersion = function(version)
 {
@@ -15259,7 +15259,7 @@ Name.prototype.appendVersion = function(version)
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} timestamp The number of microseconds since the UNIX epoch (Thursday,
  * 1 January 1970) not counting leap seconds.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendTimestamp = function(timestamp)
 {
@@ -15271,7 +15271,7 @@ Name.prototype.appendTimestamp = function(timestamp)
  * conventions for "Sequencing" (marker 0xFE).
  * http://named-data.net/doc/tech-memos/naming-conventions.pdf
  * @param {number} sequenceNumber The sequence number.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  */
 Name.prototype.appendSequenceNumber = function(sequenceNumber)
 {
@@ -15282,7 +15282,7 @@ Name.prototype.appendSequenceNumber = function(sequenceNumber)
  * Append a component of type ImplicitSha256DigestComponent, so that
  * isImplicitSha256Digest() is true.
  * @param {Blob|Buffer} digest The SHA-256 digest value.
- * @returns This name so that you can chain calls to append.
+ * @return This name so that you can chain calls to append.
  * @throws DecodingException If the digest length is not 32 bytes.
  */
 Name.prototype.appendImplicitSha256Digest = function(digest)
@@ -15306,7 +15306,7 @@ Name.prototype.addSegment = function(number)
  * @param {number} (optional) nComponents The number of components starting at
  * iStartComponent. If omitted or greater than the size of this name, get until
  * the end of the name.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getSubName = function(iStartComponent, nComponents)
 {
@@ -15329,7 +15329,7 @@ Name.prototype.getSubName = function(iStartComponent, nComponents)
  * Return a new Name with the first nComponents components of this Name.
  * @param {number} nComponents The number of prefix components.  If nComponents is -N then return the prefix up
  * to name.size() - N. For example getPrefix(-1) returns the name without the final component.
- * @returns {Name} A new name.
+ * @return {Name} A new name.
  */
 Name.prototype.getPrefix = function(nComponents)
 {
@@ -15349,7 +15349,7 @@ Name.prototype.cut = function(nComponents)
 
 /**
  * Return the number of name components.
- * @returns {number}
+ * @return {number}
  */
 Name.prototype.size = function()
 {
@@ -15361,7 +15361,7 @@ Name.prototype.size = function()
  * @param {Number} i The index of the component, starting from 0.  However, if i is negative, return the component
  * at size() - (-i).
  * @return {Name.Component} The name component at the index. You must not
- * change the Name.Component. object - if you need to change it then make a copy.
+ * change the returned Name.Component object.
  */
 Name.prototype.get = function(i)
 {
@@ -15422,7 +15422,7 @@ Name.prototype.indexOfFileName = function()
  * Encode this Name for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 Name.prototype.wireEncode = function(wireFormat)
 {
@@ -15456,10 +15456,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * is intuitive because all names with the prefix /a are next to each other.
  * But it may be also be counter-intuitive because /c comes before /bb according
  * to NDN canonical ordering since it is shorter.
- * @param {Name} other The other Name to compare with.
- * @returns {boolean} If they compare equal, -1 if *this comes before other in
- * the canonical ordering, or 1 if *this comes after other in the canonical
- * ordering. The first form of compare is simply compare(other). The second form is
+ * The first form of compare is simply compare(other). The second form is
  * compare(iStartComponent, nComponents, other [, iOtherStartComponent] [, nOtherComponents])
  * which is equivalent to
  * self.getSubName(iStartComponent, nComponents).compare
@@ -15470,7 +15467,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nComponents The number of components starting at
  * iStartComponent. If greater than the size of this name, compare until the end
  * of the name.
- * @param {Name other: The other Name to compare with.
+ * @param {Name} other The other Name to compare with.
  * @param {number} iOtherStartComponent (optional) The index if the first
  * component of the other name to compare. If iOtherStartComponent is -N then
  * compare components starting from other.size() - N. If omitted, compare
@@ -15478,7 +15475,7 @@ Name.prototype.wireDecode = function(input, wireFormat)
  * @param {number} nOtherComponents (optional) The number of components
  * starting at iOtherStartComponent. If omitted or greater than the size of this
  * name, compare until the end of the name.
- * @returns {number} 0 If they compare equal, -1 if self comes before other in
+ * @return {number} 0 If they compare equal, -1 if self comes before other in
  * the canonical ordering, or 1 if self comes after other in the canonical
  * ordering.
  * @see http://named-data.net/doc/0.2/technical/CanonicalOrder.html
@@ -15602,7 +15599,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
  * @param {Buffer|Name.Component} component The value or Name.Component to escape.
- * @returns {string} The escaped string.
+ * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
 {
@@ -15646,7 +15643,7 @@ Name.toEscapedString = function(value)
  * component in the name.
  * This does not check for a type code prefix such as "sha256digest=".
  * @param {string} escapedString The escaped string to decode.
- * @returns {Blob} The unescaped Blob value. If the escapedString is not a valid
+ * @return {Blob} The unescaped Blob value. If the escapedString is not a valid
  * escaped component, then the Blob isNull().
  */
 Name.fromEscapedString = function(escapedString)
@@ -15694,7 +15691,7 @@ Name.fromEscapedStringAsBuffer = function(escapedString)
  * - The successor of /%00%01/%01%FF is /%00%01/%02%00
  * - The successor of /%00%01/%FF%FF is /%00%01/%00%00%00
  *
- * @returns {Name} A new name which is the successor of this.
+ * @return {Name} A new name which is the successor of this.
  */
 Name.prototype.getSuccessor = function()
 {
@@ -15712,7 +15709,7 @@ Name.prototype.getSuccessor = function()
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.match = function(name)
@@ -15738,14 +15735,14 @@ Name.prototype.match = function(name)
  * Return true if the N components of this name are the same as the first N
  * components of the given name.
  * @param {Name} name The name to check.
- * @returns {Boolean} true if this matches the given name. This always returns
+ * @return {Boolean} true if this matches the given name. This always returns
  * true if this name is empty.
  */
 Name.prototype.isPrefixOf = function(name) { return this.match(name); }
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Name.prototype.getChangeCount = function()
 {
@@ -15823,13 +15820,14 @@ exports.KeyLocator = KeyLocator;
  * Get the key locator type. If KeyLocatorType.KEYNAME, you may also
  * getKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you may also
  * getKeyData() to get the digest.
- * @returns {number} The key locator type, or null if not specified.
+ * @return {number} The key locator type as a KeyLocatorType enum value,
+ * or null if not specified.
  */
 KeyLocator.prototype.getType = function() { return this.type_; };
 
 /**
  * Get the key name.  This is meaningful if getType() is KeyLocatorType.KEYNAME.
- * @returns {Name} The key name. If not specified, the Name is empty.
+ * @return {Name} The key name. If not specified, the Name is empty.
  */
 KeyLocator.prototype.getKeyName = function()
 {
@@ -15839,7 +15837,7 @@ KeyLocator.prototype.getKeyName = function()
 /**
  * Get the key data. If getType() is KeyLocatorType.KEY_LOCATOR_DIGEST, this is
  * the digest bytes.
- * @returns {Blob} The key data, or null if not specified.
+ * @return {Blob} The key data, or an isNull Blob if not specified.
  */
 KeyLocator.prototype.getKeyData = function()
 {
@@ -15859,7 +15857,8 @@ KeyLocator.prototype.getKeyDataAsBuffer = function()
  * Set the key locator type.  If KeyLocatorType.KEYNAME, you must also
  * setKeyName().  If KeyLocatorType.KEY_LOCATOR_DIGEST, you must also
  * setKeyData() to the digest.
- * @param {number} type The key locator type.  If null, the type is unspecified.
+ * @param {number} type The key locator type as a KeyLocatorType enum value.  If
+ * null, the type is unspecified.
  */
 KeyLocator.prototype.setType = function(type)
 {
@@ -15932,7 +15931,7 @@ KeyLocator.prototype.equals = function(other)
  * with all the different kinds of information that various signature
  * algorithms may use.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {boolean} True if the signature is a type that has a KeyLocator,
+ * @return {boolean} True if the signature is a type that has a KeyLocator,
  * otherwise false.
  */
 KeyLocator.canGetFromSignature = function(signature)
@@ -15945,7 +15944,7 @@ KeyLocator.canGetFromSignature = function(signature)
  * If the signature is a type that has a KeyLocator, then return it. Otherwise
  * throw an error.
  * @param {Signature} signature An object of a subclass of Signature.
- * @returns {KeyLocator} The signature's KeyLocator. It is an error if signature
+ * @return {KeyLocator} The signature's KeyLocator. It is an error if signature
  * doesn't have a KeyLocator.
  */
 KeyLocator.getFromSignature = function(signature)
@@ -15961,7 +15960,7 @@ KeyLocator.getFromSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 KeyLocator.prototype.getChangeCount = function()
 {
@@ -16070,7 +16069,7 @@ exports.MetaInfo = MetaInfo;
 
 /**
  * Get the content type.
- * @returns {number} The content type as an int from ContentType. If this is
+ * @return {number} The content type as an int from ContentType. If this is
  * ContentType.OTHER_CODE, then call getOtherTypeCode() to get the unrecognized
  * content type code.
  */
@@ -16092,7 +16091,7 @@ MetaInfo.prototype.getOtherTypeCode = function()
 
 /**
  * Get the freshness period.
- * @returns {number} The freshness period in milliseconds, or null if not
+ * @return {number} The freshness period in milliseconds, or null if not
  * specified.
  */
 MetaInfo.prototype.getFreshnessPeriod = function()
@@ -16102,7 +16101,7 @@ MetaInfo.prototype.getFreshnessPeriod = function()
 
 /**
  * Get the final block ID.
- * @returns {Name.Component} The final block ID as a Name.Component. If the
+ * @return {Name.Component} The final block ID as a Name.Component. If the
  * Name.Component getValue().size() is 0, then the final block ID is not specified.
  */
 MetaInfo.prototype.getFinalBlockId = function()
@@ -16139,6 +16138,13 @@ MetaInfo.prototype.setType = function(type)
   ++this.changeCount_;
 };
 
+/**
+ * Set the packet’s content type code to use when the content type enum is
+ * ContentType.OTHER_CODE. If the packet’s content type code is a recognized
+ * enum value, just call setType().
+ * @param {number} otherTypeCode The packet’s unrecognized content type code,
+ * which must be non-negative.
+ */
 MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 {
   if (otherTypeCode < 0)
@@ -16150,12 +16156,11 @@ MetaInfo.prototype.setOtherTypeCode = function(otherTypeCode)
 
 /**
  * Set the freshness period.
- * @param {type} freshnessPeriod The freshness period in milliseconds, or null
+ * @param {number} freshnessPeriod The freshness period in milliseconds, or null
  * for not specified.
  */
 MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
 {
-  // Use attribute freshnessSeconds for backwards compatibility.
   if (freshnessPeriod == null || freshnessPeriod < 0)
     this.freshnessPeriod_ = null;
   else
@@ -16163,6 +16168,12 @@ MetaInfo.prototype.setFreshnessPeriod = function(freshnessPeriod)
   ++this.changeCount_;
 };
 
+/**
+ * Set the final block ID.
+ * @param {Name.Component} finalBlockId The final block ID as a Name.Component.
+ * If not specified, set to a new default Name.Component(), or to a
+ * Name.Component where getValue().size() is 0.
+ */
 MetaInfo.prototype.setFinalBlockId = function(finalBlockId)
 {
   this.finalBlockId_ = typeof finalBlockId === 'object' &&
@@ -16181,7 +16192,7 @@ MetaInfo.prototype.setFinalBlockID = function(finalBlockId)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 MetaInfo.prototype.getChangeCount = function()
 {
@@ -16271,7 +16282,7 @@ exports.Sha256WithRsaSignature = Sha256WithRsaSignature;
 
 /**
  * Create a new Sha256WithRsaSignature which is a copy of this object.
- * @returns {Sha256WithRsaSignature} A new object which is a copy of this object.
+ * @return {Sha256WithRsaSignature} A new object which is a copy of this object.
  */
 Sha256WithRsaSignature.prototype.clone = function()
 {
@@ -16280,7 +16291,7 @@ Sha256WithRsaSignature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 Sha256WithRsaSignature.prototype.getKeyLocator = function()
 {
@@ -16289,7 +16300,7 @@ Sha256WithRsaSignature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 Sha256WithRsaSignature.prototype.getSignature = function()
 {
@@ -16331,7 +16342,7 @@ Sha256WithRsaSignature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Sha256WithRsaSignature.prototype.getChangeCount = function()
 {
@@ -16410,7 +16421,7 @@ exports.GenericSignature = GenericSignature;
 
 /**
  * Create a new GenericSignature which is a copy of this object.
- * @returns {GenericSignature} A new object which is a copy of this object.
+ * @return {GenericSignature} A new object which is a copy of this object.
  */
 GenericSignature.prototype.clone = function()
 {
@@ -16419,7 +16430,7 @@ GenericSignature.prototype.clone = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignature = function()
 { 
@@ -16438,7 +16449,7 @@ GenericSignature.prototype.getSignatureAsBuffer = function()
 /**
  * Get the bytes of the entire signature info encoding (including the type
  * code).
- * @returns {Blob} The encoding bytes. If not specified, the value isNull().
+ * @return {Blob} The encoding bytes. If not specified, the value isNull().
  */
 GenericSignature.prototype.getSignatureInfoEncoding = function()
 {
@@ -16450,7 +16461,7 @@ GenericSignature.prototype.getSignatureInfoEncoding = function()
  * setSignatureInfoEncoding, it sets the type code. Note that the type code
  * is ignored during wire encode, which simply uses getSignatureInfoEncoding()
  * where the encoding already has the type code.
- * @returns {number} The type code, or null if not known.
+ * @return {number} The type code, or null if not known.
  */
 GenericSignature.prototype.getTypeCode = function() { return this.typeCode_; };
 
@@ -16486,7 +16497,7 @@ GenericSignature.prototype.setSignatureInfoEncoding = function
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 GenericSignature.prototype.getChangeCount = function()
 {
@@ -16554,7 +16565,7 @@ exports.HmacWithSha256Signature = HmacWithSha256Signature;
 
 /**
  * Create a new HmacWithSha256Signature which is a copy of this object.
- * @returns {HmacWithSha256Signature} A new object which is a copy of this object.
+ * @return {HmacWithSha256Signature} A new object which is a copy of this object.
  */
 HmacWithSha256Signature.prototype.clone = function()
 {
@@ -16563,7 +16574,7 @@ HmacWithSha256Signature.prototype.clone = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator.
+ * @return {KeyLocator} The key locator.
  */
 HmacWithSha256Signature.prototype.getKeyLocator = function()
 {
@@ -16572,7 +16583,7 @@ HmacWithSha256Signature.prototype.getKeyLocator = function()
 
 /**
  * Get the data packet's signature bytes.
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 HmacWithSha256Signature.prototype.getSignature = function()
 {
@@ -16614,7 +16625,7 @@ HmacWithSha256Signature.prototype.setSignature = function(signature)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 HmacWithSha256Signature.prototype.getChangeCount = function()
 {
@@ -16688,7 +16699,7 @@ exports.DigestSha256Signature = DigestSha256Signature;
 
 /**
  * Create a new DigestSha256Signature which is a copy of this object.
- * @returns {DigestSha256Signature} A new object which is a copy of this object.
+ * @return {DigestSha256Signature} A new object which is a copy of this object.
  */
 DigestSha256Signature.prototype.clone = function()
 {
@@ -16697,7 +16708,7 @@ DigestSha256Signature.prototype.clone = function()
 
 /**
  * Get the signature bytes (which are only the digest).
- * @returns {Blob} The signature bytes. If not specified, the value isNull().
+ * @return {Blob} The signature bytes. If not specified, the value isNull().
  */
 DigestSha256Signature.prototype.getSignature = function()
 {
@@ -16717,7 +16728,7 @@ DigestSha256Signature.prototype.setSignature = function(signature)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 DigestSha256Signature.prototype.getChangeCount = function()
 {
@@ -16779,7 +16790,7 @@ var Data = function Data(nameOrData, metaInfoOrContent, arg3)
     // The copy constructor.
     var data = nameOrData;
 
-    // Copy the name.
+    // Copy the Data object.
     this.name_ = new ChangeCounter(new Name(data.getName()));
     this.metaInfo_ = new ChangeCounter(new MetaInfo(data.getMetaInfo()));
     this.signature_ = new ChangeCounter(data.getSignature().clone());
@@ -16829,7 +16840,7 @@ exports.Data = Data;
 
 /**
  * Get the data packet's name.
- * @returns {Name} The name.
+ * @return {Name} The name. If not specified, the name size() is 0.
  */
 Data.prototype.getName = function()
 {
@@ -16838,7 +16849,7 @@ Data.prototype.getName = function()
 
 /**
  * Get the data packet's meta info.
- * @returns {MetaInfo} The meta info.
+ * @return {MetaInfo} The meta info.
  */
 Data.prototype.getMetaInfo = function()
 {
@@ -16847,7 +16858,7 @@ Data.prototype.getMetaInfo = function()
 
 /**
  * Get the data packet's signature object.
- * @returns {Signature} The signature object.
+ * @return {Signature} The signature object.
  */
 Data.prototype.getSignature = function()
 {
@@ -16856,7 +16867,7 @@ Data.prototype.getSignature = function()
 
 /**
  * Get the data packet's content.
- * @returns {Blob} The content as a Blob, which isNull() if unspecified.
+ * @return {Blob} The content as a Blob, which isNull() if unspecified.
  */
 Data.prototype.getContent = function()
 {
@@ -16875,7 +16886,7 @@ Data.prototype.getContentAsBuffer = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Data.prototype.getDefaultWireEncoding = function()
@@ -16892,7 +16903,7 @@ Data.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Data.prototype.getDefaultWireEncodingFormat = function()
@@ -16948,7 +16959,7 @@ Data.prototype.getFullName = function(wireFormat)
 /**
  * Set name to a copy of the given Name.
  * @param {Name} name The Name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setName = function(name)
 {
@@ -16961,7 +16972,7 @@ Data.prototype.setName = function(name)
 /**
  * Set metaInfo to a copy of the given MetaInfo.
  * @param {MetaInfo} metaInfo The MetaInfo which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setMetaInfo = function(metaInfo)
 {
@@ -16974,7 +16985,7 @@ Data.prototype.setMetaInfo = function(metaInfo)
 /**
  * Set the signature to a copy of the given signature.
  * @param {Signature} signature The signature object which is cloned.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setSignature = function(signature)
 {
@@ -16989,7 +17000,7 @@ Data.prototype.setSignature = function(signature)
  * @param {Blob|Buffer} content The content bytes. If content is not a Blob,
  * then create a new Blob to copy the bytes (otherwise take another pointer to
  * the same Blob).
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 Data.prototype.setContent = function(content)
 {
@@ -17004,7 +17015,7 @@ Data.prototype.setContent = function(content)
  * wire format, also set the defaultWireEncoding field to the encoded result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Data.prototype.wireEncode = function(wireFormat)
 {
@@ -17072,7 +17083,7 @@ Data.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Data.prototype.getChangeCount = function()
 {
@@ -17415,7 +17426,7 @@ exports.PublicKey = PublicKey;
 
 /**
  * Encode the public key into DER.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 PublicKey.prototype.toDer = function()
 {
@@ -17424,7 +17435,7 @@ PublicKey.prototype.toDer = function()
 
 /**
  * Get the key type.
- * @returns {number} The key type as an int from KeyType.
+ * @return {number} The key type as an int from KeyType.
  */
 PublicKey.prototype.getKeyType = function()
 {
@@ -17435,7 +17446,7 @@ PublicKey.prototype.getKeyType = function()
  * Get the digest of the public key.
  * @param {number} digestAlgorithm (optional) The integer from DigestAlgorithm,
  * such as DigestAlgorithm.SHA256. If omitted, use DigestAlgorithm.SHA256 .
- * @returns {Blob} The digest value.
+ * @return {Blob} The digest value.
  */
 PublicKey.prototype.getDigest = function(digestAlgorithm)
 {
@@ -17453,7 +17464,7 @@ PublicKey.prototype.getDigest = function(digestAlgorithm)
 
 /**
  * Get the raw bytes of the public key in DER format.
- * @returns {Blob} The public key DER.
+ * @return {Blob} The public key DER.
  */
 PublicKey.prototype.getKeyDer = function()
 {
@@ -17510,7 +17521,7 @@ exports.CertificateExtension = CertificateExtension;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateExtension.prototype.toDer = function()
 {
@@ -17597,7 +17608,7 @@ exports.CertificateSubjectDescription = CertificateSubjectDescription;
 
 /**
  * Encode the object into a DER syntax tree.
- * @returns {DerNode} The encoded DER syntax tree.
+ * @return {DerNode} The encoded DER syntax tree.
  */
 CertificateSubjectDescription.prototype.toDer = function()
 {
@@ -17703,7 +17714,7 @@ Certificate.prototype.addSubjectDescription = function(description)
 
 /**
  * Get the subject description list.
- * @returns {Array<CertificateSubjectDescription>} The subject description list.
+ * @return {Array<CertificateSubjectDescription>} The subject description list.
  */
 Certificate.prototype.getSubjectDescriptionList = function()
 {
@@ -17721,7 +17732,7 @@ Certificate.prototype.addExtension = function(extension)
 
 /**
  * Get the certificate extension list.
- * @returns {Array<CertificateExtension>} The extension list.
+ * @return {Array<CertificateExtension>} The extension list.
  */
 Certificate.prototype.getExtensionList = function()
 {
@@ -17760,7 +17771,7 @@ Certificate.prototype.getPublicKeyInfo = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is earlier than notBefore.
+ * @return {Boolean} True if the current time is earlier than notBefore.
  */
 Certificate.prototype.isTooEarly = function()
 {
@@ -17770,7 +17781,7 @@ Certificate.prototype.isTooEarly = function()
 
 /**
  * Check if the certificate is valid.
- * @returns {Boolean} True if the current time is later than notAfter.
+ * @return {Boolean} True if the current time is later than notAfter.
  */
 Certificate.prototype.isTooLate = function()
 {
@@ -17780,7 +17791,7 @@ Certificate.prototype.isTooLate = function()
 
 /**
  * Encode the certificate fields in DER format.
- * @returns {DerSequence} The DER encoded contents of the certificate.
+ * @return {DerSequence} The DER encoded contents of the certificate.
  */
 Certificate.prototype.toDer = function()
 {
@@ -17914,7 +17925,7 @@ Certificate.prototype.toString = function()
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {type} msSince1970 Timestamp as milliseconds since Jan 1, 1970.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Certificate.toIsoString = function(msSince1970)
 {
@@ -17931,7 +17942,7 @@ Certificate.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Certificate.to2DigitString = function(x)
 {
@@ -17999,7 +18010,7 @@ exports.IdentityCertificate = IdentityCertificate;
  * Override the base class method to check that the name is a valid identity
  * certificate name.
  * @param {Name} name The identity certificate name which is copied.
- * @returns {Data} This Data so that you can chain calls to update values.
+ * @return {Data} This Data so that you can chain calls to update values.
  */
 IdentityCertificate.prototype.setName = function(name)
 {
@@ -18039,7 +18050,7 @@ IdentityCertificate.isIdentityCertificate = function(certificate)
 /**
  * Get the public key name from the full certificate name.
  * @param {Name} certificateName The full certificate name.
- * @returns {Name} The related public key name.
+ * @return {Name} The related public key name.
  */
 IdentityCertificate.certificateNameToPublicKeyName = function(certificateName)
 {
@@ -18153,7 +18164,7 @@ exports.IdentityStorage = IdentityStorage;
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise which returns true if the identity
+ * @return {Promise|SyncPromise} A promise which returns true if the identity
  * exists.
  */
 IdentityStorage.prototype.doesIdentityExistPromise = function
@@ -18166,7 +18177,7 @@ IdentityStorage.prototype.doesIdentityExistPromise = function
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {boolean} true if the identity exists, otherwise false.
+ * @return {boolean} true if the identity exists, otherwise false.
  * @throws Error If doesIdentityExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18203,7 +18214,7 @@ IdentityStorage.prototype.addIdentity = function(identityName)
 
 /**
  * Revoke the identity.
- * @returns {boolean} true if the identity was revoked, false if not.
+ * @return {boolean} true if the identity was revoked, false if not.
  */
 IdentityStorage.prototype.revokeIdentity = function()
 {
@@ -18218,7 +18229,7 @@ IdentityStorage.prototype.revokeIdentity = function()
  * @param {boolean} useSync (optional) If true then return a SyncPromise which
  * is already fulfilled. If omitted or false, this may return a SyncPromise or
  * an async Promise.
- * @returns {Promise|SyncPromise} A promise that returns the generated key Name.
+ * @return {Promise|SyncPromise} A promise that returns the generated key Name.
  */
 IdentityStorage.prototype.getNewKeyNamePromise = function
   (identityName, useKsk, useSync)
@@ -18253,7 +18264,7 @@ IdentityStorage.prototype.getNewKeyNamePromise = function
  * Generate a name for a new key belonging to the identity.
  * @param {Name} identityName The identity name.
  * @param {boolean} useKsk If true, generate a KSK name, otherwise a DSK name.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  * @throws Error If getNewKeyNamePromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18280,7 +18291,7 @@ IdentityStorage.prototype.doesKeyExistPromise = function(keyName, useSync)
 /**
  * Check if the specified key already exists.
  * @param {Name} keyName The name of the key.
- * @returns {boolean} true if the key exists, otherwise false.
+ * @return {boolean} true if the key exists, otherwise false.
  * @throws Error If doesKeyExistPromise doesn't return a SyncPromise which
  * is already fulfilled.
  */
@@ -18344,7 +18355,7 @@ IdentityStorage.prototype.getKeyPromise = function(keyName, useSync)
 /**
  * Get the public key DER blob from the identity storage.
  * @param {Name} keyName The name of the requested public key.
- * @returns {Blob} The DER Blob.
+ * @return {Blob} The DER Blob.
  * @throws SecurityException if the key doesn't exist.
  * @throws Error If getKeyPromise doesn't return a SyncPromise which
  * is already fulfilled.
@@ -18393,7 +18404,7 @@ IdentityStorage.prototype.doesCertificateExistPromise = function
 /**
  * Check if the specified certificate already exists.
  * @param {Name} certificateName The name of the certificate.
- * @returns {boolean} true if the certificate exists, otherwise false.
+ * @return {boolean} true if the certificate exists, otherwise false.
  * @throws Error If doesCertificateExistPromise doesn't return a SyncPromise
  * which is already fulfilled.
  */
@@ -18453,7 +18464,7 @@ IdentityStorage.prototype.getCertificatePromise = function
 /**
  * Get a certificate from the identity storage.
  * @param {Name} certificateName The name of the requested certificate.
- * @returns {IdentityCertificate} The requested certificate.
+ * @return {IdentityCertificate} The requested certificate.
  * @throws SecurityException if the certificate doesn't exist.
  * @throws Error If getCertificatePromise doesn't return a SyncPromise which
  * is already fulfilled.
@@ -18478,7 +18489,7 @@ IdentityStorage.prototype.getTpmLocatorPromise = function(useSync)
 
 /**
  * Get the TPM locator associated with this storage.
- * @returns {string} The TPM locator.
+ * @return {string} The TPM locator.
  * @throws SecurityException if the TPM locator doesn't exist.
  * @throws Error If getTpmLocatorPromise doesn't return a SyncPromise which is
  * already fulfilled.
@@ -18509,7 +18520,7 @@ IdentityStorage.prototype.getDefaultIdentityPromise = function(useSync)
 
 /**
  * Get the default identity.
- * @returns {Name} The name of default identity.
+ * @return {Name} The name of default identity.
  * @throws SecurityException if the default identity is not set.
  * @throws Error If getDefaultIdentityPromise doesn't return a SyncPromise
  * which is already fulfilled.
@@ -18540,7 +18551,7 @@ IdentityStorage.prototype.getDefaultKeyNameForIdentityPromise = function
 /**
  * Get the default key name for the specified identity.
  * @param {Name} identityName The identity name.
- * @returns {Name} The default key name.
+ * @return {Name} The default key name.
  * @throws SecurityException if the default key name for the identity is not set.
  * @throws Error If getDefaultKeyNameForIdentityPromise doesn't return a
  * SyncPromise which is already fulfilled.
@@ -18575,7 +18586,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForIdentityPromise = function
 /**
  * Get the default certificate name for the specified identity.
  * @param {Name} identityName The identity name.
- * @returns {Name} The default certificate name.
+ * @return {Name} The default certificate name.
  * @throws SecurityException if the default key name for the identity is not
  * set or the default certificate name for the key name is not set.
  * @throws Error If getDefaultCertificateNameForIdentityPromise doesn't return
@@ -18608,7 +18619,7 @@ IdentityStorage.prototype.getDefaultCertificateNameForKeyPromise = function
 /**
  * Get the default certificate name for the specified key.
  * @param {Name} keyName The key name.
- * @returns {Name} The default certificate name.
+ * @return {Name} The default certificate name.
  * @throws SecurityException if the default certificate name for the key name
  * is not set.
  * @throws Error If getDefaultCertificateNameForKeyPromise doesn't return a
@@ -18815,7 +18826,7 @@ IdentityStorage.prototype.getDefaultCertificatePromise = function(useSync)
 
 /**
  * Get the certificate of the default identity.
- * @returns {IdentityCertificate} The requested certificate.  If not found,
+ * @return {IdentityCertificate} The requested certificate.  If not found,
  * return null.
  * @throws Error If getDefaultCertificatePromise doesn't return a SyncPromise
  * which is already fulfilled.
@@ -18980,7 +18991,7 @@ IndexedDbIdentityStorage.prototype.name = "IndexedDbIdentityStorage";
  * @param {Name} identityName The identity name.
  * @param {boolean} useSync (optional) If true then return a rejected promise
  * since this only supports async code.
- * @returns {Promise} A promise which returns true if the identity exists.
+ * @return {Promise} A promise which returns true if the identity exists.
  */
 IndexedDbIdentityStorage.prototype.doesIdentityExistPromise = function
   (identityName, useSync)
@@ -19675,7 +19686,7 @@ exports.MemoryIdentityStorage = MemoryIdentityStorage;
 /**
  * Check if the specified identity already exists.
  * @param {Name} identityName The identity name.
- * @returns {SyncPromise} A promise which returns true if the identity exists.
+ * @return {SyncPromise} A promise which returns true if the identity exists.
  */
 MemoryIdentityStorage.prototype.doesIdentityExistPromise = function(identityName)
 {
@@ -21266,7 +21277,7 @@ IdentityManager.prototype.getDefaultIdentityPromise = function(useSync)
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * @throws SecurityException if the default identity is not set. However, if
@@ -22541,7 +22552,7 @@ exports.PolicyManager = PolicyManager;
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest does not need to be verified
+ * @return {boolean} True if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -22555,7 +22566,7 @@ PolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Your derived class should override.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True if the data or interest must be verified, otherwise
+ * @return {boolean} True if the data or interest must be verified, otherwise
  * false.
  */
 PolicyManager.prototype.requireVerify = function(dataOrInterest)
@@ -22583,7 +22594,7 @@ PolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 PolicyManager.prototype.checkVerificationPolicy = function
@@ -22599,7 +22610,7 @@ PolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True if the signing certificate can be used to sign the
+ * @return {boolean} True if the signing certificate can be used to sign the
  * data, otherwise false.
  */
 PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
@@ -22613,7 +22624,7 @@ PolicyManager.prototype.checkSigningPolicy = function(dataName, certificateName)
  * Your derived class should override.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} The signing identity or an empty name if cannot infer.
+ * @return {Name} The signing identity or an empty name if cannot infer.
  */
 PolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -22967,7 +22978,7 @@ ConfigPolicyManager.prototype.load = function(configFileNameOrInput, inputName)
  * verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data must be verified, otherwise false.
+ * @return {boolean} true if the data must be verified, otherwise false.
  */
 ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -22980,7 +22991,7 @@ ConfigPolicyManager.prototype.requireVerify = function(dataOrInterest)
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 ConfigPolicyManager.prototype.checkSigningPolicy = function
@@ -22995,7 +23006,7 @@ ConfigPolicyManager.prototype.checkSigningPolicy = function
  * 'any', nothing is verified.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} true if the data or interest does not need to be verified
+ * @return {boolean} true if the data or interest does not need to be verified
  * to be trusted as valid, otherwise false.
  */
 ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
@@ -23022,7 +23033,7 @@ ConfigPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} The indication of next verification step, or
+ * @return {ValidationRequest} The indication of next verification step, or
  * null if there is no further step.
  */
 ConfigPolicyManager.prototype.checkVerificationPolicy = function
@@ -23250,7 +23261,7 @@ ConfigPolicyManager.prototype.loadTrustAnchorCertificates = function()
  * components.
  * @param {BoostInfoTree} rule The rule from the configuration file that matches
  * the data or interest.
- * @returns {boolean} True if matches.
+ * @return {boolean} True if matches.
  */
 ConfigPolicyManager.prototype.checkSignatureMatch = function
   (signatureName, objectName, rule)
@@ -23344,7 +23355,7 @@ ConfigPolicyManager.prototype.checkSignatureMatch = function
  * the cases used by this class.
  * @param {Object} match The match object from String.match.
  * @param {string} expansion The string with \1, \2, etc. to replace from match.
- * @returns {string} The expanded string.
+ * @return {string} The expanded string.
  */
 ConfigPolicyManager.expand = function(match, expansion)
 {
@@ -23359,7 +23370,7 @@ ConfigPolicyManager.expand = function(match, expansion)
  * or decoding.
  * @param {string} certID
  * @param {boolean} isPath
- * @returns {IdentityCertificate}
+ * @return {IdentityCertificate}
  */
 ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
 {
@@ -23393,7 +23404,7 @@ ConfigPolicyManager.prototype.lookupCertificate = function(certID, isPath)
  * exclude the timestamp, nonce, and signature components.
  * @param {Name} objName The name to be matched.
  * @param {string} matchType The rule type to match, "data" or "interest".
- * @returns {BoostInfoTree} The matching rule, or null if not found.
+ * @return {BoostInfoTree} The matching rule, or null if not found.
  */
 ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
 {
@@ -23446,7 +23457,7 @@ ConfigPolicyManager.prototype.findMatchingRule = function(objName, matchType)
  *   'is-strict-prefix-of' - passes if the name has the other name as a
  *      prefix, and is not equal
  *   'equal' - passes if the two names are equal
- * @returns {boolean}
+ * @return {boolean}
  */
 ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
 {
@@ -23474,7 +23485,7 @@ ConfigPolicyManager.matchesRelation = function(name, matchName, matchRelation)
  * @param {Data|Interest} dataOrInterest The object whose signature is needed.
  * @param {WireFormat} wireFormat (optional) The wire format used to decode
  * signature information from the interest name.
- * @returns {Signature} The object of a sublcass of Signature or null if can't
+ * @return {Signature} The object of a sublcass of Signature or null if can't
  * decode.
  */
 ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
@@ -23503,7 +23514,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
  * of this key, or within the grace interval on first use.
  * @param {Name} keyName The name of the public key used to sign the interest.
  * @param {number} timestamp The timestamp extracted from the interest name.
- * @returns {boolean} True if timestamp is fresh as described above.
+ * @return {boolean} True if timestamp is fresh as described above.
  */
 ConfigPolicyManager.prototype.interestTimestampIsFresh = function
   (keyName, timestamp)
@@ -23733,7 +23744,7 @@ exports.NoVerifyPolicyManager = NoVerifyPolicyManager;
  * Override to always skip verification and trust as valid.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -23745,7 +23756,7 @@ NoVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * signed interest.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -23767,7 +23778,7 @@ NoVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * exceptions.
  * @param {function} onVerifyFailed Override to ignore this.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -23787,7 +23798,7 @@ NoVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 NoVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -23800,7 +23811,7 @@ NoVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 NoVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -23870,7 +23881,7 @@ exports.SelfVerifyPolicyManager = SelfVerifyPolicyManager;
  * Never skip verification.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} False.
+ * @return {boolean} False.
  */
 SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
 {
@@ -23881,7 +23892,7 @@ SelfVerifyPolicyManager.prototype.skipVerifyAndTrust = function(dataOrInterest)
  * Always return true to use the self-verification rule for the received data.
  *
  * @param {Data|Interest} dataOrInterest The received data packet or interest.
- * @returns {boolean} True.
+ * @return {boolean} True.
  */
 SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
 {
@@ -23908,7 +23919,7 @@ SelfVerifyPolicyManager.prototype.requireVerify = function(dataOrInterest)
  * better error handling the callback should catch and properly handle any
  * exceptions.
  * @param {WireFormat} wireFormat
- * @returns {ValidationRequest} null for no further step for looking up a
+ * @return {ValidationRequest} null for no further step for looking up a
  * certificate chain.
  */
 SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
@@ -23975,7 +23986,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
  *
  * @param {Name} dataName The name of data to be signed.
  * @param {Name} certificateName The name of signing certificate.
- * @returns {boolean} True to indicate that the signing certificate can be used
+ * @return {boolean} True to indicate that the signing certificate can be used
  * to sign the data.
  */
 SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
@@ -23988,7 +23999,7 @@ SelfVerifyPolicyManager.prototype.checkSigningPolicy = function
  * Override to indicate that the signing identity cannot be inferred.
  *
  * @param {Name} dataName The name of data to be signed.
- * @returns {Name} An empty name because cannot infer.
+ * @return {Name} An empty name because cannot infer.
  */
 SelfVerifyPolicyManager.prototype.inferSigningIdentity = function(dataName)
 {
@@ -24145,7 +24156,7 @@ exports.KeyChain = KeyChain;
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * certificate of the identity. Otherwise, if onComplete is supplied then return
  * undefined and use onComplete as described above.
  */
@@ -24172,7 +24183,7 @@ KeyChain.prototype.createIdentityAndCertificate = function
  * @param {Name} identityName The name of the identity.
  * @param {KeyParams} params (optional) The key parameters if a key needs to be
  * generated for the identity. If omitted, use KeyChain.DEFAULT_KEY_PARAMS.
- * @returns {Name} The key name of the auto-generated KSK of the identity.
+ * @return {Name} The key name of the auto-generated KSK of the identity.
  */
 KeyChain.prototype.createIdentity = function(identityName, params)
 {
@@ -24220,7 +24231,7 @@ KeyChain.prototype.deleteIdentity = function
  * with the exception. If onComplete is defined but onError is undefined, then
  * this will log any thrown exception. (Some database libraries only use a
  * callback, so onError is required to be notified of an exception.)
- * @returns {Name} If onComplete is omitted, return the name of the default
+ * @return {Name} If onComplete is omitted, return the name of the default
  * identity. Otherwise, if onComplete is supplied then return undefined and use
  * onComplete as described above.
  * NOTE: The library will log any exceptions thrown by this callback, but for
@@ -24273,7 +24284,7 @@ KeyChain.prototype.getDefaultCertificateName = function(onComplete, onError)
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPair = function(identityName, isKsk, keySize)
 {
@@ -24322,7 +24333,7 @@ KeyChain.prototype.setDefaultKeyForIdentity = function
  * false for a Data-Signing-Key (DSK). If omitted, generate a Data-Signing-Key.
  * @param {number} keySize (optional) The size of the key. If omitted, use a
  * default secure key size.
- * @returns {Name} The generated key name.
+ * @return {Name} The generated key name.
  */
 KeyChain.prototype.generateRSAKeyPairAsDefault = function
   (identityName, isKsk, keySize)
@@ -24334,7 +24345,7 @@ KeyChain.prototype.generateRSAKeyPairAsDefault = function
 /**
  * Create a public key signing request.
  * @param {Name} keyName The name of the key.
- * @returns {Blob} The signing request data.
+ * @return {Blob} The signing request data.
  */
 KeyChain.prototype.createSigningRequest = function(keyName)
 {
@@ -24450,7 +24461,7 @@ KeyChain.prototype.revokeCertificate = function(certificateName)
 
 /**
  * Get the identity manager given to or created by the constructor.
- * @returns {IdentityManager} The identity manager.
+ * @return {IdentityManager} The identity manager.
  */
 KeyChain.prototype.getIdentityManager = function()
 {
@@ -24463,7 +24474,7 @@ KeyChain.prototype.getIdentityManager = function()
 
 /**
  * Get the policy manager given to or created by the constructor.
- * @returns {PolicyManager} The policy manager.
+ * @return {PolicyManager} The policy manager.
  */
 KeyChain.prototype.getPolicyManager = function()
 {
@@ -24508,7 +24519,7 @@ KeyChain.prototype.getPolicyManager = function()
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or the target (if target is Data or Interest).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete as
  * described above.
@@ -24682,7 +24693,7 @@ KeyChain.prototype.signPromise = function
  * NOTE: The library will log any exceptions thrown by this callback, but for
  * better error handling the callback should catch and properly handle any
  * exceptions.
- * @returns {Signature} If onComplete is omitted, return the generated Signature
+ * @return {Signature} If onComplete is omitted, return the generated Signature
  * object (if target is a Buffer) or undefined (if target is Data).
  * Otherwise, if onComplete is supplied then return undefined and use onComplete
  * as described above.
@@ -24921,7 +24932,7 @@ KeyChain.signWithHmacWithSha256 = function(target, key, wireFormat)
  * @param {Blob} key The key for the HmacWithSha256.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the target. If omitted, use WireFormat getDefaultWireFormat().
- * @returns {boolean} True if the signature verifies, otherwise false.
+ * @return {boolean} True if the signature verifies, otherwise false.
  */
 KeyChain.verifyDataWithHmacWithSha256 = function(data, key, wireFormat)
 {
@@ -25106,20 +25117,20 @@ Exclude.ANY = "*";
 
 /**
  * Get the number of entries.
- * @returns {number} The number of entries.
+ * @return {number} The number of entries.
  */
 Exclude.prototype.size = function() { return this.values.length; };
 
 /**
  * Get the entry at the given index.
  * @param {number} i The index of the entry, starting from 0.
- * @returns {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
+ * @return {Exclude.ANY|Name.Component} Exclude.ANY or a Name.Component.
  */
 Exclude.prototype.get = function(i) { return this.values[i]; };
 
 /**
  * Append an Exclude.ANY element.
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendAny = function()
 {
@@ -25131,7 +25142,7 @@ Exclude.prototype.appendAny = function()
 /**
  * Append a component entry, copying from component.
  * @param {Name.Component|Buffer} component
- * @returns This Exclude so that you can chain calls to append.
+ * @return This Exclude so that you can chain calls to append.
  */
 Exclude.prototype.appendComponent = function(component)
 {
@@ -25245,7 +25256,7 @@ Exclude.compareComponents = function(component1, component2)
 
 /**
  * Get the change count, which is incremented each time this object is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Exclude.prototype.getChangeCount = function()
 {
@@ -25370,7 +25381,7 @@ Interest.CHILD_SELECTOR_RIGHT = 1;
  * Check if this interest's name matches the given name (using Name.match) and
  * the given name also conforms to the interest selectors.
  * @param {Name} name The name to check.
- * @returns {boolean} True if the name and interest selectors match, False otherwise.
+ * @return {boolean} True if the name and interest selectors match, False otherwise.
  */
 Interest.prototype.matchesName = function(name)
 {
@@ -25410,7 +25421,7 @@ Interest.prototype.matches_name = function(/*Name*/ name)
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the Data packet to get its full Name. If omitted, use
  * WireFormat.getDefaultWireFormat().
- * @returns {boolean} True if the given Data packet can satisfy this Interest.
+ * @return {boolean} True if the given Data packet can satisfy this Interest.
  */
 Interest.prototype.matchesData = function(data, wireFormat)
 {
@@ -25493,13 +25504,13 @@ Interest.prototype.clone = function()
 
 /**
  * Get the interest Name.
- * @returns {Name} The name.  The name size() may be 0 if not specified.
+ * @return {Name} The name.  The name size() may be 0 if not specified.
  */
 Interest.prototype.getName = function() { return this.name_.get(); };
 
 /**
  * Get the min suffix components.
- * @returns number} The min suffix components, or null if not specified.
+ * @return number} The min suffix components, or null if not specified.
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
@@ -25508,7 +25519,7 @@ Interest.prototype.getMinSuffixComponents = function()
 
 /**
  * Get the max suffix components.
- * @returns {number} The max suffix components, or null if not specified.
+ * @return {number} The max suffix components, or null if not specified.
  */
 Interest.prototype.getMaxSuffixComponents = function()
 {
@@ -25517,7 +25528,7 @@ Interest.prototype.getMaxSuffixComponents = function()
 
 /**
  * Get the interest key locator.
- * @returns {KeyLocator} The key locator. If its getType() is null,
+ * @return {KeyLocator} The key locator. If its getType() is null,
  * then the key locator is not specified.
  */
 Interest.prototype.getKeyLocator = function()
@@ -25527,14 +25538,14 @@ Interest.prototype.getKeyLocator = function()
 
 /**
  * Get the exclude object.
- * @returns {Exclude} The exclude object. If the exclude size() is zero, then
+ * @return {Exclude} The exclude object. If the exclude size() is zero, then
  * the exclude is not specified.
  */
 Interest.prototype.getExclude = function() { return this.exclude_.get(); };
 
 /**
  * Get the child selector.
- * @returns {number} The child selector, or null if not specified.
+ * @return {number} The child selector, or null if not specified.
  */
 Interest.prototype.getChildSelector = function()
 {
@@ -25543,7 +25554,7 @@ Interest.prototype.getChildSelector = function()
 
 /**
  * Get the must be fresh flag. If not specified, the default is true.
- * @returns {boolean} The must be fresh flag.
+ * @return {boolean} The must be fresh flag.
  */
 Interest.prototype.getMustBeFresh = function()
 {
@@ -25553,7 +25564,7 @@ Interest.prototype.getMustBeFresh = function()
 /**
  * Return the nonce value from the incoming interest.  If you change any of the
  * fields in this Interest object, then the nonce value is cleared.
- * @returns {Blob} The nonce. If not specified, the value isNull().
+ * @return {Blob} The nonce. If not specified, the value isNull().
  */
 Interest.prototype.getNonce = function()
 {
@@ -25645,7 +25656,7 @@ Interest.prototype.getSelectedDelegationIndex = function()
 
 /**
  * Get the interest lifetime.
- * @returns {number} The interest lifetime in milliseconds, or null if not
+ * @return {number} The interest lifetime in milliseconds, or null if not
  * specified.
  */
 Interest.prototype.getInterestLifetimeMilliseconds = function()
@@ -25656,7 +25667,7 @@ Interest.prototype.getInterestLifetimeMilliseconds = function()
 /**
  * Return the default wire encoding, which was encoded with
  * getDefaultWireEncodingFormat().
- * @returns {SignedBlob} The default wire encoding, whose isNull() may be true
+ * @return {SignedBlob} The default wire encoding, whose isNull() may be true
  * if there is no default wire encoding.
  */
 Interest.prototype.getDefaultWireEncoding = function()
@@ -25673,7 +25684,7 @@ Interest.prototype.getDefaultWireEncoding = function()
 
 /**
  * Get the WireFormat which is used by getDefaultWireEncoding().
- * @returns {WireFormat} The WireFormat, which is only meaningful if the
+ * @return {WireFormat} The WireFormat, which is only meaningful if the
  * getDefaultWireEncoding() is not isNull().
  */
 Interest.prototype.getDefaultWireEncodingFormat = function()
@@ -25696,7 +25707,7 @@ Interest.prototype.getIncomingFaceId = function()
  * Set the interest name.
  * Note: You can also call getName and change the name values directly.
  * @param {Name} name The interest name. This makes a copy of the name.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setName = function(name)
 {
@@ -25710,7 +25721,7 @@ Interest.prototype.setName = function(name)
  * Set the min suffix components count.
  * @param {number} minSuffixComponents The min suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
 {
@@ -25723,7 +25734,7 @@ Interest.prototype.setMinSuffixComponents = function(minSuffixComponents)
  * Set the max suffix components count.
  * @param {number} maxSuffixComponents The max suffix components count. If not
  * specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
 {
@@ -25738,7 +25749,7 @@ Interest.prototype.setMaxSuffixComponents = function(maxSuffixComponents)
  * @param {KeyLocator} keyLocator The KeyLocator object. This makes a copy of the object.
  * If no key locator is specified, set to a new default KeyLocator(), or to a
  * KeyLocator with an unspecified type.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setKeyLocator = function(keyLocator)
 {
@@ -25755,7 +25766,7 @@ Interest.prototype.setKeyLocator = function(keyLocator)
  * @param {Exclude} exclude The Exclude object. This makes a copy of the object.
  * If no exclude is specified, set to a new default Exclude(), or to an Exclude
  * with size() 0.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setExclude = function(exclude)
 {
@@ -25815,7 +25826,7 @@ Interest.prototype.setSelectedDelegationIndex = function(selectedDelegationIndex
  * Set the child selector.
  * @param {number} childSelector The child selector. If not specified, set to
  * undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setChildSelector = function(childSelector)
 {
@@ -25828,7 +25839,7 @@ Interest.prototype.setChildSelector = function(childSelector)
  * Set the MustBeFresh flag.
  * @param {boolean} mustBeFresh True if the content must be fresh, otherwise
  * false. If you do not set this flag, the default value is true.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setMustBeFresh = function(mustBeFresh)
 {
@@ -25841,7 +25852,7 @@ Interest.prototype.setMustBeFresh = function(mustBeFresh)
  * Set the interest lifetime.
  * @param {number} interestLifetimeMilliseconds The interest lifetime in
  * milliseconds. If not specified, set to undefined.
- * @returns {Interest} This Interest so that you can chain calls to update values.
+ * @return {Interest} This Interest so that you can chain calls to update values.
  */
 Interest.prototype.setInterestLifetimeMilliseconds = function(interestLifetimeMilliseconds)
 {
@@ -25870,7 +25881,7 @@ Interest.prototype.setNonce = function(nonce)
  * added the selectors as a query string.  For example "/test/name?ndn.ChildSelector=1".
  * Note: This is an experimental feature.  See the API docs for more detail at
  * http://named-data.net/doc/ndn-ccl-api/interest.html#interest-touri-method .
- * @returns {string} The URI string.
+ * @return {string} The URI string.
  */
 Interest.prototype.toUri = function()
 {
@@ -25904,7 +25915,7 @@ Interest.prototype.toUri = function()
  * result.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {SignedBlob} The encoded buffer in a SignedBlob object.
+ * @return {SignedBlob} The encoded buffer in a SignedBlob object.
  */
 Interest.prototype.wireEncode = function(wireFormat)
 {
@@ -25997,7 +26008,7 @@ Interest.prototype.setLpPacket = function(lpPacket)
 /**
  * Get the change count, which is incremented each time this object (or a child
  * object) is changed.
- * @returns {number} The change count.
+ * @return {number} The change count.
  */
 Interest.prototype.getChangeCount = function()
 {
@@ -26100,7 +26111,7 @@ ForwardingFlags.NfdForwardingFlags_CAPTURE       = 2;
 /**
  * Get an integer with the bits set according to the NFD forwarding flags as
  * used in the ControlParameters of the command interest.
- * @returns {number} An integer with the bits set.
+ * @return {number} An integer with the bits set.
  */
 ForwardingFlags.prototype.getNfdForwardingFlags = function()
 {
@@ -26129,13 +26140,13 @@ ForwardingFlags.prototype.setNfdForwardingFlags = function(nfdForwardingFlags)
 
 /**
  * Get the value of the "childInherit" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getChildInherit = function() { return this.childInherit; };
 
 /**
  * Get the value of the "capture" flag.
- * @returns {Boolean} true if the flag is set, false if it is cleared.
+ * @return {Boolean} true if the flag is set, false if it is cleared.
  */
 ForwardingFlags.prototype.getCapture = function() { return this.capture; };
 
@@ -26228,7 +26239,7 @@ ControlParameters.prototype.clear = function()
  * Encode this ControlParameters for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlParameters.prototype.wireEncode = function(wireFormat)
 {
@@ -26254,7 +26265,7 @@ ControlParameters.prototype.wireDecode = function(input, wireFormat)
 
 /**
  * Get the name.
- * @returns {Name} The name. If not specified, return null.
+ * @return {Name} The name. If not specified, return null.
  */
 ControlParameters.prototype.getName = function()
 {
@@ -26263,7 +26274,7 @@ ControlParameters.prototype.getName = function()
 
 /**
  * Get the face ID.
- * @returns {number} The face ID, or null if not specified.
+ * @return {number} The face ID, or null if not specified.
  */
 ControlParameters.prototype.getFaceId = function()
 {
@@ -26272,7 +26283,7 @@ ControlParameters.prototype.getFaceId = function()
 
 /**
  * Get the URI.
- * @returns {string} The face URI, or an empty string if not specified.
+ * @return {string} The face URI, or an empty string if not specified.
  */
 ControlParameters.prototype.getUri = function()
 {
@@ -26281,7 +26292,7 @@ ControlParameters.prototype.getUri = function()
 
 /**
  * Get the local control feature value.
- * @returns {number} The local control feature value, or null if not specified.
+ * @return {number} The local control feature value, or null if not specified.
  */
 ControlParameters.prototype.getLocalControlFeature = function()
 {
@@ -26290,7 +26301,7 @@ ControlParameters.prototype.getLocalControlFeature = function()
 
 /**
  * Get the origin value.
- * @returns {number} The origin value, or null if not specified.
+ * @return {number} The origin value, or null if not specified.
  */
 ControlParameters.prototype.getOrigin = function()
 {
@@ -26299,7 +26310,7 @@ ControlParameters.prototype.getOrigin = function()
 
 /**
  * Get the cost value.
- * @returns {number} The cost value, or null if not specified.
+ * @return {number} The cost value, or null if not specified.
  */
 ControlParameters.prototype.getCost = function()
 {
@@ -26308,7 +26319,7 @@ ControlParameters.prototype.getCost = function()
 
 /**
  * Get the ForwardingFlags object.
- * @returns {ForwardingFlags} The ForwardingFlags object.
+ * @return {ForwardingFlags} The ForwardingFlags object.
  */
 ControlParameters.prototype.getForwardingFlags = function()
 {
@@ -26317,7 +26328,7 @@ ControlParameters.prototype.getForwardingFlags = function()
 
 /**
  * Get the strategy.
- * @returns {Name} The strategy or an empty Name
+ * @return {Name} The strategy or an empty Name
  */
 ControlParameters.prototype.getStrategy = function()
 {
@@ -26326,7 +26337,7 @@ ControlParameters.prototype.getStrategy = function()
 
 /**
  * Get the expiration period.
- * @returns {number} The expiration period in milliseconds, or null if not specified.
+ * @return {number} The expiration period in milliseconds, or null if not specified.
  */
 ControlParameters.prototype.getExpirationPeriod = function()
 {
@@ -26481,7 +26492,7 @@ ControlResponse.prototype.clear = function()
  * Encode this ControlResponse for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 ControlResponse.prototype.wireEncode = function(wireFormat)
 {
@@ -26651,7 +26662,7 @@ exports.InterestFilter = InterestFilter;
  * (e.g., there are implicit heading `^` and trailing `$` symbols in the
  * regular expression).
  * @param {Name} name The name to check against this filter.
- * @returns {boolean} True if name matches this filter, otherwise false.
+ * @return {boolean} True if name matches this filter, otherwise false.
  */
 InterestFilter.prototype.doesMatch = function(name)
 {
@@ -26674,13 +26685,13 @@ InterestFilter.prototype.doesMatch = function(name)
 
 /**
  * Get the prefix given to the constructor.
- * @returns {Name} The prefix Name which you should not modify.
+ * @return {Name} The prefix Name which you should not modify.
  */
 InterestFilter.prototype.getPrefix = function() { return this.prefix; };
 
 /**
  * Check if a regexFilter was supplied to the constructor.
- * @returns {boolean} True if a regexFilter was supplied to the constructor.
+ * @return {boolean} True if a regexFilter was supplied to the constructor.
  */
 InterestFilter.prototype.hasRegexFilter = function()
 {
@@ -26689,7 +26700,7 @@ InterestFilter.prototype.hasRegexFilter = function()
 
 /**
  * Get the regex filter. This is only valid if hasRegexFilter() is true.
- * @returns {string} The regular expression for matching the remaining name
+ * @return {string} The regular expression for matching the remaining name
  * components.
  */
 InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; };
@@ -26698,7 +26709,7 @@ InterestFilter.prototype.getRegexFilter = function() { return this.regexFilter; 
  * If regexFilter doesn't already have them, add ^ to the beginning and $ to
  * the end since these are required by NdnRegexMatcher.match.
  * @param {string} regexFilter The regex filter.
- * @returns {string} The regex pattern with ^ and $.
+ * @return {string} The regex pattern with ^ and $.
  */
 InterestFilter.makePattern = function(regexFilter)
 {
@@ -26910,7 +26921,7 @@ DelegationSet.prototype.find = function(name)
  * Encode this DelegationSet for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 DelegationSet.prototype.wireEncode = function(wireFormat)
 {
@@ -27247,9 +27258,9 @@ exports.Tlv0_2WireFormat = Tlv0_2WireFormat;
 Tlv0_2WireFormat.instance = null;
 
 /**
- * Encode interest as NDN-TLV and return the encoding.
+ * Encode name as an NDN-TLV Name and return the encoding.
  * @param {Name} name The Name to encode.
- * @returns {Blobl} A Blob containing the encoding.
+ * @return {Blobl} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeName = function(name)
 {
@@ -27272,7 +27283,7 @@ Tlv0_2WireFormat.prototype.decodeName = function(name, input)
 /**
  * Encode the interest using NDN-TLV and return a Buffer.
  * @param {Interest} interest The Interest object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -27342,7 +27353,7 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27390,7 +27401,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input)
 /**
  * Encode data as NDN-TLV and return the encoding and signed offsets.
  * @param {Data} data The Data object to encode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (encoding, signedPortionBeginOffset, signedPortionEndOffset) where encoding
  * is a Blob containing the encoding, signedPortionBeginOffset is the offset in
  * the encoding of the beginning of the signed portion, and
@@ -27427,7 +27438,7 @@ Tlv0_2WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27458,7 +27469,7 @@ Tlv0_2WireFormat.prototype.decodeData = function(data, input)
  * Encode controlParameters as NDN-TLV and return the encoding.
  * @param {ControlParameters} controlParameters The ControlParameters object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
 {
@@ -27484,7 +27495,7 @@ Tlv0_2WireFormat.prototype.decodeControlParameters = function(controlParameters,
  * Encode controlResponse as NDN-TLV and return the encoding.
  * @param {ControlResponse} controlResponse The ControlResponse object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 {
@@ -27543,7 +27554,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, inp
 /**
  * Encode signature as a SignatureInfo and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeSignatureInfo = function(signature)
 {
@@ -27574,7 +27585,7 @@ Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
- * @returns {Signature} A new object which is a subclass of Signature.
+ * @return {Signature} A new object which is a subclass of Signature.
  */
 Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
   (signatureInfo, signatureValue)
@@ -27596,7 +27607,7 @@ Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
  * signature bits) and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
 {
@@ -27687,7 +27698,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
  * type and length because it is intended to use the type and length of a Data
  * packet's Content.
  * @param {DelegationSet} delegationSet The DelegationSet object to encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
 {
@@ -27740,7 +27751,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
  * Encode the EncryptedContent in NDN-TLV and return the encoding.
  * @param {EncryptedContent} encryptedContent The EncryptedContent object to
  * encode.
- * @returns {Blob} A Blob containing the encoding.
+ * @return {Blob} A Blob containing the encoding.
  */
 Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
 {
@@ -27794,7 +27805,7 @@ Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
 /**
  * Get a singleton instance of a Tlv0_2WireFormat.  To always use the
  * preferred version NDN-TLV, you should use TlvWireFormat.get().
- * @returns {Tlv0_2WireFormat} The singleton instance.
+ * @return {Tlv0_2WireFormat} The singleton instance.
  */
 Tlv0_2WireFormat.get = function()
 {
@@ -27840,7 +27851,7 @@ Tlv0_2WireFormat.decodeNameComponent = function(decoder)
  * Encode the name to the encoder.
  * @param {Name} name The name to encode.
  * @param {TlvEncoder} encoder The encoder to receive the encoding.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -27881,7 +27892,7 @@ Tlv0_2WireFormat.encodeName = function(name, encoder)
  * object.
  * @param {Name} name The name object whose fields are updated.
  * @param {TlvDecoder} decoder The decoder with the input.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
@@ -28346,7 +28357,7 @@ Tlv0_1_1WireFormat.instance = null;
 
 /**
  * Get a singleton instance of a Tlv0_1_1WireFormat.
- * @returns {Tlv0_1_1WireFormat} The singleton instance.
+ * @return {Tlv0_1_1WireFormat} The singleton instance.
  */
 Tlv0_1_1WireFormat.get = function()
 {
@@ -28400,7 +28411,7 @@ Tlv0_1WireFormat.instance = null;
 
 /**
  * Get a singleton instance of a Tlv0_1WireFormat.
- * @returns {Tlv0_1WireFormat} The singleton instance.
+ * @return {Tlv0_1WireFormat} The singleton instance.
  */
 Tlv0_1WireFormat.get = function()
 {
@@ -28455,7 +28466,7 @@ TlvWireFormat.instance = null;
  * wire format was set with WireFormat.setDefaultWireFormat(TlvWireFormat.get()),
  * you can check if this is the default wire encoding with
  * if WireFormat.getDefaultWireFormat() == TlvWireFormat.get().
- * @returns {TlvWireFormat} The singleton instance.
+ * @return {TlvWireFormat} The singleton instance.
  */
 TlvWireFormat.get = function()
 {
@@ -30334,7 +30345,7 @@ exports.EncryptedContent = EncryptedContent;
 
 /**
  * Get the algorithm type from EncryptAlgorithmType.
- * @returns {number} The algorithm type from EncryptAlgorithmType, or null if
+ * @return {number} The algorithm type from EncryptAlgorithmType, or null if
  * not specified.
  */
 EncryptedContent.prototype.getAlgorithmType = function()
@@ -30344,7 +30355,7 @@ EncryptedContent.prototype.getAlgorithmType = function()
 
 /**
  * Get the key locator.
- * @returns {KeyLocator} The key locator. If not specified, getType() is null.
+ * @return {KeyLocator} The key locator. If not specified, getType() is null.
  */
 EncryptedContent.prototype.getKeyLocator = function()
 {
@@ -30353,7 +30364,7 @@ EncryptedContent.prototype.getKeyLocator = function()
 
 /**
  * Get the initial vector.
- * @returns {Blob} The initial vector. If not specified, isNull() is true.
+ * @return {Blob} The initial vector. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getInitialVector = function()
 {
@@ -30362,7 +30373,7 @@ EncryptedContent.prototype.getInitialVector = function()
 
 /**
  * Get the payload.
- * @returns {Blob} The payload. If not specified, isNull() is true.
+ * @return {Blob} The payload. If not specified, isNull() is true.
  */
 EncryptedContent.prototype.getPayload = function()
 {
@@ -30373,7 +30384,7 @@ EncryptedContent.prototype.getPayload = function()
  * Set the algorithm type.
  * @param {number} algorithmType The algorithm type from EncryptAlgorithmType.
  * If not specified, set to null.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
@@ -30386,7 +30397,7 @@ EncryptedContent.prototype.setAlgorithmType = function(algorithmType)
  * Set the key locator.
  * @param {KeyLocator} keyLocator The key locator. This makes a copy of the
  * object. If not specified, set to the default KeyLocator().
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setKeyLocator = function(keyLocator)
@@ -30401,7 +30412,7 @@ EncryptedContent.prototype.setKeyLocator = function(keyLocator)
  * Set the initial vector.
  * @param {Blob} initialVector The initial vector. If not specified, set to the
  * default Blob() where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setInitialVector = function(initialVector)
@@ -30416,7 +30427,7 @@ EncryptedContent.prototype.setInitialVector = function(initialVector)
  * Set the encrypted payload.
  * @param {Blob} payload The payload. If not specified, set to the default Blob()
  * where isNull() is true.
- * @returns {EncryptedContent} This EncryptedContent so that you can chain calls
+ * @return {EncryptedContent} This EncryptedContent so that you can chain calls
  * to update values.
  */
 EncryptedContent.prototype.setPayload = function(payload)
@@ -30430,7 +30441,7 @@ EncryptedContent.prototype.setPayload = function(payload)
  * Encode this EncryptedContent for a particular wire format.
  * @param {WireFormat} wireFormat (optional) A WireFormat object  used to encode
  * this object. If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {Blob} The encoded buffer in a Blob object.
+ * @return {Blob} The encoded buffer in a Blob object.
  */
 EncryptedContent.prototype.wireEncode = function(wireFormat)
 {
@@ -32419,7 +32430,7 @@ RepetitiveInterval.RepeatUnit = {
  * covering the time point, this returns false for isPositive and returns a
  * negative interval.
  * @param {number} timePoint The time point as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is
  * positive or false if negative, and interval is the Interval covering the time
@@ -32708,7 +32719,7 @@ Schedule.prototype.addBlackInterval = function(repetitiveInterval)
  * member to access the data. If there is no interval covering the time stamp,
  * this returns false for isPositive and a negative interval.
  * @param {number} timeStamp The time stamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {object} An associative array with fields
+ * @return {object} An associative array with fields
  * (isPositive, interval) where
  * isPositive is true if the returned interval is positive or false if negative,
  * and interval is the Interval covering the time stamp, or a negative interval
@@ -32937,7 +32948,7 @@ Schedule.calculateIntervalResult_ = function
 /**
  * Convert a UNIX timestamp to ISO time representation with the "T" in the middle.
  * @param {number} msSince1970 Timestamp as milliseconds since Jan 1, 1970 UTC.
- * @returns {string} The string representation.
+ * @return {string} The string representation.
  */
 Schedule.toIsoString = function(msSince1970)
 {
@@ -32954,7 +32965,7 @@ Schedule.toIsoString = function(msSince1970)
 /**
  * A private method to zero pad an integer to 2 digits.
  * @param {number} x The number to pad.  Assume it is a non-negative integer.
- * @returns {string} The padded string.
+ * @return {string} The padded string.
  */
 Schedule.to2DigitString = function(x)
 {
@@ -32966,7 +32977,7 @@ Schedule.to2DigitString = function(x)
  * Convert an ISO time representation with the "T" in the middle to a UNIX
  * timestamp.
  * @param {string} timeString The ISO time representation.
- * @returns {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
+ * @return {number} The timestamp as milliseconds since Jan 1, 1970 UTC.
  */
 Schedule.fromIsoString = function(timeString)
 {
@@ -34946,7 +34957,7 @@ InterestFilterTable.Entry = function InterestFilterTableEntry
 
 /**
  * Get the interestFilterId given to the constructor.
- * @returns {number} The interestFilterId.
+ * @return {number} The interestFilterId.
  */
 InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 {
@@ -34955,7 +34966,7 @@ InterestFilterTable.Entry.prototype.getInterestFilterId = function()
 
 /**
  * Get the InterestFilter given to the constructor.
- * @returns {InterestFilter} The InterestFilter.
+ * @return {InterestFilter} The InterestFilter.
  */
 InterestFilterTable.Entry.prototype.getFilter = function()
 {
@@ -34964,7 +34975,7 @@ InterestFilterTable.Entry.prototype.getFilter = function()
 
 /**
  * Get the onInterest callback given to the constructor.
- * @returns {function} The onInterest callback.
+ * @return {function} The onInterest callback.
  */
 InterestFilterTable.Entry.prototype.getOnInterest = function()
 {
@@ -34973,7 +34984,7 @@ InterestFilterTable.Entry.prototype.getOnInterest = function()
 
 /**
  * Get the Face given to the constructor.
- * @returns {Face} The Face.
+ * @return {Face} The Face.
  */
 InterestFilterTable.Entry.prototype.getFace = function()
 {
@@ -35093,7 +35104,7 @@ PendingInterestTable.Entry = function PendingInterestTableEntry
 
 /**
  * Get the pendingInterestId given to the constructor.
- * @returns {number} The pendingInterestId.
+ * @return {number} The pendingInterestId.
  */
 PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 {
@@ -35102,7 +35113,7 @@ PendingInterestTable.Entry.prototype.getPendingInterestId = function()
 
 /**
  * Get the interest given to the constructor (from Face.expressInterest).
- * @returns {Interest} The interest. NOTE: You must not change the interest
+ * @return {Interest} The interest. NOTE: You must not change the interest
  * object - if you need to change it then make a copy.
  */
 PendingInterestTable.Entry.prototype.getInterest = function()
@@ -35112,7 +35123,7 @@ PendingInterestTable.Entry.prototype.getInterest = function()
 
 /**
  * Get the OnData callback given to the constructor.
- * @returns {function} The OnData callback.
+ * @return {function} The OnData callback.
  */
 PendingInterestTable.Entry.prototype.getOnData = function()
 {
@@ -35121,7 +35132,7 @@ PendingInterestTable.Entry.prototype.getOnData = function()
 
 /**
  * Get the OnNetworkNack callback given to the constructor.
- * @returns {function} The OnNetworkNack callback.
+ * @return {function} The OnNetworkNack callback.
  */
 PendingInterestTable.Entry.prototype.getOnNetworkNack = function()
 {
@@ -35175,7 +35186,7 @@ PendingInterestTable.Entry.prototype.clearTimeout = function()
  * @param {function} onData
  * @param {function} onTimeout
  * @param {function} onNetworkNack
- * @returns {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
+ * @return {PendingInterestTable.Entry} The new PendingInterestTable.Entry, or
  * null if removePendingInterest was already called with the pendingInterestId.
  */
 PendingInterestTable.prototype.add = function
@@ -35440,7 +35451,7 @@ RegisteredPrefixTable._Entry = function RegisteredPrefixTableEntry
 
 /**
  * Get the registeredPrefixId given to the constructor.
- * @returns {number} The registeredPrefixId.
+ * @return {number} The registeredPrefixId.
  */
 RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 {
@@ -35449,7 +35460,7 @@ RegisteredPrefixTable._Entry.prototype.getRegisteredPrefixId = function()
 
 /**
  * Get the name prefix given to the constructor.
- * @returns {Name} The name prefix.
+ * @return {Name} The name prefix.
  */
 RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 {
@@ -35458,7 +35469,7 @@ RegisteredPrefixTable._Entry.prototype.getPrefix = function()
 
 /**
  * Get the related interestFilterId given to the constructor.
- * @returns {number} The related interestFilterId.
+ * @return {number} The related interestFilterId.
  */
 RegisteredPrefixTable._Entry.prototype.getRelatedInterestFilterId = function()
 {
@@ -35875,7 +35886,7 @@ Face.prototype.close = function()
  * interest table (there usually are not many interest filter table entries) so
  * we use a common pool to only have to have one method which is called by Face.
  *
- * @returns {number} The next entry ID.
+ * @return {number} The next entry ID.
  */
 Face.prototype.getNextEntryId = function()
 {
@@ -35890,7 +35901,7 @@ Face.prototype.getNextEntryId = function()
  * @param {function} makeConnectionInfo This calls makeConnectionInfo(host, port)
  * to make the Transport.ConnectionInfo. For example:
  * function(host, port) { return new TcpTransport.ConnectionInfo(host, port); }
- * @returns {function} A function which returns a Transport.ConnectionInfo.
+ * @return {function} A function which returns a Transport.ConnectionInfo.
  */
 Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnectionInfo)
 {
@@ -35944,7 +35955,7 @@ Face.makeShuffledHostGetConnectionInfo = function(hostList, port, makeConnection
  * If omitted, use a default interest lifetime. (only used for the second form of expressInterest).
  * @param {WireFormat} (optional) A WireFormat object used to encode the message.
  * If omitted, use WireFormat.getDefaultWireFormat().
- * @returns {number} The pending interest ID which can be used with removePendingInterest.
+ * @return {number} The pending interest ID which can be used with removePendingInterest.
  * @throws Error If the encoded interest size exceeds Face.getMaxNdnPacketSize().
  */
 Face.prototype.expressInterest = function
@@ -36162,12 +36173,18 @@ Face.prototype.setCommandCertificateName = function(certificateName)
  * @param {WireFormat} wireFormat (optional) A WireFormat object used to encode
  * the SignatureInfo and to encode the interest name for signing.  If omitted,
  * use WireFormat.getDefaultWireFormat().
+ * @param {function} onComplete (optional) This calls onComplete() when complete.
+ * If omitted, block until complete. (Some crypto/database libraries only use a
+ * callback, so onComplete is required to use these.)
  */
-Face.prototype.makeCommandInterest = function(interest, wireFormat)
+Face.prototype.makeCommandInterest = function(interest, wireFormat, onComplete)
 {
-  wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
+  onComplete = (typeof wireFormat === "function") ? wireFormat : onComplete;
+  wireFormat = (typeof wireFormat === "function" || !wireFormat) ?
+                 WireFormat.getDefaultWireFormat() : wireFormat;
   this.nodeMakeCommandInterest
-    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat);
+    (interest, this.commandKeyChain, this.commandCertificateName, wireFormat,
+     onComplete);
 };
 
 /**
@@ -36226,7 +36243,7 @@ Face.prototype.nodeMakeCommandInterest = function
  * @param {ForwardingFlags} flags (optional) The ForwardingFlags object for
  * finer control of which interests are forward to the application. If omitted,
  * use the default flags defined by the default ForwardingFlags constructor.
- * @returns {number} The registered prefix ID which can be used with
+ * @return {number} The registered prefix ID which can be used with
  * removeRegisteredPrefix.
  */
 Face.prototype.registerPrefix = function
