@@ -216,7 +216,7 @@ function dumpData(data)
     result.push(dump("signature.signature:",
       signature.getSignature().size() == 0 ? "<none>" :
         signature.getSignature().toHex()));
-    if (signature.getKeyLocator().getType() != KeyLocatorType.NONE) {
+    if (signature.getKeyLocator().getType() != null) {
       if (signature.getKeyLocator().getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
         result.push(dump("signature.keyLocator: KeyLocatorDigest:",
           signature.getKeyLocator().getKeyData().toHex()));

@@ -228,7 +228,7 @@ function dumpData(data)
        signature.getSignatureInfoEncoding().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
-    if (keyLocator.getType() == KeyLocatorType.NONE)
+    if (keyLocator.getType() == null)
       console.log("signature.keyLocator: <none>");
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       console.log("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());
