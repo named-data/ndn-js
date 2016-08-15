@@ -353,7 +353,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, inp
 };
 
 /**
- * Encode signature as a SignatureInfo and return the encoding.
+ * Encode signature as an NDN-TLV SignatureInfo and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @return {Blob} A Blob containing the encoding.
  */
@@ -381,8 +381,8 @@ Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
 };
 
 /**
- * Decode signatureInfo as a signature info and signatureValue as the related
- * SignatureValue, and return a new object which is a subclass of Signature.
+ * Decode signatureInfo as an NDN-TLV SignatureInfo and signatureValue as the
+ * related SignatureValue, and return a new object which is a subclass of Signature.
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
@@ -404,8 +404,8 @@ Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
 };
 
 /**
- * Encode the signatureValue in the Signature object as a SignatureValue (the
- * signature bits) and return the encoding.
+ * Encode the signatureValue in the Signature object as an NDN-TLV
+ * SignatureValue (the signature bits) and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
  * @return {Blob} A Blob containing the encoding.
