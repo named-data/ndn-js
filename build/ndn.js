@@ -9290,13 +9290,7 @@ SignedBlob.prototype.signedSize = function()
  * @return {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
-SignedBlob.prototype.signedBuf = function()
-{
-  if (this.signedBuffer != null)
-    return this.signedBuffer;
-  else
-    return null;
-};
+SignedBlob.prototype.signedBuf = function() { return this.signedBuffer; };
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
@@ -25510,7 +25504,7 @@ Interest.prototype.getName = function() { return this.name_.get(); };
 
 /**
  * Get the min suffix components.
- * @return number} The min suffix components, or null if not specified.
+ * @return {number} The min suffix components, or null if not specified.
  */
 Interest.prototype.getMinSuffixComponents = function()
 {
@@ -28628,7 +28622,7 @@ EncodingUtils.dataToHtml = function(/* Data */ data)
        signature.getSignature().toHex() : "<none>"));
   }
   if (keyLocator !== null) {
-    if (keyLocator.getType() == KeyLocatorType.NONE)
+    if (keyLocator.getType() == null)
       append("signature.keyLocator: <none>");
     else if (keyLocator.getType() == KeyLocatorType.KEY_LOCATOR_DIGEST)
       append("signature.keyLocator: KeyLocatorDigest: " + keyLocator.getKeyData().toHex());

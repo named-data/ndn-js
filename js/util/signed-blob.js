@@ -83,13 +83,7 @@ SignedBlob.prototype.signedSize = function()
  * @return {Buffer} A slice into the Buffer which is the signed portion.
  * If the pointer to the array is null, return null.
  */
-SignedBlob.prototype.signedBuf = function()
-{
-  if (this.signedBuffer != null)
-    return this.signedBuffer;
-  else
-    return null;
-};
+SignedBlob.prototype.signedBuf = function() { return this.signedBuffer; };
 
 /**
  * Return the offset in the array of the beginning of the signed portion.
