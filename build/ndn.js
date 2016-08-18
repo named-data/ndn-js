@@ -28155,7 +28155,8 @@ Tlv0_2WireFormat.decodeKeyLocator = function
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
     keyLocator.setType(KeyLocatorType.KEY_LOCATOR_DIGEST);
-    keyLocator.setKeyData(decoder.readBlobTlv(Tlv.KeyLocatorDigest));
+    keyLocator.setKeyData
+      (new Blob(decoder.readBlobTlv(Tlv.KeyLocatorDigest), copy));
   }
   else
     throw new DecodingException(new Error
