@@ -11451,9 +11451,12 @@ WireFormat.prototype.encodeName = function(name)
  * Your derived class should override.
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeName = function(name, input)
+WireFormat.prototype.decodeName = function(name, input, copy)
 {
   throw new Error("decodeName is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11481,6 +11484,9 @@ WireFormat.prototype.encodeInterest = function(interest)
  * Your derived class should override.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
@@ -11490,7 +11496,7 @@ WireFormat.prototype.encodeInterest = function(interest)
  * assumed to be a signature for a signed interest).
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeInterest = function(interest, input)
+WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
   throw new Error("decodeInterest is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11517,6 +11523,9 @@ WireFormat.prototype.encodeData = function(data)
  * the signed offsets.  Your derived class should override.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
@@ -11524,7 +11533,7 @@ WireFormat.prototype.encodeData = function(data)
  * of the end of the signed portion.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeData = function(data, input)
+WireFormat.prototype.decodeData = function(data, input, copy)
 {
   throw new Error("decodeData is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11548,9 +11557,13 @@ WireFormat.prototype.encodeControlParameters = function(controlParameters)
  * @param {ControlParameters} controlParameters The ControlParameters object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+WireFormat.prototype.decodeControlParameters = function
+  (controlParameters, input, copy)
 {
   throw new Error("decodeControlParameters is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11574,9 +11587,13 @@ WireFormat.prototype.encodeControlResponse = function(controlResponse)
  * @param {ControlResponse} controlResponse The ControlResponse object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
-WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+WireFormat.prototype.decodeControlResponse = function
+  (controlResponse, input, copy)
 {
   throw new Error("decodeControlResponse is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11600,11 +11617,14 @@ WireFormat.prototype.encodeSignatureInfo = function(signature)
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {Signature} A new object which is a subclass of Signature.
  * @throws Error This always throws an "unimplemented" error. The derived class should override.
  */
 WireFormat.prototype.decodeSignatureInfoAndValue = function
-  (signatureInfo, signatureValue)
+  (signatureInfo, signatureValue, copy)
 {
   throw new Error("decodeSignatureInfoAndValue is unimplemented in the base WireFormat class.  You should use a derived class.");
 };
@@ -11627,10 +11647,13 @@ WireFormat.prototype.encodeSignatureValue = function(signature)
  * Your derived class should override.
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
   throw new Error
     ("decodeLpPacket is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -11657,10 +11680,13 @@ WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * @param {DelegationSet} delegationSet The DelegationSet object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+WireFormat.prototype.decodeDelegationSet = function(delegationSet, input, copy)
 {
   throw new Error
     ("decodeDelegationSet is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -11687,10 +11713,14 @@ WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @throws Error This always throws an "unimplemented" error. The derived class
  * should override.
  */
-WireFormat.prototype.decodeEncryptedContent = function(encryptedContent, input)
+WireFormat.prototype.decodeEncryptedContent = function
+  (encryptedContent, input, copy)
 {
   throw new Error
     ("decodeEncryptedContent is unimplemented in the base WireFormat class. You should use a derived class.");
@@ -15433,10 +15463,11 @@ Name.prototype.wireEncode = function(wireFormat)
 Name.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeName(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeName(this, input.buf(), false);
+  else
+    wireFormat.decodeName(this, input, true);
 };
 
 /**
@@ -17044,10 +17075,12 @@ Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  var result = wireFormat.decodeData(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeData(this, input.buf(), false);
+  else
+    result = wireFormat.decodeData(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -23491,7 +23524,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
     try {
       var signature = wireFormat.decodeSignatureInfoAndValue
         (dataOrInterest.getName().get(-2).getValue().buf(),
-         dataOrInterest.getName().get(-1).getValue().buf());
+         dataOrInterest.getName().get(-1).getValue().buf(), false);
     }
     catch (e) {
       return null;
@@ -23946,7 +23979,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     // Decode the last two name components of the signed interest
     var signature = wireFormat.decodeSignatureInfoAndValue
       (interest.getName().get(-2).getValue().buf(),
-       interest.getName().get(-1).getValue().buf());
+       interest.getName().get(-1).getValue().buf(), false);
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified) {
@@ -25944,10 +25977,12 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-    input.buf() : input;
-  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeInterest(this, input.buf(), false);
+  else
+    result = wireFormat.decodeInterest(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
@@ -26251,10 +26286,11 @@ ControlParameters.prototype.wireEncode = function(wireFormat)
 ControlParameters.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlParameters(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlParameters(this, input.buf(), false);
+  else
+    wireFormat.decodeControlParameters(this, input, true);
 };
 
 /**
@@ -26504,10 +26540,11 @@ ControlResponse.prototype.wireEncode = function(wireFormat)
 ControlResponse.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlResponse(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlResponse(this, input.buf(), false);
+  else
+    wireFormat.decodeControlResponse(this, input, true);
 };
 
 /**
@@ -26932,10 +26969,11 @@ DelegationSet.prototype.wireEncode = function(wireFormat)
 DelegationSet.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeDelegationSet(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeDelegationSet(this, input.buf(), false);
+  else
+    wireFormat.decodeDelegationSet(this, input, true);
 };
 /**
  * Copyright (C) 2016 Regents of the University of California.
@@ -27267,11 +27305,17 @@ Tlv0_2WireFormat.prototype.encodeName = function(name)
  * Decode input as a NDN-TLV name and set the fields of the Name object.
  * @param {Name} name The Name object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeName = function(name, input)
+Tlv0_2WireFormat.prototype.decodeName = function(name, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
-  Tlv0_2WireFormat.decodeName(name, decoder);
+  Tlv0_2WireFormat.decodeName(name, decoder, copy);
 };
 
 /**
@@ -27347,6 +27391,9 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  * object.
  * @param {Interest} interest The Interest object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
@@ -27355,14 +27402,17 @@ Tlv0_2WireFormat.prototype.encodeInterest = function(interest)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input)
+Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Interest);
-  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder);
+  var offsets = Tlv0_2WireFormat.decodeName(interest.getName(), decoder, copy);
   if (decoder.peekType(Tlv.Selectors, endOffset))
-    Tlv0_2WireFormat.decodeSelectors(interest, decoder);
+    Tlv0_2WireFormat.decodeSelectors(interest, decoder, copy);
   // Require a Nonce, but don't force it to be 4 bytes.
   var nonce = decoder.readBlobTlv(Tlv.Nonce);
   interest.setInterestLifetimeMilliseconds
@@ -27375,7 +27425,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input)
     decoder.seek(linkEndOffset);
 
     interest.setLinkWireEncoding
-      (new Blob(decoder.getSlice(linkBeginOffset, linkEndOffset), true), this);
+      (new Blob(decoder.getSlice(linkBeginOffset, linkEndOffset), copy), this);
   }
   else
     interest.unsetLink();
@@ -27432,27 +27482,33 @@ Tlv0_2WireFormat.prototype.encodeData = function(data)
  * and return the signed offsets.
  * @param {Data} data The Data object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {object} An associative array with fields
  * (signedPortionBeginOffset, signedPortionEndOffset) where
  * signedPortionBeginOffset is the offset in the encoding of the beginning of
  * the signed portion, and signedPortionEndOffset is the offset in the encoding
  * of the end of the signed portion.
  */
-Tlv0_2WireFormat.prototype.decodeData = function(data, input)
+Tlv0_2WireFormat.prototype.decodeData = function(data, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
 
   var endOffset = decoder.readNestedTlvsStart(Tlv.Data);
   var signedPortionBeginOffset = decoder.getOffset();
 
-  Tlv0_2WireFormat.decodeName(data.getName(), decoder);
-  Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder);
-  data.setContent(decoder.readBlobTlv(Tlv.Content));
-  Tlv0_2WireFormat.decodeSignatureInfo(data, decoder);
+  Tlv0_2WireFormat.decodeName(data.getName(), decoder, copy);
+  Tlv0_2WireFormat.decodeMetaInfo(data.getMetaInfo(), decoder, copy);
+  data.setContent(new Blob(decoder.readBlobTlv(Tlv.Content), copy));
+  Tlv0_2WireFormat.decodeSignatureInfo(data, decoder, copy);
 
   var signedPortionEndOffset = decoder.getOffset();
   data.getSignature().setSignature
-    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), copy));
 
   decoder.finishNestedTlvs(endOffset);
   return { signedPortionBeginOffset: signedPortionBeginOffset,
@@ -27477,12 +27533,19 @@ Tlv0_2WireFormat.prototype.encodeControlParameters = function(controlParameters)
   * @param {ControlParameters} controlParameters The ControlParameters object to
   * encode.
   * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
   * @throws DecodingException For invalid encoding
   */
-Tlv0_2WireFormat.prototype.decodeControlParameters = function(controlParameters, input)
+Tlv0_2WireFormat.prototype.decodeControlParameters = function
+  (controlParameters, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
-  Tlv0_2WireFormat.decodeControlParameters(controlParameters, decoder);
+  Tlv0_2WireFormat.decodeControlParameters(controlParameters, decoder, copy);
 };
 
 /**
@@ -27515,19 +27578,27 @@ Tlv0_2WireFormat.prototype.encodeControlResponse = function(controlResponse)
 };
 
 /**
-  * Decode controlResponse in NDN-TLV and return the encoding.
-  * @param {ControlResponse} controlResponse The ControlResponse object to
-  * encode.
-  * @param {Buffer} input The buffer with the bytes to decode.
-  * @throws DecodingException For invalid encoding
-  */
-Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, input)
+ * Decode controlResponse in NDN-TLV and return the encoding.
+ * @param {ControlResponse} controlResponse The ControlResponse object to
+ * encode.
+ * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
+ * @throws DecodingException For invalid encoding
+ */
+Tlv0_2WireFormat.prototype.decodeControlResponse = function
+  (controlResponse, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.readNestedTlvsStart(Tlv.NfdCommand_ControlResponse);
 
   controlResponse.setStatusCode(decoder.readNonNegativeIntegerTlv
     (Tlv.NfdCommand_StatusCode));
+  // Set copy false since we just immediately get a string.
   var statusText = new Blob
     (decoder.readBlobTlv(Tlv.NfdCommand_StatusText), false);
   controlResponse.setStatusText(statusText.toString());
@@ -27537,7 +27608,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, inp
     controlResponse.setBodyAsControlParameters(new ControlParameters());
     // Decode into the existing ControlParameters to avoid copying.
     Tlv0_2WireFormat.decodeControlParameters
-      (controlResponse.getBodyAsControlParameters(), decoder);
+      (controlResponse.getBodyAsControlParameters(), decoder, copy);
   }
   else
     controlResponse.setBodyAsControlParameters(null);
@@ -27546,7 +27617,7 @@ Tlv0_2WireFormat.prototype.decodeControlResponse = function(controlResponse, inp
 };
 
 /**
- * Encode signature as a SignatureInfo and return the encoding.
+ * Encode signature as an NDN-TLV SignatureInfo and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature to encode.
  * @return {Blob} A Blob containing the encoding.
  */
@@ -27574,31 +27645,37 @@ Tlv0_2WireFormat.SignatureHolder.prototype.getSignature = function()
 };
 
 /**
- * Decode signatureInfo as a signature info and signatureValue as the related
- * SignatureValue, and return a new object which is a subclass of Signature.
+ * Decode signatureInfo as an NDN-TLV SignatureInfo and signatureValue as the
+ * related SignatureValue, and return a new object which is a subclass of Signature.
  * @param {Buffer} signatureInfo The buffer with the signature info bytes to
  * decode.
  * @param {Buffer} signatureValue The buffer with the signature value to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {Signature} A new object which is a subclass of Signature.
  */
 Tlv0_2WireFormat.prototype.decodeSignatureInfoAndValue = function
-  (signatureInfo, signatureValue)
+  (signatureInfo, signatureValue, copy)
 {
+  if (copy == null)
+    copy = true;
+
   // Use a SignatureHolder to imitate a Data object for decodeSignatureInfo.
   var signatureHolder = new Tlv0_2WireFormat.SignatureHolder();
   var decoder = new TlvDecoder(signatureInfo);
-  Tlv0_2WireFormat.decodeSignatureInfo(signatureHolder, decoder);
+  Tlv0_2WireFormat.decodeSignatureInfo(signatureHolder, decoder, copy);
 
   decoder = new TlvDecoder(signatureValue);
   signatureHolder.getSignature().setSignature
-    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), true));
+    (new Blob(decoder.readBlobTlv(Tlv.SignatureValue), copy));
 
   return signatureHolder.getSignature();
 };
 
 /**
- * Encode the signatureValue in the Signature object as a SignatureValue (the
- * signature bits) and return the encoding.
+ * Encode the signatureValue in the Signature object as an NDN-TLV
+ * SignatureValue (the signature bits) and return the encoding.
  * @param {Signature} signature An object of a subclass of Signature with the
  * signature value to encode.
  * @return {Blob} A Blob containing the encoding.
@@ -27615,9 +27692,15 @@ Tlv0_2WireFormat.prototype.encodeSignatureValue = function(signature)
  * Decode input as an NDN-TLV LpPacket and set the fields of the lpPacket object.
  * @param {LpPacket} lpPacket The LpPacket object whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
+Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   lpPacket.clear();
 
   var decoder = new TlvDecoder(input);
@@ -27634,7 +27717,7 @@ Tlv0_2WireFormat.prototype.decodeLpPacket = function(lpPacket, input)
     if (fieldType == Tlv.LpPacket_Fragment) {
       // Set the fragment to the bytes of the TLV value.
       lpPacket.setFragmentWireEncoding
-        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), true));
+        (new Blob(decoder.getSlice(decoder.getOffset(), fieldEndOffset), copy));
       decoder.seek(fieldEndOffset);
 
       // The fragment is supposed to be the last field.
@@ -27722,9 +27805,16 @@ Tlv0_2WireFormat.prototype.encodeDelegationSet = function(delegationSet)
  * @param {DelegationSet} delegationSet The DelegationSet object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
-Tlv0_2WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
+Tlv0_2WireFormat.prototype.decodeDelegationSet = function
+  (delegationSet, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = input.length;
 
@@ -27733,7 +27823,7 @@ Tlv0_2WireFormat.prototype.decodeDelegationSet = function(delegationSet, input)
     decoder.readTypeAndLength(Tlv.Link_Delegation);
     var preference = decoder.readNonNegativeIntegerTlv(Tlv.Link_Preference);
     var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
 
     // Add unsorted to preserve the order so that Interest selected delegation
     // index will work.
@@ -27775,23 +27865,29 @@ Tlv0_2WireFormat.prototype.encodeEncryptedContent = function(encryptedContent)
  * @param {EncryptedContent} encryptedContent The EncryptedContent object
  * whose fields are updated.
  * @param {Buffer} input The buffer with the bytes to decode.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  */
 Tlv0_2WireFormat.prototype.decodeEncryptedContent = function
-  (encryptedContent, input)
+  (encryptedContent, input, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var decoder = new TlvDecoder(input);
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.Encrypt_EncryptedContent);
 
   Tlv0_2WireFormat.decodeKeyLocator
-    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder);
+    (Tlv.KeyLocator, encryptedContent.getKeyLocator(), decoder, copy);
   encryptedContent.setAlgorithmType
     (decoder.readNonNegativeIntegerTlv(Tlv.Encrypt_EncryptionAlgorithm));
   encryptedContent.setInitialVector
     (new Blob(decoder.readOptionalBlobTlv
-     (Tlv.Encrypt_InitialVector, endOffset), true));
+     (Tlv.Encrypt_InitialVector, endOffset), copy));
   encryptedContent.setPayload
-    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), true));
+    (new Blob(decoder.readBlobTlv(Tlv.Encrypt_EncryptedPayload), copy));
 
   decoder.finishNestedTlvs(endOffset);
 };
@@ -27825,16 +27921,22 @@ Tlv0_2WireFormat.encodeNameComponent = function(component, encoder)
  * Decode the name component as NDN-TLV and return the component. This handles
  * different component types such as ImplicitSha256DigestComponent.
  * @param {TlvDecoder} decoder The decoder with the input.
+ * @param {boolean} copy (optional) If true, copy from the input when making new
+ * Blob values. If false, then Blob values share memory with the input, which
+ * must remain unchanged while the Blob values are used. If omitted, use true.
  * @return {Name.Component} A new Name.Component.
  */
-Tlv0_2WireFormat.decodeNameComponent = function(decoder)
+Tlv0_2WireFormat.decodeNameComponent = function(decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var savePosition = decoder.getOffset();
   var type = decoder.readVarNumber();
   // Restore the position.
   decoder.seek(savePosition);
 
-  var value = new Blob(decoder.readBlobTlv(type), true);
+  var value = new Blob(decoder.readBlobTlv(type), copy);
   if (type === Tlv.ImplicitSha256DigestComponent)
     return Name.Component.fromImplicitSha256Digest(value);
   else
@@ -27894,7 +27996,7 @@ Tlv0_2WireFormat.encodeName = function(name, encoder)
  * name component and ends just before the final name component (which is
  * assumed to be a signature for a signed interest).
  */
-Tlv0_2WireFormat.decodeName = function(name, decoder)
+Tlv0_2WireFormat.decodeName = function(name, decoder, copy)
 {
   name.clear();
 
@@ -27905,7 +28007,7 @@ Tlv0_2WireFormat.decodeName = function(name, decoder)
 
   while (decoder.getOffset() < endOffset) {
     signedPortionEndOffset = decoder.getOffset();
-    name.append(Tlv0_2WireFormat.decodeNameComponent(decoder));
+    name.append(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -27944,8 +28046,11 @@ Tlv0_2WireFormat.encodeSelectors = function(interest, encoder)
     encoder.writeTypeAndLength(Tlv.Selectors, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeSelectors = function(interest, decoder)
+Tlv0_2WireFormat.decodeSelectors = function(interest, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.Selectors);
 
   interest.setMinSuffixComponents(decoder.readOptionalNonNegativeIntegerTlv
@@ -27955,12 +28060,12 @@ Tlv0_2WireFormat.decodeSelectors = function(interest, decoder)
 
   if (decoder.peekType(Tlv.PublisherPublicKeyLocator, endOffset))
     Tlv0_2WireFormat.decodeKeyLocator
-      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder);
+      (Tlv.PublisherPublicKeyLocator, interest.getKeyLocator(), decoder, copy);
   else
     interest.getKeyLocator().clear();
 
   if (decoder.peekType(Tlv.Exclude, endOffset))
-    Tlv0_2WireFormat.decodeExclude(interest.getExclude(), decoder);
+    Tlv0_2WireFormat.decodeExclude(interest.getExclude(), decoder, copy);
   else
     interest.getExclude().clear();
 
@@ -27989,8 +28094,11 @@ Tlv0_2WireFormat.encodeExclude = function(exclude, encoder)
   encoder.writeTypeAndLength(Tlv.Exclude, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeExclude = function(exclude, decoder)
+Tlv0_2WireFormat.decodeExclude = function(exclude, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.Exclude);
 
   exclude.clear();
@@ -28001,7 +28109,7 @@ Tlv0_2WireFormat.decodeExclude = function(exclude, decoder)
       exclude.appendAny();
     }
     else
-      exclude.appendComponent(Tlv0_2WireFormat.decodeNameComponent(decoder));
+      exclude.appendComponent(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -28026,8 +28134,11 @@ Tlv0_2WireFormat.encodeKeyLocator = function(type, keyLocator, encoder)
 };
 
 Tlv0_2WireFormat.decodeKeyLocator = function
-  (expectedType, keyLocator, decoder)
+  (expectedType, keyLocator, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(expectedType);
 
   keyLocator.clear();
@@ -28039,7 +28150,7 @@ Tlv0_2WireFormat.decodeKeyLocator = function
   if (decoder.peekType(Tlv.Name, endOffset)) {
     // KeyLocator is a Name.
     keyLocator.setType(KeyLocatorType.KEYNAME);
-    Tlv0_2WireFormat.decodeName(keyLocator.getKeyName(), decoder);
+    Tlv0_2WireFormat.decodeName(keyLocator.getKeyName(), decoder, copy);
   }
   else if (decoder.peekType(Tlv.KeyLocatorDigest, endOffset)) {
     // KeyLocator is a KeyLocatorDigest.
@@ -28105,8 +28216,11 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
   encoder.writeTypeAndLength(Tlv.SignatureInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder)
+Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var beginOffset = decoder.getOffset();
   var endOffset = decoder.readNestedTlvsStart(Tlv.SignatureInfo);
 
@@ -28117,13 +28231,13 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder)
     //   and set it, then data will have to copy all the fields.
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
-      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
   }
   else if (signatureType == Tlv.SignatureType_SignatureHmacWithSha256) {
     data.setSignature(new HmacWithSha256Signature());
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
-      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder);
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
   }
   else if (signatureType == Tlv.SignatureType_DigestSha256)
     data.setSignature(new DigestSha256Signature());
@@ -28133,7 +28247,7 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder)
 
     // Get the bytes of the SignatureInfo TLV.
     signatureInfo.setSignatureInfoEncoding
-      (new Blob(decoder.getSlice(beginOffset, endOffset), true), signatureType);
+      (new Blob(decoder.getSlice(beginOffset, endOffset), copy), signatureType);
   }
 
   decoder.finishNestedTlvs(endOffset);
@@ -28174,8 +28288,11 @@ Tlv0_2WireFormat.encodeMetaInfo = function(metaInfo, encoder)
   encoder.writeTypeAndLength(Tlv.MetaInfo, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
+Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   var endOffset = decoder.readNestedTlvsStart(Tlv.MetaInfo);
 
   var type = decoder.readOptionalNonNegativeIntegerTlv
@@ -28198,7 +28315,7 @@ Tlv0_2WireFormat.decodeMetaInfo = function(metaInfo, decoder)
     (decoder.readOptionalNonNegativeIntegerTlv(Tlv.FreshnessPeriod, endOffset));
   if (decoder.peekType(Tlv.FinalBlockId, endOffset)) {
     var finalBlockIdEndOffset = decoder.readNestedTlvsStart(Tlv.FinalBlockId);
-    metaInfo.setFinalBlockId(Tlv0_2WireFormat.decodeNameComponent(decoder));
+    metaInfo.setFinalBlockId(Tlv0_2WireFormat.decodeNameComponent(decoder, copy));
     decoder.finishNestedTlvs(finalBlockIdEndOffset);
   }
   else
@@ -28250,8 +28367,12 @@ Tlv0_2WireFormat.encodeControlParameters = function(controlParameters, encoder)
     (Tlv.ControlParameters_ControlParameters, encoder.getLength() - saveLength);
 };
 
-Tlv0_2WireFormat.decodeControlParameters = function(controlParameters, decoder)
+Tlv0_2WireFormat.decodeControlParameters = function
+  (controlParameters, decoder, copy)
 {
+  if (copy == null)
+    copy = true;
+
   controlParameters.clear();
   var endOffset = decoder.
     readNestedTlvsStart(Tlv.ControlParameters_ControlParameters);
@@ -28259,7 +28380,7 @@ Tlv0_2WireFormat.decodeControlParameters = function(controlParameters, decoder)
   // decode name
   if (decoder.peekType(Tlv.Name, endOffset)) {
     var name = new Name();
-    Tlv0_2WireFormat.decodeName(name, decoder);
+    Tlv0_2WireFormat.decodeName(name, decoder, copy);
     controlParameters.setName(name);
   }
 
@@ -28269,6 +28390,7 @@ Tlv0_2WireFormat.decodeControlParameters = function(controlParameters, decoder)
 
   // decode URI
   if (decoder.peekType(Tlv.ControlParameters_Uri, endOffset)) {
+    // Set copy false since we just immediately get the string.
     var uri = new Blob
       (decoder.readOptionalBlobTlv(Tlv.ControlParameters_Uri, endOffset), false);
     controlParameters.setUri(uri.toString());
@@ -28295,7 +28417,7 @@ Tlv0_2WireFormat.decodeControlParameters = function(controlParameters, decoder)
   // decode strategy
   if (decoder.peekType(Tlv.ControlParameters_Strategy, endOffset)) {
     var strategyEndOffset = decoder.readNestedTlvsStart(Tlv.ControlParameters_Strategy);
-    Tlv0_2WireFormat.decodeName(controlParameters.getStrategy(), decoder);
+    Tlv0_2WireFormat.decodeName(controlParameters.getStrategy(), decoder, copy);
     decoder.finishNestedTlvs(strategyEndOffset);
   }
 
@@ -30453,10 +30575,11 @@ EncryptedContent.prototype.wireEncode = function(wireFormat)
 EncryptedContent.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeEncryptedContent(this, input.buf(), false);
+  else
+    wireFormat.decodeEncryptedContent(this, input, true);
 };
 /**
  * Copyright (C) 2015-2016 Regents of the University of California.
