@@ -205,7 +205,7 @@ Tlv0_2WireFormat.prototype.decodeInterest = function(interest, input, copy)
     throw new Error("Interest has a selected delegation, but no link object");
 
   // Set the nonce last because setting other interest fields clears it.
-  interest.setNonce(Blob(nonce, copy));
+  interest.setNonce(new Blob(nonce, copy));
 
   decoder.finishNestedTlvs(endOffset);
   return offsets;
