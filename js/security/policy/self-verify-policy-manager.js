@@ -133,7 +133,7 @@ SelfVerifyPolicyManager.prototype.checkVerificationPolicy = function
     // Decode the last two name components of the signed interest
     var signature = wireFormat.decodeSignatureInfoAndValue
       (interest.getName().get(-2).getValue().buf(),
-       interest.getName().get(-1).getValue().buf());
+       interest.getName().get(-1).getValue().buf(), false);
 
     // wireEncode returns the cached encoding if available.
     this.verify(signature, interest.wireEncode(), function(verified) {

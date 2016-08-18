@@ -167,8 +167,9 @@ EncryptedContent.prototype.wireEncode = function(wireFormat)
 EncryptedContent.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeEncryptedContent(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeEncryptedContent(this, input.buf(), false);
+  else
+    wireFormat.decodeEncryptedContent(this, input, true);
 };

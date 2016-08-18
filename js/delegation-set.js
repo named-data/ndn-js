@@ -211,8 +211,9 @@ DelegationSet.prototype.wireEncode = function(wireFormat)
 DelegationSet.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeDelegationSet(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeDelegationSet(this, input.buf(), false);
+  else
+    wireFormat.decodeDelegationSet(this, input, true);
 };

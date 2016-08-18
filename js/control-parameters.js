@@ -94,10 +94,11 @@ ControlParameters.prototype.wireEncode = function(wireFormat)
 ControlParameters.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeControlParameters(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeControlParameters(this, input.buf(), false);
+  else
+    wireFormat.decodeControlParameters(this, input, true);
 };
 
 /**

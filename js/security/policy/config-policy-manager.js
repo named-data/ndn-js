@@ -679,7 +679,7 @@ ConfigPolicyManager.extractSignature = function(dataOrInterest, wireFormat)
     try {
       var signature = wireFormat.decodeSignatureInfoAndValue
         (dataOrInterest.getName().get(-2).getValue().buf(),
-         dataOrInterest.getName().get(-1).getValue().buf());
+         dataOrInterest.getName().get(-1).getValue().buf(), false);
     }
     catch (e) {
       return null;

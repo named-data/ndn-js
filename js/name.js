@@ -876,10 +876,11 @@ Name.prototype.wireEncode = function(wireFormat)
 Name.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  wireFormat.decodeName(this, decodeBuffer);
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    wireFormat.decodeName(this, input.buf(), false);
+  else
+    wireFormat.decodeName(this, input, true);
 };
 
 /**

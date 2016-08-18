@@ -306,10 +306,12 @@ Data.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-                     input.buf() : input;
-  var result = wireFormat.decodeData(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeData(this, input.buf(), false);
+  else
+    result = wireFormat.decodeData(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy

@@ -686,10 +686,12 @@ Interest.prototype.wireDecode = function(input, wireFormat)
 {
   wireFormat = (wireFormat || WireFormat.getDefaultWireFormat());
 
-  // If input is a blob, get its buf().
-  var decodeBuffer = typeof input === 'object' && input instanceof Blob ?
-    input.buf() : input;
-  var result = wireFormat.decodeInterest(this, decodeBuffer);
+  var result;
+  if (typeof input === 'object' && input instanceof Blob)
+    // Input is a blob, so get its buf() and set copy false.
+    result = wireFormat.decodeInterest(this, input.buf(), false);
+  else
+    result = wireFormat.decodeInterest(this, input, true);
 
   if (wireFormat == WireFormat.getDefaultWireFormat())
     // This is the default wire encoding.  In the Blob constructor, set copy
