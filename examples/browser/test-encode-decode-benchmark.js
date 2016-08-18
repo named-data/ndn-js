@@ -151,7 +151,7 @@ var keyChain;
  * @param {boolean} useCrypto If true, sign the data packet.  If false, use a blank signature.
  * @param {function} onFinished When finished this calls onFinished(duration, encoding)
  * where duration is the number of seconds for all iterations and encoding is
- * the wire encoding Buffer. It is necessary to use a callback because the
+ * the wire encoding Blob. It is necessary to use a callback because the
  * crypto functions use callbacks.
  * @param {number} nIterationsBeforeYield (optional) The number of loops before
  * calling setTimeout(0) to yield.  This is useful to let the system process
@@ -214,7 +214,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
       // We don't know when onComplete will be called. But after calling
       //   nIterations times, we are finished.
 
-      encoding = data.wireEncode().buf();
+      encoding = data.wireEncode();
       onFinished(getNowSeconds() - start, encoding);
     }
   };
@@ -252,7 +252,7 @@ TestEncodeDecodeBenchmark.benchmarkEncodeDataSeconds = function
         sha256Signature.setKeyLocator(keyLocator);
         sha256Signature.setSignature(signatureBits);
 
-        encoding = data.wireEncode().buf();
+        encoding = data.wireEncode();
       }
 
       if (doDummySign){
@@ -279,7 +279,7 @@ function onVerifyFailed(data)
  * Loop to decode a data packet nIterations times.
  * @param {number} nIterations The number of times to decode.
  * @param {boolean} useCrypto If true, verify the signature.  If false, don't verify.
- * @param {Buffer} encoding The encoded data packet to decode.
+ * @param {Blob} encoding The encoded data packet to decode.
  * @param {function} onFinished When finished this calls onFinished(duration)
  * where duration is the number of seconds for all iterations. It is necessary
  * to use a callback because the crypto functions use callbacks.
