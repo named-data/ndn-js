@@ -6,6 +6,7 @@ exports.Exclude = require('./js/exclude.js').Exclude;
 exports.Data = require('./js/data.js').Data;
 exports.ContentType = require('./js/meta-info.js').ContentType;
 exports.MetaInfo = require('./js/meta-info.js').MetaInfo;
+exports.Sha256WithEcdsaSignature = require('./js/sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature;
 exports.Sha256WithRsaSignature = require('./js/sha256-with-rsa-signature.js').Sha256WithRsaSignature;
 exports.GenericSignature = require('./js/generic-signature.js').GenericSignature;
 exports.HmacWithSha256Signature = require('./js/hmac-with-sha256-signature.js').HmacWithSha256Signature;
