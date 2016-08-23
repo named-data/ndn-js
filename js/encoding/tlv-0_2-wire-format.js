@@ -30,6 +30,7 @@ var Exclude = require('../exclude.js').Exclude; /** @ignore */
 var ContentType = require('../meta-info.js').ContentType; /** @ignore */
 var KeyLocatorType = require('../key-locator.js').KeyLocatorType; /** @ignore */
 var Sha256WithRsaSignature = require('../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var GenericSignature = require('../generic-signature.js').GenericSignature; /** @ignore */
 var HmacWithSha256Signature = require('../hmac-with-sha256-signature.js').HmacWithSha256Signature; /** @ignore */
 var DigestSha256Signature = require('../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
@@ -971,6 +972,12 @@ Tlv0_2WireFormat.encodeSignatureInfo_ = function(signature, encoder)
     encoder.writeNonNegativeIntegerTlv
       (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithRsa);
   }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    Tlv0_2WireFormat.encodeKeyLocator
+      (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
+    encoder.writeNonNegativeIntegerTlv
+      (Tlv.SignatureType, Tlv.SignatureType_SignatureSha256WithEcdsa);
+  }
   else if (signature instanceof HmacWithSha256Signature) {
     Tlv0_2WireFormat.encodeKeyLocator
       (Tlv.KeyLocator, signature.getKeyLocator(), encoder);
@@ -999,6 +1006,12 @@ Tlv0_2WireFormat.decodeSignatureInfo = function(data, decoder, copy)
     data.setSignature(new Sha256WithRsaSignature());
     // Modify data's signature object because if we create an object
     //   and set it, then data will have to copy all the fields.
+    var signatureInfo = data.getSignature();
+    Tlv0_2WireFormat.decodeKeyLocator
+      (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
+  }
+  else if (signatureType == Tlv.SignatureType_SignatureSha256WithEcdsa) {
+    data.setSignature(new Sha256WithEcdsaSignature());
     var signatureInfo = data.getSignature();
     Tlv0_2WireFormat.decodeKeyLocator
       (Tlv.KeyLocator, signatureInfo.getKeyLocator(), decoder, copy);
