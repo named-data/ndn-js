@@ -183,6 +183,7 @@ KeyLocator.prototype.equals = function(other)
 KeyLocator.canGetFromSignature = function(signature)
 {
   return signature instanceof Sha256WithRsaSignature ||
+         signature instanceof Sha256WithEcdsaSignature ||
          signature instanceof HmacWithSha256Signature;
 }
 
@@ -196,6 +197,7 @@ KeyLocator.canGetFromSignature = function(signature)
 KeyLocator.getFromSignature = function(signature)
 {
   if (signature instanceof Sha256WithRsaSignature ||
+      signature instanceof Sha256WithEcdsaSignature ||
       signature instanceof HmacWithSha256Signature)
     return signature.getKeyLocator();
   else
@@ -232,4 +234,5 @@ Object.defineProperty(KeyLocator.prototype, "keyData",
 
 // Put this last to avoid a require loop.
 var Sha256WithRsaSignature = require('./sha256-with-rsa-signature.js').Sha256WithRsaSignature;
+var Sha256WithEcdsaSignature = require('./sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature;
 var HmacWithSha256Signature = require('./hmac-with-sha256-signature.js').HmacWithSha256Signature;
