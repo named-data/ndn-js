@@ -88,10 +88,22 @@ MemoryPrivateKeyStorage.prototype.setPrivateKeyForKeyName = function
 {
   // Encode the DER as PEM.
   var keyBase64 = privateKeyDer.toString('base64');
-  var keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
-  for (var i = 0; i < keyBase64.length; i += 64)
-    keyPem += (keyBase64.substr(i, 64) + "\n");
-  keyPem += "-----END RSA PRIVATE KEY-----";
+  var keyPem;
+  if (keyType === KeyType.RSA) {
+    keyPem = "-----BEGIN RSA PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END RSA PRIVATE KEY-----";
+  }
+  else if (keyType === KeyType.ECDSA) {
+    keyPem = "-----BEGIN EC PRIVATE KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END EC PRIVATE KEY-----";
+  }
+  else
+    throw new SecurityException(new Error
+      ("MemoryPrivateKeyStorage: KeyType is not supported"));
 
   this.privateKeyStore[keyName.toUri()] =
     { keyType: keyType, privateKey: keyPem };
@@ -318,11 +330,20 @@ MemoryPrivateKeyStorage.prototype.signPromise = function
       return Promise.resolve(result);
     });
   } else {
-    var rsa = Crypto.createSign('RSA-SHA256');
-    rsa.update(data);
+    var signer;
+    if (privateKey.keyType === KeyType.RSA)
+      signer = Crypto.createSign("RSA-SHA256");
+    else if (privateKey.keyType === KeyType.ECDSA)
+      // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+      signer = Crypto.createSign("sha256");
+    else
+      // We don't expect this to happen since setPrivateKeyForKeyName already checked.
+      return SyncPromise.reject(new SecurityException(new Error
+        ("MemoryPrivateKeyStorage.sign: Unrecognized private key type")));
 
+    signer.update(data);
     var signature = new Buffer
-      (DataUtils.toNumbersIfString(rsa.sign(privateKey.privateKey)));
+      (DataUtils.toNumbersIfString(signer.sign(privateKey.privateKey)));
     var result = new Blob(signature, false);
 
     return SyncPromise.resolve(result);
