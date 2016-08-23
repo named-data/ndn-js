@@ -26,6 +26,7 @@ var DataUtils = require('../../encoding/data-utils.js').DataUtils; /** @ignore *
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var UseSubtleCrypto = require("../../use-subtle-crypto-node.js").UseSubtleCrypto;
 
 /**
@@ -124,10 +125,16 @@ PolicyManager.prototype.inferSigningIdentity = function(dataName)
   throw new Error("PolicyManager.inferSigningIdentity is not implemented");
 };
 
-// The first time verifySha256WithRsaSignature is called, it sets this to
-// determine if a signature buffer needs to be converted to a string for the
-// crypto verifier.
-PolicyManager.verifyUsesString = null;
+// The first time verify is called, it sets this to determine if a signature
+// buffer needs to be converted to a string for the crypto verifier.
+PolicyManager.verifyUsesString_ = null;
+PolicyManager.setVerifyUsesString_ = function()
+{
+  var hashResult = Crypto.createHash('sha256').digest();
+  // If the hash result is a string, we assume that this is a version of
+  //   crypto where verify also uses a string signature.
+  PolicyManager.verifyUsesString_ = (typeof hashResult === 'string');
+};
 
 /**
  * Check the type of signature and use the publicKeyDer to verify the
@@ -185,12 +192,8 @@ PolicyManager.verifySha256WithRsaSignature = function
       onComplete(verified);
     });
   } else {
-    if (PolicyManager.verifyUsesString === null) {
-      var hashResult = Crypto.createHash('sha256').digest();
-      // If the hash result is a string, we assume that this is a version of
-      //   crypto where verify also uses a string signature.
-      PolicyManager.verifyUsesString = (typeof hashResult === 'string');
-    }
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
 
     // The crypto verifier requires a PEM-encoded public key.
     var keyBase64 = publicKeyDer.buf().toString('base64');
@@ -201,7 +204,7 @@ PolicyManager.verifySha256WithRsaSignature = function
 
     var verifier = Crypto.createVerify('RSA-SHA256');
     verifier.update(signedBlob.signedBuf());
-    var signatureBytes = PolicyManager.verifyUsesString ?
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
       DataUtils.toString(signature.buf()) : signature.buf();
     onComplete(verifier.verify(keyPem, signatureBytes));
   }
