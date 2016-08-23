@@ -27,6 +27,7 @@ var Blob = require('../../util/blob.js').Blob; /** @ignore */
 var ConfigFile = require('../../util/config-file.js').ConfigFile; /** @ignore */
 var DigestSha256Signature = require('../../digest-sha256-signature.js').DigestSha256Signature; /** @ignore */
 var Sha256WithRsaSignature = require('../../sha256-with-rsa-signature.js').Sha256WithRsaSignature; /** @ignore */
+var Sha256WithEcdsaSignature = require('../../sha256-with-ecdsa-signature.js').Sha256WithEcdsaSignature; /** @ignore */
 var KeyLocatorType = require('../../key-locator.js').KeyLocatorType; /** @ignore */
 var WireFormat = require('../../encoding/wire-format.js').WireFormat; /** @ignore */
 var SecurityException = require('../security-exception.js').SecurityException; /** @ignore */
@@ -1395,6 +1396,13 @@ IdentityManager.prototype.makeSignatureByCertificatePromise = function
     var signature = null;
     if (keyType == KeyType.RSA) {
       signature = new Sha256WithRsaSignature();
+      digestAlgorithm[0] = DigestAlgorithm.SHA256;
+
+      signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);
+      signature.getKeyLocator().setKeyName(certificateName.getPrefix(-1));
+    }
+    else if (keyType == KeyType.ECDSA) {
+      signature = new Sha256WithEcdsaSignature();
       digestAlgorithm[0] = DigestAlgorithm.SHA256;
 
       signature.getKeyLocator().setType(KeyLocatorType.KEYNAME);

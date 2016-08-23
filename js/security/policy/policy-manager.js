@@ -161,6 +161,14 @@ PolicyManager.verifySignature = function
     PolicyManager.verifySha256WithRsaSignature
       (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
   }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    if (publicKeyDer.isNull()) {
+      onComplete(false);
+      return;
+    }
+    PolicyManager.verifySha256WithEcdsaSignature
+      (signature.getSignature(), signedBlob, publicKeyDer, onComplete);
+  }
   else if (signature instanceof DigestSha256Signature)
     PolicyManager.verifyDigestSha256Signature
       (signature.getSignature(), signedBlob, onComplete);
@@ -203,6 +211,49 @@ PolicyManager.verifySha256WithRsaSignature = function
     keyPem += "-----END PUBLIC KEY-----";
 
     var verifier = Crypto.createVerify('RSA-SHA256');
+    verifier.update(signedBlob.signedBuf());
+    var signatureBytes = PolicyManager.verifyUsesString_ ?
+      DataUtils.toString(signature.buf()) : signature.buf();
+    onComplete(verifier.verify(keyPem, signatureBytes));
+  }
+};
+
+/**
+ * Verify the ECDSA signature on the SignedBlob using the given public key.
+ * @param {Blob} signature The signature bits.
+ * @param {SignedBlob} signedBlob the SignedBlob with the signed portion to
+ * verify.
+ * @param {Blob} publicKeyDer The DER-encoded public key used to verify the
+ * signature.
+ * @param {function} onComplete This calls onComplete(true) if the signature
+ * verifies, otherwise onComplete(false).
+ */
+PolicyManager.verifySha256WithEcdsaSignature = function
+  (signature, signedBlob, publicKeyDer, onComplete)
+{
+  if (UseSubtleCrypto()) {
+/*
+    var algo = {name:"RSASSA-PKCS1-v1_5",hash:{name:"SHA-256"}};
+
+    crypto.subtle.importKey("spki", publicKeyDer.buf().buffer, algo, true, ["verify"]).then(function(publicKey){
+      return crypto.subtle.verify(algo, publicKey, signature.buf(), signedBlob.signedBuf())
+    }).then(function(verified){
+      onComplete(verified);
+    });
+*/  onComplete(false);
+  } else {
+    if (PolicyManager.verifyUsesString_ === null)
+      PolicyManager.setVerifyUsesString_();
+
+    // The crypto verifier requires a PEM-encoded public key.
+    var keyBase64 = publicKeyDer.buf().toString("base64");
+    var keyPem = "-----BEGIN PUBLIC KEY-----\n";
+    for (var i = 0; i < keyBase64.length; i += 64)
+      keyPem += (keyBase64.substr(i, 64) + "\n");
+    keyPem += "-----END PUBLIC KEY-----";
+
+    // Just create a "sha256". The Crypto library will infer ECDSA from the key.
+    var verifier = Crypto.createVerify("sha256");
     verifier.update(signedBlob.signedBuf());
     var signatureBytes = PolicyManager.verifyUsesString_ ?
       DataUtils.toString(signature.buf()) : signature.buf();
