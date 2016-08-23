@@ -30,6 +30,7 @@ exports.DataUtils = require('./js/encoding/data-utils.js').DataUtils;
 exports.EncodingUtils = require('./js/encoding/encoding-utils.js').EncodingUtils;
 exports.ProtobufTlv = require('./js/encoding/protobuf-tlv.js').ProtobufTlv;
 exports.Blob = require('./js/util/blob.js').Blob;
+exports.SignedBlob = require('./js/util/signed-blob.js').SignedBlob;
 exports.MemoryContentCache = require('./js/util/memory-content-cache.js').MemoryContentCache;
 exports.SegmentFetcher = require('./js/util/segment-fetcher.js').SegmentFetcher;
 exports.ExponentialReExpress = require('./js/util/exponential-re-express.js').ExponentialReExpress;
