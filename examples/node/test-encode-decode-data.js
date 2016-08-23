@@ -21,6 +21,7 @@ var Data = require('../..').Data;
 var Name = require('../..').Name;
 var Blob = require('../..').Blob;
 var Sha256WithRsaSignature = require('../..').Sha256WithRsaSignature;
+var Sha256WithEcdsaSignature = require('../..').Sha256WithEcdsaSignature;
 var HmacWithSha256Signature = require('../..').HmacWithSha256Signature;
 var DigestSha256Signature = require('../..').DigestSha256Signature;
 var GenericSignature = require('../..').GenericSignature;
@@ -201,6 +202,13 @@ function dumpData(data)
   if (signature instanceof Sha256WithRsaSignature) {
     var signature = data.getSignature();
     console.log("Sha256WithRsa signature.signature: " +
+      (signature.getSignature().size() > 0 ?
+       signature.getSignature().toHex() : "<none>"));
+    keyLocator = signature.getKeyLocator();
+  }
+  else if (signature instanceof Sha256WithEcdsaSignature) {
+    var signature = data.getSignature();
+    console.log("Sha256WithEcdsa signature.signature: " +
       (signature.getSignature().size() > 0 ?
        signature.getSignature().toHex() : "<none>"));
     keyLocator = signature.getKeyLocator();
