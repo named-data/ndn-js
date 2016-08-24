@@ -1036,7 +1036,7 @@ Name.ContentDigestSuffix = new Buffer([0x00]);
  * We can't use encodeURIComponent because that doesn't encode all the 
  * characters we want to.
  * This does not add a type code prefix such as "sha256digest=".
- * @param {Buffer|Name.Component} component The value or Name.Component to escape.
+ * @param {Buffer|Name.Component} value The value or Name.Component to escape.
  * @return {string} The escaped string.
  */
 Name.toEscapedString = function(value)
