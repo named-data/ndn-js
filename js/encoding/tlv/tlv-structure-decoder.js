@@ -128,7 +128,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
           this.nBytesToRead_ = 8;
 
         // We need to use firstOctet in the next state.
-        this.firstOctet = firstOctet;
+        this.firstOctet_ = firstOctet;
         this.state_ = TlvStructureDecoder.READ_LENGTH_BYTES;
       }
     }
@@ -138,7 +138,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         // We don't have to use the headerBuffer. Set nBytesToRead.
         decoder.seek(this.offset_);
 
-        this.nBytesToRead_ = decoder.readExtendedVarNumber(this.firstOctet);
+        this.nBytesToRead_ = decoder.readExtendedVarNumber(this.firstOctet_);
         // Update this.offset_ to the decoder's offset after reading.
         this.offset_ = decoder.getOffset();
       }
@@ -174,7 +174,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
         // Use a local decoder just for the headerBuffer.
         var bufferDecoder = new TlvDecoder(this.headerBuffer_);
         // Replace nBytesToRead with the length of the value.
-        this.nBytesToRead_ = bufferDecoder.readExtendedVarNumber(this.firstOctet);
+        this.nBytesToRead_ = bufferDecoder.readExtendedVarNumber(this.firstOctet_);
       }
 
       if (this.nBytesToRead_ == 0) {
