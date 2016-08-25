@@ -72,7 +72,8 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     if (gotElementEnd) {
       // Got the remainder of an object.  Report to the caller.
       this.dataParts.push(data.slice(0, offset));
-      var element = DataUtils.concatArrays(this.dataParts);
+      var element = this.dataParts.length === 1 ?
+        this.dataParts[0] : DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
 
       // Reset to read a new object. Do this before calling onReceivedElement
