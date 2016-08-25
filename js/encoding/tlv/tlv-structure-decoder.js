@@ -187,7 +187,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
       this.state_ = TlvStructureDecoder.READ_VALUE_BYTES;
     }
     else if (this.state_ == TlvStructureDecoder.READ_VALUE_BYTES) {
-      nRemainingBytes = input.length - this.offset_;
+      var nRemainingBytes = input.length - this.offset_;
       if (nRemainingBytes < this.nBytesToRead_) {
         // Need more.
         this.offset_ += nRemainingBytes;
