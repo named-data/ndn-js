@@ -21,20 +21,22 @@
 var TlvDecoder = require('./tlv-decoder.js').TlvDecoder;
 
 /**
+ * A TlvStructureDecoder finds the end of an NDN-TLV element, even if the
+ * element is supplied in parts.
  * Create and initialize a TlvStructureDecoder.
  * @constructor
  */
 var TlvStructureDecoder = function TlvStructureDecoder()
 {
-  this.gotElementEnd = false;
-  this.offset = 0;
-  this.state = TlvStructureDecoder.READ_TYPE;
-  this.headerLength = 0;
-  this.useHeaderBuffer = false;
+  this.gotElementEnd_ = false;
+  this.offset_ = 0;
+  this.state_ = TlvStructureDecoder.READ_TYPE;
+  this.headerLength_ = 0;
+  this.useHeaderBuffer_ = false;
   // 8 bytes is enough to hold the extended bytes in the length encoding
   // where it is an 8-byte number.
-  this.headerBuffer = new Buffer(8);
-  this.nBytesToRead = 0;
+  this.headerBuffer_ = new Buffer(8);
+  this.nBytesToRead_ = 0;
 };
 
 exports.TlvStructureDecoder = TlvStructureDecoder;
@@ -46,7 +48,7 @@ TlvStructureDecoder.READ_LENGTH_BYTES = 3;
 TlvStructureDecoder.READ_VALUE_BYTES =  4;
 
 /**
- * Continue scanning input starting from this.offset to find the element end.
+ * Continue scanning input starting from this.offset_ to find the element end.
  * If the end of the element which started at offset 0 is found, this returns
  * true and getOffset() is the length of the element.  Otherwise, this returns
  * false which means you should read more into input and call again.
@@ -56,146 +58,146 @@ TlvStructureDecoder.READ_VALUE_BYTES =  4;
  */
 TlvStructureDecoder.prototype.findElementEnd = function(input)
 {
-  if (this.gotElementEnd)
+  if (this.gotElementEnd_)
     // Someone is calling when we already got the end.
     return true;
 
   var decoder = new TlvDecoder(input);
 
   while (true) {
-    if (this.offset >= input.length)
+    if (this.offset_ >= input.length)
       // All the cases assume we have some input. Return and wait for more.
       return false;
 
-    if (this.state == TlvStructureDecoder.READ_TYPE) {
-      var firstOctet = input[this.offset];
-      this.offset += 1;
+    if (this.state_ == TlvStructureDecoder.READ_TYPE) {
+      var firstOctet = input[this.offset_];
+      this.offset_ += 1;
       if (firstOctet < 253)
         // The value is simple, so we can skip straight to reading the length.
-        this.state = TlvStructureDecoder.READ_LENGTH;
+        this.state_ = TlvStructureDecoder.READ_LENGTH;
       else {
         // Set up to skip the type bytes.
         if (firstOctet == 253)
-          this.nBytesToRead = 2;
+          this.nBytesToRead_ = 2;
         else if (firstOctet == 254)
-          this.nBytesToRead = 4;
+          this.nBytesToRead_ = 4;
         else
           // value == 255.
-          this.nBytesToRead = 8;
+          this.nBytesToRead_ = 8;
 
-        this.state = TlvStructureDecoder.READ_TYPE_BYTES;
+        this.state_ = TlvStructureDecoder.READ_TYPE_BYTES;
       }
     }
-    else if (this.state == TlvStructureDecoder.READ_TYPE_BYTES) {
-      var nRemainingBytes = input.length - this.offset;
-      if (nRemainingBytes < this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_TYPE_BYTES) {
+      var nRemainingBytes = input.length - this.offset_;
+      if (nRemainingBytes < this.nBytesToRead_) {
         // Need more.
-        this.offset += nRemainingBytes;
-        this.nBytesToRead -= nRemainingBytes;
+        this.offset_ += nRemainingBytes;
+        this.nBytesToRead_ -= nRemainingBytes;
         return false;
       }
 
       // Got the type bytes. Move on to read the length.
-      this.offset += this.nBytesToRead;
-      this.state = TlvStructureDecoder.READ_LENGTH;
+      this.offset_ += this.nBytesToRead_;
+      this.state_ = TlvStructureDecoder.READ_LENGTH;
     }
-    else if (this.state == TlvStructureDecoder.READ_LENGTH) {
-      var firstOctet = input[this.offset];
-      this.offset += 1;
+    else if (this.state_ == TlvStructureDecoder.READ_LENGTH) {
+      var firstOctet = input[this.offset_];
+      this.offset_ += 1;
       if (firstOctet < 253) {
         // The value is simple, so we can skip straight to reading
         //  the value bytes.
-        this.nBytesToRead = firstOctet;
-        if (this.nBytesToRead == 0) {
+        this.nBytesToRead_ = firstOctet;
+        if (this.nBytesToRead_ == 0) {
           // No value bytes to read. We're finished.
-          this.gotElementEnd = true;
+          this.gotElementEnd_ = true;
           return true;
         }
 
-        this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+        this.state_ = TlvStructureDecoder.READ_VALUE_BYTES;
       }
       else {
         // We need to read the bytes in the extended encoding of
         //  the length.
         if (firstOctet == 253)
-          this.nBytesToRead = 2;
+          this.nBytesToRead_ = 2;
         else if (firstOctet == 254)
-          this.nBytesToRead = 4;
+          this.nBytesToRead_ = 4;
         else
           // value == 255.
-          this.nBytesToRead = 8;
+          this.nBytesToRead_ = 8;
 
         // We need to use firstOctet in the next state.
         this.firstOctet = firstOctet;
-        this.state = TlvStructureDecoder.READ_LENGTH_BYTES;
+        this.state_ = TlvStructureDecoder.READ_LENGTH_BYTES;
       }
     }
-    else if (this.state == TlvStructureDecoder.READ_LENGTH_BYTES) {
-      var nRemainingBytes = input.length - this.offset;
-      if (!this.useHeaderBuffer && nRemainingBytes >= this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_LENGTH_BYTES) {
+      var nRemainingBytes = input.length - this.offset_;
+      if (!this.useHeaderBuffer_ && nRemainingBytes >= this.nBytesToRead_) {
         // We don't have to use the headerBuffer. Set nBytesToRead.
-        decoder.seek(this.offset);
+        decoder.seek(this.offset_);
 
-        this.nBytesToRead = decoder.readExtendedVarNumber(this.firstOctet);
-        // Update this.offset to the decoder's offset after reading.
-        this.offset = decoder.getOffset();
+        this.nBytesToRead_ = decoder.readExtendedVarNumber(this.firstOctet);
+        // Update this.offset_ to the decoder's offset after reading.
+        this.offset_ = decoder.getOffset();
       }
       else {
-        this.useHeaderBuffer = true;
+        this.useHeaderBuffer_ = true;
 
-        var nNeededBytes = this.nBytesToRead - this.headerLength;
+        var nNeededBytes = this.nBytesToRead_ - this.headerLength_;
         if (nNeededBytes > nRemainingBytes) {
           // We can't get all of the header bytes from this input.
           // Save in headerBuffer.
-          if (this.headerLength + nRemainingBytes > this.headerBuffer.length)
+          if (this.headerLength_ + nRemainingBytes > this.headerBuffer_.length)
             // We don't expect this to happen.
             throw new Error
               ("Cannot store more header bytes than the size of headerBuffer");
-          input.slice(this.offset, this.offset + nRemainingBytes).copy
-            (this.headerBuffer, this.headerLength);
-          this.offset += nRemainingBytes;
-          this.headerLength += nRemainingBytes;
+          input.slice(this.offset_, this.offset_ + nRemainingBytes).copy
+            (this.headerBuffer_, this.headerLength_);
+          this.offset_ += nRemainingBytes;
+          this.headerLength_ += nRemainingBytes;
 
           return false;
         }
 
         // Copy the remaining bytes into headerBuffer, read the
         //   length and set nBytesToRead.
-        if (this.headerLength + nNeededBytes > this.headerBuffer.length)
+        if (this.headerLength_ + nNeededBytes > this.headerBuffer_.length)
           // We don't expect this to happen.
           throw new Error
             ("Cannot store more header bytes than the size of headerBuffer");
-        input.slice(this.offset, this.offset + nNeededBytes).copy
-          (this.headerBuffer, this.headerLength);
-        this.offset += nNeededBytes;
+        input.slice(this.offset_, this.offset_ + nNeededBytes).copy
+          (this.headerBuffer_, this.headerLength_);
+        this.offset_ += nNeededBytes;
 
         // Use a local decoder just for the headerBuffer.
-        var bufferDecoder = new TlvDecoder(this.headerBuffer);
+        var bufferDecoder = new TlvDecoder(this.headerBuffer_);
         // Replace nBytesToRead with the length of the value.
-        this.nBytesToRead = bufferDecoder.readExtendedVarNumber(this.firstOctet);
+        this.nBytesToRead_ = bufferDecoder.readExtendedVarNumber(this.firstOctet);
       }
 
-      if (this.nBytesToRead == 0) {
+      if (this.nBytesToRead_ == 0) {
         // No value bytes to read. We're finished.
-        this.gotElementEnd = true;
+        this.gotElementEnd_ = true;
         return true;
       }
 
       // Get ready to read the value bytes.
-      this.state = TlvStructureDecoder.READ_VALUE_BYTES;
+      this.state_ = TlvStructureDecoder.READ_VALUE_BYTES;
     }
-    else if (this.state == TlvStructureDecoder.READ_VALUE_BYTES) {
-      nRemainingBytes = input.length - this.offset;
-      if (nRemainingBytes < this.nBytesToRead) {
+    else if (this.state_ == TlvStructureDecoder.READ_VALUE_BYTES) {
+      nRemainingBytes = input.length - this.offset_;
+      if (nRemainingBytes < this.nBytesToRead_) {
         // Need more.
-        this.offset += nRemainingBytes;
-        this.nBytesToRead -= nRemainingBytes;
+        this.offset_ += nRemainingBytes;
+        this.nBytesToRead_ -= nRemainingBytes;
         return false;
       }
 
       // Got the bytes. We're finished.
-      this.offset += this.nBytesToRead;
-      this.gotElementEnd = true;
+      this.offset_ += this.nBytesToRead_;
+      this.gotElementEnd_ = true;
       return true;
     }
     else
@@ -210,7 +212,7 @@ TlvStructureDecoder.prototype.findElementEnd = function(input)
  */
 TlvStructureDecoder.prototype.getOffset = function()
 {
-  return this.offset;
+  return this.offset_;
 };
 
 /**
@@ -219,5 +221,5 @@ TlvStructureDecoder.prototype.getOffset = function()
  */
 TlvStructureDecoder.prototype.seek = function(offset)
 {
-  this.offset = offset;
+  this.offset_ = offset;
 };
