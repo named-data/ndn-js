@@ -31,7 +31,7 @@ var LOG = require('../log.js').Log.LOG;
  * elementListener.onReceivedElement(element) with the element.  This handles
  * the case where a single call to onReceivedData may contain multiple elements.
  * @constructor
- * @param {{onReceivedElement:function}} elementListener
+ * @param {object} elementListener An object with an onReceivedElement method.
  */
 var ElementReader = function ElementReader(elementListener)
 {
@@ -42,9 +42,17 @@ var ElementReader = function ElementReader(elementListener)
 
 exports.ElementReader = ElementReader;
 
-ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
+/**
+ * Continue to read data until the end of an element, then call
+ * this.elementListener.onReceivedElement(element). The buffer passed to
+ * onReceivedElement is only valid during this call.  If you need the data
+ * later, you must copy.
+ * @param {Buffer} data The Buffer with the incoming element's bytes, you must
+ * not change the contents after calling this.
+ */
+ElementReader.prototype.onReceivedData = function(data)
 {
-  // Process multiple objects in the data.
+  // Process multiple elements in the data.
   while (true) {
     var gotElementEnd;
     var offset;
@@ -57,7 +65,7 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
           return;
       }
 
-      // Scan the input to check if a whole TLV object has been read.
+      // Scan the input to check if a whole TLV element has been read.
       this.tlvStructureDecoder.seek(0);
       gotElementEnd = this.tlvStructureDecoder.findElementEnd(data);
       offset = this.tlvStructureDecoder.getOffset();
@@ -70,13 +78,13 @@ ElementReader.prototype.onReceivedData = function(/* Buffer */ data)
     }
 
     if (gotElementEnd) {
-      // Got the remainder of an object.  Report to the caller.
+      // Got the remainder of an element.  Report to the caller.
       this.dataParts.push(data.slice(0, offset));
       var element = this.dataParts.length === 1 ?
         this.dataParts[0] : DataUtils.concatArrays(this.dataParts);
       this.dataParts = [];
 
-      // Reset to read a new object. Do this before calling onReceivedElement
+      // Reset to read a new element. Do this before calling onReceivedElement
       // in case it throws an exception.
       data = data.slice(offset, data.length);
       this.tlvStructureDecoder = new TlvStructureDecoder();
