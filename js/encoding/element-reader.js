@@ -47,8 +47,7 @@ exports.ElementReader = ElementReader;
  * this.elementListener_.onReceivedElement(element). The buffer passed to
  * onReceivedElement is only valid during this call.  If you need the data
  * later, you must copy.
- * @param {Buffer} data The Buffer with the incoming element's bytes, you must
- * not change the contents after calling this.
+ * @param {Buffer} data The Buffer with the incoming element's bytes.
  */
 ElementReader.prototype.onReceivedData = function(data)
 {
@@ -116,7 +115,7 @@ ElementReader.prototype.onReceivedData = function(data)
 
       this.dataParts_.push(new Buffer(data));
       if (LOG > 3) console.log('Incomplete packet received. Length ' + data.length + '. Wait for more input.');
-        return;
+      return;
     }
   }
 };
