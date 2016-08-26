@@ -52,24 +52,20 @@ var FibEntry = function FibEntry(name)
 
 /**
  * A ForwarderFace is used by the Faces list to represent a connection using a
- * runtime.Port or a WebSocket.
+ * runtime.Port or a Transport.
  * @param {string} The URI to use in the faces/query and faces/list commands.
  * @param {runtime.Port} port If supplied, communicate with the port. Otherwise
- * if this is null then use webSocket.
- * @param {WebSocket} webSocket If a port is not supplied, communicate using the
- * WebSocket object which is already created with the host name.
- * @param {function} onComplete (optional) When the operation is complete,
- * this calls onComplete(success) where success is true if the face is created
- * or false if the face cannot be completed. If onComplete is omitted, this does
- * not call it. (This is mainly to get the result of opening a WebSocket but is
- * also called for a port.)
+ * if this is null then use transport.
+ * @param {Transport} transport If a port is not supplied, communicate using the
+ * Transport object. You must call transport.connect using this ForwarderFace as
+ * the elementListener.
  * @constructor
  */
-var ForwarderFace = function ForwarderFace(uri, port, webSocket, onComplete)
+var ForwarderFace = function ForwarderFace(uri, port, transport)
 {
   this.uri = uri;
   this.port = port;
-  this.webSocket = webSocket;
+  this.transport = transport;
   this.elementReader = new ElementReader(this);
   this.faceId = ++ForwarderFace.lastFaceId;
 
@@ -93,59 +89,6 @@ var ForwarderFace = function ForwarderFace(uri, port, webSocket, onComplete)
       }
       thisFace.port = null;
     });
-
-    if (onComplete)
-      onComplete(true);
-  }
-  else {
-    this.webSocket.binaryType = "arraybuffer";
-
-    var thisFace = this;
-    this.webSocket.onmessage = function(ev) {
-      var result = ev.data;
-
-      if (result == null || result == undefined || result == "")
-        console.log('INVALID ANSWER');
-      else if (result instanceof ArrayBuffer) {
-        // The Buffer constructor expects an instantiated array.
-        var bytearray = new Buffer(new Uint8Array(result));
-
-        if (LOG > 3) console.log('BINARY RESPONSE IS ' + bytearray.toString('hex'));
-
-        try {
-          // Find the end of the element and call onReceivedElement.
-          thisFace.elementReader.onReceivedData(bytearray);
-        } catch (ex) {
-          console.log("NDN.webSocket.onmessage exception: " + ex);
-          return;
-        }
-      }
-    };
-
-    // Make sure we only call onComplete once.
-    var calledOnComplete = false;
-    this.webSocket.onopen = function(ev) {
-      if (LOG > 3) console.log(ev);
-      if (LOG > 3) console.log('webSocket.onopen: WebSocket connection opened.');
-      if (onComplete && !calledOnComplete) {
-        calledOnComplete = true;
-        onComplete(true);
-      }
-    };
-
-    this.webSocket.onerror = function(ev) {
-      console.log(ev);
-      console.log('webSocket.onerror: WebSocket error: ' + ev.data);
-      if (onComplete && !calledOnComplete) {
-        calledOnComplete = true;
-        onComplete(false);
-      }
-    };
-
-    this.webSocket.onclose = function(ev) {
-      console.log('webSocket.onclose: WebSocket connection closed.');
-      thisFace.webSocket = null;
-    };
   }
 };
 
@@ -255,7 +198,7 @@ ForwarderFace.prototype.onReceivedElement = function(element)
 
 ForwarderFace.prototype.isEnabled = function()
 {
-  return this.port != null || this.webSocket != null;
+  return this.port != null || this.transport != null;
 };
 
 ForwarderFace.prototype.sendObject = function(obj)
@@ -266,25 +209,15 @@ ForwarderFace.prototype.sendObject = function(obj)
 };
 
 /**
- * Send the buffer to the port or WebSocket.
+ * Send the buffer to the port or transport.
  * @param {Buffer} buffer The bytes to send.
  */
 ForwarderFace.prototype.sendBuffer = function(buffer)
 {
   if (this.port != null)
     this.sendObject(buffer.toJSON());
-  else if (this.webSocket != null) {
-    // If we directly use data.buffer to feed ws.send(),
-    // WebSocket may end up sending a packet with 10000 bytes of data.
-    // That is, WebSocket will flush the entire buffer
-    // regardless of the offset of the Uint8Array. So we have to create
-    // a new Uint8Array buffer with just the right size and copy the
-    // content from binaryInterest to the new buffer.
-    //    ---Wentao
-    var bytearray = new Uint8Array(buffer.length);
-    bytearray.set(buffer);
-    this.webSocket.send(bytearray.buffer);
-  }
+  else if (this.transport != null)
+    this.transport.send(buffer);
 };
 
 /**
@@ -387,18 +320,38 @@ ForwarderFace.prototype.onReceivedObject = function(obj)
   else if (obj.type == "faces/create") {
     // TODO: Re-check that the face doesn't exist.
     var thisFace = this;
-    var face = new ForwarderFace(obj.uri, null, new WebSocket(obj.uri), function(success) {
-      if (success) {
-        Faces.push(face);
-        obj.faceId = face.faceId;
-        obj.statusCode = 200;
-      }
-      else
-        // A problem opening the WebSocket.
-        obj.statusCode = 503;
+    var sentReply = false;
+    var face = null;
 
+    // Some transports can't report a connection failure, so use a timeout.
+    var timerId = setTimeout(function() {
+      // A problem opening the WebSocket.
+      // Only reply once.
+      if (sentReply)
+        return;
+      sentReply = true;
+
+      obj.statusCode = 503;
       thisFace.sendObject(obj);
-    });
+    }, 3000);
+    function onConnected() {
+      if (sentReply)
+        // Only reply once.
+        return;
+      sentReply = true;
+
+      // Cancel the timeout timer.
+      clearTimeout(timerId);
+      Faces.push(face);
+      obj.faceId = face.faceId;
+      obj.statusCode = 200;
+      thisFace.sendObject(obj);
+    }
+
+    var transport = new WebSocketTransport();
+    face = new ForwarderFace(obj.uri, null, transport);
+    transport.connect
+      (new WebSocketTransport.ConnectionInfo(obj.uri), this, onConnected);
   }
   else if (obj.type == "rib/register") {
     // Find the face with the faceId.
