@@ -152,9 +152,8 @@ TcpTransport.prototype.isLocal = function(connectionInfo, onResult, onError)
  * @param {object} elementListener The elementListener with function
  * onReceivedElement which must remain valid during the life of this object.
  * @param {function} onopenCallback Once connected, call onopenCallback().
- * @param {type} onclosedCallback If the connection is closed by the remote host,
- * call onclosedCallback().
- * @return {undefined}
+ * @param {function} onclosedCallback (optional) If the connection is closed by
+ * the remote host, call onclosedCallback(). If omitted or null, don't call it.
  */
 TcpTransport.prototype.connect = function
   (connectionInfo, elementListener, onopenCallback, onclosedCallback)
@@ -200,7 +199,8 @@ TcpTransport.prototype.connect = function
 
     self.socket = null;
 
-    onclosedCallback();
+    if (onclosedCallback != null)
+      onclosedCallback();
   });
 
   this.socket.connect({host: connectionInfo.host, port: connectionInfo.port});
